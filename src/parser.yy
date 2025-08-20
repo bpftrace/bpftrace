@@ -134,6 +134,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
 %token <bool> BOOL "bool"
+%token <std::string> NONE "none"
 
 %type <ast::Operator> unary_op compound_op
 %type <std::string> attach_point_def c_definitions ident keyword external_name
@@ -141,8 +142,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList> attach_points
-%type <ast::Block *> bare_block
-%type <ast::BlockExpr *> block_expr
+%type <ast::Block *> none_block bare_block block_expr
 %type <ast::Call *> call
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
@@ -160,12 +160,13 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
-%type <ast::Statement> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt for_stmt
+%type <ast::Statement> assign_stmt block_stmt expr_stmt nonexpr_stmt jump_stmt while_stmt for_stmt
+%type <ast::StatementList> stmt_list
+%type <ast::Ternary *> if_stmt if_expr
 %type <ast::RootStatement> root_stmt macro map_decl_stmt subprog probe
 %type <ast::RootStatements> root_stmts
 %type <ast::Range *> range
 %type <ast::VarDeclStatement *> var_decl_stmt
-%type <ast::StatementList> block block_or_if stmt_list
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
 %type <SizedType> type int_type pointer_type struct_type
@@ -340,11 +341,11 @@ config_assign_stmt:
                 ;
 
 subprog:
-                SUBPROG IDENT "(" subprog_args ")" ":" type block {
-                    $$ = driver.ctx.make_node<ast::Subprog>($2, $7, std::move($4), std::move($8), @$);
+                SUBPROG IDENT "(" subprog_args ")" ":" type none_block {
+                    $$ = driver.ctx.make_node<ast::Subprog>($2, $7, std::move($4), $8, @$);
                 }
-        |       SUBPROG IDENT "(" ")" ":" type block {
-                    $$ = driver.ctx.make_node<ast::Subprog>($2, $6, ast::SubprogArgList(), std::move($7), @$);
+        |       SUBPROG IDENT "(" ")" ":" type none_block {
+                    $$ = driver.ctx.make_node<ast::Subprog>($2, $6, ast::SubprogArgList(), $7, @$);
                 }
                 ;
 
@@ -358,8 +359,9 @@ subprog_arg:
                 ;
 
 macro:
-                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
-        |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
+                MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
+        |       MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
+                ;
 
 macro_args:
                 macro_args "," map   { $$ = std::move($1); $$.push_back($3); }
@@ -383,10 +385,7 @@ root_stmt:
                 ;
 
 probe:
-                attach_points pred block
-                {
-                  $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, driver.ctx.make_node<ast::Block>(std::move($3), @3), @$);
-                }
+                attach_points pred none_block { $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, $3, @$); }
                 ;
 
 attach_points:
@@ -449,39 +448,31 @@ param_count:
                 PARAMCOUNT { $$ = driver.ctx.make_node<ast::PositionalParameterCount>(@$); }
                 ;
 
-/*
- * The last statement in a block does not require a trailing semicolon.
- */
-block:
-                "{" stmt_list "}"                   { $$ = std::move($2); }
-        |       "{" stmt_list expr_stmt "}"         { $$ = std::move($2); $$.push_back($3); }
-                ;
-
 stmt_list:
                 stmt_list expr_stmt ";"     { $$ = std::move($1); $$.push_back($2); }
+        |       stmt_list nonexpr_stmt ";"  { $$ = std::move($1); $$.push_back($2); }
         |       stmt_list block_stmt        { $$ = std::move($1); $$.push_back($2); }
-        |       stmt_list var_decl_stmt ";" { $$ = std::move($1); $$.push_back($2); }
         |       %empty                      { $$ = ast::StatementList{}; }
                 ;
 
 block_stmt:
-                loop_stmt    { $$ = $1; }
-        |       if_stmt      { $$ = $1; }
-        |       for_stmt     { $$ = $1; }
-        |       bare_block   { $$ = $1; }
+                while_stmt { $$ = $1; }
+        |       if_stmt    { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @$); }
+        |       for_stmt   { $$ = $1; }
+        |       bare_block { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @$); }
                 ;
 
-bare_block:
-                "{" stmt_list "}"  { $$ = driver.ctx.make_node<ast::Block>(std::move($2), @2); }
-
 expr_stmt:
-                expr               { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @1); }
-        |       jump_stmt          { $$ = $1; }
-/*
- * quirk. Assignment is not an expression but the AssignMapStatement makes it difficult
- * this avoids a r/r conflict
- */
-        |       assign_stmt        { $$ = $1; }
+                // We do not accept a top-level if for the statement, as we parse using
+                // `if_stmt` to avoid ambiguity. The `expr` node itself will accepts an
+                // `if_expr`, which is used for any other expression except the statement.
+                conditional_expr { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @1); }
+                ;
+
+nonexpr_stmt:
+                jump_stmt        { $$ = $1; }
+        |       assign_stmt      { $$ = $1; }
+        |       var_decl_stmt    { $$ = $1; }
                 ;
 
 jump_stmt:
@@ -491,14 +482,14 @@ jump_stmt:
         |       RETURN expr { $$ = driver.ctx.make_node<ast::Jump>(ast::JumpType::RETURN, $2, @$); }
                 ;
 
-loop_stmt:
-                UNROLL "(" expr ")" block { $$ = driver.ctx.make_node<ast::Unroll>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1 + @4); }
-        |       WHILE  "(" expr ")" block { $$ = driver.ctx.make_node<ast::While>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), @1); }
+while_stmt:
+                UNROLL "(" expr ")" none_block { $$ = driver.ctx.make_node<ast::Unroll>($3, $5, @1); }
+        |       WHILE  "(" expr ")" none_block { $$ = driver.ctx.make_node<ast::While>($3, $5, @1); }
                 ;
 
 for_stmt:
-                FOR "(" var ":" map ")" block        { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
-        |       FOR "(" var ":" range ")" block      { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+                FOR "(" var ":" map ")" none_block   { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
+        |       FOR "(" var ":" range ")" none_block { $$ = driver.ctx.make_node<ast::For>($3, $5, std::move($7), @1); }
                 ;
 
 range:
@@ -506,13 +497,15 @@ range:
                 ;
 
 if_stmt:
-                IF "(" expr ")" block                  { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), driver.ctx.make_node<ast::Block>(ast::StatementList(), @1), @$); }
-        |       IF "(" expr ")" block ELSE block_or_if { $$ = driver.ctx.make_node<ast::If>($3, driver.ctx.make_node<ast::Block>(std::move($5), @5), driver.ctx.make_node<ast::Block>(std::move($7), @7), @$); }
+                IF "(" expr ")" none_block                 { $$ = driver.ctx.make_node<ast::Ternary>($3, $5, driver.ctx.make_node<ast::None>(@1), @$); }
+        |       IF "(" expr ")" bare_block ELSE none_block { $$ = driver.ctx.make_node<ast::Ternary>($3, $5, $7, @$); }
+        |       IF "(" expr ")" bare_block ELSE if_stmt    { $$ = driver.ctx.make_node<ast::Ternary>($3, $5, $7, @$); }
                 ;
 
-block_or_if:
-                block        { $$ = std::move($1); }
-        |       if_stmt      { $$ = ast::StatementList{$1}; }
+
+if_expr:
+                IF "(" expr ")" block_expr ELSE if_expr    { $$ = driver.ctx.make_node<ast::Ternary>($3, $5, $7, @$); }
+        |       IF "(" expr ")" block_expr ELSE block_expr { $$ = driver.ctx.make_node<ast::Ternary>($3, $5, $7, @$); }
                 ;
 
 assign_stmt:
@@ -556,6 +549,7 @@ primary_expr:
         |       BOOL               { $$ = driver.ctx.make_node<ast::Boolean>($1, @$); }
         |       STRING             { $$ = driver.ctx.make_node<ast::String>($1, @$); }
         |       BUILTIN            { $$ = driver.ctx.make_node<ast::Builtin>($1, @$); }
+        |       NONE               { $$ = driver.ctx.make_node<ast::None>(@$); }
         |       LPAREN expr RPAREN { $$ = $2; }
         |       param              { $$ = $1; }
         |       param_count        { $$ = $1; }
@@ -602,7 +596,38 @@ tuple_access_expr:
                 ;
 
 block_expr:
-                "{" stmt_list expr "}" { $$ = driver.ctx.make_node<ast::BlockExpr>(std::move($2), $3, @$); }
+                "{" stmt_list expr "}" { $$ = driver.ctx.make_node<ast::Block>(std::move($2), $3, @$); }
+                ;
+
+// This block is a bare block, but it allows for a final statement without a
+// trailing semi-colon, simply for convenience. Always has none as a type.
+//
+// This is *always* bare to allow for disambigutiy with `if` rules.
+bare_block:
+                "{" stmt_list "}"
+                {
+                  auto *none = driver.ctx.make_node<ast::None>(@3);
+                  $$ = driver.ctx.make_node<ast::Block>(std::move($2), none, @$);
+                }
+        |       "{" stmt_list nonexpr_stmt "}"
+                {
+                  auto stmts = std::move($2);
+                  stmts.push_back($3);
+                  auto *none = driver.ctx.make_node<ast::None>(@4);
+                  $$ = driver.ctx.make_node<ast::Block>(std::move(stmts), none, @$);
+                }
+                ;
+
+none_block:
+                bare_block { $$ = $1; }
+        |       block_expr
+                {
+                  auto *none = driver.ctx.make_node<ast::None>(@1);
+                  auto *stmt = driver.ctx.make_node<ast::ExprStatement>($1->expr, @$);
+                  $1->stmts.push_back(stmt);
+                  $1->expr.value = none;
+                  $$ = $1;
+                }
                 ;
 
 unary_expr:
@@ -629,6 +654,7 @@ unary_op:
 
 expr:
                 conditional_expr    { $$ = $1; }
+        |       if_expr             { $$ = $1; }
                 ;
 
 conditional_expr:
@@ -729,6 +755,7 @@ keyword:
         |       UNROLL        { $$ = $1; }
         |       WHILE         { $$ = $1; }
         |       SUBPROG       { $$ = $1; }
+        |       NONE          { $$ = $1; }
         ;
 
 ident:

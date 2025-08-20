@@ -60,20 +60,20 @@ bool probe_needs_pid_filter(AttachPoint *ap)
 
 } // namespace
 
-static Statement create_pid_filter(ASTContext &ast,
-                                   int pid,
-                                   const Location &loc)
+static Block *create_pid_filter(ASTContext &ast, int pid, Block *orig_block)
 {
-  return ast.make_node<If>(
-      ast.make_node<Binop>(ast.make_node<Builtin>("pid", Location(loc)),
-                           Operator::NE,
-                           ast.make_node<Integer>(pid, Location(loc)),
-                           Location(loc)),
-      ast.make_node<Block>(std::vector<Statement>{ ast.make_node<Jump>(
-                               JumpType::RETURN, Location(loc)) },
-                           Location(loc)),
-      ast.make_node<Block>(std::vector<Statement>{}, Location(loc)),
-      Location(loc));
+  return ast.make_node<Block>(
+      StatementList({}), // All in the expression below.
+      ast.make_node<Ternary>(
+          ast.make_node<Binop>(
+              ast.make_node<Builtin>("pid", Location(orig_block->loc)),
+              Operator::NE,
+              ast.make_node<Integer>(pid, Location(orig_block->loc)),
+              Location(orig_block->loc)),
+          ast.make_node<None>(Location(orig_block->loc)), // Empty.
+          orig_block,
+          Location(orig_block->loc)),
+      Location(orig_block->loc));
 }
 
 void PidFilterPass::visit(Probe &probe)
@@ -85,8 +85,7 @@ void PidFilterPass::visit(Probe &probe)
 
   for (AttachPoint *ap : probe.attach_points) {
     if (probe_needs_pid_filter(ap)) {
-      probe.block->stmts.insert(probe.block->stmts.begin(),
-                                create_pid_filter(ast_, *pid, probe.loc));
+      probe.block = create_pid_filter(ast_, *pid, probe.block);
       return;
     }
   }

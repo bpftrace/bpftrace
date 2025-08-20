@@ -123,6 +123,7 @@ class Boolean;
 class PositionalParameter;
 class PositionalParameterCount;
 class String;
+class None;
 class Identifier;
 class Builtin;
 class Call;
@@ -141,7 +142,7 @@ class MapAccess;
 class Cast;
 class Tuple;
 class Ternary;
-class BlockExpr;
+class Block;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -149,6 +150,7 @@ class Expression : public VariantNode<Integer,
                                       PositionalParameter,
                                       PositionalParameterCount,
                                       String,
+                                      None,
                                       Identifier,
                                       Builtin,
                                       Call,
@@ -167,10 +169,10 @@ class Expression : public VariantNode<Integer,
                                       Cast,
                                       Tuple,
                                       Ternary,
-                                      BlockExpr> {
+                                      Block> {
 public:
   using VariantNode::VariantNode;
-  Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
+  Expression() : Expression(static_cast<Block *>(nullptr)) {};
 
   // The `type` method is the only common thing required by all expression
   // types. This will on the variant types.
@@ -183,24 +185,20 @@ class VarDeclStatement;
 class AssignScalarMapStatement;
 class AssignMapStatement;
 class AssignVarStatement;
-class If;
 class Unroll;
 class Jump;
 class While;
 class For;
-class Block;
 
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
                                      AssignScalarMapStatement,
                                      AssignMapStatement,
                                      AssignVarStatement,
-                                     If,
                                      Unroll,
                                      Jump,
                                      While,
-                                     For,
-                                     Block> {
+                                     For> {
 public:
   using VariantNode::VariantNode;
   Statement() : Statement(static_cast<ExprStatement *>(nullptr)) {};
@@ -284,6 +282,19 @@ public:
   }
 
   const bool value;
+};
+
+class None : public Node {
+public:
+  explicit None(ASTContext &ctx, Location &&loc) : Node(ctx, std::move(loc)) {};
+  explicit None(ASTContext &ctx, const None &other, const Location &loc)
+      : Node(ctx, loc + other.loc) {};
+
+  const SizedType &type() const
+  {
+    static SizedType none = CreateNone();
+    return none;
+  }
 };
 
 class PositionalParameter : public Node {
@@ -921,32 +932,14 @@ using ConfigStatementList = std::vector<AssignConfigVarStatement *>;
 
 class Block : public Node {
 public:
-  explicit Block(ASTContext &ctx, StatementList &&stmts, Location &&loc)
-      : Node(ctx, std::move(loc)), stmts(std::move(stmts)) {};
-  explicit Block(ASTContext &ctx, const Block &other, const Location &loc)
-      : Node(ctx, loc + other.loc), stmts(clone(ctx, other.stmts, loc)) {};
-
-  const SizedType &type() const
-  {
-    static SizedType none = CreateNone();
-    return none;
-  }
-
-  StatementList stmts;
-};
-
-class BlockExpr : public Node {
-public:
-  explicit BlockExpr(ASTContext &ctx,
-                     StatementList &&stmts,
-                     Expression expr,
-                     Location &&loc)
+  explicit Block(ASTContext &ctx,
+                 StatementList &&stmts,
+                 Expression expr,
+                 Location &&loc)
       : Node(ctx, std::move(loc)),
         stmts(std::move(stmts)),
         expr(std::move(expr)) {};
-  explicit BlockExpr(ASTContext &ctx,
-                     const BlockExpr &other,
-                     const Location &loc)
+  explicit Block(ASTContext &ctx, const Block &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         stmts(clone(ctx, other.stmts, loc)),
         expr(clone(ctx, other.expr, loc)) {};
@@ -958,28 +951,6 @@ public:
 
   StatementList stmts;
   Expression expr;
-};
-
-class If : public Node {
-public:
-  explicit If(ASTContext &ctx,
-              Expression cond,
-              Block *if_block,
-              Block *else_block,
-              Location &&loc)
-      : Node(ctx, std::move(loc)),
-        cond(std::move(cond)),
-        if_block(if_block),
-        else_block(else_block) {};
-  explicit If(ASTContext &ctx, const If &other, const Location &loc)
-      : Node(ctx, loc + other.loc),
-        cond(clone(ctx, other.cond, loc)),
-        if_block(clone(ctx, other.if_block, loc)),
-        else_block(clone(ctx, other.else_block, loc)) {};
-
-  Expression cond;
-  Block *if_block = nullptr;
-  Block *else_block = nullptr;
 };
 
 class Unroll : public Node {
@@ -1098,31 +1069,22 @@ class For : public Node {
 public:
   explicit For(ASTContext &ctx,
                Variable *decl,
-               Map *map,
-               StatementList &&stmts,
+               Iterable iterable,
+               Block *block,
                Location &&loc)
       : Node(ctx, std::move(loc)),
         decl(decl),
-        iterable(map),
-        stmts(std::move(stmts)) {};
-  explicit For(ASTContext &ctx,
-               Variable *decl,
-               Range *range,
-               StatementList &&stmts,
-               Location &&loc)
-      : Node(ctx, std::move(loc)),
-        decl(decl),
-        iterable(range),
-        stmts(std::move(stmts)) {};
+        iterable(iterable),
+        block(block) {};
   explicit For(ASTContext &ctx, const For &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         decl(clone(ctx, other.decl, loc)),
         iterable(clone(ctx, other.iterable, loc)),
-        stmts(clone(ctx, other.stmts, loc)) {};
+        block(clone(ctx, other.block, loc)) {};
 
   Variable *decl = nullptr;
   Iterable iterable;
-  StatementList stmts;
+  Block *block = nullptr;
   SizedType ctx_type;
 };
 
@@ -1284,24 +1246,24 @@ public:
                    std::string name,
                    SizedType return_type,
                    SubprogArgList &&args,
-                   StatementList &&stmts,
+                   Block *block,
                    Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         return_type(std::move(return_type)),
         args(std::move(args)),
-        stmts(std::move(stmts)) {};
+        block(block) {};
   explicit Subprog(ASTContext &ctx, const Subprog &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         name(other.name),
         return_type(other.return_type),
         args(clone(ctx, other.args, loc)),
-        stmts(clone(ctx, other.stmts, loc)) {};
+        block(clone(ctx, other.block, loc)) {};
 
   const std::string name;
   SizedType return_type;
   SubprogArgList args;
-  StatementList stmts;
+  Block *block = nullptr;
 };
 using SubprogList = std::vector<Subprog *>;
 
@@ -1321,15 +1283,6 @@ public:
   Macro(ASTContext &ctx,
         std::string name,
         ExpressionList &&vargs,
-        BlockExpr *block_expr,
-        Location &&loc)
-      : Node(ctx, std::move(loc)),
-        name(std::move(name)),
-        vargs(std::move(vargs)),
-        block(block_expr) {};
-  Macro(ASTContext &ctx,
-        std::string name,
-        ExpressionList &&vargs,
         Block *block,
         Location &&loc)
       : Node(ctx, std::move(loc)),
@@ -1344,7 +1297,7 @@ public:
 
   std::string name;
   ExpressionList vargs;
-  std::variant<BlockExpr *, Block *> block;
+  Block *block = nullptr;
 };
 using MacroList = std::vector<Macro *>;
 

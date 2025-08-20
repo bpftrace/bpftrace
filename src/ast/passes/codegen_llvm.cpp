@@ -234,7 +234,6 @@ public:
   ScopedExpr visit(AssignMapStatement &assignment);
   ScopedExpr visit(AssignVarStatement &assignment);
   ScopedExpr visit(VarDeclStatement &decl);
-  ScopedExpr visit(If &if_node);
   ScopedExpr visit(Unroll &unroll);
   ScopedExpr visit(While &while_block);
   ScopedExpr visit(For &f, Map &map);
@@ -246,7 +245,6 @@ public:
   ScopedExpr visit(Subprog &subprog);
   ScopedExpr visit(Program &program);
   ScopedExpr visit(Block &block);
-  ScopedExpr visit(BlockExpr &block_expr);
 
   // compile is the primary entrypoint; it will return the generated LLVMModule.
   // Only one call to `compile` is permitted per instantiation.
@@ -3182,58 +3180,6 @@ ScopedExpr CodegenLLVM::visit(VarDeclStatement &decl)
   return ScopedExpr();
 }
 
-ScopedExpr CodegenLLVM::visit(If &if_node)
-{
-  llvm::Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *if_true = BasicBlock::Create(module_->getContext(),
-                                           "if_body",
-                                           parent);
-  BasicBlock *if_end = BasicBlock::Create(module_->getContext(),
-                                          "if_end",
-                                          parent);
-  BasicBlock *if_else = nullptr;
-
-  auto scoped_cond = visit(if_node.cond);
-  auto *cond_expr = scoped_cond.value();
-  Value *zero_value = Constant::getNullValue(cond_expr->getType());
-  Value *cond = b_.CreateICmpNE(cond_expr, zero_value, "true_cond");
-
-  // 3 possible flows:
-  //
-  // if condition is true
-  //   parent -> if_body -> if_end
-  //
-  // if condition is false, no else
-  //   parent -> if_end
-  //
-  // if condition is false, with else
-  //   parent -> if_else -> if_end
-  //
-  if (!if_node.else_block->stmts.empty()) {
-    // LLVM doesn't accept empty basic block, only create when needed
-    if_else = BasicBlock::Create(module_->getContext(), "else_body", parent);
-    b_.CreateCondBr(cond, if_true, if_else);
-  } else {
-    b_.CreateCondBr(cond, if_true, if_end);
-  }
-
-  b_.SetInsertPoint(if_true);
-  auto scoped_del_if_block = visit(*if_node.if_block);
-
-  b_.CreateBr(if_end);
-
-  b_.SetInsertPoint(if_end);
-
-  if (!if_node.else_block->stmts.empty()) {
-    b_.SetInsertPoint(if_else);
-    auto scoped_del_else_block = visit(*if_node.else_block);
-
-    b_.CreateBr(if_end);
-    b_.SetInsertPoint(if_end);
-  }
-  return ScopedExpr();
-}
-
 ScopedExpr CodegenLLVM::visit(Unroll &unroll)
 {
   auto n = unroll.expr.as<Integer>()->value;
@@ -3372,16 +3318,7 @@ ScopedExpr CodegenLLVM::visit(Predicate &pred)
   return ScopedExpr(cmp_value);
 }
 
-ScopedExpr CodegenLLVM::visit(Block &block)
-{
-  scope_stack_.push_back(&block);
-  visit(block.stmts);
-  scope_stack_.pop_back();
-
-  return ScopedExpr();
-}
-
-ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
+ScopedExpr CodegenLLVM::visit(Block &block_expr)
 {
   scope_stack_.push_back(&block_expr);
   visit(block_expr.stmts);
@@ -3520,8 +3457,7 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
     ++arg_index;
   }
 
-  for (Statement &stmt : subprog.stmts)
-    visit(stmt);
+  visit(subprog.block);
   if (subprog.return_type.IsVoidTy())
     createRet();
 
@@ -5053,7 +4989,7 @@ llvm::Function *CodegenLLVM::createForCallback(
 
   // Generate code for the loop body.
   loops_.emplace_back(for_continue, for_break);
-  visit(f.stmts);
+  visit(f.block);
   b_.CreateBr(for_continue);
   loops_.pop_back();
   b_.SetInsertPoint(for_continue);

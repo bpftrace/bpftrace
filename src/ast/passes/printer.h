@@ -19,6 +19,7 @@ public:
   void visit(PositionalParameter &param);
   void visit(PositionalParameterCount &param);
   void visit(String &string);
+  void visit(None &none);
   void visit(StackMode &mode);
   void visit(Identifier &identifier);
   void visit(Builtin &builtin);
@@ -45,7 +46,6 @@ public:
   void visit(AssignVarStatement &assignment);
   void visit(AssignConfigVarStatement &assignment);
   void visit(VarDeclStatement &decl);
-  void visit(If &if_node);
   void visit(Unroll &unroll);
   void visit(While &while_block);
   void visit(Range &range);

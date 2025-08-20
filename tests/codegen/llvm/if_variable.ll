@@ -22,13 +22,7 @@ entry:
   %"$x" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
   store i64 0, ptr %"$x", align 8
-  br i1 true, label %if_body, label %if_end
-
-if_body:                                          ; preds = %entry
   store i64 10, ptr %"$x", align 8
-  br label %if_end
-
-if_end:                                           ; preds = %if_body, %entry
   %1 = load i64, ptr %"$x", align 8
   store i64 %1, ptr %"$y", align 8
   ret i64 0
