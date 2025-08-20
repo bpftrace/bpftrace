@@ -24,8 +24,9 @@ tends to break things, is LLVM, we align with the [LLVM release
 schedule](https://llvm.org/docs/HowToReleaseLLVM.html). In particular, a minor
 bpftrace release should happen **two weeks after a major LLVM release**.
 
-If patch releases are necessary, there should be at least one week period
-between two successive releases.
+If patch releases are necessary, there should be at least one week between two
+successive releases to improve predictability for consumers of bpftrace releases
+and reduce work for bpftrace packagers.
 
 In addition, four weeks before the bpftrace release, we create a stabilized
 release branch, which will only receive bug fixes affecting the release itself.
@@ -34,12 +35,12 @@ should get into that minor release (by creating a new "patch" release).
 
 Overview of the release cadence is as follows:
 
-| Task                   | Approximate date                    | Details                                                              |
-| ---------------------- | ----------------------------------- | -------------------------------------------------------------------- |
-| release branch created | **2 weeks before the LLVM release** | [Creating a release branch](#creating-a-release-branch)              |
-| LLVM release           | usually second Tuesday of Mar/Sep   | [LLVM release schedule](https://llvm.org/docs/HowToReleaseLLVM.html) |
-| bpftrace release       | **2 weeks after the LLVM release**  | [Tagging a release](#tagging-a-release)                              |
-| patch releases         | weekly cadence after the release    | [Tagging a release](#tagging-a-release)                              |
+| Task                   | Approximate date                                 | Details                                                              |
+| ---------------------- | ------------------------------------------------ | -------------------------------------------------------------------- |
+| release branch created | **2 weeks before the LLVM release**              | [Creating a release branch](#creating-a-release-branch)              |
+| LLVM release           | usually second Tuesday of Mar/Sep                | [LLVM release schedule](https://llvm.org/docs/HowToReleaseLLVM.html) |
+| bpftrace release       | **2 weeks after the LLVM release**               | [Tagging a release](#tagging-a-release)                              |
+| patch releases         | weekly cadence after the release as necessary    | [Tagging a release](#tagging-a-release)                              |
 
 ## Preparing for a release
 
