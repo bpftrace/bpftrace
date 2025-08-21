@@ -1573,7 +1573,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     //     char[16] inet6;
     //   }
     // }
-    //}
     std::vector<llvm::Type *> elements = { b_.getInt64Ty(),
                                            ArrayType::get(b_.getInt8Ty(), 16) };
     StructType *inet_struct = b_.GetStructType("inet", elements, false);
