@@ -314,7 +314,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
         return false;
     }
   } else if (identifier == "skboutput" || identifier == "socket_cookie") {
-    return bpftrace::progtype(type) == libbpf::BPF_PROG_TYPE_TRACING;
+    return bpftrace::progtype(type) == BPF_PROG_TYPE_TRACING;
   }
 
   if (type == ProbeType::invalid)

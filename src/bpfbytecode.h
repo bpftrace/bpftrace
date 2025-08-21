@@ -83,12 +83,12 @@ private:
 
 class HelperVerifierError : public std::runtime_error {
 public:
-  HelperVerifierError(const std::string &msg, libbpf::bpf_func_id func_id_)
+  HelperVerifierError(const std::string &msg, bpf_func_id func_id_)
       : std::runtime_error(msg), func_id(func_id_)
   {
   }
 
-  const libbpf::bpf_func_id func_id;
+  const bpf_func_id func_id;
 };
 
 } // namespace bpftrace

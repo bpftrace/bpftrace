@@ -98,22 +98,21 @@ public:
   // are needed to emit the error in a useful way. This is because it may be
   // serialized and used by a separate runtime.
   RuntimeErrorInfo(RuntimeErrorId error_id,
-                   libbpf::bpf_func_id func_id,
+                   bpf_func_id func_id,
                    const ast::Location &loc)
       : SourceInfo(loc), error_id(error_id), func_id(func_id)
   {
   }
 
   RuntimeErrorInfo(RuntimeErrorId error_id, const ast::Location &loc)
-      : RuntimeErrorInfo(error_id, static_cast<libbpf::bpf_func_id>(-1), loc) {
-        };
+      : RuntimeErrorInfo(error_id, static_cast<bpf_func_id>(-1), loc) {};
 
   RuntimeErrorInfo()
       : error_id(RuntimeErrorId::HELPER_ERROR),
-        func_id(static_cast<libbpf::bpf_func_id>(-1)) {};
+        func_id(static_cast<bpf_func_id>(-1)) {};
 
   RuntimeErrorId error_id;
-  libbpf::bpf_func_id func_id;
+  bpf_func_id func_id;
 
 private:
   friend class cereal::access;

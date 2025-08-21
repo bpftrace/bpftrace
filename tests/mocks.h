@@ -43,7 +43,7 @@ public:
 
 class MockBpfMap : public BpfMap {
 public:
-  MockBpfMap(libbpf::bpf_map_type type = libbpf::BPF_MAP_TYPE_HASH,
+  MockBpfMap(bpf_map_type type = BPF_MAP_TYPE_HASH,
              std::string name = "mock_map",
              uint32_t key_size = sizeof(uint64_t),
              uint32_t value_size = sizeof(uint64_t),

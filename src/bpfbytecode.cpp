@@ -49,9 +49,8 @@ BpfBytecode::BpfBytecode(std::span<const std::byte> elf)
   else if (bt_verbose)
     log_level = 1;
 
-  BPFTRACE_LIBBPF_OPTS(bpf_object_open_opts,
-                       opts,
-                       .kernel_log_level = static_cast<__u32>(log_level));
+  DECLARE_LIBBPF_OPTS(bpf_object_open_opts, opts);
+  opts.kernel_log_level = static_cast<__u32>(log_level);
 
   bpf_object_ = std::unique_ptr<struct bpf_object, bpf_object_deleter>(
       bpf_object__open_mem(elf.data(), elf.size(), &opts));
@@ -182,7 +181,7 @@ void maybe_throw_helper_verifier_error(std::string_view log,
 
   std::string msg = std::string{ "helper " } + helper_name +
                     exception_msg_suffix;
-  throw HelperVerifierError(msg, static_cast<libbpf::bpf_func_id>(func_id));
+  throw HelperVerifierError(msg, static_cast<bpf_func_id>(func_id));
 }
 
 // The log should end with line:
