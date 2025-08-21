@@ -299,6 +299,23 @@ $ ./tests/bpftrace_test
 # ./src/bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %s\n", comm); }'
 ```
 
+## libbpf dependency
+
+One of the most important dependencies of bpftrace is the
+[libbpf](https://github.com/libbpf/libbpf) library. We usually require a very
+recent version of libbpf and, since bpftrace version 0.24, link against libbpf
+statically. Since some distros do not package the static version of libbpf
+(`libbpf.a`) and some distros package too old version of libbpf, it may be
+necessary to build libbpf [from
+source](https://github.com/libbpf/libbpf?tab=readme-ov-file#building-libbpf).
+
+After building libbpf, it should be installed into some standard path (such as
+`/usr/local/`). In case a non-standard directory is used, you can pass it to the
+above CMake command by setting the `LibBpf_ROOT` variable:
+```
+cmake -DCMAKE_BUILD_TYPE=Release .. -DLibBpf_ROOT=/path/to/libbpf/installation
+```
+
 # Disable Lockdown
 
 From the original patch set description:
