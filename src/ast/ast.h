@@ -1011,18 +1011,6 @@ public:
   std::optional<Expression> return_value;
 };
 
-class Predicate : public Node {
-public:
-  explicit Predicate(ASTContext &ctx, Expression expr, Location &&loc)
-      : Node(ctx, std::move(loc)), expr(std::move(expr)) {};
-  explicit Predicate(ASTContext &ctx,
-                     const Predicate &other,
-                     const Location &loc)
-      : Node(ctx, loc + other.loc), expr(clone(ctx, other.expr, loc)) {};
-
-  Expression expr;
-};
-
 class IfExpr : public Node {
 public:
   explicit IfExpr(ASTContext &ctx,
@@ -1213,24 +1201,20 @@ class Probe : public Node {
 public:
   explicit Probe(ASTContext &ctx,
                  AttachPointList &&attach_points,
-                 Predicate *pred,
                  BlockExpr *block,
                  Location &&loc)
       : Node(ctx, std::move(loc)),
         attach_points(std::move(attach_points)),
-        pred(pred),
         block(block),
         orig_name(probe_orig_name(this->attach_points)) {};
   explicit Probe(ASTContext &ctx, const Probe &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         attach_points(clone(ctx, other.attach_points, loc)),
-        pred(clone(ctx, other.pred, loc)),
         block(clone(ctx, other.block, loc)),
         orig_name(other.orig_name),
         index_(other.index_) {};
 
   AttachPointList attach_points;
-  Predicate *pred = nullptr;
   BlockExpr *block = nullptr;
   std::string orig_name;
 

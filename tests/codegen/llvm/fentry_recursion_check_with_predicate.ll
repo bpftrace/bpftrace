@@ -18,7 +18,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @fentry_mock_vmlinux_queued_spin_lock_slowpath_1(ptr %0) #0 section "s_fentry_mock_vmlinux_queued_spin_lock_slowpath_1" !dbg !52 {
 entry:
-  %lookup_key8 = alloca i32, align 4
   %lookup_key1 = alloca i32, align 4
   %lookup_key = alloca i32, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_key)
@@ -43,8 +42,8 @@ lookup_merge:                                     ; preds = %lookup_success
   %pid = trunc i64 %2 to i32
   %3 = zext i32 %pid to i64
   %4 = icmp eq i64 %3, 1234
-  %predcond = icmp eq i1 %4, false
-  br i1 %predcond, label %pred_false, label %pred_true
+  %true_cond = icmp ne i1 %4, false
+  br i1 %true_cond, label %left, label %right
 
 value_is_set:                                     ; preds = %lookup_success
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #2
@@ -56,42 +55,29 @@ value_is_set:                                     ; preds = %lookup_success
   store i64 %8, ptr %6, align 8
   ret i64 0
 
-pred_false:                                       ; preds = %lookup_merge
+left:                                             ; preds = %lookup_merge
+  br label %done
+
+right:                                            ; preds = %lookup_merge
+  br label %done
+
+done:                                             ; preds = %right, %left
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_key1)
   store i32 0, ptr %lookup_key1, align 4
   %lookup_elem2 = call ptr inttoptr (i64 1 to ptr)(ptr @recursion_prevention, ptr %lookup_key1)
   %map_lookup_cond6 = icmp ne ptr %lookup_elem2, null
   br i1 %map_lookup_cond6, label %lookup_success3, label %lookup_failure4
 
-pred_true:                                        ; preds = %lookup_merge
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_key8)
-  store i32 0, ptr %lookup_key8, align 4
-  %lookup_elem9 = call ptr inttoptr (i64 1 to ptr)(ptr @recursion_prevention, ptr %lookup_key8)
-  %map_lookup_cond13 = icmp ne ptr %lookup_elem9, null
-  br i1 %map_lookup_cond13, label %lookup_success10, label %lookup_failure11
-
-lookup_success3:                                  ; preds = %pred_false
+lookup_success3:                                  ; preds = %done
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_key1)
   %cast7 = ptrtoint ptr %lookup_elem2 to i64
   store i64 0, i64 %cast7, align 8
   br label %lookup_merge5
 
-lookup_failure4:                                  ; preds = %pred_false
+lookup_failure4:                                  ; preds = %done
   br label %lookup_merge5
 
 lookup_merge5:                                    ; preds = %lookup_failure4, %lookup_success3
-  ret i64 0
-
-lookup_success10:                                 ; preds = %pred_true
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_key8)
-  %cast14 = ptrtoint ptr %lookup_elem9 to i64
-  store i64 0, i64 %cast14, align 8
-  br label %lookup_merge12
-
-lookup_failure11:                                 ; preds = %pred_true
-  br label %lookup_merge12
-
-lookup_merge12:                                   ; preds = %lookup_failure11, %lookup_success10
   ret i64 0
 }
 

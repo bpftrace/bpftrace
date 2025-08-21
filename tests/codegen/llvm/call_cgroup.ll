@@ -22,13 +22,10 @@ entry:
   %"@x_key" = alloca i64, align 8
   %get_cgroup_id = call i64 inttoptr (i64 80 to ptr)() #2
   %1 = icmp eq i64 %get_cgroup_id, 4294967297
-  %predcond = icmp eq i1 %1, false
-  br i1 %predcond, label %pred_false, label %pred_true
+  %true_cond = icmp ne i1 %1, false
+  br i1 %true_cond, label %left, label %right
 
-pred_false:                                       ; preds = %entry
-  ret i64 1
-
-pred_true:                                        ; preds = %entry
+left:                                             ; preds = %entry
   %get_cgroup_id1 = call i64 inttoptr (i64 80 to ptr)() #2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
@@ -37,6 +34,12 @@ pred_true:                                        ; preds = %entry
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
+  br label %done
+
+right:                                            ; preds = %entry
+  br label %done
+
+done:                                             ; preds = %right, %left
   ret i64 1
 }
 

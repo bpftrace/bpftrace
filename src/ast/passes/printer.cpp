@@ -499,16 +499,6 @@ void Printer::visit(Jump &jump)
   --depth_;
 }
 
-void Printer::visit(Predicate &pred)
-{
-  std::string indent(depth_, ' ');
-  out_ << indent << "pred" << std::endl;
-
-  ++depth_;
-  visit(pred.expr);
-  --depth_;
-}
-
 void Printer::visit(AttachPoint &ap)
 {
   std::string indent(depth_, ' ');
@@ -520,7 +510,6 @@ void Printer::visit(Probe &probe)
   visit(probe.attach_points);
 
   ++depth_;
-  visit(probe.pred);
   visit(probe.block);
   --depth_;
 }

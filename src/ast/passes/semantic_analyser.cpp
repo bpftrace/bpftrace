@@ -167,7 +167,6 @@ public:
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
   void visit(Unroll &unroll);
-  void visit(Predicate &pred);
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
   void visit(BlockExpr &block);
@@ -3754,18 +3753,6 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
   variable_decls_[scope_stack_.back()].insert({ var_ident, decl });
 }
 
-void SemanticAnalyser::visit(Predicate &pred)
-{
-  visit(pred.expr);
-  if (is_final_pass()) {
-    const auto &ty = pred.expr.type();
-    if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy()) {
-      pred.addError() << "Invalid type for predicate: "
-                      << pred.expr.type().GetTy();
-    }
-  }
-}
-
 void SemanticAnalyser::visit(AttachPoint &ap)
 {
   if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
@@ -4088,7 +4075,6 @@ void SemanticAnalyser::visit(Probe &probe)
     }
     visit(ap);
   }
-  visit(probe.pred);
   visit(probe.block);
 }
 

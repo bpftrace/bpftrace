@@ -823,9 +823,10 @@ TEST(Parser, predicate)
   test("kprobe:sys_open / @x / { 1; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  pred\n"
+       "  if\n"
        "   map: @x\n"
-       "  int: 1 :: [int64]\n");
+       "   then\n"
+       "    int: 1 :: [int64]\n");
 }
 
 TEST(Parser, predicate_containing_division)
@@ -833,11 +834,12 @@ TEST(Parser, predicate_containing_division)
   test("kprobe:sys_open /100/25/ { 1; }",
        "Program\n"
        " kprobe:sys_open\n"
-       "  pred\n"
+       "  if\n"
        "   /\n"
        "    int: 100 :: [int64]\n"
        "    int: 25 :: [int64]\n"
-       "  int: 1 :: [int64]\n");
+       "   then\n"
+       "    int: 1 :: [int64]\n");
 }
 
 TEST(Parser, expressions)
@@ -849,7 +851,7 @@ TEST(Parser, expressions)
        "}",
        "Program\n"
        " kprobe:sys_open\n"
-       "  pred\n"
+       "  if\n"
        "   ||\n"
        "    &&\n"
        "     <=\n"
@@ -868,7 +870,8 @@ TEST(Parser, expressions)
        "    ==\n"
        "     builtin: __builtin_comm\n"
        "     string: string\n"
-       "  int: 1 :: [int64]\n");
+       "   then\n"
+       "    int: 1 :: [int64]\n");
 }
 
 TEST(Parser, variable_post_increment_decrement)
@@ -940,15 +943,16 @@ TEST(Parser, bit_shifting)
   test("kprobe:do_nanosleep / 2 < 1 >> 8 / { $x = 1 }",
        "Program\n"
        " kprobe:do_nanosleep\n"
-       "  pred\n"
+       "  if\n"
        "   <\n"
        "    int: 2 :: [int64]\n"
        "    >>\n"
        "     int: 1 :: [int64]\n"
        "     int: 8 :: [int64]\n"
-       "  =\n"
-       "   variable: $x\n"
-       "   int: 1 :: [int64]\n");
+       "   then\n"
+       "    =\n"
+       "     variable: $x\n"
+       "     int: 1 :: [int64]\n");
 }
 
 TEST(Parser, ternary_int)

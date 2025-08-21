@@ -157,7 +157,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::MapAccess *> map_expr
 %type <ast::PositionalParameter *> param
 %type <ast::PositionalParameterCount *> param_count
-%type <ast::Predicate *> pred
+%type <std::optional<ast::Expression>> pred
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
@@ -386,7 +386,19 @@ root_stmt:
                 ;
 
 probe:
-                attach_points pred none_block { $$ = driver.ctx.make_node<ast::Probe>(std::move($1), $2, $3, @$); }
+                attach_points pred none_block
+                {
+                  auto *block = $3;
+                  if ($2.has_value()) {
+                    // If there a predicate, consider this as an `if` statement
+                    // over the full block. This simplifies all later steps, and
+                    // the predicate may still be folded, eliminating the probe.
+                    auto *none = driver.ctx.make_node<ast::None>(@1);
+                    auto *cond = driver.ctx.make_node<ast::IfExpr>($2.value(), block, none, @2);
+                    block = driver.ctx.make_node<ast::BlockExpr>(ast::StatementList{}, cond, @$);
+                  }
+                  $$ = driver.ctx.make_node<ast::Probe>(std::move($1), block, @$);
+                }
                 ;
 
 attach_points:
@@ -426,8 +438,8 @@ attach_point_def:
                 ;
 
 pred:
-                DIV expr ENDPRED { $$ = driver.ctx.make_node<ast::Predicate>($2, @$); }
-        |        %empty           { $$ = nullptr; }
+                DIV expr ENDPRED { $$ = $2; }
+        |       %empty           { $$ = std::nullopt; }
                 ;
 
 
