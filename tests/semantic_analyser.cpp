@@ -424,18 +424,14 @@ TEST_F(SemanticAnalyserTest, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }");
   test("kprobe:f / true / { 123 }");
-  test("kprobe:f / \"str\" / { 123 }", Error{ R"(
-stdin:1:10-19: ERROR: Invalid type for predicate: string
-kprobe:f / "str" / { 123 }
-         ~~~~~~~~~
-)" });
+  test("kprobe:f / \"str\" / { 123 }");
   test("kprobe:f / kstack / { 123 }", Error{ R"(
-stdin:1:10-20: ERROR: Invalid type for predicate: kstack
+stdin:1:10-20: ERROR: Invalid condition: kstack
 kprobe:f / kstack / { 123 }
          ~~~~~~~~~~
 )" });
   test("kprobe:f / @mymap / { @mymap = \"str\" }", Error{ R"(
-stdin:1:10-20: ERROR: Invalid type for predicate: string
+stdin:1:10-20: ERROR: Invalid condition: string
 kprobe:f / @mymap / { @mymap = "str" }
          ~~~~~~~~~~
 )" });

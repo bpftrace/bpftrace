@@ -38,7 +38,6 @@ void ExpansionAnalyser::visit(Probe &probe)
   probe_ = &probe;
 
   visit(probe.attach_points);
-  visit(probe.pred);
   visit(probe.block);
 }
 
@@ -159,10 +158,9 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
   // - has a single kretprobe attach point
   // - attaches to the same target and function as probe
   // - is multi-expanded (session expansion uses the same attach mechanism)
-  // - has no predicate
   std::ranges::copy_if(
       ast_.root->probes, std::back_inserter(retprobes), [&](Probe *other) {
-        return other->attach_points.size() == 1 && other->pred == nullptr &&
+        return other->attach_points.size() == 1 &&
                probetype(other->attach_points[0]->provider) ==
                    ProbeType::kretprobe &&
                expansion_result_.get_expansion(*other->attach_points[0]) ==
@@ -184,10 +182,8 @@ void SessionExpander::visit(Probe &probe)
   // there's another probe with a single multi-expanded kretprobe attach point
   // with the same target. If so, perform session expansion by merging the two
   // probes together.
-  // Currently, we don't allow predicates in either of the probes.
   if (probe.attach_points.size() == 1 &&
-      probetype(probe.attach_points[0]->provider) == ProbeType::kprobe &&
-      probe.pred == nullptr) {
+      probetype(probe.attach_points[0]->provider) == ProbeType::kprobe) {
     Probe *retprobe = find_matching_retprobe(probe);
     if (!retprobe)
       return;

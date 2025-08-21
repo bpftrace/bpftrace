@@ -25,13 +25,10 @@ entry:
   %pid = trunc i64 %1 to i32
   %2 = zext i32 %pid to i64
   %3 = icmp eq i64 %2, 1234
-  %predcond = icmp eq i1 %3, false
-  br i1 %predcond, label %pred_false, label %pred_true
+  %true_cond = icmp ne i1 %3, false
+  br i1 %true_cond, label %left, label %right
 
-pred_false:                                       ; preds = %entry
-  ret i64 0
-
-pred_true:                                        ; preds = %entry
+left:                                             ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
@@ -39,6 +36,12 @@ pred_true:                                        ; preds = %entry
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
+  br label %done
+
+right:                                            ; preds = %entry
+  br label %done
+
+done:                                             ; preds = %right, %left
   ret i64 0
 }
 

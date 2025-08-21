@@ -53,7 +53,6 @@ public:
   void visit(For &for_loop);
   void visit(Config &config);
   void visit(Jump &jump);
-  void visit(Predicate &pred);
   void visit(AttachPoint &ap);
   void visit(Probe &probe);
   void visit(SubprogArg &arg);

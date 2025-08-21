@@ -239,7 +239,6 @@ public:
   ScopedExpr visit(For &f, Range &range);
   ScopedExpr visit(For &f);
   ScopedExpr visit(Jump &jump);
-  ScopedExpr visit(Predicate &pred);
   ScopedExpr visit(Probe &probe);
   ScopedExpr visit(Subprog &subprog);
   ScopedExpr visit(Program &program);
@@ -3311,33 +3310,6 @@ ScopedExpr CodegenLLVM::visit(For &f)
   return ScopedExpr();
 }
 
-ScopedExpr CodegenLLVM::visit(Predicate &pred)
-{
-  llvm::Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(),
-                                                    "pred_false",
-                                                    parent);
-  BasicBlock *pred_true_block = BasicBlock::Create(module_->getContext(),
-                                                   "pred_true",
-                                                   parent);
-
-  auto scoped_expr = visit(pred.expr);
-
-  auto *cmp_value = b_.CreateICmpEQ(scoped_expr.value(),
-                                    Constant::getNullValue(
-                                        b_.GetType(pred.expr.type())),
-                                    "predcond");
-
-  b_.CreateCondBr(cmp_value, pred_false_block, pred_true_block);
-  b_.SetInsertPoint(pred_false_block);
-
-  createRet();
-
-  b_.SetInsertPoint(pred_true_block);
-
-  return ScopedExpr(cmp_value);
-}
-
 ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
 {
   scope_stack_.push_back(&block_expr);
@@ -3376,8 +3348,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
                                getReturnValueForProbe(probe_type));
   }
 
-  if (probe.pred)
-    visit(*probe.pred);
   variables_.clear();
   auto scoped_block = visit(*probe.block);
   createRet();

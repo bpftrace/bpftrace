@@ -212,14 +212,9 @@ public:
     visitImpl(for_loop.block);
     return default_value();
   }
-  R visit(Predicate &pred)
-  {
-    return visitImpl(pred.expr);
-  }
   R visit(Probe &probe)
   {
     visitImpl(probe.attach_points);
-    visitImpl(probe.pred);
     visitImpl(probe.block);
     return default_value();
   }

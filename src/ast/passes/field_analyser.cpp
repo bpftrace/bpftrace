@@ -377,9 +377,6 @@ void FieldAnalyser::visit(Probe &probe)
     prog_type_ = progtype(probe_type_);
     attach_func_ = ap->func;
   }
-  if (probe.pred) {
-    visit(probe.pred);
-  }
   visit(probe.block);
 }
 
