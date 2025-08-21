@@ -28,8 +28,7 @@ TEST(TextOutput, lhist_no_suffix)
   HistogramMap values_by_key = {
     { OpaqueValue::from<uint64_t>(0), { 0, 1, 1, 1, 1, 1, 1, 0 } },
   };
-  auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
-                                               "@mymap");
+  auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, "@mymap");
   EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
       .WillOnce(testing::Return(
           testing::ByMove(Result<HistogramMap>(values_by_key))));
@@ -70,8 +69,7 @@ TEST(TextOutput, lhist_suffix)
   const HistogramMap values_by_key = {
     { OpaqueValue::from<uint64_t>(0), { 0, 1, 1, 1, 1, 1, 0 } },
   };
-  auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
-                                               "@mymap");
+  auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, "@mymap");
   EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
       .WillOnce(testing::Return(testing::ByMove(HistogramMap(values_by_key))));
 

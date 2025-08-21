@@ -1,7 +1,8 @@
 #pragma once
 
+#include <bpf/bpf.h>
+
 #include "btf/btf.h"
-#include "libbpf/bpf.h"
 
 namespace bpftrace::btf {
 

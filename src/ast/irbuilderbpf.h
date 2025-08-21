@@ -151,7 +151,7 @@ public:
                                 const Location &loc);
   void CreateCheckSetRecursion(const Location &loc, int early_exit_ret);
   void CreateUnSetRecursion(const Location &loc);
-  CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
+  CallInst *CreateHelperCall(bpf_func_id func_id,
                              FunctionType *helper_type,
                              ArrayRef<Value *> args,
                              bool is_pure,
@@ -184,10 +184,10 @@ public:
   void CreateRuntimeError(RuntimeErrorId rte_id, const Location &loc);
   void CreateRuntimeError(RuntimeErrorId rte_id,
                           Value *return_value,
-                          libbpf::bpf_func_id func_id,
+                          bpf_func_id func_id,
                           const Location &loc);
   void CreateHelperErrorCond(Value *return_value,
-                             libbpf::bpf_func_id func_id,
+                             bpf_func_id func_id,
                              const Location &loc,
                              bool suppress_error = false);
   StructType *GetStackStructType(bool is_ustack);
@@ -298,7 +298,7 @@ private:
   Value *createScratchBuffer(std::string_view global_var_name,
                              const Location &loc,
                              size_t key);
-  libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
+  bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
   void CreateRingbufOutput(Value *data, size_t size, const Location &loc);
 

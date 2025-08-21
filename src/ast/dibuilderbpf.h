@@ -1,14 +1,11 @@
 #pragma once
 
+#include <bpf/bpf.h>
 #include <linux/bpf.h>
 #include <llvm/IR/DIBuilder.h>
 
 #include "ast/location.h"
 #include "types.h"
-
-namespace libbpf {
-#include "libbpf/bpf.h"
-} // namespace libbpf
 
 namespace bpftrace::ast {
 
@@ -44,10 +41,10 @@ public:
                                   DIType *type);
   DIType *GetMapKeyType(const SizedType &key_type,
                         const SizedType &value_type,
-                        libbpf::bpf_map_type map_type);
+                        bpf_map_type map_type);
   DIType *GetMapFieldInt(int value);
   DIGlobalVariableExpression *createMapEntry(const std::string &name,
-                                             libbpf::bpf_map_type map_type,
+                                             bpf_map_type map_type,
                                              uint64_t max_entries,
                                              DIType *key_type,
                                              const SizedType &value_type);

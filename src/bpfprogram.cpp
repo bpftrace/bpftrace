@@ -23,21 +23,21 @@ int BpfProgram::fd() const
 void BpfProgram::set_prog_type(const Probe &probe)
 {
   auto prog_type = progtype(probe.type);
-  bpf_program__set_type(bpf_prog_, static_cast<::bpf_prog_type>(prog_type));
+  bpf_program__set_type(bpf_prog_, prog_type);
 }
 
 void BpfProgram::set_expected_attach_type(const Probe &probe,
                                           BPFfeature &feature)
 {
-  auto attach_type = static_cast<libbpf::bpf_attach_type>(0);
+  auto attach_type = static_cast<bpf_attach_type>(0);
   if (probe.type == ProbeType::fentry)
-    attach_type = libbpf::BPF_TRACE_FENTRY;
+    attach_type = BPF_TRACE_FENTRY;
   else if (probe.type == ProbeType::fexit)
-    attach_type = libbpf::BPF_TRACE_FEXIT;
+    attach_type = BPF_TRACE_FEXIT;
   else if (probe.type == ProbeType::iter)
-    attach_type = libbpf::BPF_TRACE_ITER;
+    attach_type = BPF_TRACE_ITER;
   else if (probe.type == ProbeType::rawtracepoint)
-    attach_type = libbpf::BPF_TRACE_RAW_TP;
+    attach_type = BPF_TRACE_RAW_TP;
 
   // We want to avoid kprobe_multi when a module is specified
   // because the BPF_TRACE_KPROBE_MULTI link type does not
@@ -45,20 +45,19 @@ void BpfProgram::set_expected_attach_type(const Probe &probe,
   if ((probe.type == ProbeType::kprobe || probe.type == ProbeType::kretprobe) &&
       !probe.funcs.empty() && probe.path.empty()) {
     if (probe.is_session && feature.has_kprobe_session())
-      attach_type = libbpf::BPF_TRACE_KPROBE_SESSION;
+      attach_type = BPF_TRACE_KPROBE_SESSION;
     else if (feature.has_kprobe_multi())
-      attach_type = libbpf::BPF_TRACE_KPROBE_MULTI;
+      attach_type = BPF_TRACE_KPROBE_MULTI;
   }
 
   if (feature.has_uprobe_multi() && (((probe.type == ProbeType::uprobe ||
                                        probe.type == ProbeType::uretprobe) &&
                                       !probe.funcs.empty()) ||
                                      probe.type == ProbeType::usdt)) {
-    attach_type = libbpf::BPF_TRACE_UPROBE_MULTI;
+    attach_type = BPF_TRACE_UPROBE_MULTI;
   }
 
-  bpf_program__set_expected_attach_type(
-      bpf_prog_, static_cast<::bpf_attach_type>(attach_type));
+  bpf_program__set_expected_attach_type(bpf_prog_, attach_type);
 }
 
 void BpfProgram::set_attach_target(const Probe &probe,
