@@ -173,7 +173,6 @@
                   pkgs.libopcodes
                   pkgs.libpcap
                   pkgs.systemdLibs
-                  pkgs.libsystemtap
                   pkgs."llvmPackages_${toString llvmVersion}".libclang
                   pkgs."llvmPackages_${toString llvmVersion}".llvm
                   pkgs.pahole

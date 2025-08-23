@@ -26,7 +26,6 @@ RUN dnf install -y \
         llvm-devel \
         make \
         pahole \
-        systemtap-sdt-devel \
         xxd \
         zlib-devel
 
