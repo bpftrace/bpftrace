@@ -272,7 +272,6 @@ Use specific OS build sections listed earlier if available.
 - Libcereal
 - Kernel requirements described earlier
 - Libpcap
-- Systemtap SDT headers
 - Zlib development package
 
 ### Compilation
