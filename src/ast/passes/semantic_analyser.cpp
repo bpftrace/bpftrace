@@ -2301,9 +2301,10 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
                          << " is out of bounds for array of size " << num;
         }
       }
-    } else {
+    } else if (!arr.indexpr.type().IsIntTy() || arr.indexpr.type().IsSigned()) {
       arr.addError() << "The array index operator [] only "
-                        "accepts positive literal integer indices.";
+                        "accepts positive (unsigned) integer indices. Got: "
+                     << arr.indexpr.type();
     }
   }
 
