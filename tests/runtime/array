@@ -3,6 +3,11 @@ PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (
 EXPECT @x: 1
 AFTER ./testprogs/array_access
 
+NAME array element access - with variable index
+PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $y = (uint64)0; $a = (struct A *) arg0; @x = $a->x[$y]; exit(); }
+EXPECT @x: 1
+AFTER ./testprogs/array_access
+
 NAME array element access - assign to var
 PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[0]; printf("Result: %d\n", $x); exit(); }
 EXPECT Result: 1
@@ -13,6 +18,11 @@ PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (
 EXPECT stdin:1:100-108: ERROR: the index 5 is out of bounds for array of size 4
 AFTER ./testprogs/array_access
 WILL_FAIL
+
+NAME array element access - out of bounds runtime
+PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $y = (uint64)100; $a = (struct A *) arg0; @x = $a->x[$y]; exit(); }
+EXPECT stdin:1:118-127: WARNING: Array access out of bounds. This can lead to unexpected results.
+AFTER ./testprogs/array_access
 
 NAME array element access via assignment into var
 PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; $x = $a[0]; printf("Result: %d\n", $x); exit(); }

@@ -5,6 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.0" = type { ptr, ptr }
+%runtime_error_t = type <{ i64, i64, i32 }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_x = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -21,6 +22,7 @@ entry:
   %"$var" = alloca i32, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var")
   store i32 0, ptr %"$var", align 4
+  %runtime_error_t = alloca %runtime_error_t, align 8
   %lookup_elem_val = alloca [4 x i32], align 4
   %"@x_key1" = alloca i64, align 8
   %"@x_val" = alloca [4 x i32], align 4
@@ -55,11 +57,40 @@ lookup_failure:                                   ; preds = %entry
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
-  %6 = getelementptr [4 x i32], ptr %lookup_elem_val, i32 0, i64 0
-  %7 = load volatile i32, ptr %6, align 4
+  br i1 false, label %is_oob, label %oob_merge
+
+is_oob:                                           ; preds = %lookup_merge
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
+  %6 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
+  store i64 30006, ptr %6, align 8
+  %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
+  store i64 0, ptr %7, align 8
+  %8 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
+  store i64 0, ptr %8, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %runtime_error_t, i64 20, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+oob_merge:                                        ; preds = %counter_merge, %lookup_merge
+  %9 = getelementptr [4 x i32], ptr %lookup_elem_val, i32 0, i64 0
+  %10 = load volatile i32, ptr %9, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val)
-  store i32 %7, ptr %"$var", align 4
+  store i32 %10, ptr %"$var", align 4
   ret i64 0
+
+event_loss_counter:                               ; preds = %is_oob
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #5
+  %11 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %11
+  %12 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %13 = load i64, ptr %12, align 8
+  %14 = add i64 %13, 1
+  store i64 %14, ptr %12, align 8
+  br label %counter_merge
+
+counter_merge:                                    ; preds = %event_loss_counter, %is_oob
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %runtime_error_t)
+  br label %oob_merge
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
@@ -82,6 +113,7 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #5 = { memory(none) }
 
 !llvm.dbg.cu = !{!49}
 !llvm.module.flags = !{!51, !52}
