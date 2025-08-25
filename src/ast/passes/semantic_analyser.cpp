@@ -574,6 +574,55 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
           arg_type_spec{ .type=Type::string },
           arg_type_spec{ .type=Type::string },
           arg_type_spec{ .type=Type::integer, .literal=true } } } },
+  { "strcmp",
+    { .min_args=2,
+      .max_args=2,
+      .discard_ret_warn = true,
+      .arg_types={
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::string } } } },
+  { "strnlen",
+    { .min_args=2,
+      .max_args=2,
+      .discard_ret_warn = true,
+      .arg_types={
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::integer } } } },
+  { "strlen",
+    { .min_args=1,
+      .max_args=1,
+      .discard_ret_warn = true,
+      .arg_types={
+          arg_type_spec{ .type=Type::string } } } },
+  { "strspn",
+    { .min_args=2,
+      .max_args=2,
+      .discard_ret_warn = true,
+      .arg_types={
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::string } } } },
+  { "strcspn",
+    { .min_args=2,
+      .max_args=2,
+      .discard_ret_warn = true,
+      .arg_types={
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::string } } } },
+  { "strnstr",
+    { .min_args=3,
+      .max_args=3,
+      .discard_ret_warn = true,
+      .arg_types={
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::integer, .literal=true } } } },
+  { "strstr",
+    { .min_args=2,
+      .max_args=2,
+      .discard_ret_warn = true,
+      .arg_types={
+          arg_type_spec{ .type=Type::string },
+          arg_type_spec{ .type=Type::string } } } },
   { "sum",
     { .min_args=3,
       .max_args=3,
@@ -1775,6 +1824,41 @@ void SemanticAnalyser::visit(Call &call)
       call.addError() << "Builtin strncmp requires a non-negative literal";
     }
     call.return_type = CreateUInt64();
+  } else if (call.func == "strcmp") {
+    call.return_type = CreateUInt64();
+  } else if (call.func == "strlen") {
+    if (!bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strlen)) {
+      call.addError() << "kernel not support bpf_strlen()!";
+    }
+    call.return_type = CreateInt64();
+  } else if (call.func == "strnlen") {
+    if (!bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strnlen)) {
+      call.addError() << "kernel not support bpf_strnlen()!";
+    }
+    call.return_type = CreateInt64();
+  } else if (call.func == "strspn") {
+    if (!bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strspn)) {
+      call.addError() << "kernel not support bpf_strspn()!";
+    }
+    call.return_type = CreateInt64();
+  } else if (call.func == "strcspn") {
+    if (!bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strcspn)) {
+      call.addError() << "kernel not support bpf_strcspn()!";
+    }
+    call.return_type = CreateInt64();
+  } else if (call.func == "strnstr") {
+    if (!call.vargs.at(2).is<Integer>()) {
+      call.addError() << "Builtin strnstr requires a non-negative literal";
+    }
+    if (!bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strnstr)) {
+      call.addError() << "kernel not support bpf_strnstr()!";
+    }
+    call.return_type = CreateInt64();
+  } else if (call.func == "strstr") {
+    if (!bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strstr)) {
+      call.addError() << "kernel not support bpf_strstr()!";
+    }
+    call.return_type = CreateInt64();
   } else if (call.func == "strcontains") {
     static constexpr auto warning = R"(
 strcontains() is known to have verifier complexity issues when the product of both string sizes is larger than ~2000 bytes.

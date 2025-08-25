@@ -1953,6 +1953,80 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateStrncmp(
         left_string.value(), right_string.value(), size, false));
+  } else if (call.func == "strcmp") {
+    // int bpf_strcmp(const char *s1__ign, const char *s2__ign)
+    auto &arg_s1 = call.vargs.at(0);
+    auto &arg_s2 = call.vargs.at(1);
+
+    auto s1 = visit(&arg_s1);
+    auto s2 = visit(&arg_s2);
+
+    return ScopedExpr(CreateKernelFuncCall(
+        Kfunc::bpf_strcmp, { s1.value(), s2.value() }, "strcmp", call));
+  } else if (call.func == "strlen") {
+    // int bpf_strlen(char *s1__ign)
+    auto &arg_s1 = call.vargs.at(0);
+
+    auto s1 = visit(&arg_s1);
+
+    return ScopedExpr(CreateKernelFuncCall(
+        Kfunc::bpf_strlen, { s1.value() }, "strlen", call));
+  } else if (call.func == "strnlen") {
+    // int bpf_strnlen(const char *s1__ign, size_t len)
+    auto &arg_s1 = call.vargs.at(0);
+    auto len_opt = call.vargs.at(1).as<Integer>()->value;
+    uint64_t len = std::min({ len_opt, arg_s1.type().GetSize() });
+
+    auto s1 = visit(&arg_s1);
+
+    return ScopedExpr(CreateKernelFuncCall(
+        Kfunc::bpf_strnlen, { s1.value(), b_.getInt64(len) }, "strnlen", call));
+  } else if (call.func == "strspn") {
+    // int bpf_strspn(const char *s__ign, const char *accept__ign)
+    auto &arg_s = call.vargs.at(0);
+    auto &arg_accept = call.vargs.at(1);
+
+    auto s = visit(&arg_s);
+    auto accept = visit(&arg_accept);
+
+    return ScopedExpr(CreateKernelFuncCall(
+        Kfunc::bpf_strspn, { s.value(), accept.value() }, "strspn", call));
+  } else if (call.func == "strcspn") {
+    // int bpf_strcspn(const char *s__ign, const char *reject__ign)
+    auto &arg_s = call.vargs.at(0);
+    auto &arg_reject = call.vargs.at(1);
+
+    auto s = visit(&arg_s);
+    auto reject = visit(&arg_reject);
+
+    return ScopedExpr(CreateKernelFuncCall(
+        Kfunc::bpf_strcspn, { s.value(), reject.value() }, "strcspn", call));
+  } else if (call.func == "strnstr") {
+    // int bpf_strnstr(const char *s1__ign, const char *s2__ign, size_t len)
+    auto &arg_s1 = call.vargs.at(0);
+    auto &arg_s2 = call.vargs.at(1);
+    auto len_opt = call.vargs.at(2).as<Integer>()->value;
+    uint64_t len = std::min(
+        { len_opt, arg_s1.type().GetSize(), arg_s2.type().GetSize() });
+
+    auto s1 = visit(&arg_s1);
+    auto s2 = visit(&arg_s2);
+
+    return ScopedExpr(
+        CreateKernelFuncCall(Kfunc::bpf_strnstr,
+                             { s1.value(), s2.value(), b_.getInt64(len) },
+                             "strnstr",
+                             call));
+  } else if (call.func == "strstr") {
+    // int bpf_strstr(char *s1__ign, char *s2__ign)
+    auto &arg_s1 = call.vargs.at(0);
+    auto &arg_s2 = call.vargs.at(1);
+
+    auto s1 = visit(&arg_s1);
+    auto s2 = visit(&arg_s2);
+
+    return ScopedExpr(CreateKernelFuncCall(
+        Kfunc::bpf_strstr, { s1.value(), s2.value() }, "strstr", call));
   } else if (call.func == "strcontains") {
     auto &left_arg = call.vargs.at(0);
     auto &right_arg = call.vargs.at(1);
