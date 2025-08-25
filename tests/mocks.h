@@ -105,6 +105,12 @@ public:
     return true;
   }
 
+  Result<uint64_t> get_buffer_pages(
+      [[maybe_unused]] std::optional<uint64_t> default_val) const override
+  {
+    return 64;
+  }
+
   std::unordered_set<std::string> get_func_modules(
       const std::string &__attribute__((unused)) /*func_name*/) const override
   {

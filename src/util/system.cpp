@@ -190,4 +190,33 @@ Result<std::vector<std::string>> get_mapped_paths_for_running_pids()
   return paths;
 }
 
+Result<uint64_t> get_available_mem_kb()
+{
+  std::ifstream file("/proc/meminfo");
+  std::string line;
+  uint64_t memAvailable = 0;
+
+  if (!file.is_open()) {
+    return make_error<SystemError>("Unable to open /proc/meminfo ");
+  }
+
+  while (std::getline(file, line)) {
+    if (line.starts_with("MemAvailable:")) {
+      size_t pos = line.find(":");
+      if (pos != std::string::npos) {
+        std::string valueStr = line.substr(pos + 1);
+        size_t kbPos = valueStr.find("kB");
+        if (kbPos != std::string::npos) {
+          valueStr = valueStr.substr(0, kbPos);
+        }
+        memAvailable = std::stoull(valueStr);
+      }
+      break;
+    }
+  }
+  file.close();
+
+  return memAvailable;
+}
+
 } // namespace bpftrace::util
