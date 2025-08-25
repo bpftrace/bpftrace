@@ -5,6 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.0" = type { ptr, ptr }
+%runtime_error_t = type <{ i64, i64, i32 }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_x = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -21,6 +22,7 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %array_access = alloca i32, align 4
+  %runtime_error_t = alloca %runtime_error_t, align 8
   %"$var" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var")
   store i0 0, ptr %"$var", align 1
@@ -33,23 +35,52 @@ entry:
   %6 = ptrtoint ptr %5 to i64
   store i64 %6, ptr %"$var", align 8
   %7 = load ptr, ptr %"$var", align 8
-  %8 = ptrtoint ptr %7 to i64
-  %9 = inttoptr i64 %8 to ptr
-  %10 = call ptr @llvm.preserve.static.offset(ptr %9)
-  %11 = getelementptr i8, ptr %10, i64 0
+  br i1 false, label %is_oob, label %oob_merge
+
+is_oob:                                           ; preds = %entry
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
+  %8 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
+  store i64 30006, ptr %8, align 8
+  %9 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
+  store i64 0, ptr %9, align 8
+  %10 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
+  store i64 0, ptr %10, align 8
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %runtime_error_t, i64 20, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+oob_merge:                                        ; preds = %counter_merge, %entry
+  %11 = ptrtoint ptr %7 to i64
+  %12 = inttoptr i64 %11 to ptr
+  %13 = call ptr @llvm.preserve.static.offset(ptr %12)
+  %14 = getelementptr i8, ptr %13, i64 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 4, ptr %11)
-  %12 = load i32, ptr %array_access, align 4
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 4, ptr %14)
+  %15 = load i32, ptr %array_access, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  %13 = sext i32 %12 to i64
-  store i64 %13, ptr %"@x_val", align 8
+  %16 = sext i32 %15 to i64
+  store i64 %16, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   ret i64 0
+
+event_loss_counter:                               ; preds = %is_oob
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
+  %17 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %17
+  %18 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %19 = load i64, ptr %18, align 8
+  %20 = add i64 %19, 1
+  store i64 %20, ptr %18, align 8
+  br label %counter_merge
+
+counter_merge:                                    ; preds = %event_loss_counter, %is_oob
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %runtime_error_t)
+  br label %oob_merge
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
@@ -64,6 +95,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #3 = { memory(none) }
 
 !llvm.dbg.cu = !{!42}
 !llvm.module.flags = !{!44, !45}
