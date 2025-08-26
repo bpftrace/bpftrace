@@ -134,7 +134,7 @@ EXPECT I got hhvm-proc
 
 NAME strncmp function argument
 RUN {{BPFTRACE}} -e 'struct F {char s[8];} u:./testprogs/string_args:print { @=strncmp(((struct F*)arg0)->s, "hello", 5); }' -c ./testprogs/string_args
-EXPECT @: 0
+EXPECT @: false
 
 NAME short non null-terminated string print
 RUN {{BPFTRACE}} -e 'struct F {char s[5];} u:./testprogs/string_args:print { $a = ((struct F*)arg0)->s; printf("%s %s\n", $a, $a); }' -c ./testprogs/string_args

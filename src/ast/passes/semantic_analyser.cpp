@@ -1774,7 +1774,7 @@ void SemanticAnalyser::visit(Call &call)
     if (!call.vargs.at(2).is<Integer>()) {
       call.addError() << "Builtin strncmp requires a non-negative literal";
     }
-    call.return_type = CreateUInt64();
+    call.return_type = CreateBool();
   } else if (call.func == "strcontains") {
     static constexpr auto warning = R"(
 strcontains() is known to have verifier complexity issues when the product of both string sizes is larger than ~2000 bytes.
