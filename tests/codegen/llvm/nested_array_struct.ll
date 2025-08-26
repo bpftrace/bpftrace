@@ -40,8 +40,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@bar_val")
   %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %"@bar_val", i32 16, ptr %5)
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_bar, ptr %"@bar_key", ptr %"@bar_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@bar_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@bar_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@bar_val")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@bar_key1")
   store i64 42, ptr %"@bar_key1", align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_bar, ptr %"@bar_key1")
@@ -114,8 +114,8 @@ oob_merge3:                                       ; preds = %counter_merge7, %oo
   %20 = sext i32 %19 to i64
   store i64 %20, ptr %"@_val", align 8
   %update_elem11 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   ret i64 0
 
 event_loss_counter6:                              ; preds = %is_oob2

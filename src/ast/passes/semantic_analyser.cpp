@@ -162,8 +162,8 @@ public:
   void visit(Tuple &tuple);
   void visit(Expression &expr);
   void visit(ExprStatement &expr);
-  void visit(AssignMapStatement &assignment);
-  void visit(AssignVarStatement &assignment);
+  void visit(AssignMap &assignment);
+  void visit(AssignVar &assignment);
   void visit(VarDeclStatement &decl);
   void visit(Unroll &unroll);
   void visit(Predicate &pred);
@@ -219,7 +219,7 @@ private:
   void assign_map_type(Map &map,
                        const SizedType &type,
                        const Node *loc_node,
-                       AssignMapStatement *assignment = nullptr);
+                       AssignMap *assignment = nullptr);
   SizedType create_key_type(const SizedType &expr_type, Node &node);
   void reconcile_map_key(Map *map, const Expression &key_expr);
   void update_current_key(SizedType &current_key_type,
@@ -2716,8 +2716,8 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
 
   if (!lhs.IsSameType(rhs)) {
     if (is_final_pass()) {
-      if_expr.addError() << "Branches must return the same type: "
-                         << "have '" << lhs << "' and '" << rhs << "'";
+      if_expr.addError() << "Branches must return the same type: " << "have '"
+                         << lhs << "' and '" << rhs << "'";
     }
     // This assignment is just temporary to prevent errors
     // before the final pass
@@ -3368,7 +3368,7 @@ static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
   { Type::stats_t, "stats(arg2)" },
 };
 
-void SemanticAnalyser::visit(AssignMapStatement &assignment)
+void SemanticAnalyser::visit(AssignMap &assignment)
 {
   visit(assignment.map);
   visit(assignment.key);
@@ -3479,12 +3479,12 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   }
 }
 
-void SemanticAnalyser::visit(AssignVarStatement &assignment)
+void SemanticAnalyser::visit(AssignVar &assignment)
 {
   visit(assignment.expr);
 
-  // Only visit the declaration if it is a `let` declaration,
-  // otherwise skip as it is not a variable access.
+  // Visit the underlying variable iff it is a declaration. We visit the
+  // non-declaration case below, to handle where it is used as an expression.
   if (std::holds_alternative<VarDeclStatement *>(assignment.var_decl)) {
     visit(assignment.var_decl);
   }
@@ -3635,9 +3635,17 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   assignment.var()->var_type = storedTy;
 
   if (is_final_pass()) {
-    if (storedTy.IsNoneTy())
+    if (storedTy.IsNoneTy()) {
       assignment.addError()
           << "Invalid expression for assignment: " << storedTy;
+      return; // Don't visit the variable.
+    }
+  }
+
+  // See above; we need to add a type for the variable when used as an
+  // expression. See above, where we visit in the case of a declaration.
+  if (std::holds_alternative<Variable *>(assignment.var_decl)) {
+    visit(assignment.var_decl);
   }
 }
 
@@ -4321,7 +4329,7 @@ SizedType *SemanticAnalyser::get_map_key_type(const Map &map)
 void SemanticAnalyser::assign_map_type(Map &map,
                                        const SizedType &type,
                                        const Node *loc_node,
-                                       AssignMapStatement *assignment)
+                                       AssignMap *assignment)
 {
   const std::string &map_ident = map.ident;
 

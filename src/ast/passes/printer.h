@@ -41,9 +41,9 @@ public:
   void visit(Cast &cast);
   void visit(Tuple &tuple);
   void visit(ExprStatement &expr);
-  void visit(AssignMapStatement &assignment);
-  void visit(AssignScalarMapStatement &assignment);
-  void visit(AssignVarStatement &assignment);
+  void visit(AssignMap &assignment);
+  void visit(AssignScalarMap &assignment);
+  void visit(AssignVar &assignment);
   void visit(AssignConfigVarStatement &assignment);
   void visit(VarDeclStatement &decl);
   void visit(Unroll &unroll);

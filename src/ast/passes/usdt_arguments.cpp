@@ -24,7 +24,7 @@ public:
     std::string ident = "__usdt_arg_" + std::to_string(arg);
     return ast_.make_node<ast::Variable>(ident, Location(node.loc));
   }
-  ast::AssignVarStatement *var_decl(size_t arg, Node &node)
+  ast::Statement var_decl(size_t arg, Node &node)
   {
     auto *int_arg = ast_.make_node<ast::Integer>(static_cast<uint64_t>(arg),
                                                  Location(node.loc));
@@ -32,9 +32,9 @@ public:
     Expression expr = ast_.make_node<ast::Call>("usdt_arg",
                                                 std::move(args),
                                                 Location(node.loc));
-    return ast_.make_node<AssignVarStatement>(var(arg, node),
-                                              expr,
-                                              Location(node.loc));
+    return ast_.make_node<ast::ExprStatement>(
+        ast_.make_node<AssignVar>(var(arg, node), expr, Location(node.loc)),
+        Location(node.loc));
   }
 
 private:

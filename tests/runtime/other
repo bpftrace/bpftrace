@@ -7,19 +7,19 @@ PROG i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}
 EXPECT a=10
 
 NAME ifelse_go_else
-PROG i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
+PROG i:ms:1 {$a = ""; if (10 < 2) { $a = "hi"; } else {$a = "hello"} printf("a=%s\n", $a); exit();}
 EXPECT a=hello
 
 NAME ifelse_go_if
-PROG i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
+PROG i:ms:1 {$a = ""; if (10 > 2) { $a = "hi"; } else {$a = "hello"} printf("a=%s\n", $a); exit();}
 EXPECT a=hi
 
 NAME ifelseif_go_elseif
-PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}
+PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi"; } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}
 EXPECT a=hello
 
 NAME ifelseifelse_go_else
-PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}
+PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi"; } else if (5 < 3) { $a = "hello"; } else { $a = "asdf" } printf("a=%s\n", $a); exit();}
 EXPECT a=asdf
 
 NAME if_cast

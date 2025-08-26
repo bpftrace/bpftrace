@@ -147,6 +147,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Offsetof *> offsetof_expr
 %type <ast::Expression> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
 %type <ast::Expression> logical_or_expr or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
+%type <ast::Expression> assign_expr
 %type <ast::ExpressionList> vargs
 %type <ast::SubprogArg *> subprog_arg
 %type <ast::SubprogArgList> subprog_args
@@ -159,7 +160,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Config *> config
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
-%type <ast::Statement> assign_stmt block_stmt expr_stmt nonexpr_stmt jump_stmt while_stmt for_stmt
+%type <ast::Statement> block_stmt expr_stmt nonexpr_stmt jump_stmt while_stmt for_stmt
 %type <ast::StatementList> stmt_list
 %type <ast::IfExpr *> if_stmt if_expr
 %type <ast::RootStatement> root_stmt macro map_decl_stmt subprog probe
@@ -466,11 +467,11 @@ expr_stmt:
                 // `if_stmt` to avoid ambiguity. The `expr` node itself will accept an
                 // `if_expr`, which is used for any other expression except the statement.
                 conditional_expr { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @1); }
+        |       assign_expr      { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @1); }
                 ;
 
 nonexpr_stmt:
                 jump_stmt        { $$ = $1; }
-        |       assign_stmt      { $$ = $1; }
         |       var_decl_stmt    { $$ = $1; }
                 ;
 
@@ -507,30 +508,30 @@ if_expr:
         |       IF "(" expr ")" block_expr ELSE block_expr { $$ = driver.ctx.make_node<ast::IfExpr>($3, $5, $7, @$); }
                 ;
 
-assign_stmt:
+assign_expr:
                 tuple_access_expr ASSIGN expr
                 {
                   error(@1 + @3, "Tuples are immutable once created. Consider creating a new tuple and assigning it instead.");
                   YYERROR;
                 }
-        |       map ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignScalarMapStatement>($1, $3, @$); }
-        |       map_expr ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignMapStatement>($1->map, $1->key, $3, @$); }
-        |       var_decl_stmt ASSIGN expr { $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, $3, @$); }
-        |       var ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, $3, @$); }
+        |       map ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignScalarMap>($1, $3, @$); }
+        |       map_expr ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignMap>($1->map, $1->key, $3, @$); }
+        |       var_decl_stmt ASSIGN expr { $$ = driver.ctx.make_node<ast::AssignVar>($1, $3, @$); }
+        |       var ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignVar>($1, $3, @$); }
         |       map compound_op expr
                 {
                   auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
-                  $$ = driver.ctx.make_node<ast::AssignScalarMapStatement>($1, b, @$);
+                  $$ = driver.ctx.make_node<ast::AssignScalarMap>($1, b, @$);
                 }
         |       map_expr compound_op expr
                 {
                   auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
-                  $$ = driver.ctx.make_node<ast::AssignMapStatement>($1->map, $1->key, b, @$);
+                  $$ = driver.ctx.make_node<ast::AssignMap>($1->map, $1->key, b, @$);
                 }
         |       var compound_op expr
                 {
                   auto b = driver.ctx.make_node<ast::Binop>($1, $2, $3, @2);
-                  $$ = driver.ctx.make_node<ast::AssignVarStatement>($1, b, @$);
+                  $$ = driver.ctx.make_node<ast::AssignVar>($1, b, @$);
                 }
         ;
 
@@ -659,8 +660,9 @@ unary_op:
                 ;
 
 expr:
-                conditional_expr    { $$ = $1; }
-        |       if_expr             { $$ = $1; }
+                conditional_expr { $$ = $1; }
+        |       if_expr          { $$ = $1; }
+        |       assign_expr      { $$ = $1; }
                 ;
 
 conditional_expr:

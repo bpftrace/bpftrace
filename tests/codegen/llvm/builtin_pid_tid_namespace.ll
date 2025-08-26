@@ -38,8 +38,8 @@ entry:
   %3 = zext i32 %2 to i64
   store i64 %3, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %bpf_pidns_info1)
   %get_ns_pid_tgid2 = call i64 inttoptr (i64 120 to ptr)(i64 0, i64 4026531857, ptr %bpf_pidns_info1, i32 8)
   %4 = getelementptr %bpf_pidns_info, ptr %bpf_pidns_info1, i32 0, i32 1
@@ -51,8 +51,8 @@ entry:
   %6 = zext i32 %5 to i64
   store i64 %6, ptr %"@y_val", align 8
   %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   ret i64 0
 }
 

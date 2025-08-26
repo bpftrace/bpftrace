@@ -230,8 +230,8 @@ public:
   ScopedExpr visit(Cast &cast);
   ScopedExpr visit(Tuple &tuple);
   ScopedExpr visit(ExprStatement &expr);
-  ScopedExpr visit(AssignMapStatement &assignment);
-  ScopedExpr visit(AssignVarStatement &assignment);
+  ScopedExpr visit(AssignMap &assignment);
+  ScopedExpr visit(AssignVar &assignment);
   ScopedExpr visit(VarDeclStatement &decl);
   ScopedExpr visit(Unroll &unroll);
   ScopedExpr visit(While &while_block);
@@ -2150,7 +2150,7 @@ llvm::Value *CodegenLLVM::createGetNsSwTAI(const Location &loc)
 ScopedExpr CodegenLLVM::visit([[maybe_unused]] Map &map)
 {
   // This is not currently used in code generation. Code is generated either
-  // via `MapAccess` for reads or via `AssignMapStatement` for writes.
+  // via `MapAccess` for reads or via `AssignMap` for writes.
   return ScopedExpr();
 }
 
@@ -3048,7 +3048,7 @@ ScopedExpr CodegenLLVM::visit(ExprStatement &expr)
   return visit(expr.expr);
 }
 
-ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
+ScopedExpr CodegenLLVM::visit(AssignMap &assignment)
 {
   auto scoped_expr = visit(assignment.expr);
   auto scoped_key = getMapKey(*assignment.map, assignment.key);
@@ -3091,9 +3091,11 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
   }
   b_.CreateMapUpdateElem(
       assignment.map->ident, scoped_key.value(), value, assignment.loc);
+
+  // Return the value just assigned to the type.
   if (self_alloca && dyn_cast<AllocaInst>(value))
-    b_.CreateLifetimeEnd(value);
-  return ScopedExpr();
+    return ScopedExpr(value, [this, value] { b_.CreateLifetimeEnd(value); });
+  return ScopedExpr(value);
 }
 
 void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
@@ -3142,7 +3144,7 @@ VariableLLVM &CodegenLLVM::getVariable(const std::string &var_ident)
   return *variable;
 }
 
-ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
+ScopedExpr CodegenLLVM::visit(AssignVar &assignment)
 {
   Variable &var = *assignment.var();
 
@@ -3185,18 +3187,16 @@ ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
   } else {
     b_.CreateStore(scoped_expr.value(), getVariable(var.ident).value);
   }
-  return ScopedExpr();
+
+  // Preserve the assigned value, and propagate it.
+  return scoped_expr;
 }
 
 ScopedExpr CodegenLLVM::visit(VarDeclStatement &decl)
 {
   Variable &var = *decl.var;
-  if (var.var_type.IsNoneTy()) {
-    // unused and has no type
-    return ScopedExpr();
-  }
   maybeAllocVariable(var.ident, var.var_type, var.loc);
-  return ScopedExpr();
+  return visit(decl.var);
 }
 
 ScopedExpr CodegenLLVM::visit(Unroll &unroll)

@@ -52,8 +52,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_val")
   store i64 %4, ptr %"@a_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key", ptr %"@a_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_val")
   %5 = load ptr, ptr %"$x", align 8
   %6 = call ptr @llvm.preserve.static.offset(ptr %5)
   %7 = getelementptr i8, ptr %6, i64 8
@@ -83,8 +83,8 @@ oob_merge:                                        ; preds = %counter_merge, %ent
   %16 = sext i16 %15 to i64
   store i64 %16, ptr %"@b_val", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_b, ptr %"@b_key", ptr %"@b_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_val")
   %17 = load ptr, ptr %"$x", align 8
   %18 = call ptr @llvm.preserve.static.offset(ptr %17)
   %19 = getelementptr i8, ptr %18, i64 16
@@ -97,8 +97,8 @@ oob_merge:                                        ; preds = %counter_merge, %ent
   %23 = sext i8 %22 to i64
   store i64 %23, ptr %"@c_val", align 8
   %update_elem2 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_c, ptr %"@c_key", ptr %"@c_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@c_val")
   %24 = load ptr, ptr %"$x", align 8
   %25 = call ptr @llvm.preserve.static.offset(ptr %24)
   %26 = getelementptr i8, ptr %25, i64 24
@@ -115,8 +115,8 @@ oob_merge:                                        ; preds = %counter_merge, %ent
   %31 = sext i8 %30 to i64
   store i64 %31, ptr %"@d_val", align 8
   %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_d, ptr %"@d_key", ptr %"@d_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@d_val")
   %32 = load ptr, ptr %"$x", align 8
   %33 = call ptr @llvm.preserve.static.offset(ptr %32)
   %34 = getelementptr i8, ptr %33, i64 32

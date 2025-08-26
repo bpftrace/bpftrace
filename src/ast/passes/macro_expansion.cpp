@@ -54,7 +54,7 @@ public:
 
   using Visitor<MacroExpander>::visit;
 
-  void visit(AssignVarStatement &assignment);
+  void visit(AssignVar &assignment);
   void visit(Variable &var);
   void visit(VariableAddr &var_addr);
   void visit(VarDeclStatement &decl);
@@ -96,7 +96,7 @@ MacroExpander::MacroExpander(
 {
 }
 
-void MacroExpander::visit(AssignVarStatement &assignment)
+void MacroExpander::visit(AssignVar &assignment)
 {
   if (is_top_level()) {
     visit(assignment.expr);

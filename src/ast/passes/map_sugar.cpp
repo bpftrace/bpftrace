@@ -18,10 +18,9 @@ public:
   void visit(Map &map);
   void visit(MapAccess &acc);
   void visit(MapAddr &map_addr);
-  void visit(AssignScalarMapStatement &assign);
-  void visit(AssignMapStatement &assign);
+  void visit(AssignScalarMap &assign);
+  void visit(AssignMap &assign);
   void visit(Expression &expr);
-  void visit(Statement &stmt);
 
   [[nodiscard]] bool check(Map &map, bool indexed);
   void checkAccess(Map &map, bool indexed);
@@ -41,13 +40,8 @@ public:
 
 class MapAssignmentCall : public Visitor<MapAssignmentCall> {
 public:
-  explicit MapAssignmentCall(ASTContext &ast) : ast_(ast) {};
-
   using Visitor<MapAssignmentCall>::visit;
-  void visit(Statement &stmt);
-
-private:
-  ASTContext &ast_;
+  void visit(Expression &expr);
 };
 
 class MapAssignmentCheck : public Visitor<MapAssignmentCheck> {
@@ -85,13 +79,13 @@ void MapDefaultKey::visit([[maybe_unused]] MapAddr &map_addr)
   // Don't desugar this into a map access, we want the map pointer
 }
 
-void MapDefaultKey::visit(AssignScalarMapStatement &assign)
+void MapDefaultKey::visit(AssignScalarMap &assign)
 {
   checkAccess(*assign.map, false);
   visit(assign.expr);
 }
 
-void MapDefaultKey::visit(AssignMapStatement &assign)
+void MapDefaultKey::visit(AssignMap &assign)
 {
   checkAccess(*assign.map, true);
   visit(assign.key);
@@ -109,18 +103,9 @@ void MapDefaultKey::visit(Expression &expr)
   if (auto *map = expr.as<Map>()) {
     auto *index = ast_.make_node<Integer>(0, Location(map->loc));
     expr.value = ast_.make_node<MapAccess>(map, index, Location(map->loc));
-  }
-}
-
-void MapDefaultKey::visit(Statement &stmt)
-{
-  Visitor<MapDefaultKey>::visit(stmt);
-
-  // Replace with a statement that has the default index, in the same way as
-  // above. This will be type-checked during semantic analysis.
-  if (auto *map = stmt.as<AssignScalarMapStatement>()) {
+  } else if (auto *map = expr.as<AssignScalarMap>()) {
     auto *index = ast_.make_node<Integer>(0, Location(map->loc));
-    stmt.value = ast_.make_node<AssignMapStatement>(
+    expr.value = ast_.make_node<AssignMap>(
         map->map, index, map->expr, Location(map->loc));
   }
 }
@@ -272,19 +257,17 @@ static std::optional<Expression> injectMap(Expression expr,
   return std::nullopt;
 }
 
-void MapAssignmentCall::visit(Statement &stmt)
+void MapAssignmentCall::visit(Expression &expr)
 {
   // Any assignments that are direct calls to special functions may
   // be rewritten to simply be the function expression.
-  if (auto *assign = stmt.as<AssignMapStatement>()) {
-    auto expr = injectMap(assign->expr, assign->map, assign->key);
-    if (expr) {
-      // We injected a call, and can flatten the statement.
-      stmt.value = ast_.make_node<ExprStatement>(expr.value(),
-                                                 Location(assign->loc));
+  if (auto *assign = expr.as<AssignMap>()) {
+    auto repl = injectMap(assign->expr, assign->map, assign->key);
+    if (repl) {
+      expr.value = repl->value;
     }
   }
-  Visitor<MapAssignmentCall>::visit(stmt);
+  Visitor<MapAssignmentCall>::visit(expr);
 }
 
 void MapAssignmentCheck::visit(Call &call)
@@ -306,7 +289,7 @@ Pass CreateMapSugarPass()
       // No consistent defaults.
       return std::move(defaults.metadata);
     }
-    MapAssignmentCall sugar(ast);
+    MapAssignmentCall sugar;
     sugar.visit(ast.root);
     MapAssignmentCheck check;
     check.visit(ast.root);

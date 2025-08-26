@@ -61,8 +61,8 @@ merge_block:                                      ; preds = %stack_scratch_failu
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 %5, ptr %"@x_val", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key2)
   call void @llvm.memset.p0.i64(ptr align 1 %stack_key2, i8 0, i64 16, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_stack_scratch_key5)
@@ -106,8 +106,8 @@ merge_block4:                                     ; preds = %stack_scratch_failu
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_val")
   store i64 %12, ptr %"@y_val", align 8
   %update_elem16 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   ret i64 0
 
 lookup_stack_scratch_failure7:                    ; preds = %merge_block

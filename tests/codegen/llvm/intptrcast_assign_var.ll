@@ -36,8 +36,8 @@ entry:
   %6 = sext i8 %5 to i64
   store i64 %6, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   ret i64 0
 }
 

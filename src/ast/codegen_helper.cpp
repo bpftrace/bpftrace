@@ -17,7 +17,7 @@ namespace bpftrace::ast {
 // Note this function does NOT determine if an allocation should use scratch
 // buffer or the stack, that logic is in
 // IRBuilderBPF::CreateWriteMapValueAllocation
-bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
+bool needAssignMapStatementAllocation(const AssignMap &assignment)
 {
   const auto &map = *assignment.map;
   const auto &expr_type = assignment.expr.type();

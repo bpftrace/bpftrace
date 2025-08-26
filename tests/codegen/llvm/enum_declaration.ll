@@ -29,15 +29,15 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_val")
   store i64 42, ptr %"@a_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key", ptr %"@a_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_val")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_key")
   store i64 0, ptr %"@b_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@b_val")
   store i64 43, ptr %"@b_val", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_b, ptr %"@b_key", ptr %"@b_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@b_val")
   ret i64 0
 }
 

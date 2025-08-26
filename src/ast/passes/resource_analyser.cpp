@@ -47,8 +47,8 @@ public:
   void visit(Tuple &tuple);
   void visit(For &f);
   void visit(IfExpr &if_expr);
-  void visit(AssignMapStatement &assignment);
-  void visit(AssignVarStatement &assignment);
+  void visit(AssignMap &assignment);
+  void visit(AssignVar &assignment);
   void visit(VarDeclStatement &decl);
 
   // This will move the compute resources value, it should be called only
@@ -492,7 +492,7 @@ void ResourceAnalyser::visit(For &f)
   }
 }
 
-void ResourceAnalyser::visit(AssignMapStatement &assignment)
+void ResourceAnalyser::visit(AssignMap &assignment)
 {
   // CodegenLLVM traverses the AST like:
   //      AssignmentMapStatement a
@@ -559,7 +559,7 @@ void ResourceAnalyser::update_variable_info(Variable &var)
   }
 }
 
-void ResourceAnalyser::visit(AssignVarStatement &assignment)
+void ResourceAnalyser::visit(AssignVar &assignment)
 {
   Visitor<ResourceAnalyser>::visit(assignment);
 
