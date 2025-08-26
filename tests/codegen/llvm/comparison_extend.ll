@@ -18,7 +18,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !47 {
 entry:
-  %"@_val" = alloca i8, align 1
+  %"@_val" = alloca i1, align 1
   %"@_key" = alloca i64, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112

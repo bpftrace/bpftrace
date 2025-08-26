@@ -376,6 +376,8 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
     ty = getPtrTy();
   } else if (stype.IsVoidTy()) {
     ty = getVoidTy();
+  } else if (stype.IsBoolTy()) {
+    ty = getInt1Ty();
   } else {
     switch (stype.GetSize()) {
       case 16:
