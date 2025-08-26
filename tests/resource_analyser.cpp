@@ -85,7 +85,7 @@ TEST(resource_analyser, fmt_string_args_size_arrays)
       R"(struct Foo { int a; char b[10]; } begin { $foo = (struct Foo *)0; $foo2 = (struct Foo *)1; printf("%d %s %d %s\n", $foo->a, $foo->b, $foo2->a, $foo2->b) })",
       true,
       &resources);
-  EXPECT_EQ(resources.max_fmtstring_args_size, 56);
+  EXPECT_EQ(resources.max_fmtstring_args_size, 40);
 }
 
 TEST(resource_analyser, fmt_string_args_size_strings)

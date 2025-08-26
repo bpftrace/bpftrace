@@ -4175,11 +4175,6 @@ void CodegenLLVM::createFormatStringCall(Call &call,
                                  { b_.getInt32(0), b_.getInt32(i - 1) });
     if (needMemcpy(arg.type()))
       b_.CreateMemcpyBPF(offset, scoped_arg.value(), arg.type().GetSize());
-    else if (arg.type().IsIntegerTy() && arg.type().GetSize() < 8)
-      b_.CreateStore(b_.CreateIntCast(scoped_arg.value(),
-                                      b_.getInt64Ty(),
-                                      arg.type().IsSigned()),
-                     offset);
     else
       b_.CreateStore(scoped_arg.value(), offset);
   }

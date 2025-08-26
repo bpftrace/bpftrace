@@ -77,25 +77,23 @@ kprobe:f
 
   EXPECT_EQ(args.size(), 4U);
 
-  // Note that scalar types are promoted to 64-bits when put into
-  // a perf event buffer
   EXPECT_TRUE(args[0].type.IsIntTy());
-  EXPECT_EQ(args[0].type.GetSize(), 8U);
+  EXPECT_EQ(args[0].type.GetSize(), 1U);
   EXPECT_EQ(args[0].offset, 0);
 
   EXPECT_TRUE(args[1].type.IsIntTy());
-  EXPECT_EQ(args[1].type.GetSize(), 8U);
-  EXPECT_EQ(args[1].offset, 8);
+  EXPECT_EQ(args[1].type.GetSize(), 4U);
+  EXPECT_EQ(args[1].offset, 4);
 
   // Note that the string type has size + 1 in order to signal well-formedness.
   // See clang_parser.cpp for this logic.
   EXPECT_TRUE(args[2].type.IsStringTy());
   EXPECT_EQ(args[2].type.GetSize(), 10U + 1U);
-  EXPECT_EQ(args[2].offset, 16);
+  EXPECT_EQ(args[2].offset, 8);
 
   EXPECT_TRUE(args[3].type.IsIntTy());
   EXPECT_EQ(args[3].type.GetSize(), 8U);
-  EXPECT_EQ(args[3].offset, 32);
+  EXPECT_EQ(args[3].offset, 24);
 }
 
 TEST(codegen, probe_count)
