@@ -91,7 +91,7 @@ void test(const std::string &input,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
-                .add(ast::AllParsePasses({}, std::move(import_paths)))
+                .add(ast::AllParsePasses(0, {}, std::move(import_paths)))
                 .run();
   std::stringstream out;
   ast.diagnostics().emit(out);

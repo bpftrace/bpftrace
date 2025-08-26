@@ -24,11 +24,12 @@ namespace bpftrace::ast {
 // AllParsePasses returns a vector of passes representing all parser passes, in
 // the expected order. This should be used unless there's a reason not to.
 inline std::vector<Pass> AllParsePasses(
+    uint32_t max_ast_nodes = 0,
     std::vector<std::string> &&extra_flags = {},
     std::vector<std::string> &&import_paths = {})
 {
   std::vector<Pass> passes;
-  passes.emplace_back(CreateParsePass());
+  passes.emplace_back(CreateParsePass(max_ast_nodes));
   passes.emplace_back(CreateConfigPass());
   passes.emplace_back(CreateResolveImportsPass(std::move(import_paths)));
   // N.B. We expand the AST with all externally imported scripts, then check

@@ -912,7 +912,8 @@ int main(int argc, char* argv[])
     }
   };
   // Start with all the basic parsing steps.
-  for (auto& pass : ast::AllParsePasses(std::move(flags))) {
+  for (auto& pass :
+       ast::AllParsePasses(bpftrace.max_ast_nodes_, std::move(flags))) {
     addPass(std::move(pass));
   }
   pm.add(ast::CreateLLVMInitPass());
