@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
 %printf_t = type { i64, %printf_args_t }
-%printf_args_t = type { i64, i64 }
+%printf_args_t = type { i8, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -42,29 +42,28 @@ entry:
   %9 = load i8, ptr %"struct Foo.c", align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.c")
   %10 = getelementptr %printf_args_t, ptr %5, i32 0, i32 0
-  %11 = sext i8 %9 to i64
-  store i64 %11, ptr %10, align 8
-  %12 = load ptr, ptr %"$foo", align 8
-  %13 = call ptr @llvm.preserve.static.offset(ptr %12)
-  %14 = getelementptr i8, ptr %13, i64 8
+  store i8 %9, ptr %10, align 1
+  %11 = load ptr, ptr %"$foo", align 8
+  %12 = call ptr @llvm.preserve.static.offset(ptr %11)
+  %13 = getelementptr i8, ptr %12, i64 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"struct Foo.l")
-  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.l", i32 8, ptr %14)
-  %15 = load i64, ptr %"struct Foo.l", align 8
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to ptr)(ptr %"struct Foo.l", i32 8, ptr %13)
+  %14 = load i64, ptr %"struct Foo.l", align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"struct Foo.l")
-  %16 = getelementptr %printf_args_t, ptr %5, i32 0, i32 1
-  store i64 %15, ptr %16, align 8
+  %15 = getelementptr %printf_args_t, ptr %5, i32 0, i32 1
+  store i64 %14, ptr %15, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 24, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %entry
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
-  %17 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %17
-  %18 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %19 = load i64, ptr %18, align 8
-  %20 = add i64 %19, 1
-  store i64 %20, ptr %18, align 8
+  %16 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %16
+  %17 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %18 = load i64, ptr %17, align 8
+  %19 = add i64 %18, 1
+  store i64 %19, ptr %17, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %entry

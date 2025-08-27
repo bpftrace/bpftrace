@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
 %printf_t = type { i64, %printf_args_t }
-%printf_args_t = type { i64 }
+%printf_args_t = type { i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -37,8 +37,7 @@ if_body:                                          ; preds = %entry
   %6 = lshr i64 %get_pid_tgid1, 32
   %pid2 = trunc i64 %6 to i32
   %7 = getelementptr %printf_args_t, ptr %5, i32 0, i32 0
-  %8 = zext i32 %pid2 to i64
-  store i64 %8, ptr %7, align 8
+  store i32 %pid2, ptr %7, align 4
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
@@ -48,12 +47,12 @@ if_end:                                           ; preds = %counter_merge, %ent
 
 event_loss_counter:                               ; preds = %if_body
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
-  %9 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %9
-  %10 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %11 = load i64, ptr %10, align 8
-  %12 = add i64 %11, 1
-  store i64 %12, ptr %10, align 8
+  %8 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %8
+  %9 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %10 = load i64, ptr %9, align 8
+  %11 = add i64 %10, 1
+  store i64 %11, ptr %9, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %if_body
