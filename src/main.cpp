@@ -717,8 +717,6 @@ int main(int argc, char* argv[])
   // Most configuration can be applied during the configuration pass, however
   // we need to extract a few bits of configuration up front, because they may
   // affect the actual compilation process.
-  util::get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
-                           [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; });
   util::get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
                          [&](bool x) { bpftrace.debug_output_ = x; });
 
@@ -880,8 +878,7 @@ int main(int argc, char* argv[])
   if (args.listing) {
     ast::CDefinitions no_c_defs; // See above.
     ast::TypeMetadata no_types;  // See above.
-    pm.add(CreateParsePass(bpftrace.max_ast_nodes_,
-                           bt_debug.contains(DebugStage::Parse)))
+    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)))
         .put(no_c_defs)
         .put(no_types)
         .add(ast::CreateParseAttachpointsPass(args.listing))

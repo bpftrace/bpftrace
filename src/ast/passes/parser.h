@@ -29,7 +29,7 @@ inline std::vector<Pass> AllParsePasses(
     bool debug = false)
 {
   std::vector<Pass> passes;
-  passes.emplace_back(CreateParsePass(0, debug));
+  passes.emplace_back(CreateParsePass(debug));
   passes.emplace_back(CreateConfigPass());
   passes.emplace_back(CreateResolveImportsPass(std::move(import_paths)));
   // N.B. We expand the AST with all externally imported scripts, then check

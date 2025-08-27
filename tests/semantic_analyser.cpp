@@ -4232,14 +4232,6 @@ begin { $i = tid(1); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, config)
-{
-  test("config = { BPFTRACE_MAX_AST_NODES=1 } "
-       "begin { $ns = nsecs(); }");
-  test("config = { BPFTRACE_MAX_AST_NODES=1; stack_mode=raw } "
-       "begin { $ns = nsecs(); }");
-}
-
 TEST_F(SemanticAnalyserTest, subprog_return)
 {
   test("fn f(): void { return; }");

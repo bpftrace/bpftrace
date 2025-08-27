@@ -43,6 +43,6 @@ private:
   void parse(Parser::symbol_type first_token);
 };
 
-ast::Pass CreateParsePass(uint32_t max_ast_nodes = 0, bool debug = false);
+ast::Pass CreateParsePass(bool debug = false);
 
 } // namespace bpftrace
