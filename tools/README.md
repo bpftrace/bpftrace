@@ -2,7 +2,19 @@
 
 These tools are a small collection curated by the bpftrace maintainers that have been battle-tested and are packaged with bpftrace. We're currently building a set of [community tools](https://github.com/bpftrace/user-tools), which is now accepting [contributions](https://github.com/bpftrace/user-tools/blob/master/CONTRIBUTING.md).
 
-[Read more about how tools get added to this repository](../CONTRIBUTING-TOOLS.md).
+[Read more about how tools get added to THIS repository](../CONTRIBUTING-TOOLS.md).
+
+### Versioned Tools
+
+- [0.23 tools](https://github.com/bpftrace/bpftrace/tree/release/0.23.x/tools)
+- [0.22 tools](https://github.com/bpftrace/bpftrace/tree/release/0.22.x/tools)
+- [0.21 tools](https://github.com/bpftrace/bpftrace/tree/release/0.21.x/tools)
+- [0.20 tools](https://github.com/bpftrace/bpftrace/tree/release/0.20.x/tools)
+
+---
+
+These tools may be updated to use features available in a yet-to-be-released version of bpftrace.
+If they are not working on your version of bpftrace, use the links above to get a compatible version of the tool.
 
 - tools/[bashreadline.bt](bashreadline.bt) - Print entered bash commands system wide.
 - tools/[biolatency.bt](biolatency.bt) - Block I/O latency as a histogram.
