@@ -46,10 +46,10 @@ bool probe_needs_pid_filter(AttachPoint *ap)
     case ProbeType::invalid:
     case ProbeType::iter:
     case ProbeType::profile:
-    case ProbeType::interval:
     case ProbeType::software:
     case ProbeType::hardware:
-    // We don't filter by pid for begin/end probes
+    // We don't filter by pid at all for these special probes
+    case ProbeType::interval:
     case ProbeType::special:
     case ProbeType::benchmark:
       return false;

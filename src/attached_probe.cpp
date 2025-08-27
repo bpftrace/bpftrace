@@ -1005,8 +1005,7 @@ class AttachedIntervalProbe : public AttachedProbe {
 public:
   static Result<std::unique_ptr<AttachedIntervalProbe>> make(
       Probe &probe,
-      const BpfProgram &prog,
-      std::optional<int> pid);
+      const BpfProgram &prog);
   ~AttachedIntervalProbe() override;
 
   int link_fd() override;
@@ -1036,8 +1035,7 @@ int AttachedIntervalProbe::link_fd()
 
 Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
     Probe &probe,
-    const BpfProgram &prog,
-    std::optional<int> pid)
+    const BpfProgram &prog)
 {
   int group_fd = -1;
   int cpu = 0;
@@ -1060,7 +1058,7 @@ Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
                                       PERF_COUNT_SW_CPU_CLOCK,
                                       period,
                                       freq,
-                                      pid.has_value() ? *pid : -1,
+                                      -1,
                                       cpu,
                                       group_fd);
 
@@ -1541,7 +1539,7 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
       return AttachedProfileProbe::make(probe, prog, pid);
     }
     case ProbeType::interval: {
-      return AttachedIntervalProbe::make(probe, prog, pid);
+      return AttachedIntervalProbe::make(probe, prog);
     }
     case ProbeType::software: {
       return AttachedSoftwareProbe::make(probe, prog, pid);
