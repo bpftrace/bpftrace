@@ -53,26 +53,11 @@ void Driver::error(const location &l, const std::string &m)
   ctx.state_->diagnostics_->addError(ctx.wrap(l)) << m;
 }
 
-ast::Pass CreateParsePass(uint32_t max_ast_nodes, bool debug)
+ast::Pass CreateParsePass(bool debug)
 {
   return ast::Pass::create("parse", [=](ast::ASTContext &ast) {
     Driver driver(ast, debug);
     ast.root = driver.parse_program();
-
-    // Before proceeding, ensure that the size of the AST isn't past prescribed
-    // limits. This functionality goes back to 80642a994, where it was added in
-    // order to prevent stack overflow during fuzzing. It traveled through the
-    // passes and visitor pattern, and this is a final return to the simplest
-    // possible form. It is not necessary to walk the full AST in order to
-    // determine the number of nodes. This can be done before any passes.
-    if (ast.diagnostics().ok()) {
-      assert(ast.root != nullptr);
-      auto node_count = ast.node_count();
-      if (max_ast_nodes > 0 && node_count > max_ast_nodes) {
-        ast.root->addError() << "node count (" << node_count
-                             << ") exceeds the limit (" << max_ast_nodes << ")";
-      }
-    }
   });
 }
 

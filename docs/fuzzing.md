@@ -21,13 +21,6 @@ fuzzer and the function.
 
 ## Options
 
-### `BPFTRACE_MAX_AST_NODES` environment variable
-
-When doing fuzzing, it is important to limit the number of AST nodes because
-otherwise, a fuzzer might keep generating a very long program that causes a
-stack overflow.  `BPFTRACE_MAX_AST_NODES` environment variable controls the
-maximum number of AST nodes.
-
 ## Fuzzing with AFL
 
 Before starting, it is highly recommended to read the [AFL][AFL] or
@@ -73,7 +66,6 @@ the fuzzer is by using the `--test=codegen` mode and providing overrides:
 AFL_NO_AFFINITY=1 \
 ASAN_OPTIONS=abort_on_error=1,symbolize=0 \
 BPFTRACE_BTF= \
-BPFTRACE_MAX_AST_NODES=200 \
 BPFTRACE_AVAILABLE_FUNCTIONS_TEST= \
 afl-fuzz -a text -M 0 -m none -i ./input -o ./output -t 3000 -- \
      src/bpftrace --test=codegen @@ 2>/dev/null

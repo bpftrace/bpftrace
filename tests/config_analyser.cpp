@@ -130,10 +130,10 @@ config = { BPFTRACE_MAX_PROBES = "hello" } begin { }
 )",
       false);
   test(
-      "config = { max_ast_nodes=1 } begin { }",
-      R"(stdin:1:12-27: ERROR: max_ast_nodes: can only be set as an environment variable
-config = { max_ast_nodes=1 } begin { }
-           ~~~~~~~~~~~~~~~
+      "config = { kernel_build=1 } begin { }",
+      R"(stdin:1:12-26: ERROR: kernel_build: can only be set as an environment variable
+config = { kernel_build=1 } begin { }
+           ~~~~~~~~~~~~~~
 )",
       false);
 }

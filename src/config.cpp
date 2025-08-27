@@ -297,8 +297,7 @@ const std::map<std::string, std::string> DEPRECATED = {
 // These are configuration names that are consumed elsewhere. We use this only
 // to check if we should produce a more helpful error for the user.
 const std::unordered_set<std::string> ENV_ONLY = {
-  "btf",           "debug_output",   "kernel_build", "kernel_source",
-  "max_ast_nodes", "verify_llvm_ir", "vmlinux",
+  "btf", "debug_output", "kernel_build", "kernel_source", "vmlinux",
 };
 
 // This is applied for all environment variables, and will also be accepted

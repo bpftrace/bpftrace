@@ -319,7 +319,6 @@ def fuzz():
                     "AFL_NO_AFFINITY": "1",
                     "ASAN_OPTIONS": "abort_on_error=1,symbolize=0",
                     "BPFTRACE_BTF": "",
-                    "BPFTRACE_MAX_AST_NODES": "200",
                     "BPFTRACE_AVAILABLE_FUNCTIONS_TEST": "",
                     # This setting [1] is used to skip the core pattern check,
                     # so crashes may be missed. Since this is just a smoke

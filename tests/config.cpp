@@ -78,10 +78,9 @@ static void test_lookup_error(const std::string &key,
 TEST(Config, get_config_key)
 {
   test_lookup_error("logsize", 1, "logsize: not a known configuration option");
-  test_lookup_error(
-      "max_ast_nodes",
-      1,
-      "max_ast_nodes: can only be set as an environment variable");
+  test_lookup_error("kernel_build",
+                    1,
+                    "kernel_build: can only be set as an environment variable");
 }
 
 } // namespace bpftrace::test
