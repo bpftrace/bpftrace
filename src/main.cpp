@@ -880,7 +880,8 @@ int main(int argc, char* argv[])
   if (args.listing) {
     ast::CDefinitions no_c_defs; // See above.
     ast::TypeMetadata no_types;  // See above.
-    pm.add(CreateParsePass(bpftrace.max_ast_nodes_))
+    pm.add(CreateParsePass(bpftrace.max_ast_nodes_,
+                           bt_debug.contains(DebugStage::Parse)))
         .put(no_c_defs)
         .put(no_types)
         .add(ast::CreateParseAttachpointsPass(args.listing))
@@ -912,7 +913,9 @@ int main(int argc, char* argv[])
     }
   };
   // Start with all the basic parsing steps.
-  for (auto& pass : ast::AllParsePasses(std::move(flags))) {
+  for (auto& pass : ast::AllParsePasses(std::move(flags),
+                                        {},
+                                        bt_debug.contains(DebugStage::Parse))) {
     addPass(std::move(pass));
   }
   pm.add(ast::CreateLLVMInitPass());
