@@ -660,7 +660,7 @@ macro numaid() {
 // interval:s:1 {
 //   $runqueues = (struct rq *)percpu_kaddr("runqueues", 0);
 //   if ($runqueues != 0) {         // The check is mandatory here
-//     print($runqueues->nr_running);
+//     print($runqueues.nr_running);
 //   }
 // }
 // ```
@@ -930,12 +930,12 @@ macro retval() {
 // ```
 // # cat dump.bt
 // fentry:napi_gro_receive {
-//   $ret = skboutput("receive.pcap", args.skb, args.skb->len, 0);
+//   $ret = skboutput("receive.pcap", args.skb, args.skb.len, 0);
 // }
 //
 // fentry:dev_queue_xmit {
 //   // setting offset to 14, to exclude ethernet header
-//   $ret = skboutput("output.pcap", args.skb, args.skb->len, 14);
+//   $ret = skboutput("output.pcap", args.skb, args.skb.len, 14);
 //   printf("skboutput returns %d\n", $ret);
 // }
 //
@@ -964,8 +964,8 @@ macro retval() {
 // ```
 // fentry:tcp_rcv_established
 // {
-//   $cookie = socket_cookie(args->sk);
-//   @psize[$cookie] = hist(args->skb->len);
+//   $cookie = socket_cookie(args.sk);
+//   @psize[$cookie] = hist(args.skb.len);
 // }
 // ```
 //
@@ -995,19 +995,6 @@ macro retval() {
 // In case the string is longer than the specified length only `length - 1` bytes are copied and a NULL byte is appended at the end.
 //
 // When available (starting from kernel 5.5, see the `--info` flag) bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
-
-// :function strerror
-// :variant strerror_t strerror(int error)
-//
-// Convert errno code to string.
-// This is done asynchronously in userspace when the strerror value is printed, hence the returned value can only be used for printing.
-//
-// ```
-// #include <errno.h>
-// BEGIN {
-//   print(strerror(EPERM));
-// }
-// ```
 
 // :function strftime
 // :variant timestamp strftime(const string fmt, int64 timestamp_ns)

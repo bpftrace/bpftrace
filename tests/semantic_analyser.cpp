@@ -463,7 +463,6 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
     { "ksym(arg0)", "ksym(arg1)" },
     { "usym(arg0)", "usym(arg1)" },
     { "cgroup_path(1)", "cgroup_path(2)" },
-    { "strerror(1)", "strerror(2)" },
     { "pid(curr_ns)", "pid(init)" },
     { "tid(curr_ns)", "tid(init)" },
   };
@@ -1639,20 +1638,6 @@ TEST_F(SemanticAnalyserTest, call_cgroup_path)
   test("kprobe:f { $var = cgroup_path(0); printf(\"%s %s\", $var, $var) }");
 
   test("kprobe:f { printf(\"%d\", cgroup_path(1)) }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, call_strerror)
-{
-  test("kprobe:f { strerror(1) }");
-
-  test("kprobe:f { strerror(1, 2) }", Error{});
-  test("kprobe:f { strerror(\"1\") }", Error{});
-
-  test("kprobe:f { printf(\"%s\", strerror(1)) }");
-  test("kprobe:f { printf(\"%s %s\", strerror(1), strerror(2)) }");
-  test("kprobe:f { $var = strerror(0); printf(\"%s %s\", $var, $var) }");
-
-  test("kprobe:f { printf(\"%d\", strerror(1)) }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, map_reassignment)

@@ -1891,8 +1891,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                          arg.type().IsSigned());
     b_.CreateSignal(sig_number, call.loc);
     return ScopedExpr();
-  } else if (call.func == "strerror") {
-    return visit(call.vargs.front());
   } else if (call.func == "strncmp") {
     auto &left_arg = call.vargs.at(0);
     auto &right_arg = call.vargs.at(1);

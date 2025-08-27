@@ -240,9 +240,6 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       auto c = value.bitcast<const AsyncEvent::CgroupPath>();
       return bpftrace.resolve_cgroup_path(c.cgroup_path_id, c.cgroup_id);
     }
-    case Type::strerror_t: {
-      return strerror(value.bitcast<uint64_t>());
-    }
     case Type::avg_t:
     case Type::stats_t: {
       if (type.IsAvgTy() && value.count<uint64_t>() == 1) {

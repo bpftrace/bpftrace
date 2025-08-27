@@ -991,14 +991,13 @@ If needle is contained then true is returned, else false is returned.
 
 
 ### strerror
-- `strerror_t strerror(int error)`
+- `string strerror(int error)`
 
 Convert errno code to string.
-This is done asynchronously in userspace when the strerror value is printed, hence the returned value can only be used for printing.
 
 ```
 #include <errno.h>
-BEGIN {
+begin {
   print(strerror(EPERM));
 }
 ```
