@@ -259,8 +259,6 @@ type:
                         {"timestamp", CreateTimestamp()},
                         {"macaddr_t", CreateMacAddress()},
                         {"cgroup_path_t", CreateCgroupPath()},
-                        {"strerror_t", CreateStrerror()},
-                        {"string", CreateString(0)},
                     };
                     $$ = type_map[$1];
                 }
@@ -269,6 +267,8 @@ type:
                         $$ = CreateInet(0);
                     } else if ($1 == "buffer") {
                         $$ = CreateBuffer(0);
+                    } else if ($1 == "string") {
+                        $$ = CreateString(0);
                     }
                 }
         |       SIZED_TYPE "[" UNSIGNED_INT "]" {
@@ -276,6 +276,8 @@ type:
                         $$ = CreateInet($3);
                     } else if ($1 == "buffer") {
                         $$ = CreateBuffer($3);
+                    } else if ($1 == "string") {
+                        $$ = CreateString($3);
                     }
                 }
         |       int_type "[" UNSIGNED_INT "]" {
