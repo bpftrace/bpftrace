@@ -19,7 +19,7 @@ macro is_array(expr) {
 // :variant void static_assert(bool condition, string msg)
 // Assert something is true or fail the build.
 macro static_assert(cond, msg) {
-  if (comptime !cond) {
+  if comptime !cond {
     fail(msg);
   }
 }
