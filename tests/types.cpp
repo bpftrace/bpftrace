@@ -68,7 +68,6 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateStackMode()), "stack_mode");
   EXPECT_EQ(to_str(CreateTimestampMode()), "timestamp_mode");
   EXPECT_EQ(to_str(CreateCgroupPath()), "cgroup_path_t");
-  EXPECT_EQ(to_str(CreateStrerror()), "strerror_t");
   EXPECT_EQ(to_str(CreateHist()), "hist_t");
   EXPECT_EQ(to_str(CreateLhist()), "lhist_t");
   EXPECT_EQ(to_str(CreateTSeries()), "tseries_t");

@@ -172,3 +172,23 @@ macro strstr(haystack, needle) {
 macro strcontains(haystack, needle) {
   strstr(haystack, needle) >= 0
 }
+
+// :variant string strerror(int error)
+//
+// Convert errno code to string.
+//
+// ```
+// #include <errno.h>
+// begin {
+//   print(strerror(EPERM));
+// }
+// ```
+macro strerror(errno) {
+  let $v : string[64];
+  // Ensure that the size of the string is equal to the size of the returned
+  // buffer. On the C side, it will be a compilation error if any of the
+  // strings exceed this size.
+  static_assert(sizeof($v) == sizeof(*__strerror((int32)errno, &$v)), "$v is sized correctly");
+  __strerror((int32)errno, &$v);
+  $v
+}
