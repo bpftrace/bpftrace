@@ -18,12 +18,12 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %exit = alloca %exit_t, align 8
-  %"$a" = alloca i8, align 1
+  %"$a" = alloca i1, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$a")
-  store i8 0, ptr %"$a", align 1
-  store i8 1, ptr %"$a", align 1
-  %1 = load i8, ptr %"$a", align 1
-  %true_cond = icmp ne i8 %1, 0
+  store i1 false, ptr %"$a", align 1
+  store i1 true, ptr %"$a", align 1
+  %1 = load i1, ptr %"$a", align 1
+  %true_cond = icmp ne i1 %1, false
   br i1 %true_cond, label %if_body, label %if_end
 
 if_body:                                          ; preds = %entry

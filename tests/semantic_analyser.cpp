@@ -2006,6 +2006,7 @@ TEST_F(SemanticAnalyserTest, unop_dereference)
   test("struct X { int n; } kprobe:f { $x = (struct X*)0; *$x; }");
   test("struct X { int n; } kprobe:f { $x = *(struct X*)0; *$x; }", Error{});
   test("kprobe:f { *\"0\"; }", Error{});
+  test("kprobe:f { *true; }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, unop_not)
@@ -2015,6 +2016,7 @@ TEST_F(SemanticAnalyserTest, unop_not)
   test(structs + "kprobe:f { $x = *(struct X*)0; ~$x; }", Error{});
   test(structs + "kprobe:f { $x = (struct X*)0; ~$x; }", Error{});
   test("kprobe:f { ~\"0\"; }", Error{});
+  test("kprobe:f { ~true; }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, unop_lnot)
@@ -2042,6 +2044,8 @@ TEST_F(SemanticAnalyserTest, unop_increment_decrement)
   test("kprobe:f { $x++; }", Error{});
   test("kprobe:f { @x = \"a\"; @x++; }", Error{});
   test("kprobe:f { $x = \"a\"; $x++; }", Error{});
+  test("kprobe:f { ++true; }", Error{});
+  test("kprobe:f { --true; }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, printf_and_errorf)
