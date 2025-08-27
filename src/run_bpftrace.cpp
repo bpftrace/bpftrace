@@ -87,6 +87,8 @@ int run_bpftrace(BPFtrace &bpftrace,
   }
   std::unique_ptr<output::Output> output;
   if (output_format.empty() || output_format == "text") {
+    // Note that there are two parameters here: we leave the err output as
+    // std::cerr, so this can be seen while running.
     output = std::make_unique<output::TextOutput>(*os);
   } else if (output_format == "json") {
     output = std::make_unique<output::JsonOutput>(*os);
