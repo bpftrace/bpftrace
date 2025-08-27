@@ -27,9 +27,14 @@ static const auto DIVIDE_BY_ZERO_MSG =
     "Divide or modulo by 0 detected. This can lead to unexpected "
     "results. 1 is being used as the result.";
 
+static const auto ARRAY_ACCESS_OOB_MSG =
+    "Array access out of bounds. This can lead to unexpected "
+    "results.";
+
 enum class RuntimeErrorId {
   DIVIDE_BY_ZERO,
   HELPER_ERROR,
+  ARRAY_ACCESS_OOB,
 };
 
 enum class PrintfSeverity {

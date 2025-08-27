@@ -2754,6 +2754,27 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
   auto scoped_expr = visit(arr.expr);
   auto scoped_index = visit(arr.indexpr);
 
+  if (type.IsArrayTy()) {
+    llvm::Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *is_oob = BasicBlock::Create(module_->getContext(),
+                                            "is_oob",
+                                            parent);
+    BasicBlock *merge = BasicBlock::Create(module_->getContext(),
+                                           "oob_merge",
+                                           parent);
+
+    Value *cond = b_.CreateICmpUGT(
+        b_.CreateIntCast(scoped_index.value(), b_.getInt64Ty(), false),
+        b_.getInt64(type.GetNumElements() - 1),
+        "oob_cond");
+
+    b_.CreateCondBr(cond, is_oob, merge);
+    b_.SetInsertPoint(is_oob);
+    b_.CreateRuntimeError(RuntimeErrorId::ARRAY_ACCESS_OOB, arr.loc);
+    b_.CreateBr(merge);
+    b_.SetInsertPoint(merge);
+  }
+
   if (inBpfMemory(arr.element_type) && !type.IsPtrTy())
     return readDatastructElemFromStack(
         std::move(scoped_expr), scoped_index.value(), type, arr.element_type);
