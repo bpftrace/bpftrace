@@ -49,8 +49,8 @@ EXPECT @a: [true,false]
 TIMEOUT 1
 
 NAME bool logical not
-PROG begin{ print((!0, !10)); exit(); }
-EXPECT (true, false)
+PROG begin{ $x = 0; print((!0, !10, !$x)); exit(); }
+EXPECT (true, false, true)
 TIMEOUT 1
 
 NAME bool in resized tuples

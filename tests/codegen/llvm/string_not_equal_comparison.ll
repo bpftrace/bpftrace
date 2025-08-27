@@ -20,7 +20,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !51 {
 entry:
   %"@_val" = alloca i64, align 8
-  %"@_key" = alloca i8, align 1
+  %"@_key" = alloca i1, align 1
   %strcmp.result = alloca i1, align 1
   %__builtin_comm = alloca [16 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %__builtin_comm)

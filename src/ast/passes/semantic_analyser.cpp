@@ -2669,10 +2669,16 @@ void SemanticAnalyser::visit(Unop &unop)
 
   const SizedType &type = unop.expr.type();
   if (is_final_pass()) {
+    bool invalid = false;
     // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
     // and context (we allow args->field for backwards compatibility)
-    if (!type.IsIntegerTy() && !type.IsBoolTy() &&
-        !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
+    if (type.IsBoolTy()) {
+      invalid = unop.op != Operator::LNOT;
+    } else if (!type.IsIntegerTy() &&
+               !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
+      invalid = true;
+    }
+    if (invalid) {
       unop.addError() << "The " << opstr(unop)
                       << " operator can not be used on expressions of type '"
                       << type << "'";
@@ -2698,15 +2704,7 @@ void SemanticAnalyser::visit(Unop &unop)
       unop.result_type = CreateUInt64();
     }
   } else if (unop.op == Operator::LNOT) {
-    // CreateUInt() abort if a size is invalid, so check the size here
-    if (type.GetSize() != 0 && type.GetSize() != 1 && type.GetSize() != 2 &&
-        type.GetSize() != 4 && type.GetSize() != 8) {
-      unop.addError() << "The " << opstr(unop)
-                      << " operator can not be used on expressions of type '"
-                      << type << "'";
-    } else {
-      unop.result_type = CreateUInt(8 * type.GetSize());
-    }
+    unop.result_type = CreateBool();
   } else if (type.IsPtrTy() && valid_ptr_op) {
     unop.result_type = unop.expr.type();
   } else {
