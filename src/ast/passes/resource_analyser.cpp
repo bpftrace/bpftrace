@@ -177,14 +177,8 @@ void ResourceAnalyser::visit(Call &call)
       call.func == "cat" || call.func == "debugf") {
     std::vector<SizedType> args;
 
-    // NOTE: the same logic can be found in the semantic_analyser pass
     for (auto it = call.vargs.begin() + 1; it != call.vargs.end(); it++) {
-      // Promote to 64-bit if it's not an aggregate type
-      SizedType ty = it->type(); // copy
-      if (!ty.IsAggregate() && !ty.IsTimestampTy())
-        ty.SetSize(8);
-
-      args.push_back(ty);
+      args.push_back(it->type());
     }
 
     // It may seem odd that we're creating a tuple as part of format
