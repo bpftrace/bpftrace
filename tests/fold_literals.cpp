@@ -513,7 +513,7 @@ TEST(fold_literals, conditional)
   test_not("if (comptime 1) { }", "if");
   test_not("if (comptime -1) { }", "if");
   test_not("if (comptime 0) { }", "if");
-  test_not("if (comptime 1 + 1) { }", "if");
+  test_not("if comptime (1 + 1) { }", "if");
   test_not("if (comptime \"str\") { }", "if");
   test_not("if (comptime \"\") { }", "if");
   test_not("if (comptime true) { }", "if");

@@ -14,12 +14,12 @@
 
 // Checks that this value is string-like.
 macro assert_str(exp) {
-  if (comptime is_str(exp)) {
+  if comptime is_str(exp) {
     true
-  } else if (comptime is_array(exp)) {
+  } else if comptime is_array(exp) {
     static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like arrays must contain a char-like type");
     true
-  } else if (comptime is_ptr(exp)) {
+  } else if comptime is_ptr(exp) {
     static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like pointers must point to a char-like type");
     true
   } else {
@@ -39,9 +39,9 @@ macro default_str_length() {
 // :variant int64 strlen(int8 *exp)
 macro strlen($var) {
   assert_str($var);
-  if (comptime is_str($var)) {
+  if comptime is_str($var) {
     __strnlen(&$var, sizeof($var))
-  } else if (comptime is_array($var)) {
+  } else if comptime is_array($var) {
     __strnlen($var, sizeof($var))
   } else {
     __strnlen($var, default_str_length())
@@ -49,7 +49,7 @@ macro strlen($var) {
 }
 macro strlen(exp) {
   assert_str(exp);
-  if (comptime is_str(exp) || is_array(exp)) {
+  if comptime (is_str(exp) || is_array(exp)) {
     // This must be unbound, unfortunately we need to bind it.
     let $x = exp;
     strlen($x)
@@ -83,9 +83,9 @@ macro __strnlen(ptr, max_size) {
 // :variant int64 strcap(int8 *exp)
 macro strcap(exp) {
   assert_str(exp);
-  if (comptime is_str(exp)) {
+  if comptime is_str(exp) {
     sizeof(exp)
-  } else if (comptime is_array(exp)) {
+  } else if comptime is_array(exp) {
     sizeof(exp)/sizeof(exp[0])
   } else {
     strlen(exp) // Pointer, so pass by value.
@@ -114,7 +114,7 @@ macro strstr($haystack, $needle) {
       // Help the verifier know this is safe. This is only needed if the type
       // is a string, because it will refer back to BPF memory and the function
       // needs to do a bounds check.
-      if (comptime is_str($haystack) || is_array($haystack)) {
+      if comptime (is_str($haystack) || is_array($haystack)) {
         if ($i >= sizeof($haystack)) {
           break;
         }
@@ -124,7 +124,7 @@ macro strstr($haystack, $needle) {
       }
       for ($j : ((uint64)0)..$needle_size) {
         // Help the verifier know this is safe.
-        if (comptime is_str($needle) || is_array($needle)) {
+        if comptime (is_str($needle) || is_array($needle)) {
           if ($j >= sizeof($needle)) {
             break;
           }
@@ -136,7 +136,7 @@ macro strstr($haystack, $needle) {
         }
         let $k = $i + $j;
         // Help the verifier a bit more.
-        if (comptime is_str($haystack) || is_array($haystack)) {
+        if comptime (is_str($haystack) || is_array($haystack)) {
           if ($k >= sizeof($haystack)) {
             break;
           }

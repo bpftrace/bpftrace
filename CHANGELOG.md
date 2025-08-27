@@ -145,6 +145,8 @@ and this project adheres to
   - [#4367](https://github.com/bpftrace/bpftrace/pull/4367)
 - Make probe provider names case insensitive
   - [#4371](https://github.com/bpftrace/bpftrace/pull/4371)
+- If, for, while and unroll statements can have omitted parentheses for unary expressions
+  - [#4503](https://github.com/bpftrace/bpftrace/pull/4503)
 #### Deprecated
 #### Removed
 #### Fixed
