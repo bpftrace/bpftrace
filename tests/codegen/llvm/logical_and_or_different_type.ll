@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
 %printf_t = type { i64, %printf_args_t }
-%printf_args_t = type { i8, i8, i8, i8 }
+%printf_args_t = type { i1, i1, i1, i1 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
