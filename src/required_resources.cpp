@@ -46,6 +46,10 @@ std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)
       os << DIVIDE_BY_ZERO_MSG;
       break;
     }
+    case RuntimeErrorId::ARRAY_ACCESS_OOB: {
+      os << ARRAY_ACCESS_OOB_MSG;
+      break;
+    }
   }
   return os;
 }

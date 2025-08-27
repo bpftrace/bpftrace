@@ -82,6 +82,8 @@ and this project adheres to
   - [#4414](https://github.com/bpftrace/bpftrace/pull/4414)
 - Add ability to call most builtins with call-style syntax e.g. `comm()`
   - [#4420](https://github.com/bpftrace/bpftrace/pull/4420)
+- Allow non-constant array access
+  - [#4491](https://github.com/bpftrace/bpftrace/pull/4491)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)
