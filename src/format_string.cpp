@@ -23,7 +23,7 @@ void FormatError::log(llvm::raw_ostream& OS) const
 // special cases, and the ordering matters to ensure that we capture the
 // modifiers if they are present (so `r` is the final match in the list).
 const std::regex FormatSpec::regex(
-    R"(%(-?)(\+?)( ?)(#?)(\*|\d+)?(?:\.(\*|\d+))?([hlLjzt]*)([diouxXeEfFgGaAcspn%]|rh|rx|r))");
+    R"(%(-?)(\+?)( ?)(#?)(0?)(\*|\d+)?(?:\.(\*|\d+))?([hlLjzt]*)([diouxXeEfFgGaAcspn%]|rh|rx|r))");
 
 FormatSpec::FormatSpec(const std::smatch& match)
 {
@@ -31,14 +31,15 @@ FormatSpec::FormatSpec(const std::smatch& match)
   show_sign = !match[2].str().empty();
   space_prefix = !match[3].str().empty();
   alternate_form = !match[4].str().empty();
-  if (!match[5].str().empty() && match[5].str() != "*") {
-    width = std::stoi(match[5].str());
-  }
+  lead_zeros = !match[5].str().empty();
   if (!match[6].str().empty() && match[6].str() != "*") {
-    precision = std::stoi(match[6].str());
+    width = std::stoi(match[6].str());
   }
-  length_modifier = match[7].str();
-  specifier = match[8].str();
+  if (!match[7].str().empty() && match[7].str() != "*") {
+    precision = std::stoi(match[7].str());
+  }
+  length_modifier = match[8].str();
+  specifier = match[9].str();
 }
 
 FormatString::FormatString() = default;
@@ -263,6 +264,9 @@ Result<std::string> FormatSpec::apply(const Primitive& p) const
   }
   if (width > 0) {
     ss << std::setw(width);
+  }
+  if (lead_zeros) {
+    ss << std::setfill('0');
   }
   if (precision >= 0 &&
       (specifier == "f" || specifier == "F" || specifier == "e" ||
