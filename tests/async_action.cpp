@@ -23,7 +23,7 @@ class AsyncActionTest : public testing::Test {
 public:
   AsyncActionTest()
       : bpftrace(get_mock_bpftrace()),
-        output(out),
+        output(out, out),
         handlers(*bpftrace, no_c_defs, output) {};
 
   std::unique_ptr<MockBPFtrace> bpftrace;

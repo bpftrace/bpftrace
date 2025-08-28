@@ -8,7 +8,9 @@ namespace bpftrace::output {
 
 class TextOutput : public Output {
 public:
-  explicit TextOutput(std::ostream &out = std::cout) : out_(out) {};
+  explicit TextOutput(std::ostream &out = std::cout,
+                      std::ostream &err = std::cerr)
+      : out_(out), err_(err) {};
 
   void map(const std::string &name, const Value &value) override;
   void value(const Value &value) override;
@@ -30,6 +32,7 @@ public:
 
 private:
   std::ostream &out_;
+  std::ostream &err_;
 };
 
 } // namespace bpftrace::output
