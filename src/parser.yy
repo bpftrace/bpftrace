@@ -499,8 +499,15 @@ if_stmt:
                 IF "(" expr ")" none_block                 { $$ = driver.ctx.make_node<ast::IfExpr>($3, $5, driver.ctx.make_node<ast::None>(@1), @$); }
         |       IF "(" expr ")" bare_block ELSE none_block { $$ = driver.ctx.make_node<ast::IfExpr>($3, $5, $7, @$); }
         |       IF "(" expr ")" bare_block ELSE if_stmt    { $$ = driver.ctx.make_node<ast::IfExpr>($3, $5, $7, @$); }
+        |       IF "(" expr ")" bare_block ELSE if_expr
+                {
+                  // This is a pure statement; override the value with `none`.
+                  auto *stmt = driver.ctx.make_node<ast::ExprStatement>($7, @$);
+                  auto *none = driver.ctx.make_node<ast::None>(@3);
+                  auto *block = driver.ctx.make_node<ast::BlockExpr>(ast::StatementList{ stmt }, none, @7);
+                  $$ = driver.ctx.make_node<ast::IfExpr>($3, $5, block, @$);
+                }
                 ;
-
 
 if_expr:
                 IF "(" expr ")" block_expr ELSE if_expr    { $$ = driver.ctx.make_node<ast::IfExpr>($3, $5, $7, @$); }
