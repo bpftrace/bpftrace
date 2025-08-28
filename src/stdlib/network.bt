@@ -1,0 +1,30 @@
+// Create a buffer that holds a macaddress as read from `mac`.
+// :variant macaddr_t macaddr(char [6] mac)
+//
+// This buffer can be printed in the canonical string format using the `%s` format specifier.
+//
+// ```
+// kprobe:arp_create {
+//   $stack_arg0 = *(uint8*)(reg("sp") + 8);
+//   $stack_arg1 = *(uint8*)(reg("sp") + 16);
+//   printf("SRC %s, DST %s\n", macaddr($stack_arg0), macaddr($stack_arg1));
+// }
+//
+// /*
+//  * Sample output:
+//  * SRC 18:C0:4D:08:2E:BB, DST 74:83:C2:7F:8C:FF
+//  */
+// ```
+macro macaddr(src) {
+  let $v : typeof("00:00:00:00:00:00");
+  if (valid(*src)) {
+    __macaddr(&$v, src)
+  } else {
+    if (sizeof(src) < 6) {
+      fail("unsufficient data to convert to a mac address");
+    }
+    let $data = src;
+    __macaddr(&$v, &$data);
+  }
+  $v
+}

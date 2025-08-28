@@ -257,7 +257,6 @@ type:
                         {"uavg_t", CreateAvg(false)},
                         {"ustats_t", CreateStats(false)},
                         {"timestamp", CreateTimestamp()},
-                        {"macaddr_t", CreateMacAddress()},
                         {"cgroup_path_t", CreateCgroupPath()},
                         {"strerror_t", CreateStrerror()},
                         {"string", CreateString(0)},

@@ -73,7 +73,6 @@ std::string typestr(const SizedType &type, bool debug)
     case Type::stats_t:
       return (type.is_signed_ ? "" : "u") + typestr(type.GetTy());
     case Type::count_t:
-    case Type::mac_address:
     case Type::kstack_t:
     case Type::ustack_t:
     case Type::timestamp:
@@ -163,8 +162,7 @@ bool SizedType::IsByteArray() const
 {
   return type_ == Type::string || type_ == Type::usym_t ||
          type_ == Type::inet || type_ == Type::buffer ||
-         type_ == Type::timestamp || type_ == Type::mac_address ||
-         type_ == Type::cgroup_path_t;
+         type_ == Type::timestamp || type_ == Type::cgroup_path_t;
 }
 
 bool SizedType::IsAggregate() const
@@ -225,7 +223,6 @@ std::string typestr(Type t)
     case Type::buffer:   return "buffer";   break;
     case Type::tuple:    return "tuple";    break;
     case Type::timestamp:return "timestamp";break;
-    case Type::mac_address: return "mac_address"; break;
     case Type::cgroup_path_t: return "cgroup_path_t"; break;
     case Type::strerror_t: return "strerror_t"; break;
     case Type::timestamp_mode: return "timestamp_mode"; break;
@@ -464,13 +461,6 @@ SizedType CreateTuple(std::shared_ptr<Struct> &&tuple)
   auto s = SizedType(Type::tuple, tuple->size);
   s.inner_struct_ = std::move(tuple);
   return s;
-}
-
-SizedType CreateMacAddress()
-{
-  auto st = SizedType(Type::mac_address, 6);
-  st.is_internal = true;
-  return st;
 }
 
 SizedType CreateCgroupPath()

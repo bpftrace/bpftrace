@@ -493,7 +493,8 @@ For kstack/ustack, return the depth (measured in # of frames) of the call stack.
 ### macaddr
 - `macaddr_t macaddr(char [6] mac)`
 
-Create a buffer that holds a macaddress as read from `mac`
+Create a buffer that holds a macaddress as read from `mac`.
+
 This buffer can be printed in the canonical string format using the `%s` format specifier.
 
 ```

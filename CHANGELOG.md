@@ -29,6 +29,8 @@ and this project adheres to
 - JSON serialization for unsupported and unknown types (e.g. `float`) may now
   use `null` now rather than the empty string
   - [#4302](https://github.com/bpftrace/bpftrace/pull/4302)
+- Mac addresses are no longer a native type, they are simply strings
+  - [#4512](https://github.com/bpftrace/bpftrace/pull/4512)
 #### Added
 - Add ncpus builtin to get the number of CPUs.
   - [#4105](https://github.com/bpftrace/bpftrace/pull/4105)

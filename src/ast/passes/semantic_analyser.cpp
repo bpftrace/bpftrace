@@ -431,10 +431,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::integer, .literal=true },
         arg_type_spec{ .type=Type::integer, .literal=true },
         arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "macaddr",
-    { .min_args=1,
-      .max_args=1,
-      .discard_ret_warn = true, } },
   { "max",
     { .min_args=3,
       .max_args=3,
@@ -728,7 +724,6 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::buffer:
     case Type::pointer:
     case Type::array:
-    case Type::mac_address:
     case Type::record:
     case Type::tuple:
     case Type::cgroup_path_t:
@@ -1816,28 +1811,6 @@ If you're seeing errors, try clamping the string sizes. For example:
     auto as = (call.func == "kptr" ? AddrSpace::kernel : AddrSpace::user);
     call.return_type = call.vargs.front().type();
     call.return_type.SetAS(as);
-  } else if (call.func == "macaddr") {
-    auto &arg = call.vargs.at(0);
-    if (!arg.type().IsIntTy() && !arg.type().IsArrayTy() &&
-        !arg.type().IsByteArray() && !arg.type().IsPtrTy())
-      call.addError() << call.func
-                      << "() only supports array or pointer arguments" << " ("
-                      << arg.type().GetTy() << " provided)";
-
-    if (arg.is<String>())
-      call.addError() << call.func
-                      << "() does not support literal string arguments";
-
-    // N.B. When converting from BTF, we can treat string types as 7 bytes in
-    // order to signal to userspace that they are well-formed. However, we can
-    // convert from anything as long as there are at least 6 bytes to read.
-    const auto &type = arg.type();
-    if ((type.IsArrayTy() || type.IsByteArray()) && type.GetSize() < 6) {
-      call.addError() << call.func
-                      << "() argument must be at least 6 bytes in size";
-    }
-
-    call.return_type = CreateMacAddress();
   } else if (call.func == "unwatch") {
     // Leave as `none`.
   } else if (call.func == "bswap") {

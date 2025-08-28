@@ -48,7 +48,6 @@ enum class Type : uint8_t {
   buffer,
   tuple,
   timestamp,
-  mac_address,
   cgroup_path_t,
   strerror_t,
   timestamp_mode,
@@ -465,10 +464,6 @@ public:
   {
     return type_ == Type::timestamp;
   };
-  bool IsMacAddressTy() const
-  {
-    return type_ == Type::mac_address;
-  };
   bool IsCgroupPathTy() const
   {
     return type_ == Type::cgroup_path_t;
@@ -570,7 +565,6 @@ SizedType CreateUSym();
 SizedType CreateKSym();
 SizedType CreateBuffer(size_t size);
 SizedType CreateTimestamp();
-SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
 SizedType CreateStrerror();
 SizedType CreateTimestampMode();
