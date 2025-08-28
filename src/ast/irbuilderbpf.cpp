@@ -173,7 +173,12 @@ StructType *IRBuilderBPF::GetStructType(
   if (search != structs_.end())
     return search->second;
 
-  StructType *s = StructType::create(elements, name, packed);
+  StructType *s = nullptr;
+  if (!elements.empty()) {
+    s = StructType::create(module_.getContext(), elements, name, packed);
+  } else {
+    s = StructType::create(module_.getContext(), name);
+  }
   structs_.insert({ name, s });
   return s;
 }

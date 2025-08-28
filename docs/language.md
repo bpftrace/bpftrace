@@ -1641,10 +1641,10 @@ kprobe:dummy {
 
 ## Tuples
 
-bpftrace has support for immutable N-tuples (`n > 1`).
+bpftrace has support for immutable N-tuples.
 A tuple is a sequence type (like an array) where, unlike an array, every element can have a different type.
 
-Tuples are a comma separated list of expressions, enclosed in brackets, `(1,2)`
+Tuples are a comma separated list of expressions, enclosed in brackets, `(1,2)`.
 Individual fields can be accessed with the `.` operator.
 Tuples are zero indexed like arrays are.
 
@@ -1664,6 +1664,9 @@ interval:s:1 {
  * 3
  */
 ```
+
+Single-element and empty tuples can be specified using Python-like syntax.
+A single element tuple requires a trailing comma, `(1,)`, while the empty tuple is simply `()`.
 
 ## Type conversion
 

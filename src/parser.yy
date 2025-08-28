@@ -169,6 +169,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::RootStatements> root_stmts
 %type <ast::Range *> range
 %type <ast::Typeinfo *> typeinfo_expr
+%type <ast::Tuple *> tuple_expr
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
@@ -566,6 +567,25 @@ var_decl_stmt:
         |        LET var COLON any_type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, $4, @$); }
         ;
 
+tuple_expr:
+                "(" vargs "," expr ")"
+                {
+                  auto &args = $2;
+                  args.push_back($4);
+                  $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
+                }
+        |       "(" vargs "," ")"
+                {
+                  // Tuple with a single element (possibly).
+                  $$ = driver.ctx.make_node<ast::Tuple>(std::move($2), @$);
+                }
+        |       "(" ")"
+                {
+                  // Empty tuple.
+                  $$ = driver.ctx.make_node<ast::Tuple>(ast::ExpressionList({}), @$);
+                }
+
+
 primary_expr:
                 UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
         |       BOOL               { $$ = driver.ctx.make_node<ast::Boolean>($1, @$); }
@@ -578,12 +598,7 @@ primary_expr:
         |       var_addr           { $$ = $1; }
         |       map_addr           { $$ = $1; }
         |       map_expr           { $$ = $1; }
-        |       "(" vargs "," expr ")"
-                {
-                  auto &args = $2;
-                  args.push_back($4);
-                  $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
-                }
+        |       tuple_expr         { $$ = $1; }
         |       map %prec LOW      { $$ = $1; }
         |       IDENT %prec LOW    { $$ = driver.ctx.make_node<ast::Identifier>($1, @$); }
                 ;
