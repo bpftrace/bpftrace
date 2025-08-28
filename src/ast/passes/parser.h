@@ -45,6 +45,10 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
+  // Load any late-bound scripts and expand macros if needed.
+  passes.emplace_back(CreateImportInternalScriptsPass());
+  passes.emplace_back(CreateImportExternalScriptsPass());
+  passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
   passes.emplace_back(CreateCMacroExpansionPass());
