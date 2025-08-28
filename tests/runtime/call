@@ -61,6 +61,10 @@ NAME printf_invalid_enum_symbolize_cast
 PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { $x = 100; printf("%d %s\n", ONE, (enum Foo)$x); exit() }
 EXPECT 1 100
 
+NAME printf_lead_zeros
+PROG begin { printf("%5s %04x", "ba", 2); }
+EXPECT    ba 0002
+
 NAME errorf
 PROG begin { errorf("Something bad with args: %d, %s", 10, "arg2"); }
 EXPECT stdin:1:9-62: ERROR: Something bad with args: 10, arg2
