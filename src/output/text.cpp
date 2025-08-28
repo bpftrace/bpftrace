@@ -535,13 +535,13 @@ void TextOutput::errorf(const std::string &str, const SourceInfo &info)
     if (first) {
       // No need to print the source context as that's just the `errorf`
       // call
-      LOG(ERROR, std::string(loc.source_location), out_) << str;
+      LOG(ERROR, std::string(loc.source_location), err_) << str;
       first = false;
     } else {
       LOG(ERROR,
           std::string(loc.source_location),
           std::vector(loc.source_context),
-          out_)
+          err_)
           << "expanded from";
     }
   }
@@ -569,15 +569,15 @@ void TextOutput::syscall(const std::string &syscall)
 
 void TextOutput::lost_events(uint64_t lost)
 {
-  out_ << "Lost " << lost << " events" << std::endl;
+  err_ << "Lost " << lost << " events" << std::endl;
 }
 
 void TextOutput::attached_probes(uint64_t num_probes)
 {
   if (num_probes == 1)
-    out_ << "Attached " << num_probes << " probe" << std::endl;
+    err_ << "Attached " << num_probes << " probe" << std::endl;
   else
-    out_ << "Attached " << num_probes << " probes" << std::endl;
+    err_ << "Attached " << num_probes << " probes" << std::endl;
 }
 
 void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
@@ -607,7 +607,7 @@ void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
       LOG(WARNING,
           std::string(info.locations.begin()->source_location),
           std::vector(info.locations.begin()->source_context),
-          out_)
+          err_)
           << msg << "\nAdditional Info - helper: " << info.func_id
           << ", retcode: " << retcode;
       break;
@@ -616,7 +616,7 @@ void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
       LOG(WARNING,
           std::string(info.locations.begin()->source_location),
           std::vector(info.locations.begin()->source_context),
-          out_)
+          err_)
           << info;
       break;
     }
@@ -627,7 +627,7 @@ void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
     LOG(WARNING,
         std::string(info.locations[i].source_location),
         std::vector(info.locations[i].source_context),
-        out_)
+        err_)
         << "expanded from";
   }
 }
