@@ -63,7 +63,7 @@ public:
   uint64_t max_probes = 1024;
   uint64_t max_strlen = 1024;
   uint64_t on_stack_limit = 32;
-  uint64_t perf_rb_pages = 64;
+  uint64_t perf_rb_pages = 0; // See get_buffer_pages
   std::string license = "GPL";
   std::string str_trunc_trailer = "..";
   ConfigMissingProbes missing_probes = ConfigMissingProbes::error;

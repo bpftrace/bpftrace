@@ -19,5 +19,6 @@ Result<std::vector<std::string>> get_mapped_paths_for_running_pids();
 
 Result<std::vector<int>> get_pids_for_program(const std::string &program);
 Result<std::vector<int>> get_all_running_pids();
+Result<uint64_t> get_available_mem_kb();
 
 } // namespace bpftrace::util

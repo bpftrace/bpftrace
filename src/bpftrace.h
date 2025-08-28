@@ -174,6 +174,11 @@ public:
   virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
       const std::string &name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
+  // This gets the number of perf or ring buffer pages by first checking if the
+  // user set this manually with a config value (`perf_rb_pages`), then falling
+  // back to either a static default `default_val` or a dynamic default based on
+  // the amount of available system memory
+  virtual Result<uint64_t> get_buffer_pages() const;
 
   bool write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt);
   void parse_module_btf(const std::set<std::string> &modules);

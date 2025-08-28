@@ -4485,11 +4485,23 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateInt32(),
                         CreateInt32());
   }
+  auto num_pages = bpftrace_.get_buffer_pages();
+  // The default value exists just to prevent a segfault.
+  // The program should terminate as we're adding an error to the ast root
+  auto buffer_size = sysconf(_SC_PAGE_SIZE);
+  if (!num_pages) {
+    LOG(ERROR) << num_pages.takeError();
+    ast_.root->addError()
+        << "Unable to get the number of ring buffer pages dynamically. "
+           "You must set the `perf_rb_pages` config manually e.g. `config = { "
+           "perf_rb_pages=64 }`";
+  } else {
+    buffer_size = *num_pages * sysconf(_SC_PAGE_SIZE);
+  }
 
-  auto entries = bpftrace_.config_->perf_rb_pages * 4096;
   createMapDefinition(to_string(MapType::Ringbuf),
                       libbpf::BPF_MAP_TYPE_RINGBUF,
-                      entries,
+                      buffer_size,
                       CreateNone(),
                       CreateNone());
 }
