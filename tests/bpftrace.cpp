@@ -956,7 +956,7 @@ basic_map_4[7]: 5
 
   for (const auto &tc : test_cases) {
     std::stringstream out;
-    output::TextOutput output(out);
+    output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
                                                  tc.name);
@@ -1031,7 +1031,7 @@ max_map_4[3]: 10
 
   for (const auto &tc : test_cases) {
     std::stringstream out;
-    output::TextOutput output(out);
+    output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
     bpftrace->ncpus_ = 3;
@@ -1107,7 +1107,7 @@ avg_map_4[3]: 100
 
   for (const auto &tc : test_cases) {
     std::stringstream out;
-    output::TextOutput output(out);
+    output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
     bpftrace->ncpus_ = 3;
@@ -1178,7 +1178,7 @@ string_map_4[3]: hello
 
   for (const auto &tc : test_cases) {
     std::stringstream out;
-    output::TextOutput output(out);
+    output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
@@ -1272,7 +1272,7 @@ lhist_map_3[0]:
 
   for (const auto &tc : test_cases) {
     std::stringstream out;
-    output::TextOutput output(out);
+    output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
@@ -1375,7 +1375,7 @@ hist_map_3[0]:
 
   for (const auto &tc : test_cases) {
     std::stringstream out;
-    output::TextOutput output(out);
+    output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
@@ -1463,7 +1463,7 @@ hh:mm:ss.ms  |___________________________________________________|
 
   for (const auto &tc : test_cases) {
     std::stringstream out;
-    output::TextOutput output(out);
+    output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
     auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,

@@ -13,7 +13,7 @@ static ast::CDefinitions no_c_defs; // Used for format below.
 TEST(TextOutput, lhist_no_suffix)
 {
   std::stringstream out;
-  ::bpftrace::output::TextOutput output(out);
+  ::bpftrace::output::TextOutput output(out, out);
 
   auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.maps_info["@mymap"] = MapInfo{
@@ -57,7 +57,7 @@ TEST(TextOutput, lhist_no_suffix)
 TEST(TextOutput, lhist_suffix)
 {
   std::stringstream out;
-  ::bpftrace::output::TextOutput output(out);
+  ::bpftrace::output::TextOutput output(out, out);
 
   auto bpftrace = get_mock_bpftrace();
   bpftrace->resources.maps_info["@mymap"] = MapInfo{
