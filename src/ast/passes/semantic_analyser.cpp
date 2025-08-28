@@ -313,13 +313,13 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args = 3,
       .max_args = 3,
       .arg_types = { map_type_spec{
-                         .type = std::function<SizedType(const ast::Call &)>(
-                             [](const ast::Call &call) -> SizedType {
-                               return CreateAvg(
-                                   call.vargs.at(2).type().IsSigned());
-                             }) },
-                     map_key_spec{ .map_index = 0 },
-                     arg_type_spec{ .type = Type::integer } } } },
+        .type = std::function<SizedType(const ast::Call &)>(
+            [](const ast::Call &call) -> SizedType {
+            return CreateAvg(
+                call.vargs.at(2).type().IsSigned());
+            }) },
+        map_key_spec{ .map_index = 0 },
+        arg_type_spec{ .type = Type::integer } } } },
   { "bswap", { .min_args = 1, .max_args = 1, .discard_ret_warn = true } },
   { "buf",
     { .min_args=1,
@@ -352,7 +352,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
         map_type_spec{},
       }
-      } },
+    } },
   { "count",
     { .min_args=2,
       .max_args=2,
@@ -362,7 +362,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         },
         map_key_spec{ .map_index=0 },
       }
-       } },
+    } },
   { "debugf",
     { .min_args=1,
       .max_args=128,
@@ -375,7 +375,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         map_type_spec{},
         map_key_spec{ .map_index=0 },
       }
-       } },
+    } },
   { "errorf",
     { .min_args=1,
       .max_args=128,
@@ -542,7 +542,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "signal",
     { .min_args=1,
       .max_args=1,
-       } },
+    } },
   { "sizeof",
     { .min_args=1,
       .max_args=1,
@@ -555,9 +555,9 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::string, .literal=true }, // pcap file name
         arg_type_spec{ .type=Type::pointer },      // *skb
         arg_type_spec{ .type=Type::integer },      // cap length
-        // cap offset, default is 0
-        // some tracepoints like dev_queue_xmit will output ethernet header,
-        // set offset to 14 bytes can exclude this header
+                                                   // cap offset, default is 0
+                                                   // some tracepoints like dev_queue_xmit will output ethernet header,
+                                                   // set offset to 14 bytes can exclude this header
         arg_type_spec{ .type=Type::integer } } } },
   { "stats",
     { .min_args=3,
@@ -586,16 +586,16 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=2,
       .discard_ret_warn = true,
       .arg_types={
-          arg_type_spec{ .type=Type::string, .literal=true },
-          arg_type_spec{ .type=Type::integer } } } },
+        arg_type_spec{ .type=Type::string, .literal=true },
+        arg_type_spec{ .type=Type::integer } } } },
   { "strncmp",
     { .min_args=3,
       .max_args=3,
       .discard_ret_warn = true,
       .arg_types={
-          arg_type_spec{ .type=Type::string },
-          arg_type_spec{ .type=Type::string },
-          arg_type_spec{ .type=Type::integer, .literal=true } } } },
+        arg_type_spec{ .type=Type::string },
+        arg_type_spec{ .type=Type::string },
+        arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "sum",
     { .min_args=3,
       .max_args=3,
@@ -891,9 +891,9 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     case ProbeType::uretprobe:
     case ProbeType::usdt:
       return AddrSpace::user;
-    // case : i:ms:1 (struct x*)ctx)->x
-    // Cannot decide the addrspace. Provide backward compatibility,
-    // if addrspace cannot be detected.
+      // case : i:ms:1 (struct x*)ctx)->x
+      // Cannot decide the addrspace. Provide backward compatibility,
+      // if addrspace cannot be detected.
     case ProbeType::invalid:
     case ProbeType::special:
     case ProbeType::benchmark:
@@ -1202,6 +1202,172 @@ void SemanticAnalyser::visit(Call &call)
 
   func_setter scope_bound_func_setter{ *this, call.func };
 
+  // We prioritize checking if this belongs to an external function. The reason
+  // is simple: the way that arguments are resolved is different. In the case
+  // of an external function, if we have raw identifiers they can be resolved
+  // in the context of the known external type.
+  auto extern_func = type_metadata_.global.lookup<btf::Function>(call.func);
+  if (extern_func) {
+    const auto &func = *extern_func;
+    if (func.linkage() != btf::Function::Linkage::Global &&
+        func.linkage() != btf::Function::Linkage::Extern) {
+      call.addError() << "Unsupported function linkage: '" << call.func << "'";
+      return;
+    }
+
+    auto proto = func.type();
+    if (!proto) {
+      call.addError() << "Unable to find function proto: " << proto.takeError();
+      return;
+    }
+    // Extract our return type.
+    auto return_type = proto->return_type();
+    if (!return_type) {
+      call.addError() << "Unable to read return type: "
+                      << return_type.takeError();
+      return;
+    }
+    auto compat_return_type = getCompatType(*return_type);
+    if (!compat_return_type) {
+      call.addError() << "Unable to convert return type: "
+                      << compat_return_type.takeError();
+      return;
+    }
+    call.return_type = *compat_return_type;
+    // Convert all arguments.
+    auto argument_types = proto->argument_types();
+    if (!argument_types) {
+      call.addError() << "Unable to read argument types: "
+                      << argument_types.takeError();
+      return;
+    }
+    // Check the argument count.
+    if (argument_types->size() != call.vargs.size()) {
+      call.addError() << "Function `" << call.func << "` requires "
+                      << argument_types->size() << " arguments, got "
+                      << call.vargs.size();
+      return;
+    }
+    std::vector<std::pair<std::string, SizedType>> args;
+    for (size_t i = 0; i < argument_types->size(); i++) {
+      const auto &[name, type] = argument_types->at(i);
+      auto compat_arg_type = getCompatType(type);
+      if (!compat_arg_type) {
+        // If the required type is a **pointer**, and the provided type is
+        // a **pointer**, then we let it slide. Just assume the user knows
+        // what they are doing. The verifier will catch them out otherwise.
+        visit(call.vargs[i].type());
+        if (type.is<btf::Pointer>() && call.vargs[i].type().IsPtrTy()) {
+          args.emplace_back(name, call.vargs[i].type());
+          continue;
+        }
+        if (is_final_pass()) {
+          call.addError() << "Unable to convert argument type, "
+                          << "function requires '" << type << "', "
+                          << "found '" << typestr(call.vargs[i].type())
+                          << "': " << compat_arg_type.takeError();
+        }
+        continue;
+      }
+      if ((call.vargs[i].is<Identifier>() || call.vargs[i].is<String>()) &&
+          (type.is<btf::Enum>() || type.is<btf::Enum64>())) {
+        // If the required argument is an enum argument *and* the passed
+        // argument is an ident, then we resolve in the context of that enum.
+        // This relies on the existing BTF information, as the compat type
+        // enums have no definitions.
+        std::string s;
+        if (auto *ident = call.vargs[i].as<Identifier>()) {
+          s = ident->ident;
+        } else if (auto *str = call.vargs[i].as<String>()) {
+          s = str->value;
+        }
+        const auto var = [&]() -> std::variant<btf::Enum64, btf::Enum> {
+          if (type.is<btf::Enum>()) {
+            return type.as<btf::Enum>();
+          }
+          return type.as<btf::Enum64>();
+        }();
+        const auto value = std::visit(
+            [&](const auto &e)
+                -> std::optional<std::variant<int32_t, int64_t>> {
+              const auto values = e.values();
+              // We fall back and look for an enum value that starts with `_`
+              // also. This is an escape hatch for cases where there is a
+              // reserved keyword, etc.
+              auto it = values.find(s);
+              if (it != values.end()) {
+                return it->second;
+              } else {
+                it = values.find("_" + s);
+                if (it != values.end()) {
+                  return it->second;
+                }
+              }
+              return std::nullopt;
+            },
+            var);
+        if (value) {
+          auto *typeof = ctx_.make_node<Typeof>(
+              *compat_arg_type, Location(call.vargs[i].node().loc));
+          int64_t v = std::visit(
+              [](const auto &n) { return static_cast<int64_t>(n); }, *value);
+          if (v < 0) {
+            call.vargs[i].value = ctx_.make_node<Cast>(
+                typeof,
+                ctx_.make_node<NegativeInteger>(
+                    v, Location(call.vargs[i].node().loc)),
+                Location(call.vargs[i].node().loc));
+          } else {
+            call.vargs[i].value = ctx_.make_node<Cast>(
+                typeof,
+                ctx_.make_node<Integer>(static_cast<uint64_t>(v),
+                                        Location(call.vargs[i].node().loc)),
+                Location(call.vargs[i].node().loc));
+          }
+        }
+      }
+      visit(call.vargs[i]);
+      args.emplace_back(name, std::move(*compat_arg_type));
+    }
+    if (args.size() != argument_types->size()) {
+      return; // Already emitted errors.
+    }
+    // Check all the individual arguments.
+    bool ok = true;
+    for (size_t i = 0; i < args.size(); i++) {
+      const auto &[name, type] = args[i];
+      if (type != call.vargs[i].type()) {
+        if (!name.empty()) {
+          call.vargs[i].node().addError()
+              << "Expected " << typestr(type) << " for argument `" << name
+              << "` got " << typestr(call.vargs[i].type());
+        } else {
+          call.vargs[i].node().addError()
+              << "Expected " << typestr(type) << " got "
+              << typestr(call.vargs[i].type());
+        }
+        ok = false;
+      }
+    }
+    // Build our full proto as an error message.
+    std::stringstream fullmsg;
+    fullmsg << "Function `" << call.func << "` requires arguments (";
+    bool first = true;
+    for (const auto &[name, type] : args) {
+      if (!first) {
+        fullmsg << ", ";
+      }
+      fullmsg << typestr(type);
+      first = false;
+    }
+    fullmsg << ")";
+    if (!ok) {
+      call.addError() << fullmsg.str();
+    }
+    return; // Extern function.
+  }
+
+  // Visit all arguments for internal resoution.
   for (size_t i = 0; i < call.vargs.size(); ++i) {
     func_arg_idx_ = i;
     visit(call.vargs.at(i));
@@ -1223,12 +1389,12 @@ void SemanticAnalyser::visit(Call &call)
   if (call.func == "hist") {
     if (call.vargs.size() == 3) {
       call.vargs.emplace_back(
-          ctx_.make_node<Integer>(0, Location(call.loc))); // default bits is 0
+          ctx_.make_node<Integer>(0, Location(call.loc))); // default bits
     } else {
       const auto *bits = call.vargs.at(3).as<Integer>();
       if (!bits) {
-        // Bug here as the validity of the integer literal is already checked by
-        // check_arg above.
+        // Bug here as the validity of the integer literal is already checked
+        // by check_arg above.
         LOG(BUG) << call.func << ": invalid bits value, need integer literal";
       } else if (bits->value > 5) {
         call.addError() << call.func << ": bits " << bits->value
@@ -1926,112 +2092,7 @@ void SemanticAnalyser::visit(Call &call)
       call.addError() << fs.format(args);
     }
   } else {
-    // Check here if this corresponds to an external function. We convert the
-    // external type metadata into the internal `SizedType` representation and
-    // check that they are exactly equal.
-    auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
-    if (!maybe_func) {
-      call.addError() << "Unknown function: '" << call.func << "'";
-      return;
-    }
-
-    const auto &func = *maybe_func;
-
-    if (func.linkage() != btf::Function::Linkage::Global &&
-        func.linkage() != btf::Function::Linkage::Extern) {
-      call.addError() << "Unsupported function linkage: '" << call.func << "'";
-      return;
-    }
-
-    auto proto = func.type();
-    if (!proto) {
-      call.addError() << "Unable to find function proto: " << proto.takeError();
-      return;
-    }
-    // Extract our return type.
-    auto return_type = proto->return_type();
-    if (!return_type) {
-      call.addError() << "Unable to read return type: "
-                      << return_type.takeError();
-      return;
-    }
-    auto compat_return_type = getCompatType(*return_type);
-    if (!compat_return_type) {
-      call.addError() << "Unable to convert return type: "
-                      << compat_return_type.takeError();
-      return;
-    }
-    call.return_type = *compat_return_type;
-    // Convert all arguments.
-    auto argument_types = proto->argument_types();
-    if (!argument_types) {
-      call.addError() << "Unable to read argument types: "
-                      << argument_types.takeError();
-      return;
-    }
-    // Check the argument count.
-    if (argument_types->size() != call.vargs.size()) {
-      call.addError() << "Function `" << call.func << "` requires "
-                      << argument_types->size() << " arguments, got only "
-                      << call.vargs.size();
-      return;
-    }
-    std::vector<std::pair<std::string, SizedType>> args;
-    for (size_t i = 0; i < argument_types->size(); i++) {
-      const auto &[name, type] = argument_types->at(i);
-      auto compat_arg_type = getCompatType(type);
-      if (!compat_arg_type) {
-        // If the required type is a **pointer**, and the provided type is
-        // a **pointer**, then we let it slide. Just assume the user knows
-        // what they are doing. The verifier will catch them out otherwise.
-        if (type.is<btf::Pointer>() && call.vargs[i].type().IsPtrTy()) {
-          args.emplace_back(name, call.vargs[i].type());
-          continue;
-        }
-        call.addError() << "Unable to convert argument type, "
-                        << "function requires '" << type << "', "
-                        << "found '" << typestr(call.vargs[i].type())
-                        << "': " << compat_arg_type.takeError();
-        continue;
-      }
-      args.emplace_back(name, std::move(*compat_arg_type));
-    }
-    if (args.size() != argument_types->size()) {
-      return; // Already emitted errors.
-    }
-    // Check all the individual arguments.
-    bool ok = true;
-    for (size_t i = 0; i < args.size(); i++) {
-      const auto &[name, type] = args[i];
-      if (type != call.vargs[i].type()) {
-        if (!name.empty()) {
-          call.vargs[i].node().addError()
-              << "Expected " << typestr(type) << " for argument `" << name
-              << "` got " << typestr(call.vargs[i].type());
-        } else {
-          call.vargs[i].node().addError()
-              << "Expected " << typestr(type) << " got "
-              << typestr(call.vargs[i].type());
-        }
-        ok = false;
-      }
-    }
-    // Build our full proto as an error message.
-    std::stringstream fullmsg;
-    fullmsg << "Function `" << call.func << "` requires arguments (";
-    bool first = true;
-    for (const auto &[name, type] : args) {
-      if (!first) {
-        fullmsg << ", ";
-      }
-      fullmsg << typestr(type);
-      first = false;
-    }
-    fullmsg << ")";
-    if (!ok) {
-      call.addError() << fullmsg.str();
-      return;
-    }
+    call.addError() << "Unknown function: '" << call.func << "'";
   }
 }
 
@@ -2781,8 +2842,8 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
 
   if (!lhs.IsSameType(rhs)) {
     if (is_final_pass()) {
-      if_expr.addError() << "Branches must return the same type: "
-                         << "have '" << lhs << "' and '" << rhs << "'";
+      if_expr.addError() << "Branches must return the same type: " << "have '"
+                         << lhs << "' and '" << rhs << "'";
     }
     // This assignment is just temporary to prevent errors
     // before the final pass
@@ -3318,11 +3379,16 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (ty.IsEnumTy()) {
-    if (!c_definitions_.enum_defs.contains(ty.GetName())) {
+    if (!c_definitions_.enum_defs.contains(ty.GetName()) &&
+        !type_metadata_.global.lookup<btf::Enum>(ty.GetName()) &&
+        !type_metadata_.global.lookup<btf::Enum64>(ty.GetName())) {
       cast.addError() << "Unknown enum: " << ty.GetName();
     } else {
       if (auto *integer = cast.expr.as<Integer>()) {
-        if (!c_definitions_.enum_defs[ty.GetName()].contains(integer->value)) {
+        // We only do exhaustive checking of C definitions for now, this can
+        // be extended or unified into the global extern types in the future.
+        if (c_definitions_.enum_defs.contains(ty.GetName()) &&
+            !c_definitions_.enum_defs[ty.GetName()].contains(integer->value)) {
           cast.addError() << "Enum: " << ty.GetName()
                           << " doesn't contain a variant value of "
                           << integer->value;
