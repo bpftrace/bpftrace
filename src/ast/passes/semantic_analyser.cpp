@@ -174,6 +174,7 @@ public:
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
   void visit(Typeof &typeof);
+  void visit(Typevalid &typevalid);
   void visit(Map &map);
   void visit(MapAddr &map_addr);
   void visit(MapDeclStatement &decl);
@@ -2771,7 +2772,11 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
   typeofs.visit(if_expr.cond, [](const Typeof &typeof) {
     return typeof.type().IsNoneTy(); // Not resolved.
   });
-  if (!typeofs.nodes().empty()) {
+  CollectNodes<Typevalid> valids;
+  valids.visit(if_expr.cond, [](const Typevalid &typevalid) {
+    return typevalid.expr.type().IsNoneTy(); // Not resolved.
+  });
+  if (!typeofs.nodes().empty() || !valids.nodes().empty()) {
     pass_tracker_.add_unresolved_branch(&if_expr);
     return; // Skip visiting this `if` for now.
   }
@@ -3403,6 +3408,16 @@ void SemanticAnalyser::visit(Tuple &tuple)
   tuple.tuple_type = CreateTuple(Struct::CreateTuple(elements));
 }
 
+void SemanticAnalyser::visit(Typevalid &typevalid)
+{
+  // The visit to the expression in `valid` is permitted to fail, and no
+  // diagnositcs will be generated. We still keep all of our semantic analyzer
+  // state, so references are resolved with local variables, etc.
+  ASTContext discard;
+  auto copy = clone(discard, typevalid.expr, typevalid.loc);
+  Visitor<SemanticAnalyser>::visit(copy);
+}
+
 void SemanticAnalyser::visit(Expression &expr)
 {
   // Visit and fold all other values.
@@ -3433,6 +3448,18 @@ void SemanticAnalyser::visit(Expression &expr)
       auto *id = ctx_.make_node<Integer>(0, Location(type_id->loc));
       expr.value = ctx_.make_node<Tuple>(ExpressionList{ s, id },
                                          Location(type_id->loc));
+    }
+  } else if (auto *typevalid = expr.as<Typevalid>()) {
+    if (!typevalid->expr.type().IsNoneTy()) {
+      // This should be folded subsequently.
+      expr.value = ctx_.make_node<Boolean>(true, Location(typevalid->loc));
+    } else if (is_second_chance()) {
+      // By the second chance pass, if this is unresolved then we know that it
+      // not valid and we resolve to false. The resolution of these types is
+      // what gets us back into convergence.
+      expr.value = ctx_.make_node<Boolean>(false, Location(typevalid->loc));
+    } else {
+      pass_tracker_.inc_num_unresolved();
     }
   }
 }
@@ -4259,6 +4286,11 @@ inline bool SemanticAnalyser::is_final_pass() const
 bool SemanticAnalyser::is_first_pass() const
 {
   return pass_tracker_.get_num_passes() == 1;
+}
+
+bool SemanticAnalyser::is_second_chance() const
+{
+  return pass_tracker_.is_second_chance();
 }
 
 bool SemanticAnalyser::check_arg(const Call &call,
