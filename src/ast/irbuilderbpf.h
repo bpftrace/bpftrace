@@ -98,14 +98,6 @@ public:
                                Value *src,
                                AddrSpace as,
                                const Location &loc);
-  Value *CreateUSDTReadArgument(Value *ctx,
-                                AttachPoint *attach_point,
-                                int usdt_location_index,
-                                int arg_num,
-                                Builtin &builtin,
-                                std::optional<pid_t> pid,
-                                AddrSpace as,
-                                const Location &loc);
   Value *CreateStrncmp(Value *str1, Value *str2, uint64_t n, bool inverse);
   Value *CreateStrcontains(Value *haystack,
                            uint64_t haystack_sz,
@@ -274,11 +266,6 @@ private:
                           AllocaInst *ret,
                           const Location &loc);
   llvm::Type *BpfPidnsInfoType();
-  Value *CreateUSDTReadArgument(Value *ctx,
-                                struct bcc_usdt_argument *argument,
-                                Builtin &builtin,
-                                AddrSpace as,
-                                const Location &loc);
   CallInst *createMapLookup(const std::string &map_name,
                             Value *key,
                             const std::string &name = "lookup_elem");
