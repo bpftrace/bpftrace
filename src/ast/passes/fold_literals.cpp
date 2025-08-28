@@ -34,6 +34,10 @@ public:
   std::optional<Expression> visit(BlockExpr &block_expr);
 
 private:
+  // Return nullopt if we can't compare the tuples now
+  // e.g. they contain variables, which are resolved at runtime
+  std::optional<bool> compare_tuples(Tuple *left_tuple, Tuple *right_tuple);
+
   ASTContext &ast_;
   std::optional<std::reference_wrapper<BPFtrace>> bpftrace_;
 
@@ -142,6 +146,94 @@ static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
   }
 
   return ast.make_node<Boolean>(value, Location(op.loc));
+}
+
+std::optional<bool> LiteralFolder::compare_tuples(Tuple *left_tuple,
+                                                  Tuple *right_tuple)
+{
+  if (left_tuple->elems.size() != right_tuple->elems.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < left_tuple->elems.size(); ++i) {
+    auto l_expr = left_tuple->elems[i];
+    auto r_expr = right_tuple->elems[i];
+
+    visit(l_expr);
+    visit(r_expr);
+
+    if (!is_literal(l_expr) || !is_literal(r_expr)) {
+      // N.B. we can do more here to determine if a tuple
+      // is not equal to another tuple but just doing the
+      // obvious thing with literals for now
+      if (auto *l_tuple = l_expr.as<Tuple>()) {
+        if (is_literal(r_expr)) {
+          return false;
+        }
+
+        if (auto *r_tuple = r_expr.as<Tuple>()) {
+          auto nested_eval = compare_tuples(l_tuple, r_tuple);
+          if (nested_eval) {
+            if (!*nested_eval) {
+              return false;
+            } else {
+              continue;
+            }
+          }
+        }
+
+        return std::nullopt;
+      }
+
+      if (r_expr.is<Tuple>() && is_literal(l_expr)) {
+        return false;
+      }
+
+      return std::nullopt;
+    }
+
+    if (auto *l_int = l_expr.as<Integer>()) {
+      if (auto *r_int = r_expr.as<Integer>()) {
+        if (l_int->value != r_int->value) {
+          return false;
+        }
+        continue;
+      }
+      return false;
+    }
+
+    if (auto *l_nint = l_expr.as<NegativeInteger>()) {
+      if (auto *r_nint = r_expr.as<NegativeInteger>()) {
+        if (l_nint->value != r_nint->value) {
+          return false;
+        }
+        continue;
+      }
+      return false;
+    }
+
+    if (auto *l_str = l_expr.as<String>()) {
+      if (auto *r_str = r_expr.as<String>()) {
+        if (l_str->value != r_str->value) {
+          return false;
+        }
+        continue;
+      }
+      return false;
+    }
+
+    if (auto *l_bool = l_expr.as<Boolean>()) {
+      if (auto *r_bool = r_expr.as<Boolean>()) {
+        if (l_bool->value != r_bool->value) {
+          return false;
+        }
+        continue;
+      }
+      return false;
+    }
+  }
+
+  return true;
 }
 
 template <typename T>
@@ -448,6 +540,21 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
         // Negatives are always true.
         return make_boolean(ast_, boolean->value, true, op);
       }
+    }
+  }
+
+  if (op.left.is<Tuple>() && op.right.is<Tuple>() &&
+      (op.op == Operator::EQ || op.op == Operator::NE)) {
+    auto *left_tuple = op.left.as<Tuple>();
+    auto *right_tuple = op.right.as<Tuple>();
+    auto same = compare_tuples(left_tuple, right_tuple);
+    if (same) {
+      return ast_.make_node<Boolean>(*same ? op.op == Operator::EQ
+                                           : op.op == Operator::NE,
+                                     Location(op.loc));
+    } else {
+      // Can't compare here
+      return std::nullopt;
     }
   }
 
