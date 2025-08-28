@@ -3385,10 +3385,9 @@ void SemanticAnalyser::visit(Tuple &tuple)
   for (auto &elem : tuple.elems) {
     visit(elem);
 
-    // If elem type is none that means that the tuple contains some
-    // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
-    // creation. Cast already emits the error.
-    if (elem.type().IsNoneTy() || elem.type().GetSize() == 0) {
+    // If elem type is none that means that the tuple is not yet resolved.
+    if (elem.type().IsNoneTy()) {
+      pass_tracker_.inc_num_unresolved();
       return;
     } else if (elem.type().IsMultiKeyMapTy()) {
       elem.node().addError()
