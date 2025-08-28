@@ -2273,6 +2273,9 @@ void SemanticAnalyser::visit(VariableAddr &var_addr)
     if (!found->type.IsNoneTy()) {
       var_addr.var_addr_type = CreatePointer(found->type, found->type.GetAS());
     }
+    // We can't know if the pointer to a scratch variable was passed
+    // to an external function for assignment so just mark it as assigned.
+    found->was_assigned = true;
   }
   if (is_final_pass() && var_addr.var_addr_type.IsNoneTy()) {
     var_addr.addError() << "No type available for variable "
