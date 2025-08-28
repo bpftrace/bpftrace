@@ -231,9 +231,6 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       const auto ts = bpftrace.resolve_timestamp(s.mode, s.nsecs);
       return bpftrace.format_timestamp(ts, s.strftime_id);
     }
-    case Type::mac_address: {
-      return bpftrace.resolve_mac_address(value.data());
-    }
     case Type::cgroup_path_t: {
       const auto &c = value.bitcast<const AsyncEvent::CgroupPath>();
       return bpftrace.resolve_cgroup_path(c.cgroup_path_id, c.cgroup_id);

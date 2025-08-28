@@ -1142,22 +1142,6 @@ int BPFtrace::resolve_uname(const std::string &name,
   return bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, sym);
 }
 
-std::string BPFtrace::resolve_mac_address(const char *mac_addr) const
-{
-  const size_t SIZE = 18;
-  char addr[SIZE];
-  snprintf(addr,
-           SIZE,
-           "%02X:%02X:%02X:%02X:%02X:%02X",
-           mac_addr[0],
-           mac_addr[1],
-           mac_addr[2],
-           mac_addr[3],
-           mac_addr[4],
-           mac_addr[5]);
-  return addr;
-}
-
 std::string BPFtrace::resolve_cgroup_path(uint64_t cgroup_path_id,
                                           uint64_t cgroup_id) const
 {

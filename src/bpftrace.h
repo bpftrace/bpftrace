@@ -158,7 +158,6 @@ public:
   virtual int resolve_uname(const std::string &name,
                             struct symbol *sym,
                             const std::string &path) const;
-  std::string resolve_mac_address(const char *mac_addr) const;
   std::string resolve_cgroup_path(uint64_t cgroup_path_id,
                                   uint64_t cgroup_id) const;
   std::string resolve_probe(uint64_t probe_id) const;

@@ -58,7 +58,6 @@ TEST(types, to_str)
 
   EXPECT_EQ(to_str(CreateCount()), "count_t");
 
-  EXPECT_EQ(to_str(CreateMacAddress()), "mac_address");
   EXPECT_EQ(to_str(CreateStack(true)), "kstack");
   EXPECT_EQ(to_str(CreateStack(false)), "ustack");
   EXPECT_EQ(to_str(CreateTimestamp()), "timestamp");
