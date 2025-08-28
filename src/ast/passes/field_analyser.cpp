@@ -35,8 +35,8 @@ public:
   void visit(Cast &cast);
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
-  void visit(AssignMapStatement &assignment);
-  void visit(AssignVarStatement &assignment);
+  void visit(AssignMap &assignment);
+  void visit(AssignVar &assignment);
   void visit(Unop &unop);
   void visit(Probe &probe);
   void visit(Subprog &subprog);
@@ -196,7 +196,7 @@ void FieldAnalyser::visit(Offsetof &offof)
   }
 }
 
-void FieldAnalyser::visit(AssignMapStatement &assignment)
+void FieldAnalyser::visit(AssignMap &assignment)
 {
   visit(assignment.map);
   visit(assignment.key);
@@ -204,7 +204,7 @@ void FieldAnalyser::visit(AssignMapStatement &assignment)
   var_types_.emplace(assignment.map->ident, sized_type_);
 }
 
-void FieldAnalyser::visit(AssignVarStatement &assignment)
+void FieldAnalyser::visit(AssignVar &assignment)
 {
   visit(assignment.expr);
   var_types_.emplace(assignment.var()->ident, sized_type_);

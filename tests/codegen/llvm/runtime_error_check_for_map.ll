@@ -48,8 +48,8 @@ helper_failure:                                   ; preds = %entry
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 helper_merge:                                     ; preds = %counter_merge, %entry
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_val")
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_map, ptr @map_for_each_cb, ptr null, i64 0)
   %6 = trunc i64 %for_each_map_elem to i32
   %7 = icmp sge i32 %6, 0

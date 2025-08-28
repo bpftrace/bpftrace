@@ -43,8 +43,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@map_val")
   store i64 32, ptr %"@map_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_map, ptr %"@map_key", ptr %"@map_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@map_val")
   store i64 123, ptr %"$var1", align 8
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var2", ptr align 1 @abc, i64 4, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$var3", ptr align 1 @def, i64 4, i1 false)
@@ -62,8 +62,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@len_val")
   store i64 %3, ptr %"@len_val", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_len, ptr %"@len_key", ptr %"@len_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@len_val")
   ret i64 0
 }
 

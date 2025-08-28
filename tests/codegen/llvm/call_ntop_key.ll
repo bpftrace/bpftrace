@@ -30,8 +30,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 1, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %inet, ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %inet)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   ret i64 0
 }
 

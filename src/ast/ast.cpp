@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <utility>
 
 #include "ast/ast.h"
 #include "ast/context.h"

@@ -316,7 +316,7 @@ void Printer::visit(ExprStatement &expr)
   visit(expr.expr);
 }
 
-void Printer::visit(AssignScalarMapStatement &assignment)
+void Printer::visit(AssignScalarMap &assignment)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "=" << std::endl;
@@ -327,7 +327,7 @@ void Printer::visit(AssignScalarMapStatement &assignment)
   --depth_;
 }
 
-void Printer::visit(AssignMapStatement &assignment)
+void Printer::visit(AssignMap &assignment)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "=" << std::endl;
@@ -341,7 +341,7 @@ void Printer::visit(AssignMapStatement &assignment)
   --depth_;
 }
 
-void Printer::visit(AssignVarStatement &assignment)
+void Printer::visit(AssignVar &assignment)
 {
   std::string indent(depth_, ' ');
 

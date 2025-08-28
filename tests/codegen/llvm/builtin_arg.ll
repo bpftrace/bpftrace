@@ -32,8 +32,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
   store i64 %arg0, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   %3 = call ptr @llvm.preserve.static.offset(ptr %0)
   %4 = getelementptr i8, ptr %3, i64 96
   %arg2 = load volatile i64, ptr %4, align 8
@@ -42,8 +42,8 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_val")
   store i64 %arg2, ptr %"@y_val", align 8
   %update_elem1 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   ret i64 0
 }
 

@@ -53,8 +53,8 @@ helper_failure:                                   ; preds = %entry
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 helper_merge:                                     ; preds = %counter_merge, %entry
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to ptr)() #2
   %tid = trunc i64 %get_pid_tgid1 to i32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
@@ -94,8 +94,8 @@ helper_failure3:                                  ; preds = %helper_merge
   br i1 %ringbuf_loss9, label %event_loss_counter7, label %counter_merge8
 
 helper_merge4:                                    ; preds = %counter_merge8, %helper_merge
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   ret i64 0
 
 event_loss_counter7:                              ; preds = %helper_failure3

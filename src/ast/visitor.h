@@ -146,20 +146,20 @@ public:
   {
     return visitImpl(expr.expr);
   }
-  R visit(AssignScalarMapStatement &assignment)
+  R visit(AssignScalarMap &assignment)
   {
     visitImpl(assignment.map);
     visitImpl(assignment.expr);
     return default_value();
   }
-  R visit(AssignMapStatement &assignment)
+  R visit(AssignMap &assignment)
   {
     visitImpl(assignment.map);
     visitImpl(assignment.key);
     visitImpl(assignment.expr);
     return default_value();
   }
-  R visit(AssignVarStatement &assignment)
+  R visit(AssignVar &assignment)
   {
     visitImpl(assignment.var_decl);
     visitImpl(assignment.expr);

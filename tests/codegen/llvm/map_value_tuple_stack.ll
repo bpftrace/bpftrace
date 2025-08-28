@@ -49,9 +49,9 @@ entry:
   %6 = getelementptr %"string[8]_int64__tuple_t", ptr %"@x_val", i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %6, ptr align 1 %5, i64 8, i1 false)
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple1)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple1, i8 0, i64 16, i1 false)
   %7 = getelementptr %"string[8]_int64__tuple_t", ptr %tuple1, i32 0, i32 0

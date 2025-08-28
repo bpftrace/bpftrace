@@ -1107,7 +1107,7 @@ TEST(Parser, if_elseif_else)
 TEST(Parser, if_elseif_elseif_else)
 {
   test("kprobe:f { if (pid > 10000) { $s = 10; } else if (pid < 10) { $s = 2; "
-       "} else if (pid > 999999) { $s = 0 } else { $s = 1 } }",
+       "} else if (pid > 999999) { $s = 0; } else { $s = 1 } }",
        "Program\n"
        " kprobe:f\n"
        "  if\n"
@@ -2435,7 +2435,7 @@ uretprobe:/bin/sh:f+0x10 { 1 }
 TEST(Parser, invalid_increment_decrement)
 {
   test_parse_failure("i:s:1 { @=5++}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected ++, expecting ; or }
+stdin:1:9-14: ERROR: syntax error, unexpected ++, expecting ;
 i:s:1 { @=5++}
         ~~~~~
 )");
@@ -2447,7 +2447,7 @@ i:s:1 { @=++5}
 )");
 
   test_parse_failure("i:s:1 { @=5--}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected --, expecting ; or }
+stdin:1:9-14: ERROR: syntax error, unexpected --, expecting ;
 i:s:1 { @=5--}
         ~~~~~
 )");
@@ -2459,7 +2459,7 @@ i:s:1 { @=--5}
 )");
 
   test_parse_failure("i:s:1 { @=\"a\"++}", R"(
-stdin:1:9-16: ERROR: syntax error, unexpected ++, expecting ; or }
+stdin:1:9-16: ERROR: syntax error, unexpected ++, expecting ;
 i:s:1 { @="a"++}
         ~~~~~~~
 )");
@@ -3187,9 +3187,9 @@ TEST(Parser, block_expressions)
 {
   // Non-legal trailing statement
   test_parse_failure("begin { $x = { $a = 1; $b = 2 } exit(); }", R"(
-stdin:1:31-32: ERROR: syntax error, unexpected }, expecting ;
+stdin:1:33-37: ERROR: syntax error, unexpected identifier, expecting ;
 begin { $x = { $a = 1; $b = 2 } exit(); }
-                              ~
+                                ~~~~
 )");
 
   // No expression, statement with trailing ;
@@ -3201,14 +3201,14 @@ begin { $x = { $a = 1; $b = 2; } exit(); }
 
   // Missing ; after block expression
   test_parse_failure("begin { $x = { $a = 1; $a } exit(); }", R"(
-stdin:1:29-33: ERROR: syntax error, unexpected identifier, expecting ; or }
+stdin:1:29-33: ERROR: syntax error, unexpected identifier, expecting ;
 begin { $x = { $a = 1; $a } exit(); }
                             ~~~~
 )");
 
   // Illegal; no map assignment
   test_parse_failure("begin { $x = { $a = 1; count() } exit(); }", R"(
-stdin:1:34-38: ERROR: syntax error, unexpected identifier, expecting ; or }
+stdin:1:34-38: ERROR: syntax error, unexpected identifier, expecting ;
 begin { $x = { $a = 1; count() } exit(); }
                                  ~~~~
 )");

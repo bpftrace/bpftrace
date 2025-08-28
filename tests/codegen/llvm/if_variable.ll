@@ -22,9 +22,10 @@ entry:
   %"$x" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
   store i64 0, ptr %"$x", align 8
-  store i64 10, ptr %"$x", align 8
   %1 = load i64, ptr %"$x", align 8
-  store i64 %1, ptr %"$y", align 8
+  store i64 10, ptr %"$x", align 8
+  %2 = load i64, ptr %"$x", align 8
+  store i64 %2, ptr %"$y", align 8
   ret i64 0
 }
 

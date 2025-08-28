@@ -143,6 +143,9 @@ class Cast;
 class Tuple;
 class IfExpr;
 class BlockExpr;
+class AssignScalarMap;
+class AssignMap;
+class AssignVar;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -169,7 +172,10 @@ class Expression : public VariantNode<Integer,
                                       Cast,
                                       Tuple,
                                       IfExpr,
-                                      BlockExpr> {
+                                      BlockExpr,
+                                      AssignScalarMap,
+                                      AssignMap,
+                                      AssignVar> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -182,9 +188,6 @@ using ExpressionList = std::vector<Expression>;
 
 class ExprStatement;
 class VarDeclStatement;
-class AssignScalarMapStatement;
-class AssignMapStatement;
-class AssignVarStatement;
 class Unroll;
 class Jump;
 class While;
@@ -192,9 +195,6 @@ class For;
 
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
-                                     AssignScalarMapStatement,
-                                     AssignMapStatement,
-                                     AssignVarStatement,
                                      Unroll,
                                      Jump,
                                      While,
@@ -825,76 +825,91 @@ public:
 // default keys, so that later steps (semantic analysis, code generation),
 // don't need to worry about this. Maps whose accesses are bound to a single
 // key will be automatically collapsed into scalar values on the output side.
-class AssignScalarMapStatement : public Node {
+class AssignScalarMap : public Node {
 public:
-  explicit AssignScalarMapStatement(ASTContext &ctx,
-                                    Map *map,
-                                    Expression expr,
-                                    Location &&loc)
+  explicit AssignScalarMap(ASTContext &ctx,
+                           Map *map,
+                           Expression expr,
+                           Location &&loc)
       : Node(ctx, std::move(loc)), map(map), expr(std::move(expr)) {};
-  explicit AssignScalarMapStatement(ASTContext &ctx,
-                                    const AssignScalarMapStatement &other,
-                                    const Location &loc)
+  explicit AssignScalarMap(ASTContext &ctx,
+                           const AssignScalarMap &other,
+                           const Location &loc)
       : Node(ctx, loc + other.loc),
         map(clone(ctx, other.map, loc)),
         expr(clone(ctx, other.expr, loc)) {};
+
+  const SizedType &type() const
+  {
+    return map->type();
+  }
 
   Map *map = nullptr;
   Expression expr;
 };
 
-class AssignMapStatement : public Node {
+class AssignMap : public Node {
 public:
-  explicit AssignMapStatement(ASTContext &ctx,
-                              Map *map,
-                              Expression key,
-                              Expression expr,
-                              Location &&loc)
+  explicit AssignMap(ASTContext &ctx,
+                     Map *map,
+                     Expression key,
+                     Expression expr,
+                     Location &&loc)
       : Node(ctx, std::move(loc)),
         map(map),
         key(std::move(key)),
         expr(std::move(expr)) {};
-  explicit AssignMapStatement(ASTContext &ctx,
-                              const AssignMapStatement &other,
-                              const Location &loc)
+  explicit AssignMap(ASTContext &ctx,
+                     const AssignMap &other,
+                     const Location &loc)
       : Node(ctx, loc + other.loc),
         map(clone(ctx, other.map, loc)),
         key(clone(ctx, other.key, loc)),
         expr(clone(ctx, other.expr, loc)) {};
+
+  const SizedType &type() const
+  {
+    return map->type();
+  }
 
   Map *map = nullptr;
   Expression key;
   Expression expr;
 };
 
-class AssignVarStatement : public Node {
+class AssignVar : public Node {
 public:
-  explicit AssignVarStatement(ASTContext &ctx,
-                              Variable *var,
-                              Expression expr,
-                              Location &&loc)
+  explicit AssignVar(ASTContext &ctx,
+                     Variable *var,
+                     Expression expr,
+                     Location &&loc)
       : Node(ctx, std::move(loc)), var_decl(var), expr(std::move(expr)) {};
-  explicit AssignVarStatement(ASTContext &ctx,
-                              VarDeclStatement *var_decl_stmt,
-                              Expression expr,
-                              Location &&loc)
+  explicit AssignVar(ASTContext &ctx,
+                     VarDeclStatement *var_decl_stmt,
+                     Expression expr,
+                     Location &&loc)
       : Node(ctx, std::move(loc)),
         var_decl(var_decl_stmt),
         expr(std::move(expr)) {};
-  explicit AssignVarStatement(ASTContext &ctx,
-                              const AssignVarStatement &other,
-                              const Location &loc)
+  explicit AssignVar(ASTContext &ctx,
+                     const AssignVar &other,
+                     const Location &loc)
       : Node(ctx, loc + other.loc),
         var_decl(clone(ctx, other.var_decl, loc)),
         expr(clone(ctx, other.expr, loc)) {};
 
-  Variable *var()
+  Variable *var() const
   {
     if (std::holds_alternative<VarDeclStatement *>(var_decl)) {
       return std::get<VarDeclStatement *>(var_decl)->var;
     } else {
       return std::get<Variable *>(var_decl);
     }
+  }
+
+  const SizedType &type() const
+  {
+    return var()->type();
   }
 
   std::variant<VarDeclStatement *, Variable *> var_decl;
