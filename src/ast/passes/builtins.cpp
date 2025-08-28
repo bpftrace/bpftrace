@@ -44,6 +44,26 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
   if (ident == "__builtin_safe_mode") {
     return ast_.make_node<Boolean>(bpftrace_.safe_mode_, Location(node.loc));
   }
+
+  // The builtin will be expanded to either true or false if it has this prefix,
+  // depending on whether or not the faeture is supported.
+  //
+  // In general the use of this builtin is discouraged, since it is not
+  // necessarily true that the compile-time kernel is the same as the runtime
+  // kernel. However, it is used during the standard library transition.
+  const auto &helper_prefix = "__builtin_has_helper_";
+  if (ident.starts_with(helper_prefix)) {
+    const auto &helper = ident.substr(sizeof(helper_prefix) - 1);
+    const auto helpers = bpftrace_.feature_->all_helpers();
+    for (const auto &[name, present] : helpers) {
+      if (name == helper) {
+        return ast_.make_node<Boolean>(present, Location(node.loc));
+      }
+    }
+    // If unknown, then the feature is not present.
+    return ast_.make_node<Boolean>(false, Location(node.loc));
+  }
+
   return std::nullopt;
 }
 

@@ -546,44 +546,64 @@ bool BPFfeature::has_skb_output()
   return *has_skb_output_;
 }
 
+template <typename T>
+std::string to_str(const T& v)
+{
+  if constexpr (std::is_same_v<T, bool>) {
+    if (v) {
+      return "yes";
+    } else {
+      return "no";
+    }
+  }
+  std::stringstream ss;
+  ss << v;
+  return ss.str();
+}
+
+template <typename T>
 static void tabulate(std::stringstream& buf,
-                     std::vector<std::pair<std::string, std::string>>& data)
+                     std::vector<std::pair<std::string, T>>& data)
 {
   size_t len = data.size();
   constexpr int width = 35;
   for (size_t i = 0; i < len; i += 2) {
-    buf << std::setw(width) << std::left
-        << "  " + data[i].first + ": " + data[i].second << std::setw(width);
+    std::stringstream ss;
+    ss << "  " << data[i].first << ": " << to_str(data[i].second);
+    buf << std::setw(width) << std::left << ss.str();
+    ss.str("");
     if (i + 1 < len) {
-      buf << data[i + 1].first + ": " + data[i + 1].second << std::endl;
+      ss << "  " << data[i + 1].first << ": " << to_str(data[i + 1].second);
+      buf << std::setw(width) << ss.str() << std::endl;
     } else {
       buf << std::endl;
     }
   }
 }
 
+std::vector<std::pair<std::string, bool>> BPFfeature::all_helpers()
+{
+  return std::vector<std::pair<std::string, bool>>({
+      { "probe_read_user", has_helper_probe_read_user() },
+      { "probe_read_user_str", has_helper_probe_read_user_str() },
+      { "probe_read_kernel", has_helper_probe_read_kernel() },
+      { "probe_read_kernel_str", has_helper_probe_read_kernel_str() },
+      { "send_signal", has_helper_send_signal() },
+      { "get_boot_ns", has_helper_ktime_get_boot_ns() },
+      { "dpath", has_d_path() },
+      { "skboutput", has_skb_output() },
+      { "get_tai_ns", has_helper_ktime_get_tai_ns() },
+      { "get_func_ip", has_helper_get_func_ip() },
+      { "jiffies64", has_helper_jiffies64() },
+      { "for_each_map_elem", has_helper_for_each_map_elem() },
+      { "get_ns_current_pid_tgid", has_helper_get_ns_current_pid_tgid() },
+      { "lookup_percpu_elem", has_helper_map_lookup_percpu_elem() },
+  });
+}
+
 std::string BPFfeature::report()
 {
   std::stringstream buf;
-
-  auto to_str = [](bool f) -> std::string { return f ? "yes" : "no"; };
-
-  std::vector<std::pair<std::string, std::string>> helpers = {
-    { "probe_read_user", to_str(has_helper_probe_read_user()) },
-    { "probe_read_user_str", to_str(has_helper_probe_read_user_str()) },
-    { "probe_read_kernel", to_str(has_helper_probe_read_kernel()) },
-    { "probe_read_kernel_str", to_str(has_helper_probe_read_kernel_str()) },
-    { "send_signal", to_str(has_helper_send_signal()) },
-    { "get_boot_ns", to_str(has_helper_ktime_get_boot_ns()) },
-    { "dpath", to_str(has_d_path()) },
-    { "skboutput", to_str(has_skb_output()) },
-    { "get_tai_ns", to_str(has_helper_ktime_get_tai_ns()) },
-    { "get_func_ip", to_str(has_helper_get_func_ip()) },
-    { "jiffies64", to_str(has_helper_jiffies64()) },
-    { "for_each_map_elem", to_str(has_helper_for_each_map_elem()) },
-    { "get_ns_current_pid_tgid", to_str(has_helper_get_ns_current_pid_tgid()) },
-    { "lookup_percpu_elem", to_str(has_helper_map_lookup_percpu_elem()) },
-  };
 
   std::vector<std::pair<std::string, std::string>> features = {
     { "Instruction limit", std::to_string(instruction_limit()) },
@@ -592,25 +612,26 @@ std::string BPFfeature::report()
     { "map batch", to_str(has_map_batch()) },
   };
 
-  std::vector<std::pair<std::string, std::string>> map_types = {
-    { "hash", to_str(has_map_hash()) },
-    { "array", to_str(has_map_array()) },
-    { "percpu array", to_str(has_map_percpu_array()) },
-    { "stack_trace", to_str(has_map_stack_trace()) },
-    { "ringbuf", to_str(has_map_ringbuf()) }
+  std::vector<std::pair<std::string, bool>> map_types = {
+    { "hash", has_map_hash() },
+    { "array", has_map_array() },
+    { "percpu array", has_map_percpu_array() },
+    { "stack_trace", has_map_stack_trace() },
+    { "ringbuf", has_map_ringbuf() },
   };
 
-  std::vector<std::pair<std::string, std::string>> probe_types = {
-    { "kprobe", to_str(has_prog_kprobe()) },
-    { "tracepoint", to_str(has_prog_tracepoint()) },
-    { "perf_event", to_str(has_prog_perf_event()) },
-    { "fentry", to_str(has_fentry()) },
-    { "kprobe_multi", to_str(has_kprobe_multi()) },
-    { "uprobe_multi", to_str(has_uprobe_multi()) },
-    { "kprobe_session", to_str(has_kprobe_session()) },
-    { "iter", to_str(has_iter("task")) }
+  std::vector<std::pair<std::string, bool>> probe_types = {
+    { "kprobe", has_prog_kprobe() },
+    { "tracepoint", has_prog_tracepoint() },
+    { "perf_event", has_prog_perf_event() },
+    { "fentry", has_fentry() },
+    { "kprobe_multi", has_kprobe_multi() },
+    { "uprobe_multi", has_uprobe_multi() },
+    { "kprobe_session", has_kprobe_session() },
+    { "iter", has_iter("task") },
   };
 
+  auto helpers = all_helpers();
   buf << "Kernel helpers" << std::endl;
   tabulate(buf, helpers);
   buf << std::endl;
