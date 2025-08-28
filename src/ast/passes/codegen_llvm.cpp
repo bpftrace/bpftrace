@@ -800,19 +800,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
           b_.CreateKFuncArg(ctx_, builtin.builtin_type, builtin.ident));
     }
 
-    if (builtin.ident.find("arg") != std::string::npos &&
-        probe_type == ProbeType::usdt) {
-      return ScopedExpr(
-          b_.CreateUSDTReadArgument(ctx_,
-                                    current_attach_point_,
-                                    current_usdt_location_index_,
-                                    atoi(builtin.ident.substr(3).c_str()),
-                                    builtin,
-                                    bpftrace_.pid(),
-                                    AddrSpace::user,
-                                    builtin.loc));
-    }
-
     Value *value = nullptr;
     if (builtin.is_argx() && probe_type == ProbeType::rawtracepoint)
       value = b_.CreateRawTracepointArg(ctx_, builtin.ident);
