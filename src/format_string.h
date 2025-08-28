@@ -32,6 +32,7 @@ public:
   bool show_sign = false;      // +
   bool space_prefix = false;   // (space)
   bool alternate_form = false; // #
+  bool lead_zeros = false;     // 0
   int width = 0;               // field width
   int precision = -1;          // precision after decimal point
   std::string length_modifier; // h, l, ll, etc.
