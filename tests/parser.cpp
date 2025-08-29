@@ -2640,6 +2640,46 @@ TEST(Parser, while_loop)
 )PROG");
 }
 
+TEST(Parser, tuples)
+{
+  test("k:f { print(()); }", R"PROG(Program
+ kprobe:f
+  call: print
+   tuple:
+)PROG");
+  // Not a tuple.
+  test("k:f { print((1)); }", R"PROG(Program
+ kprobe:f
+  call: print
+   int: 1 :: [int64]
+)PROG");
+  test("k:f{ print((1,)); }", R"PROG(Program
+ kprobe:f
+  call: print
+   tuple:
+    int: 1 :: [int64]
+)PROG");
+  test("k:f { print((1,2)); }", R"PROG(Program
+ kprobe:f
+  call: print
+   tuple:
+    int: 1 :: [int64]
+    int: 2 :: [int64]
+)PROG");
+  test("k:f { print((1,2,)); }", R"PROG(Program
+ kprobe:f
+  call: print
+   tuple:
+    int: 1 :: [int64]
+    int: 2 :: [int64]
+)PROG");
+  test_parse_failure("k:f { print((,)); }", R"(
+stdin:1:7-15: ERROR: syntax error, unexpected ","
+k:f { print((,)); }
+      ~~~~~~~~
+)");
+}
+
 TEST(Parser, tuple_assignment_error_message)
 {
   std::stringstream out;
