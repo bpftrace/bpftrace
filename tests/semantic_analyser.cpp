@@ -1999,6 +1999,66 @@ TEST_F(SemanticAnalyserTest, binop_integer_no_promotion)
   EXPECT_EQ(CreateInt8(), var_assignment->var()->var_type);
 }
 
+TEST_F(SemanticAnalyserTest, binop_tuple)
+{
+  // These are all variables so they don't get folded
+  test(
+      R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int8[2])(int16)2); $a == $b })");
+
+  // The total tuple size for the tuples in these two tests are the same so we
+  // can compare
+  test(R"(kprobe:f { $a = ((int16)1, 3); $b = ((int64)2, 4); $a == $b })");
+  test(
+      R"(kprobe:f { $a = (1, "hyaa", true); $b = (2, "bye", false); $a == $b })");
+
+  test(
+      R"(kprobe:f { $a = ((int16)1, (int16)3); $b = ((int64)2, 4); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (1, "reallyreallyreallylongstr", true); $b = (2, "bye", false); $a == $b })",
+      Error{});
+  test(R"(kprobe:f { $a = (1, true); $b = (2, "bye", false); $a == $b })",
+       Error{});
+  test(
+      R"(kprobe:f { $a = (1, true, "bye"); $b = (2, "bye", false); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int8[8])1); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int16[2])(int32)1); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (2, (1, (int8[2])(int16)1)); $b = (2, (1, (int16[2])(int32)1)); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (1, "hello", true); $b = (2, "bye", false); $a < $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (1, "hello", true); $b = (2, "bye", false); $a > $b })",
+      Error{});
+}
+
+TEST_F(SemanticAnalyserTest, binop_array)
+{
+  // These are variables so they don't get folded
+  test(
+      R"(kprobe:f { $a = (int8[2])(int16)1; $b = (int8[2])(int16)2; $a == $b })");
+
+  test(
+      R"(kprobe:f { $a = (int8[4])(int32)1; $b = (int8[2])(int16)2; $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (int8[4])(int32)1; $b = (int16[2])(int32)2; $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (int8[2])(int16)1; $b = (int8[2])(int16)2; $a < $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (int8[2])(int16)1; $b = (int8[2])(int16)2; $a > $b })",
+      Error{});
+}
+
 TEST_F(SemanticAnalyserTest, unop_dereference)
 {
   test("kprobe:f { *0; }");
@@ -3060,6 +3120,22 @@ stdin:1:57-62: ERROR: the index 4 is out of bounds for array of size 4
 kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); }
                                                         ~~~~~
 )" });
+}
+
+TEST_F(SemanticAnalyserTest, tuple_comparison)
+{
+  std::string err_msg = "Type mismatch for '=='";
+
+  test("kprobe:f { $s = (1, 2); $s == (3, 4)}");
+  test("kprobe:f { $s = (1, (int16)2); $s == (3, (uint8)4)}");
+  test(R"(kprobe:f { $s = (1, "hello"); $s == (3, "bye")})");
+  test("kprobe:f { $s = (1, (true, -4)); $s == (3, (false, 4))}");
+
+  test("kprobe:f { $s = (1, 2); $s == (3, 4, 5)}", Error{ err_msg });
+  test("kprobe:f { $s = (1, false); $s == (3, 4)}", Error{ err_msg });
+  test("kprobe:f { $s = (1, (2, 3)); $s == (3, (2, 3, 4))}", Error{ err_msg });
+  test("kprobe:f { $a = \"hello\"; $s = (1, (2, 3)); $s == (3, (2, $a))}",
+       Error{ err_msg });
 }
 
 TEST_F(SemanticAnalyserTest, signed_int_arithmetic_warnings)

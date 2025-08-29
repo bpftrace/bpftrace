@@ -22,6 +22,8 @@ and this project adheres to
 #### Fixed
 - ast: Avoid undefined behavior in literal folding
   - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
+- Improved tuple binop comparison
+  - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
 #### Security
 #### Docs
 #### Tools
