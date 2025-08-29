@@ -530,4 +530,16 @@ TEST(fold_literals, conditional)
   test("while (1 + 1) {}", "while(\n");
 }
 
+TEST(fold_literals, tuple_access)
+{
+  test_not("(1,0).0", "tuple:");
+  test_not("(1, 1 + 1).1", "tuple:");
+  test_not("($x, 1 + 1).0", "tuple:");
+  // Left as is
+  test("(1,0).2", ".\n   tuple:"); // bad access
+  test("$x = (1,0); $x.0",
+       "=\n   variable: $x\n   tuple:\n    int: 1 :: [int64]\n    int: 0 :: "
+       "[int64]\n  .\n   variable: $x"); // variable tuple
+}
+
 } // namespace bpftrace::test::fold_literals

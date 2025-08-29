@@ -32,6 +32,7 @@ public:
   std::optional<Expression> visit(Probe &probe);
   std::optional<Expression> visit(Builtin &builtin);
   std::optional<Expression> visit(BlockExpr &block_expr);
+  std::optional<Expression> visit(TupleAccess &acc);
 
 private:
   // Return nullopt if we can't compare the tuples now
@@ -805,6 +806,19 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
 
   expr.stmts = std::move(stmt_list);
 
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(TupleAccess &acc)
+{
+  visit(acc.expr);
+  if (auto *tuple = acc.expr.as<Tuple>()) {
+    if (acc.index >= tuple->elems.size()) {
+      // This access error happens in a later pass
+      return std::nullopt;
+    }
+    return tuple->elems[acc.index];
+  }
   return std::nullopt;
 }
 
