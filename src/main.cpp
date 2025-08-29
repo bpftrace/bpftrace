@@ -18,6 +18,7 @@
 #include "ast/diagnostic.h"
 #include "ast/helpers.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/call_injection.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
@@ -336,6 +337,7 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateProbePrunePass());
+  add(ast::CreateCallInjectionPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());
@@ -349,6 +351,7 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateProbePrunePass());
+  add(ast::CreateCallInjectionPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());

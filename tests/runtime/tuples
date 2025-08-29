@@ -121,3 +121,13 @@ EXPECT Attached 1 probe
 NAME kstack in tuple
 PROG begin { print((kstack, "a"));  }
 EXPECT Attached 1 probe
+
+NAME tuple binop equals
+PROG begin { $x = ("hello", -6); $y = ("hello", -6); $a = (1, true, $x); @b = (1, true, $y); if ($a == @b) { printf("ok\n"); } if ($a == (1, true, ("ello", -6))) { printf("nok\n"); } }
+EXPECT ok
+EXPECT_NONE nok
+
+NAME tuple binop not equals
+PROG begin { $x = ("hello", -6); $y = ("hello", -6); $a = (1, true, $x); @b = (1, true, $y); if ($a != @b) { printf("nok\n"); } if ($a != (1, true, ("ello", -6))) { printf("ok\n"); } }
+EXPECT ok
+EXPECT_NONE nok
