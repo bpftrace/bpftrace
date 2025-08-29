@@ -16,6 +16,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/simplify_types.h"
 #include "ast/passes/type_system.h"
 #include "ast/signal_bt.h"
 #include "btf/compat.h"
@@ -2665,7 +2666,7 @@ void SemanticAnalyser::visit(Binop &binop)
   }
   // Compare type here, not the sized type as we it needs to work on strings
   // of different lengths
-  else if (lht.GetTy() != rht.GetTy()) {
+  else if (!lht.IsSameType(rht)) {
     auto &err = binop.addError();
     err << "Type mismatch for '" << opstr(binop) << "': comparing " << lht
         << " with " << rht;
@@ -3404,6 +3405,7 @@ void SemanticAnalyser::visit(Expression &expr)
   // Visit and fold all other values.
   Visitor<SemanticAnalyser>::visit(expr);
   fold(ctx_, expr);
+  simplify(ctx_, expr);
 
   // Inline specific constant expressions.
   if (auto *szof = expr.as<Sizeof>()) {
