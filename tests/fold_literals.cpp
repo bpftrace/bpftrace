@@ -11,7 +11,8 @@ using ::testing::HasSubstr;
 void test(const std::string& input,
           const std::string& output,
           const std::string& error = "",
-          const std::string& warn = "")
+          const std::string& warn = "",
+          bool negate = false)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
@@ -37,8 +38,13 @@ void test(const std::string& input,
   if (!output.empty() || !warn.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
     if (!output.empty()) {
-      EXPECT_THAT(out.str(), HasSubstr("begin\n  " + output))
-          << msg.str() << out.str();
+      if (negate) {
+        EXPECT_THAT(out.str(), Not(HasSubstr(output)))
+            << msg.str() << out.str();
+      } else {
+        EXPECT_THAT(out.str(), HasSubstr("begin\n  " + output))
+            << msg.str() << out.str();
+      }
     }
     if (!warn.empty()) {
       EXPECT_THAT(out.str(), HasSubstr(warn)) << msg.str() << out.str();
@@ -58,6 +64,11 @@ void test_error(const std::string& input, const std::string& error)
 void test_warning(const std::string& input, const std::string& warn)
 {
   test(input, "", "", warn);
+}
+
+void test_not(const std::string& input, const std::string& output)
+{
+  test(input, output, "", "", true);
 }
 
 TEST(fold_literals, equals)
@@ -467,6 +478,40 @@ TEST(fold_literals, ternary)
   test("-1 ? true : false", "bool: true");
   test("\"foo\" ? true : false", "bool: true");
   test("\"\" ? true : false", "bool: false");
+}
+
+TEST(fold_literals, cast)
+{
+  test("(bool)0", "bool: false");
+  test("(bool)\"\"", "bool: false");
+  test("(bool)false", "bool: false");
+  test("(bool)1", "bool: true");
+  test("(bool)-1", "bool: true");
+  test("(bool)\"str\"", "bool: true");
+  test("(bool)true", "bool: true");
+}
+
+TEST(fold_literals, conditional)
+{
+  test_not("if (1) { }", "if");
+  test_not("if (-1) { }", "if");
+  test_not("if (0) { }", "if");
+  test_not("if (1 + 1) { }", "if");
+  test_not("if (\"str\") { }", "if");
+  test_not("if (\"\") { }", "if");
+  test_not("if (true) { }", "if");
+  test_not("if (false) { }", "if");
+
+  test_not("while (0) {}", "while");
+  test_not("while (\"\") {}", "while");
+  test_not("while (false) {}", "while");
+  test_not("while (false) { while(false) {} }", "while");
+
+  // Just make sure the while statement remains
+  test("while (1) {}", "while(\n");
+  test("while (\"str\") {}", "while(\n");
+  test("while (-1) {}", "while(\n");
+  test("while (1 + 1) {}", "while(\n");
 }
 
 } // namespace bpftrace::test::fold_literals

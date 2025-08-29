@@ -42,6 +42,30 @@ private:
 
 } // namespace
 
+static bool is_literal(const Expression &expr)
+{
+  return expr.is<Integer>() || expr.is<NegativeInteger>() ||
+         expr.is<String>() || expr.is<Boolean>();
+}
+
+static bool eval_bool(Expression expr)
+{
+  if (auto *integer = expr.as<Integer>()) {
+    return integer->value != 0;
+  }
+  if (expr.is<NegativeInteger>()) {
+    return true;
+  }
+  if (auto *str = expr.as<String>()) {
+    return !str->value.empty();
+  }
+  if (auto *boolean = expr.as<Boolean>()) {
+    return boolean->value;
+  }
+  LOG(BUG) << "Expression is not a literal";
+  return false;
+}
+
 template <typename T>
 static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
 {
@@ -255,6 +279,10 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
 std::optional<Expression> LiteralFolder::visit(Cast &cast)
 {
   visit(cast.expr);
+  if (cast.type().IsBoolTy() && is_literal(cast.expr)) {
+    return ast_.make_node<Boolean>(eval_bool(cast.expr),
+                                   Location(cast.expr.loc()));
+  }
   return std::nullopt;
 }
 
@@ -490,22 +518,8 @@ std::optional<Expression> LiteralFolder::visit(IfExpr &if_expr)
   visit(if_expr.left);
   visit(if_expr.right);
 
-  if (if_expr.cond.is<Integer>()) {
-    if (if_expr.cond.as<Integer>()->value != 0) {
-      return if_expr.left;
-    } else {
-      return if_expr.right;
-    }
-  } else if (if_expr.cond.is<NegativeInteger>()) {
-    return if_expr.left;
-  } else if (if_expr.cond.is<Boolean>()) {
-    if (if_expr.cond.as<Boolean>()->value) {
-      return if_expr.left;
-    } else {
-      return if_expr.right;
-    }
-  } else if (if_expr.cond.is<String>()) {
-    if (!if_expr.cond.as<String>()->value.empty()) {
+  if (is_literal(if_expr.cond)) {
+    if (eval_bool(if_expr.cond)) {
       return if_expr.left;
     } else {
       return if_expr.right;
@@ -660,13 +674,29 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
 {
   Visitor<LiteralFolder, std::optional<Expression>>::visit(expr);
 
-  // We fold this only if the statment list is empty, and we find a literal
+  // We fold this only if the statement list is empty, and we find a literal
   // as the expression value.
   if (expr.stmts.empty() &&
       (expr.expr.is<Integer>() || expr.expr.is<NegativeInteger>() ||
        expr.expr.is<Boolean>() || expr.expr.is<String>())) {
     return expr.expr;
   }
+
+  StatementList stmt_list;
+  for (auto &stmt : expr.stmts) {
+    visit(stmt);
+    if (auto *while_stmt = stmt.as<While>()) {
+      visit(while_stmt->cond);
+      if (is_literal(while_stmt->cond)) {
+        if (!eval_bool(while_stmt->cond)) {
+          continue;
+        }
+      }
+    }
+    stmt_list.push_back(std::move(stmt));
+  }
+
+  expr.stmts = std::move(stmt_list);
 
   return std::nullopt;
 }
