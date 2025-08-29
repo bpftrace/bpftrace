@@ -3568,40 +3568,6 @@ TEST_F(SemanticAnalyserTest, strncmp_posparam)
   test(R"(i:s:1 { strncmp("foo", "bar", $2) })", Mock{ *bpftrace }, Error{});
 }
 
-TEST_F(SemanticAnalyserTest, strcontains)
-{
-  // Test strcontains builtin
-  test(R"(i:s:1 { $a = "bar"; strcontains("foo", $a) })");
-  test(R"(i:s:1 { strcontains("foo", "bar") })");
-  test("i:s:1 { strcontains(1) }", Error{});
-  test("i:s:1 { strcontains(1,1) }", Error{});
-  test("i:s:1 { strcontains(\"a\",1) }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, strcontains_large_warnings)
-{
-  test("k:f { $s1 = str(arg0); $s2 = str(arg1); $x = strcontains($s1, $s2) }",
-       Warning{ "both string sizes is larger" });
-
-  test("k:f { $s1 = str(arg0, 64); $s2 = str(arg1, 16); $x = strcontains($s1, "
-       "$s2) }",
-       NoWarning{ "both string sizes is larger" });
-
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->config_->max_strlen = 16;
-
-  test("k:f { $s1 = str(arg0); $s2 = str(arg1); $x = strcontains($s1, $s2) }",
-       Mock{ *bpftrace },
-       NoWarning{ "both string sizes is larger" });
-}
-
-TEST_F(SemanticAnalyserTest, strcontains_posparam)
-{
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->add_param("hello");
-  test("i:s:1 { strcontains(\"foo\", str($1)) }", Mock{ *bpftrace });
-}
-
 TEST_F(SemanticAnalyserTest, override)
 {
   // literals

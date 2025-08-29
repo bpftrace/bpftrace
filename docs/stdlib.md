@@ -930,12 +930,10 @@ When available (starting from kernel 5.5, see the `--info` flag) bpftrace will a
 
 
 ### strcontains
-- `int64 strcontains(const char *haystack, const char *needle)`
 
-`strcontains` compares whether the string haystack contains the string needle.
-If needle is contained `1` is returned, else zero is returned.
+Compares whether the string haystack contains the string needle.
 
-bpftrace doesn’t read past the length of the shortest string.
+If needle is contained true is returned, else false is returned.
 
 
 ### strerror
