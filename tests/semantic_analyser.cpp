@@ -2004,6 +2004,57 @@ TEST_F(SemanticAnalyserTest, binop_integer_no_promotion)
   EXPECT_EQ(CreateInt8(), var_assignment->var()->var_type);
 }
 
+TEST_F(SemanticAnalyserTest, binop_tuple)
+{
+  // These are all variables so they don't get folded
+  test(
+      R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int8[2])(int16)2); $a == $b })");
+  test(R"(kprobe:f { $a = ((int16)1, 3); $b = ((int64)2, 4); $a == $b })");
+  test(
+      R"(kprobe:f { $a = (1, "reallyreallyreallylongstr", true); $b = (2, "bye", false); $a == $b })");
+  test(
+      R"(kprobe:f { $a = (1, "reallyreallyreallylongstr", ((int8)1, "bye")); $b = (2, "bye", (2, "reallyreallyreallylongstr")); $a == $b })");
+  test(
+      R"(kprobe:f { $a = ((int16)1, (int16)3); $b = ((int64)2, 4); $a == $b })");
+
+  test(R"(kprobe:f { $a = (1, true); $b = (2, false, 3); $a == $b })", Error{});
+  test(
+      R"(kprobe:f { $a = (1, true, "bye"); $b = (2, "bye", false); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int8[8])1); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (2, (1, (int8[2])(int16)1)); $b = (2, (1, (int16[2])(int32)1)); $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (1, "hello", true); $b = (2, "bye", false); $a < $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (1, "hello", true); $b = (2, "bye", false); $a > $b })",
+      Error{});
+}
+
+TEST_F(SemanticAnalyserTest, binop_array)
+{
+  // These are variables so they don't get folded
+  test(
+      R"(kprobe:f { $a = (int8[2])(int16)1; $b = (int8[2])(int16)2; $a == $b })");
+
+  test(
+      R"(kprobe:f { $a = (int8[4])(int32)1; $b = (int8[2])(int16)2; $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (int8[4])(int32)1; $b = (int16[2])(int32)2; $a == $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (int8[2])(int16)1; $b = (int8[2])(int16)2; $a < $b })",
+      Error{});
+  test(
+      R"(kprobe:f { $a = (int8[2])(int16)1; $b = (int8[2])(int16)2; $a > $b })",
+      Error{});
+}
+
 TEST_F(SemanticAnalyserTest, unop_dereference)
 {
   test("kprobe:f { *0; }");
