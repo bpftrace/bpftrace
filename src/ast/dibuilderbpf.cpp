@@ -1,10 +1,8 @@
-#include "dibuilderbpf.h"
-
+#include <bpf/bpf.h>
+#include <llvm/IR/Function.h>
 #include <string_view>
 
-#include <llvm/IR/Function.h>
-
-#include "libbpf/bpf.h"
+#include "dibuilderbpf.h"
 #include "log.h"
 #include "struct.h"
 #include "types.h"
@@ -365,15 +363,14 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 
 DIType *DIBuilderBPF::GetMapKeyType(const SizedType &key_type,
                                     const SizedType &value_type,
-                                    libbpf::bpf_map_type map_type)
+                                    bpf_map_type map_type)
 {
   // BPF requires 4-byte keys for array maps.
-  if (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
-      map_type == libbpf::BPF_MAP_TYPE_ARRAY) {
+  if (map_type == BPF_MAP_TYPE_PERCPU_ARRAY || map_type == BPF_MAP_TYPE_ARRAY) {
     assert(key_type.IsIntTy());
     return getInt32Ty();
   }
-  if (map_type == libbpf::BPF_MAP_TYPE_RINGBUF) {
+  if (map_type == BPF_MAP_TYPE_RINGBUF) {
     assert(key_type.IsNoneTy());
     return getInt64Ty();
   }
@@ -408,7 +405,7 @@ DIType *DIBuilderBPF::createPointerMemberType(const std::string &name,
 
 DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
     const std::string &name,
-    libbpf::bpf_map_type map_type,
+    bpf_map_type map_type,
     uint64_t max_entries,
     DIType *key_type,
     const SizedType &value_type)

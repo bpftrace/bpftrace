@@ -14,9 +14,6 @@
 #include "util/symbols.h"
 #include "util/system.h"
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-
 namespace {
 #ifdef HAVE_BLAZESYM
 std::string stringify_addr(uint64_t addr, bool perf_mode)
@@ -444,5 +441,3 @@ struct bcc_symbol_option &Usyms::get_symbol_opts()
 }
 
 } // namespace bpftrace
-
-#pragma GCC diagnostic pop

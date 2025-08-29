@@ -695,9 +695,8 @@ FuncParamLists BTF::get_params_from_btf(
     if (!t)
       continue;
 
-    BPFTRACE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
-                         decl_opts,
-                         .field_name = "");
+    DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts, decl_opts);
+    decl_opts.field_name = "";
 
     const auto *p = btf_params(t);
     for (__u16 j = 0, len = btf_vlen(t); j < len; j++, p++) {
@@ -779,9 +778,8 @@ FuncParamLists BTF::get_kprobes_params_from_btf(
     if (!t)
       continue;
 
-    BPFTRACE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
-                         decl_opts,
-                         .field_name = "");
+    DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts, decl_opts);
+    decl_opts.field_name = "";
 
     if (!is_kretprobe) {
       const auto *p = btf_params(t);
@@ -873,9 +871,8 @@ FuncParamLists BTF::get_raw_tracepoints_params_from_btf(
     if (!t)
       continue;
 
-    BPFTRACE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
-                         decl_opts,
-                         .field_name = "");
+    DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts, decl_opts);
+    decl_opts.field_name = "";
 
     const struct btf_param *p = btf_params(t);
     for (__u16 j = 0, len = btf_vlen(t); j < len; j++, p++) {

@@ -1,3 +1,4 @@
+#include <bpf/bpf.h>
 #include <cassert>
 
 #include "arch/arch.h"
@@ -8,10 +9,6 @@
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
 #include "util/strings.h"
-
-namespace libbpf {
-#include "libbpf/bpf.h"
-} // namespace libbpf
 
 namespace bpftrace::ast {
 
@@ -51,7 +48,7 @@ private:
   SizedType sized_type_;
   BPFtrace &bpftrace_;
   ExpansionResult &expansions_;
-  libbpf::bpf_prog_type prog_type_{ libbpf::BPF_PROG_TYPE_UNSPEC };
+  bpf_prog_type prog_type_{ BPF_PROG_TYPE_UNSPEC };
   bool has_builtin_args_;
   Probe *probe_ = nullptr;
 
@@ -73,10 +70,10 @@ void FieldAnalyser::visit(Builtin &builtin)
     if (!probe_)
       return;
     switch (prog_type_) {
-      case libbpf::BPF_PROG_TYPE_KPROBE:
+      case BPF_PROG_TYPE_KPROBE:
         builtin_type = "struct pt_regs";
         break;
-      case libbpf::BPF_PROG_TYPE_PERF_EVENT:
+      case BPF_PROG_TYPE_PERF_EVENT:
         builtin_type = "struct bpf_perf_event_data";
         break;
       default:

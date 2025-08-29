@@ -101,8 +101,6 @@ std::vector<std::string> Ksyms::resolve_blazesym_impl(uint64_t addr,
 {
   std::vector<std::string> str_syms;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
   if (symbolizer_ == nullptr) {
     blaze_symbolizer_opts opts = {
       .type_size = sizeof(opts),
@@ -125,7 +123,6 @@ std::vector<std::string> Ksyms::resolve_blazesym_impl(uint64_t addr,
     .vmlinux = "",
     .debug_syms = show_debug_info,
   };
-#pragma GCC diagnostic pop
 
   const blaze_syms *syms = blaze_symbolize_kernel_abs_addrs(
       symbolizer_, &src, &addr, 1);

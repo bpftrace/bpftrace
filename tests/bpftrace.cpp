@@ -958,8 +958,7 @@ basic_map_4[7]: 5
     std::stringstream out;
     output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
-    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
-                                                 tc.name);
+    auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, tc.name);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
@@ -1035,8 +1034,8 @@ max_map_4[3]: 10
     auto bpftrace = get_mock_bpftrace();
 
     bpftrace->ncpus_ = 3;
-    auto mock_map = std::make_unique<MockBpfMap>(
-        libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
+    auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_PERCPU_HASH,
+                                                 tc.name);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
@@ -1111,8 +1110,8 @@ avg_map_4[3]: 100
     auto bpftrace = get_mock_bpftrace();
 
     bpftrace->ncpus_ = 3;
-    auto mock_map = std::make_unique<MockBpfMap>(
-        libbpf::BPF_MAP_TYPE_PERCPU_HASH, tc.name);
+    auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_PERCPU_HASH,
+                                                 tc.name);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
@@ -1181,8 +1180,7 @@ string_map_4[3]: hello
     output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
-    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
-                                                 tc.name);
+    auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, tc.name);
     EXPECT_CALL(*mock_map, collect_elements(testing::_))
         .WillOnce(testing::Return(testing::ByMove(MapElements(key_values))));
 
@@ -1275,8 +1273,7 @@ lhist_map_3[0]:
     output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
-    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
-                                                 tc.name);
+    auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, tc.name);
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
         .WillOnce(
             testing::Return(testing::ByMove(HistogramMap(values_by_key))));
@@ -1378,8 +1375,7 @@ hist_map_3[0]:
     output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
-    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
-                                                 tc.name);
+    auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, tc.name);
     EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
         .WillOnce(
             testing::Return(testing::ByMove(HistogramMap(values_by_key))));
@@ -1466,8 +1462,7 @@ hh:mm:ss.ms  |___________________________________________________|
     output::TextOutput output(out, out);
     auto bpftrace = get_mock_bpftrace();
 
-    auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
-                                                 tc.name);
+    auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, tc.name);
     EXPECT_CALL(*mock_map, collect_tseries_data(testing::_, testing::_))
         .WillOnce(testing::Return(testing::ByMove(TSeriesMap(values_by_key))));
 

@@ -530,8 +530,7 @@ int BPFtrace::run(output::Output &out,
       // https://github.com/torvalds/linux/commit/6b3d638ca897e099fa99bd6d02189d3176f80a47
       constexpr size_t ETH_HLEN = 14;
       char data_in[ETH_HLEN];
-      struct ::bpf_test_run_opts opts = {};
-      opts.sz = sizeof(struct ::bpf_test_run_opts);
+      DECLARE_LIBBPF_OPTS(bpf_test_run_opts, opts);
       opts.data_in = data_in;
       opts.data_size_in = ETH_HLEN;
       opts.repeat = 1'000'000;

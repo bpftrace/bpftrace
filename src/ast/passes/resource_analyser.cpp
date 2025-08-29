@@ -1,5 +1,5 @@
-
 #include <algorithm>
+#include <bpf/bpf.h>
 
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
@@ -12,10 +12,6 @@
 #include "required_resources.h"
 #include "struct.h"
 #include "types.h"
-
-namespace libbpf {
-#include "libbpf/bpf.h"
-} // namespace libbpf
 
 namespace bpftrace::ast {
 
@@ -75,8 +71,7 @@ private:
 
   // Current probe we're analysing
   Probe *probe_{ nullptr };
-  std::unordered_map<std::string, std::pair<libbpf::bpf_map_type, int>>
-      map_decls_;
+  std::unordered_map<std::string, std::pair<bpf_map_type, int>> map_decls_;
 
   int next_map_id_ = 0;
 };

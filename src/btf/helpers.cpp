@@ -112,7 +112,7 @@ Result<MapInfo> getMapInfo(const AnyType &type)
     if (!arr || !arr->is<Array>()) {
       return make_error<MapError>("type field is not a pointer to an array");
     }
-    map_type = static_cast<::bpf_map_type>(arr->as<Array>().element_count());
+    map_type = static_cast<bpf_map_type>(arr->as<Array>().element_count());
   }
 
   // Extract the number of elements.

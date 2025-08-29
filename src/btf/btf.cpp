@@ -4,7 +4,6 @@
 
 #include "btf/btf.h"
 #include "btf/helpers.h"
-#include "libbpf/bpf.h"
 #include "util/temp.h"
 
 namespace bpftrace::btf {

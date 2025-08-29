@@ -43,8 +43,8 @@ int BPFnofeature::parse(const char* str)
 }
 
 static bool try_load_(const char* name,
-                      enum libbpf::bpf_prog_type prog_type,
-                      std::optional<libbpf::bpf_attach_type> attach_type,
+                      enum bpf_prog_type prog_type,
+                      std::optional<bpf_attach_type> attach_type,
                       std::optional<unsigned int> attach_btf_id,
                       struct bpf_insn* insns,
                       size_t insns_cnt,
@@ -68,24 +68,18 @@ static bool try_load_(const char* name,
       continue;
     }
 
-    BPFTRACE_LIBBPF_OPTS(bpf_prog_load_opts, opts);
+    DECLARE_LIBBPF_OPTS(bpf_prog_load_opts, opts);
     opts.log_buf = logbuf;
     opts.log_size = logbuf_size;
     opts.log_level = loglevel;
     opts.kern_version = version;
     if (attach_type.has_value()) {
-      opts.expected_attach_type = static_cast<::bpf_attach_type>(
-          attach_type.value());
+      opts.expected_attach_type = attach_type.value();
     }
     if (attach_btf_id.has_value())
       opts.attach_btf_id = attach_btf_id.value();
 
-    int ret = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
-                            name,
-                            "GPL",
-                            insns,
-                            insns_cnt,
-                            &opts);
+    int ret = bpf_prog_load(prog_type, name, "GPL", insns, insns_cnt, &opts);
     if (ret >= 0) {
       if (outfd)
         *outfd = ret;
@@ -99,22 +93,22 @@ static bool try_load_(const char* name,
   return false;
 }
 
-bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
+bool BPFfeature::try_load(enum bpf_prog_type prog_type,
                           struct bpf_insn* insns,
                           size_t len,
                           const char* name,
-                          std::optional<libbpf::bpf_attach_type> attach_type,
+                          std::optional<bpf_attach_type> attach_type,
                           int* outfd)
 {
   constexpr int log_size = 4096;
   char logbuf[log_size] = {};
 
   std::optional<unsigned> btf_id;
-  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING && has_btf()) {
+  if (prog_type == BPF_PROG_TYPE_TRACING && has_btf()) {
     btf_id = btf_.get_btf_id(name, "vmlinux");
   }
 
-  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING) {
+  if (prog_type == BPF_PROG_TYPE_TRACING) {
     // List of available functions must be readable
     std::ifstream traceable_funcs(tracefs::available_filter_functions());
     if (!traceable_funcs.good())
@@ -137,11 +131,10 @@ bool BPFfeature::try_load_btf(const void* btf_data, size_t btf_size)
 {
   constexpr int log_size = 4096;
   char log_buf[log_size] = {};
-  BPFTRACE_LIBBPF_OPTS(bpf_btf_load_opts,
-                       btf_opts,
-                       .log_buf = log_buf,
-                       .log_level = 0,
-                       .log_size = log_size, );
+  DECLARE_LIBBPF_OPTS(bpf_btf_load_opts, btf_opts);
+  btf_opts.log_buf = log_buf;
+  btf_opts.log_level = 0;
+  btf_opts.log_size = log_size;
 
   int fd = bpf_btf_load(btf_data, btf_size, &btf_opts);
   if (fd >= 0) {
@@ -151,8 +144,8 @@ bool BPFfeature::try_load_btf(const void* btf_data, size_t btf_size)
   return false;
 }
 
-bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
-                               enum libbpf::bpf_prog_type prog_type)
+bool BPFfeature::detect_helper(enum bpf_func_id func_id,
+                               enum bpf_prog_type prog_type)
 {
   // Stolen from libbpf's  bpf_probe_helper
   char logbuf[4096] = {};
@@ -191,18 +184,17 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
          (strstr(buf, "program of this type cannot use helper ") == nullptr);
 }
 
-bool BPFfeature::detect_prog_type(
-    enum libbpf::bpf_prog_type prog_type,
-    const char* name,
-    std::optional<libbpf::bpf_attach_type> attach_type,
-    int* outfd)
+bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type,
+                                  const char* name,
+                                  std::optional<bpf_attach_type> attach_type,
+                                  int* outfd)
 {
   struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
   return try_load(
       prog_type, insns, ARRAY_SIZE(insns), name, attach_type, outfd);
 }
 
-bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
+bool BPFfeature::detect_map(enum bpf_map_type map_type)
 {
   int key_size = 4;
   int value_size = 4;
@@ -211,10 +203,10 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
   int map_fd = 0;
 
   switch (map_type) {
-    case libbpf::BPF_MAP_TYPE_STACK_TRACE:
+    case BPF_MAP_TYPE_STACK_TRACE:
       value_size = 8;
       break;
-    case libbpf::BPF_MAP_TYPE_RINGBUF:
+    case BPF_MAP_TYPE_RINGBUF:
       // values from libbpf/src/libbpf_probes.c
       key_size = 0;
       value_size = 0;
@@ -224,14 +216,10 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
       break;
   }
 
-  BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
+  DECLARE_LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = flags;
-  map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(map_type),
-                          nullptr,
-                          key_size,
-                          value_size,
-                          max_entries,
-                          &opts);
+  map_fd = bpf_map_create(
+      map_type, nullptr, key_size, value_size, max_entries, &opts);
 
   if (map_fd >= 0)
     close(map_fd);
@@ -279,7 +267,7 @@ int BPFfeature::instruction_limit()
 
   char logbuf[logsize] = {};
   bool res = try_load_(nullptr,
-                       libbpf::BPF_PROG_TYPE_KPROBE,
+                       BPF_PROG_TYPE_KPROBE,
                        std::nullopt,
                        std::nullopt,
                        insns,
@@ -327,15 +315,10 @@ bool BPFfeature::has_map_batch()
   if (has_map_batch_.has_value())
     return *has_map_batch_;
 
-  BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
+  DECLARE_LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = flags;
-  map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(
-                              libbpf::BPF_MAP_TYPE_HASH),
-                          nullptr,
-                          key_size,
-                          value_size,
-                          max_entries,
-                          &opts);
+  map_fd = bpf_map_create(
+      BPF_MAP_TYPE_HASH, nullptr, key_size, value_size, max_entries, &opts);
 
   if (map_fd < 0)
     return false;
@@ -360,40 +343,37 @@ bool BPFfeature::has_d_path()
     BPF_MOV64_IMM(BPF_REG_6, 0),
     BPF_STX_MEM(BPF_DW, BPF_REG_2, BPF_REG_6, 0),
     BPF_LD_IMM64(BPF_REG_3, 8),
-    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_d_path),
+    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, BPF_FUNC_d_path),
     BPF_MOV64_IMM(BPF_REG_0, 0),
     BPF_EXIT_INSN(),
   };
 
-  has_d_path_ = std::make_optional<bool>(try_load(libbpf::BPF_PROG_TYPE_TRACING,
+  has_d_path_ = std::make_optional<bool>(try_load(BPF_PROG_TYPE_TRACING,
                                                   insns,
                                                   ARRAY_SIZE(insns),
                                                   "dentry_open",
-                                                  libbpf::BPF_TRACE_FENTRY));
+                                                  BPF_TRACE_FENTRY));
 
   return *has_d_path_;
 }
 
-bool try_create_link(libbpf::bpf_prog_type prog_type,
+bool try_create_link(bpf_prog_type prog_type,
                      const std::string_view prog_name,
-                     libbpf::bpf_attach_type expected_attach_type,
+                     bpf_attach_type expected_attach_type,
                      const bpf_link_create_opts& link_opts,
                      std::optional<int> expected_err)
 {
   bool result = false;
 
-  BPFTRACE_LIBBPF_OPTS(
-      bpf_prog_load_opts,
-      load_opts,
-      .expected_attach_type = static_cast<enum ::bpf_attach_type>(
-          expected_attach_type));
+  DECLARE_LIBBPF_OPTS(bpf_prog_load_opts, load_opts);
+  load_opts.expected_attach_type = expected_attach_type;
 
   struct bpf_insn insns[] = {
     BPF_MOV64_IMM(BPF_REG_0, 0),
     BPF_EXIT_INSN(),
   };
 
-  int progfd = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
+  int progfd = bpf_prog_load(prog_type,
                              prog_name.data(),
                              "GPL",
                              reinterpret_cast<struct bpf_insn*>(insns),
@@ -403,11 +383,7 @@ bool try_create_link(libbpf::bpf_prog_type prog_type,
   if (progfd < 0)
     return false;
 
-  int linkfd = bpf_link_create(progfd,
-                               0,
-                               static_cast<enum ::bpf_attach_type>(
-                                   expected_attach_type),
-                               &link_opts);
+  int linkfd = bpf_link_create(progfd, 0, expected_attach_type, &link_opts);
 
   result = expected_err.has_value() ? linkfd < 0 && -errno == *expected_err
                                     : linkfd >= 0;
@@ -432,13 +408,13 @@ bool BPFfeature::has_kprobe_multi()
 
   const char* sym = "ksys_read";
 
-  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
+  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
   link_opts.kprobe_multi.syms = &sym;
   link_opts.kprobe_multi.cnt = 1;
 
-  has_kprobe_multi_ = try_create_link(libbpf::BPF_PROG_TYPE_KPROBE,
+  has_kprobe_multi_ = try_create_link(BPF_PROG_TYPE_KPROBE,
                                       sym,
-                                      libbpf::BPF_TRACE_KPROBE_MULTI,
+                                      BPF_TRACE_KPROBE_MULTI,
                                       link_opts,
                                       std::nullopt);
   return *has_kprobe_multi_;
@@ -456,13 +432,13 @@ bool BPFfeature::has_kprobe_session()
 
   const char* sym = "ksys_read";
 
-  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
+  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
   link_opts.kprobe_multi.syms = &sym;
   link_opts.kprobe_multi.cnt = 1;
 
-  has_kprobe_session_ = try_create_link(libbpf::BPF_PROG_TYPE_KPROBE,
+  has_kprobe_session_ = try_create_link(BPF_PROG_TYPE_KPROBE,
                                         sym,
-                                        libbpf::BPF_TRACE_KPROBE_SESSION,
+                                        BPF_TRACE_KPROBE_SESSION,
                                         link_opts,
                                         std::nullopt);
   return *has_kprobe_session_;
@@ -479,15 +455,15 @@ bool BPFfeature::has_uprobe_multi()
     return *has_uprobe_multi_;
   }
 
-  BPFTRACE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
+  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
   const unsigned long offset = 0;
   link_opts.uprobe_multi.path = "/";
   link_opts.uprobe_multi.offsets = &offset;
   link_opts.uprobe_multi.cnt = 1;
 
-  has_uprobe_multi_ = try_create_link(libbpf::BPF_PROG_TYPE_KPROBE,
+  has_uprobe_multi_ = try_create_link(BPF_PROG_TYPE_KPROBE,
                                       "uprobe_multi",
-                                      libbpf::BPF_TRACE_UPROBE_MULTI,
+                                      BPF_TRACE_UPROBE_MULTI,
                                       link_opts,
                                       -EBADF);
 #else
@@ -506,15 +482,10 @@ bool BPFfeature::has_skb_output()
 
   int map_fd = 0;
 
-  BPFTRACE_LIBBPF_OPTS(bpf_map_create_opts, opts);
+  DECLARE_LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = 0;
-  map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(
-                              libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY),
-                          "rb",
-                          sizeof(int),
-                          sizeof(int),
-                          1,
-                          &opts);
+  map_fd = bpf_map_create(
+      BPF_MAP_TYPE_PERF_EVENT_ARRAY, "rb", sizeof(int), sizeof(int), 1, &opts);
 
   if (map_fd < 0)
     return false;
@@ -528,17 +499,16 @@ bool BPFfeature::has_skb_output()
     BPF_MOV64_IMM(BPF_REG_6, 0),
     BPF_STX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, 0),
     BPF_LD_IMM64(BPF_REG_5, 8),
-    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_skb_output),
+    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, BPF_FUNC_skb_output),
     BPF_MOV64_IMM(BPF_REG_0, 0),
     BPF_EXIT_INSN(),
   };
 
-  has_skb_output_ = std::make_optional<bool>(
-      try_load(libbpf::BPF_PROG_TYPE_TRACING,
-               insns,
-               ARRAY_SIZE(insns),
-               "__kfree_skb",
-               libbpf::BPF_TRACE_FENTRY));
+  has_skb_output_ = std::make_optional<bool>(try_load(BPF_PROG_TYPE_TRACING,
+                                                      insns,
+                                                      ARRAY_SIZE(insns),
+                                                      "__kfree_skb",
+                                                      BPF_TRACE_FENTRY));
 
   close(map_fd);
   return *has_skb_output_;
@@ -632,10 +602,8 @@ bool BPFfeature::has_prog_fentry()
 {
   if (!has_prog_fentry_.has_value()) {
     int progfd;
-    if (!detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
-                          "sched_fork",
-                          libbpf::BPF_TRACE_FENTRY,
-                          &progfd))
+    if (!detect_prog_type(
+            BPF_PROG_TYPE_TRACING, "sched_fork", BPF_TRACE_FENTRY, &progfd))
       goto out_false;
     int tracing_fd = bpf_raw_tracepoint_open(nullptr, progfd);
     close(progfd);
@@ -658,9 +626,9 @@ bool BPFfeature::has_fentry()
 bool BPFfeature::has_iter(std::string name)
 {
   auto tracing_name = "bpf_iter_" + name;
-  return detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
+  return detect_prog_type(BPF_PROG_TYPE_TRACING,
                           tracing_name.c_str(),
-                          libbpf::BPF_TRACE_ITER);
+                          BPF_TRACE_ITER);
 }
 
 bool BPFfeature::has_kernel_func(Kfunc kfunc)

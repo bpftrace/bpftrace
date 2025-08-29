@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <arpa/inet.h>
+#include <bpf/bpf.h>
 #include <cstring>
 #include <optional>
 #include <regex>
@@ -29,10 +30,6 @@
 #include "util/strings.h"
 #include "util/system.h"
 #include "util/wildcard.h"
-
-namespace libbpf {
-#include "libbpf/bpf.h"
-} // namespace libbpf
 
 namespace bpftrace::ast {
 
@@ -268,7 +265,7 @@ private:
   std::map<Node *, CollectNodes<Variable>> for_vars_referenced_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
-  std::map<std::string, libbpf::bpf_map_type> bpf_map_type_;
+  std::map<std::string, bpf_map_type> bpf_map_type_;
 
   uint32_t loop_depth_ = 0;
   bool has_begin_probe_ = false;
@@ -894,19 +891,19 @@ void SemanticAnalyser::visit(Builtin &builtin)
     if (probe == nullptr)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
-    libbpf::bpf_prog_type bt = progtype(pt);
+    bpf_prog_type bt = progtype(pt);
     std::string func = probe->attach_points[0]->func;
 
     for (auto *attach_point : probe->attach_points) {
       ProbeType pt = probetype(attach_point->provider);
-      libbpf::bpf_prog_type bt2 = progtype(pt);
+      bpf_prog_type bt2 = progtype(pt);
       if (bt != bt2)
         builtin.addError()
             << "ctx cannot be used in different BPF program types: "
             << progtypeName(bt) << " and " << progtypeName(bt2);
     }
     switch (bt) {
-      case libbpf::BPF_PROG_TYPE_KPROBE: {
+      case BPF_PROG_TYPE_KPROBE: {
         auto record = bpftrace_.structs.Lookup("struct pt_regs");
         if (!record.expired()) {
           builtin.builtin_type = CreatePointer(
@@ -917,10 +914,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
         }
         break;
       }
-      case libbpf::BPF_PROG_TYPE_TRACEPOINT:
+      case BPF_PROG_TYPE_TRACEPOINT:
         builtin.addError() << "Use args instead of ctx in tracepoint";
         break;
-      case libbpf::BPF_PROG_TYPE_PERF_EVENT:
+      case BPF_PROG_TYPE_PERF_EVENT:
         builtin.builtin_type = CreatePointer(
             CreateRecord("struct bpf_perf_event_data",
                          bpftrace_.structs.Lookup(
@@ -928,7 +925,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
             AddrSpace::kernel);
         builtin.builtin_type.MarkCtxAccess();
         break;
-      case libbpf::BPF_PROG_TYPE_TRACING:
+      case BPF_PROG_TYPE_TRACING:
         if (pt == ProbeType::iter) {
           std::string type = "struct bpf_iter__" + func;
           builtin.builtin_type = CreatePointer(
@@ -2199,8 +2196,7 @@ void SemanticAnalyser::visit(MapDeclStatement &decl)
   } else {
     bpf_map_type_.insert({ decl.ident, *bpf_type });
 
-    if (decl.max_entries != 1 &&
-        *bpf_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY) {
+    if (decl.max_entries != 1 && *bpf_type == BPF_MAP_TYPE_PERCPU_ARRAY) {
       decl.addError() << "Max entries can only be 1 for map type "
                       << decl.bpf_type;
     }

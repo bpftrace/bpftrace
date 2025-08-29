@@ -32,16 +32,20 @@ set (CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
-add_compile_options("-Werror=missing-field-initializers")
 add_compile_options("-Werror=undef")
 add_compile_options("-Wpointer-arith")
 add_compile_options("-Wcast-align")
 add_compile_options("-Wwrite-strings")
 add_compile_options("-Wcast-qual")
-#add_compile_options("-Wconversion")
 add_compile_options("-Wunreachable-code")
-#add_compile_options("-Wformat=2")
 add_compile_options("-Wdisabled-optimization")
+
+# libbpf has a standardized macro which requires partial initialization. In
+# general this is well-specified [1] and will zero-initialize (or run default
+# constructors) for non-specified fields, which is what we want. Therefore,
+# we disable this warning broadly and allow this syntax.
+# [1]: https://en.cppreference.com/w/cpp/language/aggregate_initialization.html
+add_compile_options("-Wno-missing-field-initializers")
 
 if(HARDENED_STDLIB)
   add_compile_definitions("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")

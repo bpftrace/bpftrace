@@ -1,13 +1,8 @@
 #pragma once
 
 #include <bpf/bpf.h>
-#include <bpf/libbpf.h>
 
 #include "types.h"
-
-namespace libbpf {
-#include "libbpf/bpf.h"
-} // namespace libbpf
 
 namespace bpftrace {
 
@@ -90,7 +85,7 @@ struct MapInfo {
       detail;
   int id = -1;
   int max_entries = -1;
-  libbpf::bpf_map_type bpf_type = libbpf::BPF_MAP_TYPE_HASH;
+  bpf_map_type bpf_type = BPF_MAP_TYPE_HASH;
   bool is_scalar = false;
 
 private:

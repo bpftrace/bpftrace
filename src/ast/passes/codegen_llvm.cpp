@@ -264,7 +264,7 @@ private:
   void createJoinCall(Call &call, int id);
 
   void createMapDefinition(const std::string &name,
-                           libbpf::bpf_map_type map_type,
+                           bpf_map_type map_type,
                            uint64_t max_entries,
                            const SizedType &key_type,
                            const SizedType &value_type);
@@ -398,8 +398,7 @@ private:
 
   Value *createFmtString(int print_id);
 
-  bool canAggPerCpuMapElems(libbpf::bpf_map_type map_type,
-                            const SizedType &val_type);
+  bool canAggPerCpuMapElems(bpf_map_type map_type, const SizedType &val_type);
 
   void maybeAllocVariable(const std::string &var_ident,
                           const SizedType &var_type,
@@ -449,7 +448,7 @@ private:
   std::vector<Node *> scope_stack_;
   std::unordered_map<Node *, std::map<std::string, VariableLLVM>> variables_;
 
-  std::unordered_map<std::string, libbpf::bpf_map_type> map_types_;
+  std::unordered_map<std::string, bpf_map_type> map_types_;
 
   llvm::Function *linear_func_ = nullptr;
   llvm::Function *log2_func_ = nullptr;
@@ -4323,7 +4322,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
 }
 
 void CodegenLLVM::createMapDefinition(const std::string &name,
-                                      libbpf::bpf_map_type map_type,
+                                      bpf_map_type map_type,
                                       uint64_t max_entries,
                                       const SizedType &key_type,
                                       const SizedType &value_type)
@@ -4392,7 +4391,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   uint16_t max_stack_limit = 0;
   for (const StackType &stack_type : codegen_resources.stackid_maps) {
     createMapDefinition(stack_type.name(),
-                        libbpf::BPF_MAP_TYPE_LRU_HASH,
+                        BPF_MAP_TYPE_LRU_HASH,
                         128 << 10,
                         CreateArray(16, CreateInt8()),
                         CreateArray(stack_type.limit, CreateUInt64()));
@@ -4401,7 +4400,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
   if (max_stack_limit > 0) {
     createMapDefinition(StackType::scratch_name(),
-                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                        BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
                         CreateUInt32(),
                         CreateArray(max_stack_limit, CreateUInt64()));
@@ -4412,7 +4411,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                       (bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
     SizedType value_type = CreateArray(value_size, CreateInt8());
     createMapDefinition(to_string(MapType::Join),
-                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                        BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
                         CreateUInt32(),
                         value_type);
@@ -4420,7 +4419,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
   if (codegen_resources.needs_elapsed_map) {
     createMapDefinition(to_string(MapType::Elapsed),
-                        libbpf::BPF_MAP_TYPE_HASH,
+                        BPF_MAP_TYPE_HASH,
                         1,
                         CreateUInt64(),
                         CreateUInt64());
@@ -4428,7 +4427,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
   if (bpftrace_.need_recursion_check_) {
     createMapDefinition(to_string(MapType::RecursionPrevention),
-                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                        BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
                         CreateUInt32(),
                         CreateUInt64());
@@ -4436,7 +4435,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
   if (required_resources.using_skboutput) {
     createMapDefinition(to_string(MapType::PerfEvent),
-                        libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
+                        BPF_MAP_TYPE_PERF_EVENT_ARRAY,
                         util::get_online_cpus().size(),
                         CreateInt32(),
                         CreateInt32());
@@ -4456,7 +4455,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   }
 
   createMapDefinition(to_string(MapType::Ringbuf),
-                      libbpf::BPF_MAP_TYPE_RINGBUF,
+                      BPF_MAP_TYPE_RINGBUF,
                       buffer_size,
                       CreateNone(),
                       CreateNone());
@@ -5106,12 +5105,11 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
   return ScopedExpr();
 }
 
-bool CodegenLLVM::canAggPerCpuMapElems(const libbpf::bpf_map_type map_type,
+bool CodegenLLVM::canAggPerCpuMapElems(const bpf_map_type map_type,
                                        const SizedType &val_type)
 {
-  return val_type.IsCastableMapTy() &&
-         (map_type == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY ||
-          map_type == libbpf::BPF_MAP_TYPE_PERCPU_HASH);
+  return val_type.IsCastableMapTy() && (map_type == BPF_MAP_TYPE_PERCPU_ARRAY ||
+                                        map_type == BPF_MAP_TYPE_PERCPU_HASH);
 }
 
 // BPF helpers that use fmt strings (bpf_trace_printk, bpf_seq_printf) expect
