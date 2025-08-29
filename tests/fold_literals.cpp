@@ -87,6 +87,14 @@ TEST(fold_literals, equals)
   test("str($1) == \"foo\"", "bool: false");
   test("$1 == 0", "bool: true");
   test("$1 == 1", "bool: false");
+  test(R"((1,-1,true,"foo") == (1,-1,true,"foo"))", "bool: true");
+  test("(1,(2,(3,1+3))) == (1,(2,(4-1,4)))", "bool: true");
+  test("(1,(2,(3,false))) == (1,(2,(4-1,4)))", "bool: false");
+  test(R"((1,-1,true,"foo") == (1,-1,true,"bar"))", "bool: false");
+  test(R"((-1,true,"foo",1) == (1,-1,true,"foo"))", "bool: false");
+  test("(1,-1) == (1,-1,true)", "bool: false");
+  test("($x,-1) == ($x,-1,true)", "bool: false");
+  test("($x,-1) == ($x,-1)", "=="); // Left as is
 }
 
 TEST(fold_literals, not_equals)
@@ -105,6 +113,14 @@ TEST(fold_literals, not_equals)
   test(R"(str($1) != "foo")", "bool: true");
   test("$1 != 0", "bool: false");
   test("$1 != 1", "bool: true");
+  test(R"((1,-1,true,"foo") != (1,-1,true,"foo"))", "bool: false");
+  test("(1,(2,(3,1+3))) != (1,(2,(4-1,4)))", "bool: false");
+  test("(1,(2,(3,false))) != (1,(2,(4-1,4)))", "bool: true");
+  test(R"((1,-1,true,"foo") != (1,-1,true,"bar"))", "bool: true");
+  test(R"((-1,true,"foo",1) != (1,-1,true,"foo"))", "bool: true");
+  test("(1,-1) != (1,-1,true)", "bool: true");
+  test("($x,-1) != ($x,-1,true)", "bool: true");
+  test("($x,-1) != ($x,-1)", "!="); // Left as is
 }
 
 TEST(fold_literals, comparison)
