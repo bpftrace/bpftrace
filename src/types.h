@@ -50,7 +50,6 @@ enum class Type : uint8_t {
   timestamp,
   mac_address,
   cgroup_path_t,
-  strerror_t,
   timestamp_mode,
   // clang-format on
 };
@@ -473,10 +472,6 @@ public:
   {
     return type_ == Type::cgroup_path_t;
   };
-  bool IsStrerrorTy() const
-  {
-    return type_ == Type::strerror_t;
-  };
   bool IsTimestampModeTy() const
   {
     return type_ == Type::timestamp_mode;
@@ -572,7 +567,6 @@ SizedType CreateBuffer(size_t size);
 SizedType CreateTimestamp();
 SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
-SizedType CreateStrerror();
 SizedType CreateTimestampMode();
 
 std::string addrspacestr(AddrSpace as);

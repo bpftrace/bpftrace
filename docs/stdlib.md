@@ -939,14 +939,12 @@ bpftrace doesn’t read past the length of the shortest string.
 
 
 ### strerror
-- `strerror_t strerror(int error)`
 
 Convert errno code to string.
-This is done asynchronously in userspace when the strerror value is printed, hence the returned value can only be used for printing.
 
 ```
 #include <errno.h>
-BEGIN {
+begin {
   print(strerror(EPERM));
 }
 ```
