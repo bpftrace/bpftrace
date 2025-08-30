@@ -23,6 +23,7 @@ add_library(ast STATIC
   passes/clang_build.cpp
   passes/named_param.cpp
   passes/codegen_resources.cpp
+  passes/comparison_expansion.cpp
   passes/config_analyser.cpp
   passes/deprecated.cpp
   passes/field_analyser.cpp
