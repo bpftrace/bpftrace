@@ -1,6 +1,7 @@
 #include "util/opaque.h"
 #include "gtest/gtest.h"
 #include <cstring>
+#include <numbers> // for std::numbers
 #include <string>
 #include <vector>
 
