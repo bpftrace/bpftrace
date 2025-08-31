@@ -990,11 +990,13 @@ std::chrono::time_point<std::chrono::system_clock> BPFtrace::resolve_timestamp(
           << "Cannot resolve timestamp due to failed boot time calculation";
     } else {
       t += std::chrono::seconds(boottime_->tv_sec);
-      t += std::chrono::nanoseconds(boottime_->tv_nsec);
+      t += std::chrono::duration_cast<std::chrono::system_clock::duration>(
+          std::chrono::nanoseconds(boottime_->tv_nsec));
     }
   }
 
-  t += std::chrono::nanoseconds(nsecs);
+  t += std::chrono::duration_cast<std::chrono::system_clock::duration>(
+      std::chrono::nanoseconds(nsecs));
   return t;
 }
 
