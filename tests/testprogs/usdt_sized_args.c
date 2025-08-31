@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#include "sdt.h"
+#include "libbpf-usdt/usdt.h"
 
 int main()
 {
@@ -12,9 +12,9 @@ int main()
   (void)c;
 
   while (1) {
-    DTRACE_PROBE1(test, probe1, a);
-    DTRACE_PROBE1(test, probe2, b);
-    DTRACE_PROBE1(test, probe3, c);
+    USDT(test, probe1, a);
+    USDT(test, probe2, b);
+    USDT(test, probe3, c);
   }
 
   return 0;
