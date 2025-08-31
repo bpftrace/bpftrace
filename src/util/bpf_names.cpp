@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <sstream> // for std::ostringstream
 
 #include "util/bpf_names.h"
 
