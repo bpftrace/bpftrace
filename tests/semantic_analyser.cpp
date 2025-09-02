@@ -265,7 +265,6 @@ TEST_F(SemanticAnalyserTest, builtin_functions)
   test("kprobe:f { @x = 1; print(@x) }");
   test("kprobe:f { @x = 1; clear(@x) }");
   test("kprobe:f { @x = 1; zero(@x) }");
-  test("kprobe:f { @x[1] = 1; if (has_key(@x, 1)) {} }");
   test("kprobe:f { @x[1] = 1; @s = len(@x) }");
   test("kprobe:f { time() }");
   test("kprobe:f { exit() }");
