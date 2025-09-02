@@ -58,17 +58,21 @@ jobs:
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm19
           TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 20 Release
+        - NAME: LLVM 20
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm20
+          TOOLS_TEST_OLDVERSION: runqlen.bt
+        - NAME: LLVM 21 Release
           CMAKE_BUILD_TYPE: Release
-          NIX_TARGET: .#bpftrace-llvm20
+          NIX_TARGET: .#bpftrace-llvm21
           TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 20 Debug
+        - NAME: LLVM 21 Debug
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm20
+          NIX_TARGET: .#bpftrace-llvm21
           TOOLS_TEST_OLDVERSION: runqlen.bt
-        - NAME: LLVM 20 Clang Debug
+        - NAME: LLVM 21 Clang Debug
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm20
+          NIX_TARGET: .#bpftrace-llvm21
           CC: clang
           CXX: clang++
           TOOLS_TEST_OLDVERSION: runqlen.bt
@@ -77,14 +81,14 @@ jobs:
           NIX_TARGET: .#bpftrace-fuzz
           CC: afl-clang-fast
           CXX: afl-clang-fast++
-        - NAME: Latest kernel (LLVM 20 Debug)
+        - NAME: Latest kernel (LLVM 21 Debug)
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm20
+          NIX_TARGET: .#bpftrace-llvm21
           NIX_TARGET_KERNEL: .#kernel-6_14
           TOOLS_TEST_OLDVERSION: runqlen.bt # Need host 6.14 kernel
-        - NAME: AOT (LLVM 20 Debug)
+        - NAME: AOT (LLVM 21 Debug)
           CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm20
+          NIX_TARGET: .#bpftrace-llvm21
           RUN_TESTS: 0
           RUN_AOT_TESTS: 1
           AOT_ALLOWLIST_FILE: .github/include/aot_allow.txt
