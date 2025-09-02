@@ -66,9 +66,9 @@ public:
 // In the future, this could be generalized by extracting information about the
 // specific function being called, and potentially respecting annotations on
 // these arguments.
-static std::unordered_set<std::string> RAW_MAP_ARG = {
-  "print", "clear", "zero", "len", "delete", "has_key",
-};
+static std::unordered_set<std::string> RAW_MAP_ARG = { "print",  "clear",
+                                                       "zero",   "len",
+                                                       "delete", "is_scalar" };
 
 void MapDefaultKey::visit(Map &map)
 {
@@ -204,8 +204,6 @@ void MapDefaultKey::visit(Call &call)
           call.addError() << "delete() requires 1 or 2 arguments ("
                           << call.vargs.size() << " provided)";
         }
-      } else if (call.func == "has_key") {
-        checkCall(*map, true, call);
       } else if (call.func == "len") {
         checkCall(*map, true, call);
       }
