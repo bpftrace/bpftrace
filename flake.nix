@@ -37,7 +37,7 @@
           pkgs = import nixpkgs { inherit system; };
 
           # The default LLVM version is the latest supported release
-          defaultLlvmVersion = 20;
+          defaultLlvmVersion = 21;
 
           # Override to specify the libbpf build we want. Note that we need to
           # capture a specific fix for linking which is not yet present in a
@@ -271,6 +271,7 @@
             default = self.packages.${system}."bpftrace-llvm${toString defaultLlvmVersion}";
 
             # Support matrix of llvm versions
+            bpftrace-llvm21 = mkBpftrace 21;
             bpftrace-llvm20 = mkBpftrace 20;
             bpftrace-llvm19 = mkBpftrace 19;
             bpftrace-llvm18 = mkBpftrace 18;
@@ -321,6 +322,7 @@
           devShells = rec {
             default = self.devShells.${system}."bpftrace-llvm${toString defaultLlvmVersion}";
 
+            bpftrace-llvm21 = mkBpftraceDevShell 21;
             bpftrace-llvm20 = mkBpftraceDevShell 20;
             bpftrace-llvm19 = mkBpftraceDevShell 19;
             bpftrace-llvm18 = mkBpftraceDevShell 18;
