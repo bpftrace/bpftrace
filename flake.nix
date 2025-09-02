@@ -70,7 +70,9 @@
 
           # Override to specify the bcc build we want.
           # First overrides with the above libbpf and then overrides the rev.
-          bccVersion = "0.33.0";
+          # We need a specific patch in BCC which resolves a build failure with
+          # LLVM 21 and is not a part of any official release, yet.
+          bccVersion = "8c5c96ad3beeed2fa827017f451a952306826974";
           bcc = (pkgs.bcc.override {
             libbpf = libbpf;
             llvmPackages = pkgs."llvmPackages_${toString defaultLlvmVersion}";
@@ -79,9 +81,9 @@
             src = pkgs.fetchFromGitHub {
               owner = "iovisor";
               repo = "bcc";
-              rev = "v${bccVersion}";
+              rev = "${bccVersion}";
               # See above
-              sha256 = "sha256-6dT3seLuEVQNKWiYGLK1ajXzW7pb62S/GQ0Lp4JdGjc=";
+              sha256 = "sha256-XcTqcsbyUBe83vsjUC70GoffCXaxk32QddBKFEP6LD8=";
             };
           };
 
