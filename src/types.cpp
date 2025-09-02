@@ -129,34 +129,49 @@ bool SizedType::IsSameType(const SizedType &t) const
 
 bool SizedType::IsEqual(const SizedType &t) const
 {
-  if (t.GetTy() != type_)
-    return false;
-
-  if (IsRecordTy())
-    return t.GetName() == GetName() && t.GetSize() == GetSize();
-
-  if (IsPtrTy())
-    return *t.GetPointeeTy() == *GetPointeeTy();
-
-  if (IsArrayTy())
-    return t.GetNumElements() == GetNumElements() &&
-           *t.GetElementTy() == *GetElementTy();
-
-  if (IsTupleTy())
-    return *t.inner_struct() == *inner_struct();
-
-  return type_ == t.GetTy() && GetSize() == t.GetSize() &&
-         is_signed_ == t.is_signed_;
-}
-
-bool SizedType::operator!=(const SizedType &t) const
-{
-  return !IsEqual(t);
+  return (*this <=> t) == 0;
 }
 
 bool SizedType::operator==(const SizedType &t) const
 {
   return IsEqual(t);
+}
+
+std::strong_ordering SizedType::operator<=>(const SizedType &t) const
+{
+  if (auto cmp = type_ <=> t.type_; cmp != 0)
+    return cmp;
+
+  if (IsRecordTy()) {
+    if (auto cmp = GetName() <=> t.GetName(); cmp != 0)
+      return cmp;
+    return GetSize() <=> t.GetSize();
+  }
+
+  if (IsPtrTy()) {
+    return *GetPointeeTy() <=> *t.GetPointeeTy();
+  }
+
+  if (IsArrayTy()) {
+    if (auto cmp = GetNumElements() <=> t.GetNumElements(); cmp != 0)
+      return cmp;
+    return *GetElementTy() <=> *t.GetElementTy();
+  }
+
+  if (IsTupleTy()) {
+    if (auto cmp = GetFieldCount() <=> t.GetFieldCount(); cmp != 0)
+      return cmp;
+    for (ssize_t i = 0; i < GetFieldCount(); i++) {
+      if (auto cmp = GetField(i).type <=> t.GetField(i).type; cmp != 0)
+        return cmp;
+    }
+    return std::strong_ordering::equal;
+  }
+
+  if (auto cmp = GetSize() <=> t.GetSize(); cmp != 0)
+    return cmp;
+
+  return is_signed_ <=> t.is_signed_;
 }
 
 bool SizedType::IsByteArray() const
