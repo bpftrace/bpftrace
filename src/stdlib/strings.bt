@@ -1,0 +1,19 @@
+// Convert errno code to string.
+//
+// ```
+// #include <errno.h>
+// begin {
+//   print(strerror(EPERM));
+// }
+// ```
+macro strerror(errno) {
+  let $v : string[64];
+  // Ensure that the size of the string is equal to the size of the returned
+  // buffer. On the C side, it will be a compilation error if any of the
+  // strings exceed this size.
+  if (sizeof($v) != sizeof(*__strerror((int32)errno, &$v))) {
+    // fail
+  }
+  __strerror((int32)errno, &$v);
+  $v
+}
