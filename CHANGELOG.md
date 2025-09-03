@@ -106,6 +106,8 @@ and this project adheres to
   - [#4510](https://github.com/bpftrace/bpftrace/pull/4510)
 - Add support for LLVM 21
   - [#4528](https://github.com/bpftrace/bpftrace/pull/4528)
+- Add support for indexing string types
+  - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)

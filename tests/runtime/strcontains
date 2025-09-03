@@ -105,3 +105,11 @@ NAME null character in both
 PROG begin { $haystack = "hello\0world"; $needle = "wo\0rld"; print(strcontains($haystack, $needle));  }
 EXPECT false
 TIMEOUT 1
+
+NAME indexing
+PROG begin { $a = "foo"; printf("%c is the first letter", $a[0]); }
+EXPECT f is the first letter
+
+NAME invalid indexing
+PROG begin { $a = "foo"; $i = (uint64)10; print($a[$i]); }
+EXPECT -1
