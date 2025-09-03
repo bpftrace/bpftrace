@@ -57,7 +57,7 @@ uint32_t rs_hash(std::string_view str)
   unsigned int hash = 0;
 
   for (char c : str) {
-    hash = hash * a + c;
+    hash = (hash * a) + c;
     a = a * b;
   }
 
