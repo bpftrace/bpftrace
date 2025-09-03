@@ -2326,7 +2326,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   const SizedType &type = arr.expr.type();
 
   if (is_final_pass()) {
-    if (!type.IsArrayTy() && !type.IsPtrTy()) {
+    if (!type.IsArrayTy() && !type.IsPtrTy() && !type.IsStringTy()) {
       arr.addError() << "The array index operator [] can only be "
                         "used on arrays and pointers, found "
                      << type.GetTy() << ".";
@@ -2339,12 +2339,18 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     }
 
     if (auto *integer = arr.indexpr.as<Integer>()) {
-      if (type.IsArrayTy()) {
-        size_t num = type.GetNumElements();
-        if (num != 0 && static_cast<size_t>(integer->value) >= num) {
-          arr.addError() << "the index " << integer->value
-                         << " is out of bounds for array of size " << num;
+      auto num = [&]() -> size_t {
+        if (type.IsArrayTy()) {
+          return type.GetNumElements();
+        } else if (type.IsStringTy()) {
+          return type.GetSize();
+        } else {
+          return 0;
         }
+      }();
+      if (num != 0 && static_cast<size_t>(integer->value) >= num) {
+        arr.addError() << "the index " << integer->value
+                       << " is out of bounds for array of size " << num;
       }
     } else if (!arr.indexpr.type().IsIntTy() || arr.indexpr.type().IsSigned()) {
       arr.addError() << "The array index operator [] only "
@@ -2357,6 +2363,8 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     arr.element_type = *type.GetElementTy();
   else if (type.IsPtrTy())
     arr.element_type = *type.GetPointeeTy();
+  else if (type.IsStringTy())
+    arr.element_type = CreateInt8();
   arr.element_type.SetAS(type.GetAS());
 
   // BPF verifier cannot track BTF information for double pointers so we

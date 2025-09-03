@@ -3052,6 +3052,21 @@ TEST_F(SemanticAnalyserTest, string_comparison)
        NoWarning{ msg });
 }
 
+TEST_F(SemanticAnalyserTest, string_index)
+{
+  // String indexing produces an 8-bit signed integer.
+  test("kprobe:f { $x = \"foo\"; $x[0] == 102; }");
+
+  // Able to index to the null, but not past it.
+  test(R"(kprobe:f { $x = "foo"; printf("%c is the fourth letter", $x[3]); })");
+  test(R"(kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); })",
+       Error{ R"(
+stdin:1:57-62: ERROR: the index 4 is out of bounds for array of size 4
+kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); }
+                                                        ~~~~~
+)" });
+}
+
 TEST_F(SemanticAnalyserTest, signed_int_arithmetic_warnings)
 {
   // Test type warnings for arithmetic
