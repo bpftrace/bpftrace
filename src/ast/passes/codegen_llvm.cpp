@@ -1959,10 +1959,18 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto left_string = visit(left_arg);
     auto right_string = visit(right_arg);
 
-    return ScopedExpr(b_.CreateStrcontains(left_string.value(),
-                                           left_arg.type().GetSize(),
-                                           right_string.value(),
-                                           right_arg.type().GetSize()));
+    if (bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strstr)) {
+      return ScopedExpr(
+          CreateKernelFuncCall(Kfunc::bpf_strstr,
+                               { left_string.value(), right_string.value() },
+                               "strstr",
+                               call));
+    } else {
+      return ScopedExpr(b_.CreateStrcontains(left_string.value(),
+                                             left_arg.type().GetSize(),
+                                             right_string.value(),
+                                             right_arg.type().GetSize()));
+    }
   } else if (call.func == "override") {
     // long bpf_override(struct pt_regs *regs, u64 rc)
     // returns: 0
