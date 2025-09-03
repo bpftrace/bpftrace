@@ -336,8 +336,10 @@ bool ClangParser::ClangParserHandler::check_diagnostics(bool bail_on_error)
        i++) {
     CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
     CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
-    std::string msg = clang_getCString(clang_getDiagnosticSpelling(diag));
-    error_msgs.push_back(msg);
+
+    CXString msg_str = clang_getDiagnosticSpelling(diag);
+    auto &msg = error_msgs.emplace_back(clang_getCString(msg_str));
+    clang_disposeString(msg_str);
 
     if ((bail_on_error && severity == CXDiagnostic_Error) ||
         severity == CXDiagnostic_Fatal) {
