@@ -47,29 +47,6 @@ DILocalScope *DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
                                          0,
                                          DINode::FlagPrototyped,
                                          flags);
-#if LLVM_VERSION_MAJOR < 17
-  // There's a bug in LLVM <17 in DIBuilder::createFunction when called for a
-  // function declaration. It creates an empty temporary MDTuple for
-  // RetainedNodes inside DISubprogram which is, in addition, never freed.
-  //
-  // We generate function declaration debug info for kfuncs so this causes
-  // two issues when kfuncs are used on LLVM <17:
-  //
-  // 1. The generated LLVM IR is invalid and its verification will fail.
-  // 2. There is a memory leak introduced by the above createFunction call.
-  //
-  // To fix both problems, delete the temporary MDTuple here.
-  //
-  // Note that the issue was fixed in LLVM 17 by
-  //
-  //  https://github.com/llvm/llvm-project/commit/ed506dd6cecd9653cf9202bfe195891a33482852
-  //
-  // which removes the creation of the temporary MDTuple.
-  //
-  if (is_declaration) {
-    llvm::MDNode::deleteTemporary(subprog->getRetainedNodes().get());
-  }
-#endif
 
   for (size_t i = 0; i < args.fields.size(); i++) {
     createParameterVariable(subprog,

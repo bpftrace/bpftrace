@@ -14,10 +14,6 @@
 #include <sstream>
 #include <sys/mman.h>
 
-#if LLVM_VERSION_MAJOR <= 16
-#include <clang/Basic/DebugInfoOptions.h>
-#endif
-
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/passes/clang_build.h"
@@ -127,11 +123,7 @@ static Result<> build(CompileContext &ctx,
                                             llvm::ArrayRef<const char *>(args),
                                             *diags);
   inv->getTargetOpts().Triple = "bpf";
-#if LLVM_VERSION_MAJOR <= 16
-  inv->getCodeGenOpts().setDebugInfo(clang::codegenoptions::FullDebugInfo);
-#else
   inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
-#endif
   inv->getCodeGenOpts().DebugColumnInfo = true;
 
   clang::CompilerInstance ci;

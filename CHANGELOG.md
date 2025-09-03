@@ -121,6 +121,8 @@ and this project adheres to
   - [#4371](https://github.com/bpftrace/bpftrace/pull/4371)
 #### Deprecated
 #### Removed
+- Drop support for LLVM 16
+  - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
 - Fix build failures due to missing location.hh
   - [#3987](https://github.com/bpftrace/bpftrace/pull/3987)
