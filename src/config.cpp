@@ -285,6 +285,7 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { UNSTABLE_TSERIES, CONFIG_FIELD_PARSER(unstable_tseries) },
   { UNSTABLE_ADDR, CONFIG_FIELD_PARSER(unstable_addr) },
   { UNSTABLE_TYPEINFO, CONFIG_FIELD_PARSER(unstable_typeinfo) },
+  { UNSTABLE_TYPEVALID, CONFIG_FIELD_PARSER(unstable_typevalid) },
 };
 
 // These symbols are deprecated, and have been remapped elsewhere.

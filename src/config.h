@@ -26,6 +26,7 @@ static const auto UNSTABLE_MAP_DECL = "unstable_map_decl";
 static const auto UNSTABLE_TSERIES = "unstable_tseries";
 static const auto UNSTABLE_ADDR = "unstable_addr";
 static const auto UNSTABLE_TYPEINFO = "unstable_typeinfo";
+static const auto UNSTABLE_TYPEVALID = "unstable_typevalid";
 
 class Config {
 public:
@@ -51,6 +52,7 @@ public:
   ConfigUnstable unstable_tseries = ConfigUnstable::warn;
   ConfigUnstable unstable_addr = ConfigUnstable::warn;
   ConfigUnstable unstable_typeinfo = ConfigUnstable::error;
+  ConfigUnstable unstable_typevalid = ConfigUnstable::error;
 #ifdef HAVE_BLAZESYM
   bool use_blazesym = true;
   bool show_debug_info = true;

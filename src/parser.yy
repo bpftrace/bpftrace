@@ -133,6 +133,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> OFFSETOF "offsetof"
 %token <std::string> TYPEOF "typeof"
 %token <std::string> TYPEINFO "typeinfo"
+%token <std::string> TYPEVALID "typevalid"
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
 %token <bool> BOOL "bool"
@@ -150,6 +151,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Typeof *> typeof_expr any_type
 %type <ast::Expression> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
 %type <ast::Expression> logical_or_expr or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
+%type <ast::Expression> typevalid_expr
 %type <ast::ExpressionList> vargs
 %type <ast::SubprogArg *> subprog_arg
 %type <ast::SubprogArgList> subprog_args
@@ -600,6 +602,7 @@ postfix_expr:
         |       sizeof_expr                    { $$ = $1; }
         |       offsetof_expr                  { $$ = $1; }
         |       typeinfo_expr                  { $$ = $1; }
+        |       typevalid_expr                 { $$ = $1; }
         |       call                           { $$ = $1; }
         |       var INCREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::INCREMENT, true, @2); }
         |       var DECREMENT                  { $$ = driver.ctx.make_node<ast::Unop>($1, ast::Operator::DECREMENT, true, @2); }
@@ -781,6 +784,11 @@ typeinfo_expr:
         |       TYPEINFO "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typeinfo>(driver.ctx.make_node<ast::Typeof>($3, @$), @$); }
                 ;
 
+typevalid_expr:
+                TYPEVALID "(" type ")"  { $$ = driver.ctx.make_node<ast::Typevalid>(driver.ctx.make_node<ast::Typeof>($3, @$), @$); }
+        |       TYPEVALID "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typevalid>(driver.ctx.make_node<ast::Typeof>($3, @$), @$); }
+                ;
+
 any_type:
                 type        { $$ = driver.ctx.make_node<ast::Typeof>($1, @$); }
         |       typeof_expr { $$ = $1; }
@@ -801,6 +809,7 @@ keyword:
         |       SUBPROG       { $$ = $1; }
         |       TYPEOF        { $$ = $1; }
         |       TYPEINFO      { $$ = $1; }
+        |       TYPEVALID     { $$ = $1; }
         ;
 
 ident:
