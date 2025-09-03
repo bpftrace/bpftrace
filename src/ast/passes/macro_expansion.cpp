@@ -130,11 +130,17 @@ void MacroExpander::visit(AssignVarStatement &assignment)
 
 void MacroExpander::visit(VarDeclStatement &decl)
 {
+  if (is_top_level()) {
+    return;
+  }
+
   auto *var = decl.var;
   if (vars_.contains(var->ident)) {
     decl.addError() << "Variable declaration shadows macro arg " << var->ident;
     return;
   }
+  renamed_vars_.insert(var->ident);
+
   visit(decl.var);
 }
 
