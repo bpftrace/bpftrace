@@ -174,11 +174,11 @@ public:
   virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
       const std::string &name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
-  // This gets the number of perf or ring buffer pages by first checking if the
+  // This gets the number of perf or ring buffer pages in total across all cpus by first checking if the
   // user set this manually with a config value (`perf_rb_pages`), then falling
-  // back to either a static default `default_val` or a dynamic default based on
-  // the amount of available system memory
-  virtual Result<uint64_t> get_buffer_pages() const;
+  // back to a dynamic default based on the amount of available system memory
+  virtual Result<uint64_t> get_buffer_pages(bool per_cpu = false) const;
+  Result<uint64_t> get_buffer_pages_per_cpu() const;
 
   bool write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt);
   void parse_module_btf(const std::set<std::string> &modules);
@@ -234,7 +234,6 @@ public:
     return std::nullopt;
   }
   int ncpus_;
-  int online_cpus_;
   int max_cpu_id_;
   std::unique_ptr<Config> config_;
   bool run_benchmarks_ = false;
@@ -245,7 +244,6 @@ private:
   Usyms usyms_;
   std::vector<std::string> params_;
 
-  std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;
   std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers_;
 
   int create_pcaps();
@@ -265,7 +263,6 @@ private:
                                               bool show_debug_info);
   void teardown_output();
   void poll_output(output::Output &out, bool drain = false);
-  int poll_skboutput_events();
   void poll_event_loss(output::Output &out);
   static uint64_t read_address_from_output(std::string output);
   struct bcc_symbol_option &get_symbol_opts();
@@ -275,8 +272,8 @@ private:
                        std::set<std::string> expanded_funcs,
                        int usdt_location_idx = 0);
   bool has_iter_ = false;
-  int epollfd_ = -1;
   struct ring_buffer *ringbuf_ = nullptr;
+  struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
 
   // Mapping traceable functions to modules (or "vmlinux") they appear in.

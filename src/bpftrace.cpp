@@ -201,7 +201,7 @@ struct PerfEventContext {
   output::Output &output;
 };
 
-void perf_event_printer(void *cb_cookie, void *raw_data, int size)
+void event_printer(void *cb_cookie, void *raw_data, int size)
 {
   auto *ctx = static_cast<PerfEventContext *>(cb_cookie);
 
@@ -212,7 +212,7 @@ void perf_event_printer(void *cb_cookie, void *raw_data, int size)
     memcpy(data, raw_data, size);
   });
 
-  // Ignore the remaining events if perf_event_printer is called during
+  // Ignore the remaining events if event_printer is called during
   // finalization stage (exit() builtin has been called)
   if (ctx->bpftrace.finalize_)
     return;
@@ -276,8 +276,22 @@ void perf_event_printer(void *cb_cookie, void *raw_data, int size)
 
 int ringbuf_printer(void *cb_cookie, void *data, size_t size)
 {
-  perf_event_printer(cb_cookie, data, size);
+  event_printer(cb_cookie, data, size);
   return 0;
+}
+
+void skb_output_printer(void *ctx,
+                        [[maybe_unused]] int cpu,
+                        void *data,
+                        __u32 size)
+{
+  event_printer(ctx, data, size);
+}
+
+void skb_output_lost(void *ctx, [[maybe_unused]] int cpu, __u64 cnt)
+{
+  auto *perf_ctx = static_cast<PerfEventContext *>(ctx);
+  perf_ctx->output.lost_events(cnt);
 }
 
 void BPFtrace::add_param(const std::string &param)
@@ -296,12 +310,6 @@ std::string BPFtrace::get_param(size_t i) const
 size_t BPFtrace::num_params() const
 {
   return params_.size();
-}
-
-void perf_event_lost(void *cb_cookie, uint64_t lost)
-{
-  auto *ctx = static_cast<PerfEventContext *>(cb_cookie);
-  ctx->output.lost_events(lost);
 }
 
 Result<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
@@ -666,7 +674,7 @@ int BPFtrace::run(output::Output &out,
 
   attached_probes_.clear();
   // finalize_ and exitsig_recv should be false from now on otherwise
-  // perf_event_printer() can ignore the `end` events.
+  // event_printer() can ignore the `end` events.
   finalize_ = false;
   exitsig_recv = false;
 
@@ -705,47 +713,26 @@ int BPFtrace::setup_output(void *ctx)
 
 int BPFtrace::setup_skboutput_perf_buffer(void *ctx)
 {
-  epollfd_ = epoll_create1(EPOLL_CLOEXEC);
-  if (epollfd_ == -1) {
-    LOG(ERROR) << "Failed to create epollfd";
+  auto map = bytecode_.getMap(MapType::PerfEvent);
+
+  auto num_pages = get_buffer_pages_per_cpu();
+  if (!num_pages) {
+    LOG(ERROR) << num_pages.takeError();
     return -1;
   }
 
-  std::vector<int> cpus = util::get_online_cpus();
-  online_cpus_ = cpus.size();
-  for (int cpu : cpus) {
-    auto num_pages = get_buffer_pages();
-    if (!num_pages) {
-      LOG(ERROR) << num_pages.takeError();
-      return -1;
-    }
-    void *reader = bpf_open_perf_buffer(
-        &perf_event_printer, &perf_event_lost, ctx, -1, cpu, *num_pages);
-    if (reader == nullptr) {
-      LOG(ERROR) << "Failed to open perf buffer";
-      return -1;
-    }
-    // Store the perf buffer pointers in a vector of unique_ptrs.
-    // When open_perf_buffers_ is cleared or destroyed,
-    // perf_reader_free is automatically called.
-    open_perf_buffers_.emplace_back(reader, perf_reader_free);
+  skb_perfbuf_ = perf_buffer__new(map.fd(),
+                                  *num_pages,
+                                  &skb_output_printer,
+                                  &skb_output_lost,
+                                  ctx,
+                                  nullptr);
 
-    struct epoll_event ev = {};
-    ev.events = EPOLLIN;
-    ev.data.ptr = reader;
-    int reader_fd = perf_reader_fd(static_cast<perf_reader *>(reader));
-
-    auto map = bytecode_.getMap(MapType::PerfEvent);
-    auto ok = map.update_elem(&cpu, &reader_fd);
-    if (!ok) {
-      LOG(ERROR) << "Failed to update perf event map: " << ok.takeError();
-      return -1;
-    }
-    if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, reader_fd, &ev) == -1) {
-      LOG(ERROR) << "Failed to add perf reader to epoll";
-      return -1;
-    }
+  if (skb_perfbuf_ == nullptr) {
+    LOG(ERROR) << "Failed to open perf buffer";
+    return -1;
   }
+
   return 0;
 }
 
@@ -760,8 +747,7 @@ void BPFtrace::teardown_output()
   ring_buffer__free(ringbuf_);
 
   if (resources.using_skboutput)
-    // Calls perf_reader_free() on all open perf buffers.
-    open_perf_buffers_.clear();
+    perf_buffer__free(skb_perfbuf_);
 }
 
 void BPFtrace::poll_output(output::Output &out, bool drain)
@@ -786,14 +772,9 @@ void BPFtrace::poll_output(output::Output &out, bool drain)
            (ready == 0 && (drain || finalize_));
   };
 
-  if (poll_skboutput && epollfd_ < 0) {
-    LOG(ERROR) << "Invalid epollfd " << epollfd_;
-    return;
-  }
-
   while (true) {
     if (poll_skboutput) {
-      ready = poll_skboutput_events();
+      ready = perf_buffer__poll(skb_perfbuf_, timeout_ms);
       if (should_retry(ready)) {
         if (!do_poll_ringbuf)
           continue;
@@ -838,19 +819,6 @@ void BPFtrace::poll_output(output::Output &out, bool drain)
       }
     }
   }
-}
-
-int BPFtrace::poll_skboutput_events()
-{
-  auto events = std::vector<struct epoll_event>(online_cpus_);
-  int ready = epoll_wait(epollfd_, events.data(), online_cpus_, timeout_ms);
-  if (ready <= 0) {
-    return ready;
-  }
-  for (int i = 0; i < ready; i++) {
-    perf_reader_event_read(static_cast<perf_reader *>(events[i].data.ptr));
-  }
-  return ready;
 }
 
 void BPFtrace::poll_event_loss(output::Output &out)
@@ -1326,10 +1294,21 @@ uint64_t find_closest_power_of_2(uint64_t n)
   }
 }
 
-Result<uint64_t> BPFtrace::get_buffer_pages() const
+Result<uint64_t> BPFtrace::get_buffer_pages(bool per_cpu) const
 {
   if (config_->perf_rb_pages) {
-    return config_->perf_rb_pages;
+    auto pages = config_->perf_rb_pages;
+    if (!per_cpu) {
+      // We want at least one page per cpu
+      if (pages < static_cast<uint64_t>(ncpus_)) {
+        return ncpus_;
+      }
+      return pages;
+    }
+
+    double res = static_cast<double>(pages) / ncpus_;
+    pages = static_cast<uint64_t>(std::ceil(res));
+    return find_closest_power_of_2(pages);
   }
   auto available_mem_kb = util::get_available_mem_kb();
   if (!available_mem_kb) {
@@ -1340,7 +1319,15 @@ Result<uint64_t> BPFtrace::get_buffer_pages() const
   static uint64_t floor = 256;
   uint64_t max = std::min(*available_mem_kb, ceiling);
   uint64_t amount_bytes = std::max(max, floor) * 1024;
+  if (per_cpu) {
+    amount_bytes /= ncpus_;
+  }
   return find_closest_power_of_2(amount_bytes / sysconf(_SC_PAGE_SIZE));
+}
+
+Result<uint64_t> BPFtrace::get_buffer_pages_per_cpu() const
+{
+  return get_buffer_pages(true);
 }
 
 Dwarf *BPFtrace::get_dwarf(const std::string &filename)

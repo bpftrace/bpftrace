@@ -105,7 +105,7 @@ public:
     return true;
   }
 
-  Result<uint64_t> get_buffer_pages() const override
+  Result<uint64_t> get_buffer_pages(bool __attribute__((unused)) /*per_cpu*/) const override
   {
     return 64;
   }
