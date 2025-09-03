@@ -475,7 +475,7 @@ bool BPFfeature::has_uprobe_multi()
   if (has_uprobe_multi_.has_value())
     return *has_uprobe_multi_;
 
-#if defined(HAVE_LIBBPF_UPROBE_MULTI)
+#ifdef HAVE_LIBBPF_UPROBE_MULTI
   if (no_feature_.uprobe_multi_) {
     has_uprobe_multi_ = false;
     return *has_uprobe_multi_;
