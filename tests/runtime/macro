@@ -177,3 +177,12 @@ ARCH x86_64
 NAME builtin wrapper username
 PROG begin { if (__builtin_username == username() && __builtin_username == username) { printf("SUCCESS %s\n", username); } }
 EXPECT_REGEX SUCCESS .*
+
+NAME recursion expansion
+PROG macro fib(n) { n <= 2 ? 1 : apply(fib, n-1) + apply(fib, n-2) } begin { printf("SUCCESS %d\n", fib(10)); }
+EXPECT_REGEX SUCCESS 55
+
+NAME recursion limits
+PROG macro fib(n) { n <= 2 ? 1 : apply(fib, n-1) + apply(fib, n-2) } begin { printf("SUCCESS %d\n", fib(100)); }
+EXPECT_REGEX stdin:1:1-65: ERROR: Reached recursive expansion limit of 16.*
+WILL_FAIL

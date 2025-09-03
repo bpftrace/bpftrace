@@ -168,6 +168,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::RootStatements> root_stmts
 %type <ast::Range *> range
 %type <ast::VarDeclStatement *> var_decl_stmt
+%type <ast::Tuple *> tuple_expr
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
 %type <SizedType> type int_type pointer_type struct_type
@@ -360,8 +361,12 @@ subprog_arg:
                 ;
 
 macro:
-                MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
-        |       MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @$); }
+                MACRO IDENT "(" macro_args ")" block_expr                       { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), nullptr, $6, @1+@4); }
+        |       MACRO IDENT "(" macro_args ")" bare_block                       { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), nullptr, $6, @1+@4); }
+        |       MACRO IDENT "(" macro_args "," ident DOT DOT DOT ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), driver.ctx.make_node<ast::Identifier>($6, @6), $11, @1+@4); }
+        |       MACRO IDENT "(" macro_args "," ident DOT DOT DOT ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), driver.ctx.make_node<ast::Identifier>($6, @6), $11, @1+@4); }
+        |       MACRO IDENT "(" ident DOT DOT DOT ")" block_expr                { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList({}), driver.ctx.make_node<ast::Identifier>($4, @4), $9, @1+@4); }
+        |       MACRO IDENT "(" ident DOT DOT DOT ")" bare_block                { $$ = driver.ctx.make_node<ast::Macro>($2, ast::ExpressionList({}), driver.ctx.make_node<ast::Identifier>($4, @4), $9, @1+@4); }
                 ;
 
 macro_args:
@@ -564,6 +569,24 @@ var_decl_stmt:
         |        LET var COLON any_type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>($2, $4, @$); }
         ;
 
+tuple_expr:
+                "(" vargs "," expr ")"
+                {
+                  auto &args = $2;
+                  args.push_back($4);
+                  $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
+                }
+        |       "(" vargs "," ")"
+                {
+                  // Tuple with a single element (possibly).
+                  $$ = driver.ctx.make_node<ast::Tuple>(std::move($2), @$);
+                }
+        |       "(" "," ")"
+                {
+                  // Empty tuple.
+                  $$ = driver.ctx.make_node<ast::Tuple>(ast::ExpressionList({}), @$);
+                }
+
 primary_expr:
                 UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
         |       BOOL               { $$ = driver.ctx.make_node<ast::Boolean>($1, @$); }
@@ -576,12 +599,7 @@ primary_expr:
         |       var_addr           { $$ = $1; }
         |       map_addr           { $$ = $1; }
         |       map_expr           { $$ = $1; }
-        |       "(" vargs "," expr ")"
-                {
-                  auto &args = $2;
-                  args.push_back($4);
-                  $$ = driver.ctx.make_node<ast::Tuple>(std::move(args), @$);
-                }
+        |       tuple_expr         { $$ = $1; }
         |       map %prec LOW      { $$ = $1; }
         |       IDENT %prec LOW    { $$ = driver.ctx.make_node<ast::Identifier>($1, @$); }
                 ;
@@ -791,7 +809,7 @@ keyword:
         |       UNROLL        { $$ = $1; }
         |       WHILE         { $$ = $1; }
         |       SUBPROG       { $$ = $1; }
-        ;
+                ;
 
 ident:
                 IDENT         { $$ = $1; }
@@ -803,22 +821,23 @@ ident:
 struct_field:
                 external_name                       { $$.push_back($1); }
         |       struct_field DOT external_name      { $$ = std::move($1); $$.push_back($3); }
-        ;
+                ;
 
 external_name:
                 keyword       { $$ = $1; }
         |       ident         { $$ = $1; }
-        ;
+                ;
 
 call:
-                IDENT "(" ")"                 { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
-        |       BUILTIN "(" ")"               { $$ = driver.ctx.make_node<ast::Call>($1, @$); }
+                IDENT "(" ")"                 { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), @$); }
+        |       BUILTIN "(" ")"               { $$ = driver.ctx.make_node<ast::Call>($1, ast::ExpressionList({}), @$); }
         |       IDENT "(" vargs ")"           { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
         |       BUILTIN "(" vargs ")"         { $$ = driver.ctx.make_node<ast::Call>($1, std::move($3), @$); }
                 ;
 
 map:
                 MAP { $$ = driver.ctx.make_node<ast::Map>($1, @$); }
+                ;
 
 map_expr:
                 map "[" vargs "]" {

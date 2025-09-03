@@ -414,8 +414,6 @@ public:
 
 class Call : public Node {
 public:
-  explicit Call(ASTContext &ctx, std::string func, Location &&loc)
-      : Node(ctx, std::move(loc)), func(std::move(func)) {};
   explicit Call(ASTContext &ctx,
                 std::string func,
                 ExpressionList &&vargs,
@@ -1292,20 +1290,24 @@ public:
   Macro(ASTContext &ctx,
         std::string name,
         ExpressionList &&vargs,
+        Identifier *varargs,
         BlockExpr *block,
         Location &&loc)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         vargs(std::move(vargs)),
+        varargs(varargs),
         block(block) {};
   explicit Macro(ASTContext &ctx, const Macro &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         name(other.name),
         vargs(clone(ctx, other.vargs, loc)),
+        varargs(clone(ctx, other.varargs, loc)),
         block(clone(ctx, other.block, loc)) {};
 
   std::string name;
   ExpressionList vargs;
+  Identifier *varargs = nullptr; // May be null.
   BlockExpr *block = nullptr;
 };
 using MacroList = std::vector<Macro *>;
