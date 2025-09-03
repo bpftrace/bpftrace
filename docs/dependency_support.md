@@ -22,11 +22,8 @@ reasonable runtime fallback strategy or detailed error message.
 ## LLVM (dynamically linked)
 
 LLVM is bpftrace's biggest build time dependency. The project always supports
-the latest LLVM release as soon as it's practical (available in CI). We support
-some number of previous LLVM releases. Given LLVM's twice annual release
-cadence, we have historically supported somewhere around the last 3 years'
-worth. We do not provide a hard guarantee, but it's probably safe to the
-versions from the previous year will be supported.
+the latest LLVM release as soon as it's practical (available in CI). On top of
+that, we support 4 previous LLVM releases (i.e. 5 LLVM versions in total).
 
 ## LLVM (statically linked)
 
