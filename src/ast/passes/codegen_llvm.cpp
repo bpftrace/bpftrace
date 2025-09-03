@@ -1163,7 +1163,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     llvm::Function *parent = b_.GetInsertBlock()->getParent();
     llvm::Type *ts_struct_ty = b_.GetMapValueType(map.type());
     AllocaInst *ts_struct_ptr = b_.CreateAllocaBPF(
-        PointerType::get(ts_struct_ty, 0), "ts_struct_ptr");
+        PointerType::get(llvm_ctx_, 0), "ts_struct_ptr");
 
     // Step 1) Figure out which bucket we're using.
     auto map_info = bpftrace_.resources.maps_info.find(map.ident);
@@ -1215,7 +1215,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     // Success: ts_struct_ptr just points to what's in the map.
     b_.CreateStore(
-        b_.CreatePointerCast(lookup, PointerType::get(ts_struct_ty, 0), "cast"),
+        b_.CreatePointerCast(lookup, PointerType::get(llvm_ctx_, 0), "cast"),
         ts_struct_ptr);
 
     b_.CreateStore(b_.getInt8(1), key_exists);
@@ -1252,8 +1252,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     //         updating it.
     b_.SetInsertPoint(maybe_clear_block);
 
-    Value *ptr = b_.CreateLoad(PointerType::get(ts_struct_ty, 0),
-                               ts_struct_ptr);
+    Value *ptr = b_.CreateLoad(PointerType::get(llvm_ctx_, 0), ts_struct_ptr);
 
     Value *value_ptr = b_.CreateGEP(ts_struct_ty,
                                     ptr,
@@ -4226,8 +4225,7 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
   auto elements = AsyncEvent::Join().asLLVMType(b_, content_size);
   StructType *join_struct = b_.GetStructType("join_t", elements, true);
 
-  Value *join_data = b_.CreateBitCast(perfdata,
-                                      PointerType::get(join_struct, 0));
+  Value *join_data = b_.CreateBitCast(perfdata, PointerType::get(llvm_ctx_, 0));
 
   b_.CreateStore(
       b_.getInt64(static_cast<int>(async_action::AsyncAction::join)),
