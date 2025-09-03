@@ -78,6 +78,8 @@ afterwards.
 1. Bump the supported LLVM version in [CMakeLists.txt](../CMakeLists.txt) and
    [flake.nix](../flake.nix), resolve any potential issues, and add a CI job to
    [.github/workflows/ci.yml](../.github/workflows/ci.yml) for the new version.
+1. Update `bpftrace_VERSION_MAJOR`, `bpftrace_VERSION_MINOR`, and
+   `bpftrace_VERSION_PATCH` in [CMakeLists.txt](../CMakeLists.txt) in both the release branch and the master branch to their new versions.
 1. Once the final LLVM is released and present in Nixpkgs (usually 2-5 days
    after the LLVM release), repeat step 2 to get the released LLVM in the CI
    environment.
