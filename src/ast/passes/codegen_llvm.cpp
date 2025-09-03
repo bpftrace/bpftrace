@@ -86,11 +86,16 @@ static auto getTargetMachine()
       throw util::FatalUserException(
           "Could not find bpf llvm target, does your llvm support it?");
     }
-    auto *machine = target->createTargetMachine(LLVMTargetTriple,
-                                                "generic",
-                                                "",
-                                                TargetOptions(),
-                                                std::optional<Reloc::Model>());
+    auto *machine = target->createTargetMachine(
+#if LLVM_VERSION_MAJOR >= 21
+        Triple(LLVMTargetTriple),
+#else
+        LLVMTargetTriple,
+#endif
+        "generic",
+        "",
+        TargetOptions(),
+        std::optional<Reloc::Model>());
 #if LLVM_VERSION_MAJOR >= 18
     machine->setOptLevel(llvm::CodeGenOptLevel::Aggressive);
 #else
