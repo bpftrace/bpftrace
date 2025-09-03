@@ -153,6 +153,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- oomkill.bt: support memory cgroup
+  - [#4533](https://github.com/bpftrace/bpftrace/pull/4533)
 - opensnoop.bt: support openat2 syscall
   - [#4310](https://github.com/bpftrace/bpftrace/pull/4310)
 - killsnoop.bt: display signal name instead of value
