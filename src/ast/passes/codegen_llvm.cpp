@@ -1959,7 +1959,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto left_string = visit(left_arg);
     auto right_string = visit(right_arg);
 
-    if (bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strstr)) {
+    if (call.vargs.size() == 3) {
+      auto size = call.vargs.at(2).as<Integer>()->value;
+      return ScopedExpr(CreateKernelFuncCall(
+          Kfunc::bpf_strnstr,
+          { left_string.value(), right_string.value(), b_.getInt64(size) },
+          "strnstr",
+          call));
+    } else if (bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strstr)) {
       return ScopedExpr(
           CreateKernelFuncCall(Kfunc::bpf_strstr,
                                { left_string.value(), right_string.value() },

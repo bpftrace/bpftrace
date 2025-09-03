@@ -558,11 +558,12 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
           arg_type_spec{ .type=Type::integer } } } },
   { "strcontains",
     { .min_args=2,
-      .max_args=2,
+      .max_args=3,
       .discard_ret_warn = true,
       .arg_types={
           arg_type_spec{ .type=Type::string, .literal=false },
-          arg_type_spec{ .type=Type::string, .literal=false } } } },
+          arg_type_spec{ .type=Type::string, .literal=false },
+          arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "strncmp",
     { .min_args=3,
       .max_args=3,
@@ -1786,6 +1787,18 @@ If you're seeing errors, try clamping the string sizes. For example:
       auto arg1_sz = call.vargs.at(1).type().GetSize();
       if (arg0_sz * arg1_sz > 2000) {
         call.addWarning() << warning;
+      }
+    }
+
+    if (call.vargs.size() == 3) {
+      if (!call.vargs.at(2).as<Integer>()) {
+        call.addError() << call.func
+                        << ": invalid size value, need non-negative literal";
+      }
+      if (!bpftrace_.feature_->has_kernel_func(Kfunc::bpf_strnstr)) {
+        call.addError()
+            << "kernel not support bpf_strnstr(), it's means strcontains() not "
+               "support 'len' parameter in your system!";
       }
     }
     call.return_type = CreateBool();
