@@ -275,7 +275,6 @@
             bpftrace-llvm19 = mkBpftrace 19;
             bpftrace-llvm18 = mkBpftrace 18;
             bpftrace-llvm17 = mkBpftrace 17;
-            bpftrace-llvm16 = mkBpftrace 16;
 
             # Self-contained static binary with all dependencies
             appimage = nix-appimage.mkappimage.${system} {
@@ -326,7 +325,6 @@
             bpftrace-llvm19 = mkBpftraceDevShell 19;
             bpftrace-llvm18 = mkBpftraceDevShell 18;
             bpftrace-llvm17 = mkBpftraceDevShell 17;
-            bpftrace-llvm16 = mkBpftraceDevShell 16;
 
             # Note that we depend on LLVM 18 explicitly for the fuzz shell, and
             # this is managed separately. The version of LLVM used to build the

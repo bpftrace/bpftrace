@@ -8,9 +8,6 @@
 // Required for LLVM_VERSION_MAJOR.
 #include <llvm/IR/GlobalValue.h>
 
-#if LLVM_VERSION_MAJOR <= 16
-#include <llvm-c/Transforms/IPO.h>
-#endif
 #include <llvm/ADT/FunctionExtras.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/CodeGen/UnreachableBlockElim.h>
@@ -24,16 +21,13 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Linker/Linker.h>
+#include <llvm/MC/TargetRegistry.h>
 #include <llvm/Passes/PassBuilder.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/Utils/Cloning.h>
-#if LLVM_VERSION_MAJOR <= 16
-#include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#endif
-#include <llvm/MC/TargetRegistry.h>
-#include <llvm/Support/TargetSelect.h>
 
 #include "arch/arch.h"
 #include "ast/ast.h"

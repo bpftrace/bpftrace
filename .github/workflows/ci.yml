@@ -42,10 +42,6 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 16
-          CMAKE_BUILD_TYPE: Debug
-          NIX_TARGET: .#bpftrace-llvm16
-          TOOLS_TEST_OLDVERSION: runqlen.bt
         - NAME: LLVM 17
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm17

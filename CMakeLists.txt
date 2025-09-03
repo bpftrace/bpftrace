@@ -163,7 +163,7 @@ else()
   find_package(LLVM REQUIRED)
 endif()
 
-set(MIN_LLVM_MAJOR 16)
+set(MIN_LLVM_MAJOR 17)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # We assume bpftrace is not being packaged when CMAKE_BUILD_TYPE=Debug.
   # So allow building with any LLVM version. This is purely for developers.
