@@ -1,4 +1,4 @@
-#include "sdt.h"
+#include "libbpf-usdt/usdt.h"
 
 int main()
 {
@@ -7,7 +7,7 @@ int main()
   (void)a;
 
   while (1)
-    DTRACE_PROBE1(test, "probe1", a);
+    USDT(test, "probe1", a);
 
   return 0;
 }

@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "sdt.h"
+#include "libbpf-usdt/usdt.h"
 
 /* For best results compile using gcc -O1 (or higher)
  *
@@ -40,24 +40,24 @@ typedef union all_types {
  *
  * PROBE_REG(al, u, 8) expands to:
  * register uint8_t _reg_u8 asm("al") = (uint8_t)test_value;
- * DTRACE_PROBE1(usdt_args, reg_u8, _reg_u8)
+ * USDT(usdt_args, reg_u8, _reg_u8)
  */
 #define PROBE_REG(register_, sign, size)                                       \
   register sign##int##size##_t _reg_##sign##size asm(                          \
       #register_) = (sign##int##size##_t)test_value;                           \
-  DTRACE_PROBE1(usdt_args, reg_##sign##size, _reg_##sign##size)
+  USDT(usdt_args, reg_##sign##size, _reg_##sign##size)
 #else
 /* Force a calculation to get the value into a register
  * works for gcc (-O1+) but not clang
  *
  * PROBE_REG(al, u, 8) expands to:
  * uint8_t _reg_u8 = (uint8_t)(test_value * one);
- * DTRACE_PROBE1(usdt_args, reg_u8, _reg_u8);
+ * USDT(usdt_args, reg_u8, _reg_u8);
  * */
 #define PROBE_REG(register_, sign, size)                                       \
   sign##int##size##_t _reg_##sign##size = (sign##int##size##_t)(test_value *   \
                                                                 one);          \
-  DTRACE_PROBE1(usdt_args, reg_##sign##size, _reg_##sign##size)
+  USDT(usdt_args, reg_##sign##size, _reg_##sign##size)
 #endif
 
 /* Read a value of the stack, expect an offset here
@@ -65,20 +65,20 @@ typedef union all_types {
  *
  * PROBE_ADDRESS(u, 8) expands to:
  * array[1].i_u8 = (uint8_t) test_value;
- * DTRACE_PROBE1(usdt_args, addr_u8, array[1].i_u8)
+ * USDT(usdt_args, addr_u8, array[1].i_u8)
  */
 #define PROBE_ADDRESS(sign, size)                                              \
   array[1].i_##sign##size = (sign##int##size##_t)test_value;                   \
-  DTRACE_PROBE1(usdt_args, addr_##sign##size, array[1].i_##sign##size)
+  USDT(usdt_args, addr_##sign##size, array[1].i_##sign##size)
 
 /* Read a value of the stack, expect an offset here
  * Works only with gcc optimisation -O1+
  *
  * PROBE_INDEX(u, 8) expands to:
- * DTRACE_PROBE1(usdt_args, index_u8, array[i].i_u8)
+ * USDT(usdt_args, index_u8, array[i].i_u8)
  */
 #define PROBE_INDEX(sign, size)                                                \
-  DTRACE_PROBE1(usdt_args, index_##sign##size, array[i].i_##sign##size)
+  USDT(usdt_args, index_##sign##size, array[i].i_##sign##size)
 
 int main()
 {
@@ -89,14 +89,14 @@ int main()
   }
 
   /* Constants */
-  DTRACE_PROBE1(usdt_args, const_u64, (uint64_t)test_value);
-  DTRACE_PROBE1(usdt_args, const_64, (int64_t)test_value);
-  DTRACE_PROBE1(usdt_args, const_u32, (uint32_t)test_value);
-  DTRACE_PROBE1(usdt_args, const_32, (int32_t)test_value);
-  DTRACE_PROBE1(usdt_args, const_u16, (uint16_t)test_value);
-  DTRACE_PROBE1(usdt_args, const_16, (int16_t)test_value);
-  DTRACE_PROBE1(usdt_args, const_u8, (uint8_t)test_value);
-  DTRACE_PROBE1(usdt_args, const_8, (int8_t)test_value);
+  USDT(usdt_args, const_u64, (uint64_t)test_value);
+  USDT(usdt_args, const_64, (int64_t)test_value);
+  USDT(usdt_args, const_u32, (uint32_t)test_value);
+  USDT(usdt_args, const_32, (int32_t)test_value);
+  USDT(usdt_args, const_u16, (uint16_t)test_value);
+  USDT(usdt_args, const_16, (int16_t)test_value);
+  USDT(usdt_args, const_u8, (uint8_t)test_value);
+  USDT(usdt_args, const_8, (int8_t)test_value);
 
   /* Direct register reads - start from 64 and work down
    * to verify the correct number of bytes are read */
@@ -134,7 +134,7 @@ int main()
 /* TLS not yet supported, need label and segment support */
 #if 0
   volatile static __thread uint64_t tls_64 = (uint64_t)test_value;
-  DTRACE_PROBE1(usdt_args, tls_u64, tls_64);
+  USDT(usdt_args, tls_u64, tls_64);
 #endif
 
   return 0;

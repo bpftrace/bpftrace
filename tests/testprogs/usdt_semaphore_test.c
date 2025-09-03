@@ -2,23 +2,23 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-#define _SDT_HAS_SEMAPHORES 1
+#include "libbpf-usdt/usdt.h"
 
-#include "sdt.h"
-
-__extension__ unsigned short tracetest_testprobe_semaphore
-    __attribute__((unused)) __attribute__((section(".probes")))
-    __attribute__((visibility("hidden")));
+USDT_DEFINE_SEMA(tracetest_testprobe_semaphore);
 
 static long myclock()
 {
   char buffer[100];
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  sprintf(buffer,
-          "tracetest_testprobe_semaphore: %d\n",
-          tracetest_testprobe_semaphore);
-  DTRACE_PROBE2(tracetest, testprobe, tv.tv_sec, buffer);
+  if (USDT_SEMA_IS_ACTIVE(tracetest_testprobe_semaphore)) {
+    snprintf(buffer,
+             sizeof(buffer),
+             "USDT semaphore: %d\n",
+             USDT_SEMA(tracetest_testprobe_semaphore).active);
+    USDT_WITH_EXPLICIT_SEMA(
+        tracetest_testprobe_semaphore, tracetest, testprobe, tv.tv_sec, buffer);
+  }
   return tv.tv_sec;
 }
 

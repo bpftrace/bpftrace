@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#include "sdt.h"
+#include "libbpf-usdt/usdt.h"
 
 int main()
 {
@@ -18,7 +18,7 @@ int main()
   uint64_t l = 0xaaaaaaaaaaaaaaaaULL;
 
   while (1) {
-    DTRACE_PROBE12(usdt_multi_args, probe1, a, b, c, d, e, f, g, h, i, j, k, l);
+    USDT(usdt_multi_args, probe1, a, b, c, d, e, f, g, h, i, j, k, l);
   }
 
   return 0;
