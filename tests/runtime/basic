@@ -301,7 +301,7 @@ TIMEOUT 3
 
 NAME info flag
 RUN {{BPFTRACE}} --info
-EXPECT_REGEX ringbuf: yes
+EXPECT_REGEX kprobe_session:
 TIMEOUT 1
 
 NAME basic while loop

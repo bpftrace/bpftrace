@@ -194,39 +194,6 @@ bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type,
       prog_type, insns, ARRAY_SIZE(insns), name, attach_type, outfd);
 }
 
-bool BPFfeature::detect_map(enum bpf_map_type map_type)
-{
-  int key_size = 4;
-  int value_size = 4;
-  int max_entries = 1;
-  int flags = 0;
-  int map_fd = 0;
-
-  switch (map_type) {
-    case BPF_MAP_TYPE_STACK_TRACE:
-      value_size = 8;
-      break;
-    case BPF_MAP_TYPE_RINGBUF:
-      // values from libbpf/src/libbpf_probes.c
-      key_size = 0;
-      value_size = 0;
-      max_entries = sysconf(_SC_PAGE_SIZE);
-      break;
-    default:
-      break;
-  }
-
-  DECLARE_LIBBPF_OPTS(bpf_map_create_opts, opts);
-  opts.map_flags = flags;
-  map_fd = bpf_map_create(
-      map_type, nullptr, key_size, value_size, max_entries, &opts);
-
-  if (map_fd >= 0)
-    close(map_fd);
-
-  return map_fd >= 0;
-}
-
 bool BPFfeature::has_btf()
 {
   return btf_.has_data();
@@ -508,14 +475,6 @@ std::string BPFfeature::report()
     { "map batch", to_str(has_map_batch()) },
   };
 
-  std::vector<std::pair<std::string, std::string>> map_types = {
-    { "hash", to_str(has_map_hash()) },
-    { "array", to_str(has_map_array()) },
-    { "percpu array", to_str(has_map_percpu_array()) },
-    { "stack_trace", to_str(has_map_stack_trace()) },
-    { "ringbuf", to_str(has_map_ringbuf()) }
-  };
-
   std::vector<std::pair<std::string, std::string>> probe_types = {
     { "kprobe_multi", to_str(has_kprobe_multi()) },
     { "uprobe_multi", to_str(has_uprobe_multi()) },
@@ -529,10 +488,6 @@ std::string BPFfeature::report()
 
   buf << "Kernel features" << std::endl;
   tabulate(buf, features);
-  buf << std::endl;
-
-  buf << "Map types" << std::endl;
-  tabulate(buf, map_types);
   buf << std::endl;
 
   buf << "Probe types" << std::endl;
