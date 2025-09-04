@@ -3,3 +3,6 @@
 #include <string_view>
 
 constexpr std::string_view BPFTRACE_VERSION = "@BPFTRACE_VERSION@";
+constexpr int MIN_KERNEL_VERSION_MAJOR = @MIN_KERNEL_VERSION_MAJOR@;
+constexpr int MIN_KERNEL_VERSION_MINOR = @MIN_KERNEL_VERSION_MINOR@;
+constexpr int MIN_KERNEL_VERSION_PATCH = @MIN_KERNEL_VERSION_PATCH@;
