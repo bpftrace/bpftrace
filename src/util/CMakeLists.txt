@@ -29,3 +29,5 @@ endif()
 target_compile_definitions(util PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
 
 target_link_libraries(util debugfs ${LIBELF_LIBRARIES} ${ZLIB_LIBRARIES})
+# See comment in src/CMakeLists.txt for explanation of the below.
+target_link_libraries(util -Wl,-Bstatic ${LIBBPF_LIBRARIES} -Wl,-Bdynamic)
