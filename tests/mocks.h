@@ -154,24 +154,15 @@ class MockBPFfeature : public BPFfeature {
 public:
   MockBPFfeature(bool has_features = true) : BPFfeature(bpf_nofeature, btf_obj)
   {
-    has_send_signal_ = std::make_optional<bool>(has_features);
-    has_get_current_cgroup_id_ = std::make_optional<bool>(has_features);
-    has_override_return_ = std::make_optional<bool>(has_features);
     has_prog_fentry_ = std::make_optional<bool>(has_features);
-    has_probe_read_kernel_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
     has_d_path_ = std::make_optional<bool>(has_features);
-    has_ktime_get_boot_ns_ = std::make_optional<bool>(has_features);
     has_kprobe_multi_ = std::make_optional<bool>(has_features);
     has_kprobe_session_ = std::make_optional<bool>(has_features);
     has_uprobe_multi_ = std::make_optional<bool>(has_features);
-    has_skb_output_ = std::make_optional<bool>(has_features);
     map_ringbuf_ = std::make_optional<bool>(has_features);
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
     has_get_func_ip_ = std::make_optional<bool>(has_features);
-    has_jiffies64_ = std::make_optional<bool>(has_features);
-    has_for_each_map_elem_ = std::make_optional<bool>(has_features);
-    has_get_ns_current_pid_tgid_ = std::make_optional<bool>(has_features);
     has_map_lookup_percpu_elem_ = std::make_optional<bool>(has_features);
     has_loop_ = std::make_optional<bool>(has_features);
   };

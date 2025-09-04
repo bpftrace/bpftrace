@@ -142,8 +142,6 @@ EXPECT_REGEX [0-9][0-9]*
 NAME builtin wrapper jiffies
 PROG begin { if (__builtin_jiffies == jiffies() && __builtin_jiffies == jiffies) { printf("SUCCESS %llu\n", jiffies);} }
 EXPECT_REGEX SUCCESS [0-9]+
-REQUIRES_FEATURE jiffies64
-MIN_KERNEL 5.9
 
 NAME builtin wrapper ncpus
 PROG begin { if (__builtin_ncpus == ncpus() && __builtin_ncpus == ncpus) { print(ncpus); } }

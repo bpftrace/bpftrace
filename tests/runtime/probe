@@ -606,7 +606,6 @@ NAME watchpoint_order
 RUN {{BPFTRACE}} -e 'watchpoint:increment+arg1:4:w { printf("first") } watchpoint:increment+arg1:4:w { printf(" second\n"); exit(); }' -c ./testprogs/watchpoint_func
 EXPECT_REGEX (first)+ second
 ARCH aarch64|x86_64
-REQUIRES_FEATURE signal
 
 NAME fexit_order
 RUN {{BPFTRACE}} runtime/scripts/fexit_order.bt

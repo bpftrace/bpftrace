@@ -234,7 +234,7 @@ kprobe:f { fake }
            ~~~~
 )" });
 
-  test("k:f { jiffies }", NoFeatures::Enable, Error{});
+  test("fentry:f { func }", NoFeatures::Enable, Error{});
 }
 
 TEST_F(SemanticAnalyserTest, builtin_cpid)
@@ -3528,13 +3528,6 @@ TEST_F(SemanticAnalyserTest, signal)
   test("k:f { signal(\"SIGABC\"); }", UnsafeMode::Enable, Error{});
   test("k:f { signal(\"ABC\"); }", UnsafeMode::Enable, Error{});
 
-  // Missing kernel support
-  test("k:f { signal(1) }", UnsafeMode::Enable, NoFeatures::Enable, Error{});
-  test("k:f { signal(\"KILL\"); }",
-       UnsafeMode::Enable,
-       NoFeatures::Enable,
-       Error{});
-
   // Positional parameter
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("1");
@@ -4790,28 +4783,6 @@ TEST_F(SemanticAnalyserTest, for_loop_control_flow)
 stdin:1:42-48: ERROR: 'return' statement is not allowed in a for-loop
 begin { @map[0] = 1; for ($kv : @map) { return; } }
                                          ~~~~~~
-)" });
-}
-
-TEST_F(SemanticAnalyserTest, for_loop_missing_feature)
-{
-  test("begin { @map[0] = 1; for ($kv : @map) { print($kv); } }",
-       NoFeatures::Enable,
-       Error{ R"(
-stdin:1:22-25: ERROR: Missing required kernel feature: for_each_map_elem
-begin { @map[0] = 1; for ($kv : @map) { print($kv); } }
-                     ~~~
-)" });
-}
-
-TEST_F(SemanticAnalyserTest, for_loop_castable_map_missing_feature)
-{
-  test("begin { @map[0] = count(); for ($kv : @map) { print($kv); } }",
-       NoFeatures::Enable,
-       Error{ R"(
-stdin:1:28-31: ERROR: Missing required kernel feature: for_each_map_elem
-begin { @map[0] = count(); for ($kv : @map) { print($kv); } }
-                           ~~~
 )" });
 }
 
