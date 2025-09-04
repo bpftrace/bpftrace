@@ -2657,9 +2657,9 @@ void SemanticAnalyser::visit(Binop &binop)
     // This case is caught earlier, just here for readability of the if/else
     // flow
   }
-  // Compare type here, not the sized type as we it needs to work on strings
+  // Compare type here, not the sized type as it needs to work on strings
   // of different lengths
-  else if (lht.GetTy() != rht.GetTy()) {
+  else if (!lht.IsSameType(rht)) {
     auto &err = binop.addError();
     err << "Type mismatch for '" << opstr(binop) << "': comparing " << lht
         << " with " << rht;

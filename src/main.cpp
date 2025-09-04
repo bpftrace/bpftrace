@@ -21,6 +21,7 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/comparison_expansion.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
@@ -334,6 +335,7 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
+  add(ast::CreateComparisonExpansionPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());
@@ -346,6 +348,7 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
+  add(ast::CreateComparisonExpansionPass());
   add(ast::CreateResourcePass());
   add(ast::CreateRecursionCheckPass());
   add(ast::CreateReturnPathPass());
