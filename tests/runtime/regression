@@ -106,21 +106,18 @@ TIMEOUT 1
 NAME fentry double pointer dereference
 PROG fentry:__module_get { print((*args.module->trace_events)->flags); exit(); }
 AFTER lsmod
-REQUIRES_FEATURE fentry
 EXPECT Attached 1 probe
 TIMEOUT 1
 
 NAME fentry double pointer array access
 PROG fentry:__module_get { print(args.module->trace_events[1]->flags); exit(); }
 AFTER lsmod
-REQUIRES_FEATURE fentry
 EXPECT Attached 1 probe
 TIMEOUT 1
 
 NAME fentry array access via pointer
 PROG fentry:__module_get { print(args.module->version[0]); exit(); }
 AFTER lsmod
-REQUIRES_FEATURE fentry
 EXPECT Attached 1 probe
 TIMEOUT 1
 

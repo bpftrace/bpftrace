@@ -4078,11 +4078,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       benchmark_locs_.emplace(ap.target, ap.loc);
     }
   } else if (ap.provider == "fentry" || ap.provider == "fexit") {
-    if (!bpftrace_.feature_->has_fentry()) {
-      ap.addError() << "fentry/fexit not available for your kernel version.";
-      return;
-    }
-
     if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {

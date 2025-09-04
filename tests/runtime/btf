@@ -33,7 +33,6 @@ NAME kernel_module_attach
 RUN {{BPFTRACE}} -e 'fentry:nf_tables_newtable { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace
 EXPECT hit
-REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES nft --help
 CLEANUP nft delete table bpftrace
@@ -42,7 +41,6 @@ NAME kernel_module_attach_wildcard
 RUN {{BPFTRACE}} -e 'fentry:nf_table*:nf_tables_newtable { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace
 EXPECT hit
-REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES nft --help
 CLEANUP nft delete table bpftrace
@@ -51,7 +49,6 @@ NAME kernel_module_args
 RUN {{BPFTRACE}} -e 'fentry:nf_tables_newtable { printf("skb: %p\n", args.skb); exit(); }'
 AFTER nft add table bpftrace
 EXPECT_REGEX ^skb: 0x[a-f0-9]+$
-REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES nft --help
 CLEANUP nft delete table bpftrace
@@ -60,7 +57,6 @@ NAME kernel_module_types
 RUN {{BPFTRACE}} -e 'fentry:nf_tables_newtable { printf("skb len: %d\n", args.skb->len); exit(); }'
 AFTER nft add table bpftrace
 EXPECT_REGEX ^skb len: [0-9]+$
-REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES nft --help
 CLEANUP nft delete table bpftrace
@@ -78,7 +74,6 @@ NAME kernel_module_type_fwd
 PROG fentry:kvm:x86_emulate_insn { printf("%d\n", args.ctxt->mode); exit(); }
 EXPECT Attached 1 probe
 TIMEOUT 2
-REQUIRES_FEATURE fentry
 REQUIRES lsmod | grep '^kvm'
 
 NAME kprobe_kernel_module_type_fwd

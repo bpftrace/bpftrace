@@ -1,7 +1,7 @@
 NAME path
 PROG fentry:security_file_open { if (strcontains(path(args.file->f_path, 128), "tmp")) { printf("OK\n"); exit(); } }
 EXPECT OK
-REQUIRES_FEATURE dpath fentry
+REQUIRES_FEATURE dpath
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME literals

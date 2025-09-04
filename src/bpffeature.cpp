@@ -517,10 +517,6 @@ std::string BPFfeature::report()
   };
 
   std::vector<std::pair<std::string, std::string>> probe_types = {
-    { "kprobe", to_str(has_prog_kprobe()) },
-    { "tracepoint", to_str(has_prog_tracepoint()) },
-    { "perf_event", to_str(has_prog_perf_event()) },
-    { "fentry", to_str(has_fentry()) },
     { "kprobe_multi", to_str(has_kprobe_multi()) },
     { "uprobe_multi", to_str(has_uprobe_multi()) },
     { "kprobe_session", to_str(has_kprobe_session()) },
@@ -564,11 +560,6 @@ bool BPFfeature::has_prog_fentry()
 out_false:
   has_prog_fentry_ = std::make_optional<bool>(false);
   return *(has_prog_fentry_);
-}
-
-bool BPFfeature::has_fentry()
-{
-  return has_prog_fentry() && btf_.has_data();
 }
 
 bool BPFfeature::has_iter(std::string name)

@@ -183,19 +183,16 @@ EXPECT_REGEX ^0 4$
 NAME print args in fentry
 PROG fentry:vfs_open { print(args); exit(); }
 EXPECT_REGEX { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall open
 
 NAME args in fentry store in map
 PROG fentry:vfs_open { @= args; exit(); }
 EXPECT_REGEX @: { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall open
 
 NAME args in fentry as a map key
 PROG fentry:vfs_open { @[args] = 1; exit(); }
 EXPECT_REGEX @[{ .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }]: 1
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall open
 
 NAME args in uprobe print
