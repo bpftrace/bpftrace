@@ -9,6 +9,24 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+#### Added
+- Add support for LLVM 21
+  - [#4528](https://github.com/bpftrace/bpftrace/pull/4528)
+#### Changed
+#### Deprecated
+#### Removed
+- Drop support for LLVM 16
+  - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
+#### Fixed
+#### Security
+#### Docs
+#### Tools
+- oomkill.bt: support memory cgroup
+  - [#4533](https://github.com/bpftrace/bpftrace/pull/4533)
+
+## [0.24.0] TBD
+
+#### Breaking Changes
 - Drop majority of DWARF support. Only uprobe argument parsing remains.
   - [#3921](https://github.com/bpftrace/bpftrace/pull/3921)
   - [#3950](https://github.com/bpftrace/bpftrace/pull/3950)
@@ -88,8 +106,6 @@ and this project adheres to
   - [#4491](https://github.com/bpftrace/bpftrace/pull/4491)
 - Add '0' flag for printf to fill with leading 0s
   - [#4510](https://github.com/bpftrace/bpftrace/pull/4510)
-- Add support for LLVM 21
-  - [#4528](https://github.com/bpftrace/bpftrace/pull/4528)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)
@@ -121,8 +137,6 @@ and this project adheres to
   - [#4371](https://github.com/bpftrace/bpftrace/pull/4371)
 #### Deprecated
 #### Removed
-- Drop support for LLVM 16
-  - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
 - Fix build failures due to missing location.hh
   - [#3987](https://github.com/bpftrace/bpftrace/pull/3987)
@@ -157,8 +171,6 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
-- oomkill.bt: support memory cgroup
-  - [#4533](https://github.com/bpftrace/bpftrace/pull/4533)
 - opensnoop.bt: support openat2 syscall
   - [#4310](https://github.com/bpftrace/bpftrace/pull/4310)
 - killsnoop.bt: display signal name instead of value
