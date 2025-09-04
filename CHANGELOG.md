@@ -10,8 +10,6 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
-- Add support for LLVM 21
-  - [#4528](https://github.com/bpftrace/bpftrace/pull/4528)
 #### Changed
 #### Deprecated
 #### Removed
@@ -106,6 +104,8 @@ and this project adheres to
   - [#4491](https://github.com/bpftrace/bpftrace/pull/4491)
 - Add '0' flag for printf to fill with leading 0s
   - [#4510](https://github.com/bpftrace/bpftrace/pull/4510)
+- Add support for LLVM 21
+  - [#4528](https://github.com/bpftrace/bpftrace/pull/4528)
 #### Changed
 - kprobe: support verbose mode listing
   - [#4362](https://github.com/bpftrace/bpftrace/pull/4362)
