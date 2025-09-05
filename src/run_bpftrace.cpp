@@ -47,13 +47,6 @@ int run_bpftrace(BPFtrace &bpftrace,
 {
   int err;
 
-  // Check for required features.
-  if (!bpftrace.feature_->has_map_ringbuf()) {
-    LOG(ERROR) << "Your kernel is too old and is missing the "
-                  "BPF_MAP_TYPE_RINGBUF, which bpftrace requires.";
-    return 1;
-  }
-
   // Process all arguments.
   auto named_param_vals = bpftrace.resources.global_vars.get_named_param_vals(
       named_params);

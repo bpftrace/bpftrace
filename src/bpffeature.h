@@ -10,18 +10,6 @@
 
 namespace bpftrace {
 
-#define DEFINE_MAP_TEST(var, maptype)                                          \
-protected:                                                                     \
-  std::optional<bool> map_##var##_;                                            \
-                                                                               \
-public:                                                                        \
-  bool has_map_##var(void)                                                     \
-  {                                                                            \
-    if (!map_##var##_.has_value())                                             \
-      map_##var##_ = std::make_optional<bool>(detect_map((maptype)));          \
-    return *(map_##var##_);                                                    \
-  }
-
 #define DEFINE_HELPER_TEST(name, progtype)                                     \
 protected:                                                                     \
   std::optional<bool> has_##name##_;                                           \
@@ -82,11 +70,6 @@ public:
 
   std::string report();
 
-  DEFINE_MAP_TEST(array, BPF_MAP_TYPE_ARRAY);
-  DEFINE_MAP_TEST(hash, BPF_MAP_TYPE_HASH);
-  DEFINE_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
-  DEFINE_MAP_TEST(stack_trace, BPF_MAP_TYPE_STACK_TRACE);
-  DEFINE_MAP_TEST(ringbuf, BPF_MAP_TYPE_RINGBUF);
   DEFINE_HELPER_TEST(ktime_get_tai_ns, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(get_func_ip, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(map_lookup_percpu_elem, BPF_PROG_TYPE_KPROBE);
@@ -106,7 +89,6 @@ protected:
   std::unordered_map<Kfunc, bool> available_kernel_funcs_;
 
 private:
-  bool detect_map(bpf_map_type map_type);
   bool detect_helper(bpf_func_id func_id, bpf_prog_type prog_type);
   bool detect_prog_type(bpf_prog_type prog_type,
                         const char* name,
@@ -125,6 +107,5 @@ private:
   BTF& btf_;
 };
 
-#undef DEFINE_MAP_TEST
 #undef DEFINE_HELPER_TEST
 } // namespace bpftrace
