@@ -85,6 +85,8 @@ int AttachPointParser::parse()
       probe->addError() << "No attach points for probe";
       failed++;
     }
+
+    has_iter_ap_ = false; // reset for each probe
   }
 
   return failed;
@@ -747,10 +749,26 @@ AttachPointParser::State AttachPointParser::iter_parser()
     return INVALID;
   }
 
+  if (!listing_) {
+    if (has_iter_ap_) {
+      errs_ << ap_->provider << " probe only supports one attach point."
+            << std::endl;
+      return INVALID;
+    }
+
+    if (util::has_wildcard(parts_[1]) ||
+        (parts_.size() == 3 && util::has_wildcard(parts_[2]))) {
+      errs_ << ap_->provider << " probe type does not support wildcards";
+      return INVALID;
+    }
+  }
+
   ap_->func = parts_[1];
 
   if (parts_.size() == 3)
     ap_->pin = parts_[2];
+
+  has_iter_ap_ = true;
   return OK;
 }
 
