@@ -60,13 +60,19 @@ The purpose of this release branch is to give sufficient time to test features
 in the upcoming bpftrace release without blocking the development on the master
 branch.
 
-When creating a branch, the following steps should be performed. Any changes to
-the code should be done in the master branch first and then backported to the
-release branch. In the rare case when the master-first approach is not possible
-(e.g. a feature present exclusively on master blocks the LLVM update), the
-changes can be done in the release branch first and forward-ported to master
-afterwards.
+When creating a branch for a release **v0.Y.0**, the following steps should be
+performed. Any changes to the code should be done in the master branch first and
+then backported to the release branch. In the rare case when the master-first
+approach is not possible (e.g. a feature present exclusively on master blocks
+the LLVM update), the changes can be done in the release branch first and
+forward-ported to master afterwards.
 
+1. Mark the release in [CHANGELOG.md](../CHANGELOG.md) by replacing the `##
+   Unreleased` header with `## [0.Y.0] TBD` and creating a new "Unreleased"
+   section with all the subsection headers below it.
+1. Update `bpftrace_VERSION_MINOR` in [CMakeLists.txt](../CMakeLists.txt) to
+   `Y`.
+1. Tag the latest commit in the master branch with `v0.Y-rc0`.
 1. Create a new branch according to the [Branching model](#branching-model).
 1. Update Nixpkgs to the latest version to get the latest (pre-release) LLVM by
    running
@@ -79,7 +85,7 @@ afterwards.
    [flake.nix](../flake.nix), resolve any potential issues, and add a CI job to
    [.github/workflows/ci.yml](../.github/workflows/ci.yml) for the new version.
 1. Once the final LLVM is released and present in Nixpkgs (usually 2-5 days
-   after the LLVM release), repeat step 2 to get the released LLVM in the CI
+   after the LLVM release), repeat step 4 to get the released LLVM in the CI
    environment.
 
 ### Branching model
@@ -100,11 +106,8 @@ You must do the following steps to formally release a version.
 
 In the release branch:
 
-1. Mark the release in [CHANGELOG.md](../CHANGELOG.md) by replacing the `##
-   Unreleased` header with `## [VERSION] date`.
-1. Update `bpftrace_VERSION_MAJOR`, `bpftrace_VERSION_MINOR`, and
-   `bpftrace_VERSION_PATCH` in [CMakeLists.txt](../CMakeLists.txt) to the target
-   version.
+1. Mark the release in [CHANGELOG.md](../CHANGELOG.md) by replacing `TBD` with
+   the current date in the corresponding header.
 1. Tag a release. We do this in the github UI by clicking "releases" (on same
    line as "commits"), then "Draft a new release". The tag version and release
    title should be the same and in `vX.Y.Z` format. The tag description should
@@ -116,4 +119,6 @@ In the release branch:
    bpftrace root dir and attach the generated archives to the release.
 
 Once the release is out:
-1. Forward-port the CHANGELOG.md changes from the release branch to master.
+1. Forward-port the CHANGELOG.md changes from the release branch to master. This
+   includes the release date and the entries which were backported from master
+   after the release branch was cut.
