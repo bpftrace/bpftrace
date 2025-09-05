@@ -64,13 +64,7 @@ endif()
 
 install(TARGETS bpftrace DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_compile_definitions(bpftrace PRIVATE ${BPFTRACE_FLAGS})
-
-# TODO(Jiawei Zhao): this conditional can be removed when we no longer use bcc.
-if(STATIC_LINKING)
-  target_link_libraries(bpftrace libbpftrace)
-else()
-  target_link_libraries(bpftrace libbpftrace libbpf.a)
-endif(STATIC_LINKING)
+target_link_libraries(bpftrace libbpftrace)
 
 # compile definitions
 
