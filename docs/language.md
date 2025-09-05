@@ -320,9 +320,9 @@ This exists because the BPF stack is limited to 512 bytes and large objects make
 
 Default: Based on available system memory
 
-Number of pages to allocate per CPU perf ring buffer.
-The value must be a power of 2.
-If you’re getting a lot of dropped events bpftrace may not be processing events in the ring buffer fast enough.
+Number of pages to allocate for each created ring or perf buffer (there is only one of each max).
+The minimum is: 1 * the number of cpus on your machine.
+If you’re getting a lot of dropped events bpftrace may not be processing events in the ring buffer (or perf buffer if you're using `skboutput`) fast enough.
 It may be useful to bump the value higher so more events can be queued up.
 The tradeoff is that bpftrace will use more memory.
 The default value is based on available system memory; max is 4096 pages (16mb) and min is 64 pages (256kb), which presumes 4k page size.
