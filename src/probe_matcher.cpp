@@ -389,13 +389,7 @@ std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
     if (!p.show_in_kernel_list) {
       continue;
     }
-    if (p.type == ProbeType::fentry) {
-      // fentry must be available
-      if (bpftrace_->feature_->has_fentry())
-        probes += p.name + "\n";
-    } else {
-      probes += p.name + "\n";
-    }
+    probes += p.name + "\n";
   }
 
   return std::make_unique<std::istringstream>(probes);

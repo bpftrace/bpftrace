@@ -35,22 +35,6 @@ public:                                                                        \
     return *(has_##name##_);                                                   \
   }
 
-#define __DEFINE_PROG_TEST(var, progtype, name, attach_type)                   \
-protected:                                                                     \
-  std::optional<bool> prog_##var##_;                                           \
-                                                                               \
-public:                                                                        \
-  bool has_prog_##var(void)                                                    \
-  {                                                                            \
-    if (!prog_##var##_.has_value())                                            \
-      prog_##var##_ = std::make_optional<bool>(                                \
-          detect_prog_type((progtype), (name), (attach_type)));                \
-    return *(prog_##var##_);                                                   \
-  }
-
-#define DEFINE_PROG_TEST(var, progtype)                                        \
-  __DEFINE_PROG_TEST(var, progtype, NULL, std::nullopt)
-
 class BPFfeature;
 
 class BPFnofeature {
@@ -93,7 +77,6 @@ public:
   bool has_uprobe_multi();
   bool has_prog_fentry();
   // These are virtual so they can be overridden in tests by the mock
-  virtual bool has_fentry();
   virtual bool has_kernel_func(Kfunc kfunc);
   virtual bool has_iter(std::string name);
 
@@ -108,9 +91,6 @@ public:
   DEFINE_HELPER_TEST(get_func_ip, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(map_lookup_percpu_elem, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(loop, BPF_PROG_TYPE_KPROBE); // Added in 5.17.
-  DEFINE_PROG_TEST(kprobe, BPF_PROG_TYPE_KPROBE);
-  DEFINE_PROG_TEST(tracepoint, BPF_PROG_TYPE_TRACEPOINT);
-  DEFINE_PROG_TEST(perf_event, BPF_PROG_TYPE_PERF_EVENT);
 
 protected:
   std::optional<bool> has_d_path_;
@@ -145,7 +125,6 @@ private:
   BTF& btf_;
 };
 
-#undef DEFINE_PROG_TEST
 #undef DEFINE_MAP_TEST
 #undef DEFINE_HELPER_TEST
 } // namespace bpftrace

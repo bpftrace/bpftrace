@@ -482,7 +482,6 @@ AFTER ./testprogs/simple_struct
 NAME print_non_map_struct_fentry
 PROG fentry:vfs_open { print(*args.path); exit(); }
 EXPECT_REGEX { .mnt = 0x[0-9a-f]+, .dentry = 0x[0-9a-f]+ }
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall open
 
 NAME print_map_item
@@ -542,13 +541,13 @@ TIMEOUT 1
 NAME path
 RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (!strncmp(path(args.file->f_path), "/tmp/bpftrace_runtime_test_syscall_gen_open_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK
-REQUIRES_FEATURE dpath fentry
+REQUIRES_FEATURE dpath
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME path_with_optional_size
 RUN {{BPFTRACE}} -ve 'fentry:security_file_open { $p = path(args.file->f_path, 48);  if ( sizeof($p) == 48 && !strncmp($p, "tmp/bpftrace_runtime_test_syscall_gen_open_temp", 48)) { printf("OK\n"); exit(); } }'
 EXPECT OK
-REQUIRES_FEATURE dpath fentry
+REQUIRES_FEATURE dpath
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 # The extra prints are here to confirm that we report on the correct helper, not
@@ -559,7 +558,6 @@ EXPECT stdin:1:31-60: ERROR: helper bpf_d_path not allowed in probe
 EXPECT fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
 EXPECT                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 REQUIRES_FEATURE dpath
-REQUIRES_FEATURE fentry
 WILL_FAIL
 AFTER ./testprogs/syscall read
 
@@ -645,7 +643,6 @@ SETUP ip netns add bpftrace-test && ip -netns bpftrace-test link set lo up
 AFTER ip netns exec bpftrace-test ./testprogs/syscall connect 127.0.0.1 80
 CLEANUP ip netns delete bpftrace-test
 EXPECT ret: 0
-REQUIRES_FEATURE fentry
 
 # Just test that the verifier doesn't reject this
 NAME skboutput rawtracepoint
@@ -658,7 +655,6 @@ SETUP ip netns add bpftrace-test && ip -netns bpftrace-test link set lo up
 AFTER ip netns exec bpftrace-test ./testprogs/syscall connect 127.0.0.1 80
 CLEANUP ip netns delete bpftrace-test
 EXPECT_REGEX ret: [0-9]+
-REQUIRES_FEATURE fentry
 
 # Just test that the verifier doesn't reject this
 NAME socket_cookie rawtracepoint

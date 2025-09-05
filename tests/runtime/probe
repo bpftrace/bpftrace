@@ -1,31 +1,26 @@
 NAME fentry
 PROG fentry:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME fexit
 PROG fexit:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME fentry_wildcard
 PROG fentry:vfs_re*ad { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME fentry_module
 PROG fentry:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME fentry_module_wildcard
 PROG fentry:vmlinu*:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 # https://github.com/bpftrace/bpftrace/issues/2447
@@ -34,14 +29,12 @@ PROG begin { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } fentry:vfs_read, fentry:v
 EXPECT @a: 0
        @b: 0
        @c: 0
-REQUIRES_FEATURE fentry
 # Note: this calls both vfs_read and vfs_open
 AFTER ./testprogs/syscall read
 
 NAME fentry args
 PROG fentry:vfs_read { printf("%d\n", args.count); exit(); }
 EXPECT_REGEX [0-9][0-9]*
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 AFTER ./testprogs/syscall read
 
@@ -49,14 +42,12 @@ AFTER ./testprogs/syscall read
 NAME fentry args as a pointer
 PROG fentry:vfs_read { printf("%d\n", args->count); exit(); }
 EXPECT_REGEX [0-9][0-9]*
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 AFTER ./testprogs/syscall read
 
 NAME fentry func builtin
 PROG fentry:vfs_read { printf("func: %s\n", func); exit(); }
 EXPECT func: vfs_read
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE get_func_ip
 AFTER ./testprogs/syscall read
@@ -64,7 +55,6 @@ AFTER ./testprogs/syscall read
 NAME fexit large args
 PROG fexit:__sys_bpf { if (args.cmd == 1111 && args.size == 2222 && (int64)retval == -7) { printf("SUCCESS %d\n", pid); exit(); }}
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 AFTER ./testprogs/fentry_args 1111 2222
 
@@ -72,32 +62,27 @@ NAME fentry_missing_probes
 PROG fentry:vfs_read,fentry:nonsense { exit(); }
 EXPECT ERROR: No BTF found for nonsense.
 WILL_FAIL
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 
 NAME fentry_warn_missing_probes
 PROG config = { missing_probes = "warn" } fentry:vfs_read,fentry:nonsense { exit(); }
 EXPECT WARNING: No BTF found for nonsense.
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 
 NAME fentry_ignore_missing_probes
 PROG config = { missing_probes = "ignore" } fentry:vfs_read,fentry:nonsense { exit(); }
 EXPECT_NONE WARNING: No BTF found for nonsense.
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 
 # Sanity check for kfunc/kretfunc alias
 NAME kfunc
 PROG kfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME kretfunc
 PROG kretfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE fentry
 AFTER ./testprogs/syscall read
 
 NAME kprobe
@@ -611,7 +596,6 @@ NAME fexit_order
 RUN {{BPFTRACE}} runtime/scripts/fexit_order.bt
 EXPECT_REGEX (first)+ second
 AFTER ./testprogs/syscall nanosleep 233;
-REQUIRES_FEATURE fentry
 REQUIRES_FEATURE btf
 
 NAME software_order

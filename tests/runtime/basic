@@ -60,7 +60,6 @@ NAME it lists fentry
 RUN {{BPFTRACE}} -l | grep fentry
 EXPECT_REGEX fentry:.*
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE fentry
 TIMEOUT 1
 
 NAME it lists rawtracepoints
@@ -88,7 +87,6 @@ NAME it lists fentry params
 RUN {{BPFTRACE}} -lv "fentry:*"
 EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE fentry
 TIMEOUT 1
 
 NAME it lists kprobes with regex filter
@@ -130,14 +128,12 @@ NAME it lists fentry events with regex filter
 RUN {{BPFTRACE}} -l "fentry:*"
 EXPECT_REGEX fentry:.*
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE fentry
 TIMEOUT 1
 
 NAME it lists fexit events with regex filter
 RUN {{BPFTRACE}} -l "fexit:*"
 EXPECT_REGEX fexit:.*
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE fentry
 TIMEOUT 1
 
 NAME it lists interval probes with regex filter

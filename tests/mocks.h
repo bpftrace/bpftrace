@@ -167,11 +167,6 @@ public:
     has_loop_ = std::make_optional<bool>(has_features);
   };
 
-  bool has_fentry() override
-  {
-    return has_features_;
-  }
-
   void add_to_available_kernel_funcs(Kfunc kfunc, bool available)
   {
     available_kernel_funcs_.emplace(kfunc, available);
