@@ -1385,4 +1385,6 @@ bool is_comparison_op(Operator op);
 SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
 SizedType ident_to_sized_type(const std::string &ident);
 
+bool is_literal(const Expression &expr);
+
 } // namespace bpftrace::ast

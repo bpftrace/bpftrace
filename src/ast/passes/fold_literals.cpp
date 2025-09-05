@@ -47,12 +47,6 @@ private:
 
 } // namespace
 
-static bool is_literal(const Expression &expr)
-{
-  return expr.is<Integer>() || expr.is<NegativeInteger>() ||
-         expr.is<String>() || expr.is<Boolean>();
-}
-
 static bool eval_bool(Expression expr)
 {
   if (auto *integer = expr.as<Integer>()) {
