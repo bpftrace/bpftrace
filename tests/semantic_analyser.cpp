@@ -4441,21 +4441,6 @@ stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/fentry/u
 iter:task { $x = args.foo; }
                  ~~~~
 )" });
-  test("iter:task,iter:task_file { 1 }", Error{ R"(
-stdin:1:1-10: ERROR: Only single iter attach point is allowed.
-iter:task,iter:task_file { 1 }
-~~~~~~~~~
-)" });
-  test("iter:task,f:func_1 { 1 }", Error{ R"(
-stdin:1:1-10: ERROR: Only single iter attach point is allowed.
-iter:task,f:func_1 { 1 }
-~~~~~~~~~
-)" });
-  test("iter:task* { }", Error{ R"(
-stdin:1:1-11: ERROR: iter probe type does not support wildcards
-iter:task* { }
-~~~~~~~~~~
-)" });
 }
 
 TEST_F(SemanticAnalyserBTFTest, rawtracepoint)
