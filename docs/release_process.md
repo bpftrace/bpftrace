@@ -71,7 +71,7 @@ afterwards.
 1. Update Nixpkgs to the latest version to get the latest (pre-release) LLVM by
    running
    ```
-   nix flake update
+   nix flake update nixpkgs
    ```
    and committing the `flake.lock` changes to the repo. At this time, the `-rc2`
    or `-rc3` version of LLVM should be available.
