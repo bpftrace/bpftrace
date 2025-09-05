@@ -663,7 +663,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       } } },
   { "fail",
     { .min_args=1,
-      .max_args=1,
+      .max_args=128,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true },
       } } },
@@ -1917,7 +1917,36 @@ If you're seeing errors, try clamping the string sizes. For example:
   } else if (call.func == "fail") {
     // This is basically a static_assert failure. It will halt the compilation.
     // We expect to hit this path only when using the `typeof` folds.
-    call.addError() << call.vargs[0].as<String>()->value;
+    bool fail_valid = true;
+    std::vector<output::Primitive> args;
+    for (size_t i = 0; i < call.vargs.size(); ++i) {
+      if (!call.vargs[i].is_literal()) {
+        fail_valid = false;
+        call.addError() << "fail() arguments need to be literals";
+      } else {
+        if (i != 0) {
+          if (auto *val = call.vargs[i].as<String>()) {
+            args.emplace_back(val->value);
+          } else if (auto *val = call.vargs[i].as<Integer>()) {
+            args.emplace_back(val->value);
+          } else if (auto *val = call.vargs[i].as<NegativeInteger>()) {
+            args.emplace_back(val->value);
+          } else if (auto *val = call.vargs[i].as<Boolean>()) {
+            args.emplace_back(val->value);
+          }
+        } else {
+          if (!call.vargs[0].is<String>()) {
+            call.addError()
+                << "first argument to fail() must be a string literal";
+          }
+        }
+      }
+    }
+
+    if (fail_valid) {
+      FormatString fs(call.vargs[0].as<String>()->value);
+      call.addError() << fs.format(args);
+    }
   } else {
     // Check here if this corresponds to an external function. We convert the
     // external type metadata into the internal `SizedType` representation and
@@ -4371,10 +4400,8 @@ bool SemanticAnalyser::check_arg(const Call &call,
                                  bool want_literal)
 {
   const auto &arg = call.vargs.at(index);
-  bool is_literal = arg.is<Integer>() || arg.is<NegativeInteger>() ||
-                    arg.is<String>();
 
-  if (want_literal && (!is_literal || arg.type().GetTy() != type)) {
+  if (want_literal && (!arg.is_literal() || arg.type().GetTy() != type)) {
     call.addError() << call.func << "() expects a " << type << " literal ("
                     << arg.type().GetTy() << " provided)";
     if (type == Type::string) {

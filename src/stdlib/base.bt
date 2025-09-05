@@ -253,6 +253,16 @@ macro elapsed() {
 // }
 // ```
 
+// :function fail
+// :variant void fail(const string fmt, args...)
+//
+// `fail()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location but, as opposed to [`errorf`](#errorf), is treated like a static assert and halts compilation if it is visited. All args have to be literals since they are evaluated at compile time.
+//
+// ```
+// BEGIN { if ($1 < 2) { fail("Expected the first positional param to be greater than 1. Got %d", $1); } }
+// ```
+//
+
 // :variant string func()
 // Name of the current function being traced (kprobes,uprobes,fentry)
 macro func() {

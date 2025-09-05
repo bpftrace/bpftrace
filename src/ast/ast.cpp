@@ -27,6 +27,12 @@ const SizedType &Expression::type() const
       value);
 }
 
+bool Expression::is_literal() const
+{
+  return is<Integer>() || is<NegativeInteger>() || is<String>() ||
+         is<Boolean>();
+}
+
 static constexpr std::string_view ENUM = "enum ";
 
 std::string opstr(const Jump &jump)

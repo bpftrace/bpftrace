@@ -179,6 +179,7 @@ public:
   // The `type` method is the only common thing required by all expression
   // types. This will on the variant types.
   const SizedType &type() const;
+  bool is_literal() const;
 };
 using ExpressionList = std::vector<Expression>;
 
