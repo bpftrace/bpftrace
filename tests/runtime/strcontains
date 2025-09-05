@@ -110,6 +110,9 @@ NAME indexing
 PROG begin { $a = "foo"; printf("%c is the first letter", $a[0]); }
 EXPECT f is the first letter
 
+# This test just ensures that the probe passes verification. There are no
+# guardrails here, if the read comes from proberead then we expect zero, but if
+# it points to BPF memory then it may be legitimate but random.
 NAME invalid indexing
-PROG begin { $a = "foo"; $i = (uint64)10; print($a[$i]); }
-EXPECT -1
+PROG begin { $a = "foo"; $i = (uint64)10; printf("the mystery letter is %c", $a[$i]); }
+EXPECT_REGEX the mystery letter is .*
