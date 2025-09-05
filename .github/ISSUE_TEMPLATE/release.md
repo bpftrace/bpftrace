@@ -21,7 +21,10 @@ For LLVM release schedule, see https://llvm.org/.
 
 ### Release progress
 
+- [ ] Mark the release in [CHANGELOG.md](https://github.com/bpftrace/bpftrace/blob/master/CHANGELOG.md) and create an "Unreleased" section
 - [ ] Create release branch `release/v0.<minor>.x` (<branching-date>)
+- [ ] Increment `bpftrace_VERSION_MINOR` in [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt) in the master branch
+- [ ] Add `v0.<minor+1>.0-init` tag to master
 - [ ] Add support for LLVM <llvm>
   - [ ] Bump `MAX_LLVM_MAJOR` in [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt)
   - [ ] Add new Nix target in [flake.nix](https://github.com/bpftrace/bpftrace/blob/master/flake.nix)
@@ -29,12 +32,11 @@ For LLVM release schedule, see https://llvm.org/.
 - [ ] Drop support for LLVM <deprecated-llvm>
 - [ ] Update LLVM in Nixpkgs to <llvm>.1.0
 - [ ] **Release bpftrace 0.<minor>.0 (<release-date>)**
-  - [ ] Mark the release in [CHANGELOG.md](https://github.com/bpftrace/bpftrace/blob/master/CHANGELOG.md)
-  - [ ] Update `bpftrace_VERSION_*` in [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt)
+  - [ ] Add the current date to [CHANGELOG.md](https://github.com/bpftrace/bpftrace/blob/master/CHANGELOG.md)
   - [ ] Draft a new release in GitHub
   - [ ] Update the docs on the bpftrace website. [Instructions](https://github.com/bpftrace/website?#updating-the-docs).
   - [ ] Add a new tools version link on the [tools readme](https://github.com/bpftrace/bpftrace/blob/master/tools/README.md) to the master branch.
 - [ ] Forward-port [CHANGELOG.md](https://github.com/bpftrace/bpftrace/blob/master/CHANGELOG.md) and [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt) changes to the master branch.
+- [ ] Increment `bpftrace_VERSION_PATCH` in [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt) in the release branch.
 
-See [Release Process](https://github.com/bpftrace/bpftrace/blob/master/docs/release_process.md) for general information on the
-release process.
+See [Release Process](https://github.com/bpftrace/bpftrace/blob/master/docs/release_process.md) for general information on the release process.
