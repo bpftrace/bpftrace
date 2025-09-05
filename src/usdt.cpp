@@ -8,6 +8,7 @@
 #include "log.h"
 #include "usdt.h"
 #include "util/system.h"
+#include "util/elf_parser.h"
 
 namespace bpftrace {
 
@@ -40,6 +41,19 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
           .semaphore_offset = usdt_probe->semaphore_offset,
       });
   current_pid_paths.emplace(usdt_probe->bin_path);
+}
+
+static void usdt_probe_each_func(struct util::usdt_spec_meta &usdt_probe)
+{
+  usdt_provider_cache[usdt_probe.bin_path][usdt_probe.provider].emplace_back(
+      usdt_probe_entry{
+          .path = usdt_probe.bin_path,
+          .provider = usdt_probe.provider,
+          .name = usdt_probe.name,
+          .semaphore_offset = usdt_probe.sema_offset,
+          .num_locations = usdt_probe.num_locations,
+      });
+  current_pid_paths.emplace(usdt_probe.bin_path);
 }
 
 // Move the current pid paths onto the pid_to_paths_cache, and clear
@@ -161,14 +175,18 @@ void USDTHelper::read_probes_for_path(const std::string &path,
   if (path_cache.contains(path))
     return;
 
-  void *ctx = bcc_usdt_new_frompath(path.c_str());
-  if (ctx == nullptr) {
-    LOG(ERROR) << "failed to initialize usdt context for path " << path;
+  auto enumerator = util::make_usdt_probe_enumerator(path);
+  if (!enumerator) {
+    LOG(ERROR) << enumerator.takeError();
     return;
   }
-  bcc_usdt_foreach(ctx, usdt_probe_each);
-  bcc_usdt_close(ctx);
-
+  auto probes_res = enumerator->enumerate_probes();
+  if (!probes_res) {
+    LOG(ERROR) << probes_res.takeError();
+    return;
+  }
+  auto probes = *probes_res;
+  std::for_each(probes.begin(), probes.end(), usdt_probe_each_func);
   path_cache.emplace(path);
 }
 
