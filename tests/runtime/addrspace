@@ -1,4 +1,3 @@
 NAME openat uptr
 RUN {{BPFTRACE}} -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { print(str(uptr(args.filename))) }' -c "./testprogs/syscall openat"
 EXPECT_REGEX ^.*/bpftrace_runtime_test_syscall_gen_open_temp$
-REQUIRES_FEATURE probe_read_kernel

@@ -91,7 +91,6 @@ public:
   bool has_kprobe_multi();
   bool has_kprobe_session();
   bool has_uprobe_multi();
-  bool has_skb_output();
   bool has_prog_fentry();
   // These are virtual so they can be overridden in tests by the mock
   virtual bool has_fentry();
@@ -105,23 +104,10 @@ public:
   DEFINE_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
   DEFINE_MAP_TEST(stack_trace, BPF_MAP_TYPE_STACK_TRACE);
   DEFINE_MAP_TEST(ringbuf, BPF_MAP_TYPE_RINGBUF);
-  DEFINE_HELPER_TEST(send_signal, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(override_return, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(get_current_cgroup_id, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_str, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_user, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_kernel, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_user_str, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_kernel_str, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(ktime_get_boot_ns, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(ktime_get_tai_ns, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(get_func_ip, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(jiffies64, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(for_each_map_elem, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(get_ns_current_pid_tgid, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(map_lookup_percpu_elem, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(loop, BPF_PROG_TYPE_KPROBE); // Added in 5.13.
+  DEFINE_HELPER_TEST(loop, BPF_PROG_TYPE_KPROBE); // Added in 5.17.
   DEFINE_PROG_TEST(kprobe, BPF_PROG_TYPE_KPROBE);
   DEFINE_PROG_TEST(tracepoint, BPF_PROG_TYPE_TRACEPOINT);
   DEFINE_PROG_TEST(perf_event, BPF_PROG_TYPE_PERF_EVENT);
@@ -133,7 +119,6 @@ protected:
   std::optional<bool> has_kprobe_multi_;
   std::optional<bool> has_kprobe_session_;
   std::optional<bool> has_uprobe_multi_;
-  std::optional<bool> has_skb_output_;
   std::optional<bool> has_prog_fentry_;
   std::optional<bool> has_btf_func_global_;
   std::optional<bool> has_kernel_dwarf_;

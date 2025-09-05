@@ -983,11 +983,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
              builtin.ident == "__builtin_jiffies" ||
              builtin.ident == "__builtin_ncpus") {
     builtin.builtin_type = CreateUInt64();
-    if (builtin.ident == "__builtin_jiffies" &&
-        !bpftrace_.feature_->has_helper_jiffies64()) {
-      builtin.addError()
-          << "BPF_FUNC_jiffies64 is not available for your kernel version";
-    }
   } else if (builtin.ident == "__builtin_curtask") {
     // Retype curtask to its original type: struct task_struct.
     builtin.builtin_type = CreatePointer(
@@ -1736,10 +1731,6 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "ustack") {
     check_stack_call(call, false);
   } else if (call.func == "signal") {
-    if (!bpftrace_.feature_->has_helper_send_signal()) {
-      call.addError()
-          << "BPF_FUNC_send_signal not available for your kernel version";
-    }
     auto &arg = call.vargs.at(0);
     if (auto *sig = arg.as<String>()) {
       if (signal_name_to_num(sig->value) < 1) {
@@ -1877,10 +1868,6 @@ If you're seeing errors, try clamping the string sizes. For example:
     }
     call.return_type = CreateUInt(arg.type().GetIntBitWidth());
   } else if (call.func == "skboutput") {
-    if (!bpftrace_.feature_->has_skb_output()) {
-      call.addError() << "BPF_FUNC_skb_output is not available for your kernel "
-                         "version";
-    }
     call.return_type = CreateUInt32();
   } else if (call.func == "nsecs") {
     call.return_type = CreateUInt64();
@@ -2897,10 +2884,6 @@ void SemanticAnalyser::visit(For &f)
 {
   if (f.iterable.is<Range>() && !bpftrace_.feature_->has_helper_loop()) {
     f.addError() << "Missing required kernel feature: loop";
-  }
-  if (f.iterable.is<Map>() &&
-      !bpftrace_.feature_->has_helper_for_each_map_elem()) {
-    f.addError() << "Missing required kernel feature: for_each_map_elem";
   }
   if (auto *map = f.iterable.as<Map>()) {
     if (!is_first_pass() && !map_val_.contains(map->ident)) {

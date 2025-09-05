@@ -472,48 +472,6 @@ bool BPFfeature::has_uprobe_multi()
   return *has_uprobe_multi_; // NOLINT(bugprone-unchecked-optional-access)
 }
 
-bool BPFfeature::has_skb_output()
-{
-  if (!has_fentry())
-    return false;
-
-  if (has_skb_output_.has_value())
-    return *has_skb_output_;
-
-  int map_fd = 0;
-
-  DECLARE_LIBBPF_OPTS(bpf_map_create_opts, opts);
-  opts.map_flags = 0;
-  map_fd = bpf_map_create(
-      BPF_MAP_TYPE_PERF_EVENT_ARRAY, "rb", sizeof(int), sizeof(int), 1, &opts);
-
-  if (map_fd < 0)
-    return false;
-
-  struct bpf_insn insns[] = {
-    BPF_LDX_MEM(BPF_DW, BPF_REG_1, BPF_REG_1, 0),
-    BPF_LD_MAP_FD(BPF_REG_2, map_fd),
-    BPF_MOV64_IMM(BPF_REG_3, 0),
-    BPF_MOV64_REG(BPF_REG_4, BPF_REG_10),
-    BPF_ALU64_IMM(BPF_ADD, BPF_REG_4, -8),
-    BPF_MOV64_IMM(BPF_REG_6, 0),
-    BPF_STX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, 0),
-    BPF_LD_IMM64(BPF_REG_5, 8),
-    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, BPF_FUNC_skb_output),
-    BPF_MOV64_IMM(BPF_REG_0, 0),
-    BPF_EXIT_INSN(),
-  };
-
-  has_skb_output_ = std::make_optional<bool>(try_load(BPF_PROG_TYPE_TRACING,
-                                                      insns,
-                                                      ARRAY_SIZE(insns),
-                                                      "__kfree_skb",
-                                                      BPF_TRACE_FENTRY));
-
-  close(map_fd);
-  return *has_skb_output_;
-}
-
 static void tabulate(std::stringstream& buf,
                      std::vector<std::pair<std::string, std::string>>& data)
 {
@@ -537,19 +495,9 @@ std::string BPFfeature::report()
   auto to_str = [](bool f) -> std::string { return f ? "yes" : "no"; };
 
   std::vector<std::pair<std::string, std::string>> helpers = {
-    { "probe_read_user", to_str(has_helper_probe_read_user()) },
-    { "probe_read_user_str", to_str(has_helper_probe_read_user_str()) },
-    { "probe_read_kernel", to_str(has_helper_probe_read_kernel()) },
-    { "probe_read_kernel_str", to_str(has_helper_probe_read_kernel_str()) },
-    { "send_signal", to_str(has_helper_send_signal()) },
-    { "get_boot_ns", to_str(has_helper_ktime_get_boot_ns()) },
     { "dpath", to_str(has_d_path()) },
-    { "skboutput", to_str(has_skb_output()) },
     { "get_tai_ns", to_str(has_helper_ktime_get_tai_ns()) },
     { "get_func_ip", to_str(has_helper_get_func_ip()) },
-    { "jiffies64", to_str(has_helper_jiffies64()) },
-    { "for_each_map_elem", to_str(has_helper_for_each_map_elem()) },
-    { "get_ns_current_pid_tgid", to_str(has_helper_get_ns_current_pid_tgid()) },
     { "lookup_percpu_elem", to_str(has_helper_map_lookup_percpu_elem()) },
   };
 

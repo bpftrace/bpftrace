@@ -42,24 +42,19 @@ std::string probeReadHelperName(bpf_func_id id)
 bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
 {
   bpf_func_id fn;
-  // Assume that if a kernel has probe_read_kernel it has the other 3 too
-  if (bpftrace_.feature_->has_helper_probe_read_kernel()) {
-    if (as == AddrSpace::kernel) {
-      fn = str ? BPF_FUNC_probe_read_kernel_str : BPF_FUNC_probe_read_kernel;
-    } else if (as == AddrSpace::user) {
-      fn = str ? BPF_FUNC_probe_read_user_str : BPF_FUNC_probe_read_user;
-    } else {
-      // if the kernel has the new helpers but AS is still none it is a bug
-      // in bpftrace, assert catches it for debug builds.
-      // assert(as != AddrSpace::none);
-      static bool warnonce = false;
-      if (!warnonce) {
-        warnonce = true;
-        LOG(WARNING) << "Addrspace is not set";
-      }
-      fn = str ? BPF_FUNC_probe_read_str : BPF_FUNC_probe_read;
-    }
+  if (as == AddrSpace::kernel) {
+    fn = str ? BPF_FUNC_probe_read_kernel_str : BPF_FUNC_probe_read_kernel;
+  } else if (as == AddrSpace::user) {
+    fn = str ? BPF_FUNC_probe_read_user_str : BPF_FUNC_probe_read_user;
   } else {
+    // if the kernel has the new helpers but AS is still none it is a bug
+    // in bpftrace, assert catches it for debug builds.
+    // assert(as != AddrSpace::none);
+    static bool warnonce = false;
+    if (!warnonce) {
+      warnonce = true;
+      LOG(WARNING) << "Addrspace is not set";
+    }
     fn = str ? BPF_FUNC_probe_read_str : BPF_FUNC_probe_read;
   }
 
@@ -271,7 +266,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
 
 void IRBuilderBPF::CreateMemsetBPF(Value *ptr, Value *val, uint32_t size)
 {
-  if (size > 512 && bpftrace_.feature_->has_helper_probe_read_kernel()) {
+  if (size > 512) {
     // Note we are "abusing" bpf_probe_read_kernel() by reading from NULL
     // which triggers a call into the kernel-optimized memset().
     //
@@ -313,7 +308,7 @@ void IRBuilderBPF::CreateMemsetBPF(Value *ptr, Value *val, uint32_t size)
 
 void IRBuilderBPF::CreateMemcpyBPF(Value *dst, Value *src, uint32_t size)
 {
-  if (size > 512 && bpftrace_.feature_->has_helper_probe_read_kernel()) {
+  if (size > 512) {
     // Note we are avoiding a call to CreateProbeRead(), as it wraps
     // calls to probe read helpers with the -k error reporting feature.
     //
@@ -1676,9 +1671,7 @@ CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
       fn = BPF_FUNC_ktime_get_ns;
       break;
     case TimestampMode::boot:
-      fn = bpftrace_.feature_->has_helper_ktime_get_boot_ns()
-               ? BPF_FUNC_ktime_get_boot_ns
-               : BPF_FUNC_ktime_get_ns;
+      fn = BPF_FUNC_ktime_get_boot_ns;
       break;
     case TimestampMode::tai:
       fn = BPF_FUNC_ktime_get_tai_ns;

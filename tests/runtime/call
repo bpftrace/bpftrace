@@ -130,7 +130,6 @@ PROG t:syscalls:sys_enter_execve { @[str(args.filename)] = count() }
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT_REGEX @\[/X{5555}\]: 1
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
-REQUIRES_FEATURE probe_read_kernel
 # We rely on the timeout to terminate the script
 TIMEOUT 1
 
@@ -139,27 +138,23 @@ PROG t:syscalls:sys_enter_execve { if (strncmp(str(args.filename), "/XXX", 4)) {
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT matched
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
-REQUIRES_FEATURE probe_read_kernel
 
 NAME str_big_printf
 PROG t:syscalls:sys_enter_execve { printf("%s\n", str(args.filename)) }
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT_REGEX /X{5555}
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
-REQUIRES_FEATURE probe_read_kernel
 
 NAME str_big_print
 PROG t:syscalls:sys_enter_execve { print(str(args.filename)) }
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT_REGEX /X{5555}
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
-REQUIRES_FEATURE probe_read_kernel
 
 NAME str_big_read
 PROG begin { @s = str(0); @ss = @s; print("success!"); exit() }
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT success!
-REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
 NAME str_big_tuple
@@ -167,7 +162,6 @@ PROG t:syscalls:sys_enter_execve { print((1, (2, str(args.filename)))) }
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT_REGEX \(1, \(2, /X{5555}\)\)
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
-REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
 NAME tuple_scratch_buf
@@ -178,7 +172,6 @@ NAME str_scratch_buf
 PROG config = { on_stack_limit = 0 } t:syscalls:sys_enter_execve { print(str(args.filename)) }
 EXPECT /XXXX
 AFTER ./testprogs/syscall execve /XXXX
-REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
 NAME fmt_str_args_scratch_buf
@@ -240,7 +233,6 @@ PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename)
 ENV BPFTRACE_MAX_STRLEN=9999
 EXPECT_REGEX \(/X{5555}, /X{5555}\)
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
-REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 1
 
 NAME buf
@@ -607,13 +599,11 @@ NAME cgroup_path
 PROG begin { print(cgroup_path(cgroup & ((1 << 32) - 1)));  }
 EXPECT_REGEX ([a-z]*:\/.*;)*[a-z]*:\/.*
 REQUIRES grep -q '^cgroup2' /proc/mounts
-MIN_KERNEL 4.18
 
 NAME cgroup_path printf
 PROG begin { printf("path: %s", cgroup_path(cgroup & ((1 << 32) - 1)));  }
 EXPECT_REGEX path: ([a-z]*:\/.*;)*[a-z]*:\/.*
 REQUIRES grep -q '^cgroup2' /proc/mounts
-MIN_KERNEL 4.18
 
 NAME strerror
 RUN {{BPFTRACE}} --include "errno.h" -e 'begin { print(strerror(EPERM));  }'
@@ -656,15 +646,11 @@ AFTER ip netns exec bpftrace-test ./testprogs/syscall connect 127.0.0.1 80
 CLEANUP ip netns delete bpftrace-test
 EXPECT ret: 0
 REQUIRES_FEATURE fentry
-REQUIRES_FEATURE skboutput
-MIN_KERNEL 5.5
 
 # Just test that the verifier doesn't reject this
 NAME skboutput rawtracepoint
 RUN {{BPFTRACE}} -e 'rawtracepoint:consume_skb { $ret = skboutput("receive.pcap", (struct sk_buff *)arg0, 1, 0); printf("ret: %d\n", $ret); exit(); }'
 EXPECT Attached 1 probe
-REQUIRES_FEATURE skboutput
-MIN_KERNEL 5.5
 
 NAME socket_cookie
 RUN {{BPFTRACE}} -e 'fentry:tcp_v4_connect { $ret = socket_cookie(args.sk); printf("ret: %llu\n", $ret); exit(); }'
