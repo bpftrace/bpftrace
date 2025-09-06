@@ -1,11 +1,15 @@
 #include <csignal>
 #include <fstream>
+#include <linux/version.h>
+#include <sys/utsname.h>
 
 #include "log.h"
 #include "output/json.h"
 #include "output/text.h"
 #include "run_bpftrace.h"
 #include "types_format.h"
+#include "util/kernel.h"
+#include "version.h"
 
 using namespace bpftrace;
 
@@ -46,6 +50,23 @@ int run_bpftrace(BPFtrace &bpftrace,
                  std::vector<std::string> &&named_params)
 {
   int err;
+
+  auto k_version = util::kernel_version(util::KernelVersionMethod::UTS);
+  auto min_k_version = static_cast<uint32_t>(
+      KERNEL_VERSION(MIN_KERNEL_VERSION_MAJOR,
+                     MIN_KERNEL_VERSION_MINOR,
+                     MIN_KERNEL_VERSION_PATCH));
+
+  if (k_version < min_k_version) {
+    struct utsname utsname;
+    uname(&utsname);
+
+    LOG(WARNING) << "Kernel version (" << utsname.release
+                 << ") is lower than the minimum supported kernel version ("
+                 << MIN_KERNEL_VERSION_MAJOR << "." << MIN_KERNEL_VERSION_MINOR
+                 << "." << MIN_KERNEL_VERSION_PATCH
+                 << "). Some features/scripts may not work as expected.";
+  }
 
   // Process all arguments.
   auto named_param_vals = bpftrace.resources.global_vars.get_named_param_vals(
