@@ -4113,19 +4113,8 @@ void SemanticAnalyser::visit(BlockExpr &block)
 
 void SemanticAnalyser::visit(Probe &probe)
 {
-  auto aps = probe.attach_points.size();
   top_level_node_ = &probe;
-
-  for (AttachPoint *ap : probe.attach_points) {
-    if (!listing_ && aps > 1 && ap->provider == "iter") {
-      if (util::has_wildcard(ap->raw_input))
-        ap->addError() << "iter probe type does not support wildcards";
-      else
-        ap->addError() << "Only single iter attach point is allowed.";
-      return;
-    }
-    visit(ap);
-  }
+  visit(probe.attach_points);
   visit(probe.block);
 }
 

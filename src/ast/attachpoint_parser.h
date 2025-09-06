@@ -63,6 +63,7 @@ private:
   std::vector<std::string> parts_;
   AttachPointList new_attach_points;
   bool listing_;
+  bool has_iter_ap_ = false;
 };
 
 // The attachpoints are expanded in their own separate pass.
