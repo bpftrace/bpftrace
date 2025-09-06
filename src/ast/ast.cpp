@@ -151,6 +151,12 @@ bool is_comparison_op(Operator op)
   return false; // unreached
 }
 
+bool is_literal(const Expression &expr)
+{
+  return expr.is<Integer>() || expr.is<NegativeInteger>() ||
+         expr.is<String>() || expr.is<Boolean>();
+}
+
 AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
                                                 const std::string &match) const
 {
