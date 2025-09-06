@@ -6,3 +6,16 @@ WILL_FAIL
 NAME ppid_macro
 PROG BEGIN { printf("SUCCESS %d\n", ppid(curtask)); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
+
+NAME strcontains_types
+PROG BEGIN { strcontains("foo", 1) }
+EXPECT_REGEX .* ERROR:.*
+WILL_FAIL
+
+NAME strcontains_not_present
+PROG BEGIN { $a = "bar"; print(strcontains("foo", $a)) }
+EXPECT false
+
+NAME strcontains_present
+PROG BEGIN { $a = "bar"; print(strcontains("foobar", $a)) }
+EXPECT true
