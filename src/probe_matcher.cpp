@@ -338,7 +338,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_usdt(
     const std::string& target) const
 {
   std::string probes;
-  usdt_probe_list usdt_probes;
+  util::usdt_probe_list usdt_probes;
 
   if (pid.has_value())
     usdt_probes = USDTHelper::probes_for_pid(
