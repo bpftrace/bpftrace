@@ -7,8 +7,8 @@
 
 #include "log.h"
 #include "usdt.h"
-#include "util/system.h"
 #include "util/elf_parser.h"
+#include "util/system.h"
 
 namespace bpftrace {
 
@@ -17,8 +17,9 @@ static std::unordered_set<int> pid_cache;
 
 // Maps all traced paths and all their providers to vector of tracepoints
 // on each provider
-static std::unordered_map<std::string,
-                          std::unordered_map<std::string, usdt_probe_list>>
+static std::unordered_map<
+    std::string,
+    std::unordered_map<std::string, util::usdt_probe_list>>
     usdt_provider_cache;
 
 // Maps a pid to a set of paths for its probes
@@ -29,35 +30,16 @@ static std::unordered_map<int, std::unordered_set<std::string>>
 // current tracepoint paths for the current pid
 static std::unordered_set<std::string> current_pid_paths;
 
-static void usdt_probe_each(struct bcc_usdt *usdt_probe)
+static void usdt_probe_each(struct util::usdt_probe_entry &usdt_probe)
 {
-#ifdef HAVE_LIBBPF_UPROBE_MULTI
-  int num_locations = 1;
-#else
-  int num_locations = usdt_probe->num_locations;
-#endif
-  usdt_provider_cache[usdt_probe->bin_path][usdt_probe->provider].emplace_back(
-      usdt_probe_entry{
-          .path = usdt_probe->bin_path,
-          .provider = usdt_probe->provider,
-          .name = usdt_probe->name,
-          .semaphore_offset = usdt_probe->semaphore_offset,
-          .num_locations = num_locations,
-      });
-  current_pid_paths.emplace(usdt_probe->bin_path);
-}
-
-static void usdt_probe_each_func(struct util::usdt_spec_meta &usdt_probe)
-{
-  usdt_provider_cache[usdt_probe.bin_path][usdt_probe.provider].emplace_back(
-      usdt_probe_entry{
-          .path = usdt_probe.bin_path,
-          .provider = usdt_probe.provider,
-          .name = usdt_probe.name,
-          .semaphore_offset = usdt_probe.sema_offset,
-          .num_locations = usdt_probe.num_locations,
-      });
-  current_pid_paths.emplace(usdt_probe.bin_path);
+  usdt_provider_cache[usdt_probe.path][usdt_probe.provider].emplace_back(
+      util::usdt_probe_entry{ usdt_probe.path,
+                              usdt_probe.provider,
+                              usdt_probe.name,
+                              usdt_probe.sema_addr,
+                              usdt_probe.sema_offset,
+                              usdt_probe.num_locations });
+  current_pid_paths.emplace(usdt_probe.path);
 }
 
 // Move the current pid paths onto the pid_to_paths_cache, and clear
@@ -68,12 +50,13 @@ static void cache_current_pid_paths(int pid)
   current_pid_paths.clear();
 }
 
-std::optional<usdt_probe_entry> USDTHelper::find(std::optional<int> pid,
-                                                 const std::string &target,
-                                                 const std::string &provider,
-                                                 const std::string &name)
+std::optional<util::usdt_probe_entry> USDTHelper::find(
+    std::optional<int> pid,
+    const std::string &target,
+    const std::string &provider,
+    const std::string &name)
 {
-  usdt_probe_list probes;
+  util::usdt_probe_list probes;
   if (pid.has_value()) {
     read_probes_for_pid(*pid);
     for (auto const &path : usdt_pid_to_paths_cache[*pid]) {
@@ -88,7 +71,7 @@ std::optional<usdt_probe_entry> USDTHelper::find(std::optional<int> pid,
 
   auto it = std::ranges::find_if(probes,
 
-                                 [&name](const usdt_probe_entry &e) {
+                                 [&name](const util::usdt_probe_entry &e) {
                                    return e.name == name;
                                  });
   if (it != probes.end()) {
@@ -98,11 +81,11 @@ std::optional<usdt_probe_entry> USDTHelper::find(std::optional<int> pid,
   }
 }
 
-usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
+util::usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
 {
   read_probes_for_pid(pid, print_error);
 
-  usdt_probe_list probes;
+  util::usdt_probe_list probes;
   for (auto const &path : usdt_pid_to_paths_cache[pid]) {
     for (auto const &usdt_probes : usdt_provider_cache[path]) {
       probes.insert(probes.end(),
@@ -113,9 +96,9 @@ usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
   return probes;
 }
 
-usdt_probe_list USDTHelper::probes_for_all_pids()
+util::usdt_probe_list USDTHelper::probes_for_all_pids()
 {
-  usdt_probe_list probes;
+  util::usdt_probe_list probes;
   auto pids = util::get_all_running_pids();
   if (!pids) {
     LOG(ERROR) << "Unable to get pids: " << pids.takeError();
@@ -129,11 +112,11 @@ usdt_probe_list USDTHelper::probes_for_all_pids()
   return probes;
 }
 
-usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
+util::usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
 {
   read_probes_for_path(path);
 
-  usdt_probe_list probes;
+  util::usdt_probe_list probes;
   for (auto const &usdt_probes : usdt_provider_cache[path]) {
     probes.insert(probes.end(),
                   usdt_probes.second.begin(),
@@ -147,19 +130,18 @@ void USDTHelper::read_probes_for_pid(int pid, bool print_error)
   if (pid_cache.contains(pid))
     return;
 
-  void *ctx = bcc_usdt_new_frompid(pid, nullptr);
-  if (ctx == nullptr) {
-    if (print_error) {
-      LOG(ERROR) << "failed to initialize usdt context for pid: " << pid;
-
-      if (kill(pid, 0) == -1 && errno == ESRCH)
-        LOG(ERROR) << "hint: process not running";
-    }
-
+  auto result = util::get_mapped_paths_for_pid(pid);
+  if (!result && print_error) {
+    LOG(ERROR) << result.takeError();
     return;
   }
-  bcc_usdt_foreach(ctx, usdt_probe_each);
-  bcc_usdt_close(ctx);
+  for (auto const &path : *result) {
+    if (current_pid_paths.contains(path)) {
+      continue;
+    }
+    read_probes_for_path(path);
+    current_pid_paths.emplace(path);
+  }
   cache_current_pid_paths(pid);
 
   pid_cache.emplace(pid);
@@ -181,7 +163,7 @@ void USDTHelper::read_probes_for_path(const std::string &path)
     return;
   }
   auto probes = *probes_res;
-  std::for_each(probes.begin(), probes.end(), usdt_probe_each_func);
+  std::for_each(probes.begin(), probes.end(), usdt_probe_each);
   path_cache.emplace(path);
 }
 
