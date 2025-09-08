@@ -2158,7 +2158,7 @@ Value *IRBuilderBPF::CreateKFuncArg(Value *ctx,
                                     SizedType &type,
                                     std::string &name)
 {
-  assert(type.IsIntTy() || type.IsPtrTy());
+  assert(type.IsIntTy() || type.IsPtrTy() || type.IsBoolTy());
   Value *expr = CreateLoad(
       GetType(type),
       CreateSafeGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),

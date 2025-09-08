@@ -17,6 +17,9 @@ Result<SizedType> getCompatType([[maybe_unused]] const Void &type)
 
 Result<SizedType> getCompatType(const Integer &type)
 {
+  if (type.is_bool()) {
+    return CreateBool();
+  }
   return CreateInt(8 * type.bytes());
 }
 

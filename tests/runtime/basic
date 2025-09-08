@@ -344,21 +344,19 @@ PROG begin { $a = 10223372036854775807; print(($a));  }
 EXPECT 10223372036854775807
 TIMEOUT 1
 
-NAME has_key exists
-PROG begin { @a[1] = 0; if (has_key(@a, 1)) { printf("ok\n"); }  }
-EXPECT ok
+NAME has_key
+RUN {{BPFTRACE}} runtime/scripts/has_key.bt
+EXPECT 7
 
-NAME has_key no_exists
-PROG begin { @a[1] = 0; if (has_key(@a, 2)) { printf("ok\n"); }  }
-EXPECT_NONE ok
+NAME has_key error scalar
+PROG begin { @g = 2; if (has_key(@g, 2)) { printf("ok\n"); }  }
+EXPECT_REGEX .* ERROR: call to has_key\(\) expects a map with explicit keys.*
+WILL_FAIL
 
-NAME has_key complex tuple
-PROG begin { @a[1, ("hello", (int8)5)] = 0; if (has_key(@a, (1, ("hello", 5)))) { printf("ok\n"); }  }
-EXPECT ok
-
-NAME has_key map value as key
-PROG begin { @g = 2; @a[2] = 0; if (has_key(@a, @g)) { printf("ok\n"); }  }
-EXPECT ok
+NAME has_key error type mismatch
+PROG begin { @g[1, "hi"] = 2; if (has_key(@g, (1, 2))) { printf("ok\n"); }  }
+EXPECT_REGEX .* ERROR: Mismatch for has_key\(\): key param has type '\(int64,int64\)' when map key type is '\(int64,string\)'.*
+WILL_FAIL
 
 NAME exit code
 PROG begin { exit(69); }

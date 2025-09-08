@@ -343,10 +343,9 @@ This utilizes the BPF helper `get_current_uid_gid`
 ### has_key
 - `boolean has_key(map m, mapkey k)`
 
-Return true (1) if the key exists in this map.
-Otherwise return false (0).
+Return `true` if the key exists in this map.
+Otherwise return `false`.
 Error if called with a map that has no keys (aka scalar map).
-Return value can also be used for scratch variables and map keys/values.
 
 ```
 kprobe:dummy {
@@ -359,9 +358,6 @@ kprobe:dummy {
     if (has_key(@scalar)) { // error
       print(("hello"));
     }
-
-    $a = has_key(@associative, (1,2)); // ok
-    @b[has_key(@associative, (1,2))] = has_key(@associative, (1,2)); // ok
 }
 ```
 

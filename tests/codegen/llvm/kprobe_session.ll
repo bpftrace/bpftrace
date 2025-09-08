@@ -22,8 +22,8 @@ entry:
   %"@_key1" = alloca i64, align 8
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
-  %is_return = call i8 @bpf_session_is_return()
-  %true_cond = icmp ne i8 %is_return, 0
+  %is_return = call i1 @bpf_session_is_return()
+  %true_cond = icmp ne i1 %is_return, false
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
@@ -51,7 +51,7 @@ done:                                             ; preds = %right, %left
 }
 
 ; Function Attrs: nounwind
-declare !dbg !52 extern_weak i8 @bpf_session_is_return() local_unnamed_addr #0 section ".ksyms"
+declare !dbg !52 extern_weak i1 @bpf_session_is_return() local_unnamed_addr #0 section ".ksyms"
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
