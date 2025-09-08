@@ -2173,8 +2173,10 @@ ScopedExpr CodegenLLVM::binop_string(Binop &binop)
 
   size_t len = std::min(binop.left.type().GetSize(),
                         binop.right.type().GetSize());
-  return ScopedExpr(b_.CreateStrncmp(
-      left_string.value(), right_string.value(), len, inverse));
+  return ScopedExpr(b_.CreateIntCast(
+      b_.CreateStrncmp(left_string.value(), right_string.value(), len, inverse),
+      b_.getInt1Ty(),
+      false));
 }
 
 ScopedExpr CodegenLLVM::binop_integer_array(Binop &binop)
@@ -2220,7 +2222,10 @@ ScopedExpr CodegenLLVM::binop_buf(Binop &binop)
 
   size_t len = std::min(binop.left.type().GetSize(),
                         binop.right.type().GetSize());
-  return ScopedExpr(b_.CreateStrncmp(left_string, right_string, len, inverse));
+  return ScopedExpr(b_.CreateIntCast(
+      b_.CreateStrncmp(left_string, right_string, len, inverse),
+      b_.getInt1Ty(),
+      false));
 }
 
 ScopedExpr CodegenLLVM::binop_int(Binop &binop)

@@ -21,13 +21,13 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !50 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
-  %strcmp.result = alloca i1, align 1
+  %strcmp.result = alloca i64, align 8
   %__builtin_comm = alloca [16 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %__builtin_comm)
   call void @llvm.memset.p0.i64(ptr align 1 %__builtin_comm, i8 0, i64 16, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to ptr)(ptr %__builtin_comm, i64 16)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %strcmp.result)
-  store i1 true, ptr %strcmp.result, align 1
+  store i64 1, ptr %strcmp.result, align 8
   %1 = getelementptr i8, ptr %__builtin_comm, i32 0
   %2 = load i8, ptr %1, align 1
   %3 = load i8, ptr @sshd, align 1
@@ -35,12 +35,11 @@ entry:
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop, %entry
-  %4 = load i1, ptr %strcmp.result, align 1
+  %4 = load i64, ptr %strcmp.result, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %strcmp.result)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %__builtin_comm)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
-  %5 = zext i1 %4 to i64
-  store i64 %5, ptr %"@_key", align 8
+  store i64 %4, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
   store i64 1, ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
@@ -49,14 +48,14 @@ strcmp.false:                                     ; preds = %strcmp.done, %strcm
   ret i64 0
 
 strcmp.done:                                      ; preds = %strcmp.loop1, %strcmp.loop_null_cmp2, %strcmp.loop_null_cmp
-  store i1 false, ptr %strcmp.result, align 1
+  store i64 0, ptr %strcmp.result, align 8
   br label %strcmp.false
 
 strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
-  %6 = getelementptr i8, ptr %__builtin_comm, i32 1
-  %7 = load i8, ptr %6, align 1
-  %8 = load i8, ptr getelementptr (i8, ptr @sshd, i32 1), align 1
-  %strcmp.cmp3 = icmp ne i8 %7, %8
+  %5 = getelementptr i8, ptr %__builtin_comm, i32 1
+  %6 = load i8, ptr %5, align 1
+  %7 = load i8, ptr getelementptr (i8, ptr @sshd, i32 1), align 1
+  %strcmp.cmp3 = icmp ne i8 %6, %7
   br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
 
 strcmp.loop_null_cmp:                             ; preds = %entry
@@ -67,7 +66,7 @@ strcmp.loop1:                                     ; preds = %strcmp.loop_null_cm
   br label %strcmp.done
 
 strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
-  %strcmp.cmp_null4 = icmp eq i8 %7, 0
+  %strcmp.cmp_null4 = icmp eq i8 %6, 0
   br i1 %strcmp.cmp_null4, label %strcmp.done, label %strcmp.loop1
 }
 

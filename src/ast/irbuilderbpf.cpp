@@ -1440,8 +1440,8 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                    uint64_t n,
                                    bool inverse)
 {
-  // This function compares each character of the two string. It returns true
-  // if all are equal and false if any are different.
+  // This function compares each character of the two strings. It returns 0
+  // if all are equal and 1 if any are different.
   //
   //  strcmp(String val1, String val2)
   //  {
@@ -1450,19 +1450,19 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   //
   //       if (val1[i] != val2[i])
   //       {
-  //         return false;
+  //         return 1;
   //       }
   //       if (val1[i] == NULL)
   //       {
-  //         return true;
+  //         break;
   //       }
   //     }
   //
-  //     return true;
+  //     return 0;
   //  }
 
   llvm::Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
+  AllocaInst *store = CreateAllocaBPF(getInt64Ty(), "strcmp.result");
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(),
                                           "strcmp.false",
                                           parent);
@@ -1470,7 +1470,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                         "strcmp.done",
                                         parent);
 
-  CreateStore(getInt1(!inverse), store);
+  CreateStore(getInt64(inverse ? 0 : 1), store);
 
   Value *null_byte = getInt8(0);
   for (size_t i = 0; i < n; i++) {
@@ -1502,13 +1502,12 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
 
   CreateBr(done);
   SetInsertPoint(done);
-  CreateStore(getInt1(inverse), store);
+  CreateStore(getInt64(inverse ? 1 : 0), store);
 
   CreateBr(str_ne);
   SetInsertPoint(str_ne);
 
-  // store is a pointer to bool (i1 *)
-  Value *result = CreateLoad(getInt1Ty(), store);
+  Value *result = CreateLoad(getInt64Ty(), store);
   CreateLifetimeEnd(store);
 
   return result;
