@@ -383,17 +383,6 @@ void ResourceAnalyser::visit(Call &call)
       resources_.max_map_key_size = std::max(resources_.max_map_key_size,
                                              map_key_size);
     }
-  } else if (call.func == "has_key") {
-    auto &map = *call.vargs.at(0).as<Map>();
-    auto &key_expr = call.vargs.at(1);
-    // has_key does not work on scalar maps (e.g. @a = 1), so we
-    // don't need to check if map.key_expr is set
-    if (needMapKeyAllocation(map, key_expr) &&
-        exceeds_stack_limit(map.key_type.GetSize())) {
-      resources_.map_key_buffers++;
-      resources_.max_map_key_size = std::max(resources_.max_map_key_size,
-                                             map.key_type.GetSize());
-    }
   } else if (call.func == "delete") {
     auto &map = *call.vargs.at(0).as<Map>();
     auto &key_expr = call.vargs.at(1);
