@@ -1,0 +1,13 @@
+begin {
+    // Test basic functionality
+    @a[1] = 0;
+    if (has_key(@a, 1)) {
+        printf("ok1\n");
+    }
+
+    // Test a more complex key
+    @b[1, ("hello", (int8)5)] = 0;
+    if (has_key(@b, (1, ("hello", 5)))) {
+        printf("ok3\n");
+    }
+}
