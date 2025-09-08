@@ -83,24 +83,31 @@ TEST(btf, integer_types)
   auto int16 = btf.add<Integer>("int16", 2, 1);
   auto int32 = btf.add<Integer>("int32", 4, 1);
   auto int64 = btf.add<Integer>("int64", 8, 1);
+  auto boolean = btf.add<Integer>("int8", 1, 4);
 
   ASSERT_TRUE(bool(int8));
   ASSERT_TRUE(bool(uint8));
   ASSERT_TRUE(bool(int16));
   ASSERT_TRUE(bool(int32));
   ASSERT_TRUE(bool(int64));
+  ASSERT_TRUE(bool(boolean));
 
   EXPECT_EQ(int8->bytes(), 1);
   EXPECT_EQ(uint8->bytes(), 1);
   EXPECT_EQ(int16->bytes(), 2);
   EXPECT_EQ(int32->bytes(), 4);
   EXPECT_EQ(int64->bytes(), 8);
+  EXPECT_EQ(boolean->bytes(), 1);
+
+  EXPECT_FALSE(int8->is_bool());
+  EXPECT_TRUE(boolean->is_bool());
 
   EXPECT_EQ(to_str(AnyType(*int8)), "int8");
   EXPECT_EQ(to_str(AnyType(*uint8)), "uint8");
   EXPECT_EQ(to_str(AnyType(*int16)), "int16");
   EXPECT_EQ(to_str(AnyType(*int32)), "int32");
   EXPECT_EQ(to_str(AnyType(*int64)), "int64");
+  EXPECT_EQ(to_str(AnyType(*boolean)), "int8");
 }
 
 TEST(btf, pointer_types)
