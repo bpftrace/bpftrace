@@ -2520,8 +2520,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     buf = b_.CreateGetStrAllocation("buf", if_expr.loc);
     const auto max_strlen = bpftrace_.config_->max_strlen;
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
-  } else if (!if_expr.result_type.IsIntTy() &&
-             !if_expr.result_type.IsNoneTy()) {
+  } else if (!if_expr.result_type.IsNoneTy()) {
     buf = b_.CreateAllocaBPF(if_expr.result_type);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), if_expr.result_type.GetSize());
   }
@@ -2534,26 +2533,25 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
                   right_block);
 
   if (if_expr.result_type.IsIntTy()) {
-    // fetch selected integer via CreateStore
     b_.SetInsertPoint(left_block);
+    auto *result_ty = b_.GetType(if_expr.result_type);
     auto scoped_left = visit(if_expr.left);
     auto *left_expr = b_.CreateIntCast(scoped_left.value(),
-                                       b_.GetType(if_expr.result_type),
+                                       result_ty,
                                        if_expr.result_type.IsSigned());
+    b_.CreateStore(left_expr, buf);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
     auto scoped_right = visit(if_expr.right);
     auto *right_expr = b_.CreateIntCast(scoped_right.value(),
-                                        b_.GetType(if_expr.result_type),
+                                        result_ty,
                                         if_expr.result_type.IsSigned());
+    b_.CreateStore(right_expr, buf);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(done);
-    auto *phi = b_.CreatePHI(b_.GetType(if_expr.result_type), 2, "result");
-    phi->addIncoming(left_expr, left_block);
-    phi->addIncoming(right_expr, right_block);
-    return ScopedExpr(phi);
+    return ScopedExpr(b_.CreateLoad(result_ty, buf));
   } else if (if_expr.result_type.IsNoneTy()) {
     // Type::none
     b_.SetInsertPoint(left_block);
