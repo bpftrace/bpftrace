@@ -5573,6 +5573,12 @@ stdin:1:12-31: ERROR: always fail
 kprobe:f { fail("always fail"); }
            ~~~~~~~~~~~~~~~~~~~
 )" });
+  test(R"(kprobe:f { fail("always fail %s %d %d %d", "now", 1, -1, false); })",
+       Error{ R"(
+stdin:1:12-64: ERROR: always fail now 1 -1 0
+kprobe:f { fail("always fail %s %d %d %d", "now", 1, -1, false); }
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)" });
   test(R"(kprobe:f { if (false) { fail("always false"); } })");
 }
 

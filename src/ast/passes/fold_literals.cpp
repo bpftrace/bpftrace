@@ -47,12 +47,6 @@ private:
 
 } // namespace
 
-static bool is_literal(const Expression &expr)
-{
-  return expr.is<Integer>() || expr.is<NegativeInteger>() ||
-         expr.is<String>() || expr.is<Boolean>();
-}
-
 static bool eval_bool(Expression expr)
 {
   if (auto *integer = expr.as<Integer>()) {
@@ -163,12 +157,12 @@ std::optional<bool> LiteralFolder::compare_tuples(Tuple *left_tuple,
     visit(l_expr);
     visit(r_expr);
 
-    if (!is_literal(l_expr) || !is_literal(r_expr)) {
+    if (!l_expr.is_literal() || !r_expr.is_literal()) {
       // N.B. we can do more here to determine if a tuple
       // is not equal to another tuple but just doing the
       // obvious thing with literals for now
       if (auto *l_tuple = l_expr.as<Tuple>()) {
-        if (is_literal(r_expr)) {
+        if (r_expr.is_literal()) {
           return false;
         }
 
@@ -186,7 +180,7 @@ std::optional<bool> LiteralFolder::compare_tuples(Tuple *left_tuple,
         return std::nullopt;
       }
 
-      if (r_expr.is<Tuple>() && is_literal(l_expr)) {
+      if (r_expr.is<Tuple>() && l_expr.is_literal()) {
         return false;
       }
 
@@ -372,7 +366,7 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
 std::optional<Expression> LiteralFolder::visit(Cast &cast)
 {
   visit(cast.expr);
-  if (cast.type().IsBoolTy() && is_literal(cast.expr)) {
+  if (cast.type().IsBoolTy() && cast.expr.is_literal()) {
     return ast_.make_node<Boolean>(eval_bool(cast.expr),
                                    Location(cast.expr.loc()));
   }
@@ -626,7 +620,7 @@ std::optional<Expression> LiteralFolder::visit(IfExpr &if_expr)
   visit(if_expr.left);
   visit(if_expr.right);
 
-  if (is_literal(if_expr.cond)) {
+  if (if_expr.cond.is_literal()) {
     if (eval_bool(if_expr.cond)) {
       return if_expr.left;
     } else {
@@ -795,7 +789,7 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
     visit(stmt);
     if (auto *while_stmt = stmt.as<While>()) {
       visit(while_stmt->cond);
-      if (is_literal(while_stmt->cond)) {
+      if (while_stmt->cond.is_literal()) {
         if (!eval_bool(while_stmt->cond)) {
           continue;
         }
