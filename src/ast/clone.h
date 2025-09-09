@@ -9,6 +9,8 @@ namespace bpftrace::ast {
 
 class Expression;
 class Statement;
+class Iterable;
+class RootStatement;
 
 template <typename T>
 struct Cloner {
@@ -21,7 +23,7 @@ struct Cloner {
 };
 
 template <typename T>
-  requires(std::is_same_v<T, Expression> || std::is_same_v<T, Statement>)
+  requires(std::is_same_v<T, Expression> || std::is_same_v<T, Statement> || std::is_same_v<T, Iterable> || std::is_same_v<T, RootStatement>)
 struct Cloner<T> {
   T operator()(ASTContext &ctx, const T &v, const Location &loc)
   {
