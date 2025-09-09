@@ -244,7 +244,8 @@ std::string MacroExpander::get_new_var_ident(std::string original_ident)
 std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
 {
   if (macro.vargs.size() != call.vargs.size()) {
-    call.addError() << "Call to macro has wrong number arguments. Expected: "
+    call.addError() << "Call to " << macro.name
+                    << "() has the wrong number of arguments. Expected: "
                     << macro.vargs.size() << " but got " << call.vargs.size();
     return std::nullopt;
   }
@@ -266,25 +267,25 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro, Call &call)
       if (auto *cvar = call.vargs.at(i).as<Variable>()) {
         vars_[mvar->ident] = cvar->ident;
       } else if (call.vargs.at(i).is<Map>()) {
-        call.addError()
-            << "Mismatched arg to macro call. Macro expects a variable for arg "
-            << mvar->ident << " but got a map.";
+        call.addError() << "Mismatched arg. " << macro.name
+                        << "() expects a variable for arg " << mvar->ident
+                        << " but got a map.";
       } else {
-        call.addError()
-            << "Mismatched arg to macro call. Macro expects a variable for arg "
-            << mvar->ident << " but got an expression.";
+        call.addError() << "Mismatched arg. " << macro.name
+                        << "() expects a variable for arg " << mvar->ident
+                        << " but got an expression.";
       }
     } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {
       if (auto *cmap = call.vargs.at(i).as<Map>()) {
         maps_[mmap->ident] = cmap->ident;
       } else if (call.vargs.at(i).is<Variable>()) {
-        call.addError()
-            << "Mismatched arg to macro call. Macro expects a map for arg "
-            << mmap->ident << " but got a variable.";
+        call.addError() << "Mismatched arg. " << macro.name
+                        << "() expects a map for arg " << mmap->ident
+                        << " but got a variable.";
       } else {
-        call.addError()
-            << "Mismatched arg to macro call. Macro expects a map for arg "
-            << mmap->ident << " but got an expression.";
+        call.addError() << "Mismatched arg. " << macro.name
+                        << "() expects a map for arg " << mmap->ident
+                        << " but got an expression.";
       }
     }
   }
@@ -298,8 +299,9 @@ std::optional<BlockExpr *> MacroExpander::expand(Macro &macro,
                                                  Identifier &ident)
 {
   if (!macro.vargs.empty()) {
-    ident.addError() << "Call to macro has no number arguments. Expected: "
-                     << macro.vargs.size();
+    ident.addError() << "Call to " << macro.name
+                     << "() has the wrong number of arguments. Expected: "
+                     << macro.vargs.size() << " but got 0.";
     return std::nullopt;
   }
 
