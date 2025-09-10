@@ -5,7 +5,11 @@
 #include "ast/ast.h"
 #include "ast/context.h"
 
-namespace bpftrace::ast {
+namespace bpftrace {
+
+class SizedType;
+
+namespace ast {
 
 class Expression;
 class Statement;
@@ -13,7 +17,11 @@ class Iterable;
 class RootStatement;
 
 template <typename T>
-struct Cloner {
+struct Cloner;
+
+template <typename T>
+  requires(std::is_same_v<T, SizedType>)
+struct Cloner<T> {
   T operator()([[maybe_unused]] ASTContext &ctx,
                const T &v,
                [[maybe_unused]] const Location &loc)
@@ -87,4 +95,5 @@ T clone(ASTContext &ctx, const T &t, const Location &loc = Location())
   return Cloner<V>()(ctx, t, loc);
 }
 
-} // namespace bpftrace::ast
+} // namespace ast
+} // namespace bpftrace
