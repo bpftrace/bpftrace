@@ -2357,9 +2357,9 @@ TEST_F(SemanticAnalyserTest, tracepoint)
 
 TEST_F(SemanticAnalyserTest, rawtracepoint)
 {
-  test("rawtracepoint:event { 1 }");
-  test("rawtracepoint:event { arg0 }");
-  test("rawtracepoint:mod:event { arg0 }");
+  test("rawtracepoint:event_rt { 1 }");
+  test("rawtracepoint:event_rt { arg0 }");
+  test("rawtracepoint:vmlinux:event_rt { arg0 }");
 }
 
 TEST_F(SemanticAnalyserTest, watchpoint_invalid_modes)

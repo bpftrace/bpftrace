@@ -58,7 +58,7 @@ TIMEOUT 1
 
 # https://github.com/bpftrace/bpftrace/issues/1952
 NAME async_id_invalid_probe_expansion
-PROG kprobe:zzzzz { probe; printf("asdf\n") } begin { printf("_%s_\n", "success"); exit() }
+PROG config = { missing_probes=warn } kprobe:zzzzz { probe; printf("asdf\n") } begin { printf("_%s_\n", "success"); exit() }
 EXPECT _success_
 TIMEOUT 1
 

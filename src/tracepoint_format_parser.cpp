@@ -85,9 +85,6 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
     probe->attach_points = new_aps;
   }
 
-  // We may have ended with probes without attach points, remove them
-  program->clear_empty_probes();
-
   return true;
 }
 
