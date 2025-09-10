@@ -135,3 +135,8 @@ NAME preserve context pointer
 PROG begin { @test[(uint64)1] = (uint64)1; } tracepoint:syscalls:sys_enter_kill { if (strcontains(comm, "test")) { @test[args.pid] = 1; } if (args.pid == @test[1]) { print((1)); } if (args.pid == @test[1]) { print((1));  } }
 EXPECT Attached 2 probes
 TIMEOUT 1
+
+# Ensure that ternary generation works for nested blocks.
+NAME nested ternary operators
+PROG begin { let $x=1; let $y=2; let $z=3;  print(if ($x) { if ($y) { if ($z) { $x } else { $y } } else { $z } } else { 0 }); }
+EXPECT 1

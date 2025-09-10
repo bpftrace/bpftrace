@@ -2541,6 +2541,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
                                        b_.GetType(if_expr.result_type),
                                        if_expr.result_type.IsSigned());
     b_.CreateBr(done);
+    BasicBlock *left_end_block = b_.GetInsertBlock();
 
     b_.SetInsertPoint(right_block);
     auto scoped_right = visit(if_expr.right);
@@ -2548,11 +2549,12 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
                                         b_.GetType(if_expr.result_type),
                                         if_expr.result_type.IsSigned());
     b_.CreateBr(done);
+    BasicBlock *right_end_block = b_.GetInsertBlock();
 
     b_.SetInsertPoint(done);
     auto *phi = b_.CreatePHI(b_.GetType(if_expr.result_type), 2, "result");
-    phi->addIncoming(left_expr, left_block);
-    phi->addIncoming(right_expr, right_block);
+    phi->addIncoming(left_expr, left_end_block);
+    phi->addIncoming(right_expr, right_end_block);
     return ScopedExpr(phi);
   } else if (if_expr.result_type.IsNoneTy()) {
     // Type::none
