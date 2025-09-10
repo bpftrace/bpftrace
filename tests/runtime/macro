@@ -102,6 +102,11 @@ NAME macro arg idents take precedence over macros with no arguments
 PROG macro add() { 2 } macro ident(add) { add } begin { print(ident(1)); }
 EXPECT 1
 
+# This is more of a regression test for clone that wasn't cloning the Iterable node
+NAME macro replaces all instances
+PROG macro first_key(@x) { let $x; for ($k : @x) { $x = $k.0; break; } $x } begin { @a[1] = 0; @b[2] = 0; print((first_key(@a), first_key(@b))); }
+EXPECT (1, 2)
+
 # Test builtins
 NAME builtin wrapper comm
 PROG begin { if (__builtin_comm == comm() && __builtin_comm == comm) { print(comm); } }
