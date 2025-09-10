@@ -229,6 +229,8 @@ endif()
 
 add_subdirectory(src)
 if (BUILD_TESTING)
+  set(ENABLE_TESTS_RUNTIME ON CACHE BOOL "Enable runtime tests")
+  set(ENABLE_TESTS_TOOLS ON CACHE BOOL "Enable tool tests")
   add_subdirectory(tests)
 endif()
 add_subdirectory(tools)

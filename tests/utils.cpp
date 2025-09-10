@@ -403,11 +403,11 @@ TEST(utils, find_in_path)
 // Hopefully they are easy to maintain. If not, please delete.
 TEST(utils, find_near_self)
 {
-  auto runtime_tests = find_near_self("runtime-tests.sh");
+  auto runtime_tests = find_near_self("near_self_file");
   // clang-tidy is not aware ASSERT_*() terminates testcase
   // NOLINTBEGIN(bugprone-unchecked-optional-access)
   ASSERT_TRUE(runtime_tests.has_value());
-  EXPECT_TRUE(runtime_tests->filename() == "runtime-tests.sh");
+  EXPECT_TRUE(runtime_tests->filename() == "near_self_file");
   EXPECT_TRUE(std::filesystem::exists(*runtime_tests));
   // NOLINTEND(bugprone-unchecked-optional-access)
 

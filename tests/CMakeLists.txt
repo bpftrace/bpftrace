@@ -77,6 +77,8 @@ add_executable(bpftrace_test
 )
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
+
 add_subdirectory(data)
 add_dependencies(bpftrace_test data_source_dwarf data_source_btf data_source_funcs parser)
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
@@ -111,61 +113,63 @@ add_subdirectory(testlibs)
 #
 # Runtime Tests
 #
-configure_file(runtime-tests.sh runtime-tests.sh @ONLY)
-add_custom_target(
-  runtime_tests
-  COMMAND ./runtime-tests.sh
-  DEPENDS
-    testprogs
-    testlibs
-    ${CMAKE_BINARY_DIR}/src/bpftrace
-)
-add_test(NAME runtime_tests COMMAND ./runtime-tests.sh)
-
-file(GLOB_RECURSE runtime_test_src_files
-  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
-  CONFIGURE_DEPENDS
-  runtime/*
-)
-list(REMOVE_ITEM runtime_test_src_files runtime/engine/cmake_vars.py)
-
-set(runtime_test_files)
-foreach(runtime_test_file ${runtime_test_src_files})
-  add_custom_command(
-    OUTPUT
-      ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
-    COMMAND ${CMAKE_COMMAND} -E copy
-      ${CMAKE_CURRENT_SOURCE_DIR}/${runtime_test_file}
-      ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
+if(ENABLE_TESTS_RUNTIME)
+  configure_file(runtime-tests.sh runtime-tests.sh @ONLY)
+  add_custom_target(
+    runtime_tests
+    COMMAND ./runtime-tests.sh
     DEPENDS
-      ${CMAKE_CURRENT_SOURCE_DIR}/${runtime_test_file}
+      testprogs
+      testlibs
+      ${CMAKE_BINARY_DIR}/src/bpftrace
   )
-  list(APPEND
-    runtime_test_files
-    ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
+  add_test(NAME runtime_tests COMMAND ./runtime-tests.sh)
+
+  file(GLOB_RECURSE runtime_test_src_files
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+    CONFIGURE_DEPENDS
+    runtime/*
   )
-endforeach()
-add_custom_target(runtime_test_files ALL DEPENDS ${runtime_test_files})
-add_dependencies(runtime_tests runtime_test_files)
+  list(REMOVE_ITEM runtime_test_src_files runtime/engine/cmake_vars.py)
 
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine)
-configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine/ @ONLY)
+  set(runtime_test_files)
+  foreach(runtime_test_file ${runtime_test_src_files})
+    add_custom_command(
+      OUTPUT
+        ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
+      COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/${runtime_test_file}
+        ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
+      DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/${runtime_test_file}
+    )
+    list(APPEND
+      runtime_test_files
+      ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
+    )
+  endforeach()
+  add_custom_target(runtime_test_files ALL DEPENDS ${runtime_test_files})
+  add_dependencies(runtime_tests runtime_test_files)
 
+  file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine)
+  configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine/ @ONLY)
+endif()
 
+if(ENABLE_TESTS_TOOLS)
+  configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
+  add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
+  add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
 
-configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
-add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
-add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
-
-if(ENABLE_TEST_VALIDATE_CODEGEN)
-  if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18)
-    message(STATUS "Adding codegen-validator test")
-    configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
-    add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
-    add_test(NAME codegen-validator COMMAND ./codegen-validator.sh ${CMAKE_SOURCE_DIR})
+  if(ENABLE_TEST_VALIDATE_CODEGEN)
+    if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18)
+      message(STATUS "Adding codegen-validator test")
+      configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
+      add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
+      add_test(NAME codegen-validator COMMAND ./codegen-validator.sh ${CMAKE_SOURCE_DIR})
+    else()
+      message(STATUS "Not building with LLVM 18, skipping codegen-validator test")
+    endif()
   else()
-    message(STATUS "Not building with LLVM 18, skipping codegen-validator test")
+    message(STATUS "codegen-validator test disabled")
   endif()
-else()
-  message(STATUS "codegen-validator test disabled")
 endif()
