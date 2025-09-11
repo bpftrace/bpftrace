@@ -542,4 +542,10 @@ TEST(fold_literals, tuple_access)
        "[int64]\n  .\n   variable: $x"); // variable tuple
 }
 
+TEST(fold_literals, array_access)
+{
+  test("\"foo\"[0]", "int: 102 :: [int64]");
+  test("\"foo\"[1]", "int: 111 :: [int64]");
+}
+
 } // namespace bpftrace::test::fold_literals
