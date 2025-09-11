@@ -65,13 +65,6 @@ endif()
 install(TARGETS bpftrace DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_compile_definitions(bpftrace PRIVATE ${BPFTRACE_FLAGS})
 
-# TODO(Jiawei Zhao): this conditional can be removed when we no longer use bcc.
-if(STATIC_LINKING)
-  target_link_libraries(bpftrace libbpftrace)
-else()
-  target_link_libraries(bpftrace libbpftrace libbpf.a)
-endif(STATIC_LINKING)
-
 # compile definitions
 
 # This is run on every build to ensure the version string is always up-to-date
@@ -99,8 +92,14 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 
+target_link_libraries(bpftrace libbpftrace)
 target_link_libraries(runtime debugfs output tracefs util)
-target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
+target_link_libraries(runtime ${ZLIB_LIBRARIES})
+# We need to tell the linker to prefer static linking for libbpf. The reason
+# is that bcc links agains libbpf and if bcc is linked dynamically, that will
+# transitively pull dynamic libbpf, too. This makes sure that symbols from the
+# static one are preferred.
+target_link_libraries(runtime -Wl,-Bstatic ${LIBBPF_LIBRARIES} -Wl,-Bdynamic)
 target_link_libraries(libbpftrace parser runtime aot ast arch util cxxdemangler_llvm)
 
 if(LIBPCAP_FOUND)
@@ -145,8 +144,6 @@ endif()
 
 if(STATIC_LINKING)
   # These are not part of the static libbcc so have to be added separate
-  target_link_libraries(runtime ${LIBBCC_BPF_LIBRARIES})
-  target_link_libraries(runtime ${LIBBPF_LIBRARIES})
   target_link_libraries(runtime ${LIBBCC_LOADER_LIBRARY_STATIC})
 
   find_package(LibLzma)
