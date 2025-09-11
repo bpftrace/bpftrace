@@ -780,7 +780,8 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
   // as the expression value.
   if (expr.stmts.empty() &&
       (expr.expr.is<Integer>() || expr.expr.is<NegativeInteger>() ||
-       expr.expr.is<Boolean>() || expr.expr.is<String>())) {
+       expr.expr.is<Boolean>() || expr.expr.is<String>() ||
+       expr.expr.is<Tuple>())) {
     return expr.expr;
   }
 
