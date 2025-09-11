@@ -159,7 +159,7 @@ REQUIRES_FEATURE kprobe_multi
 
 NAME kprobe_disallow_rcu_functions
 PROG kprobe:rcu_* { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT No probes to attach
+EXPECT_REGEX ERROR: Probe has no valid attach points.
 WILL_FAIL
 
 NAME kprobe_hide_ftrace_invalid_address
@@ -424,7 +424,7 @@ AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME rawtracepoint_missing
 PROG rawtracepoint:nonsense { print("hit"); exit(); }
-EXPECT No probes to attach
+EXPECT_REGEX ERROR: Probe has no valid attach points.
 REQUIRES_FEATURE btf
 WILL_FAIL
 
