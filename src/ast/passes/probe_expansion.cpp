@@ -242,8 +242,6 @@ void ProbeExpander::expand()
 void ProbeExpander::visit(Program &prog)
 {
   Visitor<ProbeExpander>::visit(prog);
-
-  prog.clear_empty_probes();
 }
 
 void ProbeExpander::visit(AttachPointList &aps)
