@@ -42,11 +42,11 @@ std::string get_pid_fsns_root(pid_t pid)
   return proc_path.string();
 }
 
-Result<std::string> get_proc_maps(const std::string &pid)
+Result<std::string> get_proc_maps(pid_t pid)
 {
   std::error_code ec;
   std::filesystem::path proc_path{ "/proc" };
-  proc_path /= pid;
+  proc_path /= std::to_string(pid);
   proc_path /= "maps";
 
   bool exists = std::filesystem::exists(proc_path, ec);
@@ -59,11 +59,6 @@ Result<std::string> get_proc_maps(const std::string &pid)
     return make_error<SystemError>("Process no longer exists", ENOENT);
   }
   return proc_path.string();
-}
-
-Result<std::string> get_proc_maps(pid_t pid)
-{
-  return get_proc_maps(std::to_string(pid));
 }
 
 Result<std::vector<int>> get_pids_for_program(const std::string &program)
@@ -133,7 +128,7 @@ Result<std::vector<std::string>> get_mapped_paths_for_pid(pid_t pid)
   }
 
   std::vector<std::string> paths;
-  std::unordered_set<std::string> seen_mappings;
+  std::unordered_set<std::string> processed_paths;
 
   auto pid_fsns_root = get_pid_fsns_root(pid);
   // start with the exe.
@@ -141,7 +136,7 @@ Result<std::vector<std::string>> get_mapped_paths_for_pid(pid_t pid)
   if (pid_exe && pid_exe->find("(deleted)") == std::string::npos) {
     std::string name = pid_fsns_root + *pid_exe;
     paths.push_back(name);
-    seen_mappings.emplace(std::move(name));
+    processed_paths.emplace(std::move(name));
   }
 
   // get all the mapped libraries.
@@ -167,8 +162,8 @@ Result<std::vector<std::string>> get_mapped_paths_for_pid(pid_t pid)
     if (res == 1 && buf[0] == '/') {
       std::string name = pid_fsns_root + buf;
       if (name.find("(deleted)") == std::string::npos &&
-          !seen_mappings.contains(name)) {
-        seen_mappings.emplace(name);
+          !processed_paths.contains(name)) {
+        processed_paths.emplace(name);
         paths.push_back(std::move(name));
       }
     }
