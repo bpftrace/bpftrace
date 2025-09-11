@@ -1,0 +1,17 @@
+// :variant bool is_str(any expression)
+// Determine whether the given expression is a string.
+macro is_str(expr) {
+  typeinfo(expr).0 == "string"
+}
+
+// :variant bool is_ptr(any expression)
+// Determine whether the given expression is a pointer.
+macro is_ptr(expr) {
+  (typeinfo(expr).0)[sizeof(typeinfo(expr).0)-2] == "*"[0]
+}
+
+// :variant bool is_array(any expression)
+// Determine whether the given expression is an array.
+macro is_array(expr) {
+  (typeinfo(expr).0)[sizeof(typeinfo(expr).0)-2] == "]"[0]
+}
