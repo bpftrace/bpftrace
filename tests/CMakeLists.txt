@@ -75,6 +75,7 @@ add_executable(bpftrace_test
   ${CODEGEN_SRC}
 )
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
 
 add_subdirectory(data)
 add_dependencies(bpftrace_test data_source_dwarf data_source_btf data_source_funcs parser)
@@ -119,7 +120,6 @@ add_custom_target(
     testlibs
     ${CMAKE_BINARY_DIR}/src/bpftrace
 )
-add_test(NAME runtime_tests COMMAND ./runtime-tests.sh)
 
 file(GLOB_RECURSE runtime_test_src_files
   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -154,14 +154,12 @@ configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/
 
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
-add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
 
 if(ENABLE_TEST_VALIDATE_CODEGEN)
   if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18)
     message(STATUS "Adding codegen-validator test")
     configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
     add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
-    add_test(NAME codegen-validator COMMAND ./codegen-validator.sh ${CMAKE_SOURCE_DIR})
   else()
     message(STATUS "Not building with LLVM 18, skipping codegen-validator test")
   endif()
