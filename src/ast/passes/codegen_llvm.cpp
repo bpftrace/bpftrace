@@ -2566,6 +2566,7 @@ ScopedExpr CodegenLLVM::visit(Ternary &ternary)
                                        b_.GetType(ternary.result_type),
                                        ternary.result_type.IsSigned());
     b_.CreateBr(done);
+    BasicBlock *left_end_block = b_.GetInsertBlock();
 
     b_.SetInsertPoint(right_block);
     auto scoped_right = visit(ternary.right);
@@ -2573,11 +2574,12 @@ ScopedExpr CodegenLLVM::visit(Ternary &ternary)
                                         b_.GetType(ternary.result_type),
                                         ternary.result_type.IsSigned());
     b_.CreateBr(done);
+    BasicBlock *right_end_block = b_.GetInsertBlock();
 
     b_.SetInsertPoint(done);
     auto *phi = b_.CreatePHI(b_.GetType(ternary.result_type), 2, "result");
-    phi->addIncoming(left_expr, left_block);
-    phi->addIncoming(right_expr, right_block);
+    phi->addIncoming(left_expr, left_end_block);
+    phi->addIncoming(right_expr, right_end_block);
     return ScopedExpr(phi);
   } else if (ternary.result_type.IsNoneTy()) {
     // Type::none
