@@ -7,8 +7,8 @@
 // copied into BPF memory.
 macro strcontains(haystack, needle) {
   // Accept anything that `str` accepts, but not integers.
-  if (typeinfo(haystack) == typeinfo(1) || typeinfo(haystack) == typeinfo(-1) ||
-      typeinfo(needle) == typeinfo(1) || typeinfo(needle) == typeinfo(-1)) {
+  if (comptime typeinfo(haystack) == typeinfo(1) || typeinfo(haystack) == typeinfo(-1) ||
+               typeinfo(needle) == typeinfo(1) || typeinfo(needle) == typeinfo(-1)) {
     fail("strcontains requires pointers or strings");
   }
   let $haystack = str(haystack);

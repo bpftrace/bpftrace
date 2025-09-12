@@ -95,6 +95,10 @@ public:
   {
     return visitImpl(typeinfo.typeof);
   }
+  R visit(Comptime &comptime)
+  {
+    return visitImpl(comptime.expr);
+  }
   R visit([[maybe_unused]] MapDeclStatement &decl)
   {
     return default_value();
