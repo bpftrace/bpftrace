@@ -32,6 +32,7 @@ public:
   std::optional<Expression> visit(Probe &probe);
   std::optional<Expression> visit(Builtin &builtin);
   std::optional<Expression> visit(BlockExpr &block_expr);
+  std::optional<Expression> visit(ArrayAccess &acc);
   std::optional<Expression> visit(TupleAccess &acc);
 
 private:
@@ -803,12 +804,31 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
   return std::nullopt;
 }
 
+std::optional<Expression> LiteralFolder::visit(ArrayAccess &acc)
+{
+  visit(acc.expr);
+  visit(acc.indexpr);
+
+  if (auto *str = acc.expr.as<String>()) {
+    if (auto *index = acc.indexpr.as<Integer>()) {
+      if (index->value > str->value.size()) {
+        // This error happens later on.
+        return std::nullopt;
+      }
+      const char *s = str->value.c_str();
+      return ast_.make_node<Integer>(static_cast<uint64_t>(s[index->value]),
+                                     Location(acc.loc));
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<Expression> LiteralFolder::visit(TupleAccess &acc)
 {
   visit(acc.expr);
   if (auto *tuple = acc.expr.as<Tuple>()) {
     if (acc.index >= tuple->elems.size()) {
-      // This access error happens in a later pass
+      // This access error happens in a later pass.
       return std::nullopt;
     }
     return tuple->elems[acc.index];
