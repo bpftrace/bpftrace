@@ -943,6 +943,11 @@ Prints:
 ```
 
 
+### static_assert
+
+Assert something is true or fail the build.
+
+
 ### str
 - `string str(char * data [, uint32 length)`
 
