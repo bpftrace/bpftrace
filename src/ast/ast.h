@@ -144,6 +144,7 @@ class Tuple;
 class IfExpr;
 class BlockExpr;
 class Typeinfo;
+class Comptime;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -171,7 +172,8 @@ class Expression : public VariantNode<Integer,
                                       Tuple,
                                       IfExpr,
                                       BlockExpr,
-                                      Typeinfo> {
+                                      Typeinfo,
+                                      Comptime> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -535,6 +537,22 @@ public:
   }
 
   Typeof *typeof = nullptr;
+};
+
+class Comptime : public Node {
+public:
+  explicit Comptime(ASTContext &ctx, Expression expr, Location &&loc)
+      : Node(ctx, std::move(loc)), expr(std::move(expr)) {};
+  explicit Comptime(ASTContext &ctx, const Comptime &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        expr(clone(ctx, other.expr, loc + other.loc)) {};
+
+  const SizedType &type() const
+  {
+    return expr.type();
+  }
+
+  Expression expr;
 };
 
 class MapDeclStatement : public Node {

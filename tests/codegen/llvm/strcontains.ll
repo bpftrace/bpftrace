@@ -23,47 +23,47 @@ entry:
   %ctx = alloca %ctx_t, align 8
   %array_access = alloca i8, align 1
   %"||_result" = alloca i1, align 1
-  %"$$strcontains_$found" = alloca i1, align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_$found")
-  store i1 false, ptr %"$$strcontains_$found", align 1
-  %"$$strcontains_$needle" = alloca [5 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_$needle")
-  call void @llvm.memset.p0.i64(ptr align 1 %"$$strcontains_$needle", i8 0, i64 5, i1 false)
-  %"$$strcontains_$haystack" = alloca [17 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_$haystack")
-  call void @llvm.memset.p0.i64(ptr align 1 %"$$strcontains_$haystack", i8 0, i64 17, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strcontains_$haystack", ptr align 1 @hello-test-world, i64 17, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strcontains_$needle", ptr align 1 @test, i64 5, i1 false)
-  store i1 false, ptr %"$$strcontains_$found", align 1
+  %"$$strcontains_0_$found" = alloca i1, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_0_$found")
+  store i1 false, ptr %"$$strcontains_0_$found", align 1
+  %"$$strcontains_0_$needle" = alloca [5 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_0_$needle")
+  call void @llvm.memset.p0.i64(ptr align 1 %"$$strcontains_0_$needle", i8 0, i64 5, i1 false)
+  %"$$strcontains_0_$haystack" = alloca [17 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_0_$haystack")
+  call void @llvm.memset.p0.i64(ptr align 1 %"$$strcontains_0_$haystack", i8 0, i64 17, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strcontains_0_$haystack", ptr align 1 @hello-test-world, i64 17, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strcontains_0_$needle", ptr align 1 @test, i64 5, i1 false)
+  store i1 false, ptr %"$$strcontains_0_$found", align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result")
   br i1 false, label %"||_true", label %"||_lhs_false"
 
 left:                                             ; preds = %"||_merge"
-  store i1 true, ptr %"$$strcontains_$found", align 1
+  store i1 true, ptr %"$$strcontains_0_$found", align 1
   br label %done
 
 right:                                            ; preds = %"||_merge"
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
   %1 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strcontains_$haystack" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
-  store ptr %"$$strcontains_$haystack", ptr %"ctx.$$strcontains_$haystack", align 8
+  %"ctx.$$strcontains_0_$haystack" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
+  store ptr %"$$strcontains_0_$haystack", ptr %"ctx.$$strcontains_0_$haystack", align 8
   %2 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strcontains_$needle" = getelementptr %ctx_t, ptr %2, i64 0, i32 1
-  store ptr %"$$strcontains_$needle", ptr %"ctx.$$strcontains_$needle", align 8
+  %"ctx.$$strcontains_0_$needle" = getelementptr %ctx_t, ptr %2, i64 0, i32 1
+  store ptr %"$$strcontains_0_$needle", ptr %"ctx.$$strcontains_0_$needle", align 8
   %3 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strcontains_$found" = getelementptr %ctx_t, ptr %3, i64 0, i32 2
-  store ptr %"$$strcontains_$found", ptr %"ctx.$$strcontains_$found", align 8
+  %"ctx.$$strcontains_0_$found" = getelementptr %ctx_t, ptr %3, i64 0, i32 2
+  store ptr %"$$strcontains_0_$found", ptr %"ctx.$$strcontains_0_$found", align 8
   %4 = call ptr @llvm.preserve.static.offset(ptr %ctx)
   %ctx.start = getelementptr %ctx_t, ptr %4, i64 0, i32 3
   store i64 0, ptr %ctx.start, align 8
   br i1 true, label %is_positive, label %merge
 
 done:                                             ; preds = %merge, %left
-  %5 = load i1, ptr %"$$strcontains_$found", align 1
+  %5 = load i1, ptr %"$$strcontains_0_$found", align 1
   ret i64 0
 
 "||_lhs_false":                                   ; preds = %entry
-  %6 = ptrtoint ptr %"$$strcontains_$needle" to i64
+  %6 = ptrtoint ptr %"$$strcontains_0_$needle" to i64
   %7 = inttoptr i64 %6 to ptr
   %8 = call ptr @llvm.preserve.static.offset(ptr %7)
   %9 = getelementptr i8, ptr %8, i64 0
@@ -124,12 +124,12 @@ for_body:
   %4 = load i64, ptr %start, align 8
   %5 = add i64 %4, %0
   store i64 %5, ptr %current, align 8
-  %"ctx.$$strcontains_$haystack" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
-  %"$$strcontains_$haystack" = load ptr, ptr %"ctx.$$strcontains_$haystack", align 8
-  %"ctx.$$strcontains_$needle" = getelementptr %ctx_t, ptr %1, i64 0, i32 1
-  %"$$strcontains_$needle" = load ptr, ptr %"ctx.$$strcontains_$needle", align 8
-  %"ctx.$$strcontains_$found" = getelementptr %ctx_t, ptr %1, i64 0, i32 2
-  %"$$strcontains_$found" = load ptr, ptr %"ctx.$$strcontains_$found", align 8
+  %"ctx.$$strcontains_0_$haystack" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
+  %"$$strcontains_0_$haystack" = load ptr, ptr %"ctx.$$strcontains_0_$haystack", align 8
+  %"ctx.$$strcontains_0_$needle" = getelementptr %ctx_t, ptr %1, i64 0, i32 1
+  %"$$strcontains_0_$needle" = load ptr, ptr %"ctx.$$strcontains_0_$needle", align 8
+  %"ctx.$$strcontains_0_$found" = getelementptr %ctx_t, ptr %1, i64 0, i32 2
+  %"$$strcontains_0_$found" = load ptr, ptr %"ctx.$$strcontains_0_$found", align 8
   %6 = load i64, ptr %current, align 8
   %7 = icmp uge i64 %6, 17
   %true_cond = icmp ne i1 %7, false
@@ -149,7 +149,7 @@ right:                                            ; preds = %for_body
 
 done:                                             ; preds = %right, %unreach
   %8 = load i64, ptr %current, align 8
-  %9 = ptrtoint ptr %"$$strcontains_$haystack" to i64
+  %9 = ptrtoint ptr %"$$strcontains_0_$haystack" to i64
   %10 = mul i64 %8, 1
   %11 = inttoptr i64 %9 to ptr
   %12 = call ptr @llvm.preserve.static.offset(ptr %11)
@@ -175,17 +175,17 @@ right2:                                           ; preds = %done
 done3:                                            ; preds = %right2, %unreach5
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
   %17 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strcontains_$needle6" = getelementptr %ctx_t.0, ptr %17, i64 0, i32 0
-  store ptr %"$$strcontains_$needle", ptr %"ctx.$$strcontains_$needle6", align 8
+  %"ctx.$$strcontains_0_$needle6" = getelementptr %ctx_t.0, ptr %17, i64 0, i32 0
+  store ptr %"$$strcontains_0_$needle", ptr %"ctx.$$strcontains_0_$needle6", align 8
   %18 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strcontains_$found7" = getelementptr %ctx_t.0, ptr %18, i64 0, i32 1
-  store ptr %"$$strcontains_$found", ptr %"ctx.$$strcontains_$found7", align 8
+  %"ctx.$$strcontains_0_$found7" = getelementptr %ctx_t.0, ptr %18, i64 0, i32 1
+  store ptr %"$$strcontains_0_$found", ptr %"ctx.$$strcontains_0_$found7", align 8
   %19 = call ptr @llvm.preserve.static.offset(ptr %ctx)
   %"ctx.$i" = getelementptr %ctx_t.0, ptr %19, i64 0, i32 2
   store ptr %current, ptr %"ctx.$i", align 8
   %20 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strcontains_$haystack8" = getelementptr %ctx_t.0, ptr %20, i64 0, i32 3
-  store ptr %"$$strcontains_$haystack", ptr %"ctx.$$strcontains_$haystack8", align 8
+  %"ctx.$$strcontains_0_$haystack8" = getelementptr %ctx_t.0, ptr %20, i64 0, i32 3
+  store ptr %"$$strcontains_0_$haystack", ptr %"ctx.$$strcontains_0_$haystack8", align 8
   %21 = call ptr @llvm.preserve.static.offset(ptr %ctx)
   %ctx.start = getelementptr %ctx_t.0, ptr %21, i64 0, i32 4
   store i64 0, ptr %ctx.start, align 8
@@ -199,7 +199,7 @@ is_positive:                                      ; preds = %done3
   br label %merge
 
 merge:                                            ; preds = %is_positive, %done3
-  %22 = load i1, ptr %"$$strcontains_$found", align 1
+  %22 = load i1, ptr %"$$strcontains_0_$found", align 1
   %true_cond12 = icmp ne i1 %22, false
   br i1 %true_cond12, label %left9, label %right10
 
@@ -221,9 +221,9 @@ define internal i64 @loop_cb.1(i64 %0, ptr %1) #0 section ".text" !dbg !47 {
 for_body:
   %array_access16 = alloca i8, align 1
   %array_access14 = alloca i8, align 1
-  %"$$strcontains_$k" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_$k")
-  store i64 0, ptr %"$$strcontains_$k", align 8
+  %"$$strcontains_0_$k" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_0_$k")
+  store i64 0, ptr %"$$strcontains_0_$k", align 8
   %array_access = alloca i8, align 1
   %2 = call ptr @llvm.preserve.static.offset(ptr %1)
   %start = getelementptr %ctx_t.0, ptr %2, i64 0, i32 4
@@ -232,14 +232,14 @@ for_body:
   %4 = load i64, ptr %start, align 8
   %5 = add i64 %4, %0
   store i64 %5, ptr %current, align 8
-  %"ctx.$$strcontains_$needle" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 0
-  %"$$strcontains_$needle" = load ptr, ptr %"ctx.$$strcontains_$needle", align 8
-  %"ctx.$$strcontains_$found" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 1
-  %"$$strcontains_$found" = load ptr, ptr %"ctx.$$strcontains_$found", align 8
+  %"ctx.$$strcontains_0_$needle" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 0
+  %"$$strcontains_0_$needle" = load ptr, ptr %"ctx.$$strcontains_0_$needle", align 8
+  %"ctx.$$strcontains_0_$found" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 1
+  %"$$strcontains_0_$found" = load ptr, ptr %"ctx.$$strcontains_0_$found", align 8
   %"ctx.$i" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 2
   %"$i" = load ptr, ptr %"ctx.$i", align 8
-  %"ctx.$$strcontains_$haystack" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 3
-  %"$$strcontains_$haystack" = load ptr, ptr %"ctx.$$strcontains_$haystack", align 8
+  %"ctx.$$strcontains_0_$haystack" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 3
+  %"$$strcontains_0_$haystack" = load ptr, ptr %"ctx.$$strcontains_0_$haystack", align 8
   %6 = load i64, ptr %current, align 8
   %7 = icmp uge i64 %6, 5
   %true_cond = icmp ne i1 %7, false
@@ -259,7 +259,7 @@ right:                                            ; preds = %for_body
 
 done:                                             ; preds = %right, %unreach
   %8 = load i64, ptr %current, align 8
-  %9 = ptrtoint ptr %"$$strcontains_$needle" to i64
+  %9 = ptrtoint ptr %"$$strcontains_0_$needle" to i64
   %10 = mul i64 %8, 1
   %11 = inttoptr i64 %9 to ptr
   %12 = call ptr @llvm.preserve.static.offset(ptr %11)
@@ -277,7 +277,7 @@ unreach:                                          ; No predecessors!
   br label %done
 
 left1:                                            ; preds = %done
-  store i1 true, ptr %"$$strcontains_$found", align 1
+  store i1 true, ptr %"$$strcontains_0_$found", align 1
   br label %for_break
 
 right2:                                           ; preds = %done
@@ -287,8 +287,8 @@ done3:                                            ; preds = %right2, %unreach5
   %17 = load i64, ptr %"$i", align 8
   %18 = load i64, ptr %current, align 8
   %19 = add i64 %17, %18
-  store i64 %19, ptr %"$$strcontains_$k", align 8
-  %20 = load i64, ptr %"$$strcontains_$k", align 8
+  store i64 %19, ptr %"$$strcontains_0_$k", align 8
+  %20 = load i64, ptr %"$$strcontains_0_$k", align 8
   %21 = icmp uge i64 %20, 17
   %true_cond9 = icmp ne i1 %21, false
   br i1 %true_cond9, label %left6, label %right7
@@ -303,8 +303,8 @@ right7:                                           ; preds = %done3
   br label %done8
 
 done8:                                            ; preds = %right7, %unreach10
-  %22 = load i64, ptr %"$$strcontains_$k", align 8
-  %23 = ptrtoint ptr %"$$strcontains_$haystack" to i64
+  %22 = load i64, ptr %"$$strcontains_0_$k", align 8
+  %23 = ptrtoint ptr %"$$strcontains_0_$haystack" to i64
   %24 = mul i64 %22, 1
   %25 = inttoptr i64 %23 to ptr
   %26 = call ptr @llvm.preserve.static.offset(ptr %25)
@@ -314,7 +314,7 @@ done8:                                            ; preds = %right7, %unreach10
   %28 = load i8, ptr %array_access14, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access14)
   %29 = load i64, ptr %current, align 8
-  %30 = ptrtoint ptr %"$$strcontains_$needle" to i64
+  %30 = ptrtoint ptr %"$$strcontains_0_$needle" to i64
   %31 = mul i64 %29, 1
   %32 = inttoptr i64 %30 to ptr
   %33 = call ptr @llvm.preserve.static.offset(ptr %32)
