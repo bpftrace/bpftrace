@@ -29,8 +29,15 @@ const SizedType &Expression::type() const
 
 bool Expression::is_literal() const
 {
-  return is<Integer>() || is<NegativeInteger>() || is<String>() ||
-         is<Boolean>();
+  if (is<Integer>() || is<NegativeInteger>() || is<String>() || is<Boolean>()) {
+    return true;
+  }
+  if (auto *tuple = as<Tuple>()) {
+    return std::ranges::all_of(tuple->elems, [](const auto &elem) {
+      return elem.is_literal();
+    });
+  }
+  return false;
 }
 
 static constexpr std::string_view ENUM = "enum ";

@@ -70,9 +70,9 @@ public:
   {
     num_unresolved_++;
   }
-  void add_unresolved_branch(IfExpr *if_expr)
+  void add_unresolved_branch(IfExpr &if_expr)
   {
-    unresolved_branches_.push_back(if_expr);
+    unresolved_branches_.push_back(&if_expr);
   }
   void reset_num_unresolved()
   {
@@ -198,6 +198,7 @@ public:
   void visit(Probe &probe);
   void visit(BlockExpr &block);
   void visit(Subprog &subprog);
+  void visit(Comptime &comptime);
 
 private:
   ASTContext &ctx_;
@@ -2756,33 +2757,19 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
   // In order to evaluate literals and resolved type operators, we need to fold
   // the condition. This is handled in the `Expression` visitor. Branches that
   // are always `false` are exempted from semantic checks. If after folding the
-  // condition still has unresolved `typeof` operators, then we are not able to
-  // visit yet. These branches are also not allowed to contain information
+  // condition still has unresolved `comptime` operators, then we are not able
+  // to visit yet. These branches are also not allowed to contain information
   // necessary to resolve types, that is a cycle in the dependency graph, the
   // `if` condition must be resolvable first. If the condition *is* resolvable
   // and is a constant, then we prune the dead code paths and will never use
   // them for semantic analysis.
-  visit(if_expr.cond);
-  bool unresolved_types = false;
-  CollectNodes<Typeinfo>().visit(
-      if_expr.cond, [&]([[maybe_unused]] const Typeinfo &typeinfo) {
-        unresolved_types = true;
-        return false; // Don't collect.
-      });
-  if (unresolved_types) {
-    pass_tracker_.add_unresolved_branch(&if_expr);
+  if (auto *comptime = if_expr.cond.as<Comptime>()) {
+    visit(comptime->expr);
+    pass_tracker_.add_unresolved_branch(if_expr);
     return; // Skip visiting this `if` for now.
   }
-  if (auto *b = if_expr.cond.as<Boolean>()) {
-    if (b->value) {
-      visit(if_expr.left);
-      return;
-    } else {
-      visit(if_expr.right);
-      return;
-    }
-  }
 
+  visit(if_expr.cond);
   visit(if_expr.left);
   visit(if_expr.right);
 
@@ -4167,6 +4154,18 @@ void SemanticAnalyser::visit(Subprog &subprog)
     }
   }
   scope_stack_.pop_back();
+}
+
+void SemanticAnalyser::visit(Comptime &comptime)
+{
+  // If something has not been resolved here, then we fail. Calls, variables,
+  // maps and other stateful things should be trapped by the fold pass itself,
+  // but there may just be statements that are not yet supported there, e.g.
+  // `comptime { unroll(5) { } }`. We can refine these and support more
+  // compile-time evaluation as needed. Note that we shouldn't hit this for
+  // `if` cases (that may depend on some type information), as these are
+  // handled above.
+  comptime.addError() << "Unable to resolve comptime expression.";
 }
 
 int SemanticAnalyser::analyse()

@@ -133,6 +133,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> OFFSETOF "offsetof"
 %token <std::string> TYPEOF "typeof"
 %token <std::string> TYPEINFO "typeinfo"
+%token <std::string> COMPTIME "comptime"
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
 %token <bool> BOOL "bool"
@@ -145,6 +146,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::AttachPointList> attach_points
 %type <ast::BlockExpr *> none_block bare_block block_expr
 %type <ast::Call *> call
+%type <ast::Comptime *> comptime_expr
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
 %type <ast::Typeof *> typeof_expr any_type
@@ -700,6 +702,7 @@ unary_op:
 expr:
                 conditional_expr    { $$ = $1; }
         |       if_expr             { $$ = $1; }
+        |       comptime_expr       { $$ = $1; }
                 ;
 
 conditional_expr:
@@ -796,9 +799,14 @@ typeinfo_expr:
         |       TYPEINFO "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typeinfo>(driver.ctx.make_node<ast::Typeof>($3, @$), @$); }
                 ;
 
+comptime_expr:
+                COMPTIME expr { $$ = driver.ctx.make_node<ast::Comptime>($2, @$); }
+                ;
+
 any_type:
                 type        { $$ = driver.ctx.make_node<ast::Typeof>($1, @$); }
         |       typeof_expr { $$ = $1; }
+                ;
 
 keyword:
                 BREAK         { $$ = $1; }
@@ -816,6 +824,7 @@ keyword:
         |       SUBPROG       { $$ = $1; }
         |       TYPEOF        { $$ = $1; }
         |       TYPEINFO      { $$ = $1; }
+        |       COMPTIME      { $$ = $1; }
                 ;
 
 ident:
