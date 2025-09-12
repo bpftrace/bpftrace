@@ -49,6 +49,7 @@ TestStruct = namedtuple(
         'new_pidns',
         'skip_if_env_has',
         'return_code',
+        'localize_ts',
     ],
 )
 
@@ -130,6 +131,7 @@ class TestParser(object):
         new_pidns = False
         skip_if_env_has = None
         return_code = None
+        localize_ts = -1
         prev_item_name = ''
 
         for item in test:
@@ -215,6 +217,8 @@ class TestParser(object):
                 skip_if_env_has = (parts[0], parts[1])
             elif item_name == "RETURN_CODE":
                 return_code = int(line.strip(' '))
+            elif item_name == "LOCALIZE_TIMESTAMPS":
+                localize_ts = int(line.strip(' '))
             else:
                 raise UnknownFieldError('Field %s is not a runtime test directive. Suite: %s' % (item_name, test_suite))
 
@@ -260,4 +264,5 @@ class TestParser(object):
             new_pidns,
             skip_if_env_has,
             return_code,
+            localize_ts,
         )

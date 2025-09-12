@@ -10,6 +10,7 @@ import time
 from looseversion import LooseVersion
 import re
 from functools import lru_cache
+import time
 
 import cmake_vars
 
@@ -246,6 +247,11 @@ class Runner(object):
         def get_pid_ns_cmd(cmd):
             return nsenter + [os.path.abspath(x) for x in cmd.split()]
 
+        def localize_timestamps(fmt):
+            if test.localize_ts < 0:
+                return fmt
+            return time.strftime(fmt, time.localtime(test.localize_ts))
+
         def check_expect(expect, output):
             try:
                 if expect.mode == "text":
@@ -260,7 +266,7 @@ class Runner(object):
                 elif expect.mode == "file":
                     with open(expect.expect) as expect_file:
                         # remove leading and trailing empty lines
-                        return output.strip() == expect_file.read().strip()
+                        return output.strip() == localize_timestamps(expect_file.read().strip())
                 else:
                     with open(expect.expect) as expect_file:
                         _, file_extension = os.path.splitext(expect.expect)
