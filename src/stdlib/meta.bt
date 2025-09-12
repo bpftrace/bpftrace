@@ -1,0 +1,14 @@
+// Determine whether the given expression is a string.
+macro isstr(x) {
+  typeinfo(x).0 == "string"
+}
+
+// Determine whether the given expression is a pointer.
+macro isptr(x) {
+  (typeinfo(x).0)[sizeof(typeinfo(x).0)-2] == "*"[0]
+}
+
+// Determine whether the given expression is an array.
+macro isarray(x) {
+  (typeinfo(x).0)[sizeof(typeinfo(x).0)-2] == "]"[0]
+}
