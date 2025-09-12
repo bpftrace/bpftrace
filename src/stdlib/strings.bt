@@ -1,44 +1,140 @@
-// :variant int64 strcontains(const char *haystack, const char *needle)
+// String helpers.
+//
+// This file contains various string-related functions and helpers. Strings are
+// complex, especially C strings. In general, the complexities come from the
+// need for dynamically-sized types or dynamic memory management. In bpftrace,
+// we introduce an automatic parameterized `string` type in order to make this
+// simpler, but it also makes it more complex. These string helpers are
+// intended to operate uniformally on the wider class of "string-like" objects.
+//
+// This means that these functions should efficiently support:
+//  * Pointers to int8 (signed char)
+//  * Arrays of int8
+//  * Native bpftrace `string` objects of various sizes
+
+// Checks that this value is string-like.
+macro assert_str(exp) {
+  if (comptime is_str(exp)) {
+    true
+  } else if (comptime is_array(exp)) {
+    static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like arrays must contain a char-like type");
+    true
+  } else if (comptime is_ptr(exp)) {
+    static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like pointers must point to a char-like type");
+    true
+  } else {
+    static_assert(false, "string-like values must be either strings, arrays or pointers");
+    false
+  }
+}
+
+// Returns the default unbounded length.
+macro default_str_length() {
+  sizeof(str((int8*)0))
+}
+
+// Returns the length of a string-like object.
+macro strlen($var) {
+  assert_str($var);
+  if (comptime is_str($var)) {
+    __strnlen(&$var, sizeof($var))
+  } else if (comptime is_array($var)) {
+    __strnlen($var, sizeof($var))
+  } else {
+    __strnlen($var, default_str_length())
+  }
+}
+macro strlen(exp) {
+  assert_str(exp);
+  if (comptime is_str(exp) || is_array(exp)) {
+    // This must be unbound, unfortunately we need to bind it.
+    let $x = exp;
+    strlen($x)
+  } else {
+    __strnlen(exp, default_str_length())
+  }
+}
+macro __strnlen(ptr, max_size) {
+  $sz = __bpf_strnlen(ptr, (int64)max_size);
+  if ($sz >= 0) {
+    (uint64)$sz
+  } else {
+    $sz = 0;
+    for ($i : ((uint64)0)..((uint64)max_size)) {
+      if (ptr[$i] == 0) {
+        break;
+      }
+      $sz += 1;
+    }
+    (uint64)$sz
+  }
+}
+
+// Returns the "capacity" of a string-like object.
+//
+// In most cases this is the same as the length, but for bpftrace-native
+// strings and arrays, this is the underlying object capacity. This is used to
+// bound searches and lookups without needing to scan the string itself.
+macro strcap(exp) {
+  assert_str(exp);
+  if (comptime is_str(exp)) {
+    sizeof(exp)
+  } else if (comptime is_array(exp)) {
+    sizeof(exp)/sizeof(exp[0])
+  } else {
+    strlen(exp) // Pointer, so pass by value.
+  }
+}
+
 // Compares whether the string haystack contains the string needle.
 //
 // If needle is contained then true is returned, else false is returned.
-//
-// Note that the passed expressions are always reified as strings, so may be
-// copied into BPF memory.
-macro strcontains(haystack, needle) {
-  // Accept anything that `str` accepts, but not integers.
-  if (comptime typeinfo(haystack) == typeinfo(1) || typeinfo(haystack) == typeinfo(-1) ||
-               typeinfo(needle) == typeinfo(1) || typeinfo(needle) == typeinfo(-1)) {
-    fail("strcontains requires pointers or strings");
-  }
-  let $haystack = str(haystack);
-  let $needle = str(needle);
-  let $found = false;
-  if (sizeof($needle) == 0 || $needle[0] == 0) {
+macro strstr($haystack, $needle) {
+  assert_str($haystack);
+  assert_str($needle);
+  let $index = -1;
+  let $haystack_size = strcap($haystack);
+  let $needle_size = strcap($needle);
+  if ($needle_size == 0) {
     // Special case: the needle is zero-sized.
-    $found = true;
+    $index = 0;
+  } else if ($needle[0] == 0) {
+    // Special case: the needle is empty.
+    $index = 0;
+  } else if (__bpf_strnstr(&$haystack, &$needle, (int64)$haystack_size, &$index) >= 0) {
+    // The index will be already set.
   } else {
-    for ($i : ((uint64)0)..sizeof($haystack)) {
-      // Help the verifier know this is safe.
-      if ($i >= sizeof($haystack)) {
-        break;
+    let $found = false;
+    for ($i : ((uint64)0)..$haystack_size) {
+      // Help the verifier know this is safe. This is only needed if the type
+      // is a string, because it will refer back to BPF memory and the function
+      // needs to do a bounds check.
+      if (comptime is_str($haystack) || is_array($haystack)) {
+        if ($i >= sizeof($haystack)) {
+          break;
+        }
       }
       if ($haystack[$i] == 0) {
         break;
       }
-      for ($j : ((uint64)0)..sizeof($needle)) {
+      for ($j : ((uint64)0)..$needle_size) {
         // Help the verifier know this is safe.
-        if ($j >= sizeof($needle)) {
-          break;
+        if (comptime is_str($needle) || is_array($needle)) {
+          if ($j >= sizeof($needle)) {
+            break;
+          }
         }
         if ($needle[$j] == 0) {
+          $index = (int64)$i;
           $found = true;
           break;
         }
         let $k = $i + $j;
         // Help the verifier a bit more.
-        if ($k >= sizeof($haystack)) {
-          break;
+        if (comptime is_str($haystack) || is_array($haystack)) {
+          if ($k >= sizeof($haystack)) {
+            break;
+          }
         }
         if ($haystack[$k] != $needle[$j]) {
           break;
@@ -49,5 +145,25 @@ macro strcontains(haystack, needle) {
       }
     }
   }
-  $found
+  $index
+}
+macro strstr($haystack, needle) {
+  let $needle = needle;
+  strstr($haystack, $needle)
+}
+macro strstr(haystack, $needle) {
+  let $haystack = haystack;
+  strstr($haystack, $needle)
+}
+macro strstr(haystack, needle) {
+  let $haystack = haystack;
+  strstr($haystack, needle)
+}
+
+// :variant int64 strcontains(const char *haystack, const char *needle)
+// Compares whether the string haystack contains the string needle.
+//
+// If needle is contained then true is returned, else false is returned.
+macro strcontains(haystack, needle) {
+  strstr(haystack, needle) >= 0
 }

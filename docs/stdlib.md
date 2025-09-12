@@ -19,6 +19,11 @@ Basically all functions or macros that don't have arguments or have default argu
 Simple assertion macro that will exit the entire script with an error code if the condition is not met.
 
 
+### assert_str
+
+Checks that this value is string-like.
+
+
 ### bswap
 - `uint8 bswap(uint8 n)`
 - `uint16 bswap(uint16 n)`
@@ -183,6 +188,11 @@ This utilizes the BPF helper `raw_smp_processor_id`
 Pointer to `struct task_struct` of the current task
 
 This utilizes the BPF helper `get_current_task`
+
+
+### default_str_length
+
+Returns the default unbounded length.
 
 
 ### delete
@@ -964,15 +974,21 @@ In case the string is longer than the specified length only `length - 1` bytes a
 When available (starting from kernel 5.5, see the `--info` flag) bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
 
 
+### strcap
+
+Returns the "capacity" of a string-like object.
+
+In most cases this is the same as the length, but for bpftrace-native
+strings and arrays, this is the underlying object capacity. This is used to
+bound searches and lookups without needing to scan the string itself.
+
+
 ### strcontains
 - `int64 strcontains(const char *haystack, const char *needle)`
 
 Compares whether the string haystack contains the string needle.
 
 If needle is contained then true is returned, else false is returned.
-
-Note that the passed expressions are always reified as strings, so may be
-copied into BPF memory.
 
 
 ### strerror
@@ -1012,6 +1028,11 @@ bpftrace also supports the following format string extensions:
 | `%f` | Microsecond as a decimal number, zero-padded on the left |
 
 
+### strlen
+
+Returns the length of a string-like object.
+
+
 ### strncmp
 - `int64 strncmp(char * s1, char * s2, int64 n)`
 
@@ -1021,6 +1042,13 @@ If they’re equal `0` is returned, else a non-zero value is returned.
 bpftrace doesn’t read past the length of the shortest string.
 
 The use of the `==` and `!=` operators is recommended over calling `strncmp` directly.
+
+
+### strstr
+
+Compares whether the string haystack contains the string needle.
+
+If needle is contained then true is returned, else false is returned.
 
 
 ### system
