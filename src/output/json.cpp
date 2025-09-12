@@ -318,10 +318,15 @@ struct JsonEmitter<Value::TimeSeries> {
     bool first = true;
     out << "[";
     for (const auto &[ts, value] : tseries.values) {
-      if (!first) {
+      if (std::holds_alternative<std::monostate>(value.variant)) {
+        continue;
+      }
+      if (first) {
+        first = false;
+      } else {
         out << ",";
       }
-      out << "{\"interval_start\":" << ts << ",\"value\":" << value << "}";
+      out << R"({"interval_start":")" << ts << R"(","value":)" << value << "}";
     }
     out << "]";
   }
