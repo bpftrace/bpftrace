@@ -1988,8 +1988,10 @@ void SemanticAnalyser::visit(Call &call)
           args.emplace_back(name, call.vargs[i].type());
           continue;
         }
-        call.addError() << "Unable to convert argument type: "
-                        << compat_arg_type.takeError();
+        call.addError() << "Unable to convert argument type, "
+                        << "function requires '" << type << "', "
+                        << "found '" << typestr(call.vargs[i].type())
+                        << "': " << compat_arg_type.takeError();
         continue;
       }
       args.emplace_back(name, std::move(*compat_arg_type));
