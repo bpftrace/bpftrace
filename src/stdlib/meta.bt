@@ -12,3 +12,10 @@ macro isptr(x) {
 macro isarray(x) {
   (typeinfo(x).0)[sizeof(typeinfo(x).0)-2] == "]"[0]
 }
+
+// Assert something is true or fail the build.
+macro static_assert(cond, msg) {
+  if (comptime !cond) {
+    fail(msg);
+  }
+}
