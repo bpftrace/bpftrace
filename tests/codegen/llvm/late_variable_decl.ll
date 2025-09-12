@@ -36,12 +36,21 @@ entry:
   %"$x" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
   store i64 0, ptr %"$x", align 8
+  br i1 true, label %left, label %right
+
+left:                                             ; preds = %entry
   store i64 1, ptr %"$x", align 8
+  br label %done
+
+right:                                            ; preds = %entry
+  br label %done
+
+done:                                             ; preds = %right, %left
   store i64 2, ptr %"$x1", align 8
   store i64 1, ptr %"$i", align 8
   br label %while_cond
 
-while_cond:                                       ; preds = %while_body, %entry
+while_cond:                                       ; preds = %while_body, %done
   %1 = load i64, ptr %"$i", align 8
   %true_cond = icmp ne i64 %1, 0
   br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !56

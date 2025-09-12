@@ -509,34 +509,26 @@ TEST(fold_literals, cast)
 
 TEST(fold_literals, conditional)
 {
-  test_not("if (1) { }", "if");
-  test_not("if (-1) { }", "if");
-  test_not("if (0) { }", "if");
-  test_not("if (1 + 1) { }", "if");
-  test_not("if (\"str\") { }", "if");
-  test_not("if (\"\") { }", "if");
-  test_not("if (true) { }", "if");
-  test_not("if (false) { }", "if");
-
-  test_not("while (0) {}", "while");
-  test_not("while (\"\") {}", "while");
-  test_not("while (false) {}", "while");
-  test_not("while (false) { while(false) {} }", "while");
-
-  // Just make sure the while statement remains
-  test("while (1) {}", "while(\n");
-  test("while (\"str\") {}", "while(\n");
-  test("while (-1) {}", "while(\n");
-  test("while (1 + 1) {}", "while(\n");
+  test_not("if (comptime 1) { }", "if");
+  test_not("if (comptime -1) { }", "if");
+  test_not("if (comptime 0) { }", "if");
+  test_not("if (comptime 1 + 1) { }", "if");
+  test_not("if (comptime \"str\") { }", "if");
+  test_not("if (comptime \"\") { }", "if");
+  test_not("if (comptime true) { }", "if");
+  test_not("if (comptime false) { }", "if");
+  test("if (true) { }", "if");
+  test("if (false) { }", "if");
 }
 
 TEST(fold_literals, tuple_access)
 {
-  test_not("(1,0).0", "tuple:");
-  test_not("(1, 1 + 1).1", "tuple:");
-  test_not("($x, 1 + 1).0", "tuple:");
-  // Left as is
-  test("(1,0).2", ".\n   tuple:"); // bad access
+  test_not("comptime (1,0).0", "tuple:");
+  test_not("comptime (1, 1 + 1).1", "tuple:");
+  // This cannot be evaluated.
+  test_error("comptime ($x, 1 + 1).0", "comptime");
+  // Left as is.
+  test("comptime (1,0).2", ".\n   tuple:"); // bad access
   test("$x = (1,0); $x.0",
        "=\n   variable: $x\n   tuple:\n    int: 1 :: [int64]\n    int: 0 :: "
        "[int64]\n  .\n   variable: $x"); // variable tuple
@@ -546,6 +538,14 @@ TEST(fold_literals, array_access)
 {
   test("\"foo\"[0]", "int: 102 :: [int64]");
   test("\"foo\"[1]", "int: 111 :: [int64]");
+}
+
+TEST(fold_literals, comptime)
+{
+  // This are temporary restrictions, but enough that we error when we hit a
+  // variable or map as part of a comptime expression.
+  test_error("$x = 0; comptime $x + 1", "variable");
+  test_error("@x = 0; comptime @x + 1", "map");
 }
 
 } // namespace bpftrace::test::fold_literals
