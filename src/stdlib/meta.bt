@@ -15,3 +15,11 @@ macro is_ptr(expr) {
 macro is_array(expr) {
   (typeinfo(expr).0)[sizeof(typeinfo(expr).0)-2] == "]"[0]
 }
+
+// :variant void static_assert(bool condition, string msg)
+// Assert something is true or fail the build.
+macro static_assert(cond, msg) {
+  if (comptime !cond) {
+    fail(msg);
+  }
+}

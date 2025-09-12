@@ -946,6 +946,12 @@ Prints:
 ```
 
 
+### static_assert
+- `void static_assert(bool condition, string msg)`
+
+Assert something is true or fail the build.
+
+
 ### str
 - `string str(char * data [, uint32 length)`
 
