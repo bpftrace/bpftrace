@@ -1113,12 +1113,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.builtin_type = CreateString(str_size + 1);
   } else if (builtin.ident == "__builtin_username") {
     builtin.builtin_type = CreateUsername();
-  } else if (builtin.ident == "__builtin_usermode") {
-    if (arch::Host::Machine != arch::Machine::X86_64) {
-      builtin.addError() << "'usermode' builtin is only supported on x86_64";
-      return;
-    }
-    builtin.builtin_type = CreateUInt8();
   } else if (builtin.ident == "__builtin_cpid") {
     if (!has_child_) {
       builtin.addError() << "cpid cannot be used without child command";
@@ -2815,8 +2809,8 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
 
   if (!lhs.IsSameType(rhs)) {
     if (is_final_pass()) {
-      if_expr.addError() << "Branches must return the same type: "
-                         << "have '" << lhs << "' and '" << rhs << "'";
+      if_expr.addError() << "Branches must return the same type: " << "have '"
+                         << lhs << "' and '" << rhs << "'";
     }
     // This assignment is just temporary to prevent errors
     // before the final pass
