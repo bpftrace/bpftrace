@@ -148,8 +148,6 @@ public:
   Value *CreateMapKeyAllocation(const SizedType &value_type,
                                 const std::string &name,
                                 const Location &loc);
-  void CreateCheckSetRecursion(const Location &loc, int early_exit_ret);
-  void CreateUnSetRecursion(const Location &loc);
   CallInst *CreateHelperCall(bpf_func_id func_id,
                              FunctionType *helper_type,
                              ArrayRef<Value *> args,

@@ -695,10 +695,10 @@ TEST_F(bpftrace_btf, add_probes_fentry)
 
   check_probe(bpftrace->get_probes().at(0),
               ProbeType::fentry,
-              "fentry:mock_vmlinux:func_1");
+              "fentry:vmlinux:func_1");
   check_probe(bpftrace->get_probes().at(1),
               ProbeType::fexit,
-              "fexit:mock_vmlinux:func_1");
+              "fexit:vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_fentry_bpf_func)
@@ -735,18 +735,17 @@ TEST_F(bpftrace_btf, add_probes_fentry_bpf_id)
 TEST_F(bpftrace_btf, add_probes_kprobe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("kprobe:mock_vmlinux:func_1,kretprobe:mock_vmlinux:func_1 {}",
-              *bpftrace);
+  parse_probe("kprobe:vmlinux:func_1,kretprobe:vmlinux:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   check_probe(bpftrace->get_probes().at(0),
               ProbeType::kprobe,
-              "kprobe:mock_vmlinux:func_1");
+              "kprobe:vmlinux:func_1");
   check_probe(bpftrace->get_probes().at(1),
               ProbeType::kretprobe,
-              "kretprobe:mock_vmlinux:func_1");
+              "kretprobe:vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_iter_task)
@@ -873,12 +872,6 @@ TEST(bpftrace, list_modules_kprobe_explicit)
   EXPECT_THAT(modules, Contains("vmlinux"));
   EXPECT_THAT(modules, Contains("kernel_mod"));
 }
-
-// Implicit fentry/fexit is not tested b/c the mocks are currently wired
-// up in a somewhat rigid way. The mocked data source uses "vmlinux" module
-// but another mock forces "mock_vmlinux" module. Anyone reading this comment
-// is welcome to try it out again (in case it's been fixed in interim) or do
-// a proper fix.
 
 TEST_F(bpftrace_btf, list_modules_fentry_explicit)
 {

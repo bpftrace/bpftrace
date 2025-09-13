@@ -148,3 +148,11 @@ NAME map key scratch buffer for map aggregates
 PROG config = { on_stack_limit = 0 }  begin { @a[pid, comm, "reallylongstr"] = count(); }
 EXPECT Attached 1 probe
 TIMEOUT 1
+
+# Ensure that we inject the recursion check appropriately. This relies on the
+# raw spin lock path being invoked 1000 times, and is not a guarantee. But given
+# how hot this path is, it should be reliable.
+NAME recursion check
+PROG fentry:vmlinux:_raw_spin_lock { @hit = count(); @running[cpu]++; if (@running[cpu] > 1) { print("fail"); exit(); } @running[cpu]--; if (@hit > 1000) { print("pass"); exit(); } }
+EXPECT pass
+TIMEOUT 5

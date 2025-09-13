@@ -3250,7 +3250,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
                                 std::optional<int> usdt_location_index,
                                 bool dummy)
 {
-  auto probe_type = probetype(current_attach_point_->provider);
   int index = current_attach_point_->index() ?: probe.index();
   auto func_name = util::get_function_name_for_probe(name,
                                                      index,
@@ -3266,11 +3265,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
   // check: do the following 8 lines need to be in the wildcard loop?
   ctx_ = func->arg_begin();
-
-  if (bpftrace_.need_recursion_check_) {
-    b_.CreateCheckSetRecursion(current_attach_point_->loc,
-                               getReturnValueForProbe(probe_type));
-  }
 
   variables_.clear();
   auto scoped_block = visit(*probe.block);
@@ -3388,10 +3382,6 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 
 void CodegenLLVM::createRet(Value *value)
 {
-  if (bpftrace_.need_recursion_check_) {
-    b_.CreateUnSetRecursion(current_attach_point_->loc);
-  }
-
   // If value is explicitly provided, use it.
   if (value) {
     b_.CreateRet(value);
@@ -4364,14 +4354,6 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         CreateUInt64());
   }
 
-  if (bpftrace_.need_recursion_check_) {
-    createMapDefinition(to_string(MapType::RecursionPrevention),
-                        BPF_MAP_TYPE_PERCPU_ARRAY,
-                        1,
-                        CreateUInt32(),
-                        CreateUInt64());
-  }
-
   if (required_resources.using_skboutput) {
     createMapDefinition(to_string(MapType::PerfEvent),
                         BPF_MAP_TYPE_PERF_EVENT_ARRAY,
@@ -4875,7 +4857,7 @@ llvm::Function *CodegenLLVM::createForCallback(
   };
 
   // 1. Save original locations of variables which will form part of the
-  //    callback context
+  // callback context
   // 2. Replace variable expressions with those from the context
   const auto &ctx_fields = f.ctx_type.GetFields();
   std::unordered_map<std::string, Value *> orig_ctx_vars;
