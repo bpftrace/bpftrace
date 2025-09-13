@@ -83,7 +83,6 @@ std::string typestr(const SizedType &type, bool debug)
     case Type::stack_mode:
     case Type::timestamp_mode:
     case Type::cgroup_path_t:
-    case Type::strerror_t:
     case Type::hist_t:
     case Type::lhist_t:
     case Type::tseries_t:
@@ -227,7 +226,6 @@ std::string typestr(Type t)
     case Type::timestamp:return "timestamp";break;
     case Type::mac_address: return "mac_address"; break;
     case Type::cgroup_path_t: return "cgroup_path_t"; break;
-    case Type::strerror_t: return "strerror_t"; break;
     case Type::timestamp_mode: return "timestamp_mode"; break;
     case Type::boolean:     return "bool";     break;
       // clang-format on
@@ -476,11 +474,6 @@ SizedType CreateMacAddress()
 SizedType CreateCgroupPath()
 {
   return { Type::cgroup_path_t, 16 };
-}
-
-SizedType CreateStrerror()
-{
-  return { Type::strerror_t, 8 };
 }
 
 SizedType CreateTimestampMode()

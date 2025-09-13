@@ -574,12 +574,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types={
         arg_type_spec{ .skip_check=true },
         arg_type_spec{ .type=Type::integer } } } },
-  { "strerror",
-    { .min_args=1,
-      .max_args=1,
-      .discard_ret_warn = true,
-      .arg_types={
-        arg_type_spec{ .type=Type::integer } } } },
   { "strftime",
     { .min_args=2,
       .max_args=2,
@@ -760,7 +754,6 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::record:
     case Type::tuple:
     case Type::cgroup_path_t:
-    case Type::strerror_t:
     case Type::none:
     case Type::timestamp_mode:
     case Type::boolean:
@@ -1787,8 +1780,6 @@ void SemanticAnalyser::visit(Call &call)
         call.addError() << "The path function can only be used with "
                         << "'fentry', 'fexit', 'iter' probes";
     }
-  } else if (call.func == "strerror") {
-    call.return_type = CreateStrerror();
   } else if (call.func == "strncmp") {
     if (!call.vargs.at(2).is<Integer>()) {
       call.addError() << "Builtin strncmp requires a non-negative literal";
