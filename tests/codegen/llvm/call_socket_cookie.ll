@@ -14,7 +14,7 @@ target triple = "bpf"
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @fentry_mock_vmlinux_tcp_rcv_established_1(ptr %0) #0 section "s_fentry_mock_vmlinux_tcp_rcv_established_1" !dbg !35 {
+define i64 @fentry_vmlinux_tcp_rcv_established_1(ptr %0) #0 section "s_fentry_vmlinux_tcp_rcv_established_1" !dbg !35 {
 entry:
   %"$ret" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$ret")
@@ -76,7 +76,7 @@ attributes #3 = { memory(none) }
 !32 = !{!0, !7, !22, !29}
 !33 = !{i32 2, !"Debug Info Version", i32 3}
 !34 = !{i32 7, !"uwtable", i32 0}
-!35 = distinct !DISubprogram(name: "fentry_mock_vmlinux_tcp_rcv_established_1", linkageName: "fentry_mock_vmlinux_tcp_rcv_established_1", scope: !2, file: !2, type: !36, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !31, retainedNodes: !39)
+!35 = distinct !DISubprogram(name: "fentry_vmlinux_tcp_rcv_established_1", linkageName: "fentry_vmlinux_tcp_rcv_established_1", scope: !2, file: !2, type: !36, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !31, retainedNodes: !39)
 !36 = !DISubroutineType(types: !37)
 !37 = !{!26, !38}
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
