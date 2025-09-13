@@ -51,9 +51,6 @@ event_loss_counter:                               ; preds = %entry
 counter_merge:                                    ; preds = %event_loss_counter, %entry
   call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
-
-deadcode:                                         ; No predecessors!
-  ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)

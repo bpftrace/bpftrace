@@ -1,6 +1,7 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -38,6 +39,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(CreateParsePass())
                 .add(ast::CreateResolveImportsPass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateControlFlowPass())
                 .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(CreateParseBTFPass())

@@ -31,7 +31,9 @@ kprobe:f {
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
                 .run();
-  ASSERT_TRUE(ok && ast.diagnostics().ok());
+  std::stringstream errs;
+  ast.diagnostics().emit(errs);
+  ASSERT_TRUE(ok && ast.diagnostics().ok()) << errs.str();
   bpftrace->bytecode_ = std::move(ok->get<BpfBytecode>());
 
   ASSERT_EQ(bpftrace->bytecode_.maps().size(), 7);
@@ -65,7 +67,9 @@ kprobe:f {
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
                 .run();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  std::stringstream errs;
+  ast.diagnostics().emit(errs);
+  ASSERT_TRUE(ok && ast.diagnostics().ok()) << errs.str();
   bpftrace->bytecode_ = std::move(ok->get<BpfBytecode>());
 
   ASSERT_EQ(bpftrace->bytecode_.maps().size(), 9);

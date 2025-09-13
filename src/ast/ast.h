@@ -19,14 +19,12 @@
 namespace bpftrace::ast {
 
 enum class JumpType {
-  INVALID = 0,
   RETURN,
   CONTINUE,
   BREAK,
 };
 
 enum class Operator {
-  INVALID = 0,
   ASSIGN,
   EQ,
   NE,
@@ -1053,7 +1051,7 @@ public:
         ident(other.ident),
         return_value(clone(ctx, other.return_value, loc)) {};
 
-  JumpType ident = JumpType::INVALID;
+  JumpType ident;
   std::optional<Expression> return_value;
 };
 

@@ -90,12 +90,6 @@ for_body:
   store i64 0, ptr %val_2, align 8
   br label %while_cond
 
-for_continue:                                     ; preds = %while_end
-  ret i64 0
-
-for_break:                                        ; No predecessors!
-  ret i64 1
-
 while_cond:                                       ; preds = %min_max_merge, %for_body
   %4 = load i32, ptr @__bt__num_cpus, align 4
   %5 = load i32, ptr %i, align 4
@@ -164,6 +158,9 @@ error_success:                                    ; preds = %lookup_failure
 error_failure:                                    ; preds = %lookup_failure
   %21 = load i32, ptr %i, align 4
   br label %while_end
+
+for_continue:                                     ; preds = %while_end
+  ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)

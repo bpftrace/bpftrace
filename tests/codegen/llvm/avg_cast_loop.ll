@@ -84,12 +84,6 @@ for_body:
   store i64 0, ptr %val_2, align 8
   br label %while_cond
 
-for_continue:                                     ; preds = %is_negative_merge_block
-  ret i64 0
-
-for_break:                                        ; No predecessors!
-  ret i64 1
-
 while_cond:                                       ; preds = %lookup_success, %for_body
   %4 = load i32, ptr @__bt__num_cpus, align 4
   %5 = load i32, ptr %i, align 4
@@ -169,6 +163,9 @@ is_negative_merge_block:                          ; preds = %is_positive, %is_ne
   %33 = load i64, ptr %32, align 8
   store i64 %33, ptr %"$res", align 8
   br label %for_continue
+
+for_continue:                                     ; preds = %is_negative_merge_block
+  ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)

@@ -47,9 +47,6 @@ right:                                            ; preds = %entry
   %ringbuf_loss4 = icmp slt i64 %ringbuf_output1, 0
   br i1 %ringbuf_loss4, label %event_loss_counter2, label %counter_merge3
 
-done:                                             ; preds = %deadcode, %counter_merge
-  ret i64 0
-
 event_loss_counter:                               ; preds = %left
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %7 = load i64, ptr @__bt__max_cpu_id, align 8
@@ -62,7 +59,7 @@ event_loss_counter:                               ; preds = %left
 
 counter_merge:                                    ; preds = %event_loss_counter, %left
   call void @llvm.lifetime.end.p0(i64 -1, ptr %printf_args)
-  br label %done
+  ret i64 0
 
 event_loss_counter2:                              ; preds = %right
   %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)() #3
@@ -77,9 +74,6 @@ event_loss_counter2:                              ; preds = %right
 counter_merge3:                                   ; preds = %event_loss_counter2, %right
   call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
-
-deadcode:                                         ; No predecessors!
-  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)

@@ -52,12 +52,9 @@ left:                                             ; preds = %strcmp.false
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")
-  br label %done
+  ret i64 1
 
 right:                                            ; preds = %strcmp.false
-  br label %done
-
-done:                                             ; preds = %right, %left
   ret i64 1
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop53, %strcmp.loop49, %strcmp.loop45, %strcmp.loop41, %strcmp.loop37, %strcmp.loop33, %strcmp.loop29, %strcmp.loop25, %strcmp.loop21, %strcmp.loop17, %strcmp.loop13, %strcmp.loop9, %strcmp.loop5, %strcmp.loop1, %strcmp.loop, %entry

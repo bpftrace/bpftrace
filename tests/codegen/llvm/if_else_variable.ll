@@ -26,13 +26,10 @@ entry:
 
 left:                                             ; preds = %entry
   store i64 10, ptr %"$s", align 8
-  br label %done
+  ret i64 0
 
 right:                                            ; preds = %entry
   store i64 20, ptr %"$s1", align 8
-  br label %done
-
-done:                                             ; preds = %right, %left
   ret i64 0
 }
 

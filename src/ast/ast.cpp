@@ -152,7 +152,6 @@ bool is_comparison_op(Operator op)
     case Operator::BXOR:
     case Operator::LEFT:
     case Operator::RIGHT:
-    case Operator::INVALID:
     case Operator::ASSIGN:
     case Operator::INCREMENT:
     case Operator::DECREMENT:

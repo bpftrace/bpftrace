@@ -37,6 +37,7 @@ add_executable(bpftrace_test
   named_param.cpp
   config.cpp
   collect_nodes.cpp
+  control_flow_analyser.cpp
   deprecated.cpp
   field_analyser.cpp
   fold_literals.cpp
@@ -63,7 +64,6 @@ add_executable(bpftrace_test
   resource_analyser.cpp
   result.cpp
   required_resources.cpp
-  return_path_analyser.cpp
   scopeguard.cpp
   semantic_analyser.cpp
   temp.cpp

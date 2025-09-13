@@ -27,12 +27,9 @@ entry:
   br i1 %lhs_true_cond, label %"&&_lhs_true", label %"&&_false"
 
 left:                                             ; preds = %"&&_merge"
-  br label %done
+  ret i64 0
 
 right:                                            ; preds = %"&&_merge"
-  br label %done
-
-done:                                             ; preds = %right, %left
   ret i64 0
 
 "&&_lhs_true":                                    ; preds = %entry

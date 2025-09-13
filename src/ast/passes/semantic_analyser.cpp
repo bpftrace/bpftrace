@@ -2839,32 +2839,21 @@ void SemanticAnalyser::visit(Unroll &unroll)
 
 void SemanticAnalyser::visit(Jump &jump)
 {
-  switch (jump.ident) {
-    case JumpType::RETURN:
-      if (jump.return_value) {
-        visit(jump.return_value);
+  if (jump.ident == JumpType::RETURN) {
+    visit(jump.return_value);
+    if (auto *subprog = dynamic_cast<Subprog *>(top_level_node_)) {
+      const auto &ty = subprog->return_type->type();
+      if (is_final_pass() && !ty.IsNoneTy() &&
+          (ty.IsVoidTy() != !jump.return_value.has_value() ||
+           (jump.return_value.has_value() &&
+            jump.return_value->type() != ty))) {
+        jump.addError() << "Function " << subprog->name << " is of type " << ty
+                        << ", cannot return "
+                        << (jump.return_value.has_value()
+                                ? jump.return_value->type()
+                                : CreateVoid());
       }
-      if (auto *subprog = dynamic_cast<Subprog *>(top_level_node_)) {
-        const auto &ty = subprog->return_type->type();
-        if (is_final_pass() && !ty.IsNoneTy() &&
-            (ty.IsVoidTy() != !jump.return_value.has_value() ||
-             (jump.return_value.has_value() &&
-              jump.return_value->type() != ty))) {
-          jump.addError() << "Function " << subprog->name << " is of type "
-                          << ty << ", cannot return "
-                          << (jump.return_value.has_value()
-                                  ? jump.return_value->type()
-                                  : CreateVoid());
-        }
-      }
-      break;
-    case JumpType::BREAK:
-    case JumpType::CONTINUE:
-      if (!in_loop())
-        jump.addError() << opstr(jump) << " used outside of a loop";
-      break;
-    default:
-      jump.addError() << "Unknown jump: '" << opstr(jump) << "'";
+    }
   }
 }
 
@@ -2990,7 +2979,6 @@ void SemanticAnalyser::visit(For &f)
     if (!map->type().IsMapIterableTy()) {
       map->addError() << "Loop expression does not support type: "
                       << map->type();
-      return;
     }
   } else if (auto *range = f.iterable.as<Range>()) {
     if (is_final_pass()) {
@@ -3004,18 +2992,9 @@ void SemanticAnalyser::visit(For &f)
     }
   }
 
-  // Validate body. We may relax this in the future.
-  CollectNodes<Jump> jumps;
-  jumps.visit(f.block);
-  for (const Jump &n : jumps.nodes()) {
-    if (n.ident == JumpType::RETURN) {
-      n.addError() << "'" << opstr(n)
-                   << "' statement is not allowed in a for-loop";
-    }
-  }
-
-  if (!ctx_.diagnostics().ok())
+  if (!ctx_.diagnostics().ok()) {
     return;
+  }
 
   // Collect a list of unique variables which are referenced in the loop's
   // body and declared before the loop. These will be passed into the loop
@@ -3824,17 +3803,7 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
 void SemanticAnalyser::visit(BlockExpr &block)
 {
   scope_stack_.push_back(&block);
-  for (size_t i = 0; i < block.stmts.size(); i++) {
-    auto &stmt = block.stmts.at(i);
-    visit(stmt);
-    if (is_final_pass()) {
-      auto *jump = stmt.as<Jump>();
-      if (jump && i < (block.stmts.size() - 1)) {
-        jump->addWarning() << "All code after a '" << opstr(*jump)
-                           << "' is unreachable.";
-      }
-    }
-  }
+  visit(block.stmts);
   visit(block.expr);
   scope_stack_.pop_back();
 }
