@@ -36,13 +36,10 @@ entry:
 
 left:                                             ; preds = %entry
   store i64 1, ptr %4, align 8
-  br label %done
+  ret i64 0
 
 right:                                            ; preds = %entry
   store i64 2, ptr %2, align 8
-  br label %done
-
-done:                                             ; preds = %right, %left
   ret i64 0
 }
 

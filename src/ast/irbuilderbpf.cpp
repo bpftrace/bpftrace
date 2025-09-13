@@ -2614,4 +2614,10 @@ llvm::Value *IRBuilderBPF::CreateCheckedBinop(Binop &binop,
   return result;
 }
 
+bool IRBuilderBPF::HasTerminator()
+{
+  BasicBlock *current_block = GetInsertBlock();
+  return current_block && current_block->getTerminator();
+}
+
 } // namespace bpftrace::ast

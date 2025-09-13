@@ -134,9 +134,8 @@ public:
   }
   R visit(ArrayAccess &arr)
   {
-    visitImpl(arr.expr);
     visitImpl(arr.indexpr);
-    return default_value();
+    return visitImpl(arr.expr);
   }
   R visit(TupleAccess &acc)
   {
@@ -145,14 +144,12 @@ public:
   R visit(MapAccess &acc)
   {
     visitImpl(acc.map);
-    visitImpl(acc.key);
-    return default_value();
+    return visitImpl(acc.key);
   }
   R visit(Cast &cast)
   {
-    visitImpl(cast.expr);
     visitImpl(cast.typeof);
-    return default_value();
+    return visitImpl(cast.expr);
   }
   R visit(Tuple &tuple)
   {
@@ -165,21 +162,18 @@ public:
   R visit(AssignScalarMapStatement &assignment)
   {
     visitImpl(assignment.map);
-    visitImpl(assignment.expr);
-    return default_value();
+    return visitImpl(assignment.expr);
   }
   R visit(AssignMapStatement &assignment)
   {
     visitImpl(assignment.map);
     visitImpl(assignment.key);
-    visitImpl(assignment.expr);
-    return default_value();
+    return visitImpl(assignment.expr);
   }
   R visit(AssignVarStatement &assignment)
   {
     visitImpl(assignment.var_decl);
-    visitImpl(assignment.expr);
-    return default_value();
+    return visitImpl(assignment.expr);
   }
   R visit([[maybe_unused]] AssignConfigVarStatement &assignment)
   {
@@ -223,8 +217,7 @@ public:
   R visit(Probe &probe)
   {
     visitImpl(probe.attach_points);
-    visitImpl(probe.block);
-    return default_value();
+    return visitImpl(probe.block);
   }
   R visit(Config &config)
   {
@@ -246,9 +239,8 @@ public:
   R visit(Subprog &subprog)
   {
     visitImpl(subprog.args);
-    visitImpl(subprog.block);
     visitImpl(subprog.return_type);
-    return default_value();
+    return visitImpl(subprog.block);
   }
   R visit([[maybe_unused]] Import &imp)
   {

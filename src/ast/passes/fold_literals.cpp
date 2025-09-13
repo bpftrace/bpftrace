@@ -144,7 +144,6 @@ static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
       break;
     case Operator::LNOT:
     case Operator::BNOT:
-    case Operator::INVALID:
     case Operator::ASSIGN:
     case Operator::INCREMENT:
     case Operator::DECREMENT:
@@ -346,7 +345,6 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
     case Operator::GT:
     case Operator::LAND:
     case Operator::LOR:
-    case Operator::INVALID:
     case Operator::ASSIGN:
     case Operator::INCREMENT:
     case Operator::DECREMENT:
