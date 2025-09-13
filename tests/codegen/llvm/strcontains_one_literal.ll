@@ -4,102 +4,115 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
+%ctx_t = type { ptr, ptr, ptr, i64, i64 }
+%ctx_t.0 = type { ptr, ptr, ptr, ptr, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !22
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !29
-@__bt__get_str_buf = dso_local externally_initialized global [1 x [1 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !31
+@__bt__var_buf = dso_local externally_initialized global [1 x [2 x [1024 x i8]]] zeroinitializer, section ".data.var_buf", !dbg !31
+@__bt__get_str_buf = dso_local externally_initialized global [1 x [2 x [1024 x i8]]] zeroinitializer, section ".data.get_str_buf", !dbg !40
 @test = global [5 x i8] c"test\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @kprobe_foo_1(ptr %0) #0 section "s_kprobe_foo_1" !dbg !42 {
+define i64 @kprobe_foo_1(ptr %0) #0 section "s_kprobe_foo_1" !dbg !46 {
 entry:
-  %strcontains.j = alloca i64, align 8
-  %strcontains.i = alloca i64, align 8
-  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
+  %ctx = alloca %ctx_t, align 8
+  %array_access = alloca i8, align 1
+  %"||_result" = alloca i1, align 1
+  %"$$strcontains_$found" = alloca i1, align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_$found")
+  store i1 false, ptr %"$$strcontains_$found", align 1
+  %"$$strcontains_$needle" = alloca [5 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_$needle")
+  call void @llvm.memset.p0.i64(ptr align 1 %"$$strcontains_$needle", i8 0, i64 5, i1 false)
+  %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)() #5
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
-  %3 = call ptr @llvm.preserve.static.offset(ptr %0)
-  %4 = getelementptr i8, ptr %3, i64 112
-  %arg0 = load volatile i64, ptr %4, align 8
-  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %2, i32 1024, i64 %arg0)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %strcontains.i)
-  store i64 0, ptr %strcontains.i, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %strcontains.j)
-  br label %strcontains.empty.check
+  %cpu.id.bounded6 = and i64 %get_cpu_id5, %1
+  %2 = getelementptr [1 x [2 x [1024 x i8]]], ptr @__bt__var_buf, i64 0, i64 %cpu.id.bounded6, i64 0, i64 0
+  %probe_read_kernel7 = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr null)
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #5
+  %3 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %3
+  %4 = getelementptr [1 x [2 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %4, i32 1024, ptr null)
+  %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #5
+  %5 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
+  %6 = getelementptr [1 x [2 x [1024 x i8]]], ptr @__bt__get_str_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
+  %probe_read_kernel3 = call i64 inttoptr (i64 113 to ptr)(ptr %6, i32 1024, ptr null)
+  %7 = call ptr @llvm.preserve.static.offset(ptr %0)
+  %8 = getelementptr i8, ptr %7, i64 112
+  %arg0 = load volatile i64, ptr %8, align 8
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to ptr)(ptr %6, i32 1024, i64 %arg0)
+  %probe_read_kernel_str4 = call i64 inttoptr (i64 115 to ptr)(ptr %4, i32 1024, ptr %6)
+  %probe_read_kernel8 = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr %4)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strcontains_$needle", ptr align 1 @test, i64 5, i1 false)
+  store i1 false, ptr %"$$strcontains_$found", align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"||_result")
+  br i1 false, label %"||_true", label %"||_lhs_false"
 
-strcontains.empty.check:                          ; preds = %entry
-  %5 = load i8, ptr @test, align 1
-  %6 = icmp eq i8 %5, 0
-  br i1 %6, label %strcontains.true, label %strcontains.outer.cond
+left:                                             ; preds = %"||_merge"
+  store i1 true, ptr %"$$strcontains_$found", align 1
+  br label %done
 
-strcontains.outer.cond:                           ; preds = %strcontains.outer.incr, %strcontains.empty.check
-  %7 = load i64, ptr %strcontains.i, align 8
-  %8 = icmp ult i64 %7, 1024
-  br i1 %8, label %strcontains.outer.cond.cmp, label %strcontains.false
+right:                                            ; preds = %"||_merge"
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
+  %9 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$$strcontains_$haystack" = getelementptr %ctx_t, ptr %9, i64 0, i32 0
+  store ptr %2, ptr %"ctx.$$strcontains_$haystack", align 8
+  %10 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$$strcontains_$needle" = getelementptr %ctx_t, ptr %10, i64 0, i32 1
+  store ptr %"$$strcontains_$needle", ptr %"ctx.$$strcontains_$needle", align 8
+  %11 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$$strcontains_$found" = getelementptr %ctx_t, ptr %11, i64 0, i32 2
+  store ptr %"$$strcontains_$found", ptr %"ctx.$$strcontains_$found", align 8
+  %12 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %ctx.start = getelementptr %ctx_t, ptr %12, i64 0, i32 3
+  store i64 0, ptr %ctx.start, align 8
+  br i1 true, label %is_positive, label %merge
 
-strcontains.outer.cond.cmp:                       ; preds = %strcontains.outer.cond
-  %9 = getelementptr i8, ptr %2, i64 %7
-  %10 = load i8, ptr %9, align 1
-  %11 = icmp ne i8 %10, 0
-  br i1 %11, label %strcontains.outer.body, label %strcontains.false
-
-strcontains.outer.body:                           ; preds = %strcontains.outer.cond.cmp
-  store i64 0, ptr %strcontains.j, align 8
-  br label %strcontains.inner.cond
-
-strcontains.inner.cond:                           ; preds = %strcontains.inner.incr, %strcontains.outer.body
-  %12 = load i64, ptr %strcontains.j, align 8
-  %13 = icmp ult i64 %12, 5
-  br i1 %13, label %strcontains.inner.body, label %strcontains.outer.incr
-
-strcontains.inner.body:                           ; preds = %strcontains.inner.cond
-  %14 = getelementptr i8, ptr @test, i64 %12
-  %15 = load i8, ptr %14, align 1
-  %16 = icmp eq i8 %15, 0
-  br i1 %16, label %strcontains.true, label %strcontains.inner.notnull
-
-strcontains.inner.notnull:                        ; preds = %strcontains.inner.body
-  %17 = add i64 %7, %12
-  %18 = icmp uge i64 %17, 1024
-  br i1 %18, label %strcontains.outer.incr, label %strcontains.inner.cmp
-
-strcontains.inner.cmp:                            ; preds = %strcontains.inner.notnull
-  %19 = getelementptr i8, ptr %2, i64 %17
-  %20 = load i8, ptr %19, align 1
-  %21 = icmp ne i8 %20, %15
-  br i1 %21, label %strcontains.outer.incr, label %strcontains.inner.incr
-
-strcontains.inner.incr:                           ; preds = %strcontains.inner.cmp
-  %22 = load i64, ptr %strcontains.j, align 8
-  %23 = add i64 %22, 1
-  store i64 %23, ptr %strcontains.j, align 8
-  br label %strcontains.inner.cond
-
-strcontains.outer.incr:                           ; preds = %strcontains.inner.cmp, %strcontains.inner.notnull, %strcontains.inner.cond
-  %24 = load i64, ptr %strcontains.i, align 8
-  %25 = add i64 %24, 1
-  store i64 %25, ptr %strcontains.i, align 8
-  br label %strcontains.outer.cond
-
-strcontains.true:                                 ; preds = %strcontains.inner.body, %strcontains.empty.check
-  br label %strcontains.done
-
-strcontains.false:                                ; preds = %strcontains.outer.cond.cmp, %strcontains.outer.cond
-  br label %strcontains.done
-
-strcontains.done:                                 ; preds = %strcontains.true, %strcontains.false
-  %result = phi i1 [ false, %strcontains.false ], [ true, %strcontains.true ]
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %strcontains.j)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %strcontains.i)
-  %26 = zext i1 %result to i64
+done:                                             ; preds = %merge, %left
+  %13 = load i1, ptr %"$$strcontains_$found", align 1
   ret i64 0
+
+"||_lhs_false":                                   ; preds = %entry
+  %14 = ptrtoint ptr %"$$strcontains_$needle" to i64
+  %15 = inttoptr i64 %14 to ptr
+  %16 = call ptr @llvm.preserve.static.offset(ptr %15)
+  %17 = getelementptr i8, ptr %16, i64 0
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
+  %probe_read_kernel9 = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 1, ptr %17)
+  %18 = load i8, ptr %array_access, align 1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
+  %19 = sext i8 %18 to i64
+  %20 = icmp eq i64 %19, 0
+  %rhs_true_cond = icmp ne i1 %20, false
+  br i1 %rhs_true_cond, label %"||_true", label %"||_false"
+
+"||_false":                                       ; preds = %"||_lhs_false"
+  store i1 false, ptr %"||_result", align 1
+  br label %"||_merge"
+
+"||_true":                                        ; preds = %"||_lhs_false", %entry
+  store i1 true, ptr %"||_result", align 1
+  br label %"||_merge"
+
+"||_merge":                                       ; preds = %"||_true", %"||_false"
+  %21 = load i1, ptr %"||_result", align 1
+  %true_cond = icmp ne i1 %21, false
+  br i1 %true_cond, label %left, label %right
+
+is_positive:                                      ; preds = %right
+  %bpf_loop = call i64 inttoptr (i64 181 to ptr)(i32 1024, ptr @loop_cb, ptr %ctx, i64 0)
+  br label %merge
+
+merge:                                            ; preds = %is_positive, %right
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
@@ -108,16 +121,255 @@ declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #2
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #4
+
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
+
+; Function Attrs: nounwind
+define internal i64 @loop_cb(i64 %0, ptr %1) #0 section ".text" !dbg !52 {
+for_body:
+  %ctx = alloca %ctx_t.0, align 8
+  %array_access = alloca i8, align 1
+  %2 = call ptr @llvm.preserve.static.offset(ptr %1)
+  %start = getelementptr %ctx_t, ptr %2, i64 0, i32 3
+  %3 = call ptr @llvm.preserve.static.offset(ptr %1)
+  %current = getelementptr %ctx_t, ptr %3, i64 0, i32 4
+  %4 = load i64, ptr %start, align 8
+  %5 = add i64 %4, %0
+  store i64 %5, ptr %current, align 8
+  %"ctx.$$strcontains_$haystack" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
+  %"$$strcontains_$haystack" = load ptr, ptr %"ctx.$$strcontains_$haystack", align 8
+  %"ctx.$$strcontains_$needle" = getelementptr %ctx_t, ptr %1, i64 0, i32 1
+  %"$$strcontains_$needle" = load ptr, ptr %"ctx.$$strcontains_$needle", align 8
+  %"ctx.$$strcontains_$found" = getelementptr %ctx_t, ptr %1, i64 0, i32 2
+  %"$$strcontains_$found" = load ptr, ptr %"ctx.$$strcontains_$found", align 8
+  %6 = load i64, ptr %current, align 8
+  %7 = icmp uge i64 %6, 1024
+  %true_cond = icmp ne i1 %7, false
+  br i1 %true_cond, label %left, label %right
+
+for_continue:                                     ; preds = %done11
+  ret i64 0
+
+for_break:                                        ; preds = %left9, %left1, %left
+  ret i64 1
+
+left:                                             ; preds = %for_body
+  br label %for_break
+
+right:                                            ; preds = %for_body
+  br label %done
+
+done:                                             ; preds = %right, %unreach
+  %8 = load i64, ptr %current, align 8
+  %9 = ptrtoint ptr %"$$strcontains_$haystack" to i64
+  %10 = mul i64 %8, 1
+  %11 = inttoptr i64 %9 to ptr
+  %12 = call ptr @llvm.preserve.static.offset(ptr %11)
+  %13 = getelementptr i8, ptr %12, i64 %10
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 1, ptr %13)
+  %14 = load i8, ptr %array_access, align 1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
+  %15 = sext i8 %14 to i64
+  %16 = icmp eq i64 %15, 0
+  %true_cond4 = icmp ne i1 %16, false
+  br i1 %true_cond4, label %left1, label %right2
+
+unreach:                                          ; No predecessors!
+  br label %done
+
+left1:                                            ; preds = %done
+  br label %for_break
+
+right2:                                           ; preds = %done
+  br label %done3
+
+done3:                                            ; preds = %right2, %unreach5
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
+  %17 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$$strcontains_$needle6" = getelementptr %ctx_t.0, ptr %17, i64 0, i32 0
+  store ptr %"$$strcontains_$needle", ptr %"ctx.$$strcontains_$needle6", align 8
+  %18 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$$strcontains_$found7" = getelementptr %ctx_t.0, ptr %18, i64 0, i32 1
+  store ptr %"$$strcontains_$found", ptr %"ctx.$$strcontains_$found7", align 8
+  %19 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$i" = getelementptr %ctx_t.0, ptr %19, i64 0, i32 2
+  store ptr %current, ptr %"ctx.$i", align 8
+  %20 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %"ctx.$$strcontains_$haystack8" = getelementptr %ctx_t.0, ptr %20, i64 0, i32 3
+  store ptr %"$$strcontains_$haystack", ptr %"ctx.$$strcontains_$haystack8", align 8
+  %21 = call ptr @llvm.preserve.static.offset(ptr %ctx)
+  %ctx.start = getelementptr %ctx_t.0, ptr %21, i64 0, i32 4
+  store i64 0, ptr %ctx.start, align 8
+  br i1 true, label %is_positive, label %merge
+
+unreach5:                                         ; No predecessors!
+  br label %done3
+
+is_positive:                                      ; preds = %done3
+  %bpf_loop = call i64 inttoptr (i64 181 to ptr)(i32 5, ptr @loop_cb.1, ptr %ctx, i64 0)
+  br label %merge
+
+merge:                                            ; preds = %is_positive, %done3
+  %22 = load i1, ptr %"$$strcontains_$found", align 1
+  %true_cond12 = icmp ne i1 %22, false
+  br i1 %true_cond12, label %left9, label %right10
+
+left9:                                            ; preds = %merge
+  br label %for_break
+
+right10:                                          ; preds = %merge
+  br label %done11
+
+done11:                                           ; preds = %right10, %unreach13
+  br label %for_continue
+
+unreach13:                                        ; No predecessors!
+  br label %done11
+}
+
+; Function Attrs: nounwind
+define internal i64 @loop_cb.1(i64 %0, ptr %1) #0 section ".text" !dbg !58 {
+for_body:
+  %array_access16 = alloca i8, align 1
+  %array_access14 = alloca i8, align 1
+  %"$$strcontains_$k" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strcontains_$k")
+  store i64 0, ptr %"$$strcontains_$k", align 8
+  %array_access = alloca i8, align 1
+  %2 = call ptr @llvm.preserve.static.offset(ptr %1)
+  %start = getelementptr %ctx_t.0, ptr %2, i64 0, i32 4
+  %3 = call ptr @llvm.preserve.static.offset(ptr %1)
+  %current = getelementptr %ctx_t.0, ptr %3, i64 0, i32 5
+  %4 = load i64, ptr %start, align 8
+  %5 = add i64 %4, %0
+  store i64 %5, ptr %current, align 8
+  %"ctx.$$strcontains_$needle" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 0
+  %"$$strcontains_$needle" = load ptr, ptr %"ctx.$$strcontains_$needle", align 8
+  %"ctx.$$strcontains_$found" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 1
+  %"$$strcontains_$found" = load ptr, ptr %"ctx.$$strcontains_$found", align 8
+  %"ctx.$i" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 2
+  %"$i" = load ptr, ptr %"ctx.$i", align 8
+  %"ctx.$$strcontains_$haystack" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 3
+  %"$$strcontains_$haystack" = load ptr, ptr %"ctx.$$strcontains_$haystack", align 8
+  %6 = load i64, ptr %current, align 8
+  %7 = icmp uge i64 %6, 5
+  %true_cond = icmp ne i1 %7, false
+  br i1 %true_cond, label %left, label %right
+
+for_continue:                                     ; preds = %done13
+  ret i64 0
+
+for_break:                                        ; preds = %left11, %left6, %left1, %left
+  ret i64 1
+
+left:                                             ; preds = %for_body
+  br label %for_break
+
+right:                                            ; preds = %for_body
+  br label %done
+
+done:                                             ; preds = %right, %unreach
+  %8 = load i64, ptr %current, align 8
+  %9 = ptrtoint ptr %"$$strcontains_$needle" to i64
+  %10 = mul i64 %8, 1
+  %11 = inttoptr i64 %9 to ptr
+  %12 = call ptr @llvm.preserve.static.offset(ptr %11)
+  %13 = getelementptr i8, ptr %12, i64 %10
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 1, ptr %13)
+  %14 = load i8, ptr %array_access, align 1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
+  %15 = sext i8 %14 to i64
+  %16 = icmp eq i64 %15, 0
+  %true_cond4 = icmp ne i1 %16, false
+  br i1 %true_cond4, label %left1, label %right2
+
+unreach:                                          ; No predecessors!
+  br label %done
+
+left1:                                            ; preds = %done
+  store i1 true, ptr %"$$strcontains_$found", align 1
+  br label %for_break
+
+right2:                                           ; preds = %done
+  br label %done3
+
+done3:                                            ; preds = %right2, %unreach5
+  %17 = load i64, ptr %"$i", align 8
+  %18 = load i64, ptr %current, align 8
+  %19 = add i64 %17, %18
+  store i64 %19, ptr %"$$strcontains_$k", align 8
+  %20 = load i64, ptr %"$$strcontains_$k", align 8
+  %21 = icmp uge i64 %20, 1024
+  %true_cond9 = icmp ne i1 %21, false
+  br i1 %true_cond9, label %left6, label %right7
+
+unreach5:                                         ; No predecessors!
+  br label %done3
+
+left6:                                            ; preds = %done3
+  br label %for_break
+
+right7:                                           ; preds = %done3
+  br label %done8
+
+done8:                                            ; preds = %right7, %unreach10
+  %22 = load i64, ptr %"$$strcontains_$k", align 8
+  %23 = ptrtoint ptr %"$$strcontains_$haystack" to i64
+  %24 = mul i64 %22, 1
+  %25 = inttoptr i64 %23 to ptr
+  %26 = call ptr @llvm.preserve.static.offset(ptr %25)
+  %27 = getelementptr i8, ptr %26, i64 %24
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access14)
+  %probe_read_kernel15 = call i64 inttoptr (i64 113 to ptr)(ptr %array_access14, i32 1, ptr %27)
+  %28 = load i8, ptr %array_access14, align 1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access14)
+  %29 = load i64, ptr %current, align 8
+  %30 = ptrtoint ptr %"$$strcontains_$needle" to i64
+  %31 = mul i64 %29, 1
+  %32 = inttoptr i64 %30 to ptr
+  %33 = call ptr @llvm.preserve.static.offset(ptr %32)
+  %34 = getelementptr i8, ptr %33, i64 %31
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access16)
+  %probe_read_kernel17 = call i64 inttoptr (i64 113 to ptr)(ptr %array_access16, i32 1, ptr %34)
+  %35 = load i8, ptr %array_access16, align 1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access16)
+  %36 = icmp ne i8 %28, %35
+  %true_cond18 = icmp ne i1 %36, false
+  br i1 %true_cond18, label %left11, label %right12
+
+unreach10:                                        ; No predecessors!
+  br label %done8
+
+left11:                                           ; preds = %done8
+  br label %for_break
+
+right12:                                          ; preds = %done8
+  br label %done13
+
+done13:                                           ; preds = %right12, %unreach19
+  br label %for_continue
+
+unreach19:                                        ; No predecessors!
+  br label %done13
+}
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
-attributes #3 = { memory(none) }
+attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #5 = { memory(none) }
 
-!llvm.dbg.cu = !{!38}
-!llvm.module.flags = !{!40, !41}
+!llvm.dbg.cu = !{!42}
+!llvm.module.flags = !{!44, !45}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -151,19 +403,33 @@ attributes #3 = { memory(none) }
 !29 = !DIGlobalVariableExpression(var: !30, expr: !DIExpression())
 !30 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !26, isLocal: false, isDefinition: true)
 !31 = !DIGlobalVariableExpression(var: !32, expr: !DIExpression())
-!32 = distinct !DIGlobalVariable(name: "__bt__get_str_buf", linkageName: "global", scope: !2, file: !2, type: !33, isLocal: false, isDefinition: true)
-!33 = !DICompositeType(tag: DW_TAG_array_type, baseType: !34, size: 8192, elements: !27)
-!34 = !DICompositeType(tag: DW_TAG_array_type, baseType: !35, size: 8192, elements: !27)
+!32 = distinct !DIGlobalVariable(name: "__bt__var_buf", linkageName: "global", scope: !2, file: !2, type: !33, isLocal: false, isDefinition: true)
+!33 = !DICompositeType(tag: DW_TAG_array_type, baseType: !34, size: 16384, elements: !27)
+!34 = !DICompositeType(tag: DW_TAG_array_type, baseType: !35, size: 16384, elements: !38)
 !35 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 8192, elements: !36)
 !36 = !{!37}
 !37 = !DISubrange(count: 1024, lowerBound: 0)
-!38 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !39)
-!39 = !{!0, !7, !22, !29, !31}
-!40 = !{i32 2, !"Debug Info Version", i32 3}
-!41 = !{i32 7, !"uwtable", i32 0}
-!42 = distinct !DISubprogram(name: "kprobe_foo_1", linkageName: "kprobe_foo_1", scope: !2, file: !2, type: !43, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !38, retainedNodes: !46)
-!43 = !DISubroutineType(types: !44)
-!44 = !{!26, !45}
-!45 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!46 = !{!47}
-!47 = !DILocalVariable(name: "ctx", arg: 1, scope: !42, file: !2, type: !45)
+!38 = !{!39}
+!39 = !DISubrange(count: 2, lowerBound: 0)
+!40 = !DIGlobalVariableExpression(var: !41, expr: !DIExpression())
+!41 = distinct !DIGlobalVariable(name: "__bt__get_str_buf", linkageName: "global", scope: !2, file: !2, type: !33, isLocal: false, isDefinition: true)
+!42 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !43)
+!43 = !{!0, !7, !22, !29, !31, !40}
+!44 = !{i32 2, !"Debug Info Version", i32 3}
+!45 = !{i32 7, !"uwtable", i32 0}
+!46 = distinct !DISubprogram(name: "kprobe_foo_1", linkageName: "kprobe_foo_1", scope: !2, file: !2, type: !47, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !42, retainedNodes: !50)
+!47 = !DISubroutineType(types: !48)
+!48 = !{!26, !49}
+!49 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!50 = !{!51}
+!51 = !DILocalVariable(name: "ctx", arg: 1, scope: !46, file: !2, type: !49)
+!52 = distinct !DISubprogram(name: "loop_cb", linkageName: "loop_cb", scope: !2, file: !2, type: !53, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !42, retainedNodes: !55)
+!53 = !DISubroutineType(types: !54)
+!54 = !{!26, !26, !49}
+!55 = !{!56, !57}
+!56 = !DILocalVariable(name: "index", arg: 1, scope: !52, file: !2, type: !26)
+!57 = !DILocalVariable(name: "ctx", arg: 2, scope: !52, file: !2, type: !49)
+!58 = distinct !DISubprogram(name: "loop_cb_1", linkageName: "loop_cb_1", scope: !2, file: !2, type: !53, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !42, retainedNodes: !59)
+!59 = !{!60, !61}
+!60 = !DILocalVariable(name: "index", arg: 1, scope: !58, file: !2, type: !26)
+!61 = !DILocalVariable(name: "ctx", arg: 2, scope: !58, file: !2, type: !49)

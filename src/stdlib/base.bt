@@ -971,14 +971,6 @@ macro retval() {
 //
 // When available (starting from kernel 5.5, see the `--info` flag) bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
 
-// :function strcontains
-// :variant int64 strcontains(const char *haystack, const char *needle)
-//
-// `strcontains` compares whether the string haystack contains the string needle.
-// If needle is contained `1` is returned, else zero is returned.
-//
-// bpftrace doesn’t read past the length of the shortest string.
-
 // :function strerror
 // :variant strerror_t strerror(int error)
 //
