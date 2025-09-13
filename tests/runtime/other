@@ -243,8 +243,15 @@ PROG struct Bar { short a:4, b:8, c:3, d:1; int e:9, f:15, g:1, h:2, i:5 } uprob
 EXPECT 1 217 5 1 500 31117 1 2 27
 AFTER ./testprogs/bitfield_test
 
-NAME exit exits immediately
+NAME exit with unreachable code
 PROG i:ms:100 { @++; exit(); @++ }
+EXPECT stdin:1:10-30: WARNING: Unreachable statement.
+       i:ms:100 { @++; exit(); @++ }
+                ~~~~~~~~~~~~~~~~~~~~
+TIMEOUT 1
+
+NAME exit exits immediately
+PROG i:ms:100 { @++; if (@) { exit(); } @++ }
 EXPECT @: 1
 TIMEOUT 1
 

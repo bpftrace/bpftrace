@@ -126,12 +126,6 @@ for_body:
   %7 = icmp sge i32 %6, 0
   br i1 %7, label %helper_merge, label %helper_failure
 
-for_continue:                                     ; preds = %helper_merge
-  ret i64 0
-
-for_break:                                        ; No predecessors!
-  ret i64 1
-
 helper_failure:                                   ; preds = %for_body
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
   %8 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
@@ -161,6 +155,9 @@ event_loss_counter:                               ; preds = %helper_failure
 counter_merge:                                    ; preds = %event_loss_counter, %helper_failure
   call void @llvm.lifetime.end.p0(i64 -1, ptr %runtime_error_t)
   br label %helper_merge
+
+for_continue:                                     ; preds = %helper_merge
+  ret i64 0
 }
 
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)

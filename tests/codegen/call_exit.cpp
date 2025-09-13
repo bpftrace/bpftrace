@@ -4,7 +4,7 @@ namespace bpftrace::test::codegen {
 
 TEST(codegen, call_exit)
 {
-  test("kprobe:f { exit(); @=10 }", NAME);
+  test("kprobe:f { exit(); }", NAME);
 }
 
 TEST(codegen, call_exit_with_error_code)

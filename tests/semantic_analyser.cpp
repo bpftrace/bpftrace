@@ -6,6 +6,7 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
+#include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
@@ -141,6 +142,7 @@ public:
                   .put(types->types)
                   .add(CreateParsePass())
                   .add(ast::CreateResolveImportsPass())
+                  .add(ast::CreateControlFlowPass())
                   .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
@@ -481,10 +483,7 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
        "(struct "
        "Foo*)arg1 }");
   test(
-      R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b") })");
-
-  test(
-      R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b") })",
+      R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b"); exit() })",
       ExpectedAST{ R"(
 Program
  kprobe:f
@@ -503,10 +502,11 @@ Program
 )" });
 
   // Error location is incorrect: #3063
-  test("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", Error{ R"(
-stdin:1:12-49: ERROR: Branches must return the same type: have 'int64' and 'none'
-kprobe:f { pid < 10000 ? 3 : cat("/proc/uptime") }
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  test("kprobe:f { $x = pid < 10000 ? 3 : cat(\"/proc/uptime\"); exit(); }",
+       Error{ R"(
+stdin:1:17-54: ERROR: Branches must return the same type: have 'int64' and 'none'
+kprobe:f { $x = pid < 10000 ? 3 : cat("/proc/uptime"); exit(); }
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", Error{ R"(
@@ -3395,7 +3395,6 @@ TEST_F(SemanticAnalyserTest, while_loop)
   test("i:s:1 { $a = 1; while (1) { if($a > 50) { break } $a++ }}");
   test("i:s:1 { $a = 1; while ($a < 10) { $a++ }}");
   test("i:s:1 { $a = 1; while (1) { if($a > 50) { break } $a++ }}");
-  test("i:s:1 { $a = 1; while (1) { if($a > 50) { return } $a++ }}");
   test(R"(
 i:s:1 {
   $a = 1;
@@ -3406,15 +3405,17 @@ i:s:1 {
     }
   }
 })");
+  test("i:s:1 { $a = 1; while (1) { if($a > 50) { return } $a++ }}");
 
   test("i:s:1 { $a = 1; while ($a < 10) { break; $a++ }}",
-       Warning{ "code after a 'break'" });
+       Warning{ "Unreachable" });
   test("i:s:1 { $a = 1; while ($a < 10) { continue; $a++ }}",
-       Warning{ "code after a 'continue'" });
-  test("i:s:1 { $a = 1; while ($a < 10) { return; $a++ }}",
-       Warning{ "code after a 'return'" });
+       Warning{ "Unreachable" });
   test("i:s:1 { $a = 1; while ($a < 10) { @=$a++; print(@); }}",
        Warning{ "'print()' in a loop" });
+
+  test("i:s:1 { $a = 1; while ($a < 10) { return; $a++ }}",
+       Warning{ "Unreachable" });
 }
 
 TEST_F(SemanticAnalyserTest, builtin_args)

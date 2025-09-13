@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- `exit()` is no longer allowed inside loops. `return` was always disallowed, and `exit()` implicitly returns, which may result in undefined behavior.
+  - [#4587](https://github.com/bpftrace/bpftrace/pull/4587)
 #### Added
 - Add support for indexing string types
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)

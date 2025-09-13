@@ -34,12 +34,9 @@ left:                                             ; preds = %entry
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  br label %done
+  ret i64 1
 
 right:                                            ; preds = %entry
-  br label %done
-
-done:                                             ; preds = %right, %left
   ret i64 1
 }
 

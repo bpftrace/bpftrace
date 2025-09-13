@@ -28,13 +28,10 @@ entry:
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
-  br label %done
+  ret i64 0
 
 right:                                            ; preds = %entry
   store i64 1, ptr %"$x", align 8
-  br label %done
-
-done:                                             ; preds = %right, %left
   ret i64 0
 }
 

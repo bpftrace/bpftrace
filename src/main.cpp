@@ -21,6 +21,7 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
@@ -31,7 +32,6 @@
 #include "ast/passes/probe_prune.h"
 #include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
-#include "ast/passes/return_path_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "benchmark.h"
@@ -326,14 +326,11 @@ struct Args {
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateFoldLiteralsPass());
-  add(ast::CreatePidFilterPass());
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateProbePrunePass());
   add(ast::CreateResourcePass());
-  add(ast::CreateRecursionCheckPass());
-  add(ast::CreateReturnPathPass());
 }
 
 void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
@@ -345,8 +342,6 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateSemanticPass());
   add(ast::CreateProbePrunePass());
   add(ast::CreateResourcePass());
-  add(ast::CreateRecursionCheckPass());
-  add(ast::CreateReturnPathPass());
 }
 
 ast::Pass printPass(const std::string& name)

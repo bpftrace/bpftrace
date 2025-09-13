@@ -37,6 +37,7 @@ public:
   void visit(Unop &unop);
   void visit(Probe &probe);
   void visit(Subprog &subprog);
+  void visit(Cast &cast);
 
 private:
   void resolve_args(Probe &probe);
@@ -381,6 +382,14 @@ void FieldAnalyser::visit(Subprog &subprog)
 {
   probe_ = nullptr;
   visit(subprog.block);
+}
+
+void FieldAnalyser::visit(Cast &cast)
+{
+  // N.B. Visit the expression first, so that fields can be resolved, but then
+  // visit the type so that the returned sized_type_ is always the type.
+  visit(cast.expr);
+  visit(cast.typeof);
 }
 
 Pass CreateFieldAnalyserPass()

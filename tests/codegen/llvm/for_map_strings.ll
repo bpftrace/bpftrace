@@ -47,9 +47,6 @@ for_body:
 
 for_continue:                                     ; preds = %for_body
   ret i64 0
-
-for_break:                                        ; No predecessors!
-  ret i64 1
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
