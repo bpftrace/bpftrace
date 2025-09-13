@@ -180,11 +180,6 @@ NAME builtin wrapper uid
 PROG begin { if (__builtin_uid == uid() && __builtin_uid == uid) { printf("SUCCESS %d\n", uid); } }
 EXPECT_REGEX SUCCESS [0-9]+
 
-NAME builtin wrapper usermode
-PROG begin { if (__builtin_usermode == usermode() && __builtin_usermode == usermode) { printf("SUCCESS %d\n", usermode); } }
-EXPECT_REGEX SUCCESS 1
-ARCH x86_64
-
 NAME builtin wrapper username
 PROG begin { if (__builtin_username == username() && __builtin_username == username) { printf("SUCCESS %s\n", username); } }
 EXPECT_REGEX SUCCESS .*

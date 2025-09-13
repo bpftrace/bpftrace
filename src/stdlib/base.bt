@@ -937,7 +937,7 @@ macro probe() {
 //
 // For example: `kprobe`, `special`, `tracepoint`
 macro probetype() {
-  __builtin_probetype
+  __builtin_probe_type
 }
 
 // :function pton
@@ -1277,14 +1277,6 @@ macro uid() {
 // Marks `ptr` as a user address space pointer.
 // See the address-spaces section for more information on address-spaces.
 // The pointer type is left unchanged.
-
-// :variant uint8 usermode()
-// Returns 1 if the current process is in user mode, 0 otherwise
-//
-// Currently only available on x86_64.
-macro usermode() {
-  __builtin_usermode
-}
 
 // :variant string username()
 // Get the current username

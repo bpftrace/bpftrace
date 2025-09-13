@@ -29,8 +29,6 @@ public:
   std::optional<Expression> visit(PositionalParameter &param);
   std::optional<Expression> visit(Call &call);
   std::optional<Expression> visit(Expression &expr);
-  std::optional<Expression> visit(Probe &probe);
-  std::optional<Expression> visit(Builtin &builtin);
   std::optional<Expression> visit(BlockExpr &block_expr);
   std::optional<Expression> visit(ArrayAccess &acc);
   std::optional<Expression> visit(TupleAccess &acc);
@@ -43,8 +41,6 @@ private:
 
   ASTContext &ast_;
   std::optional<std::reference_wrapper<BPFtrace>> bpftrace_;
-
-  Node *top_level_node_ = nullptr;
 };
 
 } // namespace
@@ -728,31 +724,6 @@ std::optional<Expression> LiteralFolder::visit(Expression &expr)
   if (r) {
     expr.value = r->value;
   }
-  return std::nullopt;
-}
-
-std::optional<Expression> LiteralFolder::visit(Probe &probe)
-{
-  top_level_node_ = &probe;
-  return Visitor<LiteralFolder, std::optional<Expression>>::visit(probe);
-}
-
-std::optional<Expression> LiteralFolder::visit(Builtin &builtin)
-{
-  if (builtin.ident == "__builtin_usermode") {
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      for (auto *ap : probe->attach_points) {
-        if (!ap->check_available(builtin.ident)) {
-          auto probe_type = probetype(ap->provider);
-          if (probe_type == ProbeType::special) {
-            return ast_.make_node<Integer>(builtin.loc, 1);
-          }
-          return ast_.make_node<Integer>(builtin.loc, 0);
-        }
-      }
-    }
-  }
-
   return std::nullopt;
 }
 

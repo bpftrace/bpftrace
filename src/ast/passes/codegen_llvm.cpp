@@ -722,28 +722,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
       return ScopedExpr(b_.CreateLShr(uidgid, 32));
     }
     __builtin_unreachable();
-  } else if (builtin.ident == "__builtin_usermode") {
-    if (arch::Host::Machine == arch::Machine::X86_64) {
-      auto cs_offset = arch::Host::register_to_pt_regs_offset("cs");
-      if (!cs_offset) {
-        builtin.addError() << "No CS register?";
-        return ScopedExpr(b_.getInt64(0));
-      }
-      Value *cs = b_.CreateRegisterRead(ctx_, cs_offset.value(), "reg_cs");
-      Value *mask = b_.getInt64(0x3);
-      Value *is_usermode = b_.CreateICmpEQ(b_.CreateAnd(cs, mask),
-                                           b_.getInt64(3),
-                                           "is_usermode");
-      Value *expr = b_.CreateZExt(is_usermode,
-                                  b_.GetType(builtin.builtin_type),
-                                  "usermode_result");
-      return ScopedExpr(expr);
-    } else {
-      // We lack an implementation.
-      builtin.addError() << "not supported on architecture "
-                         << arch::Host::Machine;
-      return ScopedExpr(b_.getInt64(0));
-    }
   } else if (builtin.ident == "__builtin_cpu") {
     Value *cpu = b_.CreateGetCpuId(builtin.loc);
     return ScopedExpr(b_.CreateZExt(cpu, b_.getInt64Ty()));

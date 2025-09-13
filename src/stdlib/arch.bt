@@ -1,0 +1,24 @@
+// :variant uint8 usermode()
+// Returns 1 if the current process is in user mode, 0 otherwise
+//
+// Currently only available on x86_64.
+macro usermode() {
+  if (arch == "x86_64") {
+    if (__builtin_probe_type == "special") {
+      (uint8)1
+    } else if (__builtin_probe_type == "benchmark") {
+      (uint8)1
+    } else if (__builtin_probe_type == "watchpoint" ||
+               __builtin_probe_type == "asyncwatchpoint" ||
+               __builtin_probe_type == "profile" ||
+               __builtin_probe_type == "interval" ||
+               __builtin_probe_type == "software" ||
+               __builtin_probe_type == "hardware") {
+      (uint8)(ctx.cs & 0x3 == 0x3)
+    } else {
+      (uint8)0
+    }
+  } else {
+    fail("'usermode' builtin is only supported on x86_64")
+  }
+}
