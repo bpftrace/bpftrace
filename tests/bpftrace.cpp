@@ -5,6 +5,7 @@
 #include "ast/attachpoint_parser.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -66,6 +67,7 @@ static auto parse_probe(const std::string &str,
                 .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateControlFlowPass())
                 .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
