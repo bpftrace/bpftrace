@@ -318,10 +318,15 @@ struct JsonEmitter<Value::TimeSeries> {
     bool first = true;
     out << "[";
     for (const auto &[ts, value] : tseries.values) {
-      if (!first) {
+      if (std::holds_alternative<std::monostate>(value.variant)) {
+        continue;
+      }
+      if (first) {
+        first = false;
+      } else {
         out << ",";
       }
-      out << "{\"interval_start\":" << ts << ",\"value\":" << value << "}";
+      out << R"({"interval_start":")" << ts << R"(","value":)" << value << "}";
     }
     out << "]";
   }
@@ -377,6 +382,12 @@ bool has_type(const Value &value)
 
 void JsonOutput::map(const std::string &name, const Value &value)
 {
+  if (std::holds_alternative<Value::OrderedMap>(value.variant)) {
+    if (std::get<Value::OrderedMap>(value.variant).values.empty()) {
+      return;
+    }
+  }
+
   // If the value is a histogram, or a map of histograms, then we set the type
   // to `hist`. If it is explicitly a `stats` map, then set that type.
   // Otherwise, just set the message type to `map`.

@@ -125,6 +125,10 @@ Required directives: `NAME`, (`RUN` or `PROG`), (one or more [`EXPECT`, `EXPECT_
   pair per test is accepted.
 * `TIMEOUT`: The timeout for the testcase (in seconds). This field is required.
 * `WILL_FAIL`: Mark that this test case will exit uncleanly (ie exit code != 0)
+* `LOCALIZE_TIMESTAMPS`: Before comparing actual output to expected output,
+  format `%H` timestamp strings to match the local time zone. This currently
+  only works with `EXPECT_FILE`.
+
 
 If you need to run a test program to probe (eg, uprobe/USDT), you can use the
 `BEFORE` clause. The test scripts will wait for the test program to have a pid.
