@@ -40,6 +40,7 @@
 #include "ast/location.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/link.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
@@ -460,7 +461,13 @@ private:
     return module_->getDataLayout().getTypeAllocSize(s);
   }
 
-  std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
+  // The `loops_` vector holds the stack of loops, with a set of functions for
+  // `continue` and `break` respectively. These are functions as they might
+  // lazily initialize state and avoid creating basic blocks if they are not
+  // used.
+  std::vector<
+      std::tuple<std::function<BasicBlock *()>, std::function<BasicBlock *()>>>
+      loops_;
   std::unordered_map<std::string, bool> probe_names_;
   std::unordered_map<std::string, llvm::Function *> extern_funcs_;
 
@@ -1765,15 +1772,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateOutput(buf, struct_size, call.loc);
     b_.CreateLifetimeEnd(buf);
 
-    createRet();
-
-    // create an unreachable basic block for all the "dead instructions" that
-    // may come after exit(). If we don't, LLVM will emit the instructions
-    // leading to a `unreachable insn` warning from the verifier
-    BasicBlock *deadcode = BasicBlock::Create(module_->getContext(),
-                                              "deadcode",
-                                              b_.GetInsertBlock()->getParent());
-    b_.SetInsertPoint(deadcode);
     return ScopedExpr();
   } else if (call.func == "print") {
     if (call.vargs.at(0).is<Map>()) {
@@ -2499,7 +2497,19 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
   BasicBlock *right_block = BasicBlock::Create(module_->getContext(),
                                                "right",
                                                parent);
-  BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
+
+  // If both blocks already have a terminator, then we don't generate an
+  // additional block. For this reason, the `done` block is initialized lazily.
+  BasicBlock *done = nullptr;
+  auto lazy_done = [&]() {
+    if (done != nullptr) {
+      return done;
+    }
+    auto saved_ip = b_.saveIP();
+    done = BasicBlock::Create(module_->getContext(), "done", parent);
+    b_.restoreIP(saved_ip);
+    return done;
+  };
 
   // ordering of all the following statements is important
   Value *buf = nullptr;
@@ -2527,7 +2537,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     auto *left_expr = b_.CreateIntCast(scoped_left.value(),
                                        b_.GetType(if_expr.result_type),
                                        if_expr.result_type.IsSigned());
-    b_.CreateBr(done);
+    b_.CreateBr(lazy_done());
     BasicBlock *left_end_block = b_.GetInsertBlock();
 
     b_.SetInsertPoint(right_block);
@@ -2535,10 +2545,10 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     auto *right_expr = b_.CreateIntCast(scoped_right.value(),
                                         b_.GetType(if_expr.result_type),
                                         if_expr.result_type.IsSigned());
-    b_.CreateBr(done);
+    b_.CreateBr(lazy_done());
     BasicBlock *right_end_block = b_.GetInsertBlock();
 
-    b_.SetInsertPoint(done);
+    b_.SetInsertPoint(lazy_done());
     auto *phi = b_.CreatePHI(b_.GetType(if_expr.result_type), 2, "result");
     phi->addIncoming(left_expr, left_end_block);
     phi->addIncoming(right_expr, right_end_block);
@@ -2547,11 +2557,20 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     // Type::none
     b_.SetInsertPoint(left_block);
     visit(if_expr.left);
-    b_.CreateBr(done);
+    if (!b_.HasTerminator()) {
+      b_.CreateBr(lazy_done());
+    }
     b_.SetInsertPoint(right_block);
     visit(if_expr.right);
-    b_.CreateBr(done);
-    b_.SetInsertPoint(done);
+    if (!b_.HasTerminator()) {
+      b_.CreateBr(lazy_done());
+    }
+    // If we've instantiated done by this point, then we resume there. If we
+    // haven't, then both blocks have a terminator (which is a return), so
+    // therefore we have nothing left to generate.
+    if (done != nullptr) {
+      b_.SetInsertPoint(done);
+    }
     return ScopedExpr();
   } else {
     b_.SetInsertPoint(left_block);
@@ -2566,7 +2585,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     } else {
       b_.CreateStore(scoped_left.value(), buf);
     }
-    b_.CreateBr(done);
+    b_.CreateBr(lazy_done());
 
     b_.SetInsertPoint(right_block);
     auto scoped_right = visit(if_expr.right);
@@ -2580,9 +2599,9 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     } else {
       b_.CreateStore(scoped_right.value(), buf);
     }
-    b_.CreateBr(done);
+    b_.CreateBr(lazy_done());
 
-    b_.SetInsertPoint(done);
+    b_.SetInsertPoint(lazy_done());
     if (dyn_cast<AllocaInst>(buf))
       return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
     return ScopedExpr(buf);
@@ -3198,7 +3217,7 @@ ScopedExpr CodegenLLVM::visit(Jump &jump)
 {
   switch (jump.ident) {
     case JumpType::RETURN:
-      // return can be used outside of loops
+      // return can be used outside of loops.
       if (jump.return_value) {
         auto scoped_return = visit(jump.return_value);
         createRet(scoped_return.value());
@@ -3206,39 +3225,16 @@ ScopedExpr CodegenLLVM::visit(Jump &jump)
         createRet();
       break;
     case JumpType::BREAK:
-      b_.CreateBr(std::get<1>(loops_.back()));
+      b_.CreateBr(std::get<1>(loops_.back())());
       break;
     case JumpType::CONTINUE:
-      b_.CreateBr(std::get<0>(loops_.back()));
+      b_.CreateBr(std::get<0>(loops_.back())());
       break;
     default:
       LOG(BUG) << "jump: invalid op \"" << opstr(jump) << "\"";
       __builtin_unreachable();
   }
 
-  // LLVM doesn't like having instructions after an unconditional branch (segv)
-  // This can be avoided by putting all instructions in a unreachable basicblock
-  // which will be optimize out.
-  //
-  // e.g. in the case of `while (..) { $i++; break; $i++ }` the ir will be:
-  //
-  // while_body:
-  //   ...
-  //   br label %while_end
-  //
-  // while_end:
-  //   ...
-  //
-  // unreach:
-  //   $i++
-  //   br label %while_cond
-  //
-
-  llvm::Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *unreach = BasicBlock::Create(module_->getContext(),
-                                           "unreach",
-                                           parent);
-  b_.SetInsertPoint(unreach);
   return ScopedExpr();
 }
 
@@ -3258,7 +3254,9 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
                                              "while_end",
                                              parent);
 
-  loops_.emplace_back(while_cond, while_end);
+  // Both while blocks are guaranteed to have predescesors, because we evaluate
+  // the condition for execution at least once. This simplifies the functions.
+  loops_.emplace_back([&] { return while_cond; }, [&] { return while_end; });
 
   b_.CreateBr(while_cond);
 
@@ -3272,7 +3270,6 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
 
   b_.SetInsertPoint(while_body);
   auto scoped_block = visit(*while_block.block);
-  b_.CreateBr(while_cond);
 
   b_.SetInsertPoint(while_end);
   loops_.pop_back();
@@ -3328,7 +3325,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
   variables_.clear();
   auto scoped_block = visit(*probe.block);
-  createRet();
 
   if (dummy) {
     func->eraseFromParent();
@@ -3429,8 +3425,6 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
   }
 
   visit(subprog.block);
-  if (subprog.return_type->type().IsVoidTy())
-    createRet();
 
   FunctionPassManager fpm;
   FunctionAnalysisManager fam;
@@ -3449,18 +3443,18 @@ void CodegenLLVM::createRet(Value *value)
     b_.CreateUnSetRecursion(current_attach_point_->loc);
   }
 
-  // If value is explicitly provided, use it
+  // If value is explicitly provided, use it.
   if (value) {
     b_.CreateRet(value);
-    return;
-  } else if (inside_subprog_) {
-    b_.CreateRetVoid();
-    return;
+  } else {
+    if (inside_subprog_) {
+      b_.CreateRetVoid();
+    } else {
+      int ret_val = getReturnValueForProbe(
+          probetype(current_attach_point_->provider));
+      b_.CreateRet(b_.getInt64(ret_val));
+    }
   }
-
-  int ret_val = getReturnValueForProbe(
-      probetype(current_attach_point_->provider));
-  b_.CreateRet(b_.getInt64(ret_val));
 }
 
 int CodegenLLVM::getReturnValueForProbe(ProbeType probe_type)
@@ -3547,8 +3541,8 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
 
   auto scoped_key_expr = visit(key_expr);
   const auto &key_type = map.key_type;
-  // Allocation needs to be done after recursing via visit(key_expr) so that we
-  // have the expression SSA value.
+  // Allocation needs to be done after recursing via visit(key_expr) so that
+  // we have the expression SSA value.
   Value *key = alloca_created_here
                    ? b_.CreateMapKeyAllocation(key_type,
                                                map.ident + "_key",
@@ -3616,8 +3610,8 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
     size += module_->getDataLayout().getTypeAllocSize(extra_key->getType());
   }
 
-  // If key ever changes to not be allocated here, be sure to update getMapKey()
-  // as well to take the new lifetime semantics into account.
+  // If key ever changes to not be allocated here, be sure to update
+  // getMapKey() as well to take the new lifetime semantics into account.
   auto *key = b_.CreateMapKeyAllocation(CreateArray(size, CreateInt8()),
                                         map.ident + "_key",
                                         loc);
@@ -4045,8 +4039,8 @@ void CodegenLLVM::createFormatStringCall(Call &call,
 
   // perf event output has: uint64_t id, vargs
   // The id maps to bpftrace_.*_args_, and is a way to define the
-  // types and offsets of each of the arguments, and share that between BPF and
-  // user-space for printing.
+  // types and offsets of each of the arguments, and share that between BPF
+  // and user-space for printing.
   std::vector<llvm::Type *> ringbuf_elems = { b_.getInt64Ty() };
   StructType *fmt_struct = nullptr;
   if (!elements.empty()) {
@@ -4328,8 +4322,9 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
   auto *debuginfo = debug_.createMapEntry(
       var_name, map_type, max_entries, di_key_type, value_type);
 
-  // It's sufficient that the global variable has the correct size (struct with
-  // one pointer per field). The actual inner types are defined in debug info.
+  // It's sufficient that the global variable has the correct size (struct
+  // with one pointer per field). The actual inner types are defined in debug
+  // info.
   SmallVector<llvm::Type *, 4> elems = { b_.getPtrTy(), b_.getPtrTy() };
   if (!value_type.IsNoneTy()) {
     elems.push_back(b_.getPtrTy());
@@ -4362,9 +4357,9 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 // are not used for the BPF_MAP_TYPE_RINGBUF map type.
 //
 // The most important part is to generate BTF with the above information. This
-// is done by emitting DWARF which LLVM will convert into BTF. The LLVM type of
-// the global variable itself is not important, it can simply be a struct with 4
-// pointers.
+// is done by emitting DWARF which LLVM will convert into BTF. The LLVM type
+// of the global variable itself is not important, it can simply be a struct
+// with 4 pointers.
 //
 // Note that LLVM will generate BTF which misses some information. This is
 // normally set by libbpf's linker but since we load BTF directly, we must do
@@ -4443,7 +4438,8 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     LOG(ERROR) << num_pages.takeError();
     ast_.root->addError()
         << "Unable to get the number of ring buffer pages dynamically. "
-           "You must set the `perf_rb_pages` config manually e.g. `config = { "
+           "You must set the `perf_rb_pages` config manually e.g. `config = "
+           "{ "
            "perf_rb_pages=64 }`";
   } else {
     buffer_size = *num_pages * sysconf(_SC_PAGE_SIZE);
@@ -4577,16 +4573,16 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
 
         b_.SetInsertPoint(pred_true_block);
       }
-      // Everything should be loaded by this point, so we can drop the lifetime
-      // of `scoped_src`.
+      // Everything should be loaded by this point, so we can drop the
+      // lifetime of `scoped_src`.
       return ScopedExpr(expr);
 
     } else {
       AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
       b_.CreateProbeRead(dst, elem_type, src, loc, data_type.GetAS());
       Value *expr = b_.CreateLoad(b_.GetType(elem_type), dst);
-      // We have completely loaded from dst, and therefore can insert an end to
-      // its lifetime directly.
+      // We have completely loaded from dst, and therefore can insert an end
+      // to its lifetime directly.
       b_.CreateLifetimeEnd(dst);
       return ScopedExpr(expr);
     }
@@ -4662,7 +4658,8 @@ llvm::Function *CodegenLLVM::createMurmurHash2Func()
 {
   // The goal is to produce the following code:
   //
-  // uint64_t murmur_hash_2(void *stack, uint8_t nr_stack_frames, uint64_t seed)
+  // uint64_t murmur_hash_2(void *stack, uint8_t nr_stack_frames, uint64_t
+  // seed)
   // {
   //   const uint64_t m = 0xc6a4a7935bd1e995LLU;
   //   const int r = 47;
@@ -4789,8 +4786,8 @@ llvm::Function *CodegenLLVM::createMurmurHash2Func()
   b_.CreateLifetimeEnd(k);
 
   // We reserve 0 for errors so if we happen to hash to 0 just set to 1.
-  // This should reduce hash collisions as we now have to come across two stacks
-  // that naturally hash to 1 AND 0.
+  // This should reduce hash collisions as we now have to come across two
+  // stacks that naturally hash to 1 AND 0.
   BasicBlock *if_zero = BasicBlock::Create(module_->getContext(),
                                            "if_zero",
                                            parent);
@@ -4874,9 +4871,9 @@ std::pair<llvm::Type *, llvm::Value *> CodegenLLVM::createForContext(
   // Add all the extra fields.
   std::ranges::move(extra_fields, std::back_inserter(ctx_field_types));
 
-  // Pack pointers to variables into context struct for use in the callback. If
-  // there are no fields, then the underlying codegen helper will simply pass
-  // null as the context value. We should not allocate an empty struct.
+  // Pack pointers to variables into context struct for use in the callback.
+  // If there are no fields, then the underlying codegen helper will simply
+  // pass null as the context value. We should not allocate an empty struct.
   llvm::Type *ctx_t = nullptr;
   Value *ctx = nullptr;
   if (!ctx_field_types.empty()) {
@@ -4923,12 +4920,31 @@ llvm::Function *CodegenLLVM::createForCallback(
   auto *for_body = BasicBlock::Create(module_->getContext(),
                                       "for_body",
                                       callback);
-  auto *for_continue = BasicBlock::Create(module_->getContext(),
-                                          "for_continue",
-                                          callback);
-  auto *for_break = BasicBlock::Create(module_->getContext(),
-                                       "for_break",
-                                       callback);
+  BasicBlock *for_continue = nullptr;
+  auto lazy_continue = [&] {
+    if (for_continue) {
+      return for_continue;
+    }
+    auto saved_ip = b_.saveIP();
+    for_continue = BasicBlock::Create(module_->getContext(),
+                                      "for_continue",
+                                      callback);
+    b_.restoreIP(saved_ip);
+    return for_continue;
+  };
+  BasicBlock *for_break = nullptr;
+  auto lazy_break = [&] {
+    if (for_break) {
+      return for_break;
+    }
+    auto saved_ip = b_.saveIP();
+    for_break = BasicBlock::Create(module_->getContext(),
+                                   "for_break",
+                                   callback);
+    b_.restoreIP(saved_ip);
+    return for_break;
+  };
+
   b_.SetInsertPoint(for_body);
 
   // Extract our context type and value. As noted, this requires that some
@@ -4965,14 +4981,18 @@ llvm::Function *CodegenLLVM::createForCallback(
   }
 
   // Generate code for the loop body.
-  loops_.emplace_back(for_continue, for_break);
+  loops_.emplace_back(lazy_continue, lazy_break);
   visit(f.block);
-  b_.CreateBr(for_continue);
   loops_.pop_back();
-  b_.SetInsertPoint(for_continue);
-  b_.CreateRet(b_.getInt64(0));
-  b_.SetInsertPoint(for_break);
-  b_.CreateRet(b_.getInt64(1));
+
+  if (for_continue != nullptr) {
+    b_.SetInsertPoint(for_continue);
+    b_.CreateRet(b_.getInt64(0));
+  }
+  if (for_break != nullptr) {
+    b_.SetInsertPoint(for_break);
+    b_.CreateRet(b_.getInt64(1));
+  }
 
   // Restore original non-context variables.
   for (const auto &[ident, expr] : orig_ctx_vars) {
@@ -5003,7 +5023,8 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
                                   { b_.getInt64(0), b_.getInt32(sz) },
                                   "ctx.start"));
 
-  // Create a callback function suitable for passing to bpf_loop, for the form:
+  // Create a callback function suitable for passing to bpf_loop, for the
+  // form:
   //
   //   static int cb(uint64_t index, void *ctx)
   //   {
@@ -5017,10 +5038,10 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
 
   auto *cb = createForCallback(
       f, "loop_cb", args, debug_args, ctx_t, [&](llvm::Function *callback) {
-        // See above. Prior to the callback, we push the starting value into the
-        // context as an extra field, and reserve space for the current value
-        // there. This must be set on each iteration, and provides a declaration
-        // that points there.
+        // See above. Prior to the callback, we push the starting value into
+        // the context as an extra field, and reserve space for the current
+        // value there. This must be set on each iteration, and provides a
+        // declaration that points there.
         auto *ctx = callback->getArg(1);
         auto *start_field_ptr = b_.CreateSafeGEP(
             ctx_t, ctx, { b_.getInt64(0), b_.getInt32(sz) }, "start");
@@ -5029,7 +5050,8 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
 
         // Add the current iteration count to our starting count, reseting the
         // value of the current variable in the context. The starting value is
-        // not available to the user, simply the value of the current iteration.
+        // not available to the user, simply the value of the current
+        // iteration.
         b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(),
                                                   start_field_ptr),
                                     callback->getArg(0)),
@@ -5108,10 +5130,10 @@ bool CodegenLLVM::canAggPerCpuMapElems(const bpf_map_type map_type,
 }
 
 // BPF helpers that use fmt strings (bpf_trace_printk, bpf_seq_printf) expect
-// the string passed in a data map. libbpf is able to create the map internally
-// if an internal global constant string is used. This function creates the
-// constant. Uses bpf_print_id_ to pick the correct format string from
-// RequiredResources.
+// the string passed in a data map. libbpf is able to create the map
+// internally if an internal global constant string is used. This function
+// creates the constant. Uses bpf_print_id_ to pick the correct format string
+// from RequiredResources.
 Value *CodegenLLVM::createFmtString(int print_id)
 {
   const auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
@@ -5243,26 +5265,28 @@ Pass CreateLLVMInitPass()
 Pass CreateCompilePass(
     std::optional<std::reference_wrapper<USDTHelper>> &&usdt_helper)
 {
-  return Pass::create("compile",
-                      [usdt_helper](ASTContext &ast,
-                                    BPFtrace &bpftrace,
-                                    CDefinitions &c_definitions,
-                                    NamedParamDefaults &named_param_defaults,
-                                    CompileContext &ctx,
-                                    ExpansionResult &expansions) mutable {
-                        USDTHelper default_usdt;
-                        if (!usdt_helper) {
-                          usdt_helper = std::ref(default_usdt);
-                        }
-                        CodegenLLVM llvm(ast,
-                                         bpftrace,
-                                         c_definitions,
-                                         named_param_defaults,
-                                         *ctx.context,
-                                         usdt_helper->get(),
-                                         expansions);
-                        return CompiledModule(llvm.compile());
-                      });
+  return Pass::create(
+      "compile",
+      [usdt_helper](ASTContext &ast,
+                    [[maybe_unused]] ControlFlowChecked &control_flow,
+                    BPFtrace &bpftrace,
+                    CDefinitions &c_definitions,
+                    NamedParamDefaults &named_param_defaults,
+                    CompileContext &ctx,
+                    ExpansionResult &expansions) mutable {
+        USDTHelper default_usdt;
+        if (!usdt_helper) {
+          usdt_helper = std::ref(default_usdt);
+        }
+        CodegenLLVM llvm(ast,
+                         bpftrace,
+                         c_definitions,
+                         named_param_defaults,
+                         *ctx.context,
+                         usdt_helper->get(),
+                         expansions);
+        return CompiledModule(llvm.compile());
+      });
 }
 
 Pass CreateLinkBitcodePass()
@@ -5293,8 +5317,8 @@ Pass CreateLinkBitcodePass()
 
           // Link into the original source module, consume the new one. This
           // function returns `false` on success.  Hopefully this path is
-          // unlikely to cause errors, since it seems the information available
-          // is sparse.
+          // unlikely to cause errors, since it seems the information
+          // available is sparse.
           auto err = Linker::linkModules(*cm.module,
                                          std::move(copy),
                                          Linker::LinkOnlyNeeded);

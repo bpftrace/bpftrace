@@ -133,7 +133,7 @@ EXPECT (b, 2)
 EXPECT (c, 0)
 
 NAME late map evaluation with ctx capture
-RUN {{BPFTRACE}} -e 'interval:ms:100 { $x = 1; for ($kv : @a) { print(($x, $kv.0, $kv.1)); exit(); } @a[1] = 1; }'
+RUN {{BPFTRACE}} -e 'interval:ms:100 { $x = 1; for ($kv : @a) { print(($x, $kv.0, $kv.1)); break; } if (@a[1]) { exit(); } @a[1] = 1; }'
 EXPECT (1, 1, 1)
 
 NAME variable address with int

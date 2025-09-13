@@ -26,12 +26,9 @@ entry:
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
 left:                                             ; preds = %strcmp.false
-  br label %done
+  ret i64 1
 
 right:                                            ; preds = %strcmp.false
-  br label %done
-
-done:                                             ; preds = %right, %left
   ret i64 1
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop97, %strcmp.loop93, %strcmp.loop89, %strcmp.loop85, %strcmp.loop81, %strcmp.loop77, %strcmp.loop73, %strcmp.loop69, %strcmp.loop65, %strcmp.loop61, %strcmp.loop57, %strcmp.loop53, %strcmp.loop49, %strcmp.loop45, %strcmp.loop41, %strcmp.loop37, %strcmp.loop33, %strcmp.loop29, %strcmp.loop25, %strcmp.loop21, %strcmp.loop17, %strcmp.loop13, %strcmp.loop9, %strcmp.loop5, %strcmp.loop1, %strcmp.loop, %entry

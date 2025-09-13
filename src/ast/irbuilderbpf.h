@@ -254,6 +254,11 @@ public:
 
   llvm::Value *CreateCheckedBinop(Binop &binop, Value *lhs, Value *rhs);
 
+  // Check to see if the current basic block already has a terminator. This is
+  // useful in cases where you've generated a nested block, but it may already
+  // have a terminator and you can't unconditionally generate another.
+  bool HasTerminator();
+
 private:
   Module &module_;
   BPFtrace &bpftrace_;
