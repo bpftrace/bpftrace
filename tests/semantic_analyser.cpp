@@ -5463,12 +5463,12 @@ macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add
 stdin:1:23-24: ERROR: right (int64)
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                       ~
-stdin:1:78-86: ERROR: expanded from
-macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
-                                                                             ~~~~~~~~
 stdin:1:44-52: ERROR: expanded from
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                                            ~~~~~~~~
+stdin:1:78-86: ERROR: expanded from
+macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
+                                                                             ~~~~~~~~
 )" });
 }
 
