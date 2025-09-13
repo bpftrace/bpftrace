@@ -228,8 +228,6 @@ std::string to_string(MapType t)
       return "ringbuf";
     case MapType::EventLossCounter:
       return "event_loss_counter";
-    case MapType::RecursionPrevention:
-      return "recursion_prevention";
   }
   return {}; // unreached
 }
