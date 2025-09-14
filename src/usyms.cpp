@@ -3,10 +3,6 @@
 #include <bcc/bcc_syms.h>
 #include <sstream>
 
-#ifdef HAVE_BLAZESYM
-#include <blazesym.h>
-#endif
-
 #include "config.h"
 #include "log.h"
 #include "scopeguard.h"

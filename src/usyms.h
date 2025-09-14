@@ -6,6 +6,10 @@
 #include <map>
 #include <string>
 
+#ifdef HAVE_BLAZESYM
+#include <blazesym.h>
+#endif
+
 #include "util/symbols.h"
 
 namespace bpftrace {
@@ -47,9 +51,9 @@ private:
   struct bcc_symbol_option& get_symbol_opts();
 
 #ifdef HAVE_BLAZESYM
-  struct blaze_symbolizer* symbolizer_{ nullptr };
+  blaze_symbolizer* symbolizer_{ nullptr };
 
-  struct blaze_symbolizer* create_symbolizer() const;
+  blaze_symbolizer* create_symbolizer() const;
   void cache_blazesym(const std::string& elf_file, std::optional<int> opt_pid);
   std::vector<std::string> resolve_blazesym_impl(uint64_t addr,
                                                  int32_t pid,

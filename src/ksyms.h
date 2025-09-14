@@ -4,6 +4,10 @@
 #include <optional>
 #include <string>
 
+#ifdef HAVE_BLAZESYM
+#include <blazesym.h>
+#endif
+
 #include "config.h"
 
 namespace bpftrace {
@@ -26,7 +30,7 @@ private:
   void *ksyms_{ nullptr };
 
 #ifdef HAVE_BLAZESYM
-  struct blaze_symbolizer *symbolizer_{ nullptr };
+  blaze_symbolizer *symbolizer_{ nullptr };
 
   std::vector<std::string> resolve_blazesym_impl(uint64_t addr,
                                                  bool show_offset,
