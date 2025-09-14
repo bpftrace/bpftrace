@@ -1904,7 +1904,7 @@ CallInst *IRBuilderBPF::CreateGetNumaId(const Location &loc)
 
 CallInst *IRBuilderBPF::CreateGetCpuId(const Location &loc)
 {
-  // u32 bpf_raw_smp_processor_id(void)
+  // u32 bpf_get_smp_processor_id(void)
   // Return: SMP processor ID
   FunctionType *getcpuid_func_type = FunctionType::get(getInt64Ty(), false);
   return CreateHelperCall(BPF_FUNC_get_smp_processor_id,
@@ -2008,7 +2008,7 @@ CallInst *IRBuilderBPF::CreatePerCpuPtr(Value *var,
 
 CallInst *IRBuilderBPF::CreateThisCpuPtr(Value *var, const Location &loc)
 {
-  // void *bpf_per_cpu_ptr(const void *percpu_ptr)
+  // void *bpf_this_cpu_ptr(const void *percpu_ptr)
   // Return:
   //    A pointer pointing to the kernel percpu variable on
   //    this cpu. May never be NULL.
