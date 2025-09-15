@@ -610,7 +610,7 @@ public:
                         const VariableAddr &other,
                         const Location &loc)
       : Node(ctx, loc + other.loc),
-        var(other.var),
+        var(clone(ctx, other.var, loc)),
         var_addr_type(other.var_addr_type) {};
 
   const SizedType &type() const
@@ -627,7 +627,7 @@ public:
   explicit MapAddr(ASTContext &ctx, Map *map, Location &&loc)
       : Node(ctx, std::move(loc)), map(map) {};
   explicit MapAddr(ASTContext &ctx, const MapAddr &other, const Location &loc)
-      : Node(ctx, loc + other.loc), map(other.map) {};
+      : Node(ctx, loc + other.loc), map(clone(ctx, other.map, loc)) {};
 
   const SizedType &type() const
   {
