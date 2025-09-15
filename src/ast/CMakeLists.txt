@@ -34,6 +34,7 @@ add_library(ast STATIC
   passes/portability_analyser.cpp
   passes/printer.cpp
   passes/probe_expansion.cpp
+  passes/probe_prune.cpp
   passes/resource_analyser.cpp
   passes/semantic_analyser.cpp
   passes/codegen_llvm.cpp
