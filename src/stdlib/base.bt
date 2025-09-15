@@ -531,7 +531,7 @@ macro ncpus() {
 //
 // This utilizes the BPF helper `numa_node_id`
 macro numaid() {
-  __builtin_numaid
+  (uint64)__get_numa_node_id()
 }
 
 // :function offsetof

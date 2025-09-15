@@ -1889,19 +1889,6 @@ CallInst *IRBuilderBPF::CreateGetUidGid(const Location &loc)
                           loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetNumaId(const Location &loc)
-{
-  // long bpf_get_numa_node_id(void)
-  // Return: NUMA Node ID
-  FunctionType *numaid_func_type = FunctionType::get(getInt64Ty(), false);
-  return CreateHelperCall(BPF_FUNC_get_numa_node_id,
-                          numaid_func_type,
-                          {},
-                          true,
-                          "get_numa_id",
-                          loc);
-}
-
 CallInst *IRBuilderBPF::CreateGetCpuId(const Location &loc)
 {
   // u32 bpf_get_smp_processor_id(void)

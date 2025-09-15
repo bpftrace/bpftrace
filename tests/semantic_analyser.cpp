@@ -210,7 +210,6 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("kprobe:f { gid }");
   test("kprobe:f { nsecs }");
   test("kprobe:f { elapsed }");
-  test("kprobe:f { numaid }");
   test("kprobe:f { cpu }");
   test("kprobe:f { ncpus }");
   test("kprobe:f { curtask }");

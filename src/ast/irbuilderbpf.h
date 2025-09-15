@@ -114,7 +114,6 @@ public:
   CallInst *CreateJiffies64(const Location &loc);
   CallInst *CreateGetCurrentCgroupId(const Location &loc);
   CallInst *CreateGetUidGid(const Location &loc);
-  CallInst *CreateGetNumaId(const Location &loc);
   CallInst *CreateGetCpuId(const Location &loc);
   CallInst *CreateGetCurrentTask(const Location &loc);
   CallInst *CreateGetRandom(const Location &loc);
