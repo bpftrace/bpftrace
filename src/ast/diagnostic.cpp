@@ -49,9 +49,6 @@ void Diagnostics::emit(std::ostream& out, Severity s, const Diagnostic& d) const
     }
   }
 
-  // reverse to print the initial parent first
-  std::ranges::reverse(parent_msgs);
-
   switch (s) {
     case Severity::Warning:
       if (msgs.empty()) {
