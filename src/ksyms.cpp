@@ -1,10 +1,6 @@
 #include <bcc/bcc_syms.h>
 #include <sstream>
 
-#ifdef HAVE_BLAZESYM
-#include <blazesym.h>
-#endif
-
 #include "ksyms.h"
 #include "scopeguard.h"
 
