@@ -3366,7 +3366,11 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
   current_attach_point_ = &ap;
   probefull_ = ap.name();
   if (probetype(ap.provider) == ProbeType::usdt) {
-    auto usdt = usdt_helper_.find(bpftrace_.pid(), ap.target, ap.ns, ap.func);
+    auto usdt = usdt_helper_.find(bpftrace_.pid(),
+                                  ap.target,
+                                  ap.ns,
+                                  ap.func,
+                                  bpftrace_.feature_->has_uprobe_multi());
     if (!usdt.has_value()) {
       ap.addError() << "Failed to find usdt probe: " << probefull_;
     } else

@@ -198,11 +198,12 @@ std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper(int num_locations)
 {
   auto usdt_helper = std::make_unique<NiceMock<MockUSDTHelper>>();
 
-  ON_CALL(*usdt_helper, find(_, _, _, _))
+  ON_CALL(*usdt_helper, find(_, _, _, _, _))
       .WillByDefault([num_locations](std::optional<int>,
                                      const std::string &,
                                      const std::string &,
-                                     const std::string &) {
+                                     const std::string &,
+                                     bool) {
         return usdt_probe_entry{
           .path = "",
           .provider = "",

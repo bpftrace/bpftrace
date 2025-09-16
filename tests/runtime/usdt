@@ -171,7 +171,7 @@ EXPECT_REGEX ^\d+ usdt:.*/testprogs/usdt_test:tracetest.?:testprobe.?$
 BEFORE ./testprogs/usdt_test
 
 NAME usdt probes - attach to probe with semaphore
-RUN {{BPFTRACE}} -e 'usdt::tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -e 'usdt:*:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' -p {{BEFORE_PID}}
 EXPECT USDT semaphore: 1
 BEFORE ./testprogs/usdt_semaphore_test
 

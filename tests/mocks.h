@@ -233,11 +233,12 @@ public:
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
-  MOCK_METHOD4(find,
+  MOCK_METHOD5(find,
                std::optional<usdt_probe_entry>(std::optional<int> pid,
                                                const std::string &target,
                                                const std::string &provider,
-                                               const std::string &name));
+                                               const std::string &name,
+                                              bool has_uprobe_multi));
 #pragma GCC diagnostic pop
 };
 
