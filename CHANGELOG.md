@@ -21,6 +21,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- opensnoop.bt: support full file path
+  - [#4601](https://github.com/bpftrace/bpftrace/pull/4601)
 - gethostlatency.bt: add more APIs support
   - [#4600](https://github.com/bpftrace/bpftrace/pull/4600)
 - oomkill.bt: support memory cgroup
