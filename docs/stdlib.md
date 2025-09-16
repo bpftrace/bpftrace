@@ -1236,6 +1236,14 @@ uprobe:/bin/bash:readline
 ```
 
 
+### zero
+- `void zero(map m)`
+
+**async**
+
+Set all values (for all keys) in the map to zero.
+
+
 ## Map Value Functions
 
 Map value functions can only be assigned to maps (when scalar) or map keys.

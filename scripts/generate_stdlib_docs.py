@@ -109,6 +109,9 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
                         helpers.append(current)
                     current = Helper()
 
+        if current.name and current.description:
+            helpers.append(current)
+
         return helpers
 
     except PermissionError:
