@@ -112,15 +112,7 @@ add_subdirectory(testlibs)
 #
 # Runtime Tests
 #
-configure_file(runtime-tests.sh runtime-tests.sh @ONLY)
-add_custom_target(
-  runtime_tests
-  COMMAND ./runtime-tests.sh
-  DEPENDS
-    testprogs
-    testlibs
-    ${CMAKE_BINARY_DIR}/src/bpftrace
-)
+configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
 
 file(GLOB_RECURSE runtime_test_src_files
   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -146,7 +138,6 @@ foreach(runtime_test_file ${runtime_test_src_files})
   )
 endforeach()
 add_custom_target(runtime_test_files ALL DEPENDS ${runtime_test_files})
-add_dependencies(runtime_tests runtime_test_files)
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine)
 configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine/ @ONLY)
