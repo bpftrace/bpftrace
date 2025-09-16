@@ -31,7 +31,10 @@
  * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
-config = { missing_probes = "ignore" }
+config = {
+	missing_probes = "ignore";
+	unstable_macro = "enable";
+}
 
 BEGIN
 {
@@ -40,22 +43,53 @@ BEGIN
 	    "HOST");
 }
 
+uprobe:libc:gethostbyaddr,
+uprobe:libc:gethostbyaddr_r
+{
+	@start[tid] = nsecs;
+	@inet[tid] = ntop(arg0);
+}
+
 uprobe:libc:getaddrinfo,
 uprobe:libc:gethostbyname,
-uprobe:libc:gethostbyname2
+uprobe:libc:gethostbyname_r,
+uprobe:libc:gethostbyname2,
+uprobe:libc:gethostbyname2_r
 {
 	@start[tid] = nsecs;
 	@name[tid] = arg0;
 }
 
+macro print_result(start, name)
+{
+	$latms = (nsecs - start) / 1e6;
+	time("%H:%M:%S  ");
+	printf("%-6d %-16s %6d %s\n", pid, comm, $latms, name);
+}
+
 uretprobe:libc:getaddrinfo,
 uretprobe:libc:gethostbyname,
-uretprobe:libc:gethostbyname2
+uretprobe:libc:gethostbyname_r,
+uretprobe:libc:gethostbyname2,
+uretprobe:libc:gethostbyname2_r
 /@start[tid]/
 {
-	$latms = (nsecs - @start[tid]) / 1e6;
-	time("%H:%M:%S  ");
-	printf("%-6d %-16s %6d %s\n", pid, comm, $latms, str(@name[tid]));
+	print_result(@start[tid], str(@name[tid]));
 	delete(@start, tid);
 	delete(@name, tid);
+}
+
+uretprobe:libc:gethostbyaddr,
+uretprobe:libc:gethostbyaddr_r
+/@start[tid]/
+{
+	print_result(@start[tid], @inet[tid]);
+	delete(@start, tid);
+	delete(@inet, tid);
+}
+
+END
+{
+	clear(@name);
+	clear(@inet);
 }
