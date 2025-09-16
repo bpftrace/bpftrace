@@ -1,5 +1,6 @@
 #include "mocks.h"
 #include "tracefs/tracefs.h"
+#include "util/elf_parser.h"
 #include "gmock/gmock-nice-strict.h"
 
 namespace bpftrace::test {
@@ -203,13 +204,7 @@ std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper(int num_locations)
                                      const std::string &,
                                      const std::string &,
                                      const std::string &) {
-        return usdt_probe_entry{
-          .path = "",
-          .provider = "",
-          .name = "",
-          .semaphore_offset = 0,
-          .num_locations = num_locations,
-        };
+        return util::usdt_probe_entry{ "", "", "", 0, 0, num_locations };
       });
 
   return usdt_helper;

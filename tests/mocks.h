@@ -6,6 +6,7 @@
 #include "child.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "util/elf_parser.h"
 #include "util/result.h"
 #include "util/strings.h"
 #include "gmock/gmock-function-mocker.h"
@@ -105,7 +106,8 @@ public:
     return true;
   }
 
-  Result<uint64_t> get_buffer_pages(bool __attribute__((unused)) /*per_cpu*/) const override
+  Result<uint64_t> get_buffer_pages(
+      bool __attribute__((unused)) /*per_cpu*/) const override
   {
     return 64;
   }
@@ -119,12 +121,12 @@ public:
   const std::optional<struct stat> &get_pidns_self_stat() const override
   {
     static const std::optional<struct stat> init_pid_namespace = []() {
-      struct stat s{};
+      struct stat s {};
       s.st_ino = 0xeffffffc; // PROC_PID_INIT_INO
       return std::optional{ s };
     }();
     static const std::optional<struct stat> child_pid_namespace = []() {
-      struct stat s{};
+      struct stat s {};
       s.st_ino = 0xf0000011; // Arbitrary user namespace
       return std::optional{ s };
     }();
@@ -233,11 +235,12 @@ public:
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
-  MOCK_METHOD4(find,
-               std::optional<usdt_probe_entry>(std::optional<int> pid,
-                                               const std::string &target,
-                                               const std::string &provider,
-                                               const std::string &name));
+  MOCK_METHOD4(
+      find,
+      std::optional<util::usdt_probe_entry>(std::optional<int> pid,
+                                            const std::string &target,
+                                            const std::string &provider,
+                                            const std::string &name));
 #pragma GCC diagnostic pop
 };
 
