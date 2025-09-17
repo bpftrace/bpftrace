@@ -973,7 +973,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
              builtin.ident == "__builtin_gid" ||
              builtin.ident == "__builtin_cpu" ||
              builtin.ident == "__builtin_rand" ||
-             builtin.ident == "__builtin_numaid" ||
              builtin.ident == "__builtin_jiffies" ||
              builtin.ident == "__builtin_ncpus") {
     builtin.builtin_type = CreateUInt64();

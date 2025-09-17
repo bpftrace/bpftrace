@@ -152,10 +152,6 @@ NAME builtin wrapper ncpus
 PROG begin { if (__builtin_ncpus == ncpus() && __builtin_ncpus == ncpus) { print(ncpus); } }
 EXPECT_REGEX ^[1-9][0-9]*$
 
-NAME builtin wrapper numaid
-PROG begin { if (__builtin_numaid == numaid() && __builtin_numaid == numaid) { printf("SUCCESS %d\n", numaid); } }
-EXPECT_REGEX SUCCESS [0-9]+
-
 NAME builtin wrapper probe
 PROG k:do_nanosleep { if (__builtin_probe == probe() && __builtin_probe == probe) { print(probe); } exit(); }
 EXPECT kprobe:do_nanosleep

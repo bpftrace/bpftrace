@@ -157,12 +157,6 @@ Program
   builtin: __builtin_elapsed
 )");
 
-  test("kprobe:f { __builtin_numaid }", R"(
-Program
- kprobe:f
-  builtin: __builtin_numaid
-)");
-
   test("kprobe:f { __builtin_cpu }", R"(
 Program
  kprobe:f

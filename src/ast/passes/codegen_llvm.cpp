@@ -738,8 +738,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                          << arch::Host::Machine;
       return ScopedExpr(b_.getInt64(0));
     }
-  } else if (builtin.ident == "__builtin_numaid") {
-    return ScopedExpr(b_.CreateGetNumaId(builtin.loc));
   } else if (builtin.ident == "__builtin_cpu") {
     Value *cpu = b_.CreateGetCpuId(builtin.loc);
     return ScopedExpr(b_.CreateZExt(cpu, b_.getInt64Ty()));
