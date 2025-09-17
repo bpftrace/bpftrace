@@ -2,28 +2,24 @@
 /*
  * opensnoop	Trace open() syscalls.
  *		For Linux, uses bpftrace and eBPF.
- * 
+ *
+ * USAGE: opensnoop.bt -- [--depth=<N>]
+ *
  * Example of usage:
  * 
  * # ./opensnoop.bt
- * Attaching 3 probes...
+ * Attached 8 probes
  * Tracing open syscalls... Hit Ctrl-C to end.
  * PID    COMM               FD ERR PATH
- * 2440   snmp-pass           4   0 /proc/cpuinfo
- * 2440   snmp-pass           4   0 /proc/stat
- * 25706  ls                  3   0 /etc/ld.so.cache
- * 25706  ls                  3   0 /lib/x86_64-linux-gnu/libselinux.so.1
- * 25706  ls                  3   0 /lib/x86_64-linux-gnu/libc.so.6
- * 25706  ls                  3   0 /lib/x86_64-linux-gnu/libpcre.so.3
- * 25706  ls                  3   0 /lib/x86_64-linux-gnu/libdl.so.2
- * 25706  ls                  3   0 /lib/x86_64-linux-gnu/libpthread.so.0
- * 25706  ls                  3   0 /proc/filesystems
- * 25706  ls                  3   0 /usr/lib/locale/locale-archive
- * 25706  ls                  3   0 .
- * [...]
- * 2440   snmp-pass           4   0 /proc/cpuinfo
- * 2440   snmp-pass           4   0 /proc/stat
- * 22884  pickup             12   0 maildrop
+ * 37421  bpftrace           33   0 /sys/kernel/debug/tracing/events/syscalls/sys_exit_openat2/id
+ * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/.
+ * 1400   systemd-oomd       13   0 /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-gnome\x2dsession\x2dmanager.slice/memory.pressure
+ * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3122/cgroup.procs
+ * 1615   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+ * 1614   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+ * 1613   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+ * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3150/cgroup.procs
+ * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/17355/cgroup.procs
  * 2440   snmp-pass           4   0 /proc/cpuinfo
  * 2440   snmp-pass           4   0 /proc/stat
  * 
@@ -39,9 +35,13 @@
  * Copyright 2018 Netflix, Inc.
  *
  * 08-Sep-2018	Brendan Gregg	Created this.
+ * 16-Sep-2025	Rong Tao	Support fullpath of file.
  */
 
-config = { missing_probes=warn }
+config = {
+	missing_probes=warn;
+	unstable_macro=enable;
+}
 
 BEGIN
 {
@@ -56,6 +56,29 @@ tracepoint:syscalls:sys_enter_openat2
 	@filename[tid] = args.filename;
 }
 
+macro getcwd(@paths) {
+	$dentry = curtask->fs->pwd.dentry;
+
+	$max_path_depth = getopt("depth", 35);
+
+	for ($j : ((uint64)0)..((uint64)$max_path_depth)) {
+		$parent_dentry = $dentry->d_parent;
+		if ($dentry == $parent_dentry) {
+			break;
+		}
+		@paths[$j] = str($dentry->d_name.name);
+		$dentry = $parent_dentry;
+	}
+}
+
+macro printcwd(@paths) {
+	for ($j : ((uint64)0)..((uint64)len(@paths))) {
+		printf("/%s", @paths[(uint64)len(@paths) - $j - 1]);
+	}
+	printf("/");
+	clear(@paths);
+}
+
 tracepoint:syscalls:sys_exit_open,
 tracepoint:syscalls:sys_exit_openat,
 tracepoint:syscalls:sys_exit_openat2
@@ -65,12 +88,24 @@ tracepoint:syscalls:sys_exit_openat2
 	$fd = $ret >= 0 ? $ret : -1;
 	$errno = $ret >= 0 ? 0 : - $ret;
 
-	printf("%-6d %-16s %4d %3d %s\n", pid, comm, $fd, $errno,
-	    str(@filename[tid]));
+	getcwd(@paths);
+
+	$path = str(@filename[tid]);
+
+	printf("%-6d %-16s %4d %3d ", pid, comm, $fd, $errno);
+
+	/**
+	 * Skip display cwd if path start with '/'.
+	 */
+	if ($path[0] != "/"[0]) {
+		printcwd(@paths);
+	}
+	printf("%s\n", str(@filename[tid]));
 	delete(@filename, tid);
 }
 
 END
 {
 	clear(@filename);
+	clear(@paths);
 }
