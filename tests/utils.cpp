@@ -326,14 +326,71 @@ static void with_env(const std::string &key,
                      const std::string &val,
                      std::function<void()> fn)
 {
+  char *old_val_ptr = ::getenv(key.c_str());
+  std::string old_val = {};
+
+  // we must capture the existing key's value by value, since the invokd
+  // function might modify the environment and invalidate old_val_ptr.
+  if (old_val_ptr != nullptr) {
+    old_val = old_val_ptr;
+  }
+
+  auto restore_key = [&key, &old_val]() {
+    if (!old_val.empty()) {
+      EXPECT_EQ(::setenv(key.c_str(), old_val.c_str(), 1), 0);
+    } else {
+      EXPECT_EQ(::unsetenv(key.c_str()), 0);
+    }
+  };
+
   EXPECT_EQ(::setenv(key.c_str(), val.c_str(), 1), 0);
+
   try {
     fn();
   } catch (const std::exception &ex) {
-    EXPECT_EQ(::unsetenv(key.c_str()), 0);
+    restore_key();
     throw ex;
   }
-  EXPECT_EQ(::unsetenv(key.c_str()), 0);
+
+  restore_key();
+}
+
+TEST(utils, with_env_nonexisting_key)
+{
+  // Test nonexisting variable
+  const std::string nonexisting_key = "nonexisting_key";
+  const std::string some_value = "some_value";
+
+  with_env(nonexisting_key, some_value, [&]() {
+    EXPECT_EQ(::getenv(nonexisting_key.c_str()), some_value);
+  });
+
+  EXPECT_EQ(::getenv(nonexisting_key.c_str()), nullptr);
+}
+
+TEST(utils, with_env_restoration)
+{
+  // Test that an existing variable is restored correctly,
+  // even with nested environment mutation
+  const std::string existing_key = "existing_key";
+  const std::string existing_value = "existing_value";
+  const std::string random_new_key = "random_new_key";
+  const std::string random_new_value = "random_new_value";
+  const std::string some_value = "some_value";
+
+  ::setenv(existing_key.c_str(), existing_value.c_str(), 1);
+
+  with_env(existing_key, some_value, [&]() {
+    EXPECT_EQ(::getenv(existing_key.c_str()), some_value);
+    ::unsetenv(existing_key.c_str());
+    ::setenv(random_new_key.c_str(), random_new_value.c_str(), 1);
+  });
+
+  EXPECT_EQ(::getenv(existing_key.c_str()), existing_value);
+
+  // Cleanup
+  ::unsetenv(existing_key.c_str());
+  ::unsetenv(random_new_key.c_str());
 }
 
 TEST(utils, find_in_path)
