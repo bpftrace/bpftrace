@@ -24,7 +24,7 @@ and this project adheres to
 - oomkill.bt: support memory cgroup
   - [#4533](https://github.com/bpftrace/bpftrace/pull/4533)
 
-## [0.24.0] TBD
+## [0.24.0] 2025-09-17
 
 #### Breaking Changes
 - Drop majority of DWARF support. Only uprobe argument parsing remains.
