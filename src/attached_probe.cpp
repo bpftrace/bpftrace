@@ -360,7 +360,6 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
   return offset;
 }
 
-#ifdef HAVE_LIBBPF_UPROBE_MULTI
 struct bcc_sym_cb_data {
   std::vector<std::string> &syms;
   std::set<uint64_t> &offsets;
@@ -462,7 +461,6 @@ Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
 
   return offsets;
 }
-#endif // HAVE_LIBBPF_UPROBE_MULTI
 
 class AttachedKprobeProbe : public AttachedProbe {
 public:
@@ -720,7 +718,6 @@ size_t AttachedMultiUprobeProbe::probe_count() const
   return probe_.funcs.size();
 }
 
-#ifdef HAVE_LIBBPF_UPROBE_MULTI
 Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
     make(Probe &probe, const BpfProgram &prog, std::optional<int> pid)
 {
@@ -761,13 +758,6 @@ Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
   return std::unique_ptr<AttachedMultiUprobeProbe>(
       new AttachedMultiUprobeProbe(probe, link_fd));
 }
-#else
-Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
-    make(Probe &probe, const BpfProgram &prog, std::optional<int> pid)
-{
-  return make_error<AttachError>("uprobe multi not available on this system");
-}
-#endif // HAVE_LIBBPF_UPROBE_MULTI
 
 class AttachedUSDTProbe : public AttachedProbe {
 public:

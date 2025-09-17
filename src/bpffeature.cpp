@@ -416,7 +416,6 @@ bool BPFfeature::has_uprobe_multi()
   if (has_uprobe_multi_.has_value())
     return *has_uprobe_multi_;
 
-#ifdef HAVE_LIBBPF_UPROBE_MULTI
   if (no_feature_.uprobe_multi_) {
     has_uprobe_multi_ = false;
     return *has_uprobe_multi_;
@@ -433,10 +432,7 @@ bool BPFfeature::has_uprobe_multi()
                                       BPF_TRACE_UPROBE_MULTI,
                                       link_opts,
                                       -EBADF);
-#else
-  has_uprobe_multi_ = false;
-#endif                       // HAVE_LIBBPF_UPROBE_MULTI
-  return *has_uprobe_multi_; // NOLINT(bugprone-unchecked-optional-access)
+  return *has_uprobe_multi_;
 }
 
 static void tabulate(std::stringstream& buf,

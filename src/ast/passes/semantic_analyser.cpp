@@ -3903,12 +3903,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 
     const auto pid = bpftrace_.pid();
     if (pid.has_value()) {
-      USDTHelper::probes_for_pid(*pid);
+      USDTHelper::probes_for_pid(*pid, bpftrace_.feature_->has_uprobe_multi());
     } else if (ap.target == "*") {
-      USDTHelper::probes_for_all_pids();
+      USDTHelper::probes_for_all_pids(bpftrace_.feature_->has_uprobe_multi());
     } else if (!ap.target.empty()) {
       for (auto &path : util::resolve_binary_path(ap.target))
-        USDTHelper::probes_for_path(path);
+        USDTHelper::probes_for_path(path,
+                                    bpftrace_.feature_->has_uprobe_multi());
     } else {
       ap.addError() << "usdt probe must specify at least path or pid to "
                        "probe. To target "

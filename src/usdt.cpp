@@ -28,13 +28,11 @@ static std::unordered_map<int, std::unordered_set<std::string>>
 // current tracepoint paths for the current pid
 static std::unordered_set<std::string> current_pid_paths;
 
+static bool has_uprobe_multi_ = false;
+
 static void usdt_probe_each(struct bcc_usdt *usdt_probe)
 {
-#ifdef HAVE_LIBBPF_UPROBE_MULTI
-  int num_locations = 1;
-#else
-  int num_locations = usdt_probe->num_locations;
-#endif
+  int num_locations = has_uprobe_multi_ ? 1 : usdt_probe->num_locations;
   usdt_provider_cache[usdt_probe->bin_path][usdt_probe->provider].emplace_back(
       usdt_probe_entry{
           .path = usdt_probe->bin_path,
@@ -57,18 +55,19 @@ static void cache_current_pid_paths(int pid)
 std::optional<usdt_probe_entry> USDTHelper::find(std::optional<int> pid,
                                                  const std::string &target,
                                                  const std::string &provider,
-                                                 const std::string &name)
+                                                 const std::string &name,
+                                                 bool has_uprobe_multi)
 {
   usdt_probe_list probes;
   if (pid.has_value()) {
-    read_probes_for_pid(*pid);
+    read_probes_for_pid(*pid, has_uprobe_multi);
     for (auto const &path : usdt_pid_to_paths_cache[*pid]) {
       probes.insert(probes.end(),
                     usdt_provider_cache[path][provider].begin(),
                     usdt_provider_cache[path][provider].end());
     }
   } else {
-    read_probes_for_path(target);
+    read_probes_for_path(target, has_uprobe_multi);
     probes = usdt_provider_cache[target][provider];
   }
 
@@ -84,9 +83,11 @@ std::optional<usdt_probe_entry> USDTHelper::find(std::optional<int> pid,
   }
 }
 
-usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
+usdt_probe_list USDTHelper::probes_for_pid(int pid,
+                                           bool has_uprobe_multi,
+                                           bool print_error)
 {
-  read_probes_for_pid(pid, print_error);
+  read_probes_for_pid(pid, has_uprobe_multi, print_error);
 
   usdt_probe_list probes;
   for (auto const &path : usdt_pid_to_paths_cache[pid]) {
@@ -99,7 +100,7 @@ usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
   return probes;
 }
 
-usdt_probe_list USDTHelper::probes_for_all_pids()
+usdt_probe_list USDTHelper::probes_for_all_pids(bool has_uprobe_multi)
 {
   usdt_probe_list probes;
   auto pids = util::get_all_running_pids();
@@ -108,16 +109,17 @@ usdt_probe_list USDTHelper::probes_for_all_pids()
     return probes;
   }
   for (int pid : *pids) {
-    for (auto &probe : probes_for_pid(pid, false)) {
+    for (auto &probe : probes_for_pid(pid, has_uprobe_multi, false)) {
       probes.push_back(std::move(probe));
     }
   }
   return probes;
 }
 
-usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
+usdt_probe_list USDTHelper::probes_for_path(const std::string &path,
+                                            bool has_uprobe_multi)
 {
-  read_probes_for_path(path);
+  read_probes_for_path(path, has_uprobe_multi);
 
   usdt_probe_list probes;
   for (auto const &usdt_probes : usdt_provider_cache[path]) {
@@ -128,8 +130,11 @@ usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
   return probes;
 }
 
-void USDTHelper::read_probes_for_pid(int pid, bool print_error)
+void USDTHelper::read_probes_for_pid(int pid,
+                                     bool has_uprobe_multi,
+                                     bool print_error)
 {
+  has_uprobe_multi_ = has_uprobe_multi;
   if (pid_cache.contains(pid))
     return;
 
@@ -151,8 +156,10 @@ void USDTHelper::read_probes_for_pid(int pid, bool print_error)
   pid_cache.emplace(pid);
 }
 
-void USDTHelper::read_probes_for_path(const std::string &path)
+void USDTHelper::read_probes_for_path(const std::string &path,
+                                      bool has_uprobe_multi)
 {
+  has_uprobe_multi_ = has_uprobe_multi;
   if (path_cache.contains(path))
     return;
 
