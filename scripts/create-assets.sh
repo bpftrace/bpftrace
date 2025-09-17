@@ -35,13 +35,8 @@ info "Creating tools archive"
 # bit of copying to avoid confusing tar flags not great but works
 mkdir -p "$TMP/bin"
 
-cp tools/*.bt tools/*.txt "$TMP/bin"
-rm -f "$TMP/bin/CMakeLists.txt"
+cp tools/*.bt "$TMP/bin"
 chmod +x "$TMP/bin/"*.bt
-
-tar --xz -cf "$OUT/tools-with-help.tar.xz" -C "$TMP/bin" "."
-
-rm "$TMP/bin/"*.txt
 tar --xz -cf "$OUT/tools.tar.xz" -C "$TMP/bin" "."
 
 info "Creating man archive"
