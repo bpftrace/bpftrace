@@ -21,6 +21,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- gethostlatency.bt: add more APIs support
+  - [#4600](https://github.com/bpftrace/bpftrace/pull/4600)
 - oomkill.bt: support memory cgroup
   - [#4533](https://github.com/bpftrace/bpftrace/pull/4533)
 
