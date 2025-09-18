@@ -647,11 +647,11 @@ public:
 
   const SizedType &type() const
   {
-    static SizedType voidptr = CreatePointer(CreateVoid());
-    return voidptr;
+    return map_type;
   }
 
   Map *map = nullptr;
+  SizedType map_type;
 };
 
 class Binop : public Node {

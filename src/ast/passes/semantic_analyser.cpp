@@ -245,6 +245,7 @@ private:
   bool is_valid_assignment(const Expression &expr, bool map_without_type);
   SizedType *get_map_type(const Map &map);
   SizedType *get_map_key_type(const Map &map);
+  std::optional<SizedType> get_raw_map_type(const Map &map);
   void assign_map_type(Map &map,
                        const SizedType &type,
                        const Node *loc_node,
@@ -1988,8 +1989,8 @@ void SemanticAnalyser::visit(Call &call)
           continue;
         }
         call.addError() << "Unable to convert argument type, "
-                        << "function requires '" << type << "', "
-                        << "found '" << typestr(call.vargs[i].type())
+                        << "function requires '" << type << "', " << "found '"
+                        << typestr(call.vargs[i].type())
                         << "': " << compat_arg_type.takeError();
         continue;
       }
@@ -2274,6 +2275,11 @@ void SemanticAnalyser::visit(MapAddr &map_addr)
     pass_tracker_.inc_num_unresolved();
   } else {
     visit(map_addr.map);
+
+    // Set the raw underlying type on the expression.
+    if (auto type = get_raw_map_type(*map_addr.map)) {
+      map_addr.map_type = std::move(type.value());
+    }
   }
 }
 
@@ -2780,8 +2786,8 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
 
   if (!lhs.IsSameType(rhs)) {
     if (is_final_pass()) {
-      if_expr.addError() << "Branches must return the same type: "
-                         << "have '" << lhs << "' and '" << rhs << "'";
+      if_expr.addError() << "Branches must return the same type: " << "have '"
+                         << lhs << "' and '" << rhs << "'";
     }
     // This assignment is just temporary to prevent errors
     // before the final pass
@@ -3130,13 +3136,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!bpftrace_.structs.Has(type.GetName())) {
-    acc.addError() << "Unknown struct/union: '" << type.GetName() << "'";
-    return;
-  }
-
-  std::map<std::string, std::shared_ptr<const Struct>> structs;
-
+  std::vector<std::shared_ptr<const Struct>> structs;
   if (type.is_tparg) {
     auto *probe = get_probe(acc);
     if (probe == nullptr)
@@ -3152,20 +3152,16 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
       std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
           *attach_point);
-      structs[tracepoint_struct] =
-          bpftrace_.structs.Lookup(tracepoint_struct).lock();
+      structs.emplace_back(bpftrace_.structs.Lookup(tracepoint_struct).lock());
     }
   } else {
-    structs[type.GetName()] = type.GetStruct();
+    structs.emplace_back(type.GetStruct());
   }
 
-  for (auto it : structs) {
-    std::string cast_type = it.first;
-    const auto record = it.second;
+  for (const auto &record : structs) {
     if (!record->HasField(acc.field)) {
-      acc.addError() << "Struct/union of type '" << cast_type
-                     << "' does not contain " << "a field named '" << acc.field
-                     << "'";
+      acc.addError() << "Struct/union does not contain a field named '"
+                     << acc.field << "'";
     } else {
       const auto &field = record->GetField(acc.field);
 
@@ -4436,6 +4432,45 @@ SizedType *SemanticAnalyser::get_map_key_type(const Map &map)
     return &it->second;
   }
   return nullptr;
+}
+
+std::optional<SizedType> SemanticAnalyser::get_raw_map_type(const Map &map)
+{
+  auto *key_type = get_map_key_type(map);
+  auto *value_type = get_map_type(map);
+  if (!key_type || !value_type) {
+    pass_tracker_.inc_num_unresolved();
+    return std::nullopt;
+  }
+
+  // We can't currently extract the number of entries since this is done by the
+  // resource analyzer. This should be restructured such that the full type
+  // information is available at the time of type inference.
+  size_t max_entries = 0;
+
+  // Similarly, this should be more explicit, we are abusing foreknowledge of
+  // what will happen later to inform the type of this map.
+  auto map_type = BPF_MAP_TYPE_HASH;
+  auto found_kind = bpf_map_type_.find(map.ident);
+  if (found_kind == bpf_map_type_.end()) {
+    map_type = found_kind->second;
+  }
+
+  // Construct a BPF type map.
+  std::vector<std::string_view> field_names;
+  std::vector<SizedType> fields;
+  field_names.push_back("type");
+  fields.emplace_back(CreatePointer(CreateArray(map_type, CreateInt(32))));
+  field_names.push_back("key");
+  fields.emplace_back(CreatePointer(*key_type));
+  field_names.push_back("value");
+  fields.emplace_back(CreatePointer(*value_type));
+  field_names.push_back("max_entries");
+  fields.emplace_back(CreatePointer(CreateArray(max_entries, CreateInt(32))));
+
+  // Create the anonymous record.
+  auto record = Struct::CreateRecord(fields, field_names);
+  return CreatePointer(CreateRecord(std::move(record)));
 }
 
 // Semantic analysis for assigning a value of the provided type to the given
