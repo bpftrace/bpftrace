@@ -125,8 +125,12 @@ class MacroExpander : public Visitor<MacroExpander> {
 public:
   MacroExpander(ASTContext &ast,
                 const MacroRegistry &registry,
-                std::vector<const Macro *> &stack)
-      : ast_(ast), registry_(registry), stack_(stack) {};
+                std::vector<const Macro *> &stack,
+                bool should_rename = true)
+      : ast_(ast),
+        registry_(registry),
+        stack_(stack),
+        should_rename_(should_rename) {};
 
   using Visitor<MacroExpander>::visit;
 
@@ -143,8 +147,9 @@ private:
   ASTContext &ast_;
   const MacroRegistry &registry_;
   std::vector<const Macro *> stack_;
+  bool should_rename_;
 
-  bool is_top_level();
+  bool rename_ok();
   std::string get_new_var_ident(std::string original_ident);
 
   // Maps of macro map/var names -> callsite map/var names
@@ -156,7 +161,7 @@ private:
 
 void MacroExpander::visit(AssignVarStatement &assignment)
 {
-  if (is_top_level()) {
+  if (!rename_ok()) {
     visit(assignment.expr);
     return;
   }
@@ -178,7 +183,7 @@ void MacroExpander::visit(AssignVarStatement &assignment)
 
 void MacroExpander::visit(VarDeclStatement &decl)
 {
-  if (is_top_level()) {
+  if (!rename_ok()) {
     return;
   }
 
@@ -194,7 +199,7 @@ void MacroExpander::visit(VarDeclStatement &decl)
 
 void MacroExpander::visit(Variable &var)
 {
-  if (is_top_level()) {
+  if (!rename_ok()) {
     return;
   }
 
@@ -207,7 +212,7 @@ void MacroExpander::visit(Variable &var)
 
 void MacroExpander::visit(Map &map)
 {
-  if (is_top_level()) {
+  if (!rename_ok()) {
     return;
   }
 
@@ -234,15 +239,11 @@ void MacroExpander::visit(Expression &expr)
       expr = clone(ast_, it->second, ident->loc);
       // Create a new expander because we're visiting an expression passed into
       // the macro so it's not part of the surounding macro code and therefore
-      // variables, maps, and idents in this expression shouldn't be modified.
-      //
-      // We temporarily remove our current macro from the back of the stack,
-      // because this expression *is* permitted to be non-hermetic.
-      const auto *last = stack_.back();
-      stack_.pop_back();
-      MacroExpander expander(ast_, registry_, stack_);
+      // variables, maps, and idents in this expression shouldn't be modified
+      // and this expression *is* permitted to be un-hygienic.
+
+      MacroExpander expander(ast_, registry_, stack_, false);
       expander.visit(expr);
-      stack_.push_back(last);
       return;
     }
   }
@@ -349,16 +350,16 @@ void MacroExpander::visit(Expression &expr)
   }
 }
 
-bool MacroExpander::is_top_level()
+bool MacroExpander::rename_ok()
 {
-  return stack_.empty();
+  return !stack_.empty() && should_rename_;
 }
 
 std::string MacroExpander::get_new_var_ident(std::string original_ident)
 {
   // This is a name like $$foo_0_x, where `x` is the original name,
   // `foo` is the macro name, and `0` is the depth of the call.
-  assert(!is_top_level());
+  assert(rename_ok());
   const auto *macro = stack_.back();
   std::string base = "$$" + macro->name;
   if (stack_.size() != 1) {
