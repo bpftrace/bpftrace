@@ -13,7 +13,9 @@ static void import_ast(ASTContext &ast, const ASTContext &other)
   // expansion.
   ast.diagnostics().add(std::move(other.diagnostics()));
   if (other.root) {
-    ast.root->c_definitions += other.root->c_definitions;
+    for (const auto &stmt : other.root->c_statements) {
+      ast.root->c_statements.push_back(clone(ast, stmt));
+    }
     for (const auto &decl : other.root->map_decls) {
       ast.root->map_decls.push_back(clone(ast, decl));
     }

@@ -354,18 +354,18 @@ TEST(Parser, positional_param_attachpoint)
 stdin:1:1-20: ERROR: invalid trailing character for positional param: 0. Try quoting this entire part if this is intentional e.g. "$0".
 uprobe:/bin/bash:$0 { 1 }
 ~~~~~~~~~~~~~~~~~~~
-stdin:1:1-26: ERROR: No attach points for probe
+stdin:1:1-20: ERROR: No attach points for probe
 uprobe:/bin/bash:$0 { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 )");
 
   test_parse_failure(bpftrace, R"(uprobe:/bin/bash:$a { 1 })", R"(
 stdin:1:1-20: ERROR: invalid trailing character for positional param: a. Try quoting this entire part if this is intentional e.g. "$a".
 uprobe:/bin/bash:$a { 1 }
 ~~~~~~~~~~~~~~~~~~~
-stdin:1:1-26: ERROR: No attach points for probe
+stdin:1:1-20: ERROR: No attach points for probe
 uprobe:/bin/bash:$a { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 )");
 
   test_parse_failure(bpftrace,
@@ -374,9 +374,9 @@ uprobe:/bin/bash:$a { 1 }
 stdin:1:1-35: ERROR: positional parameter is not valid: overflow error, maximum value is 18446744073709551615: 999999999999999999999999
 uprobe:f:$999999999999999999999999 { 1 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-stdin:1:1-41: ERROR: No attach points for probe
+stdin:1:1-35: ERROR: No attach points for probe
 uprobe:f:$999999999999999999999999 { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
@@ -1876,7 +1876,6 @@ TEST(Parser, include)
 {
   test("#include <stdio.h>\nkprobe:sys_read { @x = 1 }",
        "#include <stdio.h>\n"
-       "\n"
        "Program\n"
        " kprobe:sys_read\n"
        "  =\n"
@@ -1888,7 +1887,6 @@ TEST(Parser, include_quote)
 {
   test("#include \"stdio.h\"\nkprobe:sys_read { @x = 1 }",
        "#include \"stdio.h\"\n"
-       "\n"
        "Program\n"
        " kprobe:sys_read\n"
        "  =\n"
@@ -1903,7 +1901,6 @@ TEST(Parser, include_multiple)
        "#include <stdio.h>\n"
        "#include \"blah\"\n"
        "#include <foo.h>\n"
-       "\n"
        "Program\n"
        " kprobe:sys_read\n"
        "  =\n"
@@ -2073,7 +2070,6 @@ TEST(Parser, cast_enum)
 {
   test("enum Foo { ONE = 1 } kprobe:sys_read { (enum Foo)1; }",
        "enum Foo { ONE = 1 };\n"
-       "\n"
        "Program\n"
        " kprobe:sys_read\n"
        "  (enum Foo)\n"
@@ -2101,7 +2097,6 @@ TEST(Parser, offsetof_type)
 {
   test("struct Foo { int x; } begin { offsetof(struct Foo, x); }",
        "struct Foo { int x; };\n"
-       "\n"
        "Program\n"
        " begin\n"
        "  offsetof: \n"
@@ -2110,7 +2105,6 @@ TEST(Parser, offsetof_type)
   test("struct Foo { struct Bar { int x; } bar; } "
        "begin { offsetof(struct Foo, bar.x); }",
        "struct Foo { struct Bar { int x; } bar; };\n"
-       "\n"
        "Program\n"
        " begin\n"
        "  offsetof: \n"
@@ -2120,9 +2114,9 @@ TEST(Parser, offsetof_type)
   test_parse_failure("struct Foo { struct Bar { int x; } *bar; } "
                      "begin { offsetof(struct Foo, bar->x); }",
                      R"(
-stdin:1:74-79: ERROR: syntax error, unexpected ->, expecting ) or .
+stdin:1:76-78: ERROR: syntax error, unexpected ->, expecting ) or .
 struct Foo { struct Bar { int x; } *bar; } begin { offsetof(struct Foo, bar->x); }
-                                                                         ~~~~~
+                                                                           ~~
 )");
 }
 
@@ -2131,7 +2125,6 @@ TEST(Parser, offsetof_expression)
   test("struct Foo { int x; }; "
        "begin { $foo = (struct Foo *)0; offsetof(*$foo, x); }",
        "struct Foo { int x; };;\n"
-       "\n"
        "Program\n"
        " begin\n"
        "  =\n"
@@ -2148,7 +2141,6 @@ TEST(Parser, offsetof_builtin_type)
 {
   test("struct Foo { timestamp x; } begin { offsetof(struct Foo, timestamp); }",
        "struct Foo { timestamp x; };\n"
-       "\n"
        "Program\n"
        " begin\n"
        "  offsetof: \n"
@@ -2287,7 +2279,6 @@ TEST(Parser, cstruct)
 {
   test("struct Foo { int x, y; char *str; } kprobe:sys_read { 1; }",
        "struct Foo { int x, y; char *str; };\n"
-       "\n"
        "Program\n"
        " kprobe:sys_read\n"
        "  int: 1 :: [int64]\n");
@@ -2297,7 +2288,6 @@ TEST(Parser, cstruct_semicolon)
 {
   test("struct Foo { int x, y; char *str; }; kprobe:sys_read { 1; }",
        "struct Foo { int x, y; char *str; };;\n"
-       "\n"
        "Program\n"
        " kprobe:sys_read\n"
        "  int: 1 :: [int64]\n");
@@ -2307,7 +2297,6 @@ TEST(Parser, cstruct_nested)
 {
   test("struct Foo { struct { int x; } bar; } kprobe:sys_read { 1; }",
        "struct Foo { struct { int x; } bar; };\n"
-       "\n"
        "Program\n"
        " kprobe:sys_read\n"
        "  int: 1 :: [int64]\n");
@@ -2354,12 +2343,12 @@ TEST(Parser, unterminated_string)
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
   std::string expected =
-      R"(stdin:1:12-19: ERROR: unterminated string
+      R"(stdin:1:13-19: ERROR: unterminated string
 kprobe:f { "asdf }
-           ~~~~~~~
-stdin:1:12-19: ERROR: syntax error, unexpected end of file
+            ~~~~~~
+stdin:1:13-19: ERROR: syntax error, unexpected end of file
 kprobe:f { "asdf }
-           ~~~~~~~
+            ~~~~~~
 )";
   EXPECT_EQ(out.str(), expected);
 }
@@ -2381,9 +2370,9 @@ TEST(Parser, kprobe_offset)
        " kprobe:fn.abc+16\n");
 
   test_parse_failure("k:asdf+123abc", R"(
-stdin:1:1-14: ERROR: syntax error, unexpected end of file, expecting {
+stdin:1:2-14: ERROR: syntax error, unexpected end of file, expecting {
 k:asdf+123abc
-~~~~~~~~~~~~~
+ ~~~~~~~~~~~~
 )");
 }
 
@@ -2433,33 +2422,33 @@ uretprobe:/bin/sh:f+0x10 { 1 }
 TEST(Parser, invalid_increment_decrement)
 {
   test_parse_failure("i:s:1 { @=5++}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected ++, expecting ; or }
+stdin:1:12-14: ERROR: syntax error, unexpected ++, expecting ; or }
 i:s:1 { @=5++}
-        ~~~~~
+           ~~
 )");
 
   test_parse_failure("i:s:1 { @=++5}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected integer
+stdin:1:13-14: ERROR: syntax error, unexpected integer
 i:s:1 { @=++5}
-        ~~~~~
+            ~
 )");
 
   test_parse_failure("i:s:1 { @=5--}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected --, expecting ; or }
+stdin:1:12-14: ERROR: syntax error, unexpected --, expecting ; or }
 i:s:1 { @=5--}
-        ~~~~~
+           ~~
 )");
 
   test_parse_failure("i:s:1 { @=--5}", R"(
-stdin:1:9-14: ERROR: syntax error, unexpected integer
+stdin:1:13-14: ERROR: syntax error, unexpected integer
 i:s:1 { @=--5}
-        ~~~~~
+            ~
 )");
 
   test_parse_failure("i:s:1 { @=\"a\"++}", R"(
-stdin:1:9-16: ERROR: syntax error, unexpected ++, expecting ; or }
+stdin:1:14-16: ERROR: syntax error, unexpected ++, expecting ; or }
 i:s:1 { @="a"++}
-        ~~~~~~~
+             ~~
 )");
 }
 
@@ -2471,35 +2460,35 @@ TEST(Parser, long_param_overflow)
   EXPECT_NO_THROW(driver.parse_program());
   ASSERT_FALSE(ast.diagnostics().ok());
   ast.diagnostics().emit(out);
-  std::string expected = "stdin:1:11-41: ERROR: param "
+  std::string expected = "stdin:1:13-41: ERROR: param "
                          "$111111111111111111111111111 is out of "
                          "integer range [1, " +
                          std::to_string(std::numeric_limits<long>::max()) +
                          "]\n" +
                          "i:s:100 { @=$111111111111111111111111111 }\n" +
-                         "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+                         "            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
   EXPECT_EQ(out.str(), expected);
 }
 
 TEST(Parser, empty_arguments)
 {
   test_parse_failure("::k::vfs_open:: { 1 }", R"(
-stdin:1:1-26: ERROR: No attach points for probe
+stdin:1:1-16: ERROR: No attach points for probe
 ::k::vfs_open:: { 1 }
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 )");
 
   // Error location is incorrect: #3063
   test_parse_failure("k:vfs_open:: { 1 }", R"(
-stdin:1:1-14: ERROR: kprobe probe type requires 1 or 2 arguments, found 3
+stdin:1:1-13: ERROR: kprobe probe type requires 1 or 2 arguments, found 3
 k:vfs_open:: { 1 }
-~~~~~~~~~~~~~
+~~~~~~~~~~~~
 )");
 
   test_parse_failure(":w:0x10000000:8:rw { 1 }", R"(
-stdin:1:1-25: ERROR: No attach points for probe
+stdin:1:1-19: ERROR: No attach points for probe
 :w:0x10000000:8:rw { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 )");
 }
 
@@ -2556,63 +2545,63 @@ TEST(Parser, int_notation)
       "Program\n kprobe:f\n  call: print\n   int: 86400000000000 :: [int64]\n");
 
   test_parse_failure("k:f { print(5e-9); }", R"(
-stdin:1:7-15: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:14-15: ERROR: syntax error, unexpected identifier, expecting ) or ","
 k:f { print(5e-9); }
-      ~~~~~~~~
+             ~
 )");
 
   test_parse_failure("k:f { print(1e21); }", R"(
-stdin:1:7-17: ERROR: overflow error, maximum value is 18446744073709551615: 1e21
+stdin:1:13-17: ERROR: overflow error, maximum value is 18446744073709551615: 1e21
 k:f { print(1e21); }
-      ~~~~~~~~~~
+            ~~~~
 )");
 
   test_parse_failure("k:f { print(10000000000m); }", R"(
-stdin:1:7-25: ERROR: overflow error, maximum value is 18446744073709551615: 10000000000m
+stdin:1:13-25: ERROR: overflow error, maximum value is 18446744073709551615: 10000000000m
 k:f { print(10000000000m); }
-      ~~~~~~~~~~~~~~~~~~
+            ~~~~~~~~~~~~
 )");
 
   test_parse_failure("k:f { print(12e4); }", R"(
-stdin:1:7-17: ERROR: coefficient part of scientific literal must be 1-9: 12e4
+stdin:1:13-17: ERROR: coefficient part of scientific literal must be 1-9: 12e4
 k:f { print(12e4); }
-      ~~~~~~~~~~
+            ~~~~
 )");
 
   test_parse_failure("k:f { print(1_1e100); }", R"(
-stdin:1:7-20: ERROR: coefficient part of scientific literal must be 1-9: 1_1e100
+stdin:1:13-20: ERROR: coefficient part of scientific literal must be 1-9: 1_1e100
 k:f { print(1_1e100); }
-      ~~~~~~~~~~~~~
+            ~~~~~~~
 )");
 
   test_parse_failure("k:f { print(1e1_1_); }", R"(
-stdin:1:7-19: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:18-19: ERROR: syntax error, unexpected identifier, expecting ) or ","
 k:f { print(1e1_1_); }
-      ~~~~~~~~~~~~
+                 ~
 )");
 
   test_parse_failure("k:f { print(1_1_e100); }", R"(
-stdin:1:7-21: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:16-21: ERROR: syntax error, unexpected identifier, expecting ) or ","
 k:f { print(1_1_e100); }
-      ~~~~~~~~~~~~~~
+               ~~~~~
 )");
 
   test_parse_failure("k:f { print(1_1_); }", R"(
-stdin:1:7-17: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:16-17: ERROR: syntax error, unexpected identifier, expecting ) or ","
 k:f { print(1_1_); }
-      ~~~~~~~~~~
+               ~
 )");
 
   test_parse_failure("k:f { print(1ulll); }", R"(
-stdin:1:7-18: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:17-18: ERROR: syntax error, unexpected identifier, expecting ) or ","
 k:f { print(1ulll); }
-      ~~~~~~~~~~~
+                ~
 )");
 
   test_parse_failure("k:f { print(1lul); }", R"(
-stdin:1:7-17: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:15-17: ERROR: syntax error, unexpected identifier, expecting ) or ","
 k:f { print(1lul); }
-      ~~~~~~~~~~
+              ~~
 )");
 }
 
@@ -2668,9 +2657,9 @@ TEST(Parser, tuples)
     int: 2 :: [int64]
 )PROG");
   test_parse_failure("k:f { print((,)); }", R"(
-stdin:1:7-15: ERROR: syntax error, unexpected ","
+stdin:1:14-15: ERROR: syntax error, unexpected ","
 k:f { print((,)); }
-      ~~~~~~~~
+             ~
 )");
 }
 
@@ -2841,9 +2830,9 @@ i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }
 )");
 
   test_parse_failure("config = { exit(); } i:s:1 { exit(); }", R"(
-stdin:1:12-17: ERROR: syntax error, unexpected (, expecting =
+stdin:1:16-17: ERROR: syntax error, unexpected (, expecting =
 config = { exit(); } i:s:1 { exit(); }
-           ~~~~~
+               ~
 )");
 
   test_parse_failure("config = { @start = nsecs; } i:s:1 { exit(); }", R"(
@@ -2871,9 +2860,9 @@ config = { BPFTRACE_STACK_MODE=perf BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf } i:s:1 { "
                      "BPFTRACE_MAX_PROBES=2; exit(); }",
                      R"(
-stdin:1:47-67: ERROR: syntax error, unexpected =, expecting ;
+stdin:1:66-67: ERROR: syntax error, unexpected =, expecting ;
 config = { BPFTRACE_STACK_MODE=perf } i:s:1 { BPFTRACE_MAX_PROBES=2; exit(); }
-                                              ~~~~~~~~~~~~~~~~~~~~
+                                                                 ~
 )");
 
   test_parse_failure("config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }",
@@ -2884,9 +2873,9 @@ config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }
 )");
 
   test_parse_failure("BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }", R"(
-stdin:1:1-21: ERROR: syntax error, unexpected =, expecting {
+stdin:1:20-21: ERROR: syntax error, unexpected =, expecting {
 BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }
-~~~~~~~~~~~~~~~~~~~~
+                   ~
 )");
 }
 
@@ -2941,9 +2930,9 @@ TEST(Parser, subprog_invalid_return_type)
 {
   // Error location is incorrect: #3063
   test_parse_failure("fn f(): nonexistent {}", R"(
-stdin:1:9-21: ERROR: syntax error, unexpected identifier
+stdin:1:9-20: ERROR: syntax error, unexpected identifier
 fn f(): nonexistent {}
-        ~~~~~~~~~~~~
+        ~~~~~~~~~~~
 )");
 }
 
@@ -3006,9 +2995,9 @@ TEST(Parser, subprog_invalid_arg)
 {
   // Error location is incorrect: #3063
   test_parse_failure("fn f($x : invalid): void {}", R"(
-stdin:1:11-19: ERROR: syntax error, unexpected identifier
+stdin:1:11-18: ERROR: syntax error, unexpected identifier
 fn f($x : invalid): void {}
-          ~~~~~~~~
+          ~~~~~~~
 )");
 }
 
@@ -3068,16 +3057,16 @@ Program
   // Error location is incorrect: #3063
   // No body
   test_parse_failure("begin { for ($kv : @map) print($kv); }", R"(
-stdin:1:27-32: ERROR: syntax error, unexpected identifier, expecting {
+stdin:1:26-31: ERROR: syntax error, unexpected identifier, expecting {
 begin { for ($kv : @map) print($kv); }
-                          ~~~~~
+                         ~~~~~
 )");
 
   // Map for decl
   test_parse_failure("begin { for (@kv : @map) { } }", R"(
-stdin:1:13-17: ERROR: syntax error, unexpected map, expecting variable
+stdin:1:14-17: ERROR: syntax error, unexpected map, expecting variable
 begin { for (@kv : @map) { } }
-            ~~~~
+             ~~~
 )");
 }
 
@@ -3100,35 +3089,35 @@ Program
 
   // Binary expressions must be wrapped.
   test_parse_failure("begin { for ($i : 1+1..10) { print($i) } }", R"(
-stdin:1:19-22: ERROR: syntax error, unexpected +, expecting [ or . or ->
+stdin:1:20-21: ERROR: syntax error, unexpected +, expecting [ or . or ->
 begin { for ($i : 1+1..10) { print($i) } }
-                  ~~~
+                   ~
 )");
   test_parse_failure("begin { for ($i : 0..1+1) { print($i) } }", R"(
-stdin:1:19-25: ERROR: syntax error, unexpected +, expecting )
+stdin:1:23-24: ERROR: syntax error, unexpected +, expecting )
 begin { for ($i : 0..1+1) { print($i) } }
-                  ~~~~~~
+                      ~
 )");
 
   // Invalid range operator.
   test_parse_failure("begin { for ($i : 0...10) { print($i) } }", R"(
-stdin:1:19-24: ERROR: syntax error, unexpected .
+stdin:1:22-23: ERROR: syntax error, unexpected .
 begin { for ($i : 0...10) { print($i) } }
-                  ~~~~~
+                     ~
 )");
 
   // Missing end range.
   test_parse_failure("begin { for ($i : 0..) { print($i) } }", R"(
-stdin:1:19-24: ERROR: syntax error, unexpected )
+stdin:1:22-23: ERROR: syntax error, unexpected )
 begin { for ($i : 0..) { print($i) } }
-                  ~~~~~
+                     ~
 )");
 
   // Missing start range.
   test_parse_failure("begin { for ($i : ..10) { print($i) } }", R"(
-stdin:1:19-21: ERROR: syntax error, unexpected .
+stdin:1:19-20: ERROR: syntax error, unexpected .
 begin { for ($i : ..10) { print($i) } }
-                  ~~
+                  ~
 )");
 }
 
@@ -3166,16 +3155,16 @@ Program
 
   // Needs the let keyword
   test_parse_failure("begin { $x: int8; }", R"(
-stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ;
+stdin:1:11-12: ERROR: syntax error, unexpected :, expecting ;
 begin { $x: int8; }
-        ~~~
+          ~
 )");
 
   // Needs the let keyword
   test_parse_failure("begin { $x: int8 = 1; }", R"(
-stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ;
+stdin:1:11-12: ERROR: syntax error, unexpected :, expecting ;
 begin { $x: int8 = 1; }
-        ~~~
+          ~
 )");
 }
 
@@ -3308,9 +3297,9 @@ stdin:1:1-3: ERROR: syntax error, unexpected map, expecting {
 )");
 
   test_parse_failure("let @a = hash(); begin { $x; }", R"(
-stdin:1:10-16: ERROR: syntax error, unexpected ), expecting integer
+stdin:1:15-16: ERROR: syntax error, unexpected ), expecting integer
 let @a = hash(); begin { $x; }
-         ~~~~~~
+              ~
 )");
 }
 
@@ -3369,9 +3358,9 @@ Program
 )");
 
   test_parse_failure(R"(begin { }; import "foo";)", R"(
-stdin:1:9-11: ERROR: syntax error, unexpected ;, expecting {
+stdin:1:10-11: ERROR: syntax error, unexpected ;, expecting {
 begin { }; import "foo";
-        ~~
+         ~
 )");
 
   test_parse_failure("import 0; begin { }", R"(

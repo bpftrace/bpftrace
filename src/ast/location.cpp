@@ -1,17 +1,9 @@
-#include "location.h"
-
 #include <sstream>
 
 #include "ast/context.h"
+#include "ast/location.h"
 
 namespace bpftrace::ast {
-
-SourceLocation::SourceLocation(location loc, std::shared_ptr<ASTSource> source)
-    : line_range_(loc.begin.line, loc.end.line),
-      column_range_(loc.begin.column, loc.end.column),
-      source_(std::move(source))
-{
-}
 
 std::string SourceLocation::filename() const
 {
@@ -27,13 +19,48 @@ std::string SourceLocation::source_location() const
   if (source_) {
     ss << source_->filename << ":";
   }
-  if (line_range_.first != line_range_.second) {
-    ss << line_range_.first << "-" << line_range_.second;
+  if (begin.line != end.line) {
+    ss << begin.line << "-" << end.line;
     return ss.str();
   }
-  ss << line_range_.first << ":";
-  ss << column_range_.first << "-" << column_range_.second;
+  ss << begin.line << ":";
+  ss << begin.column << "-" << end.column;
   return ss.str();
+}
+
+std::ostream &operator<<(std::ostream &out, const SourceLocation &loc)
+{
+  out << loc.source_location();
+  return out;
+}
+
+SourceLocation operator+(const SourceLocation &orig, const SourceLocation &loc)
+{
+  auto result = SourceLocation(orig.source_);
+  result.begin.line = std::min(orig.begin.line, loc.begin.line);
+  result.end.line = std::max(orig.end.line, loc.end.line);
+
+  if (orig.begin.line < loc.begin.line) {
+    result.begin.column = orig.begin.column;
+  } else if (orig.begin.line == loc.begin.line) {
+    result.begin.column = std::min(orig.begin.column, loc.begin.column);
+  } else {
+    result.begin.column = loc.begin.column;
+  }
+
+  if (orig.end.line < loc.end.line) {
+    result.end.column = loc.end.column;
+  } else if (orig.end.line == loc.end.line) {
+    result.end.column = std::max(orig.end.column, loc.end.column);
+  } else {
+    result.end.column = orig.end.column;
+  }
+
+  // Anything that spans inherits the *first* location's comments.
+  result.comments_ = orig.comments_;
+  result.vspace_ = orig.vspace_;
+
+  return result;
 }
 
 std::vector<std::string> SourceLocation::source_context() const
@@ -41,25 +68,25 @@ std::vector<std::string> SourceLocation::source_context() const
   std::vector<std::string> result;
 
   // Is there source available?
-  if (!source_ || line_range_.first == 0) {
+  if (!source_ || begin.line == 0) {
     return result;
   }
 
   // Multi-lines just include all context.
-  if (line_range_.first != line_range_.second) {
-    assert(line_range_.first < line_range_.second);
-    for (unsigned int i = line_range_.first; i <= line_range_.second; i++) {
-      assert(i <= source_->lines_.size());
+  if (begin.line != end.line) {
+    assert(begin.line < end.line);
+    for (int i = begin.line; i <= end.line; i++) {
+      assert(i <= static_cast<int>(source_->lines_.size()));
       result.push_back(source_->lines_[i - 1]);
     }
     return result;
   }
 
   // Single line includes just the relevant context.
-  if (line_range_.first > source_->lines_.size()) {
+  if (begin.line > static_cast<int>(source_->lines_.size())) {
     return result; // Nothing available.
   }
-  auto &srcline = source_->lines_[line_range_.first - 1];
+  auto &srcline = source_->lines_[begin.line - 1];
   std::stringstream orig;
   for (auto c : srcline) {
     if (c == '\t')
@@ -70,9 +97,9 @@ std::vector<std::string> SourceLocation::source_context() const
   result.emplace_back(orig.str());
 
   std::stringstream select;
-  for (unsigned int x = 0; x < srcline.size() && x < column_range_.second - 1;
+  for (int x = 0; x < static_cast<int>(srcline.size()) && x < end.column - 1;
        x++) {
-    char marker = x < column_range_.first - 1 ? ' ' : '~';
+    char marker = x < begin.column - 1 ? ' ' : '~';
     if (srcline[x] == '\t') {
       select << std::string(4, marker);
     } else {

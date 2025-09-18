@@ -5,9 +5,9 @@
 // Pretend like the following %define is uncommented. We set the actual
 // definition from cmake to handle older versions of bison.
 // %define api.parser.class { Parser }
+%define api.location.type { ast::SourceLocation }
 %define api.token.constructor
 %define api.value.type variant
-%define define_location_comparison
 %define parse.assert
 %define parse.trace
 %expect 0
@@ -33,6 +33,7 @@ class Node;
 } // namespace bpftrace
 #include "ast/ast.h"
 #include "ast/context.h"
+#include "ast/location.h"
 }
 
 %{
@@ -136,10 +137,11 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> COMPTIME "comptime"
 %token <std::string> LET "let"
 %token <std::string> IMPORT "import"
+%token <std::string> HEADER "header"
 %token <bool> BOOL "bool"
 
 %type <ast::Operator> unary_op compound_op
-%type <std::string> attach_point_def c_definitions ident keyword external_name
+%type <std::string> attach_point_def ident keyword external_name
 %type <std::vector<std::string>> struct_field
 
 %type <ast::AttachPoint *> attach_point
@@ -147,6 +149,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::BlockExpr *> none_block bare_block block_expr
 %type <ast::Call *> call
 %type <ast::Comptime *> comptime_expr
+%type <ast::CStatementList> c_definitions
 %type <ast::Sizeof *> sizeof_expr
 %type <ast::Offsetof *> offsetof_expr
 %type <ast::Typeof *> typeof_expr any_type
@@ -180,6 +183,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::VariableAddr *> var_addr
 %type <ast::MapAddr *> map_addr
 %type <ast::Program *> program
+%type <std::string> header
 
 
 // A pseudo token, which is the lowest precedence among all tokens.
@@ -225,17 +229,21 @@ start:          START_PROGRAM program END { driver.result = $2; }
         |       START_EXPR expr END       { driver.result = $2; }
                 ;
 
+header:
+                HEADER { $$ = $1; }
+        |       %empty { $$ = ""; }
+
 program:
-                c_definitions config imports root_stmts {
-                    $$ = driver.ctx.make_node<ast::Program>($1, $2, std::move($3), std::move($4), @$);
+                header c_definitions config imports root_stmts {
+                    $$ = driver.ctx.make_node<ast::Program>(std::move($2), $3, std::move($4), std::move($5), @$, $1);
                 }
                 ;
 
 c_definitions:
-                CPREPROC c_definitions           { $$ = $1 + "\n" + $2; }
-        |       STRUCT STRUCT_DEFN c_definitions { $$ = $2 + ";\n" + $3; }
-        |       STRUCT ENUM c_definitions        { $$ = $2 + ";\n" + $3; }
-        |       %empty                           { $$ = std::string(); }
+                c_definitions CPREPROC           { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>($2, driver.loc)); }
+        |       c_definitions STRUCT STRUCT_DEFN { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>($3 + ";", driver.loc)); }
+        |       c_definitions STRUCT ENUM        { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>($3 + ";", driver.loc)); }
+        |       %empty                           { $$ = ast::CStatementList(); }
                 ;
 
 imports:
@@ -348,10 +356,10 @@ config_assign_stmt:
 
 subprog:
                 SUBPROG IDENT "(" subprog_args ")" ":" any_type none_block {
-                    $$ = driver.ctx.make_node<ast::Subprog>($2, $7, std::move($4), std::move($8), @$);
+                    $$ = driver.ctx.make_node<ast::Subprog>($2, $7, std::move($4), std::move($8), @1+@2);
                 }
         |       SUBPROG IDENT "(" ")" ":" any_type none_block {
-                    $$ = driver.ctx.make_node<ast::Subprog>($2, $6, ast::SubprogArgList(), std::move($7), @$);
+                    $$ = driver.ctx.make_node<ast::Subprog>($2, $6, ast::SubprogArgList(), std::move($7), @1+@2);
                 }
                 ;
 
@@ -365,8 +373,8 @@ subprog_arg:
                 ;
 
 macro:
-                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @1+@4); }
-        |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @1+@4); }
+                MACRO IDENT "(" macro_args ")" block_expr { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @1+@2); }
+        |       MACRO IDENT "(" macro_args ")" bare_block { $$ = driver.ctx.make_node<ast::Macro>($2, std::move($4), $6, @1+@2); }
                 ;
 
 macro_args:
@@ -402,7 +410,7 @@ probe:
                     auto *cond = driver.ctx.make_node<ast::IfExpr>($2.value(), block, none, @2);
                     block = driver.ctx.make_node<ast::BlockExpr>(ast::StatementList{}, cond, @$);
                   }
-                  $$ = driver.ctx.make_node<ast::Probe>(std::move($1), block, @$);
+                  $$ = driver.ctx.make_node<ast::Probe>(std::move($1), block, @1);
                 }
                 ;
 
@@ -898,7 +906,7 @@ compound_op:
 
 %%
 
-void bpftrace::Parser::error(const location &l, const std::string &m)
+void bpftrace::Parser::error(const ast::SourceLocation &l, const std::string &m)
 {
   driver.error(l, m);
 }

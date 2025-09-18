@@ -170,23 +170,23 @@ TEST(macro_expansion, overloading)
 stdin:1:37-46: ERROR: Call to add() has arguments that do not match any definition.
 macro add($x, y) { $x + 1 } begin { add(1, 1); }
                                     ~~~~~~~~~
-stdin:1:37-42: ERROR: Mismatched arg. add() expects a variable for arg $x but got an expression.
+stdin:1:41-42: ERROR: Mismatched arg. add() expects a variable for arg $x but got an expression.
 macro add($x, y) { $x + 1 } begin { add(1, 1); }
-                                    ~~~~~
-stdin:1:7-13: ERROR: This is the argument in the closest definition.
+                                        ~
+stdin:1:11-13: ERROR: This is the argument in the closest definition.
 macro add($x, y) { $x + 1 } begin { add(1, 1); }
-      ~~~~~~
+          ~~
 )");
   test_error("macro add(@x, y) { @x + 1 } begin { add(1, 1); }", R"(
 stdin:1:37-46: ERROR: Call to add() has arguments that do not match any definition.
 macro add(@x, y) { @x + 1 } begin { add(1, 1); }
                                     ~~~~~~~~~
-stdin:1:37-42: ERROR: Mismatched arg. add() expects a map for arg @x but got an expression.
+stdin:1:41-42: ERROR: Mismatched arg. add() expects a map for arg @x but got an expression.
 macro add(@x, y) { @x + 1 } begin { add(1, 1); }
-                                    ~~~~~
-stdin:1:7-13: ERROR: This is the argument in the closest definition.
+                                        ~
+stdin:1:11-13: ERROR: This is the argument in the closest definition.
 macro add(@x, y) { @x + 1 } begin { add(1, 1); }
-      ~~~~~~
+          ~~
 )");
   test_error("macro add(x) { x + 1 } macro add(x, y) { x + y } begin { add(1, "
              "1, 1); }",
@@ -194,9 +194,9 @@ macro add(@x, y) { @x + 1 } begin { add(1, 1); }
 stdin:1:58-70: ERROR: Call to add() has arguments that do not match any definition.
 macro add(x) { x + 1 } macro add(x, y) { x + y } begin { add(1, 1, 1); }
                                                          ~~~~~~~~~~~~
-stdin:1:24-38: ERROR: The closest definition of add() has a different number of arguments. Expected: 2 but got 3
+stdin:1:24-33: ERROR: The closest definition of add() has a different number of arguments. Expected: 2 but got 3
 macro add(x) { x + 1 } macro add(x, y) { x + y } begin { add(1, 1, 1); }
-                       ~~~~~~~~~~~~~~
+                       ~~~~~~~~~
 )");
 }
 
