@@ -15,13 +15,15 @@ AFTER ./testprogs/array_access
 
 NAME array element access - out of bounds
 PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[5]; printf("%d\n", $x); exit(); }
-EXPECT stdin:1:100-108: ERROR: the index 5 is out of bounds for array of size 4
+EXPECT stdin:1:104-107: ERROR: the index 5 is out of bounds for array of size 4
+       struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[5]; printf("%d\n", $x); exit(); }
+                                                                                                              ~~~
 AFTER ./testprogs/array_access
 WILL_FAIL
 
 NAME array element access - out of bounds runtime
 PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $y = (uint64)100; $a = (struct A *) arg0; @x = $a->x[$y]; exit(); }
-EXPECT stdin:1:118-127: WARNING: Array access out of bounds. This can lead to unexpected results.
+EXPECT stdin:1:122-126: WARNING: Array access out of bounds. This can lead to unexpected results.
 AFTER ./testprogs/array_access
 
 NAME array element access via assignment into var

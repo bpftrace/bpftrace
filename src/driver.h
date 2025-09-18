@@ -18,18 +18,18 @@ namespace bpftrace {
 class Driver {
 public:
   explicit Driver(ast::ASTContext &ctx, bool debug = false)
-      : ctx(ctx), debug(debug) {};
+      : ctx(ctx), debug(debug), loc(ctx.source()) {};
   ast::Program *parse_program();
   std::optional<ast::Expression> parse_expr();
 
-  void error(const location &l, const std::string &m);
+  void error(const ast::SourceLocation &l, const std::string &m);
 
   // These are accessible to the parser and lexer, but are not mutable.
   ast::ASTContext &ctx;
   const bool debug;
 
   // These are mutable state that can be modified by the lexer.
-  location loc;
+  ast::SourceLocation loc;
   std::string struct_type;
   std::string buffer;
 

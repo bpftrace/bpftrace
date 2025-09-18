@@ -678,15 +678,15 @@ bool is_colorize()
 static ast::ASTContext buildListProgram(const std::string& search)
 {
   ast::ASTContext ast("listing", search);
-  auto* ap = ast.make_node<ast::AttachPoint>(search, true, location());
+  auto* ap = ast.make_node<ast::AttachPoint>(search, true, ast::Location());
   auto* probe = ast.make_node<ast::Probe>(ast::AttachPointList({ ap }),
                                           nullptr,
-                                          location());
-  ast.root = ast.make_node<ast::Program>("",
+                                          ast::Location());
+  ast.root = ast.make_node<ast::Program>(ast::CStatementList(),
                                          nullptr,
                                          ast::ImportList(),
                                          ast::RootStatements({ probe }),
-                                         location());
+                                         ast::Location());
   return ast;
 }
 
