@@ -19,6 +19,10 @@ namespace bpftrace::ast {
 // This class is essentially a type-erased generic constant storage.
 class PassContext {
 public:
+  ~PassContext();
+  PassContext() = default;
+  PassContext(PassContext &&other) = default;
+
   // TypeId is a class which, when specialized, returns the type_id. This
   // works by storing a static variable for each specialization of the class,
   // which effectively memoizes an ID binding for the specific class.
@@ -61,13 +65,9 @@ public:
   T &get() const
   {
     int type_id = TypeId<T>::type_id();
-    auto it = state_.find(type_id);
-    if (it != state_.end()) {
-      return *static_cast<T *>(it->second.get());
-    }
-    auto extern_it = extern_state_.find(type_id);
-    if (extern_it != extern_state_.end()) {
-      return static_cast<T &>(extern_it->second.get());
+    auto it = state_index_.find(type_id);
+    if (it != state_index_.end()) {
+      return static_cast<T &>(it->second.get());
     }
     no_object_failure(type_id);
   }
@@ -77,7 +77,7 @@ public:
   bool has()
   {
     int type_id = TypeId<T>::type_id();
-    return state_.contains(type_id) || extern_state_.contains(type_id);
+    return state_index_.contains(type_id);
   }
 
 private:
@@ -91,7 +91,8 @@ private:
   void put(T &&t)
   {
     int type_id = TypeId<T>::type_id();
-    state_.emplace(type_id, std::make_unique<T>(std::move(t)));
+    auto &pushed = state_.emplace_back(std::make_unique<T>(std::move(t)));
+    state_index_.emplace(type_id, *pushed);
   }
 
   // put can also provide an external reference for the map; its lifecycle is
@@ -103,7 +104,7 @@ private:
   void put(T &t)
   {
     int type_id = TypeId<T>::type_id();
-    extern_state_.emplace(type_id, t);
+    state_index_.emplace(type_id, t);
   }
 
   // Will register the given type id and the name, which is resolvable via
@@ -127,8 +128,8 @@ private:
   static std::atomic<int> next_type_id_;
   static std::unordered_map<int, std::string> type_names_;
 
-  std::unordered_map<int, std::unique_ptr<State>> state_;
-  std::unordered_map<int, std::reference_wrapper<State>> extern_state_;
+  std::unordered_map<int, std::reference_wrapper<State>> state_index_;
+  std::vector<std::unique_ptr<State>> state_;
 
   friend class PassManager;
   friend class Pass;

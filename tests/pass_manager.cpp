@@ -134,4 +134,51 @@ TEST(PassManager, multiple_passes_complex)
   EXPECT_TRUE(bool(pm.run()));
 }
 
+class A;
+
+class B : public ast::State<"B"> {
+public:
+  B(A &a);
+  ~B() override
+  {
+    EXPECT_EQ(*ptr, true);
+  }
+
+private:
+  std::shared_ptr<bool> ptr;
+};
+
+class A : public ast::State<"A"> {
+public:
+  ~A() override
+  {
+    for (auto &callback : callbacks) {
+      callback();
+    }
+  }
+  std::vector<std::function<void()>> callbacks;
+};
+
+B::B(A &a) : ptr(std::make_shared<bool>(true))
+{
+  a.callbacks.emplace_back([ptr = this->ptr] { *ptr = false; });
+}
+
+class C : public ast::State<"C"> {
+public:
+  C(A &a) : b_(a) {};
+
+private:
+  B b_;
+};
+
+TEST(PassManager, teardown_ordering)
+{
+  PassManager pm;
+  pm.add(Pass::create("a", []() { return A(); }));
+  pm.add(Pass::create("b", [](A &a) { return B(a); }));
+  pm.add(Pass::create("c", [](A &a) { return C(a); }));
+  EXPECT_TRUE(bool(pm.run())); // Context discarded.
+}
+
 } // namespace bpftrace::test::passes
