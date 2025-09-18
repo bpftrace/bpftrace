@@ -8,10 +8,21 @@ namespace bpftrace::ast {
 std::atomic<int> PassContext::next_type_id_;
 std::unordered_map<int, std::string> PassContext::type_names_;
 
+PassContext::~PassContext()
+{
+  // If there are any ordering constraints between passes, it's possible that
+  // the pass state objects have encoded references and may use them in their
+  // destructors. Therefore, we need to teardown the state in the opposite
+  // order that it was added.
+  while (!state_.empty()) {
+    state_.pop_back();
+  }
+}
+
 bool PassContext::ok() const
 {
   int type_id = TypeId<ASTContext>::type_id();
-  if (state_.contains(type_id) || extern_state_.contains(type_id)) {
+  if (state_index_.contains(type_id)) {
     return get<ASTContext>().diagnostics().ok();
   }
   return true;
