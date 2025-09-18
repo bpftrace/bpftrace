@@ -10,8 +10,9 @@
 #include "util/int_parser.h"
 #include "util/strings.h"
 
-#define YY_USER_ACTION driver.loc.columns(yyleng);
+#define YY_USER_ACTION driver.loc.advance_columns(yyleng);
 #define yyterminate() return bpftrace::Parser::make_END(driver.loc)
+#define ECHO
 
 using namespace bpftrace;
 
@@ -42,7 +43,7 @@ ident    [_a-zA-Z][_a-zA-Z0-9]*
 map      @{ident}|@
 var      ${ident}
 hspace   [ \t]
-vspace   [\n\r]
+vspace   \n
 space    {hspace}|{vspace}
 path     :(\\.|[_\-\./a-zA-Z0-9#$+\*])+
 /* Most of the builtins are prefixed with __builtin_ as they are exposed to users via macros e.g. macro cpu() { __builtin_cpu } */
@@ -58,11 +59,15 @@ macro           macro
 hex_esc  (x|X)[0-9a-fA-F]{1,2}
 oct_esc  [0-7]{1,3}
 
+%x SCRIPT
 %x STR
 %x STRUCT
 %x ENUM
 %x BRACE
-%x COMMENT
+%x CCOMMENT
+%x CCOMMENTNL
+%x CPPCOMMENT
+%x CPPCOMMENTNL
 %x AFTER_COLON
 %x STRUCT_AFTER_COLON
 
@@ -74,122 +79,201 @@ oct_esc  [0-7]{1,3}
     driver.token.reset();
     return t;
   }
+  driver.loc.reset_meta();
 %}
 
-{hspace}+               { driver.loc.step(); }
-{vspace}+               { driver.loc.lines(yyleng); driver.loc.step(); }
+^"#!".*$                {
+                          yy_push_state(SCRIPT, yyscanner);
+                          return Parser::make_HEADER(yytext, driver.loc);
+                        }
+{vspace}+               { driver.loc.advance_columns(yyleng); }
+\r                      { driver.loc.reset_column(); }
+.                       {
+                          driver.loc.advance_columns(-1);
+                          unput(yytext[0]);
+                          yy_push_state(SCRIPT, yyscanner);
+                        }
 
-^"#!".*$                // executable line
-"//".*$                 // single-line comments
-"/*"                    yy_push_state(COMMENT, yyscanner);
-<COMMENT>{
+<CCOMMENT>{
   "*/"                  yy_pop_state(yyscanner);
-  [^*\n]+|"*"           {}
-  \n                    driver.loc.lines(1); driver.loc.step();
-  <<EOF>>               yy_pop_state(yyscanner); driver.error(driver.loc, "end of file during comment");
+  \n                    { driver.loc.advance_lines(1); yy_pop_state(yyscanner); yy_push_state(CCOMMENTNL, yyscanner); driver.loc.add_comment("\n"); }
+  .                     { driver.loc.add_comment(yytext); }
+  <<EOF>>               {
+                           yy_pop_state(yyscanner);
+                           driver.error(driver.loc, "end of file during comment");
+                        }
+}
+<CCOMMENTNL>{
+  "*/"                  yy_pop_state(yyscanner);
+  " */"                 yy_pop_state(yyscanner);
+  " * "                 { yy_pop_state(yyscanner); yy_push_state(CCOMMENT, yyscanner); }
+  " *"                  { yy_pop_state(yyscanner); yy_push_state(CCOMMENT, yyscanner); }
+  "   "                 { yy_pop_state(yyscanner); yy_push_state(CCOMMENT, yyscanner); }
+  \n                    { driver.loc.advance_lines(1); driver.loc.add_comment("\n"); }
+  .                     {
+                           driver.loc.advance_columns(-1);
+                           unput(yytext[0]);
+                           yy_pop_state(yyscanner);
+                           yy_push_state(CCOMMENT, yyscanner);
+                        }
+  <<EOF>>               {
+                           yy_pop_state(yyscanner);
+                           driver.error(driver.loc, "end of file during comment");
+                        }
+}
+<CPPCOMMENT>{
+  [^\n]+                { driver.loc.add_comment(yytext); }
+  \n                    {
+                          driver.loc.advance_lines(1);
+                          yy_pop_state(yyscanner);
+                          yy_push_state(CPPCOMMENTNL, yyscanner);
+                        }
+  <<EOF>>               yy_pop_state(yyscanner);
+}
+<CPPCOMMENTNL>{
+  [/][/][ ]\n           { driver.loc.advance_lines(1); driver.loc.add_comment("\n"); }
+  [/][/]\n              { driver.loc.advance_lines(1); driver.loc.add_comment("\n"); }
+  \n                    { driver.loc.advance_lines(1); driver.loc.add_comment("\n"); }
+  "// "                 {
+                          yy_pop_state(yyscanner);
+                          yy_push_state(CPPCOMMENT, yyscanner);
+                          driver.loc.add_comment("\n");
+                        }
+  "//"                  {
+                          yy_pop_state(yyscanner);
+                          yy_push_state(CPPCOMMENT, yyscanner);
+                          driver.loc.add_comment("\n");
+                        }
+  .                     {
+                          driver.loc.advance_columns(-1);
+                          unput(yytext[0]);
+                          yy_pop_state(yyscanner);
+                        }
+  <<EOF>>               yy_pop_state(yyscanner);
 }
 
-{builtin}               { return Parser::make_BUILTIN(yytext, driver.loc); }
-{subprog}               { return Parser::make_SUBPROG(yytext, driver.loc); }
-{macro}                 { return Parser::make_MACRO(yytext, driver.loc); }
-{int}|{hex}|{exponent}  {
-                          // Note that we have no unsigned integers in the lexer, these
-                          // are purely derived as a result of folding constants.
-                          auto res = util::to_uint(yytext, 0);
-                          if (!res) {
-                            std::stringstream ss;
-                            ss << res.takeError();
-                            driver.error(driver.loc, ss.str());
-                          } else {
-                            return Parser::make_UNSIGNED_INT(*res, driver.loc);
+<SCRIPT>{
+  {hspace}+               { }
+  {vspace}+               { driver.loc.advance_lines(yyleng); driver.loc.advance_vspace(yyleng); }
+  \r                      { driver.loc.reset_column(); }
+  "/* "                   { yy_push_state(CCOMMENT, yyscanner); }
+  "/*"                    { yy_push_state(CCOMMENT, yyscanner); }
+  "// "                   { yy_push_state(CPPCOMMENT, yyscanner); }
+  "//"                    { yy_push_state(CPPCOMMENT, yyscanner); }
+
+  {builtin}               { return Parser::make_BUILTIN(yytext, driver.loc); }
+  {subprog}               { return Parser::make_SUBPROG(yytext, driver.loc); }
+  {macro}                 { return Parser::make_MACRO(yytext, driver.loc); }
+  {int}|{hex}|{exponent}  {
+                            // Note that we have no unsigned integers in the lexer, these
+                            // are purely derived as a result of folding constants.
+                            auto res = util::to_uint(yytext, 0);
+                            if (!res) {
+                              std::stringstream ss;
+                              ss << res.takeError();
+                              driver.error(driver.loc, ss.str());
+                            } else {
+                              return Parser::make_UNSIGNED_INT(*res, driver.loc);
+                            }
                           }
-                        }
-{bool}                  {
-                          if (std::string(yytext) == "true") {
-                            return Parser::make_BOOL(true, driver.loc);
+  {bool}                  {
+                            if (std::string(yytext) == "true") {
+                              return Parser::make_BOOL(true, driver.loc);
+                            }
+                            return Parser::make_BOOL(false, driver.loc);
                           }
-                          return Parser::make_BOOL(false, driver.loc);
-                        }
-{path}                  { return Parser::make_PATH(yytext, driver.loc); }
-{map}                   { return Parser::make_MAP(yytext, driver.loc); }
-{var}                   { return Parser::make_VAR(yytext, driver.loc); }
-":"                     {
-                          /* For handling "struct x" in "fn name(...): struct x {  }" as a type rather than
-                            a beginning of a struct definition; see AFTER_COLON rules below */
-                          yy_push_state(AFTER_COLON, yyscanner);
-                          return Parser::make_COLON(driver.loc);
-                        }
-";"                     { return Parser::make_SEMI(driver.loc); }
-"{"                     { return Parser::make_LBRACE(driver.loc); }
-"}"                     { return Parser::make_RBRACE(driver.loc); }
-"["                     { return Parser::make_LBRACKET(driver.loc); }
-"]"                     { return Parser::make_RBRACKET(driver.loc); }
-"("                     { return Parser::make_LPAREN(driver.loc); }
-")"                     { return Parser::make_RPAREN(driver.loc); }
-\//{space}*[\/\{]       { return Parser::make_ENDPRED(driver.loc); } /* If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV */
-","                     { return Parser::make_COMMA(driver.loc); }
-"="                     { return Parser::make_ASSIGN(driver.loc); }
-"<<="                   { return Parser::make_LEFTASSIGN(driver.loc); }
-">>="                   { return Parser::make_RIGHTASSIGN(driver.loc); }
-"+="                    { return Parser::make_PLUSASSIGN(driver.loc); }
-"-="                    { return Parser::make_MINUSASSIGN(driver.loc); }
-"*="                    { return Parser::make_MULASSIGN(driver.loc); }
-"/="                    { return Parser::make_DIVASSIGN(driver.loc); }
-"%="                    { return Parser::make_MODASSIGN(driver.loc); }
-"&="                    { return Parser::make_BANDASSIGN(driver.loc); }
-"|="                    { return Parser::make_BORASSIGN(driver.loc); }
-"^="                    { return Parser::make_BXORASSIGN(driver.loc); }
-"=="                    { return Parser::make_EQ(driver.loc); }
-"!="                    { return Parser::make_NE(driver.loc); }
-"<="                    { return Parser::make_LE(driver.loc); }
-">="                    { return Parser::make_GE(driver.loc); }
-"<<"                    { return Parser::make_LEFT(driver.loc); }
-">>"                    { return Parser::make_RIGHT(driver.loc); }
-"<"                     { return Parser::make_LT(driver.loc); }
-">"                     { return Parser::make_GT(driver.loc); }
-"&&"                    { return Parser::make_LAND(driver.loc); }
-"||"                    { return Parser::make_LOR(driver.loc); }
-"+"                     { return Parser::make_PLUS(driver.loc); }
-"-"                     { return Parser::make_MINUS(driver.loc); }
-"++"                    { return Parser::make_INCREMENT(driver.loc); }
-"--"                    { return Parser::make_DECREMENT(driver.loc); }
-"*"                     { return Parser::make_MUL(driver.loc); }
-"/"                     { return Parser::make_DIV(driver.loc); }
-"%"                     { return Parser::make_MOD(driver.loc); }
-"&"                     { return Parser::make_BAND(driver.loc); }
-"|"                     { return Parser::make_BOR(driver.loc); }
-"^"                     { return Parser::make_BXOR(driver.loc); }
-"!"                     { return Parser::make_LNOT(driver.loc); }
-"~"                     { return Parser::make_BNOT(driver.loc); }
-"."                     { return Parser::make_DOT(driver.loc); }
-"->"                    { return Parser::make_PTR(driver.loc); }
-"$"[0-9]+               { return Parser::make_PARAM(yytext, driver.loc); }
-"$"#                    { return Parser::make_PARAMCOUNT(driver.loc); }
-"#"[^!].*               { return Parser::make_CPREPROC(yytext, driver.loc); }
-"if"                    { return Parser::make_IF(yytext, driver.loc); }
-"else"                  { return Parser::make_ELSE(yytext, driver.loc); }
-"?"                     { return Parser::make_QUES(driver.loc); }
-"unroll"                { return Parser::make_UNROLL(yytext, driver.loc); }
-"while"                 { return Parser::make_WHILE(yytext, driver.loc); }
-"config"                { return Parser::make_CONFIG(yytext, driver.loc); }
-"for"                   { return Parser::make_FOR(yytext, driver.loc); }
-"return"                { return Parser::make_RETURN(yytext, driver.loc); }
-"continue"              { return Parser::make_CONTINUE(yytext, driver.loc); }
-"break"                 { return Parser::make_BREAK(yytext, driver.loc); }
-"sizeof"                { return Parser::make_SIZEOF(yytext, driver.loc); }
-"offsetof"              { return Parser::make_OFFSETOF(yytext, driver.loc); }
-"typeof"                { return Parser::make_TYPEOF(yytext, driver.loc); }
-"typeinfo"              { return Parser::make_TYPEINFO(yytext, driver.loc); }
-"let"                   { return Parser::make_LET(yytext, driver.loc); }
-"import"                { return Parser::make_IMPORT(yytext, driver.loc); }
-"comptime"              { return Parser::make_COMPTIME(yytext, driver.loc); }
+  {path}                  { return Parser::make_PATH(yytext, driver.loc); }
+  {map}                   { return Parser::make_MAP(yytext, driver.loc); }
+  {var}                   { return Parser::make_VAR(yytext, driver.loc); }
+  ":"                     {
+                            /* For handling "struct x" in "fn name(...): struct x {  }" as a type rather than
+                              a beginning of a struct definition; see AFTER_COLON rules below */
+                            yy_push_state(AFTER_COLON, yyscanner);
+                            return Parser::make_COLON(driver.loc);
+                          }
+  ";"                     { return Parser::make_SEMI(driver.loc); }
+  "{"                     { return Parser::make_LBRACE(driver.loc); }
+  "}"                     { return Parser::make_RBRACE(driver.loc); }
+  "["                     { return Parser::make_LBRACKET(driver.loc); }
+  "]"                     { return Parser::make_RBRACKET(driver.loc); }
+  "("                     { return Parser::make_LPAREN(driver.loc); }
+  ")"                     { return Parser::make_RPAREN(driver.loc); }
+  \//{space}*[\/\{]       { return Parser::make_ENDPRED(driver.loc); } /* If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV */
+  ","                     { return Parser::make_COMMA(driver.loc); }
+  "="                     { return Parser::make_ASSIGN(driver.loc); }
+  "<<="                   { return Parser::make_LEFTASSIGN(driver.loc); }
+  ">>="                   { return Parser::make_RIGHTASSIGN(driver.loc); }
+  "+="                    { return Parser::make_PLUSASSIGN(driver.loc); }
+  "-="                    { return Parser::make_MINUSASSIGN(driver.loc); }
+  "*="                    { return Parser::make_MULASSIGN(driver.loc); }
+  "/="                    { return Parser::make_DIVASSIGN(driver.loc); }
+  "%="                    { return Parser::make_MODASSIGN(driver.loc); }
+  "&="                    { return Parser::make_BANDASSIGN(driver.loc); }
+  "|="                    { return Parser::make_BORASSIGN(driver.loc); }
+  "^="                    { return Parser::make_BXORASSIGN(driver.loc); }
+  "=="                    { return Parser::make_EQ(driver.loc); }
+  "!="                    { return Parser::make_NE(driver.loc); }
+  "<="                    { return Parser::make_LE(driver.loc); }
+  ">="                    { return Parser::make_GE(driver.loc); }
+  "<<"                    { return Parser::make_LEFT(driver.loc); }
+  ">>"                    { return Parser::make_RIGHT(driver.loc); }
+  "<"                     { return Parser::make_LT(driver.loc); }
+  ">"                     { return Parser::make_GT(driver.loc); }
+  "&&"                    { return Parser::make_LAND(driver.loc); }
+  "||"                    { return Parser::make_LOR(driver.loc); }
+  "+"                     { return Parser::make_PLUS(driver.loc); }
+  "-"                     { return Parser::make_MINUS(driver.loc); }
+  "++"                    { return Parser::make_INCREMENT(driver.loc); }
+  "--"                    { return Parser::make_DECREMENT(driver.loc); }
+  "*"                     { return Parser::make_MUL(driver.loc); }
+  "/"                     { return Parser::make_DIV(driver.loc); }
+  "%"                     { return Parser::make_MOD(driver.loc); }
+  "&"                     { return Parser::make_BAND(driver.loc); }
+  "|"                     { return Parser::make_BOR(driver.loc); }
+  "^"                     { return Parser::make_BXOR(driver.loc); }
+  "!"                     { return Parser::make_LNOT(driver.loc); }
+  "~"                     { return Parser::make_BNOT(driver.loc); }
+  "."                     { return Parser::make_DOT(driver.loc); }
+  "->"                    { return Parser::make_PTR(driver.loc); }
+  "$"[0-9]+               { return Parser::make_PARAM(yytext, driver.loc); }
+  "$"#                    { return Parser::make_PARAMCOUNT(driver.loc); }
+  "#"[^!].*               { return Parser::make_CPREPROC(yytext, driver.loc); }
+  "if"                    { return Parser::make_IF(yytext, driver.loc); }
+  "else"                  { return Parser::make_ELSE(yytext, driver.loc); }
+  "?"                     { return Parser::make_QUES(driver.loc); }
+  "unroll"                { return Parser::make_UNROLL(yytext, driver.loc); }
+  "while"                 { return Parser::make_WHILE(yytext, driver.loc); }
+  "config"                { return Parser::make_CONFIG(yytext, driver.loc); }
+  "for"                   { return Parser::make_FOR(yytext, driver.loc); }
+  "return"                { return Parser::make_RETURN(yytext, driver.loc); }
+  "continue"              { return Parser::make_CONTINUE(yytext, driver.loc); }
+  "break"                 { return Parser::make_BREAK(yytext, driver.loc); }
+  "sizeof"                { return Parser::make_SIZEOF(yytext, driver.loc); }
+  "offsetof"              { return Parser::make_OFFSETOF(yytext, driver.loc); }
+  "typeof"                { return Parser::make_TYPEOF(yytext, driver.loc); }
+  "typeinfo"              { return Parser::make_TYPEINFO(yytext, driver.loc); }
+  "let"                   { return Parser::make_LET(yytext, driver.loc); }
+  "import"                { return Parser::make_IMPORT(yytext, driver.loc); }
+  "comptime"              { return Parser::make_COMPTIME(yytext, driver.loc); }
 
-{int_type}              { return Parser::make_INT_TYPE(yytext, driver.loc); }
-{builtin_type}          { return Parser::make_BUILTIN_TYPE(yytext, driver.loc); }
-{sized_type}            { return Parser::make_SIZED_TYPE(yytext, driver.loc); }
+  {int_type}              { return Parser::make_INT_TYPE(yytext, driver.loc); }
+  {builtin_type}          { return Parser::make_BUILTIN_TYPE(yytext, driver.loc); }
+  {sized_type}            { return Parser::make_SIZED_TYPE(yytext, driver.loc); }
 
 
-\"                      { yy_push_state(STR, yyscanner); driver.buffer.clear(); }
+  \"                      { yy_push_state(STR, yyscanner); driver.buffer.clear(); }
+  struct|union|enum       {
+                            yy_push_state(STRUCT, yyscanner);
+                            driver.buffer.clear();
+                            driver.struct_type = yytext;
+                            return Parser::make_STRUCT(driver.loc);
+                          }
+  {ident}                 { return Parser::make_IDENT(yytext, driver.loc); }
+  .                       { driver.error(driver.loc, std::string("invalid character '") +
+                                              std::string(yytext) + std::string("'")); }
+  <<EOF>>                 yy_pop_state(yyscanner);
+}
+
 <STR>{
   \"                    { yy_pop_state(yyscanner); return Parser::make_STRING(driver.buffer, driver.loc); }
   [^\\\n\"]+            driver.buffer += yytext;
@@ -206,22 +290,17 @@ oct_esc  [0-7]{1,3}
                             driver.buffer += value;
                         }
   \\{hex_esc}           driver.buffer += strtol(yytext+2, NULL, 16);
-  \n                    driver.error(driver.loc, "unterminated string"); yy_pop_state(yyscanner); driver.loc.lines(1); driver.loc.step();
+  \n                    driver.error(driver.loc, "unterminated string"); yy_pop_state(yyscanner); driver.loc.advance_lines(1);
   <<EOF>>               driver.error(driver.loc, "unterminated string"); yy_pop_state(yyscanner);
   \\.                   { driver.error(driver.loc, std::string("invalid escape character '") +
                                             yytext + "'"); }
   .                     driver.error(driver.loc, "invalid character"); yy_pop_state(yyscanner);
 }
 
-struct|union|enum       {
-                            yy_push_state(STRUCT, yyscanner);
-                            driver.buffer.clear();
-                            driver.struct_type = yytext;
-                            return Parser::make_STRUCT(driver.loc);
-                        }
 <AFTER_COLON>{
-  {hspace}+             { driver.loc.step(); }
-  {vspace}+             { driver.loc.lines(yyleng); driver.loc.step(); }
+  {hspace}+             { }
+  {vspace}+             { driver.loc.advance_lines(yyleng); }
+  \r                    { driver.loc.reset_column(); }
   struct|union|enum     {
                           yy_pop_state(yyscanner);
                           yy_push_state(STRUCT_AFTER_COLON, yyscanner);
@@ -229,11 +308,12 @@ struct|union|enum       {
                           driver.struct_type = yytext;
                           return Parser::make_STRUCT(driver.loc);
                         }
-  .                     { unput(yytext[0]); yy_pop_state(yyscanner); }
+  .                     { driver.loc.advance_columns(-1); unput(yytext[0]); yy_pop_state(yyscanner); }
 }
 <STRUCT_AFTER_COLON>{
-  {hspace}+             { driver.loc.step(); }
-  {vspace}+             { driver.loc.lines(yyleng); driver.loc.step(); }
+  {hspace}+             { }
+  {vspace}+             { driver.loc.advance_lines(yyleng); }
+  \r                    { driver.loc.reset_column(); }
   {ident}               {
                           driver.buffer = yytext;
                           yy_pop_state(yyscanner);
@@ -248,8 +328,10 @@ struct|union|enum       {
                             // Put the cast type into a canonical form by trimming
                             // and then inserting a single space.
                             yy_pop_state(yyscanner);
-                            for (int i = yyleng - 1; i >= 0; i--)
+                            for (int i = yyleng - 1; i >= 0; i--) {
+                              driver.loc.advance_columns(-1);
                               unput(yytext[i]);
+                            }
                             return Parser::make_IDENT(driver.struct_type + " " + util::trim(driver.buffer), driver.loc);
                           }
                           driver.buffer += yytext[0];
@@ -269,14 +351,8 @@ struct|union|enum       {
                           }
                         }
   .                     driver.buffer += yytext[0];
-  \n                    driver.buffer += '\n'; driver.loc.lines(1); driver.loc.step();
+  \n                    driver.buffer += '\n'; driver.loc.advance_lines(1);
 }
-
-{ident}                 { return Parser::make_IDENT(yytext, driver.loc); }
-
-.                       { driver.error(driver.loc, std::string("invalid character '") +
-                                            std::string(yytext) + std::string("'")); }
-
 %%
 
 void set_source_string(const std::string *s) {

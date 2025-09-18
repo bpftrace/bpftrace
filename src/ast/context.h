@@ -113,9 +113,12 @@ private:
   {
     return std::forward<T>(t);
   }
-  Location wrap(location loc)
+  Location wrap(SourceLocation loc)
   {
-    return std::make_shared<LocationChain>(SourceLocation(loc, source_));
+    // Ensure that this source location refers to the source object in this
+    // context. The parser has a tendency to construct these directly.
+    loc.source_ = source_;
+    return std::make_shared<LocationChain>(std::move(loc));
   };
 
   std::unique_ptr<State> state_;

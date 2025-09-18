@@ -598,9 +598,9 @@ AFTER TMPDIR=/tmp ./testprogs/syscall open
 # just the first or the last one.
 NAME path_in_unsupported_fentry
 PROG fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
-EXPECT stdin:1:31-60: ERROR: helper bpf_d_path not allowed in probe
-EXPECT fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
-EXPECT                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+EXPECT stdin:1:37-60: ERROR: helper bpf_d_path not allowed in probe
+       fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
+                                           ~~~~~~~~~~~~~~~~~~~~~~~
 REQUIRES_FEATURE dpath
 WILL_FAIL
 AFTER ./testprogs/syscall read
@@ -755,9 +755,9 @@ TIMEOUT 3
 
 NAME map len keyless
 PROG begin { @ = 0; printf("map len: %d\n", len(@));  }
-EXPECT stdin:1:40-45: ERROR: call to len() expects a map with explicit keys (non-scalar map)
+EXPECT stdin:1:44-45: ERROR: call to len() expects a map with explicit keys (non-scalar map)
        begin { @ = 0; printf("map len: %d\n", len(@));  }
-                                              ~~~~~
+                                                  ~
 WILL_FAIL
 
 NAME percpu_kaddr
@@ -774,9 +774,9 @@ EXPECT_REGEX nr_running: [0-9]+
 
 NAME percpu_kaddr field access no NULL check
 PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
-EXPECT stdin:1:17-60: ERROR: helper bpf_per_cpu_ptr: result needs to be null-checked before accessing fields
+EXPECT stdin:1:31-59: ERROR: helper bpf_per_cpu_ptr: result needs to be null-checked before accessing fields
        begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 WILL_FAIL
 
 NAME clear on scalar map prevents printing

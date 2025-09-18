@@ -1348,18 +1348,33 @@ public:
 };
 using MacroList = std::vector<Macro *>;
 
+class CStatement : public Node {
+public:
+  CStatement(ASTContext &ctx, std::string data, Location &&loc)
+      : Node(ctx, std::move(loc)), data(std::move(data)) {};
+  explicit CStatement(ASTContext &ctx,
+                      const CStatement &other,
+                      const Location &loc)
+      : Node(ctx, loc + other.loc), data(other.data) {};
+
+  std::string data;
+};
+using CStatementList = std::vector<CStatement *>;
+
 class Program : public Node {
 public:
   explicit Program(ASTContext &ctx,
-                   std::string c_definitions,
+                   CStatementList &&c_statements,
                    Config *config,
                    ImportList &&imports,
                    RootStatements &&root_statements,
-                   Location &&loc)
+                   Location &&loc,
+                   std::optional<std::string> &&header = std::nullopt)
       : Node(ctx, std::move(loc)),
-        c_definitions(std::move(c_definitions)),
+        c_statements(std::move(c_statements)),
         config(config),
-        imports(std::move(imports))
+        imports(std::move(imports)),
+        header(std::move(header))
   {
     for (auto &stmt : root_statements) {
       if (auto *map_decl = stmt.as<MapDeclStatement>()) {
@@ -1375,21 +1390,23 @@ public:
   };
   explicit Program(ASTContext &ctx, const Program &other, const Location &loc)
       : Node(ctx, loc + other.loc),
-        c_definitions(other.c_definitions),
+        c_statements(clone(ctx, other.c_statements, loc)),
         config(clone(ctx, other.config, loc)),
         imports(clone(ctx, other.imports, loc)),
         map_decls(clone(ctx, other.map_decls, loc)),
         macros(clone(ctx, other.macros, loc)),
         functions(clone(ctx, other.functions, loc)),
-        probes(clone(ctx, other.probes, loc)) {};
+        probes(clone(ctx, other.probes, loc)),
+        header(other.header) {};
 
-  std::string c_definitions;
+  CStatementList c_statements;
   Config *config = nullptr;
   ImportList imports;
   MapDeclList map_decls;
   MacroList macros;
   SubprogList functions;
   ProbeList probes;
+  std::optional<std::string> header;
 
   void clear_empty_probes();
 };

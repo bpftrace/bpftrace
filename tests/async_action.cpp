@@ -1,10 +1,10 @@
 #include <regex>
 
 #include "ast/async_event_types.h"
+#include "ast/location.h"
 #include "async_action.h"
 #include "attached_probe.h"
 #include "bpftrace.h"
-#include "location.hh"
 #include "mocks.h"
 #include "output/text.h"
 #include "types.h"
@@ -177,8 +177,8 @@ TEST_F(AsyncActionTest, runtime_error)
     int return_value;
     std::string expected_substring;
     std::string filename;
-    unsigned int line;
-    unsigned int column;
+    int line;
+    int column;
   };
 
   std::vector<TestCase> test_cases = {
@@ -230,8 +230,9 @@ TEST_F(AsyncActionTest, runtime_error)
 
   uint64_t async_id = 1;
   for (const auto &tc : test_cases) {
-    auto src_loc = ast::SourceLocation(
-        location(&tc.filename, tc.line, tc.column));
+    ast::SourceLocation src_loc;
+    src_loc.begin = { .line = tc.line, .column = tc.column };
+    src_loc.end = { .line = tc.line, .column = tc.column };
     auto location_chain = std::make_shared<ast::LocationChain>(src_loc);
     RuntimeErrorInfo info(tc.rte_id, tc.func_id, location_chain);
 

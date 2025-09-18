@@ -8,21 +8,27 @@
 #include <utility>
 #include <vector>
 
-#include "location.hh"
-
 namespace bpftrace::ast {
 
 class ASTSource;
+class ASTContext;
 
 // SourceLocation refers to a single location in a source file.
 //
-// It does not contain any additional context.
+// It does not contain any additional context. It may be manipulated directly
+// by the lexer, and copied.
 class SourceLocation {
 public:
+  struct Position {
+    int line = 1;
+    int column = 1;
+  };
+
   SourceLocation() = default;
   SourceLocation(const SourceLocation &) = default;
-  SourceLocation &operator=(const SourceLocation &) = default;
-  SourceLocation(location loc, std::shared_ptr<ASTSource> source = {});
+  SourceLocation &operator=(const SourceLocation &other) = default;
+  SourceLocation(std::shared_ptr<ASTSource> source)
+      : source_(std::move(source)) {};
 
   // Canonical filename.
   std::string filename() const;
@@ -40,28 +46,92 @@ public:
   // Canonical line number, will be start of range.
   unsigned int line() const
   {
-    return line_range_.first;
+    return begin.line;
   };
 
   // Canonical column number, will be start of range.
   unsigned int column() const
   {
-    return column_range_.first;
+    return begin.column;
   };
 
-private:
-  using range_t = std::pair<unsigned int, unsigned int>;
-  SourceLocation(range_t &&lines,
-                 range_t &&columns,
-                 std::shared_ptr<ASTSource> source)
-      : line_range_(std::move(lines)),
-        column_range_(std::move(columns)),
-        source_(std::move(source)) {};
+  // Return comments associated with this location.
+  std::string comments() const
+  {
+    if (!comments_) {
+      return "";
+    }
+    return comments_->str();
+  }
 
-  range_t line_range_;
-  range_t column_range_;
+  // Returns the vertical space above the location.
+  size_t vspace() const
+  {
+    return vspace_;
+  }
+
+  // Clears all current comments.
+  void reset_meta()
+  {
+    comments_ = nullptr;
+    vspace_ = 0;
+  }
+
+  // Adds a comment.
+  template <typename T>
+  void add_comment(const T &data)
+  {
+    if (!comments_) {
+      comments_ = std::make_shared<std::stringstream>();
+    }
+    (*comments_) << data;
+  }
+
+  // Moves the cursor forward `lines` lines.
+  void advance_lines(int lines = 1)
+  {
+    begin.column = 1;
+    end.column = 1;
+    begin.line += lines;
+    end.line = begin.line;
+  }
+
+  // Add vertical space.
+  void advance_vspace(int lines = 1)
+  {
+    vspace_ += lines;
+  }
+
+  // Moves the cursor forward `count` columns.
+  void advance_columns(int count)
+  {
+    // Advance the from the end of the last token.
+    begin.column = end.column;
+    end.column += count;
+  }
+
+  // Resets the column.
+  void reset_column()
+  {
+    begin.column = 1;
+    end.column = 1;
+  }
+
+  Position begin;
+  Position end;
+
+private:
+  std::shared_ptr<std::stringstream> comments_;
   std::shared_ptr<ASTSource> source_;
+  int vspace_ = 0;
+
+  friend class ASTContext;
+  friend SourceLocation operator+(const SourceLocation &orig,
+                                  const SourceLocation &loc);
 };
+
+std::ostream &operator<<(std::ostream &out, const SourceLocation &loc);
+SourceLocation operator+(const SourceLocation &orig, const SourceLocation &loc);
 
 class LocationChain;
 using Location = std::shared_ptr<LocationChain>;
@@ -102,6 +172,14 @@ public:
   unsigned int column() const
   {
     return current.column();
+  }
+  std::string comments() const
+  {
+    return current.comments();
+  }
+  size_t vspace() const
+  {
+    return current.vspace();
   }
 
   // This may be modified for a node, typically when copying. For example, when

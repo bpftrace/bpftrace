@@ -643,9 +643,13 @@ bool ClangParser::parse(ast::Program *program,
                         BPFtrace &bpftrace,
                         std::vector<std::string> extra_flags)
 {
-  input = "#include </bpftrace/include/__btf_generated_header.h>\n" +
-          program->c_definitions;
+  std::stringstream ss;
+  ss << "#include </bpftrace/include/__btf_generated_header.h>\n";
+  for (const auto &stmt : program->c_statements) {
+    ss << stmt->data << "\n";
+  }
 
+  input = ss.str();
   input_files = getTranslationUnitFiles(CXUnsavedFile{
       .Filename = "definitions.h",
       .Contents = input.c_str(),

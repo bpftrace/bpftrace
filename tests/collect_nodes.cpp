@@ -22,7 +22,7 @@ void test(const std::vector<std::reference_wrapper<T>> &expected,
 TEST(CollectNodes, direct)
 {
   ASTContext ctx;
-  auto &var = *ctx.make_node<Variable>("myvar", bpftrace::location{});
+  auto &var = *ctx.make_node<Variable>("myvar", Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(var);
@@ -33,9 +33,9 @@ TEST(CollectNodes, direct)
 TEST(CollectNodes, indirect)
 {
   ASTContext ctx;
-  auto &var = *ctx.make_node<Variable>("myvar", bpftrace::location{});
+  auto &var = *ctx.make_node<Variable>("myvar", Location());
   auto &unop = *ctx.make_node<Unop>(
-      &var, Operator::INCREMENT, false, bpftrace::location{});
+      &var, Operator::INCREMENT, false, Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop);
@@ -46,9 +46,9 @@ TEST(CollectNodes, indirect)
 TEST(CollectNodes, none)
 {
   ASTContext ctx;
-  auto &map = *ctx.make_node<Map>("myvar", bpftrace::location{});
+  auto &map = *ctx.make_node<Map>("myvar", Location());
   auto &unop = *ctx.make_node<Unop>(
-      &map, Operator::INCREMENT, false, bpftrace::location{});
+      &map, Operator::INCREMENT, false, Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop);
@@ -59,13 +59,13 @@ TEST(CollectNodes, none)
 TEST(CollectNodes, multiple_runs)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", bpftrace::location{});
+  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
   auto &unop1 = *ctx.make_node<Unop>(
-      &var1, Operator::INCREMENT, false, bpftrace::location{});
+      &var1, Operator::INCREMENT, false, Location());
 
-  auto &var2 = *ctx.make_node<Variable>("myvar2", bpftrace::location{});
+  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
   auto &unop2 = *ctx.make_node<Unop>(
-      &var2, Operator::INCREMENT, false, bpftrace::location{});
+      &var2, Operator::INCREMENT, false, Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop1);
@@ -77,10 +77,9 @@ TEST(CollectNodes, multiple_runs)
 TEST(CollectNodes, multiple_children)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", bpftrace::location{});
-  auto &var2 = *ctx.make_node<Variable>("myvar2", bpftrace::location{});
-  auto &binop = *ctx.make_node<Binop>(
-      &var1, Operator::PLUS, &var2, bpftrace::location{});
+  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
+  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
+  auto &binop = *ctx.make_node<Binop>(&var1, Operator::PLUS, &var2, Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(binop);
@@ -91,10 +90,9 @@ TEST(CollectNodes, multiple_children)
 TEST(CollectNodes, predicate)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", bpftrace::location{});
-  auto &var2 = *ctx.make_node<Variable>("myvar2", bpftrace::location{});
-  auto &binop = *ctx.make_node<Binop>(
-      &var1, Operator::PLUS, &var2, bpftrace::location{});
+  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
+  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
+  auto &binop = *ctx.make_node<Binop>(&var1, Operator::PLUS, &var2, Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(binop, [](const auto &var) { return var.ident == "myvar2"; });
@@ -105,13 +103,13 @@ TEST(CollectNodes, predicate)
 TEST(CollectNodes, nested)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", bpftrace::location{});
-  auto &var2 = *ctx.make_node<Variable>("myvar2", bpftrace::location{});
-  auto &var3 = *ctx.make_node<Variable>("myvar3", bpftrace::location{});
+  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
+  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
+  auto &var3 = *ctx.make_node<Variable>("myvar3", Location());
   auto &binop1 = *ctx.make_node<Binop>(
-      &var1, Operator::PLUS, &var2, bpftrace::location{});
+      &var1, Operator::PLUS, &var2, Location());
   auto &binop2 = *ctx.make_node<Binop>(
-      &binop1, Operator::MINUS, &var3, bpftrace::location{});
+      &binop1, Operator::MINUS, &var3, Location());
 
   CollectNodes<Binop> visitor;
   visitor.visit(binop2,
