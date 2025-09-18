@@ -61,11 +61,7 @@ in the upcoming bpftrace release without blocking the development on the master
 branch.
 
 When creating a branch for a release **v0.Y.0**, the following steps should be
-performed. Any changes to the code should be done in the master branch first and
-then backported to the release branch. In the rare case when the master-first
-approach is not possible (e.g. a feature present exclusively on master blocks
-the LLVM update), the changes can be done in the release branch first and
-forward-ported to master afterwards.
+performed:
 
 1. Mark the release in [CHANGELOG.md](../CHANGELOG.md) by replacing the `##
    Unreleased` header with `## [0.Y.0] TBD` and creating a new "Unreleased"
@@ -99,6 +95,22 @@ Example branch names:
     * release/0.21.x
     * release/1.0.x
     * release/1.1.x
+
+### Backporting commits to release branches
+
+Any change relevant for both the master and the release branch (such as Nixpkgs
+or LLVM update) should be done in the master branch first and backported to the
+release branch afterwards. In the rare case when the master-first approach is
+not possible (e.g. a feature present exclusively on master blocks the LLVM
+update), the changes can be done in the release branch first and forward-ported
+to master afterwards.
+
+For backporting changes from one branch to another, use
+```
+git cherry-pick -s -x <sha1>
+```
+and do not squash the commits when merging the PR. This will retain a clear
+connection between the original and the backported commit.
 
 ## Tagging a release
 
