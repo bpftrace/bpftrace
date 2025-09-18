@@ -18,7 +18,6 @@ public:
   void visit(Map &map);
   void visit(MapAccess &acc);
   void visit(MapAddr &map_addr);
-  void visit(Typeof &typeof);
   void visit(AssignScalarMapStatement &assign);
   void visit(AssignMapStatement &assign);
   void visit(Expression &expr);
@@ -84,19 +83,6 @@ void MapDefaultKey::visit(MapAccess &acc)
 void MapDefaultKey::visit([[maybe_unused]] MapAddr &map_addr)
 {
   // Don't desugar this into a map access, we want the map pointer
-}
-
-void MapDefaultKey::visit([[maybe_unused]] Typeof &typeof)
-{
-  if (std::holds_alternative<Expression>(typeof.record)) {
-    const auto &expr = std::get<Expression>(typeof.record);
-    if (expr.is<Map>()) {
-      // Do nothing; allow these to exist. It will extract the value of the map
-      // whether it is keyed or not.
-      return;
-    }
-  }
-  Visitor<MapDefaultKey>::visit(typeof);
 }
 
 void MapDefaultKey::visit(AssignScalarMapStatement &assign)
