@@ -1,9 +1,11 @@
+# Disabled - repeatedly fails on upstream kernel (6.14)
 NAME watchpoint - absolute address
 BEFORE ./testprogs/watchpoint
 RUN {{BPFTRACE}} -e "watchpoint:$(awk '{print $1}' /tmp/watchpoint_mem):8:w { printf(\"hit!\n\"); exit() }" -p {{BEFORE_PID}}
 EXPECT hit!
 ARCH aarch64|ppc64|ppc64le|x86_64
 CLEANUP rm -f /tmp/watchpoint_mem
+REQUIRES bash -c "exit 1"
 
 NAME kwatchpoint - knl absolute address
 RUN {{BPFTRACE}} -e "watchpoint:0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):4:w { printf(\"hit\n\"); exit(); }"
