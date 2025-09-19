@@ -3066,6 +3066,22 @@ kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); }
 )" });
 }
 
+TEST_F(SemanticAnalyserTest, tuple_comparison)
+{
+  std::string err_msg = "Type mismatch for '=='";
+
+  test("kprobe:f { $s = (1, 2); $s == (3, 4)}");
+  test("kprobe:f { $s = (1, (int16)2); $s == (3, (uint8)4)}");
+  test(R"(kprobe:f { $s = (1, "hello"); $s == (3, "bye")})");
+  test("kprobe:f { $s = (1, (true, -4)); $s == (3, (false, 4))}");
+
+  test("kprobe:f { $s = (1, 2); $s == (3, 4, 5)}", Error{ err_msg });
+  test("kprobe:f { $s = (1, false); $s == (3, 4)}", Error{ err_msg });
+  test("kprobe:f { $s = (1, (2, 3)); $s == (3, (2, 3, 4))}", Error{ err_msg });
+  test("kprobe:f { $a = \"hello\"; $s = (1, (2, 3)); $s == (3, (2, $a))}",
+       Error{ err_msg });
+}
+
 TEST_F(SemanticAnalyserTest, signed_int_arithmetic_warnings)
 {
   // Test type warnings for arithmetic
