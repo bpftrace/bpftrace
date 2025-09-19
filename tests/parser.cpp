@@ -6,6 +6,7 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
+#include "ast/passes/printer.h"
 #include "ast_matchers.h"
 #include "driver.h"
 #include "gtest/gtest.h"
@@ -105,7 +106,10 @@ void test_macro_parse_failure(const std::string &input,
 }
 
 template <typename MatcherT>
-void test(BPFtrace &bpftrace, const std::string &input, const MatcherT &matcher)
+void test(BPFtrace &bpftrace,
+          const std::string &input,
+          const MatcherT &matcher,
+          bool reparse = true)
 {
   std::ostringstream out;
   ast::ASTContext ast("stdin", input);
@@ -120,7 +124,19 @@ void test(BPFtrace &bpftrace, const std::string &input, const MatcherT &matcher)
   ast.diagnostics().emit(out);
   ASSERT_TRUE(ast.diagnostics().ok()) << out.str() << input;
 
-  EXPECT_THAT(ast, matcher);
+  EXPECT_THAT(ast, matcher) << input;
+
+  // Generally, we format and reparse the same AST, to ensure that it parses
+  // successfully in the same way. This is a test of both the formatter and
+  // the parser, to ensure that they are consistent (at least for the tests).
+  std::stringstream ss;
+  ast::Printer printer(ast, ss);
+  printer.visit(ast.root);
+  if (reparse) {
+    test(bpftrace, ss.str(), matcher, false);
+  } else {
+    EXPECT_EQ(input, ss.str());
+  }
 }
 
 template <typename MatcherT>
