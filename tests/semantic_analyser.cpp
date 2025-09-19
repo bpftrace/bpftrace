@@ -266,6 +266,8 @@ TEST_F(SemanticAnalyserTest, builtin_functions)
   test("kprobe:f { @x = 1; zero(@x) }");
   test("kprobe:f { @x[1] = 1; if (has_key(@x, 1)) {} }");
   test("kprobe:f { @x[1] = 1; @s = len(@x) }");
+  test("kprobe:f { @x = 1; @y[1] = 1; $a = is_scalar(@x); $b = is_scalar(@y); "
+       "}");
   test("kprobe:f { time() }");
   test("kprobe:f { exit() }");
   test("kprobe:f { str(0xffff) }");
@@ -5622,6 +5624,8 @@ TEST_F(SemanticAnalyserTest, if_comptime)
 {
   test(R"(kprobe:f { @a = 1; if (comptime false) { @a[1] = 1; } })");
   test(R"(kprobe:f { @a[1] = 1; if (comptime false) { @a = 1; } })");
+  test(R"(kprobe:f { @a[1] = 1; if (comptime is_scalar(@a)) { @a = 1; } })");
+  test(R"(kprobe:f { @a = 1; if (comptime !is_scalar(@a)) { @a[1] = 1; } })");
   test(R"(kprobe:f { @a = 1; if (comptime false) { for ($kv : @a) { } } })");
   test(R"(kprobe:f { @a[1] = 1; if (comptime true) { @a = 1; } })", Error{ R"(
 stdin:1:44-46: ERROR: @a used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
