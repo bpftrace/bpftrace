@@ -114,15 +114,15 @@ std::string opstr(const Unop &unop)
     case Operator::MINUS:
       return "-";
     case Operator::MUL:
-      return "dereference";
+      return "*";
     case Operator::POST_INCREMENT:
-      return "++ (post)";
+      return "++";
     case Operator::PRE_INCREMENT:
-      return "++ (pre)";
+      return "++";
     case Operator::POST_DECREMENT:
-      return "-- (post)";
+      return "--";
     case Operator::PRE_DECREMENT:
-      return "-- (pre)";
+      return "--";
     default:
       return {};
   }
