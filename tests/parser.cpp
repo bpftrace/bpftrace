@@ -2693,7 +2693,7 @@ i:s:1 { @x = (1, 2); $x.1 = 1; }
 TEST(Parser, tuple_assignment_error)
 {
   test_parse_failure("i:s:1 { (1, 0) = 0 }", R"(
-stdin:1:16-17: ERROR: syntax error, unexpected =, expecting ;
+stdin:1:16-17: ERROR: syntax error, unexpected =
 i:s:1 { (1, 0) = 0 }
                ~
 )");
@@ -2871,7 +2871,7 @@ config = { BPFTRACE_STACK_MODE=perf BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf } i:s:1 { "
                      "BPFTRACE_MAX_PROBES=2; exit(); }",
                      R"(
-stdin:1:47-67: ERROR: syntax error, unexpected =, expecting ;
+stdin:1:47-67: ERROR: syntax error, unexpected =
 config = { BPFTRACE_STACK_MODE=perf } i:s:1 { BPFTRACE_MAX_PROBES=2; exit(); }
                                               ~~~~~~~~~~~~~~~~~~~~
 )");
@@ -3166,14 +3166,14 @@ Program
 
   // Needs the let keyword
   test_parse_failure("begin { $x: int8; }", R"(
-stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ;
+stdin:1:9-12: ERROR: syntax error, unexpected :
 begin { $x: int8; }
         ~~~
 )");
 
   // Needs the let keyword
   test_parse_failure("begin { $x: int8 = 1; }", R"(
-stdin:1:9-12: ERROR: syntax error, unexpected :, expecting ;
+stdin:1:9-12: ERROR: syntax error, unexpected :
 begin { $x: int8 = 1; }
         ~~~
 )");
@@ -3385,6 +3385,275 @@ stdin:1:8-11: ERROR: syntax error, unexpected identifier, expecting string
 import foo; begin { }
        ~~~
 )");
+}
+
+TEST(Parser, order_of_operations)
+{
+  // Test multiplication has higher precedence than addition.
+  test("kprobe:f { @x = 2 + 3 * 4; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   +\n"
+       "    int: 2 :: [int64]\n"
+       "    *\n"
+       "     int: 3 :: [int64]\n"
+       "     int: 4 :: [int64]\n");
+
+  // Test division has higher precedence than subtraction.
+  test("kprobe:f { @x = 10 - 8 / 2; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   -\n"
+       "    int: 10 :: [int64]\n"
+       "    /\n"
+       "     int: 8 :: [int64]\n"
+       "     int: 2 :: [int64]\n");
+
+  // Test modulo has same precedence as multiplication and division.
+  test("kprobe:f { @x = 2 * 3 % 4; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   %\n"
+       "    *\n"
+       "     int: 2 :: [int64]\n"
+       "     int: 3 :: [int64]\n"
+       "    int: 4 :: [int64]\n");
+
+  // Test bit shifts have lower precedence than arithmetic.
+  test("kprobe:f { @x = 1 + 2 << 3; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   <<\n"
+       "    +\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 2 :: [int64]\n"
+       "    int: 3 :: [int64]\n");
+
+  test("kprobe:f { @x = 16 >> 2 + 1; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   >>\n"
+       "    int: 16 :: [int64]\n"
+       "    +\n"
+       "     int: 2 :: [int64]\n"
+       "     int: 1 :: [int64]\n");
+
+  // Test relational operators have lower precedence than bit shifts.
+  test("kprobe:f { @x = 1 << 2 < 8; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   <\n"
+       "    <<\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 2 :: [int64]\n"
+       "    int: 8 :: [int64]\n");
+
+  test("kprobe:f { @x = 8 > 2 << 1; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   >\n"
+       "    int: 8 :: [int64]\n"
+       "    <<\n"
+       "     int: 2 :: [int64]\n"
+       "     int: 1 :: [int64]\n");
+
+  test("kprobe:f { @x = 5 <= 3 + 2; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   <=\n"
+       "    int: 5 :: [int64]\n"
+       "    +\n"
+       "     int: 3 :: [int64]\n"
+       "     int: 2 :: [int64]\n");
+
+  test("kprobe:f { @x = 5 >= 3 - 1; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   >=\n"
+       "    int: 5 :: [int64]\n"
+       "    -\n"
+       "     int: 3 :: [int64]\n"
+       "     int: 1 :: [int64]\n");
+
+  // Test equality operators have lower precedence than relational.
+  test("kprobe:f { @x = 5 > 3 == 1; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ==\n"
+       "    >\n"
+       "     int: 5 :: [int64]\n"
+       "     int: 3 :: [int64]\n"
+       "    int: 1 :: [int64]\n");
+
+  test("kprobe:f { @x = 2 < 4 != 0; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   !=\n"
+       "    <\n"
+       "     int: 2 :: [int64]\n"
+       "     int: 4 :: [int64]\n"
+       "    int: 0 :: [int64]\n");
+
+  // Test bitwise AND has lower precedence than equality.
+  test("kprobe:f { @x = 5 == 5 & 1; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   &\n"
+       "    ==\n"
+       "     int: 5 :: [int64]\n"
+       "     int: 5 :: [int64]\n"
+       "    int: 1 :: [int64]\n");
+
+  // Test bitwise XOR has lower precedence than bitwise AND.
+  test("kprobe:f { @x = 1 & 3 ^ 2; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ^\n"
+       "    &\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 3 :: [int64]\n"
+       "    int: 2 :: [int64]\n");
+
+  // Test bitwise OR has lower precedence than bitwise XOR.
+  test("kprobe:f { @x = 1 ^ 2 | 4; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   |\n"
+       "    ^\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 2 :: [int64]\n"
+       "    int: 4 :: [int64]\n");
+
+  // Test logical AND has lower precedence than bitwise OR.
+  test("kprobe:f { @x = 1 | 2 && 4; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   &&\n"
+       "    |\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 2 :: [int64]\n"
+       "    int: 4 :: [int64]\n");
+
+  // Test logical OR has lower precedence than logical AND.
+  test("kprobe:f { @x = 0 && 1 || 2; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ||\n"
+       "    &&\n"
+       "     int: 0 :: [int64]\n"
+       "     int: 1 :: [int64]\n"
+       "    int: 2 :: [int64]\n");
+
+  // Test ternary has lowest precedence.
+  test("kprobe:f { @x = 1 || 0 ? 5 : 10; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   if\n"
+       "    ||\n"
+       "     int: 1 :: [int64]\n"
+       "     int: 0 :: [int64]\n"
+       "    then\n"
+       "     int: 5 :: [int64]\n"
+       "    else\n"
+       "     int: 10 :: [int64]\n");
+
+  // Test complex expression with multiple precedence levels.
+  test("kprobe:f { @x = 1 + 2 * 3 > 5 && 4 | 8 ? 10 : 20; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   if\n"
+       "    &&\n"
+       "     >\n"
+       "      +\n"
+       "       int: 1 :: [int64]\n"
+       "       *\n"
+       "        int: 2 :: [int64]\n"
+       "        int: 3 :: [int64]\n"
+       "      int: 5 :: [int64]\n"
+       "     |\n"
+       "      int: 4 :: [int64]\n"
+       "      int: 8 :: [int64]\n"
+       "    then\n"
+       "     int: 10 :: [int64]\n"
+       "    else\n"
+       "     int: 20 :: [int64]\n");
+
+  // Test left-associativity for operators of same precedence.
+  test("kprobe:f { @x = 10 - 5 - 2; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   -\n"
+       "    -\n"
+       "     int: 10 :: [int64]\n"
+       "     int: 5 :: [int64]\n"
+       "    int: 2 :: [int64]\n");
+
+  test("kprobe:f { @x = 20 / 4 / 2; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   /\n"
+       "    /\n"
+       "     int: 20 :: [int64]\n"
+       "     int: 4 :: [int64]\n"
+       "    int: 2 :: [int64]\n");
+
+  // Test ternary is right-associative.
+  test("kprobe:f { @x = 1 ? 2 ? 3 : 4 : 5; }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @x\n"
+       "   if\n"
+       "    int: 1 :: [int64]\n"
+       "    then\n"
+       "     if\n"
+       "      int: 2 :: [int64]\n"
+       "      then\n"
+       "       int: 3 :: [int64]\n"
+       "      else\n"
+       "       int: 4 :: [int64]\n"
+       "    else\n"
+       "     int: 5 :: [int64]\n");
 }
 
 TEST(Parser, naked_expression)
