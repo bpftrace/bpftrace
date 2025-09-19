@@ -345,9 +345,9 @@ TEST_F(SemanticAnalyserTest, consistent_map_keys)
   test("begin { @x[@y[@z]] = 5; @y[2] = 1; @z = @x[0]; }");
 
   test("begin { @x = 0; @x[1]; }", Error{ R"(
-stdin:1:17-19: ERROR: @x used as a map with an explicit key (non-scalar map), previously used without an explicit key (scalar map)
+stdin:1:17-22: ERROR: @x used as a map with an explicit key (non-scalar map), previously used without an explicit key (scalar map)
 begin { @x = 0; @x[1]; }
-                ~~
+                ~~~~~
 )" });
   test("begin { @x[1] = 0; @x; }", Error{ R"(
 stdin:1:20-22: ERROR: @x used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
@@ -5615,6 +5615,18 @@ TEST_F(SemanticAnalyserTest, typeof_casts)
 stdin:1:61-74: ERROR: Cannot cast to "struct foo"
 struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
                                                             ~~~~~~~~~~~~~
+)" });
+}
+
+TEST_F(SemanticAnalyserTest, if_comptime)
+{
+  test(R"(kprobe:f { @a = 1; if (comptime false) { @a[1] = 1; } })");
+  test(R"(kprobe:f { @a[1] = 1; if (comptime false) { @a = 1; } })");
+  test(R"(kprobe:f { @a = 1; if (comptime false) { for ($kv : @a) { } } })");
+  test(R"(kprobe:f { @a[1] = 1; if (comptime true) { @a = 1; } })", Error{ R"(
+stdin:1:44-46: ERROR: @a used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
+kprobe:f { @a[1] = 1; if (comptime true) { @a = 1; } }
+                                           ~~
 )" });
 }
 
