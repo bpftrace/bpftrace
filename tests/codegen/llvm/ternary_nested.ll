@@ -36,53 +36,53 @@ entry:
 
 left:                                             ; preds = %entry
   %2 = load i64, ptr %"$y", align 8
-  %true_cond4 = icmp ne i64 %2, 0
-  br i1 %true_cond4, label %left1, label %right2
+  %true_cond3 = icmp ne i64 %2, 0
+  br i1 %true_cond3, label %left1, label %right2
 
 right:                                            ; preds = %entry
   %3 = load i64, ptr %"$y", align 8
+  br label %done9
+
+left1:                                            ; preds = %left
+  %4 = load i64, ptr %"$z", align 8
+  %true_cond6 = icmp ne i64 %4, 0
+  br i1 %true_cond6, label %left4, label %right5
+
+right2:                                           ; preds = %left
+  %5 = load i64, ptr %"$z", align 8
+  br label %done7
+
+left4:                                            ; preds = %left1
+  %6 = load i64, ptr %"$x", align 8
   br label %done
 
-done:                                             ; preds = %right, %done3
-  %result10 = phi i64 [ %result9, %done3 ], [ %3, %right ]
+right5:                                           ; preds = %left1
+  %7 = load i64, ptr %"$y", align 8
+  br label %done
+
+done:                                             ; preds = %right5, %left4
+  %result = phi i64 [ %6, %left4 ], [ %7, %right5 ]
+  br label %done7
+
+done7:                                            ; preds = %right2, %done
+  %result8 = phi i64 [ %result, %done ], [ %5, %right2 ]
+  br label %done9
+
+done9:                                            ; preds = %right, %done7
+  %result10 = phi i64 [ %result8, %done7 ], [ %3, %right ]
   call void @llvm.lifetime.start.p0(i64 -1, ptr %print_int_8_t)
-  %4 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 0
-  store i64 30007, ptr %4, align 8
-  %5 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 1
-  store i64 0, ptr %5, align 8
-  %6 = getelementptr %print_int_8_t, ptr %print_int_8_t, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %6, i8 0, i64 8, i1 false)
-  store i64 %result10, ptr %6, align 8
+  %8 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 0
+  store i64 30007, ptr %8, align 8
+  %9 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 1
+  store i64 0, ptr %9, align 8
+  %10 = getelementptr %print_int_8_t, ptr %print_int_8_t, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 8, i1 false)
+  store i64 %result10, ptr %10, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_int_8_t, i64 24, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
-left1:                                            ; preds = %left
-  %7 = load i64, ptr %"$z", align 8
-  %true_cond8 = icmp ne i64 %7, 0
-  br i1 %true_cond8, label %left5, label %right6
-
-right2:                                           ; preds = %left
-  %8 = load i64, ptr %"$z", align 8
-  br label %done3
-
-done3:                                            ; preds = %right2, %done7
-  %result9 = phi i64 [ %result, %done7 ], [ %8, %right2 ]
-  br label %done
-
-left5:                                            ; preds = %left1
-  %9 = load i64, ptr %"$x", align 8
-  br label %done7
-
-right6:                                           ; preds = %left1
-  %10 = load i64, ptr %"$y", align 8
-  br label %done7
-
-done7:                                            ; preds = %right6, %left5
-  %result = phi i64 [ %9, %left5 ], [ %10, %right6 ]
-  br label %done3
-
-event_loss_counter:                               ; preds = %done
+event_loss_counter:                               ; preds = %done9
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %11 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %11
@@ -92,7 +92,7 @@ event_loss_counter:                               ; preds = %done
   store i64 %14, ptr %12, align 8
   br label %counter_merge
 
-counter_merge:                                    ; preds = %event_loss_counter, %done
+counter_merge:                                    ; preds = %event_loss_counter, %done9
   call void @llvm.lifetime.end.p0(i64 -1, ptr %print_int_8_t)
   ret i64 0
 }

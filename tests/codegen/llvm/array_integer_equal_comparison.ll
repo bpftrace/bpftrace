@@ -68,9 +68,6 @@ left:                                             ; preds = %arraycmp.done
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 right:                                            ; preds = %arraycmp.done
-  br label %done
-
-done:                                             ; preds = %right, %deadcode
   ret i64 0
 
 while_cond:                                       ; preds = %arraycmp.loop, %entry
@@ -123,9 +120,6 @@ event_loss_counter:                               ; preds = %left
 counter_merge:                                    ; preds = %event_loss_counter, %left
   call void @llvm.lifetime.end.p0(i64 -1, ptr %exit)
   ret i64 0
-
-deadcode:                                         ; No predecessors!
-  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
