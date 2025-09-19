@@ -8,9 +8,8 @@ namespace bpftrace::ast {
 
 class Printer : public Visitor<Printer> {
 public:
-  explicit Printer(std::ostream &out) : out_(out)
-  {
-  }
+  explicit Printer(std::ostream &out, bool with_types = false)
+      : out_(out), with_types_(with_types){};
 
   using Visitor<Printer>::visit;
   void visit(Integer &integer);
@@ -42,7 +41,6 @@ public:
   void visit(MapAccess &acc);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
-  void visit(ExprStatement &expr);
   void visit(AssignMapStatement &assignment);
   void visit(AssignScalarMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
@@ -60,12 +58,19 @@ public:
   void visit(Subprog &subprog);
   void visit(Import &imp);
   void visit(Program &program);
+  void visit(BlockExpr &block);
+  void visit(Comptime &comptime);
+  void visit(Statement &stmt);
+  void visit(Expression &expr);
 
 private:
   std::ostream &out_;
   int depth_ = 0;
+  bool with_types_ = false;
 
-  std::string type(const SizedType &ty);
+  void print_type(const SizedType &ty);
+  void print_meta(const Location &loc);
+  void print_indent();
 };
 
 } // namespace bpftrace::ast

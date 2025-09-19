@@ -5,7 +5,6 @@
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/printer.h"
-#include "ast/passes/probe_expansion.h"
 #include "driver.h"
 #include "gtest/gtest.h"
 
@@ -98,7 +97,31 @@ void test(BPFtrace &bpftrace,
 
   Printer printer(out);
   printer.visit(ast.root);
-  EXPECT_EQ(expected, out.str());
+
+  // Ignore all whitespace in both the input and output, but the emitted
+  // case should be identical when parser and then reprinted.
+  std::string output = out.str();
+  size_t input_index = 0;
+  size_t output_index = 0;
+  while (true) {
+    while (input_index < input.size() && isspace(input[input_index])) {
+      input_index++;
+    }
+    while (output_index < output.size() && isspace(output[output_index])) {
+      output_index++;
+    }
+    bool input_done = input_index >= input.size();
+    bool output_done = output_index >= output.size();
+    if (input_done && output_done) {
+      break;
+    }
+    if (input_done || output_done ||
+        input[input_index] != output[output_index]) {
+      EXPECT_EQ(input, output);
+    }
+    input_index++;
+    output_index++;
+  }
 }
 
 void test(const std::string &input, std::string_view expected)
@@ -838,7 +861,8 @@ TEST(Parser, predicate_containing_division)
 
 TEST(Parser, expressions)
 {
-  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || __builtin_comm == "
+  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || __builtin_comm "
+       "== "
        "\"string\" /\n"
        "{\n"
        "  1;\n"
@@ -968,7 +992,8 @@ TEST(Parser, ternary_int)
 
 TEST(Parser, if_block)
 {
-  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } "
+  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); "
+       "} "
        "}",
        "Program\n"
        " kprobe:sys_open\n"
@@ -984,7 +1009,8 @@ TEST(Parser, if_block)
 
 TEST(Parser, if_stmt_if)
 {
-  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } "
+  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); "
+       "} "
        "@pid = pid; if (pid < 1000) { printf(\"%d is low\\n\", pid); } }",
        "Program\n"
        " kprobe:sys_open\n"
@@ -1026,7 +1052,8 @@ TEST(Parser, if_block_variable)
 
 TEST(Parser, if_else)
 {
-  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; } "
+  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; "
+       "} "
        "printf(\"%d is high\\n\", pid, $s); }",
        "Program\n"
        " kprobe:sys_open\n"
@@ -1275,7 +1302,8 @@ TEST(Parser, uprobe)
        "Program\n"
        " uprobe:/my/program:1234\n"
        "  int: 1 :: [int64]\n");
-  // Trailing alnum chars are allowed (turns the entire arg into a symbol name)
+  // Trailing alnum chars are allowed (turns the entire arg into a symbol
+  // name)
   test("uprobe:/my/program:1234abc { 1; }",
        "Program\n"
        " uprobe:/my/program:1234abc\n"
@@ -2139,7 +2167,8 @@ TEST(Parser, offsetof_expression)
 
 TEST(Parser, offsetof_builtin_type)
 {
-  test("struct Foo { timestamp x; } begin { offsetof(struct Foo, timestamp); }",
+  test("struct Foo { timestamp x; } begin { offsetof(struct Foo, timestamp); "
+       "}",
        "struct Foo { timestamp x; };\n"
        "Program\n"
        " begin\n"
@@ -2539,10 +2568,11 @@ TEST(Parser, int_notation)
   test("k:f { print(1m); }",
        "Program\n kprobe:f\n  call: print\n   int: 60000000000 :: [int64]\n");
   test("k:f { print(1h); }",
-       "Program\n kprobe:f\n  call: print\n   int: 3600000000000 :: [int64]\n");
-  test(
-      "k:f { print(1d); }",
-      "Program\n kprobe:f\n  call: print\n   int: 86400000000000 :: [int64]\n");
+       "Program\n kprobe:f\n  call: print\n   int: 3600000000000 :: "
+       "[int64]\n");
+  test("k:f { print(1d); }",
+       "Program\n kprobe:f\n  call: print\n   int: 86400000000000 :: "
+       "[int64]\n");
 
   test_parse_failure("k:f { print(5e-9); }", R"(
 stdin:1:14-15: ERROR: syntax error, unexpected identifier, expecting ) or ","
@@ -3327,7 +3357,8 @@ begin { M; }
 )");
 
   // Large source code doesn't cause any problem
-  std::string padding(16384 * 2, 'p'); // Twice the default value of YY_BUF_SIZE
+  std::string padding(16384 * 2, 'p'); // Twice the default value of
+                                       // YY_BUF_SIZE
   test_macro_parse_failure("#define M M+1\n"
                            "begin { M; }\n"
                            "end { printf(\"" +

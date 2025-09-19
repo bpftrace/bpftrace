@@ -114,7 +114,7 @@ std::string opstr(const Unop &unop)
     case Operator::MINUS:
       return "-";
     case Operator::MUL:
-      return "dereference";
+      return "*";
     case Operator::INCREMENT:
       if (unop.is_post_op)
         return "++ (post)";
@@ -152,7 +152,6 @@ bool is_comparison_op(Operator op)
     case Operator::BXOR:
     case Operator::LEFT:
     case Operator::RIGHT:
-    case Operator::INVALID:
     case Operator::ASSIGN:
     case Operator::INCREMENT:
     case Operator::DECREMENT:
