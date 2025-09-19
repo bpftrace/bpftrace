@@ -1219,6 +1219,23 @@ void SemanticAnalyser::visit(Call &call)
     return;
   }
 
+  if (call.func == "len" || call.func == "delete" || call.func == "has_key") {
+    // N.B. this should always be true at this point
+    if (auto *map = call.vargs.at(0).as<Map>()) {
+      if (map_metadata_.bad_scalar_call.contains(map)) {
+        map->addError()
+            << "call to " << call.func
+            << "() expects a map with explicit keys (non-scalar map)";
+        return;
+      } else if (map_metadata_.bad_indexed_call.contains(map)) {
+        map->addError()
+            << "call to " << call.func
+            << "() expects a map without explicit keys (scalar map)";
+        return;
+      }
+    }
+  }
+
   if (call.func == "hist") {
     if (call.vargs.size() == 3) {
       call.vargs.emplace_back(
@@ -2238,6 +2255,14 @@ void SemanticAnalyser::visit(MapDeclStatement &decl)
 
 void SemanticAnalyser::visit(Map &map)
 {
+  if (map_metadata_.bad_indexed_access.contains(&map)) {
+    map.addError()
+        << map.ident
+        << " used as a map without an explicit key (scalar map), previously "
+           "used with an explicit key (non-scalar map)";
+    return;
+  }
+
   auto val = map_val_.find(map.ident);
   if (val != map_val_.end()) {
     map.value_type = val->second;
@@ -2883,6 +2908,11 @@ void SemanticAnalyser::visit(For &f)
     if (!is_first_pass() && !map_val_.contains(map->ident)) {
       map->addError() << "Undefined map: " << map->ident;
     }
+    if (map_metadata_.bad_iterator.contains(map)) {
+      map->addError() << map->ident
+                      << " has no explicit keys (scalar map), and "
+                         "cannot be used for iteration";
+    }
   }
 
   // For-loops are implemented using the bpf_for_each_map_elem or bpf_loop
@@ -3204,6 +3234,13 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
 void SemanticAnalyser::visit(MapAccess &acc)
 {
+  if (map_metadata_.bad_scalar_access.contains(acc.map)) {
+    acc.addError() << acc.map->ident
+                   << " used as a map with an explicit key (non-scalar map), "
+                      "previously used without an explicit key (scalar map)";
+    return;
+  }
+
   visit(acc.map);
   visit(acc.key);
   reconcile_map_key(acc.map, acc.key);
