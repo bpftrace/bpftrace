@@ -1357,16 +1357,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       Value *expr = b_.CreateICmpEQ(ret, b_.getInt64(0), "delete_ret");
       return ScopedExpr(expr);
     }
-  } else if (call.func == "has_key") {
-    auto &arg = call.vargs.at(0);
-    auto &map = *arg.as<Map>();
-    auto scoped_key = getMapKey(map, call.vargs.at(1));
-
-    CallInst *lookup = b_.CreateMapLookup(map, scoped_key.value());
-    Value *expr = b_.CreateICmpNE(b_.CreateIntCast(lookup, b_.getPtrTy(), true),
-                                  b_.GetNull(),
-                                  "has_key");
-    return ScopedExpr(expr);
   } else if (call.func == "str") {
     const auto max_strlen = bpftrace_.config_->max_strlen;
     // Largest read we'll allow = our global string buffer size

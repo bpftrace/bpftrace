@@ -1,3 +1,16 @@
 macro usdt_arg(x) {
    __usdt_arg(ctx, x)
 }
+
+macro get_first_map_key(@x) {
+   let $key;
+   for ($kv : @x) {
+      $key = $kv.0;
+      break;
+   }
+   $key
+}
+
+macro get_map_key_type(@x) {
+   typeinfo(get_first_map_key(@x))
+}
