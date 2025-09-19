@@ -69,7 +69,7 @@ target_compile_definitions(bpftrace PRIVATE ${BPFTRACE_FLAGS})
 if(STATIC_LINKING)
   target_link_libraries(bpftrace libbpftrace)
 else()
-  target_link_libraries(bpftrace libbpftrace libbpf.a)
+  target_link_libraries(bpftrace libbpftrace ${LIBBPF_LIBRARIES})
 endif(STATIC_LINKING)
 
 # compile definitions
