@@ -57,19 +57,24 @@ Pass CreateTypeSystemPass()
 
 Pass CreateDumpTypesPass(std::ostream &out)
 {
-  auto fn = [&out](TypeMetadata &tm) {
+  auto fn = [&out](ASTContext &ast, TypeMetadata &tm) {
+    out << "// Functions\n";
     for (const auto &type : tm.global) {
       if (!type.is<btf::Function>()) {
         continue;
       }
-      out << type.as<btf::Function>() << "\n";
+      out << "// " << type.as<btf::Function>() << "\n";
     }
+    out << "// Variables\n";
     for (const auto &type : tm.global) {
       if (!type.is<btf::Var>()) {
         continue;
       }
-      out << type.as<btf::Var>() << "\n";
+      out << "// " << type.as<btf::Var>() << "\n";
     }
+    out << "// Program\n";
+    ast::Printer printer(ast, out, ast::FormatMode::Debug);
+    printer.visit(ast.root);
   };
   return Pass::create("DumpTypes", fn);
 }
