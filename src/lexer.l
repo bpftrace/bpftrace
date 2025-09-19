@@ -113,14 +113,16 @@ oct_esc  [0-7]{1,3}
 }
 <CCOMMENTNL>{
   [*][/]\n              { driver.loc.advance_lines(1); yy_pop_state(yyscanner); }
-  "*/"                  yy_pop_state(yyscanner);
-  "* "                  { yy_pop_state(yyscanner); yy_push_state(CCOMMENT, yyscanner); }
-  "*"                   { }
+  "*/"                  { yy_pop_state(yyscanner); }
+  [*]+[ ]*\n            {
+                          driver.loc.advance_lines(1);
+                          driver.ctx.add_comment(driver.loc); // Empty.
+                        }
+  [*]+[ ]?              { yy_pop_state(yyscanner); yy_push_state(CCOMMENT, yyscanner); }
   {hspace}+             { }
   \n                    {
-                          driver.loc.trim();
-                          driver.ctx.add_comment(driver.loc); // Blank comment.
                           driver.loc.advance_lines(1);
+                          driver.ctx.add_comment(driver.loc); // Empty.
                         }
   .                     {
                            driver.loc.rewind_columns();

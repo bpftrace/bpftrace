@@ -5,7 +5,7 @@ namespace bpftrace::ast {
 
 void PrintTo(const ASTContext& ast, std::ostream* os)
 {
-  Printer printer(*os);
+  Printer printer(ast, *os);
   printer.visit(*ast.root);
 }
 
