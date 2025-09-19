@@ -26,7 +26,7 @@ public:
 
   [[nodiscard]] bool check(Map &map, bool indexed);
   void checkAccess(Map &map, bool indexed);
-  void checkCall(Map &map, bool indexed, Call &call);
+  void checkCall(Map &map, bool indexed);
 
   MapMetadata metadata;
 
@@ -155,27 +155,20 @@ void MapDefaultKey::checkAccess(Map &map, bool indexed)
 {
   if (!check(map, indexed)) {
     if (indexed) {
-      map.addError() << map.ident
-                     << " used as a map with an explicit key (non-scalar map), "
-                        "previously used without an explicit key (scalar map)";
+      metadata.bad_scalar_access.insert(&map);
     } else {
-      map.addError()
-          << map.ident
-          << " used as a map without an explicit key (scalar map), previously "
-             "used with an explicit key (non-scalar map)";
+      metadata.bad_indexed_access.insert(&map);
     }
   }
 }
 
-void MapDefaultKey::checkCall(Map &map, bool indexed, Call &call)
+void MapDefaultKey::checkCall(Map &map, bool indexed)
 {
   if (!check(map, indexed)) {
     if (indexed) {
-      map.addError() << "call to " << call.func
-                     << "() expects a map with explicit keys (non-scalar map)";
+      metadata.bad_scalar_call.insert(&map);
     } else {
-      map.addError() << "call to " << call.func
-                     << "() expects a map without explicit keys (scalar map)";
+      metadata.bad_indexed_call.insert(&map);
     }
   }
 }
@@ -192,11 +185,11 @@ void MapDefaultKey::visit(Call &call)
       if (call.func == "delete") {
         if (call.vargs.size() == 1) {
           // Inject the default key.
-          checkCall(*map, false, call);
+          checkCall(*map, false);
           auto *index = ast_.make_node<Integer>(0, Location(map->loc));
           call.vargs.emplace_back(index);
         } else if (call.vargs.size() == 2) {
-          checkCall(*map, true, call);
+          checkCall(*map, true);
         } else {
           // Unfortunately there's no good way to handle this after desugaring.
           // The actual `delete` function requires two arguments (fixed), but
@@ -205,9 +198,9 @@ void MapDefaultKey::visit(Call &call)
                           << call.vargs.size() << " provided)";
         }
       } else if (call.func == "has_key") {
-        checkCall(*map, true, call);
+        checkCall(*map, true);
       } else if (call.func == "len") {
-        checkCall(*map, true, call);
+        checkCall(*map, true);
       }
     } else {
       if (call.func == "delete") {
@@ -230,9 +223,7 @@ void MapDefaultKey::visit(For &for_loop)
 {
   if (auto *map = for_loop.iterable.as<Map>()) {
     if (!check(*map, true)) {
-      map->addError() << map->ident
-                      << " has no explicit keys (scalar map), and "
-                         "cannot be used for iteration";
+      metadata.bad_iterator.insert(map);
     }
   } else {
     // If the map is used for the range in any way, it needs
