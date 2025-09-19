@@ -147,7 +147,7 @@ void usage(std::ostream& out)
   out << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
   out << "    --verify-llvm-ir        check that the generated LLVM IR is valid" << std::endl;
   out << "    -d, --debug STAGE       debug info for various stages of bpftrace execution" << std::endl;
-  out << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
+  out << "                            ('all', 'ast', 'types', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
   out << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
   out << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
   out << std::endl;
@@ -362,7 +362,7 @@ ast::Pass printPass(const std::string& name)
   return ast::Pass::create("print-" + name, [=](ast::ASTContext& ast) {
     std::cerr << "AST after: " << name << std::endl;
     std::cerr << "-------------------" << std::endl;
-    ast::Printer printer(std::cerr);
+    ast::Printer printer(ast, std::cerr);
     printer.visit(ast.root);
     std::cerr << std::endl;
   });
@@ -852,8 +852,8 @@ int main(int argc, char* argv[])
     // To list tracepoints, we construct a synthetic AST and then expand the
     // probe. The raw contents of the program are the initial search provided.
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
-    ast::CDefinitions no_c_defs; // No external C definitions may be used.
-    ast::TypeMetadata no_types;  // No external types may be used.
+    ast::CDefinitions no_c_defs;       // No external C definitions may be used.
+    ast::TypeMetadata no_types;        // No external types may be used.
     ast::MacroRegistry macro_registry; // No macros may be used.
 
     // Parse and expand all the attachpoints. We don't need to descend into
@@ -950,8 +950,8 @@ int main(int argc, char* argv[])
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
-    ast::CDefinitions no_c_defs; // See above.
-    ast::TypeMetadata no_types;  // See above.
+    ast::CDefinitions no_c_defs;       // See above.
+    ast::TypeMetadata no_types;        // See above.
     ast::MacroRegistry macro_registry; // See above.
     pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)))
         .put(no_c_defs)
