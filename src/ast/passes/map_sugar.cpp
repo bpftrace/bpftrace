@@ -57,6 +57,19 @@ public:
   void visit(Call &call);
 };
 
+class MapScalarCheck : public Visitor<MapScalarCheck> {
+public:
+  explicit MapScalarCheck(ASTContext &ast, MapMetadata &metadata)
+      : ast_(ast), metadata_(metadata) {};
+
+  using Visitor<MapScalarCheck>::visit;
+  void visit(Expression &expr);
+
+private:
+  ASTContext &ast_;
+  MapMetadata &metadata_;
+};
+
 } // namespace
 
 // These are special functions which are part of the map API, and operate
@@ -67,7 +80,7 @@ public:
 // specific function being called, and potentially respecting annotations on
 // these arguments.
 static std::unordered_set<std::string> RAW_MAP_ARG = {
-  "print", "clear", "zero", "len", "delete", "has_key",
+  "print", "clear", "zero", "len", "delete", "has_key", "is_scalar",
 };
 
 void MapDefaultKey::visit(Map &map)
@@ -201,6 +214,11 @@ void MapDefaultKey::visit(Call &call)
         checkCall(*map, true);
       } else if (call.func == "len") {
         checkCall(*map, true);
+      } else if (call.func == "is_scalar") {
+        if (call.vargs.size() != 1) {
+          call.addError() << "is_scalar() requires 1 argument ("
+                          << call.vargs.size() << " provided)";
+        }
       }
     } else {
       if (call.func == "delete") {
@@ -300,6 +318,27 @@ void MapAssignmentCheck::visit(Call &call)
   Visitor<MapAssignmentCheck>::visit(call);
 }
 
+void MapScalarCheck::visit(Expression &expr)
+{
+  Visitor<MapScalarCheck>::visit(expr);
+
+  if (auto *call = expr.as<Call>()) {
+    if (call->func == "is_scalar") {
+      if (auto *map = call->vargs.at(0).as<Map>()) {
+        auto val = metadata_.scalar.find(map->ident);
+        if (val == metadata_.scalar.end()) {
+          expr.node().addError() << "Unknown map: " << map->ident;
+          return;
+        }
+        expr.value = ast_.make_node<Boolean>(val->second, Location(call->loc));
+      } else {
+        expr.node().addError()
+            << call->func << "() expects a map for the first argument";
+      }
+    }
+  }
+}
+
 Pass CreateMapSugarPass()
 {
   auto fn = [](ASTContext &ast) -> MapMetadata {
@@ -313,8 +352,13 @@ Pass CreateMapSugarPass()
     }
     MapAssignmentCall sugar(ast);
     sugar.visit(ast.root);
+
     MapAssignmentCheck check;
     check.visit(ast.root);
+
+    MapScalarCheck scalar(ast, defaults.metadata);
+    scalar.visit(ast.root);
+
     return std::move(defaults.metadata);
   };
 
