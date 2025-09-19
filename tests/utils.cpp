@@ -1,3 +1,4 @@
+#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
