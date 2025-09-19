@@ -3,8 +3,6 @@
 #include "ast/context.h"
 #include "gtest/gtest.h"
 
-#include "location.hh"
-
 namespace bpftrace::test::location {
 
 static std::string test = R"(
@@ -19,7 +17,9 @@ TEST(Location, single_line)
   ast::ASTContext ast("testfile", test);
 
   // Replicate a specific parser error.
-  bpftrace::location loc(position(nullptr, 3, 9), position(nullptr, 3, 13));
+  ast::SourceLocation loc(ast.source());
+  loc.begin = { 3, 9 };
+  loc.end = { 3, 13 };
   auto &call = *ast.make_node<ast::Call>("foo", ast::ExpressionList({}), loc);
   auto &err = call.addError();
 
@@ -36,7 +36,9 @@ TEST(Location, multi_line)
   ast::ASTContext ast("testfile", test);
 
   // Replicate a specific parser error, that spans multiple lines.
-  bpftrace::location loc(position(nullptr, 3, 3), position(nullptr, 4, 19));
+  ast::SourceLocation loc(ast.source());
+  loc.begin = { 3, 3 };
+  loc.end = { 4, 19 };
   auto &call = *ast.make_node<ast::Call>("foo", ast::ExpressionList({}), loc);
   auto &err = call.addError();
 

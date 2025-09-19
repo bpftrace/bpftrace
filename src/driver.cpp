@@ -9,7 +9,6 @@ namespace bpftrace {
 void Driver::parse(Parser::symbol_type first_token)
 {
   // Reset state on every pass.
-  loc.initialize();
   struct_type.clear();
   buffer.clear();
 
@@ -46,7 +45,7 @@ std::optional<ast::Expression> Driver::parse_expr()
   return std::nullopt;
 }
 
-void Driver::error(const location &l, const std::string &m)
+void Driver::error(const ast::SourceLocation &l, const std::string &m)
 {
   // This path is normally not allowed, however we don't yet have nodes
   // constructed. Therefore, we add diagnostics directly via the private field.

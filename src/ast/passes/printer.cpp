@@ -561,8 +561,9 @@ void Printer::visit(Import &imp)
 
 void Printer::visit(Program &program)
 {
-  if (!program.c_definitions.empty())
-    out_ << program.c_definitions << std::endl;
+  for (const auto &stmt : program.c_statements) {
+    out_ << stmt->data << std::endl;
+  }
 
   std::string indent(depth_, ' ');
   out_ << indent << "Program" << std::endl;
