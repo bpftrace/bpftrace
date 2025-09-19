@@ -17,6 +17,8 @@ and this project adheres to
 #### Removed
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
+- Drop libbfd and libopcodes usage
+  - [#4604](https://github.com/bpftrace/bpftrace/pull/4604)
 #### Fixed
 #### Security
 #### Docs

@@ -1,7 +1,3 @@
-if(HAVE_BFD_DISASM)
-  set(BFD_DISASM_SRC bfd-disasm.cpp)
-endif()
-
 add_library(required_resources required_resources.cpp)
 add_dependencies(required_resources parser)
 
@@ -23,7 +19,6 @@ add_library(runtime STATIC
   btf.cpp
   child.cpp
   config.cpp
-  disasm.cpp
   dwarf_parser.cpp
   format_string.cpp
   globalvars.cpp
@@ -37,7 +32,6 @@ add_library(runtime STATIC
   types_format.cpp
   ksyms.cpp
   usyms.cpp
-  ${BFD_DISASM_SRC}
 )
 # Ensure flex+bison outputs are built first
 add_dependencies(runtime parser)
@@ -106,35 +100,6 @@ target_link_libraries(libbpftrace parser runtime aot ast arch util cxxdemangler_
 if(LIBPCAP_FOUND)
   target_link_libraries(libbpftrace ${LIBPCAP_LIBRARIES})
 endif(LIBPCAP_FOUND)
-
-if(HAVE_BFD_DISASM)
-  if(STATIC_LINKING OR LIBBFD_STATIC)
-    add_library(LIBBFD STATIC IMPORTED)
-    set_property(TARGET LIBBFD PROPERTY IMPORTED_LOCATION ${LIBBFD_LIBRARIES})
-    target_link_libraries(runtime LIBBFD)
-    add_library(LIBOPCODES STATIC IMPORTED)
-    set_property(TARGET LIBOPCODES PROPERTY IMPORTED_LOCATION ${LIBOPCODES_LIBRARIES})
-    target_link_libraries(runtime LIBOPCODES)
-    add_library(LIBIBERTY STATIC IMPORTED)
-    set_property(TARGET LIBIBERTY PROPERTY IMPORTED_LOCATION ${LIBIBERTY_LIBRARIES})
-    target_link_libraries(runtime LIBIBERTY)
-
-    add_library(LIBZSTD STATIC IMPORTED)
-    if (LIBZSTD_LIBRARIES)
-      set_property(TARGET LIBZSTD PROPERTY IMPORTED_LOCATION ${LIBZSTD_LIBRARIES})
-      target_link_libraries(runtime LIBZSTD)
-    endif(LIBZSTD_LIBRARIES)
-
-    add_library(LIBSFRAME STATIC IMPORTED)
-    if (LIBSFRAME_LIBRARIES)
-      set_property(TARGET LIBSFRAME PROPERTY IMPORTED_LOCATION ${LIBSFRAME_LIBRARIES})
-      target_link_libraries(runtime LIBSFRAME)
-    endif(LIBSFRAME_LIBRARIES)
-  else()
-    target_link_libraries(runtime ${LIBBFD_LIBRARIES})
-    target_link_libraries(runtime ${LIBOPCODES_LIBRARIES})
-  endif(STATIC_LINKING OR LIBBFD_STATIC)
-endif(HAVE_BFD_DISASM)
 
 # Link to bcc libraries (without LLVM) if possible
 if(LIBBCC_BPF_CONTAINS_RUNTIME)

@@ -28,4 +28,5 @@ if (KERNEL_HEADERS_DIR)
 endif()
 target_compile_definitions(util PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
 
+find_package(ZLIB REQUIRED)
 target_link_libraries(util debugfs ${LIBELF_LIBRARIES} ${ZLIB_LIBRARIES})

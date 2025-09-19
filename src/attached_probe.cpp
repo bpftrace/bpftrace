@@ -22,7 +22,6 @@
 
 #include "attached_probe.h"
 #include "bpftrace.h"
-#include "disasm.h"
 #include "log.h"
 #include "usdt.h"
 #include "util/bpf_names.h"
@@ -219,56 +218,6 @@ static constexpr std::string_view hint_unsafe =
     "\nUse --unsafe to force attachment. WARNING: This option could lead to "
     "data corruption in the target process.";
 
-Result<> check_alignment(Probe &probe,
-                         std::string &symbol,
-                         uint64_t sym_offset,
-                         uint64_t func_offset,
-                         bool safe_mode)
-{
-  Disasm dasm(probe.path);
-  AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
-
-  std::string tmp = probe.path + ":" + symbol + "+" +
-                    std::to_string(func_offset);
-
-  switch (aligned) {
-    case AlignState::Ok:
-      return OK();
-    case AlignState::NotAlign:
-      if (safe_mode) {
-        return make_error<AttachError>(
-            "Could not add " + probetypeName(probe.type) +
-            " into middle of instruction: " + tmp + std::string{ hint_unsafe });
-      } else {
-        std::string_view hint;
-        LOG(WARNING) << "Unsafe " << probe.type
-                     << " in the middle of the instruction: " << tmp << hint;
-        return OK();
-      }
-    case AlignState::Fail:
-      if (safe_mode) {
-        return make_error<AttachError>(
-            "Failed to check if " + probetypeName(probe.type) +
-            " is in proper place: " + tmp + std::string{ hint_unsafe });
-      } else {
-        LOG(WARNING) << "Unchecked " << probe.type << ": " << tmp;
-        return OK();
-      }
-    case AlignState::NotSupp:
-      if (safe_mode) {
-        return make_error<AttachError>("Can't check if " +
-                                       probetypeName(probe.type) +
-                                       " is in proper place (compiled without "
-                                       "(k|u)probe offset support): " +
-                                       tmp + std::string{ hint_unsafe });
-      } else {
-        LOG(WARNING) << "Unchecked " << probe.type << ": " << tmp;
-        return OK();
-      }
-  }
-  return OK();
-}
-
 Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 {
   struct bcc_symbol_option option = {};
@@ -349,13 +298,6 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
   // check if we are on the instruction boundary.
   if (func_offset == 0)
     return offset;
-
-  auto align_ok = check_alignment(
-      probe, symbol, *sym_offset, func_offset, safe_mode);
-
-  if (!align_ok) {
-    return align_ok.takeError();
-  }
 
   return offset;
 }
