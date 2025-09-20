@@ -50,7 +50,6 @@
 #include "bpftrace.h"
 #include "codegen_resources.h"
 #include "globalvars.h"
-#include "kfuncs.h"
 #include "log.h"
 #include "map_info.h"
 #include "required_resources.h"
@@ -405,13 +404,6 @@ private:
   VariableLLVM *maybeGetVariable(const std::string &var_ident);
   VariableLLVM &getVariable(const std::string &var_ident);
 
-  llvm::Function *DeclareKernelFunc(Kfunc kfunc, Node &call);
-
-  CallInst *CreateKernelFuncCall(Kfunc kfunc,
-                                 ArrayRef<Value *> args,
-                                 const Twine &name,
-                                 Node &call);
-
   GlobalVariable *DeclareKernelVar(const std::string &name);
 
   ASTContext &ast_;
@@ -452,7 +444,6 @@ private:
   llvm::Function *linear_func_ = nullptr;
   llvm::Function *log2_func_ = nullptr;
   llvm::Function *murmur_hash_2_func_ = nullptr;
-  llvm::Function *map_len_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)
@@ -1827,37 +1818,18 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     b_.CreateOutput(buf, getStructSize(event_struct), call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "len") {
-    if (call.vargs.at(0).type().IsStack()) {
-      auto &arg = call.vargs.at(0);
-      auto scoped_arg = visit(arg);
+  } else if (call.func == "stack_len") {
+    auto &arg = call.vargs.at(0);
+    auto scoped_arg = visit(arg);
 
-      auto *stack_key_struct = b_.GetStackStructType(arg.type().IsUstackTy());
-      Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
-                                            scoped_arg.value(),
-                                            { b_.getInt64(0), b_.getInt32(1) });
-      return ScopedExpr(
-          b_.CreateIntCast(b_.CreateLoad(b_.getInt64Ty(), nr_stack_frames),
-                           b_.getInt64Ty(),
-                           false));
-    } else /* call.vargs.at(0)->is_map */ {
-      auto &arg = call.vargs.at(0);
-      auto &map = *arg.as<Map>();
-
-      // This is defined only for non-scalar maps.
-      if (bpftrace_.feature_->has_kernel_func(Kfunc::bpf_map_sum_elem_count)) {
-        return ScopedExpr(CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
-                                               { b_.GetMapVar(map.ident) },
-                                               "len",
-                                               call));
-      } else {
-        if (!map_len_func_)
-          map_len_func_ = createMapLenCallback();
-
-        return ScopedExpr(
-            b_.CreateForEachMapElem(map, map_len_func_, nullptr, call.loc));
-      }
-    }
+    auto *stack_key_struct = b_.GetStackStructType(arg.type().IsUstackTy());
+    Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
+                                          scoped_arg.value(),
+                                          { b_.getInt64(0), b_.getInt32(1) });
+    return ScopedExpr(
+        b_.CreateIntCast(b_.CreateLoad(b_.getInt64Ty(), nr_stack_frames),
+                         b_.getInt64Ty(),
+                         false));
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
     StructType *time_struct = b_.GetStructType(call.func + "_t",
@@ -4791,50 +4763,6 @@ llvm::Function *CodegenLLVM::createMurmurHash2Func()
   return callback;
 }
 
-llvm::Function *CodegenLLVM::createMapLenCallback()
-{
-  // The goal is to produce the following code:
-  //
-  // static int cb(struct map *map, void *key, void *value, void *ctx)
-  // {
-  //   return 0;
-  // }
-  auto saved_ip = b_.saveIP();
-
-  std::array<llvm::Type *, 4> args = {
-    b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy()
-  };
-
-  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
-
-  auto *callback = llvm::Function::Create(
-      callback_type,
-      llvm::Function::LinkageTypes::InternalLinkage,
-      "map_len_cb",
-      module_.get());
-
-  callback->setDSOLocal(true);
-  callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
-  callback->setSection(".text");
-  callback->addFnAttr(Attribute::NoUnwind);
-
-  Struct debug_args;
-  debug_args.AddField("map", CreatePointer(CreateInt8()));
-  debug_args.AddField("key", CreatePointer(CreateInt8()));
-  debug_args.AddField("value", CreatePointer(CreateInt8()));
-  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
-  debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
-
-  auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
-  b_.SetInsertPoint(bb);
-
-  b_.CreateRet(b_.getInt64(0));
-
-  b_.restoreIP(saved_ip);
-
-  return callback;
-}
-
 std::pair<llvm::Type *, llvm::Value *> CodegenLLVM::createForContext(
     const For &f,
     std::vector<llvm::Type *> &&extra_fields)
@@ -5094,69 +5022,6 @@ Value *CodegenLLVM::createFmtString(int print_id)
   res->setAlignment(MaybeAlign(1));
   res->setLinkage(llvm::GlobalValue::InternalLinkage);
   return res;
-}
-
-/// This should emit
-///
-///    declare !dbg !... extern_weak ... @func_name(...) section ".ksyms"
-///
-/// with proper debug info entry.
-///
-/// The function type is retrieved from kernel BTF.
-///
-/// If the function declaration is already in the module, just return it.
-///
-llvm::Function *CodegenLLVM::DeclareKernelFunc(Kfunc kfunc, Node &call)
-{
-  const std::string &func_name = kfunc_name(kfunc);
-  if (auto *fun = module_->getFunction(func_name))
-    return fun;
-
-  std::string err;
-  auto func_struct = bpftrace_.btf_->resolve_args(
-      func_name, true, false, false, err);
-  if (!func_struct) {
-    call.addError() << "Unknown kernel function: " << func_name;
-    return nullptr;
-  }
-
-  Struct debug_args;
-  std::vector<llvm::Type *> args;
-  for (auto &field : func_struct->fields) {
-    if (field.name != RETVAL_FIELD_NAME) {
-      args.push_back(b_.GetType(field.type));
-      debug_args.AddField(field.name,
-                          field.type,
-                          field.offset,
-                          field.bitfield,
-                          field.is_data_loc);
-    }
-  }
-
-  FunctionType *func_type = FunctionType::get(
-      b_.GetType(func_struct->GetField(RETVAL_FIELD_NAME).type), args, false);
-
-  auto *fun = llvm::Function::Create(func_type,
-                                     llvm::GlobalValue::ExternalWeakLinkage,
-                                     func_name,
-                                     module_.get());
-  fun->setSection(".ksyms");
-  fun->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
-  fun->addFnAttr(Attribute::NoUnwind);
-
-  debug_.createFunctionDebugInfo(
-      *fun, func_struct->GetField(RETVAL_FIELD_NAME).type, debug_args, true);
-
-  return fun;
-}
-
-CallInst *CodegenLLVM::CreateKernelFuncCall(Kfunc kfunc,
-                                            ArrayRef<Value *> args,
-                                            const Twine &name,
-                                            Node &call)
-{
-  auto *func = DeclareKernelFunc(kfunc, call);
-  return b_.createCall(func->getFunctionType(), func, args, name);
 }
 
 /// This should emit

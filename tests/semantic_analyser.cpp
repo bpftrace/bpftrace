@@ -264,7 +264,6 @@ TEST_F(SemanticAnalyserTest, builtin_functions)
   test("kprobe:f { @x = 1; print(@x) }");
   test("kprobe:f { @x = 1; clear(@x) }");
   test("kprobe:f { @x = 1; zero(@x) }");
-  test("kprobe:f { @x[1] = 1; @s = len(@x) }");
   test("kprobe:f { @x = 1; @y[1] = 1; $a = is_scalar(@x); $b = is_scalar(@y); "
        "}");
   test("kprobe:f { time() }");
@@ -1204,29 +1203,6 @@ TEST_F(SemanticAnalyserTest, call_zero)
   test("kprobe:f { @x = count(); @[zero(@x)] = 1; }", Error{});
   test("kprobe:f { @x = count(); if(zero(@x)) { 123 } }", Error{});
   test("kprobe:f { @x = count(); zero(@x) ? 0 : 1; }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, call_len)
-{
-  test("kprobe:f { @x[0] = 0; len(@x); }");
-  test("kprobe:f { @x[0] = 0; len(); }", Error{});
-  test("kprobe:f { @x[0] = 0; len(@x, 1); }", Error{});
-  test("kprobe:f { @x[0] = 0; len(@x[2]); }", Error{});
-  test("kprobe:f { $x = 0; len($x); }", Error{});
-  test("kprobe:f { len(ustack) }");
-  test("kprobe:f { len(kstack) }");
-
-  test("kprobe:f { len(0) }", Error{ R"(
-stdin:1:12-18: ERROR: len() expects a map or stack to be provided
-kprobe:f { len(0) }
-           ~~~~~~
-)" });
-
-  test("kprobe:f { @x = 1; @s = len(@x) }", Error{ R"(
-stdin:1:29-31: ERROR: call to len() expects a map with explicit keys (non-scalar map)
-kprobe:f { @x = 1; @s = len(@x) }
-                            ~~
-)" });
 }
 
 TEST_F(SemanticAnalyserTest, call_time)
@@ -4599,12 +4575,6 @@ TEST_F(SemanticAnalyserTest, castable_map_missing_feature)
   test("k:f {  @a = count(); zero(@a) }", NoFeatures::Enable);
   test("k:f {  @a[1] = count(); delete(@a, 1) }", NoFeatures::Enable);
 
-  test("k:f {  @a = count(); len(@a) }", NoFeatures::Enable, Error{ R"(
-stdin:1:26-28: ERROR: call to len() expects a map with explicit keys (non-scalar map)
-k:f {  @a = count(); len(@a) }
-                         ~~
-)" });
-
   test("begin { @a = count(); print((uint64)@a) }",
        NoFeatures::Enable,
        Error{ R"(
@@ -5190,9 +5160,6 @@ TEST_F(SemanticAnalyserTest, warning_for_discared_return_value)
   test("k:f { cgroup_path(1); }",
        Warning{ "Return value discarded for "
                 "cgroup_path. It should be used" });
-  test("k:f { @x[1] = 1; len(@x); }",
-       Warning{ "Return value discarded for len. It "
-                "should be used" });
   test("k:f { uptr((int8*) arg0); }",
        Warning{ "Return value discarded for uptr. It "
                 "should be used" });

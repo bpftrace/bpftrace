@@ -6,7 +6,6 @@
 #include <string>
 
 #include "btf.h"
-#include "kfuncs.h"
 
 namespace bpftrace {
 
@@ -64,8 +63,6 @@ public:
   bool has_kprobe_session();
   bool has_uprobe_multi();
   bool has_prog_fentry();
-  // These are virtual so they can be overridden in tests by the mock
-  virtual bool has_kernel_func(Kfunc kfunc);
   virtual bool has_iter(std::string name);
 
   std::string report();
@@ -85,8 +82,6 @@ protected:
   std::optional<bool> has_prog_fentry_;
   std::optional<bool> has_btf_func_global_;
   std::optional<bool> has_kernel_dwarf_;
-
-  std::unordered_map<Kfunc, bool> available_kernel_funcs_;
 
 private:
   bool detect_helper(bpf_func_id func_id, bpf_prog_type prog_type);
