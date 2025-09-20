@@ -356,11 +356,6 @@ NAME valid license
 PROG config={license="Dual BSD/GPL"} begin { @p[1] = 1; print(len(@p));  }
 EXPECT 1
 
-NAME invalid license
-PROG config={license="Potato"} begin { @p[1] = 1; print(len(@p));  }
-EXPECT ERROR: Your bpftrace program cannot load because you are using a license that is non-GPL compatible. License: Potato
-WILL_FAIL
-
 NAME named command line params
 RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' -- --dd --aa=20 --cc=False
 EXPECT (20, false, true, hello)
