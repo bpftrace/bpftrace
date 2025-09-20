@@ -452,7 +452,6 @@ private:
   llvm::Function *linear_func_ = nullptr;
   llvm::Function *log2_func_ = nullptr;
   llvm::Function *murmur_hash_2_func_ = nullptr;
-  llvm::Function *map_len_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)
@@ -1830,37 +1829,18 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     b_.CreateOutput(buf, getStructSize(event_struct), call.loc);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "len") {
-    if (call.vargs.at(0).type().IsStack()) {
-      auto &arg = call.vargs.at(0);
-      auto scoped_arg = visit(arg);
+  } else if (call.func == "stack_len") {
+    auto &arg = call.vargs.at(0);
+    auto scoped_arg = visit(arg);
 
-      auto *stack_key_struct = b_.GetStackStructType(arg.type().IsUstackTy());
-      Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
-                                            scoped_arg.value(),
-                                            { b_.getInt64(0), b_.getInt32(1) });
-      return ScopedExpr(
-          b_.CreateIntCast(b_.CreateLoad(b_.getInt64Ty(), nr_stack_frames),
-                           b_.getInt64Ty(),
-                           false));
-    } else /* call.vargs.at(0)->is_map */ {
-      auto &arg = call.vargs.at(0);
-      auto &map = *arg.as<Map>();
-
-      // This is defined only for non-scalar maps.
-      if (bpftrace_.feature_->has_kernel_func(Kfunc::bpf_map_sum_elem_count)) {
-        return ScopedExpr(CreateKernelFuncCall(Kfunc::bpf_map_sum_elem_count,
-                                               { b_.GetMapVar(map.ident) },
-                                               "len",
-                                               call));
-      } else {
-        if (!map_len_func_)
-          map_len_func_ = createMapLenCallback();
-
-        return ScopedExpr(
-            b_.CreateForEachMapElem(map, map_len_func_, nullptr, call.loc));
-      }
-    }
+    auto *stack_key_struct = b_.GetStackStructType(arg.type().IsUstackTy());
+    Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
+                                          scoped_arg.value(),
+                                          { b_.getInt64(0), b_.getInt32(1) });
+    return ScopedExpr(
+        b_.CreateIntCast(b_.CreateLoad(b_.getInt64Ty(), nr_stack_frames),
+                         b_.getInt64Ty(),
+                         false));
   } else if (call.func == "time") {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
     StructType *time_struct = b_.GetStructType(call.func + "_t",
@@ -4788,50 +4768,6 @@ llvm::Function *CodegenLLVM::createMurmurHash2Func()
   b_.CreateLifetimeEnd(id);
 
   b_.CreateRet(ret);
-
-  b_.restoreIP(saved_ip);
-
-  return callback;
-}
-
-llvm::Function *CodegenLLVM::createMapLenCallback()
-{
-  // The goal is to produce the following code:
-  //
-  // static int cb(struct map *map, void *key, void *value, void *ctx)
-  // {
-  //   return 0;
-  // }
-  auto saved_ip = b_.saveIP();
-
-  std::array<llvm::Type *, 4> args = {
-    b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy(), b_.getPtrTy()
-  };
-
-  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
-
-  auto *callback = llvm::Function::Create(
-      callback_type,
-      llvm::Function::LinkageTypes::InternalLinkage,
-      "map_len_cb",
-      module_.get());
-
-  callback->setDSOLocal(true);
-  callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
-  callback->setSection(".text");
-  callback->addFnAttr(Attribute::NoUnwind);
-
-  Struct debug_args;
-  debug_args.AddField("map", CreatePointer(CreateInt8()));
-  debug_args.AddField("key", CreatePointer(CreateInt8()));
-  debug_args.AddField("value", CreatePointer(CreateInt8()));
-  debug_args.AddField("ctx", CreatePointer(CreateInt8()));
-  debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
-
-  auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
-  b_.SetInsertPoint(bb);
-
-  b_.CreateRet(b_.getInt64(0));
 
   b_.restoreIP(saved_ip);
 

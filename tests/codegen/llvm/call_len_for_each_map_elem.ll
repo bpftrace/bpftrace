@@ -39,21 +39,20 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nounwind
 define i64 @kprobe_f_2(ptr %0) #0 section "s_kprobe_f_2" !dbg !56 {
 entry:
-  %"$s" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s")
-  store i64 0, ptr %"$s", align 8
-  %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_x, ptr @map_len_cb, ptr null, i64 0)
-  store i64 %for_each_map_elem, ptr %"$s", align 8
-  ret i64 0
+  %"$s" = alloca i64, align 8, !dbg !59
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s"), !dbg !59
+  store i64 0, ptr %"$s", align 8, !dbg !59
+  %__len = call i64 @__len(ptr @AT_x), !dbg !59
+  store i64 %__len, ptr %"$s", align 8, !dbg !59
+  ret i64 0, !dbg !59
 }
 
-; Function Attrs: nounwind
-define internal i64 @map_len_cb(ptr %0, ptr %1, ptr %2, ptr %3) #0 section ".text" !dbg !59 {
-  ret i64 0
-}
+; Function Attrs: alwaysinline nounwind
+declare dso_local i64 @__len(ptr noundef %0) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { alwaysinline nounwind }
 
 !llvm.dbg.cu = !{!46}
 !llvm.module.flags = !{!48, !49}
@@ -117,11 +116,4 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !56 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !57)
 !57 = !{!58}
 !58 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !53)
-!59 = distinct !DISubprogram(name: "map_len_cb", linkageName: "map_len_cb", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !46, retainedNodes: !62)
-!60 = !DISubroutineType(types: !61)
-!61 = !{!24, !53, !53, !53, !53}
-!62 = !{!63, !64, !65, !66}
-!63 = !DILocalVariable(name: "map", arg: 1, scope: !59, file: !2, type: !53)
-!64 = !DILocalVariable(name: "key", arg: 2, scope: !59, file: !2, type: !53)
-!65 = !DILocalVariable(name: "value", arg: 3, scope: !59, file: !2, type: !53)
-!66 = !DILocalVariable(name: "ctx", arg: 4, scope: !59, file: !2, type: !53)
+!59 = !DILocation(line: 477, column: 5, scope: !56)
