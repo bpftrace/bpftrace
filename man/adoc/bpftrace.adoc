@@ -55,7 +55,7 @@ List all the probes attached in the program::
 
 === *-B* _MODE_
 
-Set the buffer mode for stdout.
+Set the output buffer mode (applies to terminal and file output).
 
 Valid values are::
 *none* No buffering. Each I/O is written as soon as possible +
