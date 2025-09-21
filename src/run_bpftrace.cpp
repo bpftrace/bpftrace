@@ -1,5 +1,7 @@
 #include <csignal>
+#include <cstring>
 #include <fstream>
+#include <optional>
 #include <linux/version.h>
 #include <sys/utsname.h>
 
@@ -42,12 +44,66 @@ void check_is_root()
   }
 }
 
+// Simple forwarding streambuf that can flush on-demand.
+namespace {
+class flushing_streambuf : public std::streambuf {
+public:
+  flushing_streambuf(std::streambuf *dest,
+                     bool flush_always,
+                     bool flush_on_newline)
+      : dest_(dest),
+        flush_always_(flush_always),
+        flush_on_newline_(flush_on_newline)
+  {
+  }
+
+protected:
+  int_type overflow(int_type ch) override
+  {
+    if (traits_type::eq_int_type(ch, traits_type::eof()))
+      return dest_->sputc(ch);
+
+    auto res = dest_->sputc(traits_type::to_char_type(ch));
+    if (flush_always_ || (flush_on_newline_ && ch == '\n'))
+      dest_->pubsync();
+    return res;
+  }
+
+  std::streamsize xsputn(const char *s, std::streamsize n) override
+  {
+    auto res = dest_->sputn(s, n);
+    if (res > 0) {
+      if (flush_always_) {
+        dest_->pubsync();
+      } else if (flush_on_newline_) {
+        // Flush if any newline was written
+        if (std::memchr(s, '\n', static_cast<size_t>(res)) != nullptr)
+          dest_->pubsync();
+      }
+    }
+    return res;
+  }
+
+  int sync() override
+  {
+    return dest_->pubsync();
+  }
+
+private:
+  std::streambuf *dest_;
+  bool flush_always_;
+  bool flush_on_newline_;
+};
+} // namespace
+
 int run_bpftrace(BPFtrace &bpftrace,
                  const std::string &output_file,
                  const std::string &output_format,
                  const ast::CDefinitions &c_definitions,
                  BpfBytecode &bytecode,
-                 std::vector<std::string> &&named_params)
+                 std::vector<std::string> &&named_params,
+                 bool out_flush_always,
+                 bool out_flush_on_newline)
 {
   int err;
 
@@ -100,6 +156,16 @@ int run_bpftrace(BPFtrace &bpftrace,
     os = &outputstream;
   }
   std::unique_ptr<output::Output> output;
+
+  // Optionally wrap the output stream to control flushing behavior.
+  // Keep these local so their lifetime covers the entire execution.
+  std::optional<flushing_streambuf> fsb;
+  std::optional<std::ostream> wrapped_os;
+  if (out_flush_always || out_flush_on_newline) {
+    fsb.emplace(os->rdbuf(), out_flush_always, out_flush_on_newline);
+    wrapped_os.emplace(&*fsb);
+    os = &wrapped_os.value();
+  }
   if (output_format.empty() || output_format == "text") {
     // Note that there are two parameters here: we leave the err output as
     // std::cerr, so this can be seen while running.

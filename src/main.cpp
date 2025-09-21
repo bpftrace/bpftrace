@@ -1015,10 +1015,16 @@ int main(int argc, char* argv[])
 
   auto c_definitions = pmresult->get<ast::CDefinitions>();
   auto& bytecode = pmresult->get<BpfBytecode>();
+  bool flush_always = args.obc == OutputBufferConfig::NONE;
+  bool flush_on_newline =
+      args.obc == OutputBufferConfig::UNSET ||
+      args.obc == OutputBufferConfig::LINE;
   return run_bpftrace(bpftrace,
                       args.output_file,
                       args.output_format,
                       c_definitions,
                       bytecode,
-                      std::move(args.named_params));
+                      std::move(args.named_params),
+                      flush_always,
+                      flush_on_newline);
 }
