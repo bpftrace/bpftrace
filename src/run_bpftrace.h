@@ -1,6 +1,7 @@
 #pragma once
 
 #include "bpftrace.h"
+#include "output/buffer_mode.h"
 
 int libbpf_print(enum libbpf_print_level level, const char *msg, va_list ap);
 void check_is_root();
@@ -11,5 +12,5 @@ int run_bpftrace(bpftrace::BPFtrace &bpftrace,
                  const bpftrace::ast::CDefinitions &c_definitions,
                  bpftrace::BpfBytecode &bytecode,
                  std::vector<std::string> &&named_params,
-                 bool out_flush_always = false,
-                 bool out_flush_on_newline = false);
+                 bpftrace::OutputBufferConfig out_buf_config =
+                     bpftrace::OutputBufferConfig::UNSET);

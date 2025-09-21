@@ -6,6 +6,7 @@
 #include <sys/utsname.h>
 
 #include "log.h"
+#include "output/buffer_mode.h"
 #include "output/json.h"
 #include "output/text.h"
 #include "run_bpftrace.h"
@@ -102,8 +103,7 @@ int run_bpftrace(BPFtrace &bpftrace,
                  const ast::CDefinitions &c_definitions,
                  BpfBytecode &bytecode,
                  std::vector<std::string> &&named_params,
-                 bool out_flush_always,
-                 bool out_flush_on_newline)
+                 OutputBufferConfig out_buf_config)
 {
   int err;
 
@@ -161,8 +161,11 @@ int run_bpftrace(BPFtrace &bpftrace,
   // Keep these local so their lifetime covers the entire execution.
   std::optional<flushing_streambuf> fsb;
   std::optional<std::ostream> wrapped_os;
-  if (out_flush_always || out_flush_on_newline) {
-    fsb.emplace(os->rdbuf(), out_flush_always, out_flush_on_newline);
+  bool flush_always = out_buf_config == OutputBufferConfig::NONE;
+  bool flush_on_newline = out_buf_config == OutputBufferConfig::UNSET ||
+                          out_buf_config == OutputBufferConfig::LINE;
+  if (flush_always || flush_on_newline) {
+    fsb.emplace(os->rdbuf(), flush_always, flush_on_newline);
     wrapped_os.emplace(&*fsb);
     os = &wrapped_os.value();
   }
