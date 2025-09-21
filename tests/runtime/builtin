@@ -255,6 +255,7 @@ EXPECT 1 1
 ARCH x86_64
 
 NAME usermode_builtin_in_unsupported_arch
-PROG begin { printf("%d ", usermode);  } end { print(usermode); }
-EXPECT ERROR: 'usermode' builtin is only supported on x86_64
+PROG i:1ms { print(usermode); exit(); }
+EXPECT_REGEX .*ERROR: 'usermode' builtin is only supported on x86_64.*
 ARCH aarch64
+WILL_FAIL
