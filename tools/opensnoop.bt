@@ -79,12 +79,8 @@ macro printcwd(@paths) {
 	clear(@paths);
 }
 
-tracepoint:syscalls:sys_exit_open,
-tracepoint:syscalls:sys_exit_openat,
-tracepoint:syscalls:sys_exit_openat2
-/@filename[tid]/
-{
-	$ret = args.ret;
+macro sys_exit(ret, @filename, @paths) {
+	$ret = ret;
 	$fd = $ret >= 0 ? $ret : -1;
 	$errno = $ret >= 0 ? 0 : - $ret;
 
@@ -104,8 +100,28 @@ tracepoint:syscalls:sys_exit_openat2
 	delete(@filename, tid);
 }
 
+tracepoint:syscalls:sys_exit_open
+/@filename[tid]/
+{
+	sys_exit(args.ret, @filename, @open_paths);
+}
+
+tracepoint:syscalls:sys_exit_openat
+/@filename[tid]/
+{
+	sys_exit(args.ret, @filename, @openat_paths);
+}
+
+tracepoint:syscalls:sys_exit_openat2
+/@filename[tid]/
+{
+	sys_exit(args.ret, @filename, @openat2_paths);
+}
+
 END
 {
 	clear(@filename);
-	clear(@paths);
+	clear(@open_paths);
+	clear(@openat_paths);
+	clear(@openat2_paths);
 }
