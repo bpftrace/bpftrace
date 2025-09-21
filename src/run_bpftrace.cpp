@@ -1,8 +1,8 @@
 #include <csignal>
 #include <cstring>
 #include <fstream>
-#include <optional>
 #include <linux/version.h>
+#include <optional>
 #include <sys/utsname.h>
 
 #include "log.h"

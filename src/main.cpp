@@ -1016,9 +1016,8 @@ int main(int argc, char* argv[])
   auto c_definitions = pmresult->get<ast::CDefinitions>();
   auto& bytecode = pmresult->get<BpfBytecode>();
   bool flush_always = args.obc == OutputBufferConfig::NONE;
-  bool flush_on_newline =
-      args.obc == OutputBufferConfig::UNSET ||
-      args.obc == OutputBufferConfig::LINE;
+  bool flush_on_newline = args.obc == OutputBufferConfig::UNSET ||
+                          args.obc == OutputBufferConfig::LINE;
   return run_bpftrace(bpftrace,
                       args.output_file,
                       args.output_format,
