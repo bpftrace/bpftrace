@@ -541,7 +541,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "signal",
     { .min_args=1,
-      .max_args=1,
+      .max_args=2,
        } },
   { "sizeof",
     { .min_args=1,
@@ -832,6 +832,12 @@ void SemanticAnalyser::visit(Identifier &identifier)
       identifier.addError()
           << "Invalid PID namespace mode: " << identifier.ident
           << " (expects: curr_ns or init)";
+    }
+  } else if (func_ == "signal") {
+    if (identifier.ident != "current_tid" &&
+        identifier.ident != "current_pid") {
+      identifier.addError() << "Invalid signal mode: " << identifier.ident
+                            << " (expects: current_tid or current_pid)";
     }
   } else {
     // Final attempt: try to parse as a stack mode.

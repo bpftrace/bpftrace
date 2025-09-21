@@ -148,6 +148,11 @@ enum class TimestampMode : uint8_t {
   sw_tai,
 };
 
+enum class SignalType : uint8_t {
+  current_tid,
+  current_pid,
+};
+
 struct Struct;
 struct Field;
 
