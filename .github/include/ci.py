@@ -352,7 +352,7 @@ def test():
             "bpftrace_test",
             lambda: truthy(RUN_TESTS),
             lambda: shell(
-                ["./tests/bpftrace_test"],
+                ["gtest-parallel", "./tests/bpftrace_test"],
                 cwd=Path(BUILD_DIR),
                 env={"GTEST_COLOR": "yes"},
             ),
