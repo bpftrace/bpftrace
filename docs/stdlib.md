@@ -706,7 +706,7 @@ be rejected.
 interval:s:1 {
   $runqueues = (struct rq *)percpu_kaddr("runqueues", 0);
   if ($runqueues != 0) {         // The check is mandatory here
-    print($runqueues->nr_running);
+    print($runqueues.nr_running);
   }
 }
 ```
@@ -895,12 +895,12 @@ Usage
 ```
 # cat dump.bt
 fentry:napi_gro_receive {
-  $ret = skboutput("receive.pcap", args.skb, args.skb->len, 0);
+  $ret = skboutput("receive.pcap", args.skb, args.skb.len, 0);
 }
 
 fentry:dev_queue_xmit {
   // setting offset to 14, to exclude ethernet header
-  $ret = skboutput("output.pcap", args.skb, args.skb->len, 14);
+  $ret = skboutput("output.pcap", args.skb, args.skb.len, 14);
   printf("skboutput returns %d\n", $ret);
 }
 
@@ -930,8 +930,8 @@ This function returns a `uint64` unique number on success, or 0 if **sk** is NUL
 ```
 fentry:tcp_rcv_established
 {
-  $cookie = socket_cookie(args->sk);
-  @psize[$cookie] = hist(args->skb->len);
+  $cookie = socket_cookie(args.sk);
+  @psize[$cookie] = hist(args.skb.len);
 }
 ```
 

@@ -15,7 +15,7 @@ PROG begin { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - 
 EXPECT Elapsed time: 1s
 
 NAME printf_argument_alignment
-RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; $foo2 = (struct Foo *)arg1; printf("%d %s %d %s\n", $foo->a, $foo->b, $foo2->a, $foo2->b) }' -c ./testprogs/uprobe_test
+RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; $foo2 = (struct Foo *)arg1; printf("%d %s %d %s\n", $foo.a, $foo.b, $foo2.a, $foo2.b) }' -c ./testprogs/uprobe_test
 EXPECT 123 hello 456 world
 
 NAME printf_more_arguments
@@ -47,7 +47,7 @@ PROG enum Foo { A, B, C, }; begin { printf("%-5s %5s %s\n", A, B, C); exit() }
 EXPECT A         B C
 
 NAME printf_enum_symbolize_tracepoint
-PROG tracepoint:skb:kfree_skb { $r = args->reason; printf("%d %s\n", args->reason, $r); exit() }
+PROG tracepoint:skb:kfree_skb { $r = args.reason; printf("%d %s\n", args.reason, $r); exit() }
 EXPECT_REGEX ^\d+ [A-Z_]+$
 SETUP ip link set lo up
 AFTER ping localhost -c 5
@@ -244,12 +244,12 @@ AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
 TIMEOUT 1
 
 NAME buf
-RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s->a, 4), buf($s->b, 4), buf($s->c), buf($s->d), buf($s->e), buf($s->f)); exit(); }' -c ./testprogs/complex_struct
+RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s.a, 4), buf($s.b, 4), buf($s.c), buf($s.d), buf($s.e), buf($s.f)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: \x09\x08\x07\x06-\x05\x04\x03\x02-\x01\x02\x03\x04-\x05\x00\x00\x00\x06\x00\x00\x00\x07\x00\x00\x00\x08\x00\x00\x00-\x09\x00\x0a\x00\x0b\x00\x0c\x00-\x0d\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00
 ARCH x86_64|ppc64le|aarch64|armv7l
 
 NAME buf
-RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s->a, 4), buf($s->b, 4), buf($s->c), buf($s->d), buf($s->e), buf($s->f)); exit(); }' -c ./testprogs/complex_struct
+RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s.a, 4), buf($s.b, 4), buf($s.c), buf($s.d), buf($s.e), buf($s.f)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: \x09\x08\x07\x06-\x05\x04\x03\x02-\x01\x02\x03\x04-\x00\x00\x00\x05\x00\x00\x00\x06\x00\x00\x00\x07\x00\x00\x00\x08-\x00\x09\x00\x0a\x00\x0b\x00\x0c-\x00\x00\x00\x00\x00\x00\x00\x0d\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10
 ARCH s390x|ppc64
 
@@ -509,12 +509,12 @@ EXPECT (1, 2, string)
 TIMEOUT 1
 
 NAME print_non_map_array
-PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; print($a); exit(); }
+PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0).x; print($a); exit(); }
 EXPECT [1,2,3,4]
 AFTER ./testprogs/array_access
 
 NAME print_non_map_multi_dimensional_array
-PROG struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1)->y; print($b); exit(); }
+PROG struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1).y; print($b); exit(); }
 EXPECT [[5,6],[7,8]]
 AFTER ./testprogs/array_access
 
@@ -583,13 +583,13 @@ EXPECT_REGEX begin\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 
 NAME path
-RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (!strncmp(path(args.file->f_path), "/tmp/bpftrace_runtime_test_syscall_gen_open_temp", 49)) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (!strncmp(path(args.file.f_path), "/tmp/bpftrace_runtime_test_syscall_gen_open_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
 NAME path_with_optional_size
-RUN {{BPFTRACE}} -ve 'fentry:security_file_open { $p = path(args.file->f_path, 48);  if ( sizeof($p) == 48 && !strncmp($p, "tmp/bpftrace_runtime_test_syscall_gen_open_temp", 48)) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -ve 'fentry:security_file_open { $p = path(args.file.f_path, 48);  if ( sizeof($p) == 48 && !strncmp($p, "tmp/bpftrace_runtime_test_syscall_gen_open_temp", 48)) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath
 AFTER TMPDIR=/tmp ./testprogs/syscall open
@@ -597,38 +597,38 @@ AFTER TMPDIR=/tmp ./testprogs/syscall open
 # The extra prints are here to confirm that we report on the correct helper, not
 # just the first or the last one.
 NAME path_in_unsupported_fentry
-PROG fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
-EXPECT stdin:1:37-60: ERROR: helper bpf_d_path not allowed in probe
-       fentry:vfs_read { print("a"); print(path(args.file->f_path)); print("b"); }
-                                           ~~~~~~~~~~~~~~~~~~~~~~~
+PROG fentry:vfs_read { print("a"); print(path(args.file.f_path)); print("b"); }
+EXPECT stdin:1:37-59: ERROR: helper bpf_d_path not allowed in probe
+       fentry:vfs_read { print("a"); print(path(args.file.f_path)); print("b"); }
+                                           ~~~~~~~~~~~~~~~~~~~~~~
 REQUIRES_FEATURE dpath
 WILL_FAIL
 AFTER ./testprogs/syscall read
 
 NAME macaddr
-RUN {{BPFTRACE}} -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); printf("P: %s\n", macaddr($s->mac)); exit(); }' -c ./testprogs/complex_struct
+RUN {{BPFTRACE}} -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); printf("P: %s\n", macaddr($s.mac)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: 05:04:03:02:01:02
 
 NAME macaddr as map key
-RUN {{BPFTRACE}} -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); @[macaddr($s->mac)] = 1; exit(); }' -c ./testprogs/complex_struct
+RUN {{BPFTRACE}} -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); @[macaddr($s.mac)] = 1; exit(); }' -c ./testprogs/complex_struct
 EXPECT @[05:04:03:02:01:02]: 1
 
 NAME macaddr as map value
-RUN {{BPFTRACE}} -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); @[1] = macaddr($s->mac); exit(); }' -c ./testprogs/complex_struct
+RUN {{BPFTRACE}} -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); @[1] = macaddr($s.mac); exit(); }' -c ./testprogs/complex_struct
 EXPECT @[1]: 05:04:03:02:01:02
 
 NAME iter:task
-PROG iter:task { printf("comm: %s\n", ctx->task->comm); exit(); }
+PROG iter:task { printf("comm: %s\n", ctx.task.comm); exit(); }
 EXPECT comm: bpftrace
 REQUIRES_FEATURE iter
 
 NAME iter:task_file
-PROG iter:task_file { printf("comm: %s\n", ctx->task->comm); exit(); }
+PROG iter:task_file { printf("comm: %s\n", ctx.task.comm); exit(); }
 EXPECT comm: bpftrace
 REQUIRES_FEATURE iter
 
 NAME iter:task_vma
-PROG iter:task_vma { printf("comm: %s\n", ctx->task->comm); exit(); }
+PROG iter:task_vma { printf("comm: %s\n", ctx.task.comm); exit(); }
 EXPECT comm: bpftrace
 REQUIRES_FEATURE iter
 
@@ -682,7 +682,7 @@ EXPECT 1234
 TIMEOUT 1
 
 NAME skboutput
-RUN {{BPFTRACE}} -e 'fentry:__dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb->len, 14); printf("ret: %d\n", $ret); exit(); }'
+RUN {{BPFTRACE}} -e 'fentry:__dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb.len, 14); printf("ret: %d\n", $ret); exit(); }'
 SETUP ip netns add bpftrace-test && ip -netns bpftrace-test link set lo up
 AFTER ip netns exec bpftrace-test ./testprogs/syscall connect 127.0.0.1 80
 CLEANUP ip netns delete bpftrace-test
@@ -702,7 +702,7 @@ EXPECT_REGEX ret: [0-9]+
 
 # Just test that the verifier doesn't reject this
 NAME socket_cookie rawtracepoint
-RUN {{BPFTRACE}} -e 'rawtracepoint:tcp_probe { $ret = socket_cookie(args->sk); printf("ret: %llu\n", $ret); exit(); }'
+RUN {{BPFTRACE}} -e 'rawtracepoint:tcp_probe { $ret = socket_cookie(args.sk); printf("ret: %llu\n", $ret); exit(); }'
 EXPECT Attached 1 probe
 
 # debugf can be slow so add some time before checking the trace pipe
@@ -767,13 +767,13 @@ PROG begin { if (*percpu_kaddr("process_counts") == *percpu_kaddr("process_count
 EXPECT SUCCESS
 
 NAME percpu_kaddr field access
-PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); if ($runq != 0) { printf("nr_running: %d\n", $runq->nr_running) } exit() }
+PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); if ($runq != 0) { printf("nr_running: %d\n", $runq.nr_running) } exit() }
 EXPECT_REGEX nr_running: [0-9]+
 
 NAME percpu_kaddr field access no NULL check
-PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
+PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq.nr_running); exit() }
 EXPECT stdin:1:31-59: ERROR: helper bpf_per_cpu_ptr: result needs to be null-checked before accessing fields
-       begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq->nr_running); exit() }
+       begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq.nr_running); exit() }
                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 WILL_FAIL
 

@@ -431,7 +431,7 @@ WILL_FAIL
 
 # Test that we get at least two characters out
 NAME rawtracepoint args
-PROG rawtracepoint:irq_handler_entry { print(str(((struct irqaction*)args.action)->name)); exit(); }
+PROG rawtracepoint:irq_handler_entry { print(str(((struct irqaction*)args.action).name)); exit(); }
 EXPECT_REGEX ..+
 
 NAME profile

@@ -1808,9 +1808,9 @@ TEST_F(SemanticAnalyserTest, array_as_map_key)
       @x[((struct MyStruct *)0)->y] = 1;
     })",
        Error{ R"(
-stdin:4:10-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'int32[4]' when map expects arguments: 'int32[2]'
+stdin:4:32-34: ERROR: Argument mismatch for @x: trying to access with arguments: 'int32[4]' when map expects arguments: 'int32[2]'
       @x[((struct MyStruct *)0)->y] = 1;
-         ~~~~~~~~~~~~~~~~~~~~~~~~~
+                               ~~
 )" });
 }
 
@@ -2573,7 +2573,7 @@ TEST_F(SemanticAnalyserTest, field_access_pointer)
 {
   std::string structs = "struct type1 { int field; }";
   test(structs + "kprobe:f { ((struct type1*)0)->field }");
-  test(structs + "kprobe:f { ((struct type1*)0).field }", Error{});
+  test(structs + "kprobe:f { ((struct type1*)0).field }");
   test(structs + "kprobe:f { *((struct type1*)0) }");
 }
 

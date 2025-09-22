@@ -114,7 +114,7 @@ PROG i:ms:1 { printf("SUCCESS %p\n", curtask); exit(); }
 EXPECT_REGEX SUCCESS 0x[0-9a-f]+
 
 NAME curtask_field
-PROG struct task_struct {int x;} i:ms:1 { printf("SUCCESS %d\n", curtask->x); exit(); }
+PROG struct task_struct {int x;} i:ms:1 { printf("SUCCESS %d\n", curtask.x); exit(); }
 EXPECT_REGEX SUCCESS -?[0-9][0-9]*
 
 NAME rand
@@ -126,7 +126,7 @@ PROG i:ms:1 { printf("SUCCESS %llu\n", cgroup); exit(); }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME ctx
-PROG struct x {unsigned long x}; i:ms:1 { printf("SUCCESS %lu\n", ((struct x*)ctx)->x); exit(); }
+PROG struct x {unsigned long x}; i:ms:1 { printf("SUCCESS %lu\n", ((struct x*)ctx).x); exit(); }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME cat

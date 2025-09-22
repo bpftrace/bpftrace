@@ -79,12 +79,12 @@ EXPECT 12
 AFTER ./testprogs/simple_struct
 
 NAME array in tuple
-PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0)->x); exit(); }
+PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0).x); exit(); }
 EXPECT @t: (1, [1,2,3,4])
 AFTER ./testprogs/array_access
 
 NAME array in tuple sizing
-PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int32)1, ((struct A *)arg0)->x); print(sizeof($t)); exit(); }
+PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int32)1, ((struct A *)arg0).x); print(sizeof($t)); exit(); }
 EXPECT 20
 AFTER ./testprogs/array_access
 

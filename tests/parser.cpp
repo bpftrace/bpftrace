@@ -2053,8 +2053,7 @@ TEST(Parser, cast_precedence)
        " kprobe:sys_read\n"
        "  (struct mytype *)\n"
        "   .\n"
-       "    dereference\n"
-       "     builtin: arg0\n"
+       "    builtin: arg0\n"
        "    field\n");
 
   test("kprobe:sys_read { (struct mytype)arg0+123; }",
@@ -2197,8 +2196,7 @@ TEST(Parser, field_access)
        "Program\n"
        " kprobe:sys_read\n"
        "  .\n"
-       "   dereference\n"
-       "    map: @x\n"
+       "   map: @x\n"
        "   myfield\n");
 }
 
@@ -2215,8 +2213,7 @@ TEST(Parser, field_access_builtin)
        "Program\n"
        " kprobe:sys_read\n"
        "  .\n"
-       "   dereference\n"
-       "    map: @x\n"
+       "   map: @x\n"
        "   count\n");
 }
 
@@ -2233,8 +2230,7 @@ TEST(Parser, field_access_builtin_type)
        "Program\n"
        " kprobe:sys_read\n"
        "  .\n"
-       "   dereference\n"
-       "    map: @x\n"
+       "   map: @x\n"
        "   timestamp\n");
 }
 
@@ -2251,8 +2247,7 @@ TEST(Parser, field_access_sized_type)
        "Program\n"
        " kprobe:sys_read\n"
        "  .\n"
-       "   dereference\n"
-       "    map: @x\n"
+       "   map: @x\n"
        "   string\n");
 }
 
@@ -2887,18 +2882,36 @@ TEST(Parser, keywords_as_identifiers)
                                         "unroll",   "while" };
   for (const auto &keyword : keywords) {
     test("begin { $x = (struct Foo*)0; $x->" + keyword + "; }",
-         "Program\n begin\n  =\n   variable: $x\n   (struct Foo *)\n    int: "
-         "0 :: [int64]\n "
-         " .\n   dereference\n    variable: $x\n   " +
+         "Program\n"
+         " begin\n"
+         "  =\n"
+         "   variable: $x\n"
+         "   (struct Foo *)\n"
+         "    int: 0 :: [int64]\n"
+         "  .\n"
+         "   variable: $x\n"
+         "   " +
              keyword + "\n");
     test("begin { $x = (struct Foo)0; $x." + keyword + "; }",
-         "Program\n begin\n  =\n   variable: $x\n   (struct Foo)\n    int: 0 "
-         ":: [int64]\n "
-         " .\n   variable: $x\n   " +
+         "Program\n"
+         " begin\n"
+         "  =\n"
+         "   variable: $x\n"
+         "   (struct Foo)\n"
+         "    int: 0 :: [int64]\n"
+         "  .\n"
+         "   variable: $x\n"
+         "   " +
              keyword + "\n");
     test("begin { $x = offsetof(*__builtin_curtask, " + keyword + "); }",
-         "Program\n begin\n  =\n   variable: $x\n   offsetof: \n    "
-         "dereference\n     builtin: __builtin_curtask\n    " +
+         "Program\n"
+         " begin\n"
+         "  =\n"
+         "   variable: $x\n"
+         "   offsetof: \n"
+         "    dereference\n"
+         "     builtin: __builtin_curtask\n"
+         "    " +
              keyword + "\n");
   }
 }
