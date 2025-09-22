@@ -665,7 +665,7 @@ array_access_expr:
 
 field_access_expr:
                 primary_expr DOT external_name { $$ = driver.ctx.make_node<ast::FieldAccess>($1, $3, @2); }
-        |       primary_expr PTR external_name { $$ = driver.ctx.make_node<ast::FieldAccess>(driver.ctx.make_node<ast::Unop>($1, ast::Operator::MUL, false, @2), $3, @$); }
+        |       primary_expr PTR external_name { $$ = driver.ctx.make_node<ast::FieldAccess>($1, $3, @2); }
                 ;
 
 block_expr:

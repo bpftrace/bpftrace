@@ -127,6 +127,13 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
   visit(acc.expr);
 
+  // Automatically resolve through pointers.
+  while (sized_type_.IsPtrTy()) {
+    auto tmp = *sized_type_.GetPointeeTy();
+    sized_type_ = std::move(tmp);
+    resolve_fields(sized_type_);
+  }
+
   if (has_builtin_args_) {
     const auto *arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
     if (arg)

@@ -3084,6 +3084,18 @@ void SemanticAnalyser::visit(For &f)
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   visit(acc.expr);
+
+  // FieldAccesses will automatically resolve through any number of pointer
+  // dereferences. For now, we inject the `Unop` operator directly, as codegen
+  // stores the underlying structs as pointers anyways. In the future, we will
+  // likely want to do this in a different way if we are tracking l-values.
+  while (acc.expr.type().IsPtrTy()) {
+    auto *unop = ctx_.make_node<Unop>(
+        acc.expr, Operator::MUL, false, Location(acc.expr.node().loc));
+    acc.expr.value = unop;
+    visit(acc.expr);
+  }
+
   const SizedType &type = acc.expr.type();
 
   if (type.IsPtrTy()) {

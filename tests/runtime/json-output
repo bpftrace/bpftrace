@@ -182,8 +182,8 @@ EXPECT {"type": "hist", "data": {"@": {"1": [{"min": 8, "max": 15, "count": 1}],
 TIMEOUT 1
 
 NAME helper_error
-RUN {{BPFTRACE}} -k -q -f json -e 'struct foo {int a;}; begin { $tmp = ((struct foo*) 0)->a;  }'
-EXPECT {"type": "helper_error", "msg": "Bad address", "helper": "probe_read", "retcode": -14, "filename": "stdin", "line": 1, "col": 37}
+RUN {{BPFTRACE}} -k -q -f json -e 'struct foo {int a;}; begin { $tmp = ((struct foo*) 0).a;  }'
+EXPECT {"type": "helper_error", "msg": "Bad address", "helper": "probe_read", "retcode": -14, "filename": "stdin", "line": 1, "col": 54}
 TIMEOUT 1
 
 NAME cgroup_path

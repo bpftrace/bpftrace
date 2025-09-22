@@ -11,5 +11,5 @@ RUN {{BPFTRACE}} runtime/scripts/struct_let.bt -c ./testprogs/struct_array
 EXPECT 100 102 104 106 108
 
 NAME pointer_to_pointer
-RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:./testprogs/ptr_to_ptr:function { $pp = (struct Foo **)arg0; printf("%d\n", (*$pp)->a); }' -c ./testprogs/ptr_to_ptr
+RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:./testprogs/ptr_to_ptr:function { $pp = (struct Foo **)arg0; printf("%d\n", (*$pp).a); }' -c ./testprogs/ptr_to_ptr
 EXPECT 123

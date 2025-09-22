@@ -1,18 +1,18 @@
 # https://github.com/bpftrace/bpftrace/pull/566#issuecomment-487295113
 NAME codegen_struct_save_nested
-PROG struct Foo { int m; struct { int x; int y; } bar; int n; } begin { @foo = (struct Foo *)0; @bar = @foo->bar; @x = @foo->bar.x; printf("_%s_\n", "done");  }
+PROG struct Foo { int m; struct { int x; int y; } bar; int n; } begin { @foo = (struct Foo *)0; @bar = @foo.bar; @x = @foo.bar.x; printf("_%s_\n", "done");  }
 EXPECT _done_
 TIMEOUT 1
 
 NAME logical_and_or_different_sizes
-PROG struct Foo { int m; } uprobe:./testprogs/simple_struct:func { $foo = (struct Foo*)arg0; printf("%d %d %d %d %d\n", $foo->m, $foo->m && 0, 1 && $foo->m, $foo->m || 0, 0 || $foo->m); exit(); }
+PROG struct Foo { int m; } uprobe:./testprogs/simple_struct:func { $foo = (struct Foo*)arg0; printf("%d %d %d %d %d\n", $foo.m, $foo.m && 0, 1 && $foo.m, $foo.m || 0, 0 || $foo.m); exit(); }
 AFTER ./testprogs/simple_struct
 EXPECT 2 0 1 1 1
 
 # https://github.com/bpftrace/bpftrace/issues/759
 # Update test once https://github.com/bpftrace/bpftrace/pull/781 lands
 # NAME ntop_map_printf
-# RUN {{BPFTRACE}} -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { @a = ntop(2, ((union ip*)arg0)->v4); printf("v4: %s; ", @a); @b = ntop(10, ((union ip*)arg1)->v6); exit() } end { printf("v6: %s", @b); clear(@a); clear(@b) }'
+# RUN {{BPFTRACE}} -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { @a = ntop(2, ((union ip*)arg0).v4); printf("v4: %s; ", @a); @b = ntop(10, ((union ip*)arg1).v6); exit() } end { printf("v6: %s", @b); clear(@a); clear(@b) }'
 # AFTER ./testprogs/ntop
 # EXPECT v4: 127.0.0.1; v6: ffee:ffee:ddcc:ddcc:bbaa:bbaa:c0a8:1
 # TIMEOUT 1
@@ -42,7 +42,7 @@ EXPECT stdin:1:48-49: WARNING: Divide or modulo by 0 detected. This can lead to 
 TIMEOUT 1
 
 NAME c_array_indexing
-RUN {{BPFTRACE}} -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo->b[0], $foo->b[1], $foo->b[2], $foo->b[3], $foo->b[4]) }' -c ./testprogs/uprobe_test
+RUN {{BPFTRACE}} -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo.b[0], $foo.b[1], $foo.b[2], $foo.b[3], $foo.b[4]) }' -c ./testprogs/uprobe_test
 EXPECT h e l l o
 
 # https://github.com/bpftrace/bpftrace/issues/1773
@@ -104,19 +104,19 @@ TIMEOUT 1
 # array accesses so we must use bpf_probe_read_kernel, otherwise the program is
 # rejected. The below two tests make sure that we handle such situations.
 NAME fentry double pointer dereference
-PROG fentry:__module_get { print((*args.module->trace_events)->flags); exit(); }
+PROG fentry:__module_get { print((*args.module.trace_events).flags); exit(); }
 AFTER lsmod
 EXPECT Attached 1 probe
 TIMEOUT 1
 
 NAME fentry double pointer array access
-PROG fentry:__module_get { print(args.module->trace_events[1]->flags); exit(); }
+PROG fentry:__module_get { print(args.module.trace_events[1].flags); exit(); }
 AFTER lsmod
 EXPECT Attached 1 probe
 TIMEOUT 1
 
 NAME fentry array access via pointer
-PROG fentry:__module_get { print(args.module->version[0]); exit(); }
+PROG fentry:__module_get { print(args.module.version[0]); exit(); }
 AFTER lsmod
 EXPECT Attached 1 probe
 TIMEOUT 1
