@@ -59,6 +59,7 @@ hex_esc  (x|X)[0-9a-fA-F]{1,2}
 oct_esc  [0-7]{1,3}
 
 %x STR
+%x STR_CONCAT
 %x STRUCT
 %x ENUM
 %x BRACE
@@ -191,7 +192,10 @@ oct_esc  [0-7]{1,3}
 
 \"                      { yy_push_state(STR, yyscanner); driver.buffer.clear(); }
 <STR>{
-  \"                    { yy_pop_state(yyscanner); return Parser::make_STRING(driver.buffer, driver.loc); }
+  \"                    { 
+                          yy_pop_state(yyscanner); 
+                          yy_push_state(STR_CONCAT, yyscanner);
+                        }
   [^\\\n\"]+            driver.buffer += yytext;
   \\n                   driver.buffer += '\n';
   \\t                   driver.buffer += '\t';
@@ -211,6 +215,24 @@ oct_esc  [0-7]{1,3}
   \\.                   { driver.error(driver.loc, std::string("invalid escape character '") +
                                             yytext + "'"); }
   .                     driver.error(driver.loc, "invalid character"); yy_pop_state(yyscanner);
+}
+
+<STR_CONCAT>{
+  {hspace}+             { driver.loc.step(); }
+  {vspace}+             { driver.loc.lines(yyleng); driver.loc.step(); }
+  \"                    { 
+                          yy_pop_state(yyscanner);
+                          yy_push_state(STR, yyscanner);
+                        }
+  .                     { 
+                          unput(yytext[0]); /* Put the character back */
+                          yy_pop_state(yyscanner);
+                          return Parser::make_STRING(driver.buffer, driver.loc);
+                        }
+  <<EOF>>               { 
+                          yy_pop_state(yyscanner);
+                          return Parser::make_STRING(driver.buffer, driver.loc);
+                        }
 }
 
 struct|union|enum       {
