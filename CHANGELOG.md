@@ -13,6 +13,8 @@ and this project adheres to
 - Add support for indexing string types
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)
 #### Changed
+- Apply `-B` buffering semantics to file outputs.
+  - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 16
