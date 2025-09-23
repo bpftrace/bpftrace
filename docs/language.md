@@ -1998,9 +1998,9 @@ end {
 }
 ```
 
-### PER_CPU types
+### PERCPU types
 
-For bpftrace PER_CPU types (search this document for "PER_CPU"), you may coerce
+For bpftrace PERCPU map types (e.g., those created by using [`count()`](stdlib.md#count) or [`sum()`](stdlib.md#sum)) you may coerce
 (and thus force a more expensive synchronous read) the type to an integer using
 a cast or by doing a comparison. This is useful for when you need an integer
 during comparisons, `printf()`, or other.
