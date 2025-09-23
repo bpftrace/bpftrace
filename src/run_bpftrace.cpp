@@ -49,12 +49,8 @@ void check_is_root()
 namespace {
 class flushing_streambuf : public std::streambuf {
 public:
-  flushing_streambuf(std::streambuf *dest,
-                     bool flush_always,
-                     bool flush_on_newline)
-      : dest_(dest),
-        flush_always_(flush_always),
-        flush_on_newline_(flush_on_newline)
+  flushing_streambuf(std::streambuf *dest, OutputBufferConfig mode)
+      : dest_(dest), mode_(mode)
   {
   }
 
@@ -65,7 +61,10 @@ protected:
       return dest_->sputc(ch);
 
     auto res = dest_->sputc(traits_type::to_char_type(ch));
-    if (flush_always_ || (flush_on_newline_ && ch == '\n'))
+    if (mode_ == OutputBufferConfig::NONE ||
+        ((mode_ == OutputBufferConfig::UNSET ||
+          mode_ == OutputBufferConfig::LINE) &&
+         ch == '\n'))
       dest_->pubsync();
     return res;
   }
@@ -74,9 +73,10 @@ protected:
   {
     auto res = dest_->sputn(s, n);
     if (res > 0) {
-      if (flush_always_) {
+      if (mode_ == OutputBufferConfig::NONE) {
         dest_->pubsync();
-      } else if (flush_on_newline_) {
+      } else if (mode_ == OutputBufferConfig::UNSET ||
+                 mode_ == OutputBufferConfig::LINE) {
         // Flush if any newline was written
         if (std::memchr(s, '\n', static_cast<size_t>(res)) != nullptr)
           dest_->pubsync();
@@ -92,8 +92,7 @@ protected:
 
 private:
   std::streambuf *dest_;
-  bool flush_always_;
-  bool flush_on_newline_;
+  OutputBufferConfig mode_;
 };
 } // namespace
 
@@ -161,11 +160,8 @@ int run_bpftrace(BPFtrace &bpftrace,
   // Keep these local so their lifetime covers the entire execution.
   std::optional<flushing_streambuf> fsb;
   std::optional<std::ostream> wrapped_os;
-  bool flush_always = out_buf_config == OutputBufferConfig::NONE;
-  bool flush_on_newline = out_buf_config == OutputBufferConfig::UNSET ||
-                          out_buf_config == OutputBufferConfig::LINE;
-  if (flush_always || flush_on_newline) {
-    fsb.emplace(os->rdbuf(), flush_always, flush_on_newline);
+  if (out_buf_config != OutputBufferConfig::FULL) {
+    fsb.emplace(os->rdbuf(), out_buf_config);
     wrapped_os.emplace(&*fsb);
     os = &wrapped_os.value();
   }
