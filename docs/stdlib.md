@@ -1343,7 +1343,7 @@ Count how often this function is called.
 
 Using `@=count()` is conceptually similar to `@++`.
 The difference is that the `count()` function uses a map type optimized for
-performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
+performance and correctness using cheap, thread-safe writes ([PERCPU](./language.md#percpu-types)). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
 
@@ -1447,7 +1447,7 @@ Prints:
 * `max_t max(int64 n)`
 
 Update the map with `n` if `n` is bigger than the current value held.
-Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
+Similar to `count` this uses a [PERCPU](./language.md#percpu-types) map (thread-safe, fast writes, slow reads).
 
 Note: this is different than the typical userspace `max()` in that bpftrace’s `max()`
 only takes a single argument. The logical "other" argument to compare to is the value
@@ -1475,7 +1475,7 @@ be returned.
 * `min_t min(int64 n)`
 
 Update the map with `n` if `n` is smaller than the current value held.
-Similar to `count` this uses a PER_CPU map (thread-safe, fast writes, slow reads).
+Similar to `count` this uses a [PERCPU](./language.md#percpu-types) map (thread-safe, fast writes, slow reads).
 
 See `max()` above for how this differs from the typical userspace `min()`.
 
@@ -1506,7 +1506,7 @@ Calculate the sum of all `n` passed.
 
 Using `@=sum(5)` is conceptually similar to `@+=5`.
 The difference is that the `sum()` function uses a map type optimized for
-performance and correctness using cheap, thread-safe writes (PER_CPU). However, sync reads
+performance and correctness using cheap, thread-safe writes ([PERCPU](./language.md#percpu-types)). However, sync reads
 can be expensive as bpftrace needs to iterate over all the cpus to collect and
 sum these values.
 
