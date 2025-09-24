@@ -169,10 +169,8 @@
                   pkgs.cereal
                   pkgs.elfutils
                   pkgs.gtest
-                  pkgs.libbfd
                   pkgs.libelf
                   pkgs.libffi
-                  pkgs.libopcodes
                   pkgs.libpcap
                   pkgs.systemdLibs
                   pkgs."llvmPackages_${toString llvmVersion}".libclang
