@@ -22,7 +22,7 @@ std::pair<uint64_t, uint64_t> reduce_tseries_value(const OpaqueValue &value,
   uint64_t latest_epoch = 0;
 
   for (size_t i = 0; i < value.count<tseries_data<T>>(); i++) {
-    const auto &v = value.bitcast<tseries_data<T>>(i);
+    auto v = value.bitcast<tseries_data<T>>(i);
     if (v.epoch == 0) {
       // Don't consider buckets where epoch is 0. This means it was never used.
       continue;
