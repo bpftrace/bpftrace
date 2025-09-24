@@ -18,6 +18,8 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
+- ast: Avoid undefined behavior in literal folding
+  - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
 #### Security
 #### Docs
 #### Tools
