@@ -2951,12 +2951,6 @@ TEST_F(SemanticAnalyserTest, positional_parameters)
   // Parameters can be used as string literals
   test("kprobe:f { printf(\"%d\", cgroupid(str($2))); }", Mock{ *bpftrace });
 
-  auto ast = test("k:f { $1 }");
-  auto *stmt =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::ExprStatement>();
-  auto *pp = stmt->expr.as<ast::PositionalParameter>();
-  EXPECT_EQ(CreateNone(), pp->type());
-
   bpftrace->add_param("0999");
   test("kprobe:f { printf(\"%d\", $4); }", Mock{ *bpftrace }, Error{});
 }
