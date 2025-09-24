@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.1] TBD
+
+#### Fixed
+- Fix missing location.hh build error on Alpine
+  - [#4635](https://github.com/bpftrace/bpftrace/pull/4635)
+- Fix build with gcc-16
+  - [#4614](https://github.com/bpftrace/bpftrace/pull/4614)
+#### Docs
+- Fix docs for PERCPU map types
+  - [#4646](https://github.com/bpftrace/bpftrace/pull/4646)
+
 ## [0.24.0] 2025-09-17
 
 #### Breaking Changes
