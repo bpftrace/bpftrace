@@ -4,6 +4,6 @@
 
 namespace bpftrace::ast {
 
-Pass CreateSemanticPass(bool listing = false);
+Pass CreateSemanticPass();
 
 } // namespace bpftrace::ast

@@ -14,10 +14,10 @@
 #include <unistd.h>
 
 #include "aot/aot.h"
-#include "ast/attachpoint_parser.h"
 #include "ast/diagnostic.h"
 #include "ast/helpers.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
@@ -792,10 +792,11 @@ int main(int argc, char* argv[])
                         .put(no_c_defs)
                         .put(no_types)
                         .add(ast::CreateParseAttachpointsPass(args.listing))
+                        .add(ast::CreateCheckAttachpointsPass(args.listing))
                         .add(CreateParseBTFPass())
                         .add(ast::CreateMapSugarPass())
                         .add(ast::CreateNamedParamsPass())
-                        .add(ast::CreateSemanticPass(args.listing))
+                        .add(ast::CreateSemanticPass())
                         .run();
 
     if (!pmresult) {
@@ -881,10 +882,11 @@ int main(int argc, char* argv[])
         .put(no_c_defs)
         .put(no_types)
         .add(ast::CreateParseAttachpointsPass(args.listing))
+        .add(ast::CreateCheckAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())
         .add(ast::CreateMapSugarPass())
         .add(ast::CreateNamedParamsPass())
-        .add(ast::CreateSemanticPass(args.listing));
+        .add(ast::CreateSemanticPass());
 
     auto pmresult = pm.run();
     if (!pmresult) {

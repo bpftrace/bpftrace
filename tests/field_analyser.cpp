@@ -1,5 +1,5 @@
 #include "ast/passes/field_analyser.h"
-#include "ast/attachpoint_parser.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/probe_expansion.h"
 #include "driver.h"
 #include "mocks.h"
