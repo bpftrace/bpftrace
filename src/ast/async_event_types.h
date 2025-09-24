@@ -65,11 +65,6 @@ struct Strftime {
 
 struct Buf {
   uint32_t length;
-  // Seems like GCC 7.4.x can't handle `char content[]`. Work around by using
-  // 0 sized array (a GCC extension that clang also accepts:
-  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70932). It also looks like
-  // the issue doesn't exist in GCC 7.5.x.
-  char content[0];
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, uint32_t length);
 } __attribute__((packed));
