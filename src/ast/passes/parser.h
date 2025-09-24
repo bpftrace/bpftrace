@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ast/attachpoint_parser.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
@@ -41,6 +41,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateImportInternalScriptsPass());
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
+  passes.emplace_back(CreateCheckAttachpointsPass());
   passes.emplace_back(CreateUSDTImportPass()); // Import USDT stdlib if needed
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateParseBTFPass());

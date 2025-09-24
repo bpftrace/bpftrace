@@ -1,4 +1,4 @@
-#include "ast/attachpoint_parser.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"

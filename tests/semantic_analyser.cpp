@@ -3,7 +3,7 @@
 
 #include "arch/arch.h"
 #include "ast/ast.h"
-#include "ast/attachpoint_parser.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/field_analyser.h"
@@ -2267,181 +2267,6 @@ TEST_F(SemanticAnalyserTest, join_delimiter)
   test("kprobe:f { join(arg0, 3) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, kprobe)
-{
-  test("kprobe:f { 1 }");
-  test("kretprobe:f { 1 }");
-}
-
-TEST_F(SemanticAnalyserTest, uprobe)
-{
-  test("uprobe:/bin/sh:f { 1 }");
-  test("u:/bin/sh:f { 1 }");
-  test("uprobe:/bin/sh:0x10 { 1 }");
-  test("u:/bin/sh:0x10 { 1 }");
-  test("uprobe:/bin/sh:f+0x10 { 1 }");
-  test("u:/bin/sh:f+0x10 { 1 }");
-  test("uprobe:sh:f { 1 }");
-  test("uprobe:/bin/sh:cpp:f { 1 }");
-  test("uprobe:/notexistfile:f { 1 }", Error{});
-  test("uprobe:notexistfile:f { 1 }", Error{});
-  test("uprobe:/bin/sh:nolang:f { 1 }", Error{});
-
-  test("uretprobe:/bin/sh:f { 1 }");
-  test("ur:/bin/sh:f { 1 }");
-  test("uretprobe:sh:f { 1 }");
-  test("ur:sh:f { 1 }");
-  test("uretprobe:/bin/sh:0x10 { 1 }");
-  test("ur:/bin/sh:0x10 { 1 }");
-  test("uretprobe:/bin/sh:cpp:f { 1 }");
-  test("uretprobe:/notexistfile:f { 1 }", Error{});
-  test("uretprobe:notexistfile:f { 1 }", Error{});
-  test("uretprobe:/bin/sh:nolang:f { 1 }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, usdt)
-{
-  test("usdt:/bin/sh:probe { 1 }");
-  test("usdt:sh:probe { 1 }");
-  test("usdt:/bin/sh:namespace:probe { 1 }");
-  test("usdt:/notexistfile:namespace:probe { 1 }", Error{});
-  test("usdt:notexistfile:namespace:probe { 1 }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, begin_end_probes)
-{
-  test("begin { 1 }");
-  test("begin { 1 } begin { 2 }", Error{});
-
-  test("end { 1 }");
-  test("end { 1 } end { 2 }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, bench_probes)
-{
-  test("bench:a { 1 } bench:b { 2 }");
-  test("bench: { 1 }", Error{ R"(
-stdin:1:1-7: ERROR: bench probes must have a name
-bench: { 1 }
-~~~~~~
-)" });
-  test("BENCH:a { 1 } BENCH:a { 2 }", Error{ R"(
-stdin:1:14-22: ERROR: "a" was used as the name for more than one BENCH probe
-BENCH:a { 1 } BENCH:a { 2 }
-             ~~~~~~~~
-stdin:1:1-8: ERROR: this is the other instance
-BENCH:a { 1 } BENCH:a { 2 }
-~~~~~~~
-)" });
-}
-
-TEST_F(SemanticAnalyserTest, self_probe)
-{
-  test("self:signal:SIGUSR1 { 1 }");
-
-  test("self:signal:sighup { 1 }", Error{ R"(
-stdin:1:1-19: ERROR: sighup is not a supported signal
-self:signal:sighup { 1 }
-~~~~~~~~~~~~~~~~~~
-)" });
-  test("self:keypress:space { 1 }", Error{ R"(
-stdin:1:1-20: ERROR: keypress is not a supported trigger
-self:keypress:space { 1 }
-~~~~~~~~~~~~~~~~~~~
-)" });
-}
-
-TEST_F(SemanticAnalyserTest, tracepoint)
-{
-  test("tracepoint:category:event { 1 }");
-}
-
-TEST_F(SemanticAnalyserTest, rawtracepoint)
-{
-  test("rawtracepoint:event_rt { 1 }");
-  test("rawtracepoint:event_rt { arg0 }");
-  test("rawtracepoint:vmlinux:event_rt { arg0 }");
-}
-
-TEST_F(SemanticAnalyserTest, watchpoint_invalid_modes)
-{
-  if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
-  }
-
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->procmon_ = std::make_unique<MockProcMon>(123);
-
-  if (arch::Host::Machine == arch::ARM64) {
-    test("watchpoint:0x1234:8:r { 1 }", Mock{ *bpftrace });
-  } else {
-    test("watchpoint:0x1234:8:r { 1 }", Mock{ *bpftrace }, Error{});
-  }
-  test("watchpoint:0x1234:8:rx { 1 }", Mock{ *bpftrace }, Error{});
-  test("watchpoint:0x1234:8:wx { 1 }", Mock{ *bpftrace }, Error{});
-  test("watchpoint:0x1234:8:xw { 1 }", Mock{ *bpftrace }, Error{});
-  test("watchpoint:0x1234:8:rwx { 1 }", Mock{ *bpftrace }, Error{});
-  test("watchpoint:0x1234:8:xx { 1 }", Mock{ *bpftrace }, Error{});
-  test("watchpoint:0x1234:8:b { 1 }", Mock{ *bpftrace }, Error{});
-}
-
-TEST_F(SemanticAnalyserTest, watchpoint_absolute)
-{
-  if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
-  }
-
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->procmon_ = std::make_unique<MockProcMon>(123);
-
-  test("watchpoint:0x1234:8:rw { 1 }", Mock{ *bpftrace });
-  test("watchpoint:0x1234:9:rw { 1 }", Mock{ *bpftrace }, Error{});
-  test("watchpoint:0x0:8:rw { 1 }", Mock{ *bpftrace }, Error{});
-}
-
-TEST_F(SemanticAnalyserTest, watchpoint_function)
-{
-  if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
-  }
-
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->procmon_ = std::make_unique<MockProcMon>(123);
-
-  test("watchpoint:func1+arg2:8:rw { 1 }", Mock{ *bpftrace });
-  test("w:func1+arg2:8:rw { 1 }", Mock{ *bpftrace });
-  test("w:func1.one_two+arg2:8:rw { 1 }", Mock{ *bpftrace });
-  test("watchpoint:func1+arg99999:8:rw { 1 }", Mock{ *bpftrace }, Error{});
-
-  bpftrace->procmon_ = nullptr;
-  test("watchpoint:func1+arg2:8:rw { 1 }", Mock{ *bpftrace }, Error{});
-}
-
-TEST_F(SemanticAnalyserTest, asyncwatchpoint)
-{
-  if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
-  }
-
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->procmon_ = std::make_unique<MockProcMon>(123);
-
-  test("asyncwatchpoint:func1+arg2:8:rw { 1 }", Mock{ *bpftrace });
-  test("aw:func1+arg2:8:rw { 1 }", Mock{ *bpftrace });
-  test("aw:func1.one_two+arg2:8:rw { 1 }", Mock{ *bpftrace });
-  test("asyncwatchpoint:func1+arg99999:8:rw { 1 }", Mock{ *bpftrace }, Error{});
-
-  // asyncwatchpoint's may not use absolute addresses
-  test("asyncwatchpoint:0x1234:8:rw { 1 }", Mock{ *bpftrace }, Error{});
-
-  bpftrace->procmon_ = nullptr;
-  test("watchpoint:func1+arg2:8:rw { 1 }", Mock{ *bpftrace }, Error{});
-}
-
 TEST_F(SemanticAnalyserTest, args_builtin_wrong_use)
 {
   test("begin { args.foo }", Error{});
@@ -2455,24 +2280,6 @@ TEST_F(SemanticAnalyserTest, args_builtin_wrong_use)
   test("hardware:cache-references:1000000 { args.foo }", Error{});
   test("software:faults:1000 { args.foo }", Error{});
   test("interval:s:1 { args.foo }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, profile)
-{
-  test("profile:hz:997 { 1 }");
-  test("profile:s:10 { 1 }");
-  test("profile:ms:100 { 1 }");
-  test("profile:us:100 { 1 }");
-  test("profile:unit:100 { 1 }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, interval)
-{
-  test("interval:hz:997 { 1 }");
-  test("interval:s:10 { 1 }");
-  test("interval:ms:100 { 1 }");
-  test("interval:us:100 { 1 }");
-  test("interval:unit:100 { 1 }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, variable_cast_types)

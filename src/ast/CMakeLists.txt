@@ -9,7 +9,6 @@ target_link_libraries(ast_defs util)
 
 add_library(ast STATIC
   async_event_types.cpp
-  attachpoint_parser.cpp
   codegen_helper.cpp
   diagnostic.cpp
   dibuilderbpf.cpp
@@ -17,6 +16,7 @@ add_library(ast STATIC
   pass_manager.cpp
   signal.cpp
 
+  passes/attachpoint_passes.cpp
   passes/builtins.cpp
   passes/c_macro_expansion.cpp
   passes/clang_parser.cpp

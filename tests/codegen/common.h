@@ -4,7 +4,7 @@
 #include <iostream>
 #include <regex>
 
-#include "ast/attachpoint_parser.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
@@ -69,6 +69,7 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateImportInternalScriptsPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateCheckAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())

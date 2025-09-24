@@ -1,5 +1,5 @@
 #include "ast/passes/probe_expansion.h"
-#include "ast/attachpoint_parser.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/printer.h"
 #include "btf_common.h"
 #include "driver.h"

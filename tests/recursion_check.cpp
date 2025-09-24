@@ -1,5 +1,5 @@
 #include "ast/passes/recursion_check.h"
-#include "ast/attachpoint_parser.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
