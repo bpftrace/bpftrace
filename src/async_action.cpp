@@ -34,14 +34,14 @@ static Result<std::vector<output::Primitive>> prepare_args(
 
 void AsyncHandlers::exit(const OpaqueValue &data)
 {
-  const auto &exit = data.bitcast<AsyncEvent::Exit>();
+  auto exit = data.bitcast<AsyncEvent::Exit>();
   BPFtrace::exit_code = exit.exit_code;
   bpftrace.request_finalize();
 }
 
 void AsyncHandlers::join(const OpaqueValue &data)
 {
-  const auto &join = data.bitcast<AsyncEvent::Join>();
+  auto join = data.bitcast<AsyncEvent::Join>();
   uint64_t join_id = join.join_id;
   const auto *delim = bpftrace.resources.join_args[join_id].c_str();
   auto arg = data.slice(sizeof(AsyncEvent::Join));
@@ -66,7 +66,7 @@ void AsyncHandlers::time(const OpaqueValue &data)
     LOG(WARNING) << "localtime_r: " << strerror(errno);
     return;
   }
-  const auto &time = data.bitcast<AsyncEvent::Time>();
+  auto time = data.bitcast<AsyncEvent::Time>();
   const auto *fmt = bpftrace.resources.time_args[time.time_id].c_str();
   if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0) {
     LOG(WARNING) << "strftime returned 0";
@@ -77,7 +77,7 @@ void AsyncHandlers::time(const OpaqueValue &data)
 
 void AsyncHandlers::runtime_error(const OpaqueValue &data)
 {
-  const auto &runtime_error = data.bitcast<AsyncEvent::RuntimeError>();
+  auto runtime_error = data.bitcast<AsyncEvent::RuntimeError>();
   auto error_id = runtime_error.error_id;
   const auto return_value = runtime_error.return_value;
   const auto &info = bpftrace.resources.runtime_error_info[error_id];
@@ -86,14 +86,12 @@ void AsyncHandlers::runtime_error(const OpaqueValue &data)
 
 void AsyncHandlers::print_non_map(const OpaqueValue &data)
 {
-  const auto &print = data.bitcast<AsyncEvent::PrintNonMap>();
+  auto print = data.bitcast<AsyncEvent::PrintNonMap>();
   const SizedType &ty = bpftrace.resources.non_map_print_args.at(
       print.print_id);
 
-  auto v = format(bpftrace,
-                  c_definitions,
-                  ty,
-                  OpaqueValue::from(&print.content[0], ty.GetSize()));
+  auto v = format(
+      bpftrace, c_definitions, ty, data.slice(sizeof(AsyncEvent::PrintNonMap)));
   if (!v) {
     LOG(BUG) << "error printing non-map value: " << v.takeError();
   }
@@ -102,7 +100,7 @@ void AsyncHandlers::print_non_map(const OpaqueValue &data)
 
 void AsyncHandlers::print_map(const OpaqueValue &data)
 {
-  const auto &print = data.bitcast<AsyncEvent::Print>();
+  auto print = data.bitcast<AsyncEvent::Print>();
   const auto &map = bpftrace.bytecode_.getMap(print.mapid);
 
   auto res = format(bpftrace, c_definitions, map, print.top, print.div);
@@ -116,7 +114,7 @@ void AsyncHandlers::print_map(const OpaqueValue &data)
 
 void AsyncHandlers::zero_map(const OpaqueValue &data)
 {
-  const auto &mapevent = data.bitcast<AsyncEvent::MapEvent>();
+  auto mapevent = data.bitcast<AsyncEvent::MapEvent>();
   const auto &map = bpftrace.bytecode_.getMap(mapevent.mapid);
   uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
   auto ok = map.zero_out(nvalues);
@@ -129,7 +127,7 @@ void AsyncHandlers::zero_map(const OpaqueValue &data)
 
 void AsyncHandlers::clear_map(const OpaqueValue &data)
 {
-  const auto &mapevent = data.bitcast<AsyncEvent::MapEvent>();
+  auto mapevent = data.bitcast<AsyncEvent::MapEvent>();
   const auto &map = bpftrace.bytecode_.getMap(mapevent.mapid);
   uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
   auto ok = map.clear(nvalues);
@@ -141,7 +139,7 @@ void AsyncHandlers::clear_map(const OpaqueValue &data)
 
 void AsyncHandlers::watchpoint_attach(const OpaqueValue &data)
 {
-  const auto &watchpoint = data.bitcast<AsyncEvent::Watchpoint>();
+  auto watchpoint = data.bitcast<AsyncEvent::Watchpoint>();
   uint64_t probe_idx = watchpoint.watchpoint_idx;
   uint64_t addr = watchpoint.addr;
 
@@ -192,7 +190,7 @@ out:
 
 void AsyncHandlers::watchpoint_detach(const OpaqueValue &data)
 {
-  const auto &unwatch = data.bitcast<AsyncEvent::WatchpointUnwatch>();
+  auto unwatch = data.bitcast<AsyncEvent::WatchpointUnwatch>();
   uint64_t addr = unwatch.addr;
 
   // Remove all probes watching `addr`. Note how we fail silently here
@@ -208,7 +206,7 @@ void AsyncHandlers::watchpoint_detach(const OpaqueValue &data)
 
 void AsyncHandlers::skboutput(const OpaqueValue &data)
 {
-  const auto &hdr = data.bitcast<AsyncEvent::SkbOutput>();
+  auto hdr = data.bitcast<AsyncEvent::SkbOutput>();
   int offset = std::get<1>(
       bpftrace.resources.skboutput_args_.at(hdr.skb_output_id));
   auto pkt = data.slice(sizeof(hdr));

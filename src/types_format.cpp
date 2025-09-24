@@ -82,10 +82,12 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       return bpftrace.resolve_uid(value.bitcast<uint64_t>());
     }
     case Type::buffer: {
-      const auto &buf = value.bitcast<AsyncEvent::Buf>();
+      auto buf = value.bitcast<AsyncEvent::Buf>();
+      size_t length = buf.length;
       output::Primitive::Buffer v;
       v.data.resize(buf.length);
-      memcpy(v.data.data(), buf.content, buf.length);
+      const auto *content = value.slice(sizeof(AsyncEvent::Buf), length).data();
+      memcpy(v.data.data(), content, length);
       return v;
     }
     case Type::string: {
@@ -227,7 +229,7 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       // string. We could optionally store just a native nsec timestamp, and
       // allow the output to choose the format. We will leave this for a future
       // type. For now this both resolves and formats the time.
-      const auto &s = value.bitcast<const AsyncEvent::Strftime>();
+      auto s = value.bitcast<const AsyncEvent::Strftime>();
       const auto ts = bpftrace.resolve_timestamp(s.mode, s.nsecs);
       return bpftrace.format_timestamp(ts, s.strftime_id);
     }
@@ -235,7 +237,7 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       return bpftrace.resolve_mac_address(value.data());
     }
     case Type::cgroup_path_t: {
-      const auto &c = value.bitcast<const AsyncEvent::CgroupPath>();
+      auto c = value.bitcast<const AsyncEvent::CgroupPath>();
       return bpftrace.resolve_cgroup_path(c.cgroup_path_id, c.cgroup_id);
     }
     case Type::strerror_t: {
