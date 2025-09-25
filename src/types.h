@@ -19,6 +19,8 @@
 
 namespace bpftrace {
 
+constexpr std::string_view TRACEPOINT_STRUCT_PREFIX = "struct _tracepoint_";
+
 enum class Type : uint8_t {
   // clang-format off
   none,
@@ -167,7 +169,6 @@ public:
   StackType stack_type;
   int funcarg_idx = -1;
   bool is_internal = false;
-  bool is_tparg = false;
   bool is_funcarg = false;
   TimestampMode ts_mode = TimestampMode::boot;
 
@@ -197,7 +198,6 @@ private:
     archive(type_,
             stack_type,
             is_internal,
-            is_tparg,
             is_funcarg,
             funcarg_idx,
             is_signed_,
@@ -503,6 +503,11 @@ public:
   {
     return type_ == Type::hist_t || type_ == Type::lhist_t ||
            type_ == Type::tseries_t;
+  }
+
+  bool IsTracepointArgs() const
+  {
+    return GetName().starts_with(TRACEPOINT_STRUCT_PREFIX);
   }
 
   bool NeedsPercpuMap() const;

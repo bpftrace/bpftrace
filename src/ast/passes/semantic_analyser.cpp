@@ -856,7 +856,6 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
   builtin.builtin_type.SetAS(
       attach_point->target == "syscalls" ? AddrSpace::user : AddrSpace::kernel);
   builtin.builtin_type.MarkCtxAccess();
-  builtin.builtin_type.is_tparg = true;
 }
 
 ProbeType SemanticAnalyser::single_provider_type(Probe *probe)
@@ -3167,7 +3166,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
   std::map<std::string, std::shared_ptr<const Struct>> structs;
 
-  if (type.is_tparg) {
+  if (type.IsTracepointArgs()) {
     auto *probe = get_probe(acc);
     if (probe == nullptr)
       return;
@@ -3225,7 +3224,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
       // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
       // access to the first 8 bytes results in verifier error.
-      if (type.is_tparg && field.offset < 8)
+      if (type.IsTracepointArgs() && field.offset < 8)
         acc.addError()
             << "BPF does not support accessing common tracepoint fields";
     }
@@ -4485,7 +4484,7 @@ void SemanticAnalyser::assign_map_type(Map &map,
 {
   const std::string &map_ident = map.ident;
 
-  if (type.IsRecordTy() && type.is_tparg) {
+  if (type.IsRecordTy() && type.IsTracepointArgs()) {
     loc_node->addError() << "Storing tracepoint args in maps is not supported";
   }
 

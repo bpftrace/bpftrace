@@ -8,6 +8,7 @@
 #include "config.h"
 #include "tracefs/tracefs.h"
 #include "tracepoint_format_parser.h"
+#include "types.h"
 
 namespace bpftrace {
 
@@ -92,7 +93,7 @@ std::string TracepointFormatParser::get_struct_name(
     const std::string &category,
     const std::string &event_name)
 {
-  return "struct _tracepoint_" + category + "_" + event_name;
+  return std::string(TRACEPOINT_STRUCT_PREFIX) + category + "_" + event_name;
 }
 
 std::string TracepointFormatParser::get_struct_name(const ast::AttachPoint &ap)
