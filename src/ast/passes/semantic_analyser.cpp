@@ -851,12 +851,17 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
 {
   std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
       *attach_point);
-  builtin.builtin_type = CreateRecord(
-      tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
+
+  if (builtin.builtin_type.IsNoneTy()) {
+    builtin.builtin_type = CreateRecord(
+        tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
+  } else {
+    builtin.builtin_type.AddNameForAp(attach_point->name(), tracepoint_struct);
+  }
+
   builtin.builtin_type.SetAS(
       attach_point->target == "syscalls" ? AddrSpace::user : AddrSpace::kernel);
   builtin.builtin_type.MarkCtxAccess();
-  builtin.builtin_type.is_tparg = true;
 }
 
 ProbeType SemanticAnalyser::single_provider_type(Probe *probe)
@@ -3167,27 +3172,24 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
   std::map<std::string, std::shared_ptr<const Struct>> structs;
 
-  if (type.is_tparg) {
-    auto *probe = get_probe(acc);
-    if (probe == nullptr)
-      return;
+  auto *probe = get_probe(acc);
+  assert(probe != nullptr);
 
-    for (AttachPoint *attach_point : probe->attach_points) {
-      if (probetype(attach_point->provider) != ProbeType::tracepoint) {
-        // The args builtin can only be used with tracepoint
-        // an error message is already generated in visit(Builtin)
-        // just continue semantic analysis
-        continue;
+  for (AttachPoint *attach_point : probe->attach_points) {
+    if (probetype(attach_point->provider) == ProbeType::tracepoint) {
+      auto record = type.GetStruct();
+      structs[type.GetName(attach_point->name())] = record;
+
+      // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
+      // access to the first 8 bytes results in verifier error.
+      if (record->GetField(acc.field).offset < 8) {
+        acc.addError()
+            << "BPF does not support accessing common tracepoint fields";
       }
-
-      std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-          *attach_point);
-      structs[tracepoint_struct] =
-          bpftrace_.structs.Lookup(tracepoint_struct).lock();
     }
-  } else {
-    structs[type.GetName()] = type.GetStruct();
   }
+
+  structs[type.GetName()] = type.GetStruct();
 
   for (auto it : structs) {
     std::string cast_type = it.first;
@@ -3222,12 +3224,6 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       }
       acc.field_type.is_internal = type.is_internal;
       acc.field_type.SetAS(acc.expr.type().GetAS());
-
-      // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
-      // access to the first 8 bytes results in verifier error.
-      if (type.is_tparg && field.offset < 8)
-        acc.addError()
-            << "BPF does not support accessing common tracepoint fields";
     }
   }
 }

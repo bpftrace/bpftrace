@@ -2581,7 +2581,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 
   assert(type.IsRecordTy());
   bool is_ctx = type.IsCtxAccess();
-  bool is_tparg = type.is_tparg;
   bool is_internal = type.is_internal;
   bool is_funcarg = type.is_funcarg;
 
@@ -2601,15 +2600,12 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     }
   }
 
-  std::string cast_type = is_tparg ? TracepointFormatParser::get_struct_name(
-                                         *current_attach_point_)
-                                   : type.GetName();
+  std::string cast_type = type.GetName(current_attach_point_->name());
 
   // This overwrites the stored type!
   type = CreateRecord(cast_type, bpftrace_.structs.Lookup(cast_type));
   if (is_ctx)
     type.MarkCtxAccess();
-  type.is_tparg = is_tparg;
   type.is_internal = is_internal;
   type.is_funcarg = is_funcarg;
   // Restore the addrspace info
