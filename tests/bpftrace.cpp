@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
@@ -69,8 +70,9 @@ static auto parse_probe(const std::string &str,
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateCheckAttachpointsPass())
                 .add(ast::CreateControlFlowPass())
-                .add(ast::CreateProbeExpansionPass())
+                .add(ast::CreateApExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())

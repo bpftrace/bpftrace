@@ -1,4 +1,4 @@
-#include "ast/passes/probe_expansion.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/printer.h"
 #include "btf_common.h"
@@ -6,7 +6,7 @@
 #include "mocks.h"
 #include "gtest/gtest.h"
 
-namespace bpftrace::test::probe_expansion {
+namespace bpftrace::test::ap_expansion {
 
 static void test(const std::string &prog,
                  const std::vector<std::string> &expected_aps,
@@ -25,7 +25,7 @@ static void test(const std::string &prog,
       .put(bpftrace)
       .add(CreateParsePass())
       .add(ast::CreateParseAttachpointsPass())
-      .add(ast::CreateProbeExpansionPass());
+      .add(ast::CreateApExpansionPass());
   auto result = pm.run();
   ASSERT_TRUE(result && ast.diagnostics().ok());
 
@@ -79,7 +79,7 @@ static void test_ast(const std::string &input, std::string_view expected_ast)
   test(input, {}, {}, expected_ast, true);
 }
 
-TEST(probe_expansion, session_ast)
+TEST(ap_expansion, session_ast)
 {
   test_ast("kprobe:sys_* { @entry = 1 } kretprobe:sys_* { @exit = 1 }", R"(
 Program
@@ -97,7 +97,7 @@ Program
 )");
 }
 
-TEST(probe_expansion, kprobe_wildcard)
+TEST(ap_expansion, kprobe_wildcard)
 {
   // Disabled kprobe_multi - should get full expansion
   test_attach_points("kprobe:sys_read,kprobe:my_*,kprobe:sys_write {}",
@@ -108,7 +108,7 @@ TEST(probe_expansion, kprobe_wildcard)
                      false);
 }
 
-TEST(probe_expansion, kprobe_multi_wildcard)
+TEST(ap_expansion, kprobe_multi_wildcard)
 {
   test_multi_attach_points(
       "kprobe:sys_read,kprobe:my_*,kprobe:sys_write {}",
@@ -116,7 +116,7 @@ TEST(probe_expansion, kprobe_multi_wildcard)
       { {}, { "my_one", "my_two" }, {} });
 }
 
-TEST(probe_expansion, probe_builtin)
+TEST(ap_expansion, probe_builtin)
 {
   // Even though kprobe_multi is enabled (by default), we should get full
   // expansion due to using the "probe" builtin.
@@ -128,20 +128,20 @@ TEST(probe_expansion, probe_builtin)
         "kprobe:sys_write" });
 }
 
-TEST(probe_expansion, kprobe_wildcard_no_matches)
+TEST(ap_expansion, kprobe_wildcard_no_matches)
 {
   test_attach_points("kprobe:sys_read,kprobe:not_here_*,kprobe:sys_write {}",
                      { "kprobe:sys_read", "kprobe:sys_write" },
                      false);
 }
 
-TEST(probe_expansion, krpobe_multi_wildcard_no_matches)
+TEST(ap_expansion, krpobe_multi_wildcard_no_matches)
 {
   test_attach_points("kprobe:sys_read,kprobe:not_here_*,kprobe:sys_write {}",
                      { "kprobe:sys_read", "kprobe:sys_write" });
 }
 
-TEST(probe_expansion, kprobe_module_wildcard)
+TEST(ap_expansion, kprobe_module_wildcard)
 {
   // We leave kprobe_multi enabled here but it doesn't support the
   // module:function syntax so full expansion should be done anyways.
@@ -151,7 +151,7 @@ TEST(probe_expansion, kprobe_module_wildcard)
                        "kprobe:other_kernel_mod:func_in_mod" });
 }
 
-TEST(probe_expansion, kprobe_module_function_wildcard)
+TEST(ap_expansion, kprobe_module_function_wildcard)
 {
   // We leave kprobe_multi enabled here but it doesn't support the
   // module:function syntax so full expansion should be done anyways.
@@ -160,7 +160,7 @@ TEST(probe_expansion, kprobe_module_function_wildcard)
                        "kprobe:kernel_mod:other_func_in_mod" });
 }
 
-TEST(probe_expansion, uprobe_wildcard)
+TEST(ap_expansion, uprobe_wildcard)
 {
   // Disabled uprobe_multi - should get full expansion
   test_attach_points("uprobe:/bin/sh:*open {}",
@@ -169,14 +169,14 @@ TEST(probe_expansion, uprobe_wildcard)
                      false);
 }
 
-TEST(probe_expansion, uprobe_multi_wildcard)
+TEST(ap_expansion, uprobe_multi_wildcard)
 {
   test_multi_attach_points("uprobe:/bin/sh:*open {}",
                            { "uprobe:/bin/sh:*open" },
                            { { "/bin/sh:first_open", "/bin/sh:second_open" } });
 }
 
-TEST(probe_expansion, uprobe_wildcard_file)
+TEST(ap_expansion, uprobe_wildcard_file)
 {
   // Disabled uprobe_multi - should get full expansion
   test_attach_points("uprobe:/bin/*sh:*open {}",
@@ -186,7 +186,7 @@ TEST(probe_expansion, uprobe_wildcard_file)
                      false);
 }
 
-TEST(probe_expansion, uprobe_multi_wildcard_file)
+TEST(ap_expansion, uprobe_multi_wildcard_file)
 {
   // Enabled uprobe_multi - targets should be expanded, functions shouldn't
   test_multi_attach_points("uprobe:/bin/*sh:*open {}",
@@ -195,20 +195,20 @@ TEST(probe_expansion, uprobe_multi_wildcard_file)
                              { "/bin/bash:first_open" } });
 }
 
-TEST(probe_expansion, uprobe_wildcard_no_matches)
+TEST(ap_expansion, uprobe_wildcard_no_matches)
 {
   test_attach_points("uprobe:/bin/sh:foo*,uprobe:/bin/sh:first_open {}",
                      { "uprobe:/bin/sh:first_open" },
                      false);
 }
 
-TEST(probe_expansion, uprobe_wildcard_multi_no_matches)
+TEST(ap_expansion, uprobe_wildcard_multi_no_matches)
 {
   test_attach_points("uprobe:/bin/sh:foo*,uprobe:/bin/sh:first_open {}",
                      { "uprobe:/bin/sh:first_open" });
 }
 
-TEST(probe_expansion, uprobe_cpp_symbol)
+TEST(ap_expansion, uprobe_cpp_symbol)
 {
   test_attach_points("uprobe:/bin/sh:cpp:cpp_mangled {}",
                      { "uprobe:/bin/sh:cpp:_Z11cpp_mangledi",
@@ -217,14 +217,14 @@ TEST(probe_expansion, uprobe_cpp_symbol)
                      false);
 }
 
-TEST(probe_expansion, uprobe_cpp_symbol_full)
+TEST(ap_expansion, uprobe_cpp_symbol_full)
 {
   test_attach_points("uprobe:/bin/sh:cpp:\"cpp_mangled(int)\" {}",
                      { "uprobe:/bin/sh:cpp:_Z11cpp_mangledi" },
                      false);
 }
 
-TEST(probe_expansion, uprobe_cpp_symbol_wildcard)
+TEST(ap_expansion, uprobe_cpp_symbol_wildcard)
 {
   test_attach_points("uprobe:/bin/sh:cpp:cpp_mangled* {}",
                      { "uprobe:/bin/sh:cpp:_Z11cpp_mangledi",
@@ -234,7 +234,7 @@ TEST(probe_expansion, uprobe_cpp_symbol_wildcard)
                      false);
 }
 
-TEST(probe_expansion, uprobe_no_demangling)
+TEST(ap_expansion, uprobe_no_demangling)
 {
   // Without the :cpp prefix, only look for non-mangled "cpp_mangled" symbol
   test_attach_points("uprobe:/bin/sh:cpp_mangled* {}",
@@ -242,7 +242,7 @@ TEST(probe_expansion, uprobe_no_demangling)
                      false);
 }
 
-TEST(probe_expansion, usdt_wildcard)
+TEST(ap_expansion, usdt_wildcard)
 {
   test_attach_points("usdt:/bin/*sh:prov*:tp* {}",
                      { "usdt:/bin/bash:prov1:tp3",
@@ -251,19 +251,19 @@ TEST(probe_expansion, usdt_wildcard)
                        "usdt:/bin/sh:prov2:tp" });
 }
 
-TEST(probe_expansion, usdt_empty_namespace)
+TEST(ap_expansion, usdt_empty_namespace)
 {
   test_attach_points("usdt:/bin/sh:tp1 {}", { "usdt:/bin/sh:prov1:tp1" });
 }
 
-TEST(probe_expansion, tracepoint_wildcard)
+TEST(ap_expansion, tracepoint_wildcard)
 {
   test_attach_points("tracepoint:sched:sched_* {}",
                      { "tracepoint:sched:sched_one",
                        "tracepoint:sched:sched_two" });
 }
 
-TEST(probe_expansion, tracepoint_category_wildcard)
+TEST(ap_expansion, tracepoint_category_wildcard)
 {
   test_attach_points("tracepoint:sched*:sched_* {}",
                      { "tracepoint:sched:sched_one",
@@ -271,15 +271,15 @@ TEST(probe_expansion, tracepoint_category_wildcard)
                        "tracepoint:sched_extra:sched_extra" });
 }
 
-TEST(probe_expansion, tracepoint_wildcard_no_matches)
+TEST(ap_expansion, tracepoint_wildcard_no_matches)
 {
   test_attach_points("tracepoint:type:typo_*,tracepoint:sched:sched_one {}",
                      { "tracepoint:sched:sched_one" });
 }
 
-class probe_expansion_btf : public test_btf {};
+class ap_expansion_btf : public test_btf {};
 
-TEST(probe_expansion_btf, fentry_wildcard)
+TEST(ap_expansion_btf, fentry_wildcard)
 {
   test_attach_points("fentry:func_* {}",
                      { "fentry:vmlinux:func_1",
@@ -287,40 +287,40 @@ TEST(probe_expansion_btf, fentry_wildcard)
                        "fentry:vmlinux:func_3" });
 }
 
-TEST(probe_expansion_btf, fentry_wildcard_no_matches)
+TEST(ap_expansion_btf, fentry_wildcard_no_matches)
 {
   test_attach_points("fentry:foo*,fentry:vmlinux:func_1 {}",
                      { "fentry:vmlinux:func_1" });
 }
 
-TEST(probe_expansion_btf, fentry_module_wildcard)
+TEST(ap_expansion_btf, fentry_module_wildcard)
 {
   test_attach_points("fentry:*:func_1 {}", { "fentry:vmlinux:func_1" });
 }
 
-TEST(probe_expansion_btf, fentry_bpf_id_wildcard)
+TEST(ap_expansion_btf, fentry_bpf_id_wildcard)
 {
   test_attach_points("fentry:bpf:123:func_* {}",
                      { "fentry:bpf:123:func_1", "fentry:bpf:123:func_2" });
 }
 
-TEST(probe_expansion_btf, rawtracepoint_wildcard)
+TEST(ap_expansion_btf, rawtracepoint_wildcard)
 {
   test_attach_points("rawtracepoint:event* {}",
                      { "rawtracepoint:vmlinux:event_rt" });
 }
 
-TEST(probe_expansion_btf, rawtracepoint_wildcard_no_matches)
+TEST(ap_expansion_btf, rawtracepoint_wildcard_no_matches)
 {
   test_attach_points("rawtracepoint:foo*,rawtracepoint:event_rt {}",
                      { "rawtracepoint:vmlinux:event_rt" });
 }
 
-TEST(probe_expansion_btf, kprobe_session)
+TEST(ap_expansion_btf, kprobe_session)
 {
   test_multi_attach_points("kprobe:my_* {} kretprobe:my_* {}",
                            { "kprobe:my_*" },
                            { { "my_one", "my_two" } });
 }
 
-} // namespace bpftrace::test::probe_expansion
+} // namespace bpftrace::test::ap_expansion

@@ -35,8 +35,9 @@ add_library(ast STATIC
   passes/pid_filter_pass.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
-  passes/probe_expansion.cpp
+  passes/ap_expansion.cpp
   passes/probe_prune.cpp
+  passes/probe_expansion.cpp
   passes/resource_analyser.cpp
   passes/semantic_analyser.cpp
   passes/simplify_types.cpp

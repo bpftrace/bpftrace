@@ -8,7 +8,7 @@ namespace bpftrace::test::codegen {
 
 TEST(codegen, args_multiple_tracepoints)
 {
-  test("tracepoint:sched:sched_one,tracepoint:sched:sched_two { "
+  test("tracepoint:sched:sched_one,tracepoint:sched:sched_one_twin { "
        "@[args.common_field] = 1; }",
        NAME);
 }

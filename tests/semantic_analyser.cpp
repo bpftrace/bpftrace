@@ -3,6 +3,7 @@
 
 #include "arch/arch.h"
 #include "ast/ast.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
@@ -146,9 +147,11 @@ public:
                   .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
+                  .add(ast::CreateApExpansionPass())
                   .add(ast::CreateProbeExpansionPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
+                  .add(ast::CreateProbeExpansionPass({ ProbeType::tracepoint }))
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateMapSugarPass())
@@ -3423,12 +3426,17 @@ TEST_F(SemanticAnalyserTest, builtin_args)
   auto bpftrace = get_mock_bpftrace();
   test("t:sched:sched_one { args.common_field }", Mock{ *bpftrace });
   test("t:sched:sched_two { args.common_field }", Mock{ *bpftrace });
+  test("t:sched:sched_one,t:sched:sched_one_twin { args.common_field }",
+       Mock{ *bpftrace });
+  test("t:sched:sched_on* { args.common_field }", Mock{ *bpftrace });
+  // Backwards compatibility
+  test("t:sched:sched_one { args->common_field }", Mock{ *bpftrace });
+
+  test("t:sched:sched_one { args.not_a_field }", Mock{ *bpftrace }, Error{});
+  // Mixed args ok
   test("t:sched:sched_one,t:sched:sched_two { args.common_field }",
        Mock{ *bpftrace });
   test("t:sched:sched_* { args.common_field }", Mock{ *bpftrace });
-  test("t:sched:sched_one { args.not_a_field }", Mock{ *bpftrace }, Error{});
-  // Backwards compatibility
-  test("t:sched:sched_one { args->common_field }", Mock{ *bpftrace });
 }
 
 TEST_F(SemanticAnalyserTest, type_ctx)
@@ -4673,11 +4681,8 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
 
 TEST_F(SemanticAnalyserBTFTest, args_builtin_mixed_probes)
 {
-  test("fentry:func_1,tracepoint:sched:sched_one { args }", Error{ R"(
-stdin:1:44-48: ERROR: The args builtin can only be used within the context of a single probe type, e.g. "probe1 {args}" is valid while "probe1,probe2 {args}" is not.
-fentry:func_1,tracepoint:sched:sched_one { args }
-                                           ~~~~
-)" });
+  // This is fine as they get split into different probes
+  test("fentry:func_1,tracepoint:sched:sched_one { args }");
 }
 
 TEST_F(SemanticAnalyserBTFTest, binop_late_ptr_resolution)

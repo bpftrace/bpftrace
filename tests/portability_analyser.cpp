@@ -1,4 +1,5 @@
 #include "ast/passes/portability_analyser.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/macro_expansion.h"
@@ -34,9 +35,10 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateCheckAttachpointsPass())
-                .add(ast::CreateProbeExpansionPass())
+                .add(ast::CreateApExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateMapSugarPass())
+                .add(ast::CreateProbeExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateSemanticPass())
@@ -61,7 +63,7 @@ TEST(portability_analyser, tracepoint_field_access)
 {
   test("tracepoint:sched:sched_one { args }", 0);
   test("tracepoint:sched:sched_one { args.common_field }", 0);
-  test("tracepoint:sched:sched_* { args.common_field }", 0);
+  test("tracepoint:sched:sched_on* { args.common_field }", 0);
   // Backwards compatibility
   test("tracepoint:sched:sched_one { args->common_field }", 0);
 }

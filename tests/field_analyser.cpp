@@ -1,4 +1,5 @@
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/probe_expansion.h"
 #include "driver.h"
@@ -25,6 +26,7 @@ void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
                     .put(bpftrace)
                     .add(CreateParsePass())
                     .add(ast::CreateParseAttachpointsPass())
+                    .add(ast::CreateApExpansionPass())
                     .add(ast::CreateProbeExpansionPass())
                     .add(ast::CreateFieldAnalyserPass())
                     .run();
@@ -39,28 +41,6 @@ void test(const std::string &input, bool ok = true)
 }
 
 class field_analyser_btf : public test_btf {};
-
-TEST_F(field_analyser_btf, fentry_args)
-{
-  // func_1 and func_2 have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test("fentry:func_1, fentry:func_2 { }", true);
-  // func_1 and func_2 have different args, one of them
-  // is used in probe code, we can't continue -> FAIL
-  test("fentry:func_1, fentry:func_2 { $x = args.foo; }", false);
-  // func_2 and func_3 have same args -> PASS
-  test("fentry:func_2, fentry:func_3 { }", true);
-  // func_2 and func_3 have same args -> PASS
-  test("fentry:func_2, fentry:func_3 { $x = args.foo1; }", true);
-  // aaa does not exist -> FAIL
-  test("fentry:func_2, fentry:aaa { $x = args.foo1; }", false);
-  // func_* have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test("fentry:func_* { }", true);
-  // func_* have different args, one of them
-  // is used in probe code, we can't continue -> FAIL
-  test("fentry:func_* { $x = args.foo1; }", false);
-}
 
 TEST_F(field_analyser_btf, btf_types)
 {
@@ -400,34 +380,6 @@ TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
 #ifdef HAVE_LIBDW
 
 class field_analyser_dwarf : public test_dwarf {};
-
-TEST_F(field_analyser_dwarf, uprobe_args)
-{
-  std::string uprobe = "uprobe:" + std::string(bin_);
-  test(uprobe + ":func_1 { $x = args.a; }", true);
-  test(uprobe + ":func_2 { $x = args.b; }", true);
-  // Backwards compatibility
-  test(uprobe + ":func_1 { $x = args->a; }", true);
-
-  // func_1 and func_2 have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test(uprobe + ":func_1, " + uprobe + ":func_2 { }", true);
-  // func_1 and func_2 have different args, one of them
-  // is used in probe code, we can't continue -> FAIL
-  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args.a; }", false);
-  // func_2 and func_3 have same args -> PASS
-  test(uprobe + ":func_2, " + uprobe + ":func_3 { }", true);
-  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args.a; }", true);
-
-  // Probes with wildcards (need non-mock BPFtrace)
-  BPFtrace bpftrace;
-  // func_* have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test(bpftrace, uprobe + ":func_* { }", true);
-  // func_* have different args, one of them
-  // is used in probe code, we can't continue -> FAIL
-  test(bpftrace, uprobe + ":func_* { $x = args.a; }", false);
-}
 
 TEST_F(field_analyser_dwarf, parse_struct)
 {
