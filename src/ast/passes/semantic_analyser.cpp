@@ -3408,11 +3408,48 @@ void SemanticAnalyser::visit(Expression &expr)
   } else if (auto *type_id = expr.as<Typeinfo>()) {
     const auto &ty = type_id->typeof->type();
     if (!ty.IsNoneTy()) {
+      ExpressionList type_info_fields;
       // We currently lack a globally-unique enumeration of types. For
       // simplicity, just use the type string with a placeholder identifier.
       auto *s = ctx_.make_node<String>(typestr(ty), Location(type_id->loc));
       auto *id = ctx_.make_node<Integer>(0, Location(type_id->loc));
-      expr.value = ctx_.make_node<Tuple>(ExpressionList{ s, id },
+      type_info_fields.emplace_back(s);
+      type_info_fields.emplace_back(id);
+
+      // For maps, tuples, and structs (records) the third entry in the typeinfo
+      // tuple is another tuple of strings for each field type
+      ExpressionList field_types;
+      if (std::holds_alternative<Expression>(type_id->typeof->record)) {
+        if (auto *map =
+                std::get<Expression>(type_id->typeof->record).as<Map>()) {
+          if (!map_metadata_.scalar[map->ident]) {
+            auto *key_str = ctx_.make_node<String>(typestr(map->key_type),
+                                                   Location(type_id->loc));
+            auto *val_str = ctx_.make_node<String>(typestr(map->value_type),
+                                                   Location(type_id->loc));
+            field_types.emplace_back(key_str);
+            field_types.emplace_back(val_str);
+          }
+        }
+      }
+
+      if (field_types.empty()) {
+        if (ty.IsTupleTy() || ty.IsRecordTy()) {
+          for (const auto &field : ty.GetFields()) {
+            auto *ft_str = ctx_.make_node<String>(typestr(field.type),
+                                                  Location(type_id->loc));
+            field_types.emplace_back(ft_str);
+          }
+        }
+      }
+
+      if (!field_types.empty()) {
+        auto *field_type_tuple = ctx_.make_node<Tuple>(std::move(field_types),
+                                                       Location(type_id->loc));
+        type_info_fields.emplace_back(field_type_tuple);
+      }
+
+      expr.value = ctx_.make_node<Tuple>(std::move(type_info_fields),
                                          Location(type_id->loc));
     }
   }
