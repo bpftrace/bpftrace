@@ -4485,10 +4485,6 @@ void SemanticAnalyser::assign_map_type(Map &map,
 {
   const std::string &map_ident = map.ident;
 
-  if (type.IsRecordTy() && type.is_tparg) {
-    loc_node->addError() << "Storing tracepoint args in maps is not supported";
-  }
-
   auto *maptype = get_map_type(map);
   if (maptype) {
     if (maptype->IsNoneTy()) {
