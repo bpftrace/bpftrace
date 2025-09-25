@@ -168,7 +168,6 @@ public:
   StackType stack_type;
   int funcarg_idx = -1;
   bool is_internal = false;
-  bool is_tparg = false;
   bool is_funcarg = false;
   TimestampMode ts_mode = TimestampMode::boot;
 
@@ -198,7 +197,6 @@ private:
     archive(type_,
             stack_type,
             is_internal,
-            is_tparg,
             is_funcarg,
             funcarg_idx,
             is_signed_,

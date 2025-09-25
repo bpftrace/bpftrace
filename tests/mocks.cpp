@@ -115,6 +115,11 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
       .lock()
       ->AddField("common_field", CreateUInt64(), 8, std::nullopt, false);
 
+  bpftrace.structs.Add("struct _tracepoint_sched_sched_one_twin", 8);
+  bpftrace.structs.Lookup("struct _tracepoint_sched_sched_one_twin")
+      .lock()
+      ->AddField("common_field", CreateUInt64(), 8, std::nullopt, false);
+
   bpftrace.structs.Add("struct _tracepoint_sched_sched_two", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_sched_two")
       .lock()

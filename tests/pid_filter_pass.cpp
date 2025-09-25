@@ -3,6 +3,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_expansion.h"
+#include "ast/passes/resolve_args.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -31,6 +32,7 @@ void test(const std::string& input, bool has_pid, bool has_filter)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())
+                .add(ast::CreateResolveArgsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreatePidFilterPass())
                 .run();
