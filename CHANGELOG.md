@@ -13,6 +13,8 @@ and this project adheres to
   - [#4635](https://github.com/bpftrace/bpftrace/pull/4635)
 - Fix build with gcc-16
   - [#4614](https://github.com/bpftrace/bpftrace/pull/4614)
+- ast: Avoid undefined behavior in literal folding
+  - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
 #### Docs
 - Fix docs for PERCPU map types
   - [#4646](https://github.com/bpftrace/bpftrace/pull/4646)
