@@ -167,7 +167,6 @@ public:
   StackType stack_type;
   int funcarg_idx = -1;
   bool is_internal = false;
-  bool is_tparg = false;
   bool is_funcarg = false;
   TimestampMode ts_mode = TimestampMode::boot;
 
@@ -177,6 +176,9 @@ private:
   std::shared_ptr<SizedType> element_type_; // for "container" and pointer
                                             // (like) types
   std::string name_; // name of this type, for named types like struct and enum
+  // for multi-attachpoint probes we may store the same data structure for a type
+  // but when accessing it in codegen we need the name specific to the program/attachpoint
+  std::unordered_map<std::string, std::string> names_for_aps_;
   std::variant<std::shared_ptr<Struct>, std::weak_ptr<Struct>>
       inner_struct_; // inner struct for records and tuples: if a shared_ptr, it
                      // is an anonymous type, if it is a weak_ptr, then it is
@@ -197,7 +199,6 @@ private:
     archive(type_,
             stack_type,
             is_internal,
-            is_tparg,
             is_funcarg,
             funcarg_idx,
             is_signed_,
@@ -326,10 +327,21 @@ public:
     return num_elements_;
   };
 
-  const std::string &GetName() const
+  const std::string &GetName(std::string ap_name = "") const
   {
     assert(IsRecordTy() || IsEnumTy());
+    if (!ap_name.empty()) {
+      auto found = names_for_aps_.find(ap_name);
+      if (found != names_for_aps_.end()) {
+        return found->second;
+      }
+    }
     return name_;
+  }
+
+  void AddNameForAp(const std::string &ap_name, std::string name)
+  {
+    names_for_aps_[ap_name] = name;
   }
 
   Type GetTy() const
