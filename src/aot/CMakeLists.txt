@@ -34,3 +34,7 @@ if(BUILD_ASAN)
   target_compile_options(bpftrace-aotrt PUBLIC "-fsanitize=address")
   target_link_options(bpftrace-aotrt PUBLIC "-fsanitize=address")
 endif()
+
+if(BUILD_UBSAN)
+  target_link_options(bpftrace-aotrt PUBLIC "-fsanitize=undefined")
+endif()

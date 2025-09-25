@@ -94,6 +94,11 @@ if(BUILD_ASAN)
   target_link_options(bpftrace_test PUBLIC "-fsanitize=address")
 endif()
 
+if(BUILD_UBSAN)
+  target_compile_options(bpftrace_test PUBLIC "-fsanitize=undefined")
+  target_link_options(bpftrace_test PUBLIC "-fsanitize=undefined")
+endif()
+
 # bpftrace tests require (at minimum) version 1.11.
 # There's no great way to enforce a minimum version from cmake -- the cmake
 # modules don't respect minimum requested version.

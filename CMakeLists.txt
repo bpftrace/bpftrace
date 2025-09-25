@@ -15,6 +15,7 @@ set(HARDENED_STDLIB OFF CACHE BOOL "Enable hardened definitions for standard lib
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
+set(BUILD_UBSAN OFF CACHE BOOL "Build bpftrace with -fsanitize=undefined")
 set(ENABLE_MAN ON CACHE BOOL "Build man pages")
 set(BUILD_TESTING ON CACHE BOOL "Build test suite")
 set(ENABLE_TEST_VALIDATE_CODEGEN ON CACHE BOOL "Run LLVM IR validation tests")

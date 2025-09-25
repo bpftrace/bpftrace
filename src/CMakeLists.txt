@@ -2,6 +2,12 @@ if(HAVE_BFD_DISASM)
   set(BFD_DISASM_SRC bfd-disasm.cpp)
 endif()
 
+if (BUILD_UBSAN)
+  # This adds -fsanitize=undefined to all below compiler invocations, including
+  # subdirectories.
+  add_compile_options("-fsanitize=undefined")
+endif()
+
 add_library(required_resources required_resources.cpp)
 add_dependencies(required_resources parser)
 
@@ -199,6 +205,13 @@ endif()
 if (BUILD_ASAN)
   target_compile_options(bpftrace PUBLIC "-fsanitize=address")
   target_link_options(bpftrace PUBLIC "-fsanitize=address")
+endif()
+
+if (BUILD_UBSAN)
+  # We do not use add_link_options here since it doesn't work for some reason.
+  # Instead, just pass -fsanitize=undefined to the linker when linking the
+  # bpftrace target.
+  target_link_options(bpftrace PUBLIC "-fsanitize=undefined")
 endif()
 
 if (STATIC_LINKING)
