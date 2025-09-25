@@ -144,17 +144,16 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
             res > static_cast<uint64_t>(right)) {
           return res;
         }
+        return std::nullopt;
       }
       if constexpr (std::is_same_v<T, int64_t>) {
         if ((left > 0 && right < 0) || (left < 0 && right > 0)) {
           return clamp(left + right);
         }
         if (left < 0 && right < 0) {
-          auto res = left + right;
-          if (res < left && res < right) {
-            return res;
-          }
-          return std::nullopt;
+          if (std::numeric_limits<int64_t>::min() - left > right)
+            return std::nullopt;
+          return left + right;
         }
       }
       return std::nullopt;
@@ -177,18 +176,15 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
       } else {
         if (right == 0) {
           return clamp(left);
-        } else if (right < 0) {
-          auto res = left - right;
-          if (res < left) {
-            return std::nullopt;
-          }
-          return clamp(res);
         } else {
-          auto res = left - right;
-          if (res > left) {
+          if (left > 0 && right < 0 &&
+              std::numeric_limits<int64_t>::max() - left < -right) {
+            return std::nullopt;
+          } else if (left < 0 && right > 0 &&
+                     std::numeric_limits<int64_t>::min() - left > -right) {
             return std::nullopt;
           }
-          return clamp(res);
+          return clamp(left - right);
         }
       }
     case Operator::MUL:
@@ -226,8 +222,15 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
     case Operator::BXOR:
       return clamp(left ^ right);
     case Operator::LEFT:
+      // Shifting negative amount of bits or more bits than the width of `left`
+      // (which is always 64 in our case) is undefined behavior in C++
+      if (right < 0 || right >= 64)
+        return std::nullopt;
       return clamp(left << right);
     case Operator::RIGHT:
+      // Same as above
+      if (right < 0 || right >= 64)
+        return std::nullopt;
       return clamp(left >> right);
     // Comparison operators are handled in `make_boolean` and checked in
     // `is_comparison_op`.
