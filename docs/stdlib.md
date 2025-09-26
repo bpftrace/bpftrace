@@ -975,6 +975,9 @@ When available (starting from kernel 5.5, see the `--info` flag) bpftrace will a
 
 
 ### strcap
+- `int64 strcap(string exp)`
+- `int64 strcap(int8 exp[])`
+- `int64 strcap(int8 *exp)`
 
 Returns the "capacity" of a string-like object.
 
@@ -984,7 +987,7 @@ bound searches and lookups without needing to scan the string itself.
 
 
 ### strcontains
-- `int64 strcontains(const char *haystack, const char *needle)`
+- `bool strcontains(string haystack, string needle)`
 
 Compares whether the string haystack contains the string needle.
 
@@ -1029,6 +1032,9 @@ bpftrace also supports the following format string extensions:
 
 
 ### strlen
+- `int64 strlen(string exp)`
+- `int64 strlen(int8 exp[])`
+- `int64 strlen(int8 *exp)`
 
 Returns the length of a string-like object.
 
@@ -1045,10 +1051,9 @@ The use of the `==` and `!=` operators is recommended over calling `strncmp` dir
 
 
 ### strstr
+- `int64 strstr(string haystack, string needle)`
 
-Compares whether the string haystack contains the string needle.
-
-If needle is contained then true is returned, else false is returned.
+Returns the index of the first occurrence of the string needle in the string haystack. If needle is not in haystack then -1 is returned.
 
 
 ### system
