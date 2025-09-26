@@ -498,6 +498,26 @@ public:
   std::vector<std::string> field;
 };
 
+class Map : public Node {
+public:
+  explicit Map(ASTContext &ctx, std::string ident, Location &&loc)
+      : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
+  explicit Map(ASTContext &ctx, const Map &other, const Location &loc)
+      : Node(ctx, loc + other.loc),
+        ident(other.ident),
+        key_type(other.key_type),
+        value_type(other.value_type) {};
+
+  const SizedType &type() const
+  {
+    return value_type;
+  }
+
+  std::string ident;
+  SizedType key_type;
+  SizedType value_type;
+};
+
 class Typeof : public Node {
 public:
   explicit Typeof(ASTContext &ctx, SizedType record, Location &&loc)
@@ -513,7 +533,15 @@ public:
     if (std::holds_alternative<SizedType>(record)) {
       return std::get<SizedType>(record);
     } else {
-      return std::get<Expression>(record).type();
+      const auto &expr = std::get<Expression>(record);
+      // If this is a scalar map, it will be automatically deusgared and
+      // turned into a map access. Otherwise, it is left as a raw map
+      // and this case is handled as a special path.
+      if (auto *map = expr.as<Map>()) {
+        return map->key_type;
+      } else {
+        return expr.type();
+      }
     }
   }
 
@@ -579,26 +607,6 @@ public:
   const int max_entries;
 };
 using MapDeclList = std::vector<MapDeclStatement *>;
-
-class Map : public Node {
-public:
-  explicit Map(ASTContext &ctx, std::string ident, Location &&loc)
-      : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
-  explicit Map(ASTContext &ctx, const Map &other, const Location &loc)
-      : Node(ctx, loc + other.loc),
-        ident(other.ident),
-        key_type(other.key_type),
-        value_type(other.value_type) {};
-
-  const SizedType &type() const
-  {
-    return value_type;
-  }
-
-  std::string ident;
-  SizedType key_type;
-  SizedType value_type;
-};
 
 class Variable : public Node {
 public:

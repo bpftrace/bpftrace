@@ -103,10 +103,12 @@ void MapDefaultKey::visit([[maybe_unused]] Typeof &typeof)
 {
   if (std::holds_alternative<Expression>(typeof.record)) {
     const auto &expr = std::get<Expression>(typeof.record);
-    if (expr.is<Map>()) {
-      // Do nothing; allow these to exist. It will extract the value of the map
-      // whether it is keyed or not.
-      return;
+    if (auto *map = expr.as<Map>()) {
+      // Don't de-sugar if it's a non-scalar map
+      auto val = metadata.scalar.find(map->ident);
+      if (val != metadata.scalar.end() && !val->second) {
+        return;
+      }
     }
   }
   Visitor<MapDefaultKey>::visit(typeof);
