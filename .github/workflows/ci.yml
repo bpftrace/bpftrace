@@ -78,6 +78,7 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm21
           BUILD_ASAN: 1
           BUILD_UBSAN: 1
+          RUNTIME_TESTS_FILTER: "-btf.user_supplied_c_def_using_btf"
         - NAME: Fuzzing
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-fuzz
