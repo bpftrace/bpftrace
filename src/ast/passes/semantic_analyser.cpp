@@ -3447,9 +3447,12 @@ void SemanticAnalyser::visit(Expression &expr)
     if (!ty.IsNoneTy()) {
       // We currently lack a globally-unique enumeration of types. For
       // simplicity, just use the type string with a placeholder identifier.
-      auto *s = ctx_.make_node<String>(typestr(ty), Location(type_id->loc));
       auto *id = ctx_.make_node<Integer>(0, Location(type_id->loc));
-      expr.value = ctx_.make_node<Tuple>(ExpressionList{ s, id },
+      auto *base_ty = ctx_.make_node<String>(to_string(ty.GetTy()),
+                                             Location(type_id->loc));
+      auto *full_ty = ctx_.make_node<String>(typestr(ty),
+                                             Location(type_id->loc));
+      expr.value = ctx_.make_node<Tuple>(ExpressionList{ id, base_ty, full_ty },
                                          Location(type_id->loc));
     }
   }
