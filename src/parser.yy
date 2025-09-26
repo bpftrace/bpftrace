@@ -493,6 +493,7 @@ expr_stmt:
                 // `if_stmt` to avoid ambiguity. The `expr` node itself will accept an
                 // `if_expr`, which is used for any other expression except the statement.
                 conditional_expr { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @1); }
+        |       comptime_expr    { $$ = driver.ctx.make_node<ast::ExprStatement>($1, @1); }
                 ;
 
 nonexpr_stmt:
