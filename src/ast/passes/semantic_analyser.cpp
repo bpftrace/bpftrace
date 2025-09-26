@@ -264,7 +264,6 @@ private:
 
   void binop_ptr(Binop &op);
   void binop_int(Binop &op);
-  void binop_array(Binop &op);
 
   bool has_error() const;
   bool in_loop()
@@ -2500,26 +2499,6 @@ void SemanticAnalyser::binop_int(Binop &binop)
   }
 }
 
-void SemanticAnalyser::binop_array(Binop &binop)
-{
-  const auto &lht = binop.left.type();
-  const auto &rht = binop.right.type();
-  if (binop.op != Operator::EQ && binop.op != Operator::NE) {
-    binop.addError() << "The " << opstr(binop)
-                     << " operator cannot be used on arrays.";
-  }
-
-  if (lht.GetNumElements() != rht.GetNumElements()) {
-    binop.addError()
-        << "Only arrays of same size support comparison operators.";
-  }
-
-  if (!lht.GetElementTy()->IsIntegerTy() || lht != rht) {
-    binop.addError()
-        << "Only arrays of same sized integer support comparison operators.";
-  }
-}
-
 void SemanticAnalyser::binop_ptr(Binop &binop)
 {
   const auto &lht = binop.left.type();
@@ -2672,20 +2651,20 @@ void SemanticAnalyser::visit(Binop &binop)
 
   if (is_int_binop) {
     binop_int(binop);
-  } else if (lht.IsArrayTy() && rht.IsArrayTy()) {
-    binop_array(binop);
   } else if (lht.IsPtrTy() || rht.IsPtrTy()) {
     // This case is caught earlier, just here for readability of the if/else
     // flow
   }
-  // Compare type here, not the sized type as we it needs to work on strings
+  // Compare type here, not the sized type as it needs to work on strings
   // of different lengths
-  else if (lht.GetTy() != rht.GetTy()) {
+  else if (!lht.IsTypeComparable(rht)) {
     auto &err = binop.addError();
     err << "Type mismatch for '" << opstr(binop) << "': comparing " << lht
         << " with " << rht;
-    err.addContext(binop.left.loc()) << "left (" << lht << ")";
-    err.addContext(binop.right.loc()) << "right (" << rht << ")";
+    err.addContext(binop.left.loc())
+        << "left (" << lht << ") Size: " << lht.GetSize();
+    err.addContext(binop.right.loc())
+        << "right (" << rht << ") Size: " << rht.GetSize();
   }
   // Also allow combination like reg("sp") + 8
   else if (binop.op != Operator::EQ && binop.op != Operator::NE) {

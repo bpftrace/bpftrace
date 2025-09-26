@@ -19,6 +19,7 @@ add_library(ast STATIC
   passes/attachpoint_passes.cpp
   passes/builtins.cpp
   passes/c_macro_expansion.cpp
+  passes/op_lowering.cpp
   passes/clang_parser.cpp
   passes/clang_build.cpp
   passes/named_param.cpp

@@ -103,6 +103,36 @@ std::string to_string(Type ty)
   return ss.str();
 }
 
+bool SizedType::IsTypeComparable(const SizedType &t) const
+{
+  if (!IsSameType(t)) {
+    return false;
+  }
+
+  if (IsArrayTy()) {
+    if (GetNumElements() != t.GetNumElements()) {
+      return false;
+    }
+    if (!GetElementTy()->IsIntegerTy() ||
+        *t.GetElementTy() != *GetElementTy()) {
+      return false;
+    }
+  }
+
+  if (IsTupleTy()) {
+    if (GetSize() != t.GetSize()) {
+      return false;
+    }
+    for (ssize_t i = 0; i < GetFieldCount(); i++) {
+      if (!GetField(i).type.IsTypeComparable(t.GetField(i).type)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 bool SizedType::IsSameType(const SizedType &t) const
 {
   if (t.GetTy() != type_)
