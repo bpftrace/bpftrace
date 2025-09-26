@@ -31,7 +31,6 @@ endif(STATIC_LINKING)
 
 # ASAN
 if(BUILD_ASAN)
-  target_compile_options(bpftrace-aotrt PUBLIC "-fsanitize=address")
   target_link_options(bpftrace-aotrt PUBLIC "-fsanitize=address")
 endif()
 
