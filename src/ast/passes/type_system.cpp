@@ -1,8 +1,5 @@
-#include <unordered_map>
-
-#include "ast/ast.h"
-#include "ast/passes/clang_build.h"
 #include "ast/passes/type_system.h"
+#include "ast/passes/clang_build.h"
 
 namespace bpftrace::ast {
 

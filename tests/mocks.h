@@ -113,7 +113,7 @@ public:
   std::unordered_set<std::string> get_func_modules(
       const std::string &__attribute__((unused)) /*func_name*/) const override
   {
-    return { "mock_vmlinux" };
+    return { "vmlinux" };
   }
 
   const std::optional<struct stat> &get_pidns_self_stat() const override
