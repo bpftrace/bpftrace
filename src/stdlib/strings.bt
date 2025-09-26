@@ -34,6 +34,9 @@ macro default_str_length() {
 }
 
 // Returns the length of a string-like object.
+// :variant int64 strlen(string exp)
+// :variant int64 strlen(int8 exp[])
+// :variant int64 strlen(int8 *exp)
 macro strlen($var) {
   assert_str($var);
   if (comptime is_str($var)) {
@@ -75,6 +78,9 @@ macro __strnlen(ptr, max_size) {
 // In most cases this is the same as the length, but for bpftrace-native
 // strings and arrays, this is the underlying object capacity. This is used to
 // bound searches and lookups without needing to scan the string itself.
+// :variant int64 strcap(string exp)
+// :variant int64 strcap(int8 exp[])
+// :variant int64 strcap(int8 *exp)
 macro strcap(exp) {
   assert_str(exp);
   if (comptime is_str(exp)) {
@@ -86,9 +92,8 @@ macro strcap(exp) {
   }
 }
 
-// Compares whether the string haystack contains the string needle.
-//
-// If needle is contained then true is returned, else false is returned.
+// Returns the index of the first occurrence of the string needle in the string haystack. If needle is not in haystack then -1 is returned.
+// :variant int64 strstr(string haystack, string needle)
 macro strstr($haystack, $needle) {
   assert_str($haystack);
   assert_str($needle);
@@ -160,7 +165,7 @@ macro strstr(haystack, needle) {
   strstr($haystack, needle)
 }
 
-// :variant int64 strcontains(const char *haystack, const char *needle)
+// :variant bool strcontains(string haystack, string needle)
 // Compares whether the string haystack contains the string needle.
 //
 // If needle is contained then true is returned, else false is returned.
