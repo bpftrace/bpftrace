@@ -5352,7 +5352,7 @@ stdin:1:12-64: ERROR: always fail now 1 -1 0
 kprobe:f { fail("always fail %s %d %d %d", "now", 1, -1, false); }
            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
-  test(R"(kprobe:f { if (comptime false) { fail("always false"); } })");
+  test(R"(kprobe:f { if comptime (false) { fail("always false"); } })");
 
   // Check that non-comptime expressions are not folder.
   test(R"(kprobe:f { if (false) { fail("always false"); } })", Error{ R"(
@@ -5452,16 +5452,16 @@ TEST_F(SemanticAnalyserTest, typeinfo_if_comptime)
   // correct type branch will be chosen, and we will not encounted a type error
   // for the other branch.
   test(
-      R"(kprobe:f { $x = 1; if (comptime typeinfo($x) == typeinfo("abc")) { $x = "foo"; } else { $x = 2; } })");
+      R"(kprobe:f { $x = 1; if comptime (typeinfo($x) == typeinfo("abc")) { $x = "foo"; } else { $x = 2; } })");
   test(
-      R"(kprobe:f { $x = "xyz"; if (comptime typeinfo($x) == typeinfo("abc")) { $x = "foo"; } else { $x = 2; } })");
+      R"(kprobe:f { $x = "xyz"; if comptime (typeinfo($x) == typeinfo("abc")) { $x = "foo"; } else { $x = 2; } })");
   test(
-      R"(kprobe:f { $x = 1; if (comptime typeinfo($x) != typeinfo(1)) { fail("only integers"); } })");
+      R"(kprobe:f { $x = 1; if comptime (typeinfo($x) != typeinfo(1)) { fail("only integers"); } })");
   test(
-      R"(kprobe:f { $x = 1; if (comptime typeinfo($x) == typeinfo(1)) { fail("no integers"); } })",
+      R"(kprobe:f { $x = 1; if comptime (typeinfo($x) == typeinfo(1)) { fail("no integers"); } })",
       Error{ R"(
 stdin:1:64-83: ERROR: no integers
-kprobe:f { $x = 1; if (comptime typeinfo($x) == typeinfo(1)) { fail("no integers"); } }
+kprobe:f { $x = 1; if comptime (typeinfo($x) == typeinfo(1)) { fail("no integers"); } }
                                                                ~~~~~~~~~~~~~~~~~~~
 )" });
 }
