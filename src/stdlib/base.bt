@@ -470,6 +470,25 @@ macro jiffies() {
 //
 // For kstack/ustack, return the depth (measured in # of frames) of the call stack.
 
+macro len(@map) {
+  if (comptime is_scalar(@map)) {
+    fail("call to len() expects a map with explicit keys (non-scalar map)");
+    0
+  } else {
+    (int64)__len((void *)&@map)
+  }
+}
+
+macro len(e) {
+  $x = e;
+  if (comptime typeinfo($x).0 != "ustack" && typeinfo($x).0 != "kstack") {
+    fail("call to len() expects a map, ustack, or kstack");
+    0
+  } else {
+    stack_len($x)
+  }
+}
+
 // :function macaddr
 // :variant macaddr_t macaddr(char [6] mac)
 //

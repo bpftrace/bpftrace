@@ -39,19 +39,20 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nounwind
 define i64 @kprobe_f_2(ptr %0) #0 section "s_kprobe_f_2" !dbg !56 {
 entry:
-  %"$s" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s")
-  store i64 0, ptr %"$s", align 8
-  %len = call i64 @bpf_map_sum_elem_count(ptr @AT_x)
-  store i64 %len, ptr %"$s", align 8
-  ret i64 0
+  %"$s" = alloca i64, align 8, !dbg !59
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$s"), !dbg !59
+  store i64 0, ptr %"$s", align 8, !dbg !59
+  %__len = call i64 @__len(ptr @AT_x), !dbg !59
+  store i64 %__len, ptr %"$s", align 8, !dbg !59
+  ret i64 0, !dbg !59
 }
 
-; Function Attrs: nounwind
-declare !dbg !59 extern_weak i64 @bpf_map_sum_elem_count(ptr %0) local_unnamed_addr #0 section ".ksyms"
+; Function Attrs: alwaysinline nounwind
+declare dso_local i64 @__len(ptr noundef %0) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { alwaysinline nounwind }
 
 !llvm.dbg.cu = !{!46}
 !llvm.module.flags = !{!48, !49}
@@ -115,9 +116,4 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !56 = distinct !DISubprogram(name: "kprobe_f_2", linkageName: "kprobe_f_2", scope: !2, file: !2, type: !51, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !46, retainedNodes: !57)
 !57 = !{!58}
 !58 = !DILocalVariable(name: "ctx", arg: 1, scope: !56, file: !2, type: !53)
-!59 = !DISubprogram(name: "bpf_map_sum_elem_count", linkageName: "bpf_map_sum_elem_count", scope: !2, file: !2, type: !60, flags: DIFlagPrototyped, spFlags: 0)
-!60 = !DISubroutineType(types: !61)
-!61 = !{!24, !62}
-!62 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !63, size: 64)
-!63 = !DICompositeType(tag: DW_TAG_structure_type, name: "bpf_map", scope: !2, file: !2, elements: !64)
-!64 = !{}
+!59 = !DILocation(line: 477, column: 5, scope: !56)

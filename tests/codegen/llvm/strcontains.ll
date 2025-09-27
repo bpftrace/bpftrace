@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
 %ctx_t = type { ptr, ptr, ptr, ptr, ptr, i64, i64 }
-%ctx_t.0 = type { ptr, ptr, ptr, ptr, ptr, i64, i64 }
+%ctx_t.140 = type { ptr, ptr, ptr, ptr, ptr, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -149,7 +149,7 @@ declare dso_local i64 @__bpf_strnstr(ptr noundef %0, ptr noundef %1, i64 noundef
 ; Function Attrs: nounwind
 define internal i64 @loop_cb(i64 %0, ptr %1) #0 section ".text" !dbg !42 {
 for_body:
-  %ctx = alloca %ctx_t.0, align 8
+  %ctx = alloca %ctx_t.140, align 8
   %array_access = alloca i8, align 1
   %2 = call ptr @llvm.preserve.static.offset(ptr %1)
   %start = getelementptr %ctx_t, ptr %2, i64 0, i32 5
@@ -215,22 +215,22 @@ done3:                                            ; preds = %right2, %unreach5
   %18 = sub i64 %17, 0
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
   %19 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_3_$needle6" = getelementptr %ctx_t.0, ptr %19, i64 0, i32 0
+  %"ctx.$$strstr_3_$needle6" = getelementptr %ctx_t.140, ptr %19, i64 0, i32 0
   store ptr %"$$strstr_3_$needle", ptr %"ctx.$$strstr_3_$needle6", align 8
   %20 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_4_$index7" = getelementptr %ctx_t.0, ptr %20, i64 0, i32 1
+  %"ctx.$$strstr_4_$index7" = getelementptr %ctx_t.140, ptr %20, i64 0, i32 1
   store ptr %"$$strstr_4_$index", ptr %"ctx.$$strstr_4_$index7", align 8
   %21 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$i" = getelementptr %ctx_t.0, ptr %21, i64 0, i32 2
+  %"ctx.$i" = getelementptr %ctx_t.140, ptr %21, i64 0, i32 2
   store ptr %current, ptr %"ctx.$i", align 8
   %22 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_4_$found8" = getelementptr %ctx_t.0, ptr %22, i64 0, i32 3
+  %"ctx.$$strstr_4_$found8" = getelementptr %ctx_t.140, ptr %22, i64 0, i32 3
   store ptr %"$$strstr_4_$found", ptr %"ctx.$$strstr_4_$found8", align 8
   %23 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_2_$haystack9" = getelementptr %ctx_t.0, ptr %23, i64 0, i32 4
+  %"ctx.$$strstr_2_$haystack9" = getelementptr %ctx_t.140, ptr %23, i64 0, i32 4
   store ptr %"$$strstr_2_$haystack", ptr %"ctx.$$strstr_2_$haystack9", align 8
   %24 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %ctx.start = getelementptr %ctx_t.0, ptr %24, i64 0, i32 5
+  %ctx.start = getelementptr %ctx_t.140, ptr %24, i64 0, i32 5
   store i64 0, ptr %ctx.start, align 8
   %25 = trunc i64 %18 to i32
   %is_positive_cond = icmp sgt i32 %25, 0
@@ -271,21 +271,21 @@ for_body:
   store i64 0, ptr %"$$strstr_4_$k", align 8
   %array_access = alloca i8, align 1
   %2 = call ptr @llvm.preserve.static.offset(ptr %1)
-  %start = getelementptr %ctx_t.0, ptr %2, i64 0, i32 5
+  %start = getelementptr %ctx_t.140, ptr %2, i64 0, i32 5
   %3 = call ptr @llvm.preserve.static.offset(ptr %1)
-  %current = getelementptr %ctx_t.0, ptr %3, i64 0, i32 6
+  %current = getelementptr %ctx_t.140, ptr %3, i64 0, i32 6
   %4 = load i64, ptr %start, align 8
   %5 = add i64 %4, %0
   store i64 %5, ptr %current, align 8
-  %"ctx.$$strstr_3_$needle" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 0
+  %"ctx.$$strstr_3_$needle" = getelementptr %ctx_t.140, ptr %1, i64 0, i32 0
   %"$$strstr_3_$needle" = load ptr, ptr %"ctx.$$strstr_3_$needle", align 8
-  %"ctx.$$strstr_4_$index" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 1
+  %"ctx.$$strstr_4_$index" = getelementptr %ctx_t.140, ptr %1, i64 0, i32 1
   %"$$strstr_4_$index" = load ptr, ptr %"ctx.$$strstr_4_$index", align 8
-  %"ctx.$i" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 2
+  %"ctx.$i" = getelementptr %ctx_t.140, ptr %1, i64 0, i32 2
   %"$i" = load ptr, ptr %"ctx.$i", align 8
-  %"ctx.$$strstr_4_$found" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 3
+  %"ctx.$$strstr_4_$found" = getelementptr %ctx_t.140, ptr %1, i64 0, i32 3
   %"$$strstr_4_$found" = load ptr, ptr %"ctx.$$strstr_4_$found", align 8
-  %"ctx.$$strstr_2_$haystack" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 4
+  %"ctx.$$strstr_2_$haystack" = getelementptr %ctx_t.140, ptr %1, i64 0, i32 4
   %"$$strstr_2_$haystack" = load ptr, ptr %"ctx.$$strstr_2_$haystack", align 8
   %6 = load i64, ptr %current, align 8
   %7 = icmp uge i64 %6, 5

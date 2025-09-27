@@ -413,12 +413,10 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=1,
       .max_args=1,
       .discard_ret_warn = true, } },
-  { "len",
+  { "stack_len",
     { .min_args=1,
       .max_args=1,
       .discard_ret_warn = true,
-      // This cannot be checked without overloading: it requires *either* a
-      // stack type, or a non-scalar map.
     } },
   { "lhist",
     { .min_args=6,
@@ -1703,8 +1701,8 @@ void SemanticAnalyser::visit(Call &call)
     // Leave as `none`.
   } else if (call.func == "zero") {
     // Leave as `none`.
-  } else if (call.func == "len") {
-    if (!call.vargs.at(0).is<Map>() && !call.vargs.at(0).type().IsStack()) {
+  } else if (call.func == "stack_len") {
+    if (!call.vargs.at(0).type().IsStack()) {
       call.addError() << "len() expects a map or stack to be provided";
     }
     call.return_type = CreateInt64();

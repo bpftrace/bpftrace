@@ -28,10 +28,16 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !84 {
 entry:
   %"@y_val" = alloca i64, align 8
   %"@y_key" = alloca i64, align 8
+  %"$$len_$x16" = alloca %kstack_key, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$len_$x16")
+  call void @llvm.memset.p0.i64(ptr align 1 %"$$len_$x16", i8 0, i64 16, i1 false)
   %lookup_stack_scratch_key5 = alloca i32, align 4
   %stack_key2 = alloca %kstack_key, align 8
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  %"$$len_$x" = alloca %ustack_key, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$len_$x")
+  call void @llvm.memset.p0.i64(ptr align 1 %"$$len_$x", i8 0, i64 24, i1 false)
   %lookup_stack_scratch_key = alloca i32, align 4
   %stack_key = alloca %ustack_key, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %stack_key)
@@ -48,13 +54,14 @@ stack_scratch_failure:                            ; preds = %lookup_stack_scratc
 
 merge_block:                                      ; preds = %stack_scratch_failure, %get_stack_success, %get_stack_fail
   %1 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 2
-  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #4
+  %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #5
   %2 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %2 to i32
   store i32 %pid, ptr %1, align 4
   %3 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 3
   store i32 0, ptr %3, align 4
-  %4 = getelementptr %ustack_key, ptr %stack_key, i64 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$len_$x", ptr align 1 %stack_key, i64 24, i1 false)
+  %4 = getelementptr %ustack_key, ptr %"$$len_$x", i64 0, i32 1
   %5 = load i64, ptr %4, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
@@ -99,13 +106,14 @@ stack_scratch_failure3:                           ; preds = %lookup_stack_scratc
   br label %merge_block4
 
 merge_block4:                                     ; preds = %stack_scratch_failure3, %get_stack_success11, %get_stack_fail12
-  %11 = getelementptr %kstack_key, ptr %stack_key2, i64 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$len_$x16", ptr align 1 %stack_key2, i64 16, i1 false)
+  %11 = getelementptr %kstack_key, ptr %"$$len_$x16", i64 0, i32 1
   %12 = load i64, ptr %11, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")
   store i64 0, ptr %"@y_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_val")
   store i64 %12, ptr %"@y_val", align 8
-  %update_elem16 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
+  %update_elem17 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %"@y_key", ptr %"@y_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
   ret i64 0
@@ -220,11 +228,15 @@ declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #2
 ; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #3
 
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noalias nocapture readonly %1, i64 %2, i1 immarg %3) #4
+
 attributes #0 = { nounwind }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: write) }
-attributes #4 = { memory(none) }
+attributes #4 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+attributes #5 = { memory(none) }
 
 !llvm.dbg.cu = !{!80}
 !llvm.module.flags = !{!82, !83}
