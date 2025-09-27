@@ -379,15 +379,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=1,
       .arg_types={
         arg_type_spec{ .type=Type::integer } } } },
-  { "has_key",
-    { .min_args=2,
-      .max_args=2,
-      .discard_ret_warn = true,
-      .arg_types={
-        map_type_spec{},
-        map_key_spec{ .map_index=0 },
-      }
-    } },
   { "hist",
     { .min_args=3,
       .max_args=4,
@@ -1366,8 +1357,6 @@ void SemanticAnalyser::visit(Call &call)
     call.return_type = CreateStats(true);
   } else if (call.func == "delete") {
     call.return_type = CreateUInt8();
-  } else if (call.func == "has_key") {
-    call.return_type = CreateBool();
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
     const auto &t = arg.type();

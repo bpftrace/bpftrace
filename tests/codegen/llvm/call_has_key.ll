@@ -18,7 +18,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !50 {
 entry:
-  %"@x_key1" = alloca i64, align 8
+  %"$$has_key_$key" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$has_key_$key")
+  store i64 0, ptr %"$$has_key_$key", align 8
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
@@ -28,11 +30,10 @@ entry:
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key1")
-  store i64 1, ptr %"@x_key1", align 8
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key1")
-  %has_key = icmp ne ptr %lookup_elem, null
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key1")
+  store i64 1, ptr %"$$has_key_$key", align 8
+  %__has_key = call i32 @__has_key(ptr @AT_x, ptr %"$$has_key_$key"), !dbg !56
+  %1 = sext i32 %__has_key to i64
+  %2 = icmp eq i64 %1, 0
   ret i64 0
 }
 
@@ -42,8 +43,12 @@ declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
+; Function Attrs: alwaysinline nounwind
+declare dso_local i32 @__has_key(ptr noundef %0, ptr noundef %1) #2
+
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { alwaysinline nounwind }
 
 !llvm.dbg.cu = !{!46}
 !llvm.module.flags = !{!48, !49}
@@ -104,3 +109,4 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 !53 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !54 = !{!55}
 !55 = !DILocalVariable(name: "ctx", arg: 1, scope: !50, file: !2, type: !53)
+!56 = !DILocation(line: 330, column: 5, scope: !50)
