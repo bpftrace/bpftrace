@@ -656,14 +656,14 @@ bool ClangParser::parse(ast::Program *program,
       .Length = input.size(),
   });
 
-  args = { "-isystem", "/bpftrace/include" };
+  args = { "-I", "/bpftrace/include" };
   auto system_paths = system_include_paths();
   for (auto &path : system_paths) {
-    args.push_back("-isystem");
+    args.push_back("-I");
     args.push_back(path.c_str());
   }
   std::string arch_path = get_arch_include_path();
-  args.push_back("-isystem");
+  args.push_back("-I");
   args.push_back(arch_path.c_str());
 
   for (auto &flag : extra_flags) {

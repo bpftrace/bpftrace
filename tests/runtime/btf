@@ -3,6 +3,11 @@ PROG struct foo { struct task_struct t; } begin {  }
 EXPECT Attached 1 probe
 REQUIRES_FEATURE btf
 
+NAME user_supplied_kernel_header
+RUN {{BPFTRACE}} -e 'tracepoint:sched:sched_switch { $task = (struct task_struct *)curtask; printf("%p\n", $task); exit(); }' --include linux/sched.h
+EXPECT Attached 1 probe
+REQUIRES_FEATURE btf
+
 NAME tracepoint_pointer_type_resolution
 PROG tracepoint:syscalls:sys_enter_nanosleep { args.rqtp->tv_sec; exit(); }
 EXPECT Attached 1 probe

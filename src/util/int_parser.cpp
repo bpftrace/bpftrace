@@ -6,6 +6,7 @@
 
 #include "util/int_parser.h"
 #include "util/result.h"
+#include "util/strings.h"
 
 namespace bpftrace::util {
 
@@ -96,7 +97,7 @@ Result<uint64_t> to_uint(const std::string &num, int base)
   // Check to see if this has been bound to a specific type. Note that we
   // treat no suffix as a 64-bit integer type.
   // https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal
-  std::string suffix(endptr);
+  std::string suffix(to_lower(endptr));
   // The pair is the maximum value for the type, and the multiplier
   static std::map<std::string, std::pair<uint64_t, uint64_t>> int_config = {
     { "", { std::numeric_limits<uint64_t>::max(), 1 } },
