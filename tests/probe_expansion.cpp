@@ -85,7 +85,7 @@ TEST(probe_expansion, session_ast)
 Program
  kprobe:sys_*
   if
-   builtin: __builtin_session_is_return
+   call: __session_is_return
    then
     =
      map: @exit

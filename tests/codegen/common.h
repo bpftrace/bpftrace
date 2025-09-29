@@ -33,8 +33,6 @@ namespace bpftrace::test::codegen {
 
 #define NAME (::testing::UnitTest::GetInstance()->current_test_info()->name())
 
-class codegen_btf : public test_btf {};
-
 static std::string get_expected(const std::string &name)
 {
   std::string fname = TEST_CODEGEN_LOCATION + name + ".ll";

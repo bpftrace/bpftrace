@@ -133,10 +133,6 @@ long bpf_map_sum_elem_count(const struct bpf_map *map)
 {
   return 0;
 }
-_Bool bpf_session_is_return()
-{
-  return 1;
-}
 
 long __probestub_event_rt(void *__data, long first_real_arg)
 {
