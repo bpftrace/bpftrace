@@ -1,6 +1,6 @@
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/parser.h"
-#include "ast/passes/printer.h"
+#include "ast_matchers.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
@@ -9,10 +9,9 @@ namespace bpftrace::test::fold_literals {
 using ::testing::HasSubstr;
 
 void test(const std::string& input,
-          const std::string& output,
+          const Matcher<const ast::Expression&>& expr_matcher,
           const std::string& error = "",
-          const std::string& warn = "",
-          bool negate = false)
+          const std::string& warn = "")
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
@@ -37,26 +36,17 @@ void test(const std::string& input,
                 .run();
 
   std::ostringstream out;
-  ast::Printer printer(out);
-  printer.visit(ast.root);
   ast.diagnostics().emit(out);
 
-  if (!output.empty() || !warn.empty()) {
+  if (error.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
-    if (!output.empty()) {
-      if (negate) {
-        EXPECT_THAT(out.str(), Not(HasSubstr(output)))
-            << msg.str() << out.str();
-      } else {
-        EXPECT_THAT(out.str(), HasSubstr("begin\n  " + output))
-            << msg.str() << out.str();
-      }
-    }
+    EXPECT_THAT(ast,
+                Program().WithProbe(
+                    Probe({ "begin" }, { ExprStatement(expr_matcher) })));
     if (!warn.empty()) {
       EXPECT_THAT(out.str(), HasSubstr(warn)) << msg.str() << out.str();
     }
-  }
-  if (!error.empty()) {
+  } else {
     ASSERT_FALSE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
     EXPECT_THAT(out.str(), HasSubstr(error)) << msg.str() << out.str();
   }
@@ -64,182 +54,187 @@ void test(const std::string& input,
 
 void test_error(const std::string& input, const std::string& error)
 {
-  test(input, "", error);
+  test(input, _, error);
 }
 
 void test_warning(const std::string& input, const std::string& warn)
 {
-  test(input, "", "", warn);
+  test(input, _, "", warn);
 }
 
-void test_not(const std::string& input, const std::string& output)
+void test_not(const std::string& input,
+              const Matcher<const ast::Expression&>& expr_matcher)
 {
-  test(input, output, "", "", true);
+  test(input, testing::Not(expr_matcher), "");
 }
 
 TEST(fold_literals, equals)
 {
-  test("0 == 0", "bool: true");
-  test("0 == 1", "bool: false");
-  test("-1 == 1", "bool: false");
-  test("-1 == -1", "bool: true");
-  test("true == true", "bool: true");
-  test("false == false", "bool: true");
-  test(R"("foo" == "bar")", "bool: false");
-  test(R"("foo" == "foo")", "bool: true");
-  test("\"foo\" == 1", "==");    // Left as is
-  test("\"foo\" == true", "=="); // Left as is
-  test("str($1) == \"\"", "bool: true");
-  test("str($1) == \"foo\"", "bool: false");
-  test("$1 == 0", "bool: true");
-  test("$1 == 1", "bool: false");
-  test(R"((1,-1,true,"foo") == (1,-1,true,"foo"))", "bool: true");
-  test("(1,(2,(3,1+3))) == (1,(2,(4-1,4)))", "bool: true");
-  test("(1,(2,(3,false))) == (1,(2,(4-1,4)))", "bool: false");
-  test(R"((1,-1,true,"foo") == (1,-1,true,"bar"))", "bool: false");
-  test(R"((-1,true,"foo",1) == (1,-1,true,"foo"))", "bool: false");
-  test("(1,-1) == (1,-1,true)", "bool: false");
-  test("($x,-1) == ($x,-1,true)", "bool: false");
-  test("($x,-1) == ($x,-1)", "=="); // Left as is
+  test("0 == 0", Boolean(true));
+  test("0 == 1", Boolean(false));
+  test("-1 == 1", Boolean(false));
+  test("-1 == -1", Boolean(true));
+  test("true == true", Boolean(true));
+  test("false == false", Boolean(true));
+  test(R"("foo" == "bar")", Boolean(false));
+  test(R"("foo" == "foo")", Boolean(true));
+  test("str($1) == \"\"", Boolean(true));
+  test("str($1) == \"foo\"", Boolean(false));
+  test("$1 == 0", Boolean(true));
+  test("$1 == 1", Boolean(false));
+  test(R"((1,-1,true,"foo") == (1,-1,true,"foo"))", Boolean(true));
+  test("(1,(2,(3,1+3))) == (1,(2,(4-1,4)))", Boolean(true));
+  test("(1,(2,(3,false))) == (1,(2,(4-1,4)))", Boolean(false));
+  test(R"((1,-1,true,"foo") == (1,-1,true,"bar"))", Boolean(false));
+  test(R"((-1,true,"foo",1) == (1,-1,true,"foo"))", Boolean(false));
+  test("(1,-1) == (1,-1,true)", Boolean(false));
+  test("($x,-1) == ($x,-1,true)", Boolean(false));
+
+  // These should be unexpanded.
+  test("\"foo\" == 1", Binop(Operator::EQ, String("foo"), Integer(1)));
+  test("\"foo\" == true", Binop(Operator::EQ, String("foo"), Boolean(true)));
+  test("($x,-1) == ($x,-1)", testing::Not(Boolean(true)));
 }
 
 TEST(fold_literals, not_equals)
 {
-  test("0 != 0", "bool: false");
-  test("0 != 1", "bool: true");
-  test("-1 != 1", "bool: true");
-  test("-1 != -1", "bool: false");
-  test("false != true", "bool: true");
-  test("false != false", "bool: false");
-  test(R"("foo" != "bar")", "bool: true");
-  test(R"("foo" != "foo")", "bool: false");
-  test(R"("foo" != 1)", "!=");     // Left as is
-  test(R"("foo" != false)", "!="); // Left as is
-  test(R"(str($1) != "")", "bool: false");
-  test(R"(str($1) != "foo")", "bool: true");
-  test("$1 != 0", "bool: false");
-  test("$1 != 1", "bool: true");
-  test(R"((1,-1,true,"foo") != (1,-1,true,"foo"))", "bool: false");
-  test("(1,(2,(3,1+3))) != (1,(2,(4-1,4)))", "bool: false");
-  test("(1,(2,(3,false))) != (1,(2,(4-1,4)))", "bool: true");
-  test(R"((1,-1,true,"foo") != (1,-1,true,"bar"))", "bool: true");
-  test(R"((-1,true,"foo",1) != (1,-1,true,"foo"))", "bool: true");
-  test("(1,-1) != (1,-1,true)", "bool: true");
-  test("($x,-1) != ($x,-1,true)", "bool: true");
-  test("($x,-1) != ($x,-1)", "!="); // Left as is
+  test("0 != 0", Boolean(false));
+  test("0 != 1", Boolean(true));
+  test("-1 != 1", Boolean(true));
+  test("-1 != -1", Boolean(false));
+  test("false != true", Boolean(true));
+  test("false != false", Boolean(false));
+  test(R"("foo" != "bar")", Boolean(true));
+  test(R"("foo" != "foo")", Boolean(false));
+  test(R"(str($1) != "")", Boolean(false));
+  test(R"(str($1) != "foo")", Boolean(true));
+  test("$1 != 0", Boolean(false));
+  test("$1 != 1", Boolean(true));
+  test(R"((1,-1,true,"foo") != (1,-1,true,"foo"))", Boolean(false));
+  test("(1,(2,(3,1+3))) != (1,(2,(4-1,4)))", Boolean(false));
+  test("(1,(2,(3,false))) != (1,(2,(4-1,4)))", Boolean(true));
+  test(R"((1,-1,true,"foo") != (1,-1,true,"bar"))", Boolean(true));
+  test(R"((-1,true,"foo",1) != (1,-1,true,"foo"))", Boolean(true));
+  test("(1,-1) != (1,-1,true)", Boolean(true));
+  test("($x,-1) != ($x,-1,true)", Boolean(true));
+
+  // These should be unexpanded.
+  test(R"("foo" != 1)", Binop(Operator::NE, String("foo"), Integer(1)));
+  test(R"("foo" != false)", Binop(Operator::NE, String("foo"), Boolean(false)));
+  test("($x,-1) != ($x,-1)", testing::Not(Boolean(true)));
 }
 
 TEST(fold_literals, comparison)
 {
-  test("0 < 1", "bool: true");
-  test("1 < 0", "bool: false");
-  test("0 < 0", "bool: false");
-  test("-1 < 0", "bool: true");
-  test("-1 < -2", "bool: false");
-  test("true < false", "bool: false");
-  test("0x7fffffffffffffff < 0x8000000000000000", "bool: true");
-  test("0xffffffffffffffff < 0", "bool: false");
-  test(R"("a" < "b")", "bool: true");
-  test(R"("b" < "a")", "bool: false");
-  test(R"("a" < "a")", "bool: false");
-  test(R"("" < "a")", "bool: true");
-  test(R"("abc" < "abd")", "bool: true");
+  test("0 < 1", Boolean(true));
+  test("1 < 0", Boolean(false));
+  test("0 < 0", Boolean(false));
+  test("-1 < 0", Boolean(true));
+  test("-1 < -2", Boolean(false));
+  test("true < false", Boolean(false));
+  test("0x7fffffffffffffff < 0x8000000000000000", Boolean(true));
+  test("0xffffffffffffffff < 0", Boolean(false));
+  test(R"("a" < "b")", Boolean(true));
+  test(R"("b" < "a")", Boolean(false));
+  test(R"("a" < "a")", Boolean(false));
+  test(R"("" < "a")", Boolean(true));
+  test(R"("abc" < "abd")", Boolean(true));
 
-  test("0 > 1", "bool: false");
-  test("1 > 0", "bool: true");
-  test("0 > 0", "bool: false");
-  test("-1 > 0", "bool: false");
-  test("-1 > -2", "bool: true");
-  test("true > false", "bool: true");
-  test("0x7fffffffffffffff > 0x8000000000000000", "bool: false");
-  test("0xffffffffffffffff > 0", "bool: true");
-  test(R"("a" > "b")", "bool: false");
-  test(R"("b" > "a")", "bool: true");
-  test(R"("a" > "a")", "bool: false");
-  test(R"("" > "a")", "bool: false");
-  test(R"("abc" > "abd")", "bool: false");
+  test("0 > 1", Boolean(false));
+  test("1 > 0", Boolean(true));
+  test("0 > 0", Boolean(false));
+  test("-1 > 0", Boolean(false));
+  test("-1 > -2", Boolean(true));
+  test("true > false", Boolean(true));
+  test("0x7fffffffffffffff > 0x8000000000000000", Boolean(false));
+  test("0xffffffffffffffff > 0", Boolean(true));
+  test(R"("a" > "b")", Boolean(false));
+  test(R"("b" > "a")", Boolean(true));
+  test(R"("a" > "a")", Boolean(false));
+  test(R"("" > "a")", Boolean(false));
+  test(R"("abc" > "abd")", Boolean(false));
 
-  test("0 <= 1", "bool: true");
-  test("1 <= 0", "bool: false");
-  test("0 <= 0", "bool: true");
-  test("-1 <= 0", "bool: true");
-  test("-1 <= -1", "bool: true");
-  test("false <= true", "bool: true");
-  test("0x7fffffffffffffff <= 0x8000000000000000", "bool: true");
-  test("0xffffffffffffffff <= 0", "bool: false");
-  test(R"("a" <= "b")", "bool: true");
-  test(R"("b" <= "a")", "bool: false");
-  test(R"("a" <= "a")", "bool: true");
-  test(R"("" <= "a")", "bool: true");
-  test(R"("abc" <= "abd")", "bool: true");
+  test("0 <= 1", Boolean(true));
+  test("1 <= 0", Boolean(false));
+  test("0 <= 0", Boolean(true));
+  test("-1 <= 0", Boolean(true));
+  test("-1 <= -1", Boolean(true));
+  test("false <= true", Boolean(true));
+  test("0x7fffffffffffffff <= 0x8000000000000000", Boolean(true));
+  test("0xffffffffffffffff <= 0", Boolean(false));
+  test(R"("a" <= "b")", Boolean(true));
+  test(R"("b" <= "a")", Boolean(false));
+  test(R"("a" <= "a")", Boolean(true));
+  test(R"("" <= "a")", Boolean(true));
+  test(R"("abc" <= "abd")", Boolean(true));
 
-  test("0 >= 1", "bool: false");
-  test("1 >= 0", "bool: true");
-  test("0 >= 0", "bool: true");
-  test("-1 >= 0", "bool: false");
-  test("-1 >= -1", "bool: true");
-  test("true <= false", "bool: false");
-  test("0x7fffffffffffffff >= 0x8000000000000000", "bool: false");
-  test("0xffffffffffffffff >= 0", "bool: true");
-  test(R"("a" >= "b")", "bool: false");
-  test(R"("b" >= "a")", "bool: true");
-  test(R"("a" >= "a")", "bool: true");
-  test(R"("" >= "a")", "bool: false");
-  test(R"("abc" >= "abd")", "bool: false");
+  test("0 >= 1", Boolean(false));
+  test("1 >= 0", Boolean(true));
+  test("0 >= 0", Boolean(true));
+  test("-1 >= 0", Boolean(false));
+  test("-1 >= -1", Boolean(true));
+  test("true <= false", Boolean(false));
+  test("0x7fffffffffffffff >= 0x8000000000000000", Boolean(false));
+  test("0xffffffffffffffff >= 0", Boolean(true));
+  test(R"("a" >= "b")", Boolean(false));
+  test(R"("b" >= "a")", Boolean(true));
+  test(R"("a" >= "a")", Boolean(true));
+  test(R"("" >= "a")", Boolean(false));
+  test(R"("abc" >= "abd")", Boolean(false));
 }
 
 TEST(fold_literals, plus)
 {
-  test("0 + 0", "int: 0 :: [int64]");
-  test("0 + 1", "int: 1 :: [int64]");
-  test("1 + 2", "int: 3 :: [int64]");
-  test("5 + 10", "int: 15 :: [int64]");
-  test("-5 + 10", "int: 5 :: [int64]");
-  test("-10 + -5", "negative int: -15");
-  test("9223372036854775807 + 1", "int: 9223372036854775808 :: [uint64]");
-  test("9223372036854775808 + 1", "int: 9223372036854775809 :: [uint64]");
-  test("0 + (-1)", "negative int: -1");
-  test("1 + (-2)", "negative int: -1");
-  test("-5 + 5", "int: 0 :: [int64]");
-  test("0xffffffffffffffff + 0", "int: 18446744073709551615 :: [uint64]");
-  test("0x7fffffffffffffff + (-1)", "int: 9223372036854775806 :: [int64]");
+  test("0 + 0", Integer(0));
+  test("0 + 1", Integer(1));
+  test("1 + 2", Integer(3));
+  test("5 + 10", Integer(15));
+  test("-5 + 10", Integer(5));
+  test("-10 + -5", NegativeInteger(-15));
+  test("9223372036854775807 + 1", Integer(9223372036854775808ULL));
+  test("9223372036854775808 + 1", Integer(9223372036854775809ULL));
+  test("0 + (-1)", NegativeInteger(-1));
+  test("1 + (-2)", NegativeInteger(-1));
+  test("-5 + 5", Integer(0));
+  test("0xffffffffffffffff + 0", Integer(18446744073709551615ULL));
+  test("0x7fffffffffffffff + (-1)", Integer(9223372036854775806));
   test_error("0xffffffffffffffff + 1", "overflow");
   test_error("0x8000000000000000 + (-1)", "overflow"); // Coerced to signed
 
-  test(R"("foo" + "bar")", "string: foobar");
-  test(R"("" + "test")", "string: test");
-  test(R"("hello" + 3)", "string: lo");
+  test(R"("foo" + "bar")", String("foobar"));
+  test(R"("" + "test")", String("test"));
+  test(R"("hello" + 3)", String("lo"));
   test_warning(R"("hello" + 8)", "literal string will always be empty");
 
-  test("false + false", "bool: false");
-  test("false + true", "bool: true");
-  test("true + true", "bool: true");
+  test("false + false", Boolean(false));
+  test("false + true", Boolean(true));
+  test("true + true", Boolean(true));
 }
 
 TEST(fold_literals, minus)
 {
-  test("0 - 1", "negative int: -1");
-  test("1 - 2", "negative int: -1");
-  test("0 - 0", "int: 0 :: [int64]");
-  test("1 - 1", "int: 0 :: [int64]");
-  test("2 - 1", "int: 1 :: [int64]");
-  test("0xffffffffffffffff - 1", "int: 18446744073709551614 :: [uint64]");
-  test("0xffffffffffffffff - 0xffffffffffffffff", "int: 0 :: [uint64]");
-  test("0x8000000000000000 - 1", "int: 9223372036854775807 :: [uint64]");
-  test("0x7fffffffffffffff - 0x7fffffffffffffff", "int: 0 :: [int64]");
-  test("0x7fffffffffffffff - 0x8000000000000000", "negative int: -1");
-  test("0x8000000000000000 - 0x8000000000000001", "negative int: -1");
-  test("0 - 0x8000000000000000", "negative int: -9223372036854775808");
+  test("0 - 1", NegativeInteger(-1));
+  test("1 - 2", NegativeInteger(-1));
+  test("0 - 0", Integer(0));
+  test("1 - 1", Integer(0));
+  test("2 - 1", Integer(1));
+  test("0xffffffffffffffff - 1", Integer(18446744073709551614ULL));
+  test("0xffffffffffffffff - 0xffffffffffffffff", Integer(0));
+  test("0x8000000000000000 - 1", Integer(9223372036854775807));
+  test("0x7fffffffffffffff - 0x7fffffffffffffff", Integer(0));
+  test("0x7fffffffffffffff - 0x8000000000000000", NegativeInteger(-1));
+  test("0x8000000000000000 - 0x8000000000000001", NegativeInteger(-1));
+  test("0 - 0x8000000000000000", NegativeInteger(-9223372036854775808ULL));
   test("0x7fffffffffffffff - 0xffffffffffffffff",
-       "negative int: -9223372036854775808",
+       NegativeInteger(-9223372036854775808ULL),
        "");
-  test("0-9223372036854775808", "negative int: -9223372036854775808");
+  test("0-9223372036854775808", NegativeInteger(-9223372036854775808ULL));
   test("0x8000000000000000-0xffffffffffffffff",
-       "negative int: -9223372036854775807",
+       NegativeInteger(-9223372036854775807),
        "");
-  test("0x8000000000000000-0x7fffffffffffffff", "int: 1 :: [uint64]");
-  test("0-0x8000000000000000", "negative int: -9223372036854775808");
-  test("9223372036854775807-9223372036854775808", "negative int: -1");
+  test("0x8000000000000000-0x7fffffffffffffff", Integer(1));
+  test("0-0x8000000000000000", NegativeInteger(-9223372036854775808ULL));
+  test("9223372036854775807-9223372036854775808", NegativeInteger(-1));
   test_error("0 - 0x8000000000000001", "underflow");
   test_error("1 - 0xffffffffffffffff", "underflow");
   test_error("0-9223372036854775809", "underflow");
@@ -248,311 +243,313 @@ TEST(fold_literals, minus)
   test_error("0xffffffffffffffff - (-1)", "overflow");
   test_error("0 - 0xffffffffffffffff", "underflow");
 
-  test("false - false", "bool: false");
-  test("false - true", "bool: true");
-  test("true - true", "bool: false");
-  test("true - false", "bool: true");
+  test("false - false", Boolean(false));
+  test("false - true", Boolean(true));
+  test("true - true", Boolean(false));
+  test("true - false", Boolean(true));
 }
 
 TEST(fold_literals, multiply)
 {
-  test("0 * 0", "int: 0 :: [int64]");
-  test("0 * 1", "int: 0 :: [int64]");
-  test("1 * 0", "int: 0 :: [int64]");
-  test("1 * 1", "int: 1 :: [int64]");
-  test("2 * 3", "int: 6 :: [int64]");
-  test("10 * 20", "int: 200 :: [int64]");
-  test("-1 * 1", "negative int: -1");
-  test("1 * -1", "negative int: -1");
-  test("-1 * -1", "int: 1 :: [int64]");
-  test("-10 * 5", "negative int: -50");
-  test("5 * -10", "negative int: -50");
-  test("-5 * -10", "int: 50 :: [int64]");
-  test("0xffffffffffffffff * 0x1", "int: 18446744073709551615 :: [uint64]");
-  test("0x7fffffffffffffff * 0x2", "int: 18446744073709551614 :: [uint64]");
-  test("0xffffffffffffffff * 0x0", "int: 0 :: [uint64]");
-  test("9223372036854775807 * 1", "int: 9223372036854775807 :: [int64]");
-  test("9223372036854775808 * 1", "int: 9223372036854775808 :: [uint64]");
+  test("0 * 0", Integer(0));
+  test("0 * 1", Integer(0));
+  test("1 * 0", Integer(0));
+  test("1 * 1", Integer(1));
+  test("2 * 3", Integer(6));
+  test("10 * 20", Integer(200));
+  test("-1 * 1", NegativeInteger(-1));
+  test("1 * -1", NegativeInteger(-1));
+  test("-1 * -1", Integer(1));
+  test("-10 * 5", NegativeInteger(-50));
+  test("5 * -10", NegativeInteger(-50));
+  test("-5 * -10", Integer(50));
+  test("0xffffffffffffffff * 0x1", Integer(18446744073709551615ULL));
+  test("0x7fffffffffffffff * 0x2", Integer(18446744073709551614ULL));
+  test("0xffffffffffffffff * 0x0", Integer(0));
+  test("9223372036854775807 * 1", Integer(9223372036854775807));
+  test("9223372036854775808 * 1", Integer(9223372036854775808ULL));
   test_error("0x8000000000000000 * 0x2", "overflow");
   test_error("0xffffffffffffffff * 0xffffffffffffffff", "overflow");
 
-  test("false * false", "bool: false");
-  test("false * true", "bool: false");
-  test("true * true", "bool: true");
+  test("false * false", Boolean(false));
+  test("false * true", Boolean(false));
+  test("true * true", Boolean(true));
 }
 
 TEST(fold_literals, divide)
 {
-  test("10 / 2", "int: 5 :: [int64]");
-  test("15 / 3", "int: 5 :: [int64]");
-  test("100 / 10", "int: 10 :: [int64]");
-  test("0 / 5", "int: 0 :: [int64]");
-  test("-10 / 2", "negative int: -5");
-  test("10 / -2", "negative int: -5");
-  test("-10 / -2", "int: 5 :: [int64]");
-  test("0xffffffffffffffff / 0x10", "int: 1152921504606846975 :: [uint64]");
-  test("0x7fffffffffffffff / 0xff", "int: 36170086419038336 :: [int64]");
-  test("0x8000000000000000 / 0xff", "int: 36170086419038336 :: [uint64]");
-  test("9223372036854775807 / 1", "int: 9223372036854775807 :: [int64]");
-  test("9223372036854775808 / 2", "int: 4611686018427387904 :: [uint64]");
-  test("0xffffffffffffffff / 1", "int: 18446744073709551615 :: [uint64]");
+  test("10 / 2", Integer(5));
+  test("15 / 3", Integer(5));
+  test("100 / 10", Integer(10));
+  test("0 / 5", Integer(0));
+  test("-10 / 2", NegativeInteger(-5));
+  test("10 / -2", NegativeInteger(-5));
+  test("-10 / -2", Integer(5));
+  test("0xffffffffffffffff / 0x10", Integer(1152921504606846975));
+  test("0x7fffffffffffffff / 0xff", Integer(36170086419038336));
+  test("0x8000000000000000 / 0xff", Integer(36170086419038336));
+  test("9223372036854775807 / 1", Integer(9223372036854775807));
+  test("9223372036854775808 / 2", Integer(4611686018427387904));
+  test("0xffffffffffffffff / 1", Integer(18446744073709551615ULL));
   test_error("123 / 0", "unable to fold");
   test_error("-123 / 0", "unable to fold");
 
-  test("false / true", "bool: false");
-  test("true / true", "bool: true");
+  test("false / true", Boolean(false));
+  test("true / true", Boolean(true));
   test_error("false / false", "unable to fold");
   test_error("true / false", "unable to fold");
 }
 
 TEST(fold_literals, mod)
 {
-  test("10 % 3", "int: 1 :: [int64]");
-  test("15 % 4", "int: 3 :: [int64]");
-  test("0 % 5", "int: 0 :: [int64]");
-  test("100 % 10", "int: 0 :: [int64]");
-  test("-10 % 3", "negative int: -1");
-  test("10 % -3", "int: 1 :: [int64]");
-  test("-10 % -3", "negative int: -1");
-  test("0xffffffffffffffff % 0x10", "int: 15 :: [uint64]");
-  test("0x7fffffffffffffff % 0xff", "int: 127 :: [int64]");
-  test("0x8000000000000000 % 0xff", "int: 128 :: [uint64]");
+  test("10 % 3", Integer(1));
+  test("15 % 4", Integer(3));
+  test("0 % 5", Integer(0));
+  test("100 % 10", Integer(0));
+  test("-10 % 3", NegativeInteger(-1));
+  test("10 % -3", Integer(1));
+  test("-10 % -3", NegativeInteger(-1));
+  test("0xffffffffffffffff % 0x10", Integer(15));
+  test("0x7fffffffffffffff % 0xff", Integer(127));
+  test("0x8000000000000000 % 0xff", Integer(128));
   test_error("123 % 0", "unable to fold");
   test_error("-123 % 0", "unable to fold");
 
-  test("false % true", "bool: false");
-  test("true % true", "bool: false");
+  test("false % true", Boolean(false));
+  test("true % true", Boolean(false));
   test_error("false % false", "unable to fold");
   test_error("true % false", "unable to fold");
 }
 
 TEST(fold_literals, binary)
 {
-  test("1 & 1", "int: 1 :: [int64]");
-  test("1 & 0", "int: 0 :: [int64]");
-  test("0 & 0", "int: 0 :: [int64]");
-  test("0xffffffffffffffff & 0x1", "int: 1 :: [uint64]");
-  test("0xffffffffffffffff & 0x0", "int: 0 :: [uint64]");
+  test("1 & 1", Integer(1));
+  test("1 & 0", Integer(0));
+  test("0 & 0", Integer(0));
+  test("0xffffffffffffffff & 0x1", Integer(1));
+  test("0xffffffffffffffff & 0x0", Integer(0));
   test("0xffffffffffffffff & 0xffffffffffffffff",
-       "int: 18446744073709551615 :: [uint64]",
+       Integer(18446744073709551615ULL),
        "");
-  test("0x7fffffffffffffff & 0x1", "int: 1 :: [int64]");
-  test("0x7fffffffffffffff & 0x0", "int: 0 :: [int64]");
+  test("0x7fffffffffffffff & 0x1", Integer(1));
+  test("0x7fffffffffffffff & 0x0", Integer(0));
   test("0x7fffffffffffffff & 0x7fffffffffffffff",
-       "int: 9223372036854775807 :: [int64]",
+       Integer(9223372036854775807),
        "");
-  test("-1 & 1", "int: 1 :: [int64]");
-  test("-1 & 0", "int: 0 :: [int64]");
-  test("-1 & -1", "negative int: -1");
-  test("0x8000000000000000 & 0x1", "int: 0 :: [uint64]");
+  test("-1 & 1", Integer(1));
+  test("-1 & 0", Integer(0));
+  test("-1 & -1", NegativeInteger(-1));
+  test("0x8000000000000000 & 0x1", Integer(0));
   test("0x8000000000000000 & 0x8000000000000000",
-       "int: 9223372036854775808 :: [uint64]",
+       Integer(9223372036854775808ULL),
        "");
   test_error("-1 & 0xffffffffffffffff", "overflow");
 
-  test("1 | 1", "int: 1 :: [int64]");
-  test("1 | 0", "int: 1 :: [int64]");
-  test("0 | 0", "int: 0 :: [int64]");
-  test("0xffffffffffffffff | 0x1", "int: 18446744073709551615 :: [uint64]");
-  test("0xffffffffffffffff | 0x0", "int: 18446744073709551615 :: [uint64]");
-  test("0x7fffffffffffffff | 0x1", "int: 9223372036854775807 :: [int64]");
-  test("0x7fffffffffffffff | 0x0", "int: 9223372036854775807 :: [int64]");
-  test("-1 | 1", "negative int: -1");
-  test("-1 | 0", "negative int: -1");
-  test("-1 | -1", "negative int: -1");
-  test("0x8000000000000000 | 0x1", "int: 9223372036854775809 :: [uint64]");
+  test("1 | 1", Integer(1));
+  test("1 | 0", Integer(1));
+  test("0 | 0", Integer(0));
+  test("0xffffffffffffffff | 0x1", Integer(18446744073709551615ULL));
+  test("0xffffffffffffffff | 0x0", Integer(18446744073709551615ULL));
+  test("0x7fffffffffffffff | 0x1", Integer(9223372036854775807));
+  test("0x7fffffffffffffff | 0x0", Integer(9223372036854775807));
+  test("-1 | 1", NegativeInteger(-1));
+  test("-1 | 0", NegativeInteger(-1));
+  test("-1 | -1", NegativeInteger(-1));
+  test("0x8000000000000000 | 0x1", Integer(9223372036854775809ULL));
   test("0x8000000000000000 | 0x8000000000000000",
-       "int: 9223372036854775808 :: [uint64]",
+       Integer(9223372036854775808ULL),
        "");
-  test("0xff | 0x0f", "int: 255 :: [int64]");
-  test("0xff | 0xf0", "int: 255 :: [int64]");
-  test("-10 | 0x0f", "negative int: -1");
-  test("0x7fffffffffffffff | -1", "negative int: -1");
-  test("0xffffffff | -0xf", "negative int: -1");
-  test("-0xff | -0x0f", "negative int: -15");
+  test("0xff | 0x0f", Integer(255));
+  test("0xff | 0xf0", Integer(255));
+  test("-10 | 0x0f", NegativeInteger(-1));
+  test("0x7fffffffffffffff | -1", NegativeInteger(-1));
+  test("0xffffffff | -0xf", NegativeInteger(-1));
+  test("-0xff | -0x0f", NegativeInteger(-15));
 
-  test("1 ^ 1", "int: 0 :: [int64]");
-  test("1 ^ 0", "int: 1 :: [int64]");
-  test("0 ^ 0", "int: 0 :: [int64]");
-  test("0xffffffffffffffff ^ 0x1", "int: 18446744073709551614 :: [uint64]");
-  test("0xffffffffffffffff ^ 0x0", "int: 18446744073709551615 :: [uint64]");
-  test("0xffffffffffffffff ^ 0xffffffffffffffff", "int: 0 :: [uint64]");
-  test("0x7fffffffffffffff ^ 0x1", "int: 9223372036854775806 :: [int64]");
-  test("0x7fffffffffffffff ^ 0x0", "int: 9223372036854775807 :: [int64]");
-  test("0x7fffffffffffffff ^ 0x7fffffffffffffff", "int: 0 :: [int64]");
-  test("-1 ^ 1", "negative int: -2");
-  test("-1 ^ 0", "negative int: -1");
-  test("-1 ^ -1", "int: 0 :: [int64]");
-  test("0x8000000000000000 ^ 0x1", "int: 9223372036854775809 :: [uint64]");
-  test("0x8000000000000000 ^ 0x8000000000000000", "int: 0 :: [uint64]");
-  test("0xff ^ 0x0f", "int: 240 :: [int64]");
-  test("0xff ^ 0xf0", "int: 15 :: [int64]");
-  test("-10 ^ 0x0f", "negative int: -7");
-  test("0x7fffffffffffffff ^ -1", "negative int: -9223372036854775808");
-  test("0xffffffff ^ -0xf", "negative int: -4294967282");
-  test("-0xff ^ -0x0f", "int: 240 :: [int64]");
+  test("1 ^ 1", Integer(0));
+  test("1 ^ 0", Integer(1));
+  test("0 ^ 0", Integer(0));
+  test("0xffffffffffffffff ^ 0x1", Integer(18446744073709551614ULL));
+  test("0xffffffffffffffff ^ 0x0", Integer(18446744073709551615ULL));
+  test("0xffffffffffffffff ^ 0xffffffffffffffff", Integer(0));
+  test("0x7fffffffffffffff ^ 0x1", Integer(9223372036854775806));
+  test("0x7fffffffffffffff ^ 0x0", Integer(9223372036854775807));
+  test("0x7fffffffffffffff ^ 0x7fffffffffffffff", Integer(0));
+  test("-1 ^ 1", NegativeInteger(-2));
+  test("-1 ^ 0", NegativeInteger(-1));
+  test("-1 ^ -1", Integer(0));
+  test("0x8000000000000000 ^ 0x1", Integer(9223372036854775809ULL));
+  test("0x8000000000000000 ^ 0x8000000000000000", Integer(0));
+  test("0xff ^ 0x0f", Integer(240));
+  test("0xff ^ 0xf0", Integer(15));
+  test("-10 ^ 0x0f", NegativeInteger(-7));
+  test("0x7fffffffffffffff ^ -1", NegativeInteger(-9223372036854775808ULL));
+  test("0xffffffff ^ -0xf", NegativeInteger(-4294967282));
+  test("-0xff ^ -0x0f", Integer(240));
 
-  test("1 << 0", "int: 1 :: [int64]");
-  test("1 << 1", "int: 2 :: [int64]");
-  test("1 << 2", "int: 4 :: [int64]");
-  test("1 << 63", "int: 9223372036854775808 :: [uint64]");
-  test("0xff << 8", "int: 65280 :: [int64]");
-  test("0xff << 56", "int: 18374686479671623680 :: [uint64]");
-  test("-1 << 1", "negative int: -2");
-  test("-1 << 63", "negative int: -9223372036854775808");
-  test("0x7fffffffffffffff << 1", "int: 18446744073709551614 :: [uint64]");
-  test("0x8000000000000000 << 1", "int: 0 :: [uint64]"); // Legal overflow
+  test("1 << 0", Integer(1));
+  test("1 << 1", Integer(2));
+  test("1 << 2", Integer(4));
+  test("1 << 63", Integer(9223372036854775808ULL));
+  test("0xff << 8", Integer(65280));
+  test("0xff << 56", Integer(18374686479671623680ULL));
+  test("-1 << 1", NegativeInteger(-2));
+  test("-1 << 63", NegativeInteger(-9223372036854775808ULL));
+  test("0x7fffffffffffffff << 1", Integer(18446744073709551614ULL));
+  test("0x8000000000000000 << 1", Integer(0)); // Legal overflow
   test_error("1 << 64", "overflow");
 
-  test("8 >> 1", "int: 4 :: [int64]");
-  test("8 >> 2", "int: 2 :: [int64]");
-  test("8 >> 3", "int: 1 :: [int64]");
-  test("8 >> 4", "int: 0 :: [int64]");
-  test("0xff >> 4", "int: 15 :: [int64]");
-  test("0xffffffffffffffff >> 32", "int: 4294967295 :: [uint64]");
-  test("-1 >> 1", "negative int: -1"); // Sign extension
-  test("-8 >> 2", "negative int: -2"); // Sign extension
-  test("0x8000000000000000 >> 1", "int: 4611686018427387904 :: [uint64]");
-  test("0x8000000000000000 >> 63", "int: 1 :: [uint64]");
+  test("8 >> 1", Integer(4));
+  test("8 >> 2", Integer(2));
+  test("8 >> 3", Integer(1));
+  test("8 >> 4", Integer(0));
+  test("0xff >> 4", Integer(15));
+  test("0xffffffffffffffff >> 32", Integer(4294967295));
+  test("-1 >> 1", NegativeInteger(-1)); // Sign extension
+  test("-8 >> 2", NegativeInteger(-2)); // Sign extension
+  test("0x8000000000000000 >> 1", Integer(4611686018427387904));
+  test("0x8000000000000000 >> 63", Integer(1));
   test_error("1 >> 64", "overflow");
 
-  test("true & true", "bool: true");
-  test("true & false", "bool: false");
-  test("false & false", "bool: false");
-  test("true | true", "bool: true");
-  test("true | false", "bool: true");
-  test("false | false", "bool: false");
-  test("true ^ true", "bool: false");
-  test("true ^ false", "bool: true");
-  test("false ^ false", "bool: false");
-  test("true << false", "bool: false");
-  test("true << true", "bool: false");
-  test("false << false", "bool: false");
-  test("true >> false", "bool: true");
-  test("true >> true", "bool: false");
-  test("false >> false", "bool: false");
+  test("true & true", Boolean(true));
+  test("true & false", Boolean(false));
+  test("false & false", Boolean(false));
+  test("true | true", Boolean(true));
+  test("true | false", Boolean(true));
+  test("false | false", Boolean(false));
+  test("true ^ true", Boolean(false));
+  test("true ^ false", Boolean(true));
+  test("false ^ false", Boolean(false));
+  test("true << false", Boolean(false));
+  test("true << true", Boolean(false));
+  test("false << false", Boolean(false));
+  test("true >> false", Boolean(true));
+  test("true >> true", Boolean(false));
+  test("false >> false", Boolean(false));
 }
 
 TEST(fold_literals, logical)
 {
-  test("1 && 1", "bool: true");
-  test("0 && 1", "bool: false");
-  test("0 && 0", "bool: false");
-  test("-1 && 0", "bool: false");
-  test("1 && -1", "bool: true");
-  test("true && true", "bool: true");
-  test("true && false", "bool: false");
-  test("false && false", "bool: false");
-  test("\"foo\" && true", "bool: true");
-  test("\"\" && true", "bool: false");
-  test("\"\" && false", "bool: false");
-  test("1 && true", "bool: true");
-  test("0 && true", "bool: false");
-  test("1 && false", "bool: false");
-  test("0 && false", "bool: false");
-  test("-1 && true", "bool: true");
-  test("-1 && false", "bool: false");
-  test("\"foo\" && 1", "&&"); // Left as is
+  test("1 && 1", Boolean(true));
+  test("0 && 1", Boolean(false));
+  test("0 && 0", Boolean(false));
+  test("-1 && 0", Boolean(false));
+  test("1 && -1", Boolean(true));
+  test("true && true", Boolean(true));
+  test("true && false", Boolean(false));
+  test("false && false", Boolean(false));
+  test("\"foo\" && true", Boolean(true));
+  test("\"\" && true", Boolean(false));
+  test("\"\" && false", Boolean(false));
+  test("1 && true", Boolean(true));
+  test("0 && true", Boolean(false));
+  test("1 && false", Boolean(false));
+  test("0 && false", Boolean(false));
+  test("-1 && true", Boolean(true));
+  test("-1 && false", Boolean(false));
 
-  test("1 || 1", "bool: true");
-  test("0 || 1", "bool: true");
-  test("0 || 0", "bool: false");
-  test("-1 || 0", "bool: true");
-  test("1 || -1", "bool: true");
-  test("true || true", "bool: true");
-  test("true || false", "bool: true");
-  test("false || false", "bool: false");
-  test("\"foo\" || true", "bool: true");
-  test("\"\" || true", "bool: true");
-  test("\"\" || false", "bool: false");
-  test("1 || true", "bool: true");
-  test("0 || true", "bool: true");
-  test("1 || false", "bool: true");
-  test("0 || false", "bool: false");
-  test("-1 || true", "bool: true");
-  test("-1 || false", "bool: true");
-  test("\"foo\" || 1", "||"); // Left as is
+  test("1 || 1", Boolean(true));
+  test("0 || 1", Boolean(true));
+  test("0 || 0", Boolean(false));
+  test("-1 || 0", Boolean(true));
+  test("1 || -1", Boolean(true));
+  test("true || true", Boolean(true));
+  test("true || false", Boolean(true));
+  test("false || false", Boolean(false));
+  test("\"foo\" || true", Boolean(true));
+  test("\"\" || true", Boolean(true));
+  test("\"\" || false", Boolean(false));
+  test("1 || true", Boolean(true));
+  test("0 || true", Boolean(true));
+  test("1 || false", Boolean(true));
+  test("0 || false", Boolean(false));
+  test("-1 || true", Boolean(true));
+  test("-1 || false", Boolean(true));
+
+  // These are unexpanded.
+  test("\"foo\" && 1", Binop(Operator::LAND, String("foo"), Integer(1)));
+  test("\"foo\" || 1", Binop(Operator::LOR, String("foo"), Integer(1)));
 }
 
 TEST(fold_literals, unary)
 {
-  test("~(-1)", "int: 0 :: [int64]");
-  test("~0xfffffffffffffffe", "int: 1 :: [uint64]");
-  test("~0", "int: 18446744073709551615 :: [uint64]");
+  test("~(-1)", Integer(0));
+  test("~0xfffffffffffffffe", Integer(1));
+  test("~0", Integer(18446744073709551615ULL));
 
-  test("!0", "bool: true");
-  test("!1", "bool: false");
-  test("!-1", "bool: false");
-  test("!false", "bool: true");
-  test("!true", "bool: false");
+  test("!0", Boolean(true));
+  test("!1", Boolean(false));
+  test("!-1", Boolean(false));
+  test("!false", Boolean(true));
+  test("!true", Boolean(false));
 
-  test("-1", "negative int: -1");
-  test("-0", "int: 0 :: [int64]");
-  test("-0x7fffffffffffffff", "negative int: -9223372036854775807");
-  test("-0x8000000000000000", "negative int: -9223372036854775808");
-  test("-(-0x8000000000000000)", "int: 9223372036854775808 :: [uint64]");
+  test("-1", NegativeInteger(-1));
+  test("-0", Integer(0));
+  test("-0x7fffffffffffffff", NegativeInteger(-9223372036854775807));
+  test("-0x8000000000000000", NegativeInteger(-9223372036854775808ULL));
+  test("-(-0x8000000000000000)", Integer(9223372036854775808ULL));
   test_error("-0x8000000000000001", "underflow");
 }
 
 TEST(fold_literals, ternary)
 {
-  test("0 ? true : false", "bool: false");
-  test("1 ? true : false", "bool: true");
-  test("-1 ? true : false", "bool: true");
-  test("\"foo\" ? true : false", "bool: true");
-  test("\"\" ? true : false", "bool: false");
+  test("0 ? true : false", Boolean(false));
+  test("1 ? true : false", Boolean(true));
+  test("-1 ? true : false", Boolean(true));
+  test("\"foo\" ? true : false", Boolean(true));
+  test("\"\" ? true : false", Boolean(false));
 }
 
 TEST(fold_literals, cast)
 {
-  test("(bool)0", "bool: false");
-  test("(bool)\"\"", "bool: false");
-  test("(bool)false", "bool: false");
-  test("(bool)1", "bool: true");
-  test("(bool)-1", "bool: true");
-  test("(bool)\"str\"", "bool: true");
-  test("(bool)true", "bool: true");
+  test("(bool)0", Boolean(false));
+  test("(bool)\"\"", Boolean(false));
+  test("(bool)false", Boolean(false));
+  test("(bool)1", Boolean(true));
+  test("(bool)-1", Boolean(true));
+  test("(bool)\"str\"", Boolean(true));
+  test("(bool)true", Boolean(true));
 }
 
 TEST(fold_literals, conditional)
 {
-  test_not("if (comptime 1) { }", "if");
-  test_not("if (comptime -1) { }", "if");
-  test_not("if (comptime 0) { }", "if");
-  test_not("if comptime (1 + 1) { }", "if");
-  test_not("if (comptime \"str\") { }", "if");
-  test_not("if (comptime \"\") { }", "if");
-  test_not("if (comptime true) { }", "if");
-  test_not("if (comptime false) { }", "if");
-  test("if (true) { }", "if");
-  test("if (false) { }", "if");
+  test_not("if (comptime 1) { }", IfExprMatcher());
+  test_not("if (comptime -1) { }", IfExprMatcher());
+  test_not("if (comptime 0) { }", IfExprMatcher());
+  test_not("if comptime (1 + 1) { }", IfExprMatcher());
+  test_not("if (comptime \"str\") { }", IfExprMatcher());
+  test_not("if (comptime \"\") { }", IfExprMatcher());
+  test_not("if (comptime true) { }", IfExprMatcher());
+  test_not("if (comptime false) { }", IfExprMatcher());
+  test("if (true) { }", IfExprMatcher());
+  test("if (false) { }", IfExprMatcher());
 }
 
 TEST(fold_literals, tuple_access)
 {
-  test_not("comptime ((1,0).0)", "tuple:");
-  test_not("comptime ((1, 1 + 1).1)", "tuple:");
+  test_not("comptime (1,0).0", ComptimeMatcher());
+  test_not("comptime (1, 1 + 1).1", ComptimeMatcher());
   // This cannot be evaluated.
-  test_error("comptime (($x, 1 + 1).0)", "comptime");
-  // Left as is.
-  test("comptime ((1,0).2)", ".\n   tuple:"); // bad access
-  test("$x = (1,0); $x.0",
-       "=\n   variable: $x\n   tuple:\n    int: 1 :: [int64]\n    int: 0 :: "
-       "[int64]\n  .\n   variable: $x"); // variable tuple
+  test_error("comptime ($x, 1 + 1).0", "comptime");
+  // This should be left as is.
+  test("{ $x = (1,0); $x.0 };", Block({ _ }, TupleAccess(Variable("$x"), 0)));
+  // Left as is, since it is an error.
+  test("comptime (1,0).2",
+       Comptime(TupleAccess(Tuple({ Integer(1), Integer(0) }), 2)));
 }
 
 TEST(fold_literals, array_access)
 {
-  test("\"foo\"[0]", "int: 102 :: [int64]");
-  test("\"foo\"[1]", "int: 111 :: [int64]");
+  test("\"foo\"[0]", Integer(102));
+  test("\"foo\"[1]", Integer(111));
 }
 
 TEST(fold_literals, comptime)
 {
   // This are temporary restrictions, but enough that we error when we hit a
   // variable or map as part of a comptime expression.
-  test_error("$x = 0; comptime ($x + 1)", "variable");
-  test_error("@x = 0; comptime (@x + 1)", "map");
+  test_error("$x = 0; comptime ($x + 1)", "Unable to evaluate at compile time");
+  test_error("@x = 0; comptime (@x + 1)", "Unable to evaluate at compile time");
 }
 
 } // namespace bpftrace::test::fold_literals

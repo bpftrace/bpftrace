@@ -1,6 +1,5 @@
 #include "ast/passes/macro_expansion.h"
-#include "ast/passes/parser.h"
-#include "ast/passes/printer.h"
+#include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
@@ -30,18 +29,27 @@ void test(const std::string& input,
                 .run();
 
   std::ostringstream out;
-  ast::Printer printer(out);
-  printer.visit(ast.root);
   ast.diagnostics().emit(out);
 
-  if (error.empty()) {
+  // Trim the prefix off the error and warning, since they may come with
+  // a newline embedded which will cause the test fail.
+  std::string trimmed_error = error;
+  std::string trimmed_warn = warn;
+  if (!error.empty()) {
+    trimmed_error = error.substr(error.find_first_not_of("\n"));
+  }
+  if (!warn.empty()) {
+    trimmed_warn = warn.substr(warn.find_first_not_of("\n"));
+  }
+
+  if (trimmed_error.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
-    if (!warn.empty()) {
-      EXPECT_THAT(out.str(), HasSubstr(warn)) << msg.str() << out.str();
+    if (!trimmed_warn.empty()) {
+      EXPECT_THAT(out.str(), HasSubstr(trimmed_warn)) << msg.str() << out.str();
     }
   } else {
     ASSERT_FALSE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
-    EXPECT_THAT(out.str(), HasSubstr(error)) << msg.str() << out.str();
+    EXPECT_THAT(out.str(), HasSubstr(trimmed_error)) << msg.str() << out.str();
   }
 }
 

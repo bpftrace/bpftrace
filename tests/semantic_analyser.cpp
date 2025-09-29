@@ -16,17 +16,35 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
-#include "ast/passes/printer.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
+#include "ast_matchers.h"
 #include "bpftrace.h"
 #include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
+#include "struct.h"
 
 namespace bpftrace::test::semantic_analyser {
 
+using bpftrace::test::AssignMapStatement;
+using bpftrace::test::AssignVarStatement;
+using bpftrace::test::Binop;
+using bpftrace::test::Builtin;
+using bpftrace::test::Cast;
+using bpftrace::test::ExprStatement;
+using bpftrace::test::For;
+using bpftrace::test::If;
+using bpftrace::test::Integer;
+using bpftrace::test::Map;
+using bpftrace::test::MapAccess;
+using bpftrace::test::Probe;
+using bpftrace::test::Program;
+using bpftrace::test::String;
+using bpftrace::test::Tuple;
+using bpftrace::test::Typeof;
+using bpftrace::test::Variable;
 using ::testing::_;
 using ::testing::HasSubstr;
 
@@ -55,7 +73,7 @@ struct Types {
   ast::TypeMetadata &types;
 };
 struct ExpectedAST {
-  std::string_view str;
+  ProgramMatcher matcher;
 };
 
 template <typename T, typename First, typename... Ts>
@@ -188,11 +206,7 @@ public:
     }
     out.str("");
     if (expected_ast) {
-      EXPECT_TRUE(!expected_ast->str.empty());
-      ast::Printer printer(out);
-      printer.visit(ast.root);
-      const auto aststr = out.str();
-      EXPECT_THAT(aststr, HasSubstr(clean_prefix(expected_ast->str))) << aststr;
+      EXPECT_THAT(ast, expected_ast->matcher);
     }
 
     return ast;
@@ -487,23 +501,13 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
        "(struct "
        "Foo*)arg1 }");
   test(
-      R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b"); exit() })",
-      ExpectedAST{ R"(
-Program
- kprobe:f
-  if :: [(string[13],string[13])]
-   < :: [bool]
-    builtin: pid :: [uint32]
-    int: 10000 :: [int64]
-   then
-    tuple: :: [(string[2],string[13])]
-     string: a
-     string: hellolongstr
-   else
-    tuple: :: [(string[13],string[2])]
-     string: hellolongstr
-     string: b
-)" });
+      R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b") })",
+      ExpectedAST{ Program().WithProbe(
+          Probe({ "kprobe:f" },
+                { ExprStatement(
+                    If(Binop(Operator::LT, Builtin("pid"), Integer(10000)),
+                       Tuple({ String("a"), String("hellolongstr") }),
+                       Tuple({ String("hellolongstr"), String("b") }))) })) });
 
   // Error location is incorrect: #3063
   test("kprobe:f { $x = pid < 10000 ? 3 : cat(\"/proc/uptime\"); exit(); }",
@@ -2330,51 +2334,56 @@ TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
   // When assigning an aggregation to a map
   // containing integers, the aggregation is
   // implicitly cast to an integer.
-  test("kprobe:f { @x = 1; @y = count(); @x = @y; }", ExpectedAST{ R"(
-  =
-   map: @x :: [int64]int64
-    int: 0 :: [int64]
-   (int64)
-    [] :: [count_t]
-     map: @y :: [int64]count_t
-     int: 0 :: [int64]
-)" });
-  test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }", ExpectedAST{ R"(
-  =
-   map: @x :: [int64]int64
-    int: 0 :: [int64]
-   (int64)
-    [] :: [sum_t]
-     map: @y :: [int64]sum_t
-     int: 0 :: [int64]
-)" });
-  test("kprobe:f { @x = 1; @y = min(5); @x = @y; }", ExpectedAST{ R"(
-  =
-   map: @x :: [int64]int64
-    int: 0 :: [int64]
-   (int64)
-    [] :: [min_t]
-     map: @y :: [int64]min_t
-     int: 0 :: [int64]
-)" });
-  test("kprobe:f { @x = 1; @y = max(5); @x = @y; }", ExpectedAST{ R"(
-  =
-   map: @x :: [int64]int64
-    int: 0 :: [int64]
-   (int64)
-    [] :: [max_t]
-     map: @y :: [int64]max_t
-     int: 0 :: [int64]
-)" });
-  test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }", ExpectedAST{ R"(
-  =
-   map: @x :: [int64]int64
-    int: 0 :: [int64]
-   (int64)
-    [] :: [avg_t]
-     map: @y :: [int64]avg_t
-     int: 0 :: [int64]
-)" });
+  test("kprobe:f { @x = 1; @y = count(); @x = @y; }",
+       ExpectedAST{ Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
+                   ExprStatement(Call("count", { Map("@y"), Integer(0) })),
+                   AssignMapStatement(
+                       Map("@x"),
+                       Integer(0),
+                       Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
+                            MapAccess(Map("@y"), Integer(0)))) })) });
+  test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
+             ExprStatement(Call("sum", { Map("@y"), Integer(0), Integer(5) })),
+             AssignMapStatement(
+                 Map("@x"),
+                 Integer(0),
+                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
+                      MapAccess(Map("@y"), Integer(0)))) })) });
+  test("kprobe:f { @x = 1; @y = min(5); @x = @y; }",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
+             ExprStatement(Call("min", { Map("@y"), Integer(0), Integer(5) })),
+             AssignMapStatement(
+                 Map("@x"),
+                 Integer(0),
+                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
+                      MapAccess(Map("@y"), Integer(0)))) })) });
+  test("kprobe:f { @x = 1; @y = max(5); @x = @y; }",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
+             ExprStatement(Call("max", { Map("@y"), Integer(0), Integer(5) })),
+             AssignMapStatement(
+                 Map("@x"),
+                 Integer(0),
+                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
+                      MapAccess(Map("@y"), Integer(0)))) })) });
+  test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
+             ExprStatement(Call("avg", { Map("@y"), Integer(0), Integer(5) })),
+             AssignMapStatement(
+                 Map("@x"),
+                 Integer(0),
+                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
+                      MapAccess(Map("@y"), Integer(0)))) })) });
 
   // Assigning to a newly declared map
   // requires an explicit cast to get the
@@ -3230,30 +3239,24 @@ stdin:1:35-56: ERROR: Type mismatch for $x: trying to assign value of type '(int
 kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }
                                   ~~~~~~~~~~~~~~~~~~~~~
 )" });
-  test("begin { $x = (uint8)1; $x = 5; }", ExpectedAST{ R"(
-Program
- begin
-  =
-   variable: $x :: [uint8]
-   (uint8)
-    int: 1 :: [int64]
-  =
-   variable: $x :: [uint8]
-   (uint8)
-    int: 5 :: [int64]
-)" });
-  test("begin { $x = (int8)1; $x = 5; }", ExpectedAST{ R"(
-Program
- begin
-  =
-   variable: $x :: [int8]
-   (int8)
-    int: 1 :: [int64]
-  =
-   variable: $x :: [int8]
-   (int8)
-    int: 5 :: [int64]
-)" });
+  test("begin { $x = (uint8)1; $x = 5; }",
+       ExpectedAST{ Program().WithProbe(
+           Probe({ "begin" },
+                 { AssignVarStatement(Variable("$x"),
+                                      Cast(Typeof(SizedType(Type::integer)),
+                                           Integer(1))),
+                   AssignVarStatement(Variable("$x"),
+                                      Cast(Typeof(SizedType(Type::integer)),
+                                           Integer(5))) })) });
+  test("begin { $x = (int8)1; $x = 5; }",
+       ExpectedAST{ Program().WithProbe(
+           Probe({ "begin" },
+                 { AssignVarStatement(Variable("$x"),
+                                      Cast(Typeof(SizedType(Type::integer)),
+                                           Integer(1))),
+                   AssignVarStatement(Variable("$x"),
+                                      Cast(Typeof(SizedType(Type::integer)),
+                                           Integer(5))) })) });
 }
 
 TEST_F(SemanticAnalyserTest, mixed_int_like_map_assignments)
@@ -3624,7 +3627,7 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   var = unop->expr.as<ast::Variable>();
   EXPECT_TRUE(var->var_type.IsPtrTy());
 
-  SizedType chartype;
+  class SizedType chartype;
   if (arch::Host::Machine == arch::Machine::X86_64) {
     chartype = CreateInt8();
   } else {
@@ -3881,7 +3884,7 @@ TEST_F(SemanticAnalyserTest, tuple_indexing)
 // More in depth inspection of AST
 TEST_F(SemanticAnalyserTest, tuple_assign_var)
 {
-  SizedType ty = CreateTuple(
+  class SizedType ty = CreateTuple(
       Struct::CreateTuple({ CreateInt64(), CreateString(6) }));
   auto ast = test(R"(begin { $t = (1, "str"); $t = (4, "other"); })");
   auto &stmts = ast.root->probes.at(0)->block->stmts;
@@ -3903,7 +3906,7 @@ TEST_F(SemanticAnalyserTest, tuple_assign_map)
 
   // $t = (1, 3, 3, 7);
   auto *assignment = stmts.at(0).as<ast::AssignMapStatement>();
-  SizedType ty = CreateTuple(Struct::CreateTuple(
+  class SizedType ty = CreateTuple(Struct::CreateTuple(
       { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
   EXPECT_EQ(ty, assignment->map->value_type);
 
@@ -3917,9 +3920,10 @@ TEST_F(SemanticAnalyserTest, tuple_assign_map)
 // More in depth inspection of AST
 TEST_F(SemanticAnalyserTest, tuple_nested)
 {
-  SizedType ty_inner = CreateTuple(
+  class SizedType ty_inner = CreateTuple(
       Struct::CreateTuple({ CreateInt64(), CreateInt64() }));
-  SizedType ty = CreateTuple(Struct::CreateTuple({ CreateInt64(), ty_inner }));
+  class SizedType ty = CreateTuple(
+      Struct::CreateTuple({ CreateInt64(), ty_inner }));
   auto ast = test(R"(begin { $t = (1,(1,2)); })");
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
@@ -4389,43 +4393,24 @@ t:btf:tag { args.real_parent }
 TEST_F(SemanticAnalyserTest, for_loop_map_one_key)
 {
   test("begin { @map[0] = 1; for ($kv : @map) { print($kv); } }",
-       ExpectedAST{ R"(
-Program
- begin
-  =
-   map: @map :: [int64]int64
-    int: 0 :: [int64]
-   int: 1 :: [int64]
-  for
-   decl
-    variable: $kv :: [(int64,int64)]
-    map: @map :: [int64]int64
-   stmts
-    call: print
-     variable: $kv :: [(int64,int64)]
-)" });
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "begin" },
+           { AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+             For(Variable("$kv"),
+                 Map("@map"),
+                 { ExprStatement(Call("print", { Variable("$kv") })) }) })) });
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_map_two_keys)
 {
   test("begin { @map[0,0] = 1; for ($kv : @map) { print($kv); } }",
-       ExpectedAST{ R"(
-Program
- begin
-  =
-   map: @map :: [(int64,int64)]int64
-    tuple: :: [(int64,int64)]
-     int: 0 :: [int64]
-     int: 0 :: [int64]
-   int: 1 :: [int64]
-  for
-   decl
-    variable: $kv :: [((int64,int64),int64)]
-    map: @map :: [(int64,int64)]int64
-   stmts
-    call: print
-     variable: $kv :: [((int64,int64),int64)]
-)" });
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "begin" },
+           { AssignMapStatement(
+                 Map("@map"), Tuple({ Integer(0), Integer(0) }), Integer(1)),
+             For(Variable("$kv"),
+                 Map("@map"),
+                 { ExprStatement(Call("print", { Variable("$kv") })) }) })) });
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_map)
@@ -4517,7 +4502,8 @@ stdin:4:12-15: ERROR: Loop declaration shadows existing variable: $kv
 
 TEST_F(SemanticAnalyserTest, for_loop_variables_read_only)
 {
-  test(R"(
+  test(
+      R"(
     begin {
       $var = 0;
       @map[0] = 1;
@@ -4526,17 +4512,26 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_read_only)
       }
       print($var);
     })",
-       ExpectedAST{ R"(
-  for
-   ctx
-    $var :: [int64 *, AS(kernel)]
-   decl
-)" });
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignVarStatement(Variable("$var"), Integer(0)),
+            AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+            For(Variable("$kv"),
+                Map("@map"),
+                { ExprStatement(Call("print", { Variable("$var") })) })
+                .WithContext(
+                    bpftrace::test::SizedType(Type::record)
+                        .WithField("$var",
+                                   bpftrace::test::SizedType(Type::pointer)
+                                       .WithElement(bpftrace::test::SizedType(
+                                           Type::integer)))),
+            ExprStatement(Call("print", { Variable("$var") })) })) });
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_variables_modified_during_loop)
 {
-  test(R"(
+  test(
+      R"(
     begin {
       $var = 0;
       @map[0] = 1;
@@ -4545,17 +4540,23 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_modified_during_loop)
       }
       print($var);
     })",
-       ExpectedAST{ R"(
-  for
-   ctx
-    $var :: [int64 *, AS(kernel)]
-   decl
-)" });
+      ExpectedAST{ Program().WithProbe(
+          Probe({ "begin" },
+                { AssignVarStatement(Variable("$var"), Integer(0)),
+                  AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+                  For(Variable("$kv"),
+                      Map("@map"),
+                      { ExprStatement(
+                          Unop(Operator::POST_INCREMENT, Variable("$var"))) })
+                      .WithContext(bpftrace::test::SizedType(Type::record)
+                                       .WithField("$var",
+                                                  bpftrace::test::SizedType(
+                                                      Type::pointer))),
+                  ExprStatement(Call("print", { Variable("$var") })) })) });
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop)
 {
-  // $var should not appear in ctx
   test(R"(
     begin {
       @map[0] = 1;
@@ -4564,10 +4565,15 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop)
         print($var);
       }
     })",
-       ExpectedAST{ R"(
-  for
-   decl
-)" });
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "begin" },
+           { AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+             For(Variable("$kv"),
+                 Map("@map"),
+                 { AssignVarStatement(Variable("$var"), Integer(2)),
+                   ExprStatement(Call("print", { Variable("$var") })) })
+                 .WithContext(testing::Not(
+                     SizedType(Type::record).WithField("$var", _))) })) });
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
@@ -4583,13 +4589,20 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
         print($var3);
       }
     })",
-       ExpectedAST{ R"(
-  for
-   ctx
-    $var1 :: [int64 *, AS(kernel)]
-    $var3 :: [string[4] *, AS(kernel)]
-   decl
-)" });
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "begin" },
+           { AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+             AssignVarStatement(Variable("$var1"), Integer(123)),
+             AssignVarStatement(Variable("$var2"), String("abc")),
+             AssignVarStatement(Variable("$var3"), String("def")),
+             For(Variable("$kv"),
+                 Map("@map"),
+                 { AssignVarStatement(Variable("$var1"), Integer(456)),
+                   ExprStatement(Call("print", { Variable("$var3") })) })
+                 .WithContext(
+                     bpftrace::test::SizedType(Type::record)
+                         .WithField("$var1", SizedType(Type::pointer))
+                         .WithField("$var3", SizedType(Type::pointer))) })) });
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop_used_after)
@@ -5224,18 +5237,14 @@ begin { let $x = { let $y = $x; $y }; print($x) }
 )" });
 
   // Good, variable is not shadowed
-  test("begin { let $x = { let $x = 1; $x }; print($x) }", ExpectedAST{ R"(
-Program
- begin
-  decl
-   variable: $x :: [int64]
-   decl
-    variable: $x :: [int64]
-    int: 1 :: [int64]
-   variable: $x :: [int64]
-  call: print
-   variable: $x :: [int64]
-)" });
+  test("begin { let $x = { let $x = 1; $x }; print($x) }",
+       ExpectedAST{ Program().WithProbe(
+           Probe({ "begin" },
+                 { AssignVarStatement(Variable("$x"),
+                                      Block({ AssignVarStatement(Variable("$x"),
+                                                                 Integer(1)) },
+                                            Variable("$x"))),
+                   ExprStatement(Call("print", { Variable("$x") })) })) });
 }
 
 TEST_F(SemanticAnalyserTest, map_declarations)
@@ -5549,8 +5558,8 @@ kprobe:f { @a[1] = 1; if (comptime true) { @a = 1; } }
 TEST_F(SemanticAnalyserTest, typeinfo_if_comptime)
 {
   // We should be able to selectively analyze specific branches. Only the
-  // correct type branch will be chosen, and we will not encounted a type error
-  // for the other branch.
+  // correct type branch will be chosen, and we will not encounted a type
+  // error for the other branch.
   test(
       R"(kprobe:f { $x = 1; if comptime (typeinfo($x) == typeinfo("abc")) { $x = "foo"; } else { $x = 2; } })");
   test(

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "attached_probe.h"
 #include "bpffeature.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
@@ -12,11 +13,9 @@
 
 namespace bpftrace::test {
 
-class MockProbeMatcher : public ProbeMatcher {
+class MockProbeMatcher : public ::bpftrace::ProbeMatcher {
 public:
-  MockProbeMatcher(BPFtrace *bpftrace) : ProbeMatcher(bpftrace)
-  {
-  }
+  MockProbeMatcher(BPFtrace *bpftrace) : ::bpftrace::ProbeMatcher(bpftrace) {};
 #pragma GCC diagnostic push
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
@@ -63,19 +62,19 @@ class MockBPFtrace : public BPFtrace {
 public:
   MOCK_METHOD2(
       attach_probe,
-      Result<std::unique_ptr<AttachedProbe>>(Probe &probe,
+      Result<std::unique_ptr<AttachedProbe>>(::bpftrace::Probe &probe,
                                              const BpfBytecode &bytecode));
 
   MOCK_METHOD1(resume_tracee, int(pid_t tracee_pid));
-  std::vector<Probe> get_probes()
+  std::vector<::bpftrace::Probe> get_probes()
   {
     return resources.probes;
   }
-  std::unordered_map<std::string, Probe> get_special_probes()
+  std::unordered_map<std::string, ::bpftrace::Probe> get_special_probes()
   {
     return resources.special_probes;
   }
-  std::vector<Probe> get_benchmark_probes()
+  std::vector<::bpftrace::Probe> get_benchmark_probes()
   {
     return resources.benchmark_probes;
   }
@@ -105,7 +104,8 @@ public:
     return true;
   }
 
-  Result<uint64_t> get_buffer_pages(bool __attribute__((unused)) /*per_cpu*/) const override
+  Result<uint64_t> get_buffer_pages(
+      bool __attribute__((unused)) /*per_cpu*/) const override
   {
     return 64;
   }
@@ -119,12 +119,12 @@ public:
   const std::optional<struct stat> &get_pidns_self_stat() const override
   {
     static const std::optional<struct stat> init_pid_namespace = []() {
-      struct stat s{};
+      struct stat s {};
       s.st_ino = 0xeffffffc; // PROC_PID_INIT_INO
       return std::optional{ s };
     }();
     static const std::optional<struct stat> child_pid_namespace = []() {
-      struct stat s{};
+      struct stat s {};
       s.st_ino = 0xf0000011; // Arbitrary user namespace
       return std::optional{ s };
     }();
@@ -224,7 +224,7 @@ public:
                                                const std::string &target,
                                                const std::string &provider,
                                                const std::string &name,
-                                              bool has_uprobe_multi));
+                                               bool has_uprobe_multi));
 #pragma GCC diagnostic pop
 };
 
