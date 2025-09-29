@@ -193,8 +193,9 @@ void SessionExpander::visit(Probe &probe)
 
     AttachPointList attach_points = probe.attach_points;
     auto *expr = ast_.make_node<IfExpr>(
-        ast_.make_node<Builtin>("__builtin_session_is_return",
-                                Location(probe.block->loc)),
+        ast_.make_node<Call>("__session_is_return",
+                             ExpressionList{},
+                             Location(probe.block->loc)),
         retprobe->block,
         probe.block,
         Location(probe.block->loc));

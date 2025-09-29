@@ -860,9 +860,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return ScopedExpr(b_.getInt64(cpid));
   } else if (builtin.ident == "__builtin_jiffies") {
     return ScopedExpr(b_.CreateJiffies64(builtin.loc));
-  } else if (builtin.ident == "__builtin_session_is_return") {
-    return ScopedExpr(CreateKernelFuncCall(
-        Kfunc::bpf_session_is_return, {}, "is_return", builtin));
   } else {
     LOG(BUG) << "unknown builtin \"" << builtin.ident << "\"";
     __builtin_unreachable();
