@@ -16,6 +16,8 @@ public:
   std::unordered_map<std::string, bool> scalar;
 };
 
+const std::unordered_set<std::string>& getAssignRewriteFuncs();
+
 Pass CreateMapSugarPass();
 
 } // namespace bpftrace::ast

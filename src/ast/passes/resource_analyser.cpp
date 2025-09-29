@@ -363,53 +363,35 @@ void ResourceAnalyser::visit(Call &call)
       resources_.str_buffers++;
   }
 
-  // Aggregation functions like count/sum/max are always called like:
-  //   @ = count()
-  // Thus, we visit AssignMapStatement AST node which visits the map and
-  // assigns a map key buffer. Thus, there is no need to assign another
-  // buffer here.
-  //
-  // The exceptions are:
-  // 1. lhist/hist/tseries because the map key buffer includes both the key
-  //    itself and the bucket ID from a call to linear/log2/tseries functions.
-  // 2. has_key/delete because the map key buffer allocation depends on
-  //    arguments to the function e.g.
-  //      delete(@, 2)
-  //    requires a map key buffer to hold arg1 = 2 but map.key_expr is null
-  //    so the map key buffer check in visit(Map &map) doesn't work as is.
-  if (call.func == "lhist" || call.func == "hist" || call.func == "tseries") {
-    auto &map = *call.vargs.at(0).as<Map>();
-    // Allocation is always needed for lhist/hist/tseries. But we need to
-    // allocate space for both map key and the bucket ID from a call to
-    // linear/log2/tseries functions.
-    const auto map_key_size = map.key_type.GetSize() + CreateUInt64().GetSize();
-    if (exceeds_stack_limit(map_key_size)) {
-      resources_.map_key_buffers++;
-      resources_.max_map_key_size = std::max(resources_.max_map_key_size,
-                                             map_key_size);
-    }
-  } else if (call.func == "has_key") {
-    auto &map = *call.vargs.at(0).as<Map>();
-    auto &key_expr = call.vargs.at(1);
-    // has_key does not work on scalar maps (e.g. @a = 1), so we
-    // don't need to check if map.key_expr is set
-    if (needMapKeyAllocation(map, key_expr) &&
-        exceeds_stack_limit(map.key_type.GetSize())) {
-      resources_.map_key_buffers++;
-      resources_.max_map_key_size = std::max(resources_.max_map_key_size,
-                                             map.key_type.GetSize());
-    }
-  } else if (call.func == "delete") {
-    auto &map = *call.vargs.at(0).as<Map>();
-    auto &key_expr = call.vargs.at(1);
-    const auto deleteNeedMapKeyAllocation = needMapKeyAllocation(map, key_expr);
-    // delete always expects a map and key, so we don't need to check if
-    // map.key_expr is set
-    if (deleteNeedMapKeyAllocation &&
-        exceeds_stack_limit(map.key_type.GetSize())) {
-      resources_.map_key_buffers++;
-      resources_.max_map_key_size = std::max(resources_.max_map_key_size,
-                                             map.key_type.GetSize());
+  // These functions, some of which are desugared AssignMapStatements (e.g.,
+  // `@a[1, 2, 3] = count(); -> count(@a, (1, 2, 3));`) might require
+  // additional map key scratch buffers because the map key type might be
+  // a slightly different type due to type promotion in an earlier pass.
+  // This requires us to allocate a new map key (or create a scratch buffer)
+  // and copy individual elements of the tuple instead of the whole thing.
+  if (getAssignRewriteFuncs().contains(call.func) || call.func == "delete" ||
+      call.func == "has_key") {
+    if (call.func == "lhist" || call.func == "hist" || call.func == "tseries") {
+      auto &map = *call.vargs.at(0).as<Map>();
+      // Allocation is always needed for lhist/hist/tseries but we need to
+      // allocate space for both map key and the bucket ID from a call to
+      // linear/log2/tseries functions.
+      const auto map_key_size = map.key_type.GetSize() +
+                                CreateUInt64().GetSize();
+      if (exceeds_stack_limit(map_key_size)) {
+        resources_.map_key_buffers++;
+        resources_.max_map_key_size = std::max(resources_.max_map_key_size,
+                                               map_key_size);
+      }
+    } else {
+      auto &map = *call.vargs.at(0).as<Map>();
+      auto &key_expr = call.vargs.at(1);
+      if (needMapKeyAllocation(map, key_expr) &&
+          exceeds_stack_limit(map.key_type.GetSize())) {
+        resources_.map_key_buffers++;
+        resources_.max_map_key_size = std::max(resources_.max_map_key_size,
+                                               map.key_type.GetSize());
+      }
     }
   }
 
