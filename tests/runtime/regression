@@ -140,3 +140,11 @@ TIMEOUT 1
 NAME nested ternary operators
 PROG begin { let $x=1; let $y=2; let $z=3;  print(if ($x) { if ($y) { if ($z) { $x } else { $y } } else { $z } } else { 0 }); }
 EXPECT 1
+
+# Ensure scratch buffers for map keys are created for aggregate map
+# functions like `count()` and `sum()`
+# https://github.com/bpftrace/bpftrace/issues/4669
+NAME map key scratch buffer for map aggregates
+PROG config = { on_stack_limit = 0 }  begin { @a[pid, comm, "reallylongstr"] = count(); }
+EXPECT Attached 1 probe
+TIMEOUT 1
