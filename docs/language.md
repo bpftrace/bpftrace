@@ -1425,8 +1425,10 @@ After the "common" members listed first, the members are specific to the tracepo
 * `ur`
 
 `uprobe` s or user-space probes are the user-space equivalent of `kprobe` s.
-The same limitations that apply [kprobe and kretprobe](#kprobe-and-kretprobe) also apply to `uprobe` s and `uretprobe` s, namely: arguments are available via the `argN` and `sargN` builtins and can only be accessed with a uprobe (`sargN` is more common for older versions of golang).
+The same limitations that apply [kprobe and kretprobe](#kprobe-and-kretprobe) also apply to `uprobe` s and `uretprobe` s, namely: arguments are available via the `argN` builtins and can only be accessed with a uprobe.
 retval is the return value for the instrumented function and can only be accessed with a uretprobe.
+**Note**: When tracing some languages, like C++, `arg0` and even `arg1` may refer to runtime internals such as the current object instance (`this`) and/or the eventual return value for large returned objects where copy elision is used.
+This will push the actual function arguments to possibly start at `arg1` or `arg2` - the only way to know is to experiment.
 
 ```
 uprobe:/bin/bash:readline { printf("arg0: %d\n", arg0); }
