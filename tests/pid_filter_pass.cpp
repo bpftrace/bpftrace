@@ -2,17 +2,23 @@
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/field_analyser.h"
-#include "ast/passes/printer.h"
+#include "ast_matchers.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::pid_filter_pass {
 
+using bpftrace::test::ExprStatement;
+using bpftrace::test::If;
+using bpftrace::test::Integer;
+using bpftrace::test::ProbeMatcher;
+using bpftrace::test::Program;
+
 using ::testing::_;
 using ::testing::HasSubstr;
 
-void test(const std::string& input, bool has_pid, bool has_filter)
+void test(const std::string& attach_points, bool has_pid, bool has_filter)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
@@ -20,6 +26,9 @@ void test(const std::string& input, bool has_pid, bool has_filter)
     bpftrace.procmon_ = std::make_unique<MockProcMon>(1);
   }
 
+  // Note that this constructs a program from the list of attachpoints,
+  // and the body { 1 }, which we test for explicitly below.
+  std::string input = attach_points + " { 1 }";
   ast::ASTContext ast("stdin", input);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
@@ -36,23 +45,19 @@ void test(const std::string& input, bool has_pid, bool has_filter)
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
 
-  std::string_view expected_ast = R"(
-  if
-   !=
-    builtin: pid
-    int: 1 :: [int64]
-   then
-   else
-)";
-
-  std::ostringstream out;
-  ast::Printer printer(out);
-  printer.visit(ast.root);
-
   if (has_filter) {
-    EXPECT_THAT(out.str(), HasSubstr(expected_ast));
+    // The filter transforms the probe to a new block that has the if as the
+    // final expression in the top.
+    EXPECT_THAT(
+        ast,
+        Program().WithProbe(ProbeMatcher().WithBody(Block(
+            {}, If(Binop(Operator::NE, Builtin("pid"), Integer(1)), _, _)))));
   } else {
-    EXPECT_THAT(out.str(), Not(HasSubstr(expected_ast)));
+    // The probe should still be a sequence of statements.
+    EXPECT_THAT(ast,
+                Program().WithProbe(ProbeMatcher().WithStatements({
+                    ExprStatement(Integer(1)),
+                })));
   }
 }
 
@@ -68,15 +73,15 @@ TEST(pid_filter_pass, add_filter)
   };
 
   for (auto& probe : filter_probes) {
-    test(probe + " { 1 }", true, true);
+    test(probe, true, true);
   }
 }
 
 TEST(pid_filter_pass, no_add_filter)
 {
   // Sanity check: no pid, no filter
-  test("kprobe:f { 1 }", false, false);
-  test("profile:hz:99 { 1 }", false, false);
+  test("kprobe:f", false, false);
+  test("profile:hz:99", false, false);
 
   std::vector<std::string> no_filter_probes = {
     "begin",
@@ -93,14 +98,14 @@ TEST(pid_filter_pass, no_add_filter)
   };
 
   for (auto& probe : no_filter_probes) {
-    test(probe + " { 1 }", true, false);
+    test(probe, true, false);
   }
 }
 
 TEST(pid_filter_pass, mixed_probes)
 {
-  test("kprobe:f, uprobe:/bin/sh:f { 1 }", true, true);
-  test("usdt:sh:probe, uprobe:/bin/sh:f, profile:ms:1 { 1 }", true, false);
+  test("kprobe:f, uprobe:/bin/sh:f", true, true);
+  test("usdt:sh:probe, uprobe:/bin/sh:f, profile:ms:1", true, false);
 }
 
 } // namespace bpftrace::test::pid_filter_pass

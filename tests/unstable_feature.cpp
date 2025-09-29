@@ -1,7 +1,6 @@
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/config_analyser.h"
-#include "ast/passes/parser.h"
-#include "ast/passes/printer.h"
+#include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 
@@ -28,8 +27,6 @@ void test(const std::string& input, const std::string& error = "")
                 .run();
 
   std::ostringstream out;
-  ast::Printer printer(out);
-  printer.visit(ast.root);
   ast.diagnostics().emit(out);
 
   if (error.empty()) {

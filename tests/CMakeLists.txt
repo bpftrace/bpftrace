@@ -29,6 +29,7 @@ add_executable(bpftrace_test
   arch.cpp
   async_action.cpp
   ast.cpp
+  ast_matchers.cpp
   attachpoint_passes.cpp
   bpfbytecode.cpp
   bpftrace.cpp

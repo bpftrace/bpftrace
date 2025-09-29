@@ -1,6 +1,6 @@
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
-#include "ast/passes/printer.h"
+#include "ast_matchers.h"
 #include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
@@ -8,10 +8,21 @@
 
 namespace bpftrace::test::ap_probe_expansion {
 
+using bpftrace::test::AssignScalarMapStatement;
+using bpftrace::test::Block;
+using bpftrace::test::Builtin;
+using bpftrace::test::ExprStatement;
+using bpftrace::test::If;
+using bpftrace::test::Integer;
+using bpftrace::test::Map;
+using bpftrace::test::Probe;
+using bpftrace::test::Program;
+
+template <typename MatcherT>
 static void test(const std::string &prog,
                  const std::vector<std::string> &expected_aps,
                  const std::vector<std::set<std::string>> &expected_funcs,
-                 std::string_view expected_ast,
+                 const MatcherT &matcher,
                  bool features)
 {
   auto mock_bpftrace = get_mock_bpftrace();
@@ -46,22 +57,14 @@ static void test(const std::string &prog,
     }
   }
 
-  if (!expected_ast.empty()) {
-    if (expected_ast[0] == '\n')
-      expected_ast.remove_prefix(1);
-
-    std::stringstream out;
-    ast::Printer printer(out);
-    printer.visit(ast.root);
-    EXPECT_EQ(out.str(), expected_ast);
-  }
+  EXPECT_THAT(ast, matcher);
 }
 
 static void test_attach_points(const std::string &input,
                                const std::vector<std::string> &expected_aps,
                                bool features = true)
 {
-  test(input, expected_aps, {}, "", features);
+  test(input, expected_aps, {}, _, features);
 }
 
 static void test_multi_attach_points(
@@ -69,30 +72,27 @@ static void test_multi_attach_points(
     const std::vector<std::string> &expected_aps,
     const std::vector<std::set<std::string>> &expected_funcs)
 {
-  test(input, expected_aps, expected_funcs, "", true);
+  test(input, expected_aps, expected_funcs, _, true);
 }
 
-static void test_ast(const std::string &input, std::string_view expected_ast)
+template <typename MatcherT>
+static void test_ast(const std::string &input, const MatcherT matcher)
 {
-  test(input, {}, {}, expected_ast, true);
+  test(input, {}, {}, matcher, true);
 }
 
 TEST(ap_probe_expansion, session_ast)
 {
-  test_ast("kprobe:sys_* { @entry = 1 } kretprobe:sys_* { @exit = 1 }", R"(
-Program
- kprobe:sys_*
-  if
-   call: __session_is_return
-   then
-    =
-     map: @exit
-     int: 1 :: [int64]
-   else
-    =
-     map: @entry
-     int: 1 :: [int64]
-)");
+  test_ast(
+      "kprobe:sys_* { @entry = 1 } kretprobe:sys_* { @exit = 1 }",
+      Program().WithProbe(Probe(
+          { "kprobe:sys_*" },
+          { ExprStatement(
+              If(Call("__session_is_return", {}),
+                 Block({ AssignScalarMapStatement(Map("@exit"), Integer(1)) },
+                       None()),
+                 Block({ AssignScalarMapStatement(Map("@entry"), Integer(1)) },
+                       None()))) })));
 }
 
 TEST(ap_probe_expansion, kprobe_wildcard)
