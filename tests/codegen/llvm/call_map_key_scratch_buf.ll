@@ -14,14 +14,14 @@ target triple = "bpf"
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !49
 @__bt__write_map_val_buf = dso_local externally_initialized global [1 x [1 x [8 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !51
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !60
-@__bt__map_key_buf = dso_local externally_initialized global [1 x [3 x [16 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !64
-@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !70
+@__bt__map_key_buf = dso_local externally_initialized global [1 x [4 x [16 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !64
+@__bt__num_cpus = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !68
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 ; Function Attrs: nounwind
-define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !76 {
+define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !74 {
 entry:
   %initial_value9 = alloca i64, align 8
   %lookup_elem_val7 = alloca i64, align 8
@@ -30,7 +30,7 @@ entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  %2 = getelementptr [1 x [4 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
   store i64 1, ptr %2, align 8
   %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %2)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %lookup_elem_val)
@@ -56,7 +56,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #3
   %5 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
-  %6 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
+  %6 = getelementptr [1 x [4 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded2, i64 1, i64 0
   %7 = getelementptr [16 x i8], ptr %6, i64 0, i64 0
   store i64 0, ptr %7, align 8
   %8 = getelementptr [16 x i8], ptr %6, i64 0, i64 8
@@ -85,14 +85,14 @@ lookup_merge6:                                    ; preds = %lookup_failure5, %l
   %get_cpu_id11 = call i64 inttoptr (i64 8 to ptr)() #3
   %11 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded12 = and i64 %get_cpu_id11, %11
-  %12 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded12, i64 2, i64 0
+  %12 = getelementptr [1 x [4 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded12, i64 2, i64 0
   store i64 1, ptr %12, align 8
   %lookup_elem13 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %12)
   %has_key = icmp ne ptr %lookup_elem13, null
   %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)() #3
   %13 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded15 = and i64 %get_cpu_id14, %13
-  %14 = getelementptr [1 x [3 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
+  %14 = getelementptr [1 x [4 x [16 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
   store i64 1, ptr %14, align 8
   %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %14)
   %delete_ret = icmp eq i64 %delete_elem, 0
@@ -179,8 +179,8 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: re
 attributes #2 = { alwaysinline nounwind }
 attributes #3 = { memory(none) }
 
-!llvm.dbg.cu = !{!72}
-!llvm.module.flags = !{!74, !75}
+!llvm.dbg.cu = !{!70}
+!llvm.module.flags = !{!72, !73}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "LICENSE", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -248,19 +248,17 @@ attributes #3 = { memory(none) }
 !63 = !DICompositeType(tag: DW_TAG_array_type, baseType: !24, size: 64, elements: !58)
 !64 = !DIGlobalVariableExpression(var: !65, expr: !DIExpression())
 !65 = distinct !DIGlobalVariable(name: "__bt__map_key_buf", linkageName: "global", scope: !2, file: !2, type: !66, isLocal: false, isDefinition: true)
-!66 = !DICompositeType(tag: DW_TAG_array_type, baseType: !67, size: 384, elements: !58)
-!67 = !DICompositeType(tag: DW_TAG_array_type, baseType: !32, size: 384, elements: !68)
-!68 = !{!69}
-!69 = !DISubrange(count: 3, lowerBound: 0)
-!70 = !DIGlobalVariableExpression(var: !71, expr: !DIExpression())
-!71 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
-!72 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !73)
-!73 = !{!0, !7, !26, !35, !49, !51, !60, !64, !70}
-!74 = !{i32 2, !"Debug Info Version", i32 3}
-!75 = !{i32 7, !"uwtable", i32 0}
-!76 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !77, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !72, retainedNodes: !80)
-!77 = !DISubroutineType(types: !78)
-!78 = !{!24, !79}
-!79 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
-!80 = !{!81}
-!81 = !DILocalVariable(name: "ctx", arg: 1, scope: !76, file: !2, type: !79)
+!66 = !DICompositeType(tag: DW_TAG_array_type, baseType: !67, size: 512, elements: !58)
+!67 = !DICompositeType(tag: DW_TAG_array_type, baseType: !32, size: 512, elements: !5)
+!68 = !DIGlobalVariableExpression(var: !69, expr: !DIExpression())
+!69 = distinct !DIGlobalVariable(name: "__bt__num_cpus", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!70 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !71)
+!71 = !{!0, !7, !26, !35, !49, !51, !60, !64, !68}
+!72 = !{i32 2, !"Debug Info Version", i32 3}
+!73 = !{i32 7, !"uwtable", i32 0}
+!74 = distinct !DISubprogram(name: "kprobe_f_1", linkageName: "kprobe_f_1", scope: !2, file: !2, type: !75, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !70, retainedNodes: !78)
+!75 = !DISubroutineType(types: !76)
+!76 = !{!24, !77}
+!77 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
+!78 = !{!79}
+!79 = !DILocalVariable(name: "ctx", arg: 1, scope: !74, file: !2, type: !77)

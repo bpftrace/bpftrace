@@ -6,6 +6,16 @@
 
 namespace bpftrace::ast {
 
+const std::unordered_set<std::string> &getAssignRewriteFuncs()
+{
+  // Similarly these are syntactic sugar over operating on a map. This list
+  // could also be dynamically generated based on some underlying annotation.
+  static std::unordered_set<std::string> ASSIGN_REWRITE = {
+    "hist", "lhist", "count", "sum", "min", "max", "avg", "stats", "tseries",
+  };
+  return ASSIGN_REWRITE;
+}
+
 namespace {
 
 class MapDefaultKey : public Visitor<MapDefaultKey> {
@@ -269,18 +279,12 @@ void MapFunctionAliases::visit(Call &call)
   }
 }
 
-// Similarly these are syntactic sugar over operating on a map. This list could
-// also be dynamically generated based on some underlying annotation.
-static std::unordered_set<std::string> ASSIGN_REWRITE = {
-  "hist", "lhist", "count", "sum", "min", "max", "avg", "stats", "tseries",
-};
-
 static std::optional<Expression> injectMap(Expression expr,
                                            Map *map,
                                            Expression key)
 {
   if (auto *call = expr.as<Call>()) {
-    if (ASSIGN_REWRITE.contains(call->func)) {
+    if (getAssignRewriteFuncs().contains(call->func)) {
       auto args = std::move(call->vargs);
       call->vargs.emplace_back(map);
       call->vargs.emplace_back(key);
@@ -314,7 +318,7 @@ void MapAssignmentCall::visit(Statement &stmt)
 
 void MapAssignmentCheck::visit(Call &call)
 {
-  if (ASSIGN_REWRITE.contains(call.func) && call.injected_args == 0) {
+  if (getAssignRewriteFuncs().contains(call.func) && call.injected_args == 0) {
     call.addError() << call.func << "() must be assigned directly to a map";
   }
   Visitor<MapAssignmentCheck>::visit(call);
