@@ -673,6 +673,9 @@ Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,
   // The last level is either an array of bytes (e.g. for strings)
   // or a single value (e.g. for ints like the EVENT_LOSS_COUNTER)
   const auto global_name = std::string(global_var_name);
+  bpftrace_.resources.global_vars.check_index(global_name,
+                                              bpftrace_.resources,
+                                              key);
   auto sized_type = bpftrace_.resources.global_vars.get_sized_type(
       global_name, bpftrace_.resources, *bpftrace_.config_);
   auto *cpu_id = CreateGetCpuId(loc);
