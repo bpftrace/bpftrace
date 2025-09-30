@@ -379,14 +379,8 @@ void ResourceAnalyser::visit(Call &call)
                                                map_key_size);
       }
     } else {
-      auto &map = *call.vargs.at(0).as<Map>();
-      auto &key_expr = call.vargs.at(1);
-      if (needMapKeyAllocation(map, key_expr) &&
-          exceeds_stack_limit(map.key_type.GetSize())) {
-        resources_.map_key_buffers++;
-        resources_.max_map_key_size = std::max(resources_.max_map_key_size,
-                                               map.key_type.GetSize());
-      }
+      maybe_allocate_map_key_buffer(*call.vargs.at(0).as<Map>(),
+                                    call.vargs.at(1));
     }
   }
 
