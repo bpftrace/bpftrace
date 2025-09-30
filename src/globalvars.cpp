@@ -276,6 +276,23 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
   return CreateInt64();
 }
 
+void GlobalVars::check_index(const std::string &global_var_name,
+                             const RequiredResources &resources,
+                             size_t index) const
+{
+  if (global_var_name == TUPLE_BUFFER) {
+    assert(index < resources.tuple_buffers);
+  } else if (global_var_name == GET_STR_BUFFER) {
+    assert(index < resources.str_buffers);
+  } else if (global_var_name == READ_MAP_VALUE_BUFFER) {
+    assert(index < resources.read_map_value_buffers);
+  } else if (global_var_name == VARIABLE_BUFFER) {
+    assert(index < resources.variable_buffers);
+  } else if (global_var_name == MAP_KEY_BUFFER) {
+    assert(index < resources.map_key_buffers);
+  }
+}
+
 std::unordered_set<std::string> get_section_names()
 {
   std::unordered_set<std::string> ret;

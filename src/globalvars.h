@@ -166,6 +166,7 @@ public:
   SizedType get_sized_type(const std::string &global_var_name,
                            const RequiredResources &resources,
                            const Config &bpftrace_config) const;
+  void check_index(const std::string &global_var_name, const RequiredResources &resources, size_t index) const;
 
   const std::unordered_map<std::string, GlobalVarConfig> &global_var_map() const
   {
