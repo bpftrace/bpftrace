@@ -23,5 +23,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
     - name: Build
       run: docker build -f ${{ matrix.dockerfile }} .

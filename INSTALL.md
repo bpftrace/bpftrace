@@ -240,7 +240,7 @@ make install
 
 # bpftrace
 cd $builddir
-git clone https://github.com/bpftrace/bpftrace
+git clone --recurse-submodules https://github.com/bpftrace/bpftrace
 cd bpftrace
 mkdir build; cd build
 cmake3 ..
