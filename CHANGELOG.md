@@ -11,6 +11,8 @@ and this project adheres to
 #### Breaking Changes
 - `exit()` is no longer allowed inside loops. `return` was always disallowed, and `exit()` implicitly returns, which may result in undefined behavior.
   - [#4587](https://github.com/bpftrace/bpftrace/pull/4587)
+- Restrict bpftrace script licenses to those that are GPL compatible
+  - [#4677](https://github.com/bpftrace/bpftrace/pull/4677)
 #### Added
 - Add support for indexing string types
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)

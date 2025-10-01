@@ -250,7 +250,15 @@ For user space symbols, symbolicate lazily/on-demand (`true`) or symbolicate eve
 
 Default: "GPL"
 
-The license bpftrace will use to load BPF programs into the linux kernel.
+The license bpftrace will use to load BPF programs into the linux kernel. Here is the list of accepted license strings:
+- GPL
+- GPL v2
+- GPL and additional rights
+- Dual BSD/GPL
+- Dual MIT/GPL
+- Dual MPL/GPL
+
+[Read More about BPF licenses](#bpf-license)
 
 ### log_size
 
