@@ -14,6 +14,7 @@ namespace bpftrace {
 
 char ParseError::ID;
 char RenameError::ID;
+char LicenseError::ID;
 
 void ParseError::log(llvm::raw_ostream &OS) const
 {
@@ -23,6 +24,30 @@ void ParseError::log(llvm::raw_ostream &OS) const
 void RenameError::log(llvm::raw_ostream &OS) const
 {
   OS << "key has been renamed to '" << name_ << "'";
+}
+
+static const std::unordered_map<std::string, CompatibleBPFLicense>
+    BPF_LICENSE_STR = { { "GPL", GPL },
+                        { "GPL v2", GPL_V2 },
+                        { "GPL and additional rights", GPL_AR },
+                        { "Dual BSD/GPL", DUAL_BSD_GPL },
+                        { "Dual MIT/GPL", DUAL_MIT_GPL },
+                        { "Dual MPL/GPL", DUAL_MPL_GPL } };
+
+void LicenseError::log(llvm::raw_ostream &OS) const
+{
+  OS << "Invalid value for license. Found: " << license() << ". Valid values: ";
+  bool first = true;
+  for (const auto &[k, v] : BPF_LICENSE_STR) {
+    if (!first) {
+      OS << ", ";
+    }
+    OS << k;
+    first = false;
+  }
+  OS << ". Read more about BPF programs and licensing: "
+        "https://docs.kernel.org/bpf/"
+        "bpf_licensing.html#using-bpf-programs-in-the-linux-kernel";
 }
 
 // /proc/sys/kernel/randomize_va_space >= 1
@@ -193,6 +218,28 @@ struct ConfigParser<ConfigMissingProbes> {
     return make_error<ParseError>(key,
                                   "Invalid value for missing_probes: valid "
                                   "values are ignore, warn, and error.");
+  }
+};
+
+template <>
+struct ConfigParser<CompatibleBPFLicense> {
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   CompatibleBPFLicense *target,
+                   const std::string &original)
+  {
+    auto found = BPF_LICENSE_STR.find(original);
+    if (found == BPF_LICENSE_STR.end()) {
+      return make_error<LicenseError>(original);
+    }
+
+    *target = found->second;
+    return OK();
+  }
+  Result<OK> parse([[maybe_unused]] const std::string &key,
+                   [[maybe_unused]] CompatibleBPFLicense *target,
+                   uint64_t v)
+  {
+    return make_error<LicenseError>(std::to_string(v));
   }
 };
 
@@ -378,6 +425,17 @@ Result<OK> Config::load_environment()
     }
   }
   return OK();
+}
+
+std::string Config::get_license_str(CompatibleBPFLicense license)
+{
+  for (const auto &[k, v] : BPF_LICENSE_STR) {
+    if (v == license) {
+      return k;
+    }
+  }
+  LOG(BUG) << "License enum not in BPF_LICENSE_STR map";
+  return "";
 }
 
 } // namespace bpftrace

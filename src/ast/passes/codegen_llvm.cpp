@@ -50,6 +50,7 @@
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "codegen_resources.h"
+#include "config.h"
 #include "globalvars.h"
 #include "log.h"
 #include "map_info.h"
@@ -507,7 +508,8 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
   module_->setUwtable(llvm::UWTableKind::None);
 
   // Set license of BPF programs.
-  const std::string &license = bpftrace_.config_->license;
+  const std::string license = ::bpftrace::Config::get_license_str(
+      bpftrace_.config_->license);
   auto license_size = license.size() + 1;
   auto *license_var = llvm::dyn_cast<GlobalVariable>(
       module_->getOrInsertGlobal(LICENSE,
