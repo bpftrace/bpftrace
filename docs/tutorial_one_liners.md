@@ -25,9 +25,8 @@ bpftrace -l 'tracepoint:syscalls:sys_enter_*'
 ```
 bpftrace -e 'BEGIN { printf("hello world\n"); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'BEGIN { printf("hello world\n"); }'
 Attached 1 probe
 hello world
 ^C
@@ -43,9 +42,8 @@ This prints a welcome message. Run it, then hit Ctrl-C to end.
 ```
 bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
 Attached 1 probe
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
@@ -70,9 +68,8 @@ members of this struct can be found with: `bpftrace -vl tracepoint:syscalls:sys_
 ```
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
 ```
-
+Expected Output:
 ```
-bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
 Attached 1 probe
 ^C
 
@@ -95,9 +92,8 @@ Maps are automatically printed when bpftrace ends (eg, via Ctrl-C).
 ```
 bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
 Attached 1 probe
 ^C
 
@@ -125,9 +121,8 @@ This summarizes the return value of the sys_read() kernel function for PID 18644
 ```
 bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 2000, 200); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 2000, 200); }'
 Attached 1 probe
 ^C
 
@@ -156,9 +151,8 @@ Summarize read() bytes as a linear histogram, and traced using kernel dynamic tr
 ```
 bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
 Attached 2 probes
 
 [...]
@@ -199,9 +193,8 @@ Summarize the time spent in read(), in nanoseconds, as a histogram, by process n
 ```
 bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
 Attached 25 probes
 @[tracepoint:sched:sched_wakeup_new]: 1
 @[tracepoint:sched:sched_process_fork]: 1
@@ -228,9 +221,8 @@ Count process-level events for five seconds, printing a summary.
 ```
 bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
 Attached 1 probe
 ^C
 
@@ -262,9 +254,8 @@ Profile kernel stacks at 99 Hertz, printing a frequency count.
 ```
 bpftrace -e 'tracepoint:sched:sched_switch { @[kstack] = count(); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'tracepoint:sched:sched_switch { @[kstack] = count(); }'
 ^C
 [...]
 
@@ -300,9 +291,8 @@ This counts stack traces that led to context switching (off-CPU) events. The abo
 ```
 bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
 ```
-
+Expected Output:
 ```
-# bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
 Attached 1 probe
 ^C
 
