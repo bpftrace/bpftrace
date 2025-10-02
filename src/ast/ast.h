@@ -38,8 +38,10 @@ enum class Operator {
   LAND,
   LOR,
   PLUS,
-  INCREMENT,
-  DECREMENT,
+  PRE_INCREMENT,
+  PRE_DECREMENT,
+  POST_INCREMENT,
+  POST_DECREMENT,
   MINUS,
   MUL,
   DIV,
@@ -993,20 +995,12 @@ public:
 
 class Unop : public Node {
 public:
-  explicit Unop(ASTContext &ctx,
-                Expression expr,
-                Operator op,
-                bool is_post_op,
-                Location &&loc)
-      : Node(ctx, std::move(loc)),
-        expr(std::move(expr)),
-        op(op),
-        is_post_op(is_post_op) {};
+  explicit Unop(ASTContext &ctx, Expression expr, Operator op, Location &&loc)
+      : Node(ctx, std::move(loc)), expr(std::move(expr)), op(op) {};
   explicit Unop(ASTContext &ctx, const Unop &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         expr(clone(ctx, other.expr, loc)),
-        op(other.op),
-        is_post_op(other.is_post_op) {};
+        op(other.op) {};
 
   const SizedType &type() const
   {
@@ -1015,14 +1009,12 @@ public:
 
   bool operator==(const Unop &other) const
   {
-    return op == other.op && is_post_op == other.is_post_op &&
-           expr == other.expr && result_type == other.result_type;
+    return op == other.op && expr == other.expr &&
+           result_type == other.result_type;
   }
   std::strong_ordering operator<=>(const Unop &other) const
   {
     if (auto cmp = op <=> other.op; cmp != 0)
-      return cmp;
-    if (auto cmp = is_post_op <=> other.is_post_op; cmp != 0)
       return cmp;
     if (auto cmp = expr <=> other.expr; cmp != 0)
       return cmp;
@@ -1031,7 +1023,6 @@ public:
 
   Expression expr;
   Operator op;
-  bool is_post_op;
   SizedType result_type;
 };
 

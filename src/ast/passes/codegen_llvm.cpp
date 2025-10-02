@@ -2360,8 +2360,10 @@ ScopedExpr CodegenLLVM::unop_int(Unop &unop)
       ScopedExpr scoped_expr = visit(unop.expr);
       return ScopedExpr(b_.CreateNeg(scoped_expr.value()));
     }
-    case Operator::INCREMENT:
-    case Operator::DECREMENT: {
+    case Operator::PRE_INCREMENT:
+    case Operator::PRE_DECREMENT:
+    case Operator::POST_INCREMENT:
+    case Operator::POST_DECREMENT: {
       return createIncDec(unop);
     }
     case Operator::MUL: {
@@ -2404,8 +2406,10 @@ ScopedExpr CodegenLLVM::unop_ptr(Unop &unop)
       }
       return scoped_expr; // Pass as is.
     }
-    case Operator::INCREMENT:
-    case Operator::DECREMENT:
+    case Operator::PRE_INCREMENT:
+    case Operator::PRE_DECREMENT:
+    case Operator::POST_INCREMENT:
+    case Operator::POST_DECREMENT:
       return createIncDec(unop);
     default:
       return visit(unop.expr);
@@ -4536,7 +4540,10 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
 
 ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
 {
-  bool is_increment = unop.op == Operator::INCREMENT;
+  bool is_increment = (unop.op == Operator::PRE_INCREMENT ||
+                       unop.op == Operator::POST_INCREMENT);
+  bool is_post = (unop.op == Operator::POST_INCREMENT ||
+                  unop.op == Operator::POST_DECREMENT);
   const SizedType &type = unop.expr.type();
   uint64_t step = type.IsPtrTy() ? type.GetPointeeTy()->GetSize() : 1;
 
@@ -4565,10 +4572,11 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     b_.CreateMapUpdateElem(map.ident, scoped_key.value(), newval, unop.loc);
 
     Value *value;
-    if (unop.is_post_op)
+    if (is_post) {
       value = oldval;
-    else
+    } else {
       value = b_.CreateLoad(b_.GetType(map.value_type), newval);
+    }
     b_.CreateLifetimeEnd(newval);
     return ScopedExpr(value);
   } else if (auto *var = unop.expr.as<Variable>()) {
@@ -4589,10 +4597,11 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
 
     b_.CreateStore(newval, variable.value);
 
-    if (unop.is_post_op)
+    if (is_post) {
       return ScopedExpr(oldval);
-    else
+    } else {
       return ScopedExpr(newval);
+    }
   } else {
     LOG(BUG) << "invalid expression passed to " << opstr(unop);
     __builtin_unreachable();

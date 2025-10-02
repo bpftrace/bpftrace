@@ -215,12 +215,10 @@ std::vector<Unop *> variants<Unop>(ASTContext &c, SourceLocation l)
   Expression expr1 = c.make_node<Integer>(42UL, l);
   Expression expr2 = c.make_node<Integer>(24UL, l);
   Expression expr3 = c.make_node<Variable>(std::string("$x"), l);
-  Expression expr4 = c.make_node<Integer>(42UL, l);
 
-  return { c.make_node<Unop>(std::move(expr1), Operator::LNOT, false, l),
-           c.make_node<Unop>(std::move(expr2), Operator::BNOT, false, l),
-           c.make_node<Unop>(std::move(expr3), Operator::LNOT, false, l),
-           c.make_node<Unop>(std::move(expr4), Operator::LNOT, true, l) };
+  return { c.make_node<Unop>(std::move(expr1), Operator::LNOT, l),
+           c.make_node<Unop>(std::move(expr2), Operator::BNOT, l),
+           c.make_node<Unop>(std::move(expr3), Operator::LNOT, l) };
 }
 
 template <>

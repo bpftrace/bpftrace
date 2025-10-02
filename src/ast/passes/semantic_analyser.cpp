@@ -2683,7 +2683,10 @@ void SemanticAnalyser::visit(Binop &binop)
 
 void SemanticAnalyser::visit(Unop &unop)
 {
-  if (unop.op == Operator::INCREMENT || unop.op == Operator::DECREMENT) {
+  if (unop.op == Operator::PRE_INCREMENT ||
+      unop.op == Operator::PRE_DECREMENT ||
+      unop.op == Operator::POST_INCREMENT ||
+      unop.op == Operator::POST_DECREMENT) {
     // Handle ++ and -- before visiting unop.expr, because these
     // operators should be able to work with undefined maps.
     if (auto *acc = unop.expr.as<MapAccess>()) {
@@ -2704,8 +2707,10 @@ void SemanticAnalyser::visit(Unop &unop)
 
   auto valid_ptr_op = false;
   switch (unop.op) {
-    case Operator::INCREMENT:
-    case Operator::DECREMENT:
+    case Operator::PRE_INCREMENT:
+    case Operator::PRE_DECREMENT:
+    case Operator::POST_INCREMENT:
+    case Operator::POST_DECREMENT:
     case Operator::MUL:
       valid_ptr_op = true;
       break;
@@ -3090,8 +3095,9 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   // stores the underlying structs as pointers anyways. In the future, we will
   // likely want to do this in a different way if we are tracking l-values.
   while (acc.expr.type().IsPtrTy()) {
-    auto *unop = ctx_.make_node<Unop>(
-        acc.expr, Operator::MUL, false, Location(acc.expr.node().loc));
+    auto *unop = ctx_.make_node<Unop>(acc.expr,
+                                      Operator::MUL,
+                                      Location(acc.expr.node().loc));
     acc.expr.value = unop;
     visit(acc.expr);
   }

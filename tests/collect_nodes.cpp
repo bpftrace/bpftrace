@@ -34,8 +34,7 @@ TEST(CollectNodes, indirect)
 {
   ASTContext ctx;
   auto &var = *ctx.make_node<Variable>("myvar", Location());
-  auto &unop = *ctx.make_node<Unop>(
-      &var, Operator::INCREMENT, false, Location());
+  auto &unop = *ctx.make_node<Unop>(&var, Operator::PRE_INCREMENT, Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop);
@@ -47,8 +46,7 @@ TEST(CollectNodes, none)
 {
   ASTContext ctx;
   auto &map = *ctx.make_node<Map>("myvar", Location());
-  auto &unop = *ctx.make_node<Unop>(
-      &map, Operator::INCREMENT, false, Location());
+  auto &unop = *ctx.make_node<Unop>(&map, Operator::PRE_INCREMENT, Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop);
@@ -60,12 +58,14 @@ TEST(CollectNodes, multiple_runs)
 {
   ASTContext ctx;
   auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
-  auto &unop1 = *ctx.make_node<Unop>(
-      &var1, Operator::INCREMENT, false, Location());
+  auto &unop1 = *ctx.make_node<Unop>(&var1,
+                                     Operator::PRE_INCREMENT,
+                                     Location());
 
   auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
-  auto &unop2 = *ctx.make_node<Unop>(
-      &var2, Operator::INCREMENT, false, Location());
+  auto &unop2 = *ctx.make_node<Unop>(&var2,
+                                     Operator::PRE_INCREMENT,
+                                     Location());
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop1);

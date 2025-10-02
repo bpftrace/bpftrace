@@ -115,13 +115,13 @@ std::string opstr(const Unop &unop)
       return "-";
     case Operator::MUL:
       return "dereference";
-    case Operator::INCREMENT:
-      if (unop.is_post_op)
-        return "++ (post)";
+    case Operator::POST_INCREMENT:
+      return "++ (post)";
+    case Operator::PRE_INCREMENT:
       return "++ (pre)";
-    case Operator::DECREMENT:
-      if (unop.is_post_op)
-        return "-- (post)";
+    case Operator::POST_DECREMENT:
+      return "-- (post)";
+    case Operator::PRE_DECREMENT:
       return "-- (pre)";
     default:
       return {};
@@ -153,8 +153,10 @@ bool is_comparison_op(Operator op)
     case Operator::LEFT:
     case Operator::RIGHT:
     case Operator::ASSIGN:
-    case Operator::INCREMENT:
-    case Operator::DECREMENT:
+    case Operator::PRE_INCREMENT:
+    case Operator::PRE_DECREMENT:
+    case Operator::POST_INCREMENT:
+    case Operator::POST_DECREMENT:
     case Operator::LNOT:
     case Operator::BNOT:
       return false;
