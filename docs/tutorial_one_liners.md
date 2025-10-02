@@ -23,6 +23,10 @@ bpftrace -l 'tracepoint:syscalls:sys_enter_*'
 # Lesson 2. Hello World
 
 ```
+bpftrace -e 'BEGIN { printf("hello world\n"); }'
+```
+
+```
 # bpftrace -e 'BEGIN { printf("hello world\n"); }'
 Attached 1 probe
 hello world
@@ -35,6 +39,10 @@ This prints a welcome message. Run it, then hit Ctrl-C to end.
 - An action can be associated with probes, in { }. This example calls printf() when the probe fires.
 
 # Lesson 3. File Opens
+
+```
+bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
+```
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
@@ -61,6 +69,10 @@ members of this struct can be found with: `bpftrace -vl tracepoint:syscalls:sys_
 
 ```
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
+```
+
+```
+bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
 Attached 1 probe
 ^C
 
@@ -79,6 +91,10 @@ This summarizes syscalls by process name, printing a report on Ctrl-C.
 Maps are automatically printed when bpftrace ends (eg, via Ctrl-C).
 
 # Lesson 5. Distribution of read() Bytes
+
+```
+bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
+```
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
@@ -107,6 +123,10 @@ This summarizes the return value of the sys_read() kernel function for PID 18644
 # Lesson 6. Kernel Dynamic Tracing of read() Bytes
 
 ```
+bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 2000, 200); }'
+```
+
+```
 # bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 2000, 200); }'
 Attached 1 probe
 ^C
@@ -132,6 +152,10 @@ Summarize read() bytes as a linear histogram, and traced using kernel dynamic tr
 - lhist(): this is a linear histogram, where the arguments are: value, min, max, step. The first argument (`retval`) of vfs_read() is the return value: the number of bytes read.
 
 # Lesson 7. Timing read()s
+
+```
+bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
+```
 
 ```
 # bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ns[comm] = hist(nsecs - @start[tid]); delete(@start, tid); }'
@@ -173,6 +197,10 @@ Summarize the time spent in read(), in nanoseconds, as a histogram, by process n
 # Lesson 8. Count Process-Level Events
 
 ```
+bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
+```
+
+```
 # bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
 Attached 25 probes
 @[tracepoint:sched:sched_wakeup_new]: 1
@@ -196,6 +224,10 @@ Count process-level events for five seconds, printing a summary.
 - exit(): This exits bpftrace.
 
 # Lesson 9. Profile On-CPU Kernel Stacks
+
+```
+bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
+```
 
 ```
 # bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
@@ -226,6 +258,10 @@ Profile kernel stacks at 99 Hertz, printing a frequency count.
 - kstack: Returns the kernel stack trace. This is used as a key for the map, so that it can be frequency counted. The output of this is ideal to be visualized as a flame graph. There is also `ustack` for the user-level stack trace.
 
 # Lesson 10. Scheduler Tracing
+
+```
+bpftrace -e 'tracepoint:sched:sched_switch { @[kstack] = count(); }'
+```
 
 ```
 # bpftrace -e 'tracepoint:sched:sched_switch { @[kstack] = count(); }'
@@ -260,6 +296,10 @@ This counts stack traces that led to context switching (off-CPU) events. The abo
 - sched_switch fires in thread context, so that the stack refers to the thread who is leaving. As you use other probe types, pay attention to context, as comm, pid, kstack, etc, may not refer to the target of the probe.
 
 # Lesson 11. Block I/O Tracing
+
+```
+bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
+```
 
 ```
 # bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
@@ -307,7 +347,7 @@ The context of this probe is important: this fires when the I/O is issued to the
 
 kprobe:vfs_open
 {
-	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
+  printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
 }
 
 # bpftrace path.bt
