@@ -8,11 +8,13 @@ namespace bpftrace::ast {
 
 class Printer : public Visitor<Printer> {
 public:
-  explicit Printer(std::ostream &out) : out_(out)
-  {
-  }
+  explicit Printer(std::ostream &out,
+                   bool with_comments = false,
+                   bool with_types = false)
+      : out_(out), with_comments_(with_comments), with_types_(with_types) {};
 
   using Visitor<Printer>::visit;
+  void visit(CStatement &cstmt);
   void visit(Integer &integer);
   void visit(NegativeInteger &integer);
   void visit(Boolean &boolean);
@@ -42,7 +44,6 @@ public:
   void visit(MapAccess &acc);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
-  void visit(ExprStatement &expr);
   void visit(AssignMapStatement &assignment);
   void visit(AssignScalarMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
@@ -60,12 +61,33 @@ public:
   void visit(Subprog &subprog);
   void visit(Import &imp);
   void visit(Program &program);
+  void visit(BlockExpr &block);
+  void visit(Comptime &comptime);
+  void visit(Statement &stmt);
+  void visit(Macro &macro);
+  void visit(ExprStatement &stmt);
+  void visit(Expression &expr);
+  void visit(const SizedType &type);
+
+  // These are used to override the behavior in specific scenarios. Nested
+  // expressions will still always be visited directly by the parent visitor.
+  void visit_bare(Expression &expr);
+  void visit_bare(Tuple &tuple);
+  void visit_multiline(IfExpr &if_expr);
+  void visit_multiline(BlockExpr &block);
+
+  // Used by helpers.
+  void print_meta(const Location &loc, bool inline_style);
+  void emit(const std::string &s);
 
 private:
   std::ostream &out_;
   int depth_ = 0;
+  bool with_comments_ = false;
+  bool with_types_ = false;
 
-  std::string type(const SizedType &ty);
+  void print_type(const SizedType &ty);
+  void print_indent();
 };
 
 } // namespace bpftrace::ast

@@ -114,7 +114,7 @@ std::string opstr(const Unop &unop)
     case Operator::MINUS:
       return "-";
     case Operator::MUL:
-      return "dereference";
+      return "*";
     case Operator::INCREMENT:
       if (unop.is_post_op)
         return "++ (post)";

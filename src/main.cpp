@@ -349,7 +349,7 @@ ast::Pass printPass(const std::string& name)
   return ast::Pass::create("print-" + name, [=](ast::ASTContext& ast) {
     std::cerr << "AST after: " << name << std::endl;
     std::cerr << "-------------------" << std::endl;
-    ast::Printer printer(std::cerr);
+    ast::Printer printer(std::cerr, false, true);
     printer.visit(ast.root);
     std::cerr << std::endl;
   });

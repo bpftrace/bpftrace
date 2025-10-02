@@ -56,13 +56,7 @@ public:
   };
 
   // Return comments associated with this location.
-  std::string comments() const
-  {
-    if (!comments_) {
-      return "";
-    }
-    return comments_->str();
-  }
+  std::vector<std::string> comments() const;
 
   // Returns the vertical space above the location.
   size_t vspace() const
@@ -173,7 +167,7 @@ public:
   {
     return current.column();
   }
-  std::string comments() const
+  std::vector<std::string> comments() const
   {
     return current.comments();
   }

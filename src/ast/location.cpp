@@ -1,9 +1,27 @@
+#include <algorithm>
 #include <sstream>
 
 #include "ast/context.h"
 #include "ast/location.h"
+#include "util/strings.h"
 
 namespace bpftrace::ast {
+
+std::vector<std::string> SourceLocation::comments() const
+{
+  if (!comments_) {
+    return {};
+  }
+  auto s = comments_->str();
+  // Trim all leading and trailing whitespace.
+  s.erase(0, s.find_first_not_of(" \t\n\r\f\v"));
+  s.erase(s.find_last_not_of(" \t\n\r\f\v") + 1);
+  auto parts = util::split_string(s, '\n');
+  if (parts.empty() && parts[0].empty()) {
+    return {};
+  }
+  return parts;
+}
 
 std::string SourceLocation::filename() const
 {
@@ -58,7 +76,10 @@ SourceLocation operator+(const SourceLocation &orig, const SourceLocation &loc)
 
   // Anything that spans inherits the *first* location's comments.
   result.comments_ = orig.comments_;
-  result.vspace_ = orig.vspace_;
+  result.vspace_ = orig.vspace_ + loc.vspace_;
+  if (loc.comments_) {
+    result.add_comment(loc.comments_->str());
+  }
 
   return result;
 }
