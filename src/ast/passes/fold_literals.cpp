@@ -145,8 +145,10 @@ static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
     case Operator::LNOT:
     case Operator::BNOT:
     case Operator::ASSIGN:
-    case Operator::INCREMENT:
-    case Operator::DECREMENT:
+    case Operator::PRE_INCREMENT:
+    case Operator::PRE_DECREMENT:
+    case Operator::POST_INCREMENT:
+    case Operator::POST_DECREMENT:
       LOG(BUG) << "binary operator is not valid: " << static_cast<int>(op.op);
   }
 
@@ -346,8 +348,10 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
     case Operator::LAND:
     case Operator::LOR:
     case Operator::ASSIGN:
-    case Operator::INCREMENT:
-    case Operator::DECREMENT:
+    case Operator::PRE_INCREMENT:
+    case Operator::PRE_DECREMENT:
+    case Operator::POST_INCREMENT:
+    case Operator::POST_DECREMENT:
     case Operator::LNOT:
     case Operator::BNOT:
       break;

@@ -112,8 +112,9 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
 
   auto land_chain = create_land_chain(equal_exprs, op);
   if (op.op == Operator::NE) {
-    auto *not_binop = ast_.make_node<Unop>(
-        land_chain, Operator::LNOT, false, Location(op.loc));
+    auto *not_binop = ast_.make_node<Unop>(land_chain,
+                                           Operator::LNOT,
+                                           Location(op.loc));
     not_binop->result_type = CreateBool();
     return not_binop;
   } else {
