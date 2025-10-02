@@ -28,8 +28,7 @@ entry:
 
 lookup_success:                                   ; preds = %entry
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_key)
-  %cast = ptrtoint ptr %lookup_elem to i64
-  %1 = atomicrmw xchg i64 %cast, i64 1 seq_cst, align 8
+  %1 = atomicrmw xchg ptr %lookup_elem, i64 1 seq_cst, align 8
   %value_set_condition = icmp eq i64 %1, 0
   br i1 %value_set_condition, label %lookup_merge, label %value_is_set
 
@@ -55,8 +54,7 @@ value_is_set:                                     ; preds = %lookup_success
 
 lookup_success3:                                  ; preds = %lookup_merge
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_key1)
-  %cast7 = ptrtoint ptr %lookup_elem2 to i64
-  store i64 0, i64 %cast7, align 8
+  store i64 0, ptr %lookup_elem2, align 8
   br label %lookup_merge5
 
 lookup_failure4:                                  ; preds = %lookup_merge
@@ -85,8 +83,7 @@ entry:
 
 lookup_success:                                   ; preds = %entry
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_key)
-  %cast = ptrtoint ptr %lookup_elem to i64
-  %1 = atomicrmw xchg i64 %cast, i64 1 seq_cst, align 8
+  %1 = atomicrmw xchg ptr %lookup_elem, i64 1 seq_cst, align 8
   %value_set_condition = icmp eq i64 %1, 0
   br i1 %value_set_condition, label %lookup_merge, label %value_is_set
 
@@ -112,8 +109,7 @@ value_is_set:                                     ; preds = %lookup_success
 
 lookup_success3:                                  ; preds = %lookup_merge
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_key1)
-  %cast7 = ptrtoint ptr %lookup_elem2 to i64
-  store i64 0, i64 %cast7, align 8
+  store i64 0, ptr %lookup_elem2, align 8
   br label %lookup_merge5
 
 lookup_failure4:                                  ; preds = %lookup_merge
