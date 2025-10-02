@@ -22,6 +22,8 @@ set(ENABLE_TEST_VALIDATE_CODEGEN ON CACHE BOOL "Run LLVM IR validation tests")
 set(ENABLE_SYSTEMD OFF CACHE BOOL "Enable systemd integration")
 set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
 set(SYSTEM_INCLUDE_PATHS "auto" CACHE STRING "Hard-code system include paths (colon separated, the default value \"auto\" queries clang at runtime)")
+set(USE_SYSTEM_LIBBPF OFF CACHE BOOL
+    "Use system libbpf instead of vendoring it from a submodule")
 
 set(ENABLE_SKB_OUTPUT ON CACHE BOOL "Enable skb_output, will include libpcap")
 
@@ -101,8 +103,8 @@ include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
 find_package(LibBpf REQUIRED)
 include_directories(SYSTEM ${LIBBPF_INCLUDE_DIRS})
-if("${LIBBPF_VERSION_MAJOR}.${LIBBPF_VERSION_MINOR}" VERSION_LESS 1.5)
-  message(SEND_ERROR "bpftrace requires libbpf 1.5 or greater")
+if(USE_SYSTEM_LIBBPF)
+  message(WARNING "Using system libbpf, please ensure that the version is greater than or equal to the submodule")
 endif()
 
 find_package(LibElf REQUIRED)
