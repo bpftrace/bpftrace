@@ -434,8 +434,6 @@ private:
   // Probes and attach points are indexed from 1, 0 means no index
   // (no index is used for probes whose attach points are indexed individually)
   int next_probe_index_ = 1;
-  // Used if there are duplicate USDT entries
-  int current_usdt_location_index_{ 0 };
   bool inside_subprog_ = false;
 
   std::vector<Node *> scope_stack_;
@@ -3314,7 +3312,6 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
     // (eg arg0. may not be found in the same offset from the same
     // register in each location)
     auto reset_ids = async_ids_.create_reset_ids();
-    current_usdt_location_index_ = 0;
     for (int i = 0; i < ap.usdt.num_locations; ++i) {
       reset_ids();
 
@@ -3324,7 +3321,6 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
                           expansions_.get_expansion(ap),
                           expansions_.get_expanded_funcs(ap),
                           i);
-      current_usdt_location_index_++;
     }
   } else {
     generateProbe(probe, probefull_, func_type);
