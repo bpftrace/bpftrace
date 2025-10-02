@@ -63,6 +63,7 @@ enum class TestMode {
   CODEGEN,
   COMPILER_BENCHMARK,
   BPF_BENCHMARK,
+  FORMAT,
 };
 
 enum class BuildMode {
@@ -477,9 +478,11 @@ Args parse_args(int argc, char* argv[])
           args.test_mode = TestMode::COMPILER_BENCHMARK;
         } else if (std::strcmp(optarg, "bench") == 0) {
           args.test_mode = TestMode::BPF_BENCHMARK;
+        } else if (std::strcmp(optarg, "format") == 0) {
+          args.test_mode = TestMode::FORMAT;
         } else {
           LOG(ERROR) << "USAGE: --test can only be 'codegen', "
-                        "'compiler-bench', or 'bench'.";
+                        "'compiler-bench', 'bench' or 'format'.";
           exit(1);
         }
         break;
@@ -838,6 +841,24 @@ int main(int argc, char* argv[])
   } else {
     // Script is provided as a command line argument.
     ast = ast::ASTContext("stdin", args.script);
+  }
+
+  if (args.test_mode == TestMode::FORMAT) {
+    // For formatting, we parse the full file, but don't apply any other passes
+    // or use any other diagnostics. It only matters whether the parse itself
+    // was successful, and then we emit the formatted source code.
+    ast::PassManager pm;
+    pm.put(ast);
+    pm.put(bpftrace);
+    pm.add(CreateParsePass(false));
+    auto ok = pm.run();
+    if (!ok) {
+      std::cerr << ok.takeError() << "\n";
+      return 2;
+    }
+    ast::Printer printer(std::cout, true, false);
+    printer.visit(ast.root);
+    return 0; // All done.
   }
 
   for (const auto& param : args.params) {
