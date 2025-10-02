@@ -205,12 +205,6 @@ Program
   builtin: arg0
 )");
 
-  test("kprobe:f { sarg0 }", R"(
-Program
- kprobe:f
-  builtin: sarg0
-)");
-
   test("kprobe:f { __builtin_retval }", R"(
 Program
  kprobe:f

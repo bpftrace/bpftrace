@@ -13,6 +13,8 @@ and this project adheres to
   - [#4587](https://github.com/bpftrace/bpftrace/pull/4587)
 - Restrict bpftrace script licenses to those that are GPL compatible
   - [#4677](https://github.com/bpftrace/bpftrace/pull/4677)
+- Remove the deprecated `sarg` builtin
+  - [#4686](https://github.com/bpftrace/bpftrace/pull/4686)
 #### Added
 - Add support for indexing string types
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)

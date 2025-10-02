@@ -221,7 +221,6 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("kprobe:f { kstack }");
   test("kprobe:f { ustack }");
   test("kprobe:f { arg0 }");
-  test("kprobe:f { sarg0 }");
   test("kretprobe:f { retval }");
   test("kprobe:f { func }");
   test("uprobe:/bin/sh:f { func }");

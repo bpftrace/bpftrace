@@ -18,6 +18,8 @@ public:
 struct DeprecatedName {
   std::string old_name;
   std::string new_name;
+  std::string version_deprecated;
+  std::string version_last_available;
 
   // True if this name no longer exists - there is no `new_name`.
   bool deleted;
@@ -47,7 +49,10 @@ static void check(const std::vector<DeprecatedName> &list,
 
     if (item.deleted) {
       auto &err = node.addError();
-      err << item.old_name << " is deprecated and has no effect.";
+      err << item.old_name << " is deleted. " << "This was deprecated in "
+          << item.version_deprecated << " and was last available in "
+          << item.version_last_available << ".";
+      err.addHint() << "Use " << item.new_name << " instead.";
     } else {
       auto &warn = node.addWarning();
       warn << item.old_name
@@ -61,7 +66,9 @@ static std::vector<DeprecatedName> DEPRECATED_BUILTINS = {
   {
       .old_name = "sarg*",
       .new_name = "*(reg(\"sp\") + <stack_offset>)",
-      .deleted = false,
+      .version_deprecated = "v0.21",
+      .version_last_available = "v0.24",
+      .deleted = true,
   },
 };
 
