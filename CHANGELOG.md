@@ -15,6 +15,8 @@ and this project adheres to
   - [#4614](https://github.com/bpftrace/bpftrace/pull/4614)
 - ast: Avoid undefined behavior in literal folding
   - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
+- Fix missing map key buffers for map aggregate functions
+  - [#4670](https://github.com/bpftrace/bpftrace/pull/4670)
 #### Docs
 - Fix docs for PERCPU map types
   - [#4646](https://github.com/bpftrace/bpftrace/pull/4646)
