@@ -32,8 +32,7 @@ public:
 };
 
 // Compiles the primary AST, and emits `CompiledModule`.
-Pass CreateCompilePass(std::optional<std::reference_wrapper<USDTHelper>>
-                           &&usdt_helper = std::nullopt);
+Pass CreateCompilePass();
 
 // Links any external bitcode into the module. This must follow the compile
 // pass, and should proceed any verification, optimization or external linking.
@@ -64,12 +63,10 @@ Pass CreateDumpASMPass(std::ostream &out);
 
 // AllCompilePasses returns a vector of passes representing all compile passes,
 // in the expected order.
-inline std::vector<Pass> AllCompilePasses(
-    std::optional<std::reference_wrapper<USDTHelper>> &&usdt_helper =
-        std::nullopt)
+inline std::vector<Pass> AllCompilePasses()
 {
   std::vector<Pass> passes;
-  passes.emplace_back(CreateCompilePass(std::move(usdt_helper)));
+  passes.emplace_back(CreateCompilePass());
   passes.emplace_back(CreateLinkBitcodePass());
   passes.emplace_back(CreateVerifyPass());
   passes.emplace_back(CreateOptimizePass());

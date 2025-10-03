@@ -106,8 +106,7 @@ Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
 Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
                                const ast::Probe &p,
                                ast::ExpansionType expansion,
-                               std::set<std::string> expanded_funcs,
-                               int usdt_location_idx)
+                               std::set<std::string> expanded_funcs)
 {
   Probe probe;
   probe.path = ap.target;
@@ -121,7 +120,6 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.address = ap.address;
   probe.func_offset = ap.func_offset;
   probe.loc = 0;
-  probe.usdt_location_idx = usdt_location_idx;
   probe.index = ap.index() ?: p.index();
   probe.len = ap.len;
   probe.mode = ap.mode;
@@ -136,12 +134,10 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
 int BPFtrace::add_probe(const ast::AttachPoint &ap,
                         const ast::Probe &p,
                         ast::ExpansionType expansion,
-                        std::set<std::string> expanded_funcs,
-                        int usdt_location_idx)
+                        std::set<std::string> expanded_funcs)
 {
   auto type = probetype(ap.provider);
-  auto probe = generate_probe(
-      ap, p, expansion, std::move(expanded_funcs), usdt_location_idx);
+  auto probe = generate_probe(ap, p, expansion, std::move(expanded_funcs));
 
   // Add the new probe(s) to resources
   if (ap.provider == "begin" || ap.provider == "end") {

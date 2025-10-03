@@ -10,17 +10,9 @@ std::string sanitise_bpf_program_name(const std::string &name);
 // Generate object file function name for a given probe
 inline std::string get_function_name_for_probe(
     const std::string &probe_name,
-    int index,
-    std::optional<int> usdt_location_index = std::nullopt)
+    int index)
 {
-  auto ret = sanitise_bpf_program_name(probe_name);
-
-  if (usdt_location_index)
-    ret += "_loc" + std::to_string(*usdt_location_index);
-
-  ret += "_" + std::to_string(index);
-
-  return ret;
+  return sanitise_bpf_program_name(probe_name) + "_" + std::to_string(index);
 }
 
 inline std::string get_section_name(const std::string &function_name)

@@ -228,6 +228,4 @@ public:
 #pragma GCC diagnostic pop
 };
 
-std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper(int num_locations);
-
 } // namespace bpftrace::test

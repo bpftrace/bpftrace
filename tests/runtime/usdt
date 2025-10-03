@@ -125,22 +125,10 @@ RUN {{BPFTRACE}} -e 'usdt:::*probe2 { printf("here\n" ); exit(); }' -p {{BEFORE_
 EXPECT Attached 2 probes
 BEFORE ./testprogs/usdt_test
 
-
-# When uprobe_multi is supported, a single ebpf program can be attached to multiple
-# identical usdt probes, so we only need to attach to 3 different usdt probes.
-# For systems without uprobe_multi support, we need to manually attach an ebpf
-# program to each probe location, resulting in 6 probes being attached.
-NAME usdt probes - attach to multiple probes with different number of locations by wildcard (with uprobe_multi)
+NAME usdt probes - attach to multiple probes with different number of locations by wildcard
 PROG usdt:./testprogs/usdt_multiple_locations:tracetest:testprobe* { printf("here\n" ); exit(); }
-REQUIRES_FEATURE uprobe_multi
 BEFORE ./testprogs/usdt_multiple_locations
 EXPECT_REGEX Attached 3 probes
-
-NAME usdt probes - attach to multiple probes with different number of locations by wildcard (without uprobe_multi)
-PROG usdt:./testprogs/usdt_multiple_locations:tracetest:testprobe* { printf("here\n" ); exit(); }
-REQUIRES_FEATURE !uprobe_multi
-BEFORE ./testprogs/usdt_multiple_locations
-EXPECT_REGEX Attached 6 probes
 
 NAME usdt probes - attach to probe with args by file
 PROG usdt:./testprogs/usdt_test:* { $a = str(arg1); print($a); @c[$a] = 1; if (len(@c) == 3) { exit(); } }
