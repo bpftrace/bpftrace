@@ -1279,21 +1279,17 @@ void IRBuilderBPF::CreateCheckSetRecursion(const Location &loc,
 
   // Make the verifier happy with a null check even though the value should
   // never be null for key 0.
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, getPtrTy(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getPtrTy()),
-      "map_lookup_cond");
+  Value *condition = CreateICmpNE(CreateIntCast(call, getPtrTy(), true),
+                                  GetNull(),
+                                  "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
 
   CreateLifetimeEnd(key);
 
-  // createMapLookup  returns an u8*
-  auto *cast = CreatePtrToInt(call, getInt64Ty(), "cast");
-
   Value *prev_value = CREATE_ATOMIC_RMW(AtomicRMWInst::BinOp::Xchg,
-                                        cast,
+                                        call,
                                         getInt64(1),
                                         8,
                                         AtomicOrdering::SequentiallyConsistent);
@@ -1348,19 +1344,16 @@ void IRBuilderBPF::CreateUnSetRecursion(const Location &loc)
 
   // Make the verifier happy with a null check even though the value should
   // never be null for key 0.
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, getPtrTy(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getPtrTy()),
-      "map_lookup_cond");
+  Value *condition = CreateICmpNE(CreateIntCast(call, getPtrTy(), true),
+                                  GetNull(),
+                                  "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
 
   CreateLifetimeEnd(key);
 
-  // createMapLookup  returns an u8*
-  auto *cast = CreatePtrToInt(call, getInt64Ty(), "cast");
-  CreateStore(getInt64(0), cast);
+  CreateStore(getInt64(0), call);
 
   CreateBr(merge_block);
 

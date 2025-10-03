@@ -17,6 +17,8 @@ and this project adheres to
   - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
 - Fix missing map key buffers for map aggregate functions
   - [#4670](https://github.com/bpftrace/bpftrace/pull/4670)
+- Fix fentry/fexit recursion check
+  - [#4684](https://github.com/bpftrace/bpftrace/pull/4684)
 #### Docs
 - Fix docs for PERCPU map types
   - [#4646](https://github.com/bpftrace/bpftrace/pull/4646)
