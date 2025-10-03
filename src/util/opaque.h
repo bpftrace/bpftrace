@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -144,10 +145,23 @@ public:
   }
 
   template <typename T>
-  const T &bitcast(size_t index = 0) const
+    requires(std::is_trivially_copyable_v<T>)
+  T bitcast(size_t index = 0) const
   {
     check(sizeof(T) * index, sizeof(T));
-    return reinterpret_cast<const T *>(data())[index];
+    const T *src = reinterpret_cast<const T *>(data()) + index;
+    // Some existing types are packed structures that don't have default
+    // constructors (although they are trivially copyable). Therefore, if we
+    // don't have any alignment constraints, avoid the constructor and do the
+    // direct copy out. If we do have alignment constraints, allow the memcpy
+    // to do all the heavy lifting.
+    if constexpr (std::alignment_of_v<T> <= 1) {
+      return *src;
+    } else {
+      T result;
+      std::memcpy(&result, src, sizeof(result));
+      return result;
+    }
   }
 
   bool operator==(const OpaqueValue &other) const;

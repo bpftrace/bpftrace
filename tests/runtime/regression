@@ -138,3 +138,11 @@ NAME preserve context pointer
 PROG begin { @test[(uint64)1] = (uint64)1; } tracepoint:syscalls:sys_enter_kill { if (strcontains(comm, "test")) { @test[args.pid] = 1; } if (args.pid == @test[1]) { print((1)); } if (args.pid == @test[1]) { print((1));  } }
 EXPECT Attached 2 probes
 TIMEOUT 1
+
+# Ensure scratch buffers for map keys are created for aggregate map
+# functions like `count()` and `sum()`
+# https://github.com/bpftrace/bpftrace/issues/4669
+NAME map key scratch buffer for map aggregates
+PROG config = { on_stack_limit = 0 }  begin { @a[pid, comm, "reallylongstr"] = count(); }
+EXPECT Attached 1 probe
+TIMEOUT 1
