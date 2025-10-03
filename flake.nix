@@ -39,42 +39,11 @@
           # The default LLVM version is the latest supported release
           defaultLlvmVersion = 21;
 
-          # Override to specify the libbpf build we want. Note that we need to
-          # capture a specific fix for linking which is not yet present in a
-          # release. Once this fix is present in a release, then this should be
-          # updated to the relevant version and we need to update the version
-          # constraint in `CMakeLists.txt`.
-          libbpfVersion = "5e3306e89a44cab09693ce4bfe50bfc0cb595941";
-          libbpf = pkgs.libbpf.overrideAttrs {
-            version = libbpfVersion;
-            src = pkgs.fetchFromGitHub {
-              owner = "libbpf";
-              repo = "libbpf";
-              rev = "${libbpfVersion}";
-              # Nix uses the hash to do lookups in its cache as well as check that the
-              # download from the internet hasn't changed. Therefore, it's necessary to
-              # update the hash every time you update the source. Failure to update the
-              # hash in a cached environment (warm development host and CI) will cause
-              # nix to use the old source and then fail at some point in the future when
-              # the stale cached content is evicted.
-              #
-              # If you don't know the hash, set:
-              #   sha256 = "";
-              # then nix will fail the build with such an error message:
-              #   hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
-              #   specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-              # got:    sha256-173gxk0ymiw94glyjzjizp8bv8g72gwkjhacigd1an09jshdrjb4
-              sha256 = "sha256-giMF2DaBDk3/MKQkCzYcn5ZkcuCyrPXXoe9jI5E3QI0=";
-            };
-          };
-
           # Override to specify the bcc build we want.
-          # First overrides with the above libbpf and then overrides the rev.
           # We need a specific patch in BCC which resolves a build failure with
           # LLVM 21 and is not a part of any official release, yet.
           bccVersion = "8c5c96ad3beeed2fa827017f451a952306826974";
           bcc = (pkgs.bcc.override {
-            libbpf = libbpf;
             llvmPackages = pkgs."llvmPackages_${toString defaultLlvmVersion}";
           }).overridePythonAttrs {
             version = bccVersion;
@@ -164,7 +133,6 @@
                 buildInputs = [
                   bcc
                   blazesym_c
-                  libbpf
                   pkgs.asciidoctor
                   pkgs.cereal
                   pkgs.elfutils
