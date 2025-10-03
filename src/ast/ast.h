@@ -1380,7 +1380,7 @@ public:
         var_decl(clone(ctx, other.var_decl, loc)),
         expr(clone(ctx, other.expr, loc)) {};
 
-  Variable *var()
+  Variable *var() const
   {
     if (std::holds_alternative<VarDeclStatement *>(var_decl)) {
       return std::get<VarDeclStatement *>(var_decl)->var;

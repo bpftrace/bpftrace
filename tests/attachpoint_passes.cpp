@@ -1,6 +1,5 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "arch/arch.h"
-#include "ast/passes/printer.h"
 #include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
@@ -33,15 +32,20 @@ void test(const std::string& input,
                 .run();
 
   std::ostringstream out;
-  ast::Printer printer(out);
-  printer.visit(ast.root);
   ast.diagnostics().emit(out);
 
-  if (error.empty()) {
+  // Trim the prefix off the error, since it may come with a newline embedded
+  // which will cause the test fail.
+  std::string trimmed_error = error;
+  if (!error.empty()) {
+    trimmed_error = error.substr(error.find_first_not_of("\n"));
+  }
+
+  if (trimmed_error.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
   } else {
     ASSERT_FALSE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
-    EXPECT_THAT(out.str(), HasSubstr(error)) << msg.str() << out.str();
+    EXPECT_THAT(out.str(), HasSubstr(trimmed_error)) << msg.str() << out.str();
   }
 }
 
@@ -93,15 +97,19 @@ void test(BPFtrace& bpftrace,
                 .run();
 
   std::ostringstream out;
-  ast::Printer printer(out);
-  printer.visit(ast.root);
   ast.diagnostics().emit(out);
 
-  if (error.empty()) {
+  // See above.
+  std::string trimmed_error = error;
+  if (!error.empty()) {
+    trimmed_error = error.substr(error.find_first_not_of("\n"));
+  }
+
+  if (trimmed_error.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
   } else {
     ASSERT_FALSE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
-    EXPECT_THAT(out.str(), HasSubstr(error)) << msg.str() << out.str();
+    EXPECT_THAT(out.str(), HasSubstr(trimmed_error)) << msg.str() << out.str();
   }
 }
 

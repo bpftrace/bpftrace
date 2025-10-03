@@ -3,7 +3,6 @@
 #include <sstream>
 
 #include "ast/passes/parser.h"
-#include "ast/passes/printer.h"
 #include "ast/passes/resolve_imports.h"
 #include "util/temp.h"
 #include "gmock/gmock-matchers.h"
@@ -97,8 +96,6 @@ void test(const std::string &input,
   ast.diagnostics().emit(out);
   if (std::holds_alternative<checkFn>(check)) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
-    ast::Printer printer(msg);
-    printer.visit(ast.root);
     std::get<checkFn>(check)(ok->get<Imports>());
   } else {
     ASSERT_FALSE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
