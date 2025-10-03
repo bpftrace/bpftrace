@@ -58,8 +58,6 @@ if(${LIBBCC_FOUND})
 if(STATIC_LINKING)
   # libbcc.a is not statically linked with libbpf.a, libelf.a, libz.a, and liblzma.a.
   # If we do a static bpftrace build, we must link them in.
-  find_package(LibBpf)
-  find_package(LibElf)
   find_package(LibLzma)
 
   if(ANDROID)
