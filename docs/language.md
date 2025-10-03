@@ -771,23 +771,6 @@ The following relation operators are available for comparing strings, integer ar
 | == | left-hand string equal to right-hand |
 | != | left-hand string not equal to right-hand |
 
-**Note:** Tuple comparison works by comparing each element of both tuples
-with a logical && chain, e.g., the comparison of these two tuples
-```
-$x = ("hello", -6);
-$y = ("bye", -6);
-```
-turns this:
-```
-$x == $y
-```
-into this
-```
-($x.0 == $y.0 && $x.1 == $y.1)
-```
-So if comparing literal tuples that have nested expression with side effects
-they may not execute due to short-circuiting if previous elements are not equal.
-
 ### Assignment Operators
 
 The following assignment operators can be used on both `map` and `scratch` variables:
