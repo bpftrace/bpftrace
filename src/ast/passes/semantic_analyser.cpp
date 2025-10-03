@@ -1045,32 +1045,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     builtin.builtin_type = CreateUInt64();
     builtin.builtin_type.SetAS(addrspace);
-  } else if (!builtin.ident.compare(0, 4, "sarg") &&
-             builtin.ident.size() == 5 && builtin.ident.at(4) >= '0' &&
-             builtin.ident.at(4) <= '9') {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    ProbeType pt = probetype(probe->attach_points[0]->provider);
-    AddrSpace addrspace = find_addrspace(pt);
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kprobe && type != ProbeType::uprobe)
-        builtin.addError()
-            << "The " + builtin.ident
-            << " builtin can only be used with 'kprobes' and 'uprobes' probes";
-      if (is_final_pass() &&
-          (attach_point->address != 0 || attach_point->func_offset != 0)) {
-        // If sargX values are needed when using an offset, they can be stored
-        // in a map when entering the function and then referenced from an
-        // offset-based probe
-        builtin.addWarning()
-            << "Using an address offset with the sargX built-in can"
-               "lead to unexpected behavior ";
-      }
-    }
-    builtin.builtin_type = CreateUInt64();
-    builtin.builtin_type.SetAS(addrspace);
   } else if (builtin.ident == "__builtin_probe") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)

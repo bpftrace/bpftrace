@@ -805,35 +805,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     }
     return ScopedExpr(value);
 
-  } else if (!builtin.ident.compare(0, 4, "sarg") &&
-             builtin.ident.size() == 5 && builtin.ident.at(4) >= '0' &&
-             builtin.ident.at(4) <= '9') {
-    auto sp_offset = arch::Host::register_to_pt_regs_offset(
-        arch::Host::sp_value());
-    if (!sp_offset) {
-      builtin.addError() << "no stack offset available";
-      return ScopedExpr(b_.getInt64(0));
-    }
-    int arg_num = atoi(builtin.ident.substr(4).c_str());
-    Value *sp = b_.CreateRegisterRead(ctx_, sp_offset.value(), "reg_sp");
-    AllocaInst *dst = b_.CreateAllocaBPF(builtin.builtin_type, builtin.ident);
-
-    // Pointer width is used when calculating the SP offset and the number of
-    // bytes to read from stack for each argument. We pass a pointer SizedType
-    // to CreateProbeRead to make sure it uses the correct read size while
-    // keeping builtin.type an int64.
-    size_t arg_width = b_.getPointerStorageTy()->getIntegerBitWidth() / 8;
-    SizedType arg_type = CreatePointer(CreateInt8(),
-                                       builtin.builtin_type.GetAS());
-    assert(builtin.builtin_type.GetSize() == arg_type.GetSize());
-
-    Value *src = b_.CreateAdd(sp,
-                              b_.getInt64((arg_num * arg_width) +
-                                          arch::Host::argument_stack_offset()));
-    b_.CreateProbeRead(dst, arg_type, src, builtin.loc);
-    Value *expr = b_.CreateLoad(b_.GetType(builtin.builtin_type), dst);
-    b_.CreateLifetimeEnd(dst);
-    return ScopedExpr(expr);
   } else if (builtin.ident == "__builtin_probe") {
     auto probe_str = probefull_;
     probe_str.resize(builtin.builtin_type.GetSize() - 1);
