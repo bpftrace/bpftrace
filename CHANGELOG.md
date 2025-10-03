@@ -28,8 +28,6 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
-- ast: Avoid undefined behavior in literal folding
-  - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
 - Improved tuple binop comparison
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
 #### Security
@@ -41,6 +39,21 @@ and this project adheres to
   - [#4600](https://github.com/bpftrace/bpftrace/pull/4600)
 - oomkill.bt: support memory cgroup
   - [#4533](https://github.com/bpftrace/bpftrace/pull/4533)
+
+## [0.24.1] 2025-10-03
+
+#### Fixed
+- Fix missing location.hh build error on Alpine
+  - [#4635](https://github.com/bpftrace/bpftrace/pull/4635)
+- Fix build with gcc-16
+  - [#4614](https://github.com/bpftrace/bpftrace/pull/4614)
+- ast: Avoid undefined behavior in literal folding
+  - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
+- Fix missing map key buffers for map aggregate functions
+  - [#4670](https://github.com/bpftrace/bpftrace/pull/4670)
+#### Docs
+- Fix docs for PERCPU map types
+  - [#4646](https://github.com/bpftrace/bpftrace/pull/4646)
 
 ## [0.24.0] 2025-09-17
 
