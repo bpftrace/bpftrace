@@ -20,6 +20,7 @@ public:
 private:
   Expression create_land_chain(std::vector<Expression> &equal_exprs, Binop &op);
   ASTContext &ast_;
+  int var_id_ = 0;
 };
 
 std::optional<Expression> SimplifyTypes::visit(Expression &expr)
@@ -90,12 +91,26 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
   // strict about the inner types of the tuple matching up due to size
   // and alignment issus.
   // https://github.com/bpftrace/bpftrace/pull/4523#discussion_r2382109017
+  var_id_++;
+  auto *left_tuple_var = ast_.make_node<Variable>("$$binop_tuple_left_" +
+                                                      std::to_string(var_id_),
+                                                  Location(op.left.loc()));
+  auto *right_tuple_var = ast_.make_node<Variable>("$$binop_tuple_right_" +
+                                                       std::to_string(var_id_),
+                                                   Location(op.right.loc()));
+  auto *left_var_assign = ast_.make_node<AssignVarStatement>(
+      left_tuple_var, clone(ast_, op.left, op.left.loc()), Location(op.loc));
+  auto *right_var_assign = ast_.make_node<AssignVarStatement>(
+      right_tuple_var, clone(ast_, op.right, op.right.loc()), Location(op.loc));
+
   std::vector<Expression> equal_exprs;
   for (size_t i = 0; i < left_fields.size(); ++i) {
-    auto *left_tpa = ast_.make_node<TupleAccess>(op.left, i, Location(op.loc));
+    auto *left_tpa = ast_.make_node<TupleAccess>(left_tuple_var,
+                                                 i,
+                                                 Location(op.loc));
     left_tpa->element_type = left_fields[i].type;
 
-    auto *right_tpa = ast_.make_node<TupleAccess>(op.right,
+    auto *right_tpa = ast_.make_node<TupleAccess>(right_tuple_var,
                                                   i,
                                                   Location(op.loc));
     right_tpa->element_type = right_fields[i].type;
@@ -116,9 +131,15 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
                                            Operator::LNOT,
                                            Location(op.loc));
     not_binop->result_type = CreateBool();
-    return not_binop;
+    return ast_.make_node<BlockExpr>(StatementList{ left_var_assign,
+                                                    right_var_assign },
+                                     not_binop,
+                                     Location(op.loc));
   } else {
-    return land_chain;
+    return ast_.make_node<BlockExpr>(StatementList{ left_var_assign,
+                                                    right_var_assign },
+                                     land_chain,
+                                     Location(op.loc));
   }
 }
 
