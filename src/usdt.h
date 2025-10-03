@@ -12,7 +12,6 @@ struct usdt_probe_entry {
   std::string provider;
   std::string name;
   uint64_t semaphore_offset;
-  int num_locations;
 };
 
 using usdt_probe_list = std::vector<usdt_probe_entry>;

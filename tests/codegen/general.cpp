@@ -96,27 +96,4 @@ kprobe:f
   EXPECT_EQ(args[3].offset, 24);
 }
 
-TEST(codegen, probe_count)
-{
-  ast::ASTContext ast("stdin", R"(
-kprobe:f { 1; } kprobe:d { 1; }
-)");
-  MockBPFtrace bpftrace;
-  EXPECT_CALL(bpftrace, add_probe(_, _, _, _, _)).Times(2);
-
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-
-  auto ok = ast::PassManager()
-                .put(ast)
-                .put<BPFtrace>(bpftrace)
-                .add(ast::AllParsePasses())
-                .add(ast::CreateLLVMInitPass())
-                .add(ast::CreateClangBuildPass())
-                .add(ast::CreateTypeSystemPass())
-                .add(ast::CreateSemanticPass())
-                .add(ast::AllCompilePasses())
-                .run();
-  ASSERT_TRUE(ok && ast.diagnostics().ok());
-}
 } // namespace bpftrace::test::codegen

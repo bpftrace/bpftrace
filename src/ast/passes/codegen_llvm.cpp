@@ -205,7 +205,6 @@ public:
                        CDefinitions &c_definitions,
                        NamedParamDefaults &named_param_defaults,
                        LLVMContext &llvm_ctx,
-                       USDTHelper &usdt_helper,
                        ExpansionResult &expansions);
 
   using Visitor<CodegenLLVM, ScopedExpr>::visit;
@@ -291,7 +290,6 @@ private:
   void generateProbe(Probe &probe,
                      const std::string &name,
                      FunctionType *func_type,
-                     std::optional<int> usdt_location_index = std::nullopt,
                      bool dummy = false);
 
   // Generate a probe and register it to the BPFtrace class.
@@ -413,7 +411,6 @@ private:
   CDefinitions &c_definitions_;
   NamedParamDefaults &named_param_defaults_;
   LLVMContext &llvm_ctx_;
-  USDTHelper &usdt_helper_;
   ExpansionResult &expansions_;
   std::unique_ptr<Module> module_;
   AsyncIds async_ids_;
@@ -469,14 +466,12 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          CDefinitions &c_definitions,
                          NamedParamDefaults &named_param_defaults,
                          LLVMContext &llvm_ctx,
-                         USDTHelper &usdt_helper,
                          ExpansionResult &expansions)
     : ast_(ast),
       bpftrace_(bpftrace),
       c_definitions_(c_definitions),
       named_param_defaults_(named_param_defaults),
       llvm_ctx_(llvm_ctx),
-      usdt_helper_(usdt_helper),
       expansions_(expansions),
       module_(std::make_unique<Module>("bpftrace", llvm_ctx)),
 
@@ -3214,14 +3209,11 @@ ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &name,
                                 FunctionType *func_type,
-                                std::optional<int> usdt_location_index,
                                 bool dummy)
 {
   auto probe_type = probetype(current_attach_point_->provider);
   int index = current_attach_point_->index() ?: probe.index();
-  auto func_name = util::get_function_name_for_probe(name,
-                                                     index,
-                                                     usdt_location_index);
+  auto func_name = util::get_function_name_for_probe(name, index);
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
   func->setSection(util::get_section_name(func_name));
@@ -3264,42 +3256,11 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 {
   current_attach_point_ = &ap;
   probefull_ = ap.name();
-  if (probetype(ap.provider) == ProbeType::usdt) {
-    auto usdt = usdt_helper_.find(bpftrace_.pid(),
-                                  ap.target,
-                                  ap.ns,
-                                  ap.func,
-                                  bpftrace_.feature_->has_uprobe_multi());
-    if (!usdt.has_value()) {
-      ap.addError() << "Failed to find usdt probe: " << probefull_;
-    } else
-      ap.usdt = *usdt;
-
-    // A "unique" USDT probe can be present in a binary in multiple
-    // locations. One case where this happens is if a function
-    // containing a USDT probe is inlined into a caller. So we must
-    // generate a new program for each instance. We _must_ regenerate
-    // because argument locations may differ between instance locations
-    // (eg arg0. may not be found in the same offset from the same
-    // register in each location)
-    auto reset_ids = async_ids_.create_reset_ids();
-    for (int i = 0; i < ap.usdt.num_locations; ++i) {
-      reset_ids();
-
-      generateProbe(probe, probefull_, func_type, i);
-      bpftrace_.add_probe(ap,
-                          probe,
-                          expansions_.get_expansion(ap),
-                          expansions_.get_expanded_funcs(ap),
-                          i);
-    }
-  } else {
-    generateProbe(probe, probefull_, func_type);
-    bpftrace_.add_probe(ap,
-                        probe,
-                        expansions_.get_expansion(ap),
-                        expansions_.get_expanded_funcs(ap));
-  }
+  generateProbe(probe, probefull_, func_type);
+  bpftrace_.add_probe(ap,
+                      probe,
+                      expansions_.get_expansion(ap),
+                      expansions_.get_expanded_funcs(ap));
   current_attach_point_ = nullptr;
 }
 
@@ -3428,7 +3389,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
     generated = true;
   }
   if (!generated) {
-    generateProbe(probe, "dummy", func_type, std::nullopt, true);
+    generateProbe(probe, "dummy", func_type, true);
   }
 
   current_attach_point_ = nullptr;
@@ -5074,31 +5035,24 @@ Pass CreateLLVMInitPass()
   return Pass::create("llvm-init", [] { return CompileContext(); });
 }
 
-Pass CreateCompilePass(
-    std::optional<std::reference_wrapper<USDTHelper>> &&usdt_helper)
+Pass CreateCompilePass()
 {
-  return Pass::create(
-      "compile",
-      [usdt_helper](ASTContext &ast,
-                    [[maybe_unused]] ControlFlowChecked &control_flow,
-                    BPFtrace &bpftrace,
-                    CDefinitions &c_definitions,
-                    NamedParamDefaults &named_param_defaults,
-                    CompileContext &ctx,
-                    ExpansionResult &expansions) mutable {
-        USDTHelper default_usdt;
-        if (!usdt_helper) {
-          usdt_helper = std::ref(default_usdt);
-        }
-        CodegenLLVM llvm(ast,
-                         bpftrace,
-                         c_definitions,
-                         named_param_defaults,
-                         *ctx.context,
-                         usdt_helper->get(),
-                         expansions);
-        return CompiledModule(llvm.compile());
-      });
+  return Pass::create("compile",
+                      [](ASTContext &ast,
+                         [[maybe_unused]] ControlFlowChecked &control_flow,
+                         BPFtrace &bpftrace,
+                         CDefinitions &c_definitions,
+                         NamedParamDefaults &named_param_defaults,
+                         CompileContext &ctx,
+                         ExpansionResult &expansions) mutable {
+                        CodegenLLVM llvm(ast,
+                                         bpftrace,
+                                         c_definitions,
+                                         named_param_defaults,
+                                         *ctx.context,
+                                         expansions);
+                        return CompiledModule(llvm.compile());
+                      });
 }
 
 Pass CreateLinkBitcodePass()

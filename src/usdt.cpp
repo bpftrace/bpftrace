@@ -32,14 +32,12 @@ static bool has_uprobe_multi_ = false;
 
 static void usdt_probe_each(struct bcc_usdt *usdt_probe)
 {
-  int num_locations = has_uprobe_multi_ ? 1 : usdt_probe->num_locations;
   usdt_provider_cache[usdt_probe->bin_path][usdt_probe->provider].emplace_back(
       usdt_probe_entry{
           .path = usdt_probe->bin_path,
           .provider = usdt_probe->provider,
           .name = usdt_probe->name,
           .semaphore_offset = usdt_probe->semaphore_offset,
-          .num_locations = num_locations,
       });
   current_pid_paths.emplace(usdt_probe->bin_path);
 }
