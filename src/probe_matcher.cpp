@@ -55,9 +55,7 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
   auto has_parameter = [](const std::string& token) {
     return token.find('(') != std::string::npos;
   };
-  const bool truncate_parameters = std::ranges::none_of(tokens,
-
-                                                        has_parameter);
+  const bool truncate_parameters = std::ranges::none_of(tokens, has_parameter);
 
   std::string line;
   std::set<std::string> matches;

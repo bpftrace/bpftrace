@@ -173,9 +173,10 @@ public:
   virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
       const std::string &name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
-  // This gets the number of perf or ring buffer pages in total across all cpus by first checking if the
-  // user set this manually with a config value (`perf_rb_pages`), then falling
-  // back to a dynamic default based on the amount of available system memory
+  // This gets the number of perf or ring buffer pages in total across all cpus
+  // by first checking if the user set this manually with a config value
+  // (`perf_rb_pages`), then falling back to a dynamic default based on the
+  // amount of available system memory
   virtual Result<uint64_t> get_buffer_pages(bool per_cpu = false) const;
   Result<uint64_t> get_buffer_pages_per_cpu() const;
 
@@ -218,7 +219,6 @@ public:
   bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
-  bool need_recursion_check_ = false;
 
   std::unique_ptr<ProbeMatcher> probe_matcher_;
 

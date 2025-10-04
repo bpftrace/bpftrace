@@ -2,9 +2,9 @@
 
 #include "ast/ast.h"
 #include "ast/passes/recursion_check.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
-#include "log.h"
 
 namespace bpftrace::ast {
 
@@ -28,14 +28,23 @@ bool is_recursive_func(const std::string &func_name)
 
 class RecursionCheck : public Visitor<RecursionCheck> {
 public:
-  explicit RecursionCheck(BPFtrace &bpftrace) : bpftrace_(bpftrace)
-  {
-  }
+  explicit RecursionCheck(ASTContext &ast, BPFtrace &bpftrace)
+      : ast_(ast), bpftrace_(bpftrace) {};
 
   using Visitor<RecursionCheck>::visit;
-  void visit(Program &program);
+  void visit(Probe &probe);
+  void visit(Statement &stmt);
+
+  void visit([[maybe_unused]] Subprog &subprog)
+  {
+    // Ignore potentially nested subprogs.
+  }
+
+  // Indicates whether the import is required.
+  bool needs_import = false;
 
 private:
+  ASTContext &ast_;
   BPFtrace &bpftrace_;
 };
 
@@ -50,37 +59,81 @@ private:
 // one map while a different lock is trying to be acquired for the other map.
 // This is specific to fentry/fexit (kfunc/kretfunc) as kprobes have kernel
 // protections against this type of deadlock.
-//
-// Note: it would be better if this was in resource analyzer but we need
-// probe_matcher to get the list of functions for the attach point.
-void RecursionCheck::visit(Program &program)
+void RecursionCheck::visit(Probe &probe)
 {
-  for (auto *probe : program.probes) {
-    for (auto *ap : probe->attach_points) {
-      auto probe_type = probetype(ap->provider);
-      if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
-        for (const auto &match : matches) {
-          if (is_recursive_func(match)) {
-            LOG(WARNING)
-                << "Attaching to dangerous function: " << match
-                << ". bpftrace has added mitigations to prevent a kernel "
-                   "deadlock but they may result in some lost events.";
-            bpftrace_.need_recursion_check_ = true;
-            return;
-          }
+  for (auto *ap : probe.attach_points) {
+    auto probe_type = probetype(ap->provider);
+    if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
+      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+      for (const auto &match : matches) {
+        if (is_recursive_func(match)) {
+          ap->addWarning()
+              << "Attaching to dangerous function: " << match
+              << ". bpftrace has added mitigations to prevent a kernel "
+                 "deadlock but they may result in some lost events.";
+
+          // Visit the main block to rewrite all returns to release
+          // the recursive lock.
+          visit(probe.block);
+
+          // Rewrite the main block to execute the probe only if we
+          // are not executing recursively.
+          auto *ret = ast_.make_node<Jump>(JumpType::RETURN,
+                                           Location(probe.loc));
+          auto *none = ast_.make_node<None>(Location(probe.loc));
+          auto *ret_block = ast_.make_node<BlockExpr>(StatementList({ ret }),
+                                                      none,
+                                                      Location(probe.loc));
+          auto *probe_block = ast_.make_node<BlockExpr>(
+              StatementList({}),
+              ast_.make_node<IfExpr>(ast_.make_node<Call>("__try_set_recursion",
+                                                          ExpressionList(),
+                                                          Location(probe.loc)),
+                                     probe.block,
+                                     ret_block,
+                                     Location(probe.loc)),
+              Location(probe.loc));
+          probe.block = probe_block;
+          needs_import = true;
+          return;
         }
       }
     }
   }
 }
 
+void RecursionCheck::visit(Statement &stmt)
+{
+  Visitor<RecursionCheck>::visit(stmt);
+  if (auto *jump = stmt.as<Jump>()) {
+    if (jump->ident == JumpType::RETURN) {
+      // Inject a call to the recursion check function.
+      auto *none = ast_.make_node<None>(Location(jump->loc));
+      auto *call = ast_.make_node<ExprStatement>(
+          ast_.make_node<Call>("__unset_recursion",
+                               ExpressionList(),
+                               Location(jump->loc)),
+          Location(jump->loc));
+      auto *block = ast_.make_node<BlockExpr>(StatementList({ call, jump }),
+                                              none,
+                                              Location(jump->loc));
+      stmt.value = ast_.make_node<ExprStatement>(block, Location(jump->loc));
+    }
+  }
+}
+
 Pass CreateRecursionCheckPass()
 {
-  return Pass::create("RecursionCheck", [](ASTContext &ast, BPFtrace &b) {
-    auto recursion_check = RecursionCheck(b);
-    recursion_check.visit(ast.root);
-  });
+  return Pass::create(
+      "RecursionCheck",
+      [](ASTContext &ast, BPFtrace &bpftrace, Imports &imports) -> Result<> {
+        auto recursion_check = RecursionCheck(ast, bpftrace);
+        recursion_check.visit(ast.root);
+        if (recursion_check.needs_import) {
+          return imports.import_any(*ast.root, "stdlib/recursion_check");
+        }
+        return OK();
+      });
 };
 
 } // namespace bpftrace::ast
