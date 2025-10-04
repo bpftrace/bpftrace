@@ -38,3 +38,23 @@ Please consult [static.sh][0] for the source of truth.
 
 
 [0]: https://github.com/bpftrace/bpftrace/blob/master/.github/include/static.sh
+
+## libbpf
+
+bpftrace relies on libbpf for most of the tasks related to management of BPF
+programs, particularly loading and attachment. Occasionally, it is necessary to
+introduce patches to libbpf to enable some bpftrace functionality or to fix
+bugs. For this reason, we require a very recent, often unreleased, version of
+libbpf.
+
+To simplify development and building, bpftrace vendors libbpf as a submodule and
+by default links against the vendored version statically. Since linking against
+vendored library versions is not preferred by most distributions, we also allow
+building against system libbpf by using `-DUSE_SYSTEM_LIBBPF=On` in CMake. Note
+that it is the responsibility of the builder to ensure that the linked libbpf
+contains all the necessary patches.
+
+To the best of our knowledge, the below is the list of particular libbpf patches
+needed by bpftrace:
+- [libbpf/libbpf@dd589c3](https://github.com/libbpf/libbpf/commit/dd589c3b31c13164bdc61ed174fbae6fe76c8308) (included in libbpf 1.5.0)
+- [libbpf/libbpf@b58f5a3](https://github.com/libbpf/libbpf/commit/b58f5a3e7778908765a00e14809718fadcf90fb8) (included in libbpf 1.6.0)

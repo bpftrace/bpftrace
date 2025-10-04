@@ -23,6 +23,8 @@ and this project adheres to
 #### Changed
 - Apply `-B` buffering semantics to file outputs.
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)
+- Link against libbpf vendored from a submodule by default
+  - [#4688](https://github.com/bpftrace/bpftrace/pull/4688)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 16
