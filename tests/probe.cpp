@@ -7,6 +7,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/probe_expansion.h"
+#include "ast/passes/resolve_args.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -44,6 +45,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(ast::CreateMacroExpansionPass())
                 .add(CreateParseBTFPass())
                 .add(ast::CreateMapSugarPass())
+                .add(ast::CreateResolveArgsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateLLVMInitPass())

@@ -15,6 +15,7 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_expansion.h"
+#include "ast/passes/resolve_args.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -147,8 +148,10 @@ public:
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
                   .add(ast::CreateProbeExpansionPass())
+                  .add(ast::CreateResolveArgsPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
+                  .add(ast::CreateResolveArgsPass({ ProbeType::tracepoint }))
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateMapSugarPass())
@@ -3407,12 +3410,18 @@ TEST_F(SemanticAnalyserTest, builtin_args)
   auto bpftrace = get_mock_bpftrace();
   test("t:sched:sched_one { args.common_field }", Mock{ *bpftrace });
   test("t:sched:sched_two { args.common_field }", Mock{ *bpftrace });
-  test("t:sched:sched_one,t:sched:sched_two { args.common_field }",
+  test("t:sched:sched_one,t:sched:sched_one_twin { args.common_field }",
        Mock{ *bpftrace });
-  test("t:sched:sched_* { args.common_field }", Mock{ *bpftrace });
-  test("t:sched:sched_one { args.not_a_field }", Mock{ *bpftrace }, Error{});
+  test("t:sched:sched_on* { args.common_field }", Mock{ *bpftrace });
   // Backwards compatibility
   test("t:sched:sched_one { args->common_field }", Mock{ *bpftrace });
+
+  test("t:sched:sched_one { args.not_a_field }", Mock{ *bpftrace }, Error{});
+  // Mixed args
+  test("t:sched:sched_one,t:sched:sched_two { args.common_field }",
+       Mock{ *bpftrace },
+       Error{});
+  test("t:sched:sched_* { args.common_field }", Mock{ *bpftrace }, Error{});
 }
 
 TEST_F(SemanticAnalyserTest, type_ctx)
@@ -4658,9 +4667,9 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
 TEST_F(SemanticAnalyserBTFTest, args_builtin_mixed_probes)
 {
   test("fentry:func_1,tracepoint:sched:sched_one { args }", Error{ R"(
-stdin:1:44-48: ERROR: The args builtin can only be used within the context of a single probe type, e.g. "probe1 {args}" is valid while "probe1,probe2 {args}" is not.
+stdin:1:15-41: ERROR: Probe has attach points with mixed arguments
 fentry:func_1,tracepoint:sched:sched_one { args }
-                                           ~~~~
+              ~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
 }
 

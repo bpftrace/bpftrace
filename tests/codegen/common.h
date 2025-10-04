@@ -17,6 +17,7 @@
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/probe_expansion.h"
 #include "ast/passes/recursion_check.h"
+#include "ast/passes/resolve_args.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
@@ -71,8 +72,10 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateImportInternalScriptsPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateProbeExpansionPass())
+                .add(ast::CreateResolveArgsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
+                .add(ast::CreateResolveArgsPass({ProbeType::tracepoint}))
                 .add(ast::CreateCMacroExpansionPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())

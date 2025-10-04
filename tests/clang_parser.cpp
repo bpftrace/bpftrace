@@ -4,6 +4,7 @@
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/probe_expansion.h"
+#include "ast/passes/resolve_args.h"
 #include "bpftrace.h"
 #include "btf_common.h"
 #include "driver.h"
@@ -28,6 +29,7 @@ static ast::CDefinitions parse(
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeExpansionPass())
+                .add(ast::CreateResolveArgsPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .run();
