@@ -31,14 +31,14 @@ public:
   ExpansionResult(ExpansionResult &&) = default;
   ExpansionResult &operator=(ExpansionResult &&) = default;
 
-  void set_expansion(AttachPoint &ap, ExpansionType type)
+  void set_ap_expansion(AttachPoint &ap, ExpansionType type)
   {
-    expansions[&ap] = type;
+    ap_expansions[&ap] = type;
   }
-  ExpansionType get_expansion(AttachPoint &ap)
+  ExpansionType get_ap_expansion(AttachPoint &ap)
   {
-    auto exp = expansions.find(&ap);
-    if (exp == expansions.end())
+    auto exp = ap_expansions.find(&ap);
+    if (exp == ap_expansions.end())
       return ExpansionType::NONE;
     return exp->second;
   }
@@ -61,9 +61,18 @@ public:
     return funcs->second;
   }
 
+  void add_probe(Probe * probe) {
+    probe_expansions.insert(probe);
+  }
+
+  bool has_probe(Probe* probe) {
+    return probe_expansions.contains(probe);
+  }
+
 private:
-  std::unordered_map<AttachPoint *, ExpansionType> expansions;
+  std::unordered_map<AttachPoint *, ExpansionType> ap_expansions;
   std::unordered_map<AttachPoint *, std::set<std::string>> expanded_funcs;
+  std::unordered_set<Probe *> probe_expansions;
 };
 
 Pass CreateProbeExpansionPass();

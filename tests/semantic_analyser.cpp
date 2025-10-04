@@ -4657,11 +4657,8 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
 
 TEST_F(SemanticAnalyserBTFTest, args_builtin_mixed_probes)
 {
-  test("fentry:func_1,tracepoint:sched:sched_one { args }", Error{ R"(
-stdin:1:44-48: ERROR: The args builtin can only be used within the context of a single probe type, e.g. "probe1 {args}" is valid while "probe1,probe2 {args}" is not.
-fentry:func_1,tracepoint:sched:sched_one { args }
-                                           ~~~~
-)" });
+  // Should separate each of these into their own programs
+  test("fentry:func_1,tracepoint:sched:sched_one { args }");
 }
 
 TEST_F(SemanticAnalyserBTFTest, binop_late_ptr_resolution)

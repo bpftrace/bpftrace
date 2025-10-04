@@ -1080,14 +1080,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
 
     ProbeType type = single_provider_type(probe);
+    assert(type != ProbeType::invalid);
 
-    if (type == ProbeType::invalid) {
-      builtin.addError()
-          << "The args builtin can only be used within the context of a single "
-             "probe type, e.g. \"probe1 {args}\" is valid while "
-             "\"probe1,probe2 {args}\" is not.";
-    } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
-               type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
+    if (type == ProbeType::fentry || type == ProbeType::fexit ||
+        type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
       for (auto *attach_point : probe->attach_points) {
         if (attach_point->target == "bpf") {
           builtin.addError() << "The args builtin cannot be used for "
