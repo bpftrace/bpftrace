@@ -3259,7 +3259,7 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
   generateProbe(probe, probefull_, func_type);
   bpftrace_.add_probe(ap,
                       probe,
-                      expansions_.get_expansion(ap),
+                      expansions_.get_ap_expansion(ap),
                       expansions_.get_expanded_funcs(ap));
   current_attach_point_ = nullptr;
 }

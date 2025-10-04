@@ -376,7 +376,8 @@ void AttachPoint::set_index(int index)
 
 std::string Probe::args_typename() const
 {
-  return "struct " + orig_name + "_args";
+  assert(attach_points.size() == 1);
+  return "struct " + orig_name + attach_points.front()->func + "_args";
 }
 
 int Probe::index() const

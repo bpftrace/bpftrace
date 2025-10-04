@@ -114,7 +114,7 @@ void ExpansionAnalyser::visit(AttachPoint &ap)
   }
 
   if (expansion != ExpansionType::NONE)
-    result_.set_expansion(ap, expansion);
+    result_.set_ap_expansion(ap, expansion);
 }
 
 void ExpansionAnalyser::visit(Builtin &builtin)
@@ -124,7 +124,11 @@ void ExpansionAnalyser::visit(Builtin &builtin)
 
   if (builtin.ident == "__builtin_probe") {
     for (auto *ap : probe_->attach_points)
-      result_.set_expansion(*ap, ExpansionType::FULL);
+      result_.set_ap_expansion(*ap, ExpansionType::FULL);
+  } else if (builtin.ident == "args") {
+    result_.add_probe(probe_);
+  } else if (builtin.ident == "__builtin_retval") {
+    result_.add_probe(probe_);
   }
 }
 
@@ -163,7 +167,7 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
         return other->attach_points.size() == 1 &&
                probetype(other->attach_points[0]->provider) ==
                    ProbeType::kretprobe &&
-               expansion_result_.get_expansion(*other->attach_points[0]) ==
+               expansion_result_.get_ap_expansion(*other->attach_points[0]) ==
                    ExpansionType::MULTI &&
                other->attach_points[0]->target == ap->target &&
                other->attach_points[0]->func == ap->func;
@@ -207,23 +211,25 @@ void SessionExpander::visit(Probe &probe)
                                                 Location(probe.block->loc)),
                                             Location(probe.block->loc));
 
-    expansion_result_.set_expansion(*probe.attach_points[0],
-                                    ExpansionType::SESSION);
+    expansion_result_.set_ap_expansion(*probe.attach_points[0],
+                                       ExpansionType::SESSION);
 
     std::erase(ast_.root->probes, retprobe);
   }
 }
 
-class ProbeExpander : public Visitor<ProbeExpander> {
+class AttachpointExpander : public Visitor<AttachpointExpander> {
 public:
-  ProbeExpander(ASTContext &ast, BPFtrace &bpftrace, ExpansionResult &result)
+  AttachpointExpander(ASTContext &ast,
+                      BPFtrace &bpftrace,
+                      ExpansionResult &result)
       : ast_(ast), bpftrace_(bpftrace), result_(result)
   {
   }
 
   void expand();
 
-  using Visitor<ProbeExpander>::visit;
+  using Visitor<AttachpointExpander>::visit;
   void visit(Program &prog);
   void visit(AttachPointList &aps);
 
@@ -235,24 +241,24 @@ private:
   ExpansionResult &result_;
 };
 
-void ProbeExpander::expand()
+void AttachpointExpander::expand()
 {
   visit(*ast_.root);
 }
 
-void ProbeExpander::visit(Program &prog)
+void AttachpointExpander::visit(Program &prog)
 {
-  Visitor<ProbeExpander>::visit(prog);
+  Visitor<AttachpointExpander>::visit(prog);
 }
 
-void ProbeExpander::visit(AttachPointList &aps)
+void AttachpointExpander::visit(AttachPointList &aps)
 {
   const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
 
   AttachPointList new_aps;
   for (auto *ap : aps) {
     auto probe_type = probetype(ap->provider);
-    auto expansion = result_.get_expansion(*ap);
+    auto expansion = result_.get_ap_expansion(*ap);
     switch (expansion) {
       case ExpansionType::FULL: {
         auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
@@ -314,6 +320,55 @@ void ProbeExpander::visit(AttachPointList &aps)
   aps = new_aps;
 }
 
+class ProbeExpander : public Visitor<ProbeExpander> {
+public:
+  ProbeExpander(ASTContext &ast, BPFtrace &bpftrace, ExpansionResult &result)
+      : ast_(ast), bpftrace_(bpftrace), result_(result)
+  {
+  }
+
+  void expand();
+
+  using Visitor<ProbeExpander>::visit;
+  void visit(Program &prog);
+
+private:
+  ASTContext &ast_;
+  BPFtrace &bpftrace_;
+  ExpansionResult &result_;
+};
+
+void ProbeExpander::expand()
+{
+  visit(*ast_.root);
+}
+
+void ProbeExpander::visit(Program &prog)
+{
+  ProbeList new_probe_list;
+
+  for (auto *probe : prog.probes) {
+    if (!result_.has_probe(probe)) {
+      new_probe_list.emplace_back(probe);
+      continue;
+    }
+
+    for (auto *ap : probe->attach_points) {
+      // Only one per probe
+      AttachPointList new_ap;
+      new_ap.emplace_back(ap);
+
+      auto *new_probe = ast_.make_node<Probe>(
+          std::move(new_ap),
+          clone(ast_, probe->block, probe->block->loc),
+          Location(probe->loc));
+      new_probe_list.emplace_back(new_probe);
+    }
+  }
+
+  prog.probes = std::move(new_probe_list);
+}
+
 Pass CreateProbeExpansionPass()
 {
   auto fn = [](ASTContext &ast, BPFtrace &bpftrace) {
@@ -323,8 +378,11 @@ Pass CreateProbeExpansionPass()
     SessionExpander session_expander(ast, bpftrace, result);
     session_expander.visit(*ast.root);
 
-    ProbeExpander expander(ast, bpftrace, result);
-    expander.expand();
+    AttachpointExpander ap_expander(ast, bpftrace, result);
+    ap_expander.expand();
+
+    ProbeExpander probe_expander(ast, bpftrace, result);
+    probe_expander.expand();
 
     return result;
   };
