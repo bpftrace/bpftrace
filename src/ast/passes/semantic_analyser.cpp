@@ -259,7 +259,6 @@ private:
   void validate_map_key(const SizedType &key, Node &node);
   void resolve_struct_type(SizedType &type, Node &node);
 
-  void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(Probe *probe);
   AddrSpace find_addrspace(ProbeType pt);
 
@@ -822,19 +821,6 @@ void SemanticAnalyser::visit(Identifier &identifier)
   }
 }
 
-void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
-                                               Builtin &builtin)
-{
-  std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-      *attach_point);
-  builtin.builtin_type = CreateRecord(
-      tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
-  builtin.builtin_type.SetAS(
-      attach_point->target == "syscalls" ? AddrSpace::user : AddrSpace::kernel);
-  builtin.builtin_type.MarkCtxAccess();
-  builtin.builtin_type.is_tparg = true;
-}
-
 ProbeType SemanticAnalyser::single_provider_type(Probe *probe)
 {
   ProbeType type = ProbeType::invalid;
@@ -1075,19 +1061,23 @@ void SemanticAnalyser::visit(Builtin &builtin)
       ProbeType type = probetype(attach_point->provider);
 
       if (type == ProbeType::tracepoint) {
-        builtin_args_tracepoint(attach_point, builtin);
+        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
+            *attach_point);
+        builtin.builtin_type = CreateRecord(
+            tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
+        builtin.builtin_type.SetAS(attach_point->target == "syscalls"
+                                       ? AddrSpace::user
+                                       : AddrSpace::kernel);
+        builtin.builtin_type.MarkCtxAccess();
+        break;
       }
     }
 
     ProbeType type = single_provider_type(probe);
+    assert(type != ProbeType::invalid);
 
-    if (type == ProbeType::invalid) {
-      builtin.addError()
-          << "The args builtin can only be used within the context of a single "
-             "probe type, e.g. \"probe1 {args}\" is valid while "
-             "\"probe1,probe2 {args}\" is not.";
-    } else if (type == ProbeType::fentry || type == ProbeType::fexit ||
-               type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
+    if (type == ProbeType::fentry || type == ProbeType::fexit ||
+        type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
       for (auto *attach_point : probe->attach_points) {
         if (attach_point->target == "bpf") {
           builtin.addError() << "The args builtin cannot be used for "
@@ -3106,70 +3096,45 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  std::map<std::string, std::shared_ptr<const Struct>> structs;
+  std::string cast_type = type.GetName();
+  const auto &record = type.GetStruct();
 
-  if (type.is_tparg) {
-    auto *probe = get_probe(acc);
-    if (probe == nullptr)
-      return;
-
-    for (AttachPoint *attach_point : probe->attach_points) {
-      if (probetype(attach_point->provider) != ProbeType::tracepoint) {
-        // The args builtin can only be used with tracepoint
-        // an error message is already generated in visit(Builtin)
-        // just continue semantic analysis
-        continue;
-      }
-
-      std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-          *attach_point);
-      structs[tracepoint_struct] =
-          bpftrace_.structs.Lookup(tracepoint_struct).lock();
-    }
+  if (!record->HasField(acc.field)) {
+    acc.addError() << "Struct/union of type '" << cast_type
+                   << "' does not contain " << "a field named '" << acc.field
+                   << "'";
   } else {
-    structs[type.GetName()] = type.GetStruct();
-  }
+    const auto &field = record->GetField(acc.field);
 
-  for (auto it : structs) {
-    std::string cast_type = it.first;
-    const auto record = it.second;
-    if (!record->HasField(acc.field)) {
-      acc.addError() << "Struct/union of type '" << cast_type
-                     << "' does not contain " << "a field named '" << acc.field
-                     << "'";
-    } else {
-      const auto &field = record->GetField(acc.field);
-
-      if (field.type.IsPtrTy()) {
-        const auto &tags = field.type.GetBtfTypeTags();
-        // Currently only "rcu" is safe. "percpu", for example, requires
-        // special unwrapping with `bpf_per_cpu_ptr` which is not yet
-        // supported.
-        static const std::string_view allowed_tag = "rcu";
-        for (const auto &tag : tags) {
-          if (tag != allowed_tag) {
-            acc.addError() << "Attempting to access pointer field '"
-                           << acc.field
-                           << "' with unsupported tag attribute: " << tag;
-          }
+    if (field.type.IsPtrTy()) {
+      const auto &tags = field.type.GetBtfTypeTags();
+      // Currently only "rcu" is safe. "percpu", for example, requires
+      // special unwrapping with `bpf_per_cpu_ptr` which is not yet
+      // supported.
+      static const std::string_view allowed_tag = "rcu";
+      for (const auto &tag : tags) {
+        if (tag != allowed_tag) {
+          acc.addError() << "Attempting to access pointer field '" << acc.field
+                         << "' with unsupported tag attribute: " << tag;
         }
       }
-
-      acc.field_type = field.type;
-      if (acc.expr.type().IsCtxAccess() &&
-          (acc.field_type.IsArrayTy() || acc.field_type.IsRecordTy())) {
-        // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
-        acc.field_type.MarkCtxAccess();
-      }
-      acc.field_type.is_internal = type.is_internal;
-      acc.field_type.SetAS(acc.expr.type().GetAS());
-
-      // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
-      // access to the first 8 bytes results in verifier error.
-      if (type.is_tparg && field.offset < 8)
-        acc.addError()
-            << "BPF does not support accessing common tracepoint fields";
     }
+
+    acc.field_type = field.type;
+    if (acc.expr.type().IsCtxAccess() &&
+        (acc.field_type.IsArrayTy() || acc.field_type.IsRecordTy())) {
+      // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
+      acc.field_type.MarkCtxAccess();
+    }
+    acc.field_type.is_internal = type.is_internal;
+    acc.field_type.SetAS(acc.expr.type().GetAS());
+
+    // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
+    // access to the first 8 bytes results in verifier error.
+    if (TracepointFormatParser::is_tracepoint_struct(type.GetName()) &&
+        field.offset < 8)
+      acc.addError()
+          << "BPF does not support accessing common tracepoint fields";
   }
 }
 
@@ -4135,7 +4100,8 @@ void SemanticAnalyser::assign_map_type(Map &map,
 {
   const std::string &map_ident = map.ident;
 
-  if (type.IsRecordTy() && type.is_tparg) {
+  if (type.IsRecordTy() &&
+      TracepointFormatParser::is_tracepoint_struct(type.GetName())) {
     loc_node->addError() << "Storing tracepoint args in maps is not supported";
   }
 

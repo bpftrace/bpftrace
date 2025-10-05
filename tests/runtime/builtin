@@ -223,6 +223,10 @@ REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
+NAME mixed probe args
+PROG rawtracepoint:irq_handler_entry, rawtracepoint:irq_handler_exit, fentry:do_nanosleep { args }
+EXPECT Attached 3 probes
+
 NAME jiffies
 PROG i:ms:1 { printf("SUCCESS %llu\n", jiffies); exit(); }
 EXPECT_REGEX SUCCESS [0-9]+
