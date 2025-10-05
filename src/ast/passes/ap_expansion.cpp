@@ -1,4 +1,4 @@
-#include "ast/passes/probe_expansion.h"
+#include "ast/passes/ap_expansion.h"
 
 #include <algorithm>
 
@@ -214,16 +214,16 @@ void SessionExpander::visit(Probe &probe)
   }
 }
 
-class ProbeExpander : public Visitor<ProbeExpander> {
+class ApExpander : public Visitor<ApExpander> {
 public:
-  ProbeExpander(ASTContext &ast, BPFtrace &bpftrace, ExpansionResult &result)
+  ApExpander(ASTContext &ast, BPFtrace &bpftrace, ExpansionResult &result)
       : ast_(ast), bpftrace_(bpftrace), result_(result)
   {
   }
 
   void expand();
 
-  using Visitor<ProbeExpander>::visit;
+  using Visitor<ApExpander>::visit;
   void visit(Program &prog);
   void visit(AttachPointList &aps);
 
@@ -235,17 +235,17 @@ private:
   ExpansionResult &result_;
 };
 
-void ProbeExpander::expand()
+void ApExpander::expand()
 {
   visit(*ast_.root);
 }
 
-void ProbeExpander::visit(Program &prog)
+void ApExpander::visit(Program &prog)
 {
-  Visitor<ProbeExpander>::visit(prog);
+  Visitor<ApExpander>::visit(prog);
 }
 
-void ProbeExpander::visit(AttachPointList &aps)
+void ApExpander::visit(AttachPointList &aps)
 {
   const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
 
@@ -314,7 +314,7 @@ void ProbeExpander::visit(AttachPointList &aps)
   aps = new_aps;
 }
 
-Pass CreateProbeExpansionPass()
+Pass CreateApExpansionPass()
 {
   auto fn = [](ASTContext &ast, BPFtrace &bpftrace) {
     ExpansionAnalyser analyser(bpftrace);
@@ -323,13 +323,13 @@ Pass CreateProbeExpansionPass()
     SessionExpander session_expander(ast, bpftrace, result);
     session_expander.visit(*ast.root);
 
-    ProbeExpander expander(ast, bpftrace, result);
+    ApExpander expander(ast, bpftrace, result);
     expander.expand();
 
     return result;
   };
 
-  return Pass::create("ProbeExpansion", fn);
+  return Pass::create("ApExpansion", fn);
 }
 
 } // namespace bpftrace::ast

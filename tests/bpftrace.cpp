@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstring>
 
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
@@ -10,7 +11,6 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
-#include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "bpfmap.h"
@@ -66,7 +66,7 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateCheckAttachpointsPass())
                 .add(ast::CreateControlFlowPass())
-                .add(ast::CreateProbeExpansionPass())
+                .add(ast::CreateApExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())

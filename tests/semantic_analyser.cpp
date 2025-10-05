@@ -3,6 +3,7 @@
 
 #include "arch/arch.h"
 #include "ast/ast.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
@@ -14,7 +15,6 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/printer.h"
-#include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -146,7 +146,7 @@ public:
                   .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
-                  .add(ast::CreateProbeExpansionPass())
+                  .add(ast::CreateApExpansionPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
                   .add(ast::CreateCMacroExpansionPass())

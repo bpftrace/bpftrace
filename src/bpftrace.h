@@ -15,8 +15,8 @@
 
 #include "ast/ast.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/clang_parser.h"
-#include "ast/passes/probe_expansion.h"
 #include "attached_probe.h"
 #include "bpfbytecode.h"
 #include "bpffeature.h"

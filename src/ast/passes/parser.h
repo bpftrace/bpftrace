@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/pass_manager.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
@@ -14,7 +15,6 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/pid_filter_pass.h"
-#include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/usdt_arguments.h"
@@ -49,7 +49,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateControlFlowPass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateParseBTFPass());
-  passes.emplace_back(CreateProbeExpansionPass());
+  passes.emplace_back(CreateApExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
   passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateFieldAnalyserPass());
