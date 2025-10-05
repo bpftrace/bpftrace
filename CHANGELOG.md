@@ -32,6 +32,8 @@ and this project adheres to
   - [#4649](https://github.com/bpftrace/bpftrace/pull/4649)
 - Improved tuple binop comparison
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
+- Fix off-by-one for function argument size comparison
+  - [#4698](https://github.com/bpftrace/bpftrace/pull/4698)
 #### Security
 #### Docs
 #### Tools
