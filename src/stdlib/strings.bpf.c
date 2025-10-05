@@ -14,7 +14,14 @@ long __bpf_strnlen(const char *ptr, size_t max_size)
   if (bpf_strnlen) {
     return bpf_strnlen(ptr, max_size);
   }
-  return -ENOSYS; // Not available, must fall back.
+  long sz = 0;
+  for (size_t i = 0; i < max_size; ++i) {
+    if (ptr[i] == 0) {
+      break;
+    }
+    ++sz;
+  }
+  return sz;
 }
 
 extern int bpf_strnstr(const char *s1__ign,

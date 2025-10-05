@@ -39,14 +39,17 @@ macro default_str_length() {
 // :variant int64 strlen(int8 *exp)
 macro strlen($var) {
   assert_str($var);
+  let $sz = (int64)0;
   if comptime is_str($var) {
-    __strnlen(&$var, sizeof($var))
+    $sz = __strnlen(&$var, sizeof($var));
   } else if comptime is_array($var) {
-    __strnlen($var, sizeof($var))
+    $sz = __strnlen($var, sizeof($var));
   } else {
-    __strnlen($var, default_str_length())
+    $sz = __strnlen($var, default_str_length());
   }
+  (uint64)$sz
 }
+
 macro strlen(exp) {
   assert_str(exp);
   if comptime (is_str(exp) || is_array(exp)) {
@@ -54,23 +57,12 @@ macro strlen(exp) {
     let $x = exp;
     strlen($x)
   } else {
-    __strnlen(exp, default_str_length())
+    (uint64)__strnlen(exp, default_str_length())
   }
 }
+
 macro __strnlen(ptr, max_size) {
-  $sz = __bpf_strnlen(ptr, (int64)max_size);
-  if ($sz >= 0) {
-    (uint64)$sz
-  } else {
-    $sz = 0;
-    for ($i : ((uint64)0)..((uint64)max_size)) {
-      if (ptr[$i] == 0) {
-        break;
-      }
-      $sz += 1;
-    }
-    (uint64)$sz
-  }
+  __bpf_strnlen(ptr, (int64)max_size)
 }
 
 // Returns the "capacity" of a string-like object.
