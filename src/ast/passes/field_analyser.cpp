@@ -309,7 +309,7 @@ void FieldAnalyser::resolve_args(Probe &probe)
           ap->addWarning() << "No debuginfo found for " << ap->target;
         }
         if (probe_args &&
-            probe_args->fields.size() >= arch::Host::arguments().size()) {
+            probe_args->fields.size() > arch::Host::arguments().size()) {
           ap->addError() << "\'args\' builtin is not supported for "
                          << "probes with stack-passed arguments.";
         }

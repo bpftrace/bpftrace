@@ -1,6 +1,7 @@
 #include <cstring>
 #include <functional>
 #include <iomanip>
+#include <iostream>
 
 #include "util/opaque.h"
 
