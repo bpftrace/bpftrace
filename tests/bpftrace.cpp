@@ -809,6 +809,9 @@ TEST(bpftrace, resolve_timestamp)
   static const auto bootmode = static_cast<uint32_t>(TimestampMode::boot);
   auto bpftrace = get_strict_mock_bpftrace();
 
+  if (std::chrono::system_clock::period::den < 1000000000)
+    GTEST_SKIP() << "Timestamp test requires nanosecond precision";
+
   // Basic sanity check
   bpftrace->boottime_ = { .tv_sec = 3, .tv_nsec = 0 };
   bpftrace->resources.strftime_args.emplace_back("%s.%f");
