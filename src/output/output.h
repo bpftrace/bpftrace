@@ -148,8 +148,7 @@ public:
   virtual void value(const Value& value) = 0;
 
   // Specialized messages during execution.
-  virtual void printf(const std::string& str) = 0;
-  virtual void errorf(const std::string& str, const SourceInfo& info) = 0;
+  virtual void printf(const std::string& str, const SourceInfo& info, PrintfSeverity severity) = 0;
   virtual void time(const std::string& time) = 0;
   virtual void cat(const std::string& cat) = 0;
   virtual void join(const std::string& join) = 0;

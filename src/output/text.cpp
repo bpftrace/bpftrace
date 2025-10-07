@@ -524,26 +524,46 @@ void TextOutput::primitive(const Primitive &p)
   TextEmitter<Primitive>::emit(out_, p);
 }
 
-void TextOutput::printf(const std::string &str)
+void TextOutput::printf(const std::string &str,
+                        const SourceInfo &info,
+                        PrintfSeverity severity)
 {
-  out_ << str;
-}
-
-void TextOutput::errorf(const std::string &str, const SourceInfo &info)
-{
-  bool first = true;
-  for (const auto &loc : info.locations) {
-    if (first) {
-      // No need to print the source context as that's just the `errorf`
-      // call
-      LOG(ERROR, std::string(loc.source_location), err_) << str;
-      first = false;
-    } else {
-      LOG(ERROR,
-          std::string(loc.source_location),
-          std::vector(loc.source_context),
-          err_)
-          << "expanded from";
+  switch (severity) {
+    case PrintfSeverity::NONE: {
+      out_ << str;
+      return;
+    }
+    case PrintfSeverity::WARNING:
+    case PrintfSeverity::ERROR: {
+      bool is_error = severity == PrintfSeverity::ERROR;
+      bool first = true;
+      for (const auto &loc : info.locations) {
+        if (first) {
+          // No need to print the source context as that's just the `errorf` or
+          // `warnf` call
+          if (is_error) {
+            LOG(ERROR, std::string(loc.source_location), err_) << str;
+          } else {
+            LOG(WARNING, std::string(loc.source_location), err_) << str;
+          }
+          first = false;
+        } else {
+          if (is_error) {
+            LOG(ERROR,
+                std::string(loc.source_location),
+                std::vector(loc.source_context),
+                err_)
+                << "expanded from";
+          } else {
+            LOG(WARNING,
+                std::string(loc.source_location),
+                std::vector(loc.source_context),
+                err_)
+                << "expanded from";
+          }
+        }
+      }
+      return;
     }
   }
 }

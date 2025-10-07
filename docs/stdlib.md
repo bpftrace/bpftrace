@@ -1305,6 +1305,24 @@ uprobe:/bin/bash:readline
 ```
 
 
+### warnf
+- `void warnf(const string fmt, args...)`
+
+**async**
+
+`warnf()` formats and prints data (similar to [`printf`](#printf)) as an warning message with the source location. This respects the "--no-warnings" flag and will be silent if that is used.
+
+```
+BEGIN { warnf("Something kinda bad with args: %d, %s", 10, "arg2"); }
+```
+
+Prints:
+
+```
+EXPECT stdin:1:9-62: WARNING: Something kinda bad with args: 10, arg2
+```
+
+
 ### zero
 - `void zero(map m)`
 

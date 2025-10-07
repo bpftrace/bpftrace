@@ -1642,13 +1642,13 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                              async_action::AsyncAction::printf);
       return ScopedExpr();
     }
-  } else if (call.func == "errorf") {
+  } else if (call.func == "errorf" || call.func == "warnf") {
     auto async_id = async_ids_.printf();
     createFormatStringCall(call,
                            async_id,
                            std::get<1>(
                                bpftrace_.resources.printf_args[async_id]),
-                           "errorf",
+                           call.func,
                            async_action::AsyncAction::printf);
     return ScopedExpr();
   } else if (call.func == "debugf") {

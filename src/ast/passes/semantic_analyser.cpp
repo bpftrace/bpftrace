@@ -614,6 +614,11 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=1,
       .max_args=1,
       .discard_ret_warn = true, } },
+  { "warnf",
+    { .min_args=1,
+      .max_args=128,
+      .arg_types={
+        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "zero",
     { .min_args=1,
       .max_args=1,
@@ -766,7 +771,8 @@ void SemanticAnalyser::visit(String &string)
   // Skip check for printf()'s format string (1st argument) and create the
   // string with the original size. This is because format string is not part of
   // bpf byte code.
-  if ((func_ == "printf" || func_ == "errorf") && func_arg_idx_ == 0)
+  if ((func_ == "printf" || func_ == "errorf" || func_ == "warnf") &&
+      func_arg_idx_ == 0)
     return;
 
   const auto str_len = bpftrace_.config_->max_strlen;
@@ -1549,8 +1555,8 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "cgroupid") {
     call.return_type = CreateUInt64();
   } else if (call.func == "printf" || call.func == "errorf" ||
-             call.func == "system" || call.func == "cat" ||
-             call.func == "debugf") {
+             call.func == "warnf" || call.func == "system" ||
+             call.func == "cat" || call.func == "debugf") {
     if (is_final_pass()) {
       const auto &fmt = call.vargs.at(0).as<String>()->value;
       std::vector<SizedType> args;
