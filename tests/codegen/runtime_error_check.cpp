@@ -38,16 +38,6 @@ TEST(codegen, runtime_error_check_comm)
   test(*bpftrace, "kprobe:f { @x = comm; }", NAME);
 }
 
-TEST(codegen, runtime_error_check_signal)
-{
-  auto bpftrace = get_mock_bpftrace();
-
-  bpftrace->warning_level_ = 1;
-  bpftrace->safe_mode_ = false;
-
-  test(*bpftrace, "kprobe:f { signal(8); }", NAME);
-}
-
 TEST(codegen, runtime_error_check_path)
 {
   auto bpftrace = get_mock_bpftrace();

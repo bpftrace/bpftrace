@@ -2,6 +2,7 @@
 
 #include "arch/arch.h"
 #include "ast/passes/builtins.h"
+#include "ast/signal_bt.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 
@@ -16,6 +17,7 @@ public:
 
   using Visitor<Builtins, std::optional<Expression>>::visit;
   std::optional<Expression> visit(Builtin &builtin);
+  std::optional<Expression> visit(Call &call);
   std::optional<Expression> visit(Identifier &identifier);
   std::optional<Expression> visit(Expression &expression);
   std::optional<Expression> visit(Probe &probe);
@@ -58,6 +60,25 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
       return ast_.make_node<String>(
           probetypeName(probetype(probe->attach_points.front()->provider)),
           Location(node.loc));
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<Expression> Builtins::visit(Call &call)
+{
+  Visitor<Builtins, std::optional<Expression>>::visit(call);
+  if (call.func == "__builtin_signal_num") {
+    if (call.vargs.size() != 1) {
+      call.addError() << "__builtin_signal_num expects 1 argument";
+    } else {
+      if (auto *str = call.vargs.at(0).as<String>()) {
+        auto signal_num = signal_name_to_num(str->value);
+        if (signal_num < 1) {
+          call.addError() << "Invalid string for signal: " << str->value;
+        }
+        return ast_.make_node<Integer>(signal_num, Location(str->loc));
+      }
     }
   }
   return std::nullopt;

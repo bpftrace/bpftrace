@@ -20,8 +20,8 @@ and this project adheres to
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)
 - Automatic dereferencing is supported via `.`, now the preferred access operator
   - [#4673](https://github.com/bpftrace/bpftrace/pull/4673)
-- Allow `signal()` to target either the current process or the current thread via an optional second argument
-  - [#4721](https://github.com/bpftrace/bpftrace/pull/4721)
+- Add `signal_thread()` to target the current thread
+  - [#4700](https://github.com/bpftrace/bpftrace/pull/4700)
 - Add `probetype` builtin
   - [#4712](https://github.com/bpftrace/bpftrace/pull/4712)
 - Allow array-style access for tuples
