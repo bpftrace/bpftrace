@@ -2,8 +2,8 @@
 #include <cassert>
 
 #include "arch/arch.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/field_analyser.h"
-#include "ast/passes/probe_expansion.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"

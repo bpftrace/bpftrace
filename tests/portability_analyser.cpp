@@ -1,10 +1,10 @@
 #include "ast/passes/portability_analyser.h"
+#include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
-#include "ast/passes/probe_expansion.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "btf_common.h"
@@ -34,7 +34,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateCheckAttachpointsPass())
-                .add(ast::CreateProbeExpansionPass())
+                .add(ast::CreateApExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())
