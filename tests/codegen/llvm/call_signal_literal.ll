@@ -4,6 +4,10 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
+%errorf_t.1 = type { i64, %errorf_args_t.0 }
+%errorf_args_t.0 = type { i64 }
+%errorf_t = type { i64, %errorf_args_t }
+%errorf_args_t = type { i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -16,11 +20,112 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %signal = call i64 inttoptr (i64 109 to ptr)(i32 8)
+  %errorf_args4 = alloca %errorf_t.1, align 8
+  %"$$signal_internal_2_$ret" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$signal_internal_2_$ret")
+  store i64 0, ptr %"$$signal_internal_2_$ret", align 8
+  %errorf_args = alloca %errorf_t, align 8
+  %"$$signal_internal_2_$sig" = alloca i32, align 4
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$signal_internal_2_$sig")
+  store i32 0, ptr %"$$signal_internal_2_$sig", align 4
+  store i32 0, ptr %"$$signal_internal_2_$sig", align 4
+  store i32 8, ptr %"$$signal_internal_2_$sig", align 4
+  %1 = load i32, ptr %"$$signal_internal_2_$sig", align 4
+  %2 = sext i32 %1 to i64
+  %3 = icmp slt i64 %2, 1
+  %true_cond = icmp ne i1 %3, false
+  br i1 %true_cond, label %left, label %right
+
+left:                                             ; preds = %entry
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %errorf_args)
+  call void @llvm.memset.p0.i64(ptr align 1 %errorf_args, i8 0, i64 16, i1 false)
+  %4 = getelementptr %errorf_t, ptr %errorf_args, i32 0, i32 0
+  store i64 0, ptr %4, align 8
+  %5 = getelementptr %errorf_t, ptr %errorf_args, i32 0, i32 1
+  %6 = load i32, ptr %"$$signal_internal_2_$sig", align 4
+  %7 = getelementptr %errorf_args_t, ptr %5, i32 0, i32 0
+  store i32 %6, ptr %7, align 4
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %errorf_args, i64 16, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+right:                                            ; preds = %entry
+  br label %done
+
+event_loss_counter:                               ; preds = %left
+  %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #4
+  %8 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %8
+  %9 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %10 = load i64, ptr %9, align 8
+  %11 = add i64 %10, 1
+  store i64 %11, ptr %9, align 8
+  br label %counter_merge
+
+counter_merge:                                    ; preds = %event_loss_counter, %left
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %errorf_args)
+  br label %done
+
+done:                                             ; preds = %right, %counter_merge
+  %12 = load i32, ptr %"$$signal_internal_2_$sig", align 4
+  %__signal = call i64 @__signal(i32 %12), !dbg !41
+  store i64 %__signal, ptr %"$$signal_internal_2_$ret", align 8
+  %13 = load i64, ptr %"$$signal_internal_2_$ret", align 8
+  %14 = icmp ne i64 %13, 0
+  %true_cond3 = icmp ne i1 %14, false
+  br i1 %true_cond3, label %left1, label %right2
+
+left1:                                            ; preds = %done
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %errorf_args4)
+  call void @llvm.memset.p0.i64(ptr align 1 %errorf_args4, i8 0, i64 16, i1 false)
+  %15 = getelementptr %errorf_t.1, ptr %errorf_args4, i32 0, i32 0
+  store i64 1, ptr %15, align 8
+  %16 = getelementptr %errorf_t.1, ptr %errorf_args4, i32 0, i32 1
+  %17 = load i64, ptr %"$$signal_internal_2_$ret", align 8
+  %18 = getelementptr %errorf_args_t.0, ptr %16, i32 0, i32 0
+  store i64 %17, ptr %18, align 8
+  %ringbuf_output5 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %errorf_args4, i64 16, i64 0)
+  %ringbuf_loss8 = icmp slt i64 %ringbuf_output5, 0
+  br i1 %ringbuf_loss8, label %event_loss_counter6, label %counter_merge7
+
+right2:                                           ; preds = %done
+  br label %done11
+
+event_loss_counter6:                              ; preds = %left1
+  %get_cpu_id9 = call i64 inttoptr (i64 8 to ptr)() #4
+  %19 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded10 = and i64 %get_cpu_id9, %19
+  %20 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded10, i64 0
+  %21 = load i64, ptr %20, align 8
+  %22 = add i64 %21, 1
+  store i64 %22, ptr %20, align 8
+  br label %counter_merge7
+
+counter_merge7:                                   ; preds = %event_loss_counter6, %left1
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %errorf_args4)
+  br label %done11
+
+done11:                                           ; preds = %right2, %counter_merge7
   ret i64 0
 }
 
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.start.p0(i64 immarg %0, ptr nocapture %1) #1
+
+; Function Attrs: nocallback nofree nounwind willreturn memory(argmem: write)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+
+; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
+declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
+
+; Function Attrs: alwaysinline nounwind
+declare dso_local i64 @__signal(i32 noundef %0) #3
+
 attributes #0 = { nounwind }
+attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+attributes #2 = { nocallback nofree nounwind willreturn memory(argmem: write) }
+attributes #3 = { alwaysinline nounwind }
+attributes #4 = { memory(none) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}
@@ -66,3 +171,4 @@ attributes #0 = { nounwind }
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !39 = !{!40}
 !40 = !DILocalVariable(name: "ctx", arg: 1, scope: !35, file: !2, type: !38)
+!41 = !DILocation(line: 919, column: 10, scope: !35)

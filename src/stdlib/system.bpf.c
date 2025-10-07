@@ -9,3 +9,7 @@
 long __get_numa_node_id() {
     return bpf_get_numa_node_id();
 }
+
+long __signal(int sig) {
+    return bpf_send_signal(sig);
+}

@@ -3258,45 +3258,6 @@ ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when 
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, signal)
-{
-  // int literals
-  test("k:f { signal(1); }", UnsafeMode::Enable);
-  test("kr:f { signal(1); }", UnsafeMode::Enable);
-  test("u:/bin/sh:f { signal(11); }", UnsafeMode::Enable);
-  test("ur:/bin/sh:f { signal(11); }", UnsafeMode::Enable);
-  test("p:hz:1 { signal(1); }", UnsafeMode::Enable);
-
-  // vars
-  test("k:f { @=1; signal(@); }", UnsafeMode::Enable);
-  test("k:f { @=1; signal((int32)arg0); }", UnsafeMode::Enable);
-
-  // String
-  test("k:f { signal(\"KILL\"); }", UnsafeMode::Enable);
-  test("k:f { signal(\"SIGKILL\"); }", UnsafeMode::Enable);
-
-  // Not allowed for:
-  test("hardware:pcm:1000 { signal(1); }", UnsafeMode::Enable, Error{});
-  test("software:pcm:1000 { signal(1); }", UnsafeMode::Enable, Error{});
-  test("begin { signal(1); }", UnsafeMode::Enable, Error{});
-  test("end { signal(1); }", UnsafeMode::Enable, Error{});
-  test("i:s:1 { signal(1); }", UnsafeMode::Enable, Error{});
-
-  // invalid signals
-  test("k:f { signal(0); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(-100); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(100); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(\"SIGABC\"); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(\"ABC\"); }", UnsafeMode::Enable, Error{});
-
-  // Positional parameter
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->add_param("1");
-  bpftrace->add_param("hello");
-  test("k:f { signal($1) }", UnsafeMode::Enable, Mock{ *bpftrace });
-  test("k:f { signal($2) }", UnsafeMode::Enable, Mock{ *bpftrace }, Error{});
-}
-
 TEST_F(SemanticAnalyserTest, strncmp)
 {
   // Test strncmp builtin

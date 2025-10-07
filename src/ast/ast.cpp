@@ -303,7 +303,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
       case ProbeType::rawtracepoint:
         return false;
     }
-  } else if (identifier == "signal") {
+  } else if (identifier == "__signal") {
     switch (type) {
       case ProbeType::kprobe:
       case ProbeType::kretprobe:

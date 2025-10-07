@@ -7,7 +7,7 @@ namespace bpftrace {
 
 static std::unordered_set<std::string> UNSAFE_BUILTIN_FUNCS = {
   "system",
-  "signal",
+  "__signal",
   "override",
 };
 
