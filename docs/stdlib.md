@@ -840,8 +840,6 @@ For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You c
 
 **unsafe**
 
-**Kernel** 5.3
-
 This utilizes the BPF helper `bpf_send_signal`
 
 Probe types: k(ret)probe, u(ret)probe, USDT, profile

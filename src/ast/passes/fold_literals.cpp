@@ -2,6 +2,7 @@
 
 #include "ast/ast.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/signal_bt.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
@@ -463,10 +464,6 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
     // Check for another string.
     auto *rs = other.as<String>();
     if (!rs) {
-      // Let's just make sure it's not a negative literal.
-      if (other.is<NegativeInteger>()) {
-        op.addError() << "illegal literal operation with strings";
-      }
       // This is a mix of a string and something else. This may be a runtime
       // type, and we need to leave it up to the semantic analysis.
       return std::nullopt;
@@ -745,6 +742,18 @@ std::optional<Expression> LiteralFolder::visit(Call &call)
       }
     }
     return ast_.make_node<String>(s, Location(call.loc));
+  } else if (call.func == "__signal_name_to_num") {
+    if (call.vargs.size() != 1) {
+      call.addError() << "__signal_name_to_num expects 1 argument";
+    } else {
+      if (auto *str = call.vargs.at(0).as<String>()) {
+        auto signal_num = signal_name_to_num(str->value);
+        if (signal_num < 1) {
+          call.addError() << "Invalid string for signal: " << str->value;
+        }
+        return ast_.make_node<Integer>(signal_num, Location(str->loc));
+      }
+    }
   } else {
     if (!comptime) {
       // Visit normally; we are just simplifying literals.

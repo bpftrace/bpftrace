@@ -871,13 +871,10 @@ macro retval() {
   __builtin_retval
 }
 
-// :function signal
 // :variant void signal(const string sig)
 // :variant void signal(uint32 signum)
 //
 // **unsafe**
-//
-// **Kernel** 5.3
 //
 // This utilizes the BPF helper `bpf_send_signal`
 //
@@ -896,6 +893,35 @@ macro retval() {
 // $ ls
 // Trace/breakpoint trap (core dumped)
 // ```
+macro signal($var) {
+  if comptime (is_str($var)) {
+    fail("signal() accepts a string literal or a positive integer");
+  }
+  signal_internal($var);
+}
+
+macro signal(expr) {
+  signal_internal(expr);
+}
+
+macro signal_internal(expr) {
+  let $sig: int32 = 0;
+  if comptime (is_str(expr)) {
+    $sig = __signal_name_to_num(expr);
+  } else if comptime (typeinfo(expr).1 != "int") {
+    fail("signal() accepts a string literal or a positive integer");
+  } else {
+    $sig = (int32)expr;
+  }
+  if ($sig < 1) {
+    errorf("signal() expects a positive integer. Got %d", $sig);
+  } else {
+    $ret = __signal($sig);
+    if ($ret != 0) {
+      warnf("signal call failed with error %d", $ret);
+    }
+  }
+}
 
 // :function sizeof
 // :variant uint64 sizeof(TYPE)
