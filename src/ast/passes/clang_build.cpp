@@ -132,7 +132,11 @@ static Result<> build(CompileContext &ctx,
   ci.getInvocation() = *inv;
   ci.setDiagnostics(diags.release());
   ci.setFileManager(new clang::FileManager(clang::FileSystemOptions(), vfs));
+#if LLVM_VERSION_MAJOR >= 22
+  ci.createSourceManager();
+#else
   ci.createSourceManager(ci.getFileManager());
+#endif
 
   // Generate the object file, which should include the required BTF
   // debug information. This also generates the module as a
