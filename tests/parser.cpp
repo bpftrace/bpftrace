@@ -1821,6 +1821,7 @@ TEST(Parser, wildcard_func)
     "args",
     "__builtin_curtask",
     "errorf",
+    "warnf",
     "func",
     "__builtin_gid"
     "__builtin_rand",

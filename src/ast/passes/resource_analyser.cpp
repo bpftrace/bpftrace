@@ -168,8 +168,8 @@ void ResourceAnalyser::visit(Call &call)
 {
   Visitor<ResourceAnalyser>::visit(call);
 
-  if (call.func == "printf" || call.func == "errorf" || call.func == "system" ||
-      call.func == "cat" || call.func == "debugf") {
+  if (call.func == "printf" || call.func == "errorf" || call.func == "warnf" ||
+      call.func == "system" || call.func == "cat" || call.func == "debugf") {
     std::vector<SizedType> args;
 
     for (auto it = call.vargs.begin() + 1; it != call.vargs.end(); it++) {
@@ -212,6 +212,9 @@ void ResourceAnalyser::visit(Call &call)
     } else if (call.func == "errorf") {
       resources_.printf_args.emplace_back(
           fmtstr, tuple->fields, PrintfSeverity::ERROR, SourceInfo(call.loc));
+    } else if (call.func == "warnf") {
+      resources_.printf_args.emplace_back(
+          fmtstr, tuple->fields, PrintfSeverity::WARNING, SourceInfo(call.loc));
     } else if (call.func == "debugf") {
       resources_.bpf_print_fmts.emplace_back(fmtstr);
     } else if (call.func == "system") {

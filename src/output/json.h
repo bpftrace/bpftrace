@@ -14,6 +14,7 @@ public:
   void value(const Value &value) override;
   void printf(const std::string &str) override;
   void errorf(const std::string &str, const SourceInfo &info) override;
+  void warnf(const std::string &str, const SourceInfo &info) override;
   void time(const std::string &time) override;
   void cat(const std::string &cat) override;
   void join(const std::string &join) override;

@@ -285,6 +285,13 @@ void AsyncHandlers::printf(const OpaqueValue &data)
       out.errorf(fmt.format(*vals), source_info);
       return;
     }
+    case PrintfSeverity::WARNING: {
+      if (bpftrace.warning_level_ == 0) {
+        return;
+      }
+      out.warnf(fmt.format(*vals), source_info);
+      return;
+    }
   }
 }
 

@@ -40,6 +40,7 @@ enum class RuntimeErrorId {
 enum class PrintfSeverity {
   NONE,
   ERROR,
+  WARNING,
 };
 
 struct SourceLocation {

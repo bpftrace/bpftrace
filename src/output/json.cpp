@@ -429,6 +429,23 @@ void JsonOutput::errorf(const std::string &str, const SourceInfo &info)
   out_ << R"(})" << std::endl;
 }
 
+void JsonOutput::warnf(const std::string &str, const SourceInfo &info)
+{
+  out_ << R"({"type": "warnf")";
+  out_ << R"(, "msg": )";
+  std::stringstream ss;
+  ss << str;
+  JsonEmitter<std::string>::emit(out_, ss.str());
+  // Json only prints the top level location
+  out_ << R"(, "filename": )";
+  JsonEmitter<std::string>::emit(out_, info.locations.begin()->filename);
+  out_ << R"(, "line": )";
+  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->line);
+  out_ << R"(, "col": )";
+  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->column);
+  out_ << R"(})" << std::endl;
+}
+
 void JsonOutput::time(const std::string &time)
 {
   emit_data(out_, "time", std::nullopt, time);

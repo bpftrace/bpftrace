@@ -81,6 +81,20 @@ EXPECT stdin:1:15-38: ERROR: Something bad
 EXPECT stdin:1:50-55: ERROR: expanded from
 EXPECT macro bad() { errorf("Something bad"); } begin { bad(); }
 
+NAME warnf
+PROG begin { warnf("Something kinda bad with args: %d, %s", 10, "arg2"); }
+EXPECT stdin:1:9-67: WARNING: Something kinda bad with args: 10, arg2
+
+NAME warnf with no warnings
+RUN {{BPFTRACE}} -e 'begin { warnf("no warn"); }' --no-warnings
+EXPECT_REGEX_NONE .*no warn.*
+
+# Just a quick smoke test to show that warnf works
+# the same as printf
+NAME warnf_length_modifiers
+PROG begin { $x = 0x12345678abcdef; warnf("%hhx %hx %x %jx\n", $x, $x, $x, $x);  }
+EXPECT stdin:1:32-74: WARNING: ef cdef 78abcdef 12345678abcdef
+
 NAME time
 PROG i:ms:1 { time("%H:%M:%S\n"); exit();}
 EXPECT_REGEX [0-9]*:[0-9]*:[0-9]*
