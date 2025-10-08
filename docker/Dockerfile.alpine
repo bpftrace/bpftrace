@@ -33,6 +33,8 @@ RUN ln -s "clang${LLVM_VERSION}" /usr/lib/cmake/clang
 COPY . /src
 WORKDIR /src
 
+# We set USE_SYSTEM_LIBBPF=On to test that bpftrace can build with system libbpf
+# (i.e. not using libbpf from the submodule)
 RUN cmake -B /build -G Ninja \
   -DCMAKE_INSTALL_PREFIX=/usr \
   -DCMAKE_BUILD_TYPE=MinSizeRel \
