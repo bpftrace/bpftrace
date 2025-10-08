@@ -548,6 +548,25 @@ void TextOutput::errorf(const std::string &str, const SourceInfo &info)
   }
 }
 
+void TextOutput::warnf(const std::string &str, const SourceInfo &info)
+{
+  bool first = true;
+  for (const auto &loc : info.locations) {
+    if (first) {
+      // No need to print the source context as that's just the `warnf`
+      // call
+      LOG(WARNING, std::string(loc.source_location), err_) << str;
+      first = false;
+    } else {
+      LOG(WARNING,
+          std::string(loc.source_location),
+          std::vector(loc.source_context),
+          err_)
+          << "expanded from";
+    }
+  }
+}
+
 void TextOutput::time(const std::string &time)
 {
   out_ << time;
