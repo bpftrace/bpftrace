@@ -17,6 +17,7 @@ jobs:
     strategy:
       matrix:
         dockerfile:
+        - docker/Dockerfile.alpine
         - docker/Dockerfile.debian
         - docker/Dockerfile.fedora
         - docker/Dockerfile.ubuntu
