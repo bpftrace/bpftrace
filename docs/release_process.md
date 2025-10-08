@@ -123,7 +123,8 @@ In the release branch:
 1. Tag a release. We do this in the github UI by clicking "releases" (on same
    line as "commits"), then "Draft a new release". The tag version and release
    title should be the same and in `vX.Y.Z` format. The tag description should
-   be the same as what you added to CHANGELOG.md.
+   be the same as what was added in the CHANGELOG.md with the addition of a "Release
+   Highlights" section at the top ([example](https://github.com/bpftrace/bpftrace/releases/tag/v0.24.0)).
 1. Check that automation picks up the new release and uploads release assets to
    the release.
 1. If automation fails, please fix the automation for next time and also
@@ -134,3 +135,20 @@ Once the release is out:
 1. Forward-port the CHANGELOG.md changes from the release branch to master. This
    includes the release date and the entries which were backported from master
    after the release branch was cut.
+1. Create a "Release Notes" page on the bpftrace website ([example](https://bpftrace.org/release-024-notes))
+   and update the text and link on the homepage to point to this new page.
+   Also link to this page from the "Release Highlights" section in the tag
+   description.
+
+## Creating a Patch Release
+
+1. Checkout the active release branch.
+1. Mark the release in [CHANGELOG.md](../CHANGELOG.md) by replacing the `##
+   Unreleased` header with `## [X.Y.Z] TODAY'S DATE` or adding this header
+   if one doesn't exist.
+1. Update `bpftrace_VERSION_PATCH` in [CMakeLists.txt](../CMakeLists.txt) to
+   `Z`.
+1. After those changes have landed then [tag the release](#tagging-a-release)
+   following the steps in that section except the patches don't need a
+   "Release Highlights" section of the tag description or a new "Release Notes"
+   page on the website.
