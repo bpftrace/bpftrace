@@ -9,9 +9,11 @@ on:
   push:
     branches:
       - master
+  pull_request:
 
 jobs:
   build-and-upload:
+    name: ${{ (github.event_name == 'pull_request' && 'build' || 'build-and-upload') }} (${{ matrix.runner }})
     strategy:
       matrix:
         runner: [ubuntu-latest, ubuntu-24.04-arm]
@@ -33,10 +35,11 @@ jobs:
 
     - name: Build appimage
       run: |
-        nix build .#appimage
+        nix build .?submodules=1#appimage
         cp ./result bpftrace
 
     - name: Upload appimage
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
       uses: actions/upload-artifact@v4
       with:
         name: bpftrace-${{ runner.arch }}
