@@ -4,8 +4,6 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
-%ctx_t = type { ptr, ptr, ptr, ptr, ptr, i64, i64 }
-%ctx_t.0 = type { ptr, ptr, ptr, ptr, ptr, i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -20,10 +18,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_foo_1(ptr %0) #0 section "s_kprobe_foo_1" !dbg !35 {
 entry:
-  %ctx = alloca %ctx_t, align 8
-  %"$$strstr_4_$found" = alloca i1, align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$found")
-  store i1 false, ptr %"$$strstr_4_$found", align 1
   %array_access = alloca i8, align 1
   %"$$strstr_4_$needle_size" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$needle_size")
@@ -31,9 +25,6 @@ entry:
   %"$$strstr_4_$haystack_size" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$haystack_size")
   store i64 0, ptr %"$$strstr_4_$haystack_size", align 8
-  %"$$strstr_4_$index" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$index")
-  store i64 0, ptr %"$$strstr_4_$index", align 8
   %"$$strstr_3_$needle" = alloca [5 x i8], align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_3_$needle")
   call void @llvm.memset.p0.i64(ptr align 1 %"$$strstr_3_$needle", i8 0, i64 5, i1 false)
@@ -42,7 +33,6 @@ entry:
   call void @llvm.memset.p0.i64(ptr align 1 %"$$strstr_2_$haystack", i8 0, i64 17, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strstr_2_$haystack", ptr align 1 @hello-test-world, i64 17, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strstr_3_$needle", ptr align 1 @test, i64 5, i1 false)
-  store i64 -1, ptr %"$$strstr_4_$index", align 8
   store i64 17, ptr %"$$strstr_4_$haystack_size", align 8
   store i64 5, ptr %"$$strstr_4_$needle_size", align 8
   %1 = load i64, ptr %"$$strstr_4_$needle_size", align 8
@@ -51,7 +41,6 @@ entry:
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
-  store i64 0, ptr %"$$strstr_4_$index", align 8
   br label %done
 
 right:                                            ; preds = %entry
@@ -69,63 +58,23 @@ right:                                            ; preds = %entry
   br i1 %true_cond3, label %left1, label %right2
 
 done:                                             ; preds = %done4, %left
-  %10 = load i64, ptr %"$$strstr_4_$index", align 8
-  %11 = icmp sge i64 %10, 0
+  %result5 = phi i64 [ 0, %left ], [ %result, %done4 ]
+  %10 = icmp sge i64 %result5, 0
   ret i64 0
 
 left1:                                            ; preds = %right
-  store i64 0, ptr %"$$strstr_4_$index", align 8
   br label %done4
 
 right2:                                           ; preds = %right
-  %12 = load i64, ptr %"$$strstr_4_$haystack_size", align 8
-  %__bpf_strnstr = call i64 @__bpf_strnstr(ptr %"$$strstr_2_$haystack", ptr %"$$strstr_3_$needle", i64 %12, ptr %"$$strstr_4_$index"), !dbg !41
-  %13 = icmp sge i64 %__bpf_strnstr, 0
-  %true_cond7 = icmp ne i1 %13, false
-  br i1 %true_cond7, label %left5, label %right6
-
-done4:                                            ; preds = %done8, %left1
-  br label %done
-
-left5:                                            ; preds = %right2
-  br label %done8
-
-right6:                                           ; preds = %right2
-  store i1 false, ptr %"$$strstr_4_$found", align 1
-  %14 = load i64, ptr %"$$strstr_4_$haystack_size", align 8
-  %15 = sub i64 %14, 0
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
-  %16 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_2_$haystack" = getelementptr %ctx_t, ptr %16, i64 0, i32 0
-  store ptr %"$$strstr_2_$haystack", ptr %"ctx.$$strstr_2_$haystack", align 8
-  %17 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_4_$needle_size" = getelementptr %ctx_t, ptr %17, i64 0, i32 1
-  store ptr %"$$strstr_4_$needle_size", ptr %"ctx.$$strstr_4_$needle_size", align 8
-  %18 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_3_$needle" = getelementptr %ctx_t, ptr %18, i64 0, i32 2
-  store ptr %"$$strstr_3_$needle", ptr %"ctx.$$strstr_3_$needle", align 8
-  %19 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_4_$index" = getelementptr %ctx_t, ptr %19, i64 0, i32 3
-  store ptr %"$$strstr_4_$index", ptr %"ctx.$$strstr_4_$index", align 8
-  %20 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_4_$found" = getelementptr %ctx_t, ptr %20, i64 0, i32 4
-  store ptr %"$$strstr_4_$found", ptr %"ctx.$$strstr_4_$found", align 8
-  %21 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %ctx.start = getelementptr %ctx_t, ptr %21, i64 0, i32 5
-  store i64 0, ptr %ctx.start, align 8
-  %22 = trunc i64 %15 to i32
-  %is_positive_cond = icmp sgt i32 %22, 0
-  br i1 %is_positive_cond, label %is_positive, label %merge
-
-done8:                                            ; preds = %merge, %left5
+  %11 = load i64, ptr %"$$strstr_4_$haystack_size", align 8
+  %12 = load i64, ptr %"$$strstr_4_$needle_size", align 8
+  %__bpf_strnstr = call i32 @__bpf_strnstr(ptr %"$$strstr_2_$haystack", ptr %"$$strstr_3_$needle", i64 %11, i64 %12), !dbg !41
+  %13 = sext i32 %__bpf_strnstr to i64
   br label %done4
 
-is_positive:                                      ; preds = %right6
-  %bpf_loop = call i64 inttoptr (i64 181 to ptr)(i32 %22, ptr @loop_cb, ptr %ctx, i64 0)
-  br label %merge
-
-merge:                                            ; preds = %is_positive, %right6
-  br label %done8
+done4:                                            ; preds = %right2, %left1
+  %result = phi i64 [ 0, %left1 ], [ %13, %right2 ]
+  br label %done
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: readwrite)
@@ -144,224 +93,7 @@ declare ptr @llvm.preserve.static.offset(ptr readnone %0) #4
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: alwaysinline nounwind
-declare dso_local i64 @__bpf_strnstr(ptr noundef %0, ptr noundef %1, i64 noundef %2, ptr noundef %3) #5
-
-; Function Attrs: nounwind
-define internal i64 @loop_cb(i64 %0, ptr %1) #0 section ".text" !dbg !42 {
-for_body:
-  %ctx = alloca %ctx_t.0, align 8
-  %array_access = alloca i8, align 1
-  %2 = call ptr @llvm.preserve.static.offset(ptr %1)
-  %start = getelementptr %ctx_t, ptr %2, i64 0, i32 5
-  %3 = call ptr @llvm.preserve.static.offset(ptr %1)
-  %current = getelementptr %ctx_t, ptr %3, i64 0, i32 6
-  %4 = load i64, ptr %start, align 8
-  %5 = add i64 %4, %0
-  store i64 %5, ptr %current, align 8
-  %"ctx.$$strstr_2_$haystack" = getelementptr %ctx_t, ptr %1, i64 0, i32 0
-  %"$$strstr_2_$haystack" = load ptr, ptr %"ctx.$$strstr_2_$haystack", align 8
-  %"ctx.$$strstr_4_$needle_size" = getelementptr %ctx_t, ptr %1, i64 0, i32 1
-  %"$$strstr_4_$needle_size" = load ptr, ptr %"ctx.$$strstr_4_$needle_size", align 8
-  %"ctx.$$strstr_3_$needle" = getelementptr %ctx_t, ptr %1, i64 0, i32 2
-  %"$$strstr_3_$needle" = load ptr, ptr %"ctx.$$strstr_3_$needle", align 8
-  %"ctx.$$strstr_4_$index" = getelementptr %ctx_t, ptr %1, i64 0, i32 3
-  %"$$strstr_4_$index" = load ptr, ptr %"ctx.$$strstr_4_$index", align 8
-  %"ctx.$$strstr_4_$found" = getelementptr %ctx_t, ptr %1, i64 0, i32 4
-  %"$$strstr_4_$found" = load ptr, ptr %"ctx.$$strstr_4_$found", align 8
-  %6 = load i64, ptr %current, align 8
-  %7 = icmp uge i64 %6, 17
-  %true_cond = icmp ne i1 %7, false
-  br i1 %true_cond, label %left, label %right
-
-left:                                             ; preds = %for_body
-  br label %for_break
-
-right:                                            ; preds = %for_body
-  br label %done
-
-for_break:                                        ; preds = %left9, %left1, %left
-  ret i64 1
-
-done:                                             ; preds = %right
-  %8 = load i64, ptr %current, align 8
-  %9 = ptrtoint ptr %"$$strstr_2_$haystack" to i64
-  %10 = mul i64 %8, 1
-  %11 = inttoptr i64 %9 to ptr
-  %12 = call ptr @llvm.preserve.static.offset(ptr %11)
-  %13 = getelementptr i8, ptr %12, i64 %10
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 1, ptr %13)
-  %14 = load i8, ptr %array_access, align 1
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
-  %15 = sext i8 %14 to i64
-  %16 = icmp eq i64 %15, 0
-  %true_cond3 = icmp ne i1 %16, false
-  br i1 %true_cond3, label %left1, label %right2
-
-left1:                                            ; preds = %done
-  br label %for_break
-
-right2:                                           ; preds = %done
-  br label %done4
-
-done4:                                            ; preds = %right2
-  %17 = load i64, ptr %"$$strstr_4_$needle_size", align 8
-  %18 = sub i64 %17, 0
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx)
-  %19 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_3_$needle5" = getelementptr %ctx_t.0, ptr %19, i64 0, i32 0
-  store ptr %"$$strstr_3_$needle", ptr %"ctx.$$strstr_3_$needle5", align 8
-  %20 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_4_$index6" = getelementptr %ctx_t.0, ptr %20, i64 0, i32 1
-  store ptr %"$$strstr_4_$index", ptr %"ctx.$$strstr_4_$index6", align 8
-  %21 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$i" = getelementptr %ctx_t.0, ptr %21, i64 0, i32 2
-  store ptr %current, ptr %"ctx.$i", align 8
-  %22 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_4_$found7" = getelementptr %ctx_t.0, ptr %22, i64 0, i32 3
-  store ptr %"$$strstr_4_$found", ptr %"ctx.$$strstr_4_$found7", align 8
-  %23 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %"ctx.$$strstr_2_$haystack8" = getelementptr %ctx_t.0, ptr %23, i64 0, i32 4
-  store ptr %"$$strstr_2_$haystack", ptr %"ctx.$$strstr_2_$haystack8", align 8
-  %24 = call ptr @llvm.preserve.static.offset(ptr %ctx)
-  %ctx.start = getelementptr %ctx_t.0, ptr %24, i64 0, i32 5
-  store i64 0, ptr %ctx.start, align 8
-  %25 = trunc i64 %18 to i32
-  %is_positive_cond = icmp sgt i32 %25, 0
-  br i1 %is_positive_cond, label %is_positive, label %merge
-
-is_positive:                                      ; preds = %done4
-  %bpf_loop = call i64 inttoptr (i64 181 to ptr)(i32 %25, ptr @loop_cb.1, ptr %ctx, i64 0)
-  br label %merge
-
-merge:                                            ; preds = %is_positive, %done4
-  %26 = load i1, ptr %"$$strstr_4_$found", align 1
-  %true_cond11 = icmp ne i1 %26, false
-  br i1 %true_cond11, label %left9, label %right10
-
-left9:                                            ; preds = %merge
-  br label %for_break
-
-right10:                                          ; preds = %merge
-  br label %done12
-
-done12:                                           ; preds = %right10
-}
-
-; Function Attrs: nounwind
-define internal i64 @loop_cb.1(i64 %0, ptr %1) #0 section ".text" !dbg !48 {
-for_body:
-  %array_access13 = alloca i8, align 1
-  %array_access11 = alloca i8, align 1
-  %"$$strstr_4_$k" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$k")
-  store i64 0, ptr %"$$strstr_4_$k", align 8
-  %array_access = alloca i8, align 1
-  %2 = call ptr @llvm.preserve.static.offset(ptr %1)
-  %start = getelementptr %ctx_t.0, ptr %2, i64 0, i32 5
-  %3 = call ptr @llvm.preserve.static.offset(ptr %1)
-  %current = getelementptr %ctx_t.0, ptr %3, i64 0, i32 6
-  %4 = load i64, ptr %start, align 8
-  %5 = add i64 %4, %0
-  store i64 %5, ptr %current, align 8
-  %"ctx.$$strstr_3_$needle" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 0
-  %"$$strstr_3_$needle" = load ptr, ptr %"ctx.$$strstr_3_$needle", align 8
-  %"ctx.$$strstr_4_$index" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 1
-  %"$$strstr_4_$index" = load ptr, ptr %"ctx.$$strstr_4_$index", align 8
-  %"ctx.$i" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 2
-  %"$i" = load ptr, ptr %"ctx.$i", align 8
-  %"ctx.$$strstr_4_$found" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 3
-  %"$$strstr_4_$found" = load ptr, ptr %"ctx.$$strstr_4_$found", align 8
-  %"ctx.$$strstr_2_$haystack" = getelementptr %ctx_t.0, ptr %1, i64 0, i32 4
-  %"$$strstr_2_$haystack" = load ptr, ptr %"ctx.$$strstr_2_$haystack", align 8
-  %6 = load i64, ptr %current, align 8
-  %7 = icmp uge i64 %6, 5
-  %true_cond = icmp ne i1 %7, false
-  br i1 %true_cond, label %left, label %right
-
-left:                                             ; preds = %for_body
-  br label %for_break
-
-right:                                            ; preds = %for_body
-  br label %done
-
-for_break:                                        ; preds = %left9, %left5, %left1, %left
-  ret i64 1
-
-done:                                             ; preds = %right
-  %8 = load i64, ptr %current, align 8
-  %9 = ptrtoint ptr %"$$strstr_3_$needle" to i64
-  %10 = mul i64 %8, 1
-  %11 = inttoptr i64 %9 to ptr
-  %12 = call ptr @llvm.preserve.static.offset(ptr %11)
-  %13 = getelementptr i8, ptr %12, i64 %10
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 1, ptr %13)
-  %14 = load i8, ptr %array_access, align 1
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
-  %15 = sext i8 %14 to i64
-  %16 = icmp eq i64 %15, 0
-  %true_cond3 = icmp ne i1 %16, false
-  br i1 %true_cond3, label %left1, label %right2
-
-left1:                                            ; preds = %done
-  %17 = load i64, ptr %"$i", align 8
-  store i64 %17, ptr %"$$strstr_4_$index", align 8
-  store i1 true, ptr %"$$strstr_4_$found", align 1
-  br label %for_break
-
-right2:                                           ; preds = %done
-  br label %done4
-
-done4:                                            ; preds = %right2
-  %18 = load i64, ptr %"$i", align 8
-  %19 = load i64, ptr %current, align 8
-  %20 = add i64 %18, %19
-  store i64 %20, ptr %"$$strstr_4_$k", align 8
-  %21 = load i64, ptr %"$$strstr_4_$k", align 8
-  %22 = icmp uge i64 %21, 17
-  %true_cond7 = icmp ne i1 %22, false
-  br i1 %true_cond7, label %left5, label %right6
-
-left5:                                            ; preds = %done4
-  br label %for_break
-
-right6:                                           ; preds = %done4
-  br label %done8
-
-done8:                                            ; preds = %right6
-  %23 = load i64, ptr %"$$strstr_4_$k", align 8
-  %24 = ptrtoint ptr %"$$strstr_2_$haystack" to i64
-  %25 = mul i64 %23, 1
-  %26 = inttoptr i64 %24 to ptr
-  %27 = call ptr @llvm.preserve.static.offset(ptr %26)
-  %28 = getelementptr i8, ptr %27, i64 %25
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access11)
-  %probe_read_kernel12 = call i64 inttoptr (i64 113 to ptr)(ptr %array_access11, i32 1, ptr %28)
-  %29 = load i8, ptr %array_access11, align 1
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access11)
-  %30 = load i64, ptr %current, align 8
-  %31 = ptrtoint ptr %"$$strstr_3_$needle" to i64
-  %32 = mul i64 %30, 1
-  %33 = inttoptr i64 %31 to ptr
-  %34 = call ptr @llvm.preserve.static.offset(ptr %33)
-  %35 = getelementptr i8, ptr %34, i64 %32
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %array_access13)
-  %probe_read_kernel14 = call i64 inttoptr (i64 113 to ptr)(ptr %array_access13, i32 1, ptr %35)
-  %36 = load i8, ptr %array_access13, align 1
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access13)
-  %37 = icmp ne i8 %29, %36
-  %true_cond15 = icmp ne i1 %37, false
-  br i1 %true_cond15, label %left9, label %right10
-
-left9:                                            ; preds = %done8
-  br label %for_break
-
-right10:                                          ; preds = %done8
-  br label %done16
-
-done16:                                           ; preds = %right10
-}
+declare dso_local i32 @__bpf_strnstr(ptr noundef %0, ptr noundef %1, i64 noundef %2, i64 noundef %3) #5
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -414,14 +146,4 @@ attributes #5 = { alwaysinline nounwind }
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !39 = !{!40}
 !40 = !DILocalVariable(name: "ctx", arg: 1, scope: !35, file: !2, type: !38)
-!41 = !DILocation(line: 109, column: 14, scope: !35)
-!42 = distinct !DISubprogram(name: "loop_cb", linkageName: "loop_cb", scope: !2, file: !2, type: !43, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !31, retainedNodes: !45)
-!43 = !DISubroutineType(types: !44)
-!44 = !{!26, !26, !38}
-!45 = !{!46, !47}
-!46 = !DILocalVariable(name: "index", arg: 1, scope: !42, file: !2, type: !26)
-!47 = !DILocalVariable(name: "ctx", arg: 2, scope: !42, file: !2, type: !38)
-!48 = distinct !DISubprogram(name: "loop_cb_1", linkageName: "loop_cb_1", scope: !2, file: !2, type: !43, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !31, retainedNodes: !49)
-!49 = !{!50, !51}
-!50 = !DILocalVariable(name: "index", arg: 1, scope: !48, file: !2, type: !26)
-!51 = !DILocalVariable(name: "ctx", arg: 2, scope: !48, file: !2, type: !38)
+!41 = !DILocation(line: 109, column: 5, scope: !35)

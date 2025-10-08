@@ -97,60 +97,17 @@ macro strcap(exp) {
 macro strstr($haystack, $needle) {
   assert_str($haystack);
   assert_str($needle);
-  let $index = -1;
   let $haystack_size = strcap($haystack);
   let $needle_size = strcap($needle);
   if ($needle_size == 0) {
     // Special case: the needle is zero-sized.
-    $index = 0;
+    0
   } else if ($needle[0] == 0) {
     // Special case: the needle is empty.
-    $index = 0;
-  } else if (__bpf_strnstr(&$haystack, &$needle, (int64)$haystack_size, &$index) >= 0) {
-    // The index will be already set.
+    0
   } else {
-    let $found = false;
-    for ($i : ((uint64)0)..$haystack_size) {
-      // Help the verifier know this is safe. This is only needed if the type
-      // is a string, because it will refer back to BPF memory and the function
-      // needs to do a bounds check.
-      if comptime (is_str($haystack) || is_array($haystack)) {
-        if ($i >= sizeof($haystack)) {
-          break;
-        }
-      }
-      if ($haystack[$i] == 0) {
-        break;
-      }
-      for ($j : ((uint64)0)..$needle_size) {
-        // Help the verifier know this is safe.
-        if comptime (is_str($needle) || is_array($needle)) {
-          if ($j >= sizeof($needle)) {
-            break;
-          }
-        }
-        if ($needle[$j] == 0) {
-          $index = (int64)$i;
-          $found = true;
-          break;
-        }
-        let $k = $i + $j;
-        // Help the verifier a bit more.
-        if comptime (is_str($haystack) || is_array($haystack)) {
-          if ($k >= sizeof($haystack)) {
-            break;
-          }
-        }
-        if ($haystack[$k] != $needle[$j]) {
-          break;
-        }
-      }
-      if ($found) {
-        break;
-      }
-    }
+    __bpf_strnstr(&$haystack, &$needle, (int64)$haystack_size, (int64)$needle_size)
   }
-  $index
 }
 macro strstr($haystack, needle) {
   let $needle = needle;
