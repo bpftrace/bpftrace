@@ -21,16 +21,40 @@ extern int bpf_strnstr(const char *s1__ign,
                        const char *s2__ign,
                        size_t len) __ksym __weak;
 
-long __bpf_strnstr(const char *haystack,
+int __bpf_strnstr(const char *haystack,
                    const char *needle,
-                   size_t max_size,
-                   long *out)
+                   size_t haystack_size,
+                   size_t needle_size)
 {
   if (bpf_strnstr) {
-    *out = bpf_strnstr(haystack, needle, max_size);
-    return 0; // Successfully searched.
+    return bpf_strnstr(haystack, needle, haystack_size);
   }
-  return -ENOSYS;
+  if (needle_size > haystack_size) {
+    return -1;
+  }
+  for (size_t i = 0; i < haystack_size; i++) {
+    size_t j;
+    if (haystack[i] == 0) {
+      break;
+    }
+    for (j = 0; j < needle_size; j++) {
+      if (needle[j] == 0) {
+        return (int)i;
+      }
+      size_t k = i + j;
+      if (k > haystack_size) {
+        break;
+      }
+      if (haystack[k] != needle[j]) {
+        break;
+      }
+    }
+
+    if (j == needle_size) {
+      return (int)i;
+    }
+  }
+  return -1;
 }
 
 typedef char m_str[64];
