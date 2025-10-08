@@ -27,6 +27,7 @@ if (USE_SYSTEM_LIBBPF)
     (preferred) or install the libbpf.a static library")
 else()
   set(LIBBPF_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/libbpf/src)
+  file(GLOB LIBBPF_SRCS ${LIBBPF_SOURCE}/*)
   set(LIBBPF_BUILD ${CMAKE_CURRENT_BINARY_DIR}/libbpf)
   set(LIBBPF_LIBRARY ${LIBBPF_BUILD}/lib64/libbpf.a)
 
@@ -50,7 +51,7 @@ else()
     # -fPIE here is needed by latest binutils when building with Clang
     COMMAND make PREFIX=${LIBBPF_BUILD} EXTRA_CFLAGS="-fPIE" install > /dev/null
     WORKING_DIRECTORY ${LIBBPF_SOURCE}
-    DEPENDS ${LIBBPF_SOURCE}/*
+    DEPENDS ${LIBBPF_SRCS}
     COMMENT "Building libbpf"
     VERBATIM)
   add_custom_target(libbpf_build DEPENDS ${LIBBPF_LIBRARY})
