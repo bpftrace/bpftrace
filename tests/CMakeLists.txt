@@ -61,6 +61,7 @@ add_executable(bpftrace_test
   config_analyser.cpp
   pass_manager.cpp
   pid_filter_pass.cpp
+  probe_expansion.cpp
   recursion_check.cpp
   resource_analyser.cpp
   result.cpp

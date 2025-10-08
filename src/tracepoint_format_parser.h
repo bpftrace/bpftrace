@@ -16,6 +16,7 @@ public:
   static std::string get_struct_name(const std::string &category,
                                      const std::string &event_name);
   static std::string get_struct_name(const ast::AttachPoint &ap);
+  static bool is_tracepoint_struct(const std::string &name);
   static void clear_struct_list()
   {
     struct_list.clear();

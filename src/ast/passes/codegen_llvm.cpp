@@ -2522,14 +2522,9 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
 ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType type = acc.expr.type();
-  AddrSpace addrspace = acc.expr.type().GetAS();
   auto scoped_arg = visit(acc.expr);
 
   assert(type.IsRecordTy());
-  bool is_ctx = type.IsCtxAccess();
-  bool is_tparg = type.is_tparg;
-  bool is_internal = type.is_internal;
-  bool is_funcarg = type.is_funcarg;
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
@@ -2546,21 +2541,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
                                          acc.field_type);
     }
   }
-
-  std::string cast_type = is_tparg ? TracepointFormatParser::get_struct_name(
-                                         *current_attach_point_)
-                                   : type.GetName();
-
-  // This overwrites the stored type!
-  type = CreateRecord(cast_type, bpftrace_.structs.Lookup(cast_type));
-  if (is_ctx)
-    type.MarkCtxAccess();
-  type.is_tparg = is_tparg;
-  type.is_internal = is_internal;
-  type.is_funcarg = is_funcarg;
-  // Restore the addrspace info
-  // struct MyStruct { const int* a; };  $s = (struct MyStruct *)arg0;  $s->a
-  type.SetAS(addrspace);
 
   const auto &field = type.GetField(acc.field);
 

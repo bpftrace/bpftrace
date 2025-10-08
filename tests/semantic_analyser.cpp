@@ -15,6 +15,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -147,8 +148,10 @@ public:
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
                   .add(ast::CreateApExpansionPass())
+                  .add(ast::CreateProbeExpansionPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
+                  .add(ast::CreateProbeExpansionPass({ ProbeType::tracepoint }))
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateMapSugarPass())
@@ -4657,11 +4660,7 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
 
 TEST_F(SemanticAnalyserBTFTest, args_builtin_mixed_probes)
 {
-  test("fentry:func_1,tracepoint:sched:sched_one { args }", Error{ R"(
-stdin:1:44-48: ERROR: The args builtin can only be used within the context of a single probe type, e.g. "probe1 {args}" is valid while "probe1,probe2 {args}" is not.
-fentry:func_1,tracepoint:sched:sched_one { args }
-                                           ~~~~
-)" });
+  test("fentry:func_1,tracepoint:sched:sched_one { args }");
 }
 
 TEST_F(SemanticAnalyserBTFTest, binop_late_ptr_resolution)

@@ -13,6 +13,8 @@ namespace bpftrace {
 
 std::set<std::string> TracepointFormatParser::struct_list;
 
+constexpr std::string_view TRACEPOINT_STRUCT_PREFIX = "struct _tracepoint_";
+
 bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
 {
   ast::Program *program = ctx.root;
@@ -96,7 +98,12 @@ std::string TracepointFormatParser::get_struct_name(
     const std::string &category,
     const std::string &event_name)
 {
-  return "struct _tracepoint_" + category + "_" + event_name;
+  return std::string(TRACEPOINT_STRUCT_PREFIX) + category + "_" + event_name;
+}
+
+bool TracepointFormatParser::is_tracepoint_struct(const std::string &name)
+{
+  return name.starts_with(TRACEPOINT_STRUCT_PREFIX);
 }
 
 std::string TracepointFormatParser::get_struct_name(const ast::AttachPoint &ap)
