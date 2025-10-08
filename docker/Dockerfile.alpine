@@ -1,0 +1,45 @@
+# This Dockerfile is used to both document and test building bpftrace on the
+# development version of Alpine. We attempt to catch bugs as early as possible
+# which is why we are using the edge repository.
+
+FROM alpine:edge
+
+ARG LLVM_VERSION=20
+
+RUN apk add --update \
+  asciidoctor \
+  bcc-dev \
+  binutils-dev \
+  bison \
+  blazesym \
+  build-base \
+  cereal \
+  clang$LLVM_VERSION-dev \
+  clang$LLVM_VERSION-extra-tools \
+  clang$LLVM_VERSION-static \
+  cmake \
+  elfutils-dev \
+  flex-dev \
+  libbpf-dev \
+  linux-headers \
+  llvm$LLVM_VERSION-dev \
+  llvm$LLVM_VERSION-gtest \
+  llvm$LLVM_VERSION-static \
+  samurai \
+  libxml2-dev
+
+RUN ln -s "clang${LLVM_VERSION}" /usr/lib/cmake/clang
+
+COPY . /src
+WORKDIR /src
+
+RUN cmake -B /build -G Ninja \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DCMAKE_BUILD_TYPE=MinSizeRel \
+  -DBUILD_TESTING=OFF \
+  -DCMAKE_PREFIX_PATH=/usr/lib/llvm${LLVM_VERSION}/lib/cmake \
+  -DLLVM_REQUESTED_VERSION="$(/usr/lib/llvm${LLVM_VERSION}/bin/llvm-config --version)" \
+  -DUSE_SYSTEM_LIBBPF=1
+RUN cmake --build /build -j$(nproc)
+
+ENTRYPOINT ["/build/src/bpftrace"]
