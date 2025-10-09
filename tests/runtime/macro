@@ -161,6 +161,10 @@ PROG k:do_nanosleep { if (__builtin_probe == probe() && __builtin_probe == probe
 EXPECT kprobe:do_nanosleep
 AFTER ./testprogs/syscall nanosleep 1e8
 
+NAME builtin wrapper probetype
+PROG begin { if (__builtin_probetype == probetype() && __builtin_probetype == probetype) { print(probetype); } exit(); }
+EXPECT special
+
 NAME builtin wrapper rand
 PROG begin { printf("SUCCESS1 %llu\n", __builtin_rand); printf("SUCCESS2 %llu\n", rand); printf("SUCCESS3 %llu\n", rand()); }
 EXPECT_REGEX SUCCESS1 [0-9]+

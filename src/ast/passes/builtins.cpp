@@ -53,6 +53,13 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
                                     Location(node.loc));
     }
   }
+  if (ident == "__builtin_probetype") {
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+      return ast_.make_node<String>(
+          probetypeName(probetype(probe->attach_points.front()->provider)),
+          Location(node.loc));
+    }
+  }
   return std::nullopt;
 }
 
