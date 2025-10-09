@@ -32,7 +32,9 @@ COPY . /src
 WORKDIR /src
 
 # Use CMAKE_BUILD_TYPE=Release if you don't plan on developing bpftrace
-RUN cmake -B /build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Debug
+# We set USE_SYSTEM_LIBBPF=On to test that bpftrace can build with system libbpf
+# (i.e. not using libbpf from the submodule)
+RUN cmake -B /build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Debug -DUSE_SYSTEM_LIBBPF=On
 RUN make -C /build -j$(nproc)
 
 ENTRYPOINT ["/build/src/bpftrace"]
