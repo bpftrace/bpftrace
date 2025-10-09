@@ -833,6 +833,15 @@ macro probe() {
   __builtin_probe
 }
 
+// :variant string probetype()
+// Name of the probe type.
+// Note: `begin` and `end` probes are of type `special`.
+//
+// For example: `kprobe`, `special`, `tracepoint`
+macro probetype() {
+  __builtin_probetype
+}
+
 // :function pton
 // :variant char addr[4] pton(const string *addr_v4)
 // :variant char addr[16] pton(const string *addr_v6)

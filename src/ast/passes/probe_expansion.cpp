@@ -88,6 +88,7 @@ public:
 
   using Visitor<ProbeExpansion>::visit;
   void visit(Builtin &builtin);
+  void visit(Identifier &identifier);
   void visit(Program &prog);
 
 private:
@@ -156,6 +157,22 @@ void ArgsResolver::visit(Probe &probe)
 {
   probe_ = &probe;
   visit(probe.block);
+}
+
+void ProbeExpansion::visit(Identifier &identifier)
+{
+  if (identifier.ident == "__builtin_probetype") {
+    ProbeType prev_probe_type = ProbeType::invalid;
+    for (auto *ap : probe_->attach_points) {
+      auto probe_type = probetype(ap->provider);
+      if (prev_probe_type == ProbeType::invalid) {
+        prev_probe_type = probe_type;
+      } else if (prev_probe_type != probe_type) {
+        needs_expansion_ = true;
+        break;
+      }
+    }
+  }
 }
 
 void ProbeExpansion::visit(Builtin &builtin)

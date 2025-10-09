@@ -193,6 +193,52 @@ Program
 )");
 }
 
+TEST_F(probe_expansion_btf, builtin_probetype)
+{
+  test("fentry:vmlinux:func_1, fentry:vmlinux:func_2 { __builtin_probetype }",
+       R"(
+Program
+ fentry:vmlinux:func_1
+ fentry:vmlinux:func_2
+  identifier: __builtin_probetype
+)");
+
+  test("fentry:vmlinux:func_* { __builtin_probetype }", R"(
+Program
+ fentry:vmlinux:func_1
+ fentry:vmlinux:func_2
+ fentry:vmlinux:func_3
+  identifier: __builtin_probetype
+)");
+
+  test("fentry:vmlinux:func_1, tracepoint:sched:sched_one { "
+       "__builtin_probetype }",
+       R"(
+Program
+ fentry:vmlinux:func_1
+  identifier: __builtin_probetype
+ tracepoint:sched:sched_one
+  identifier: __builtin_probetype
+)");
+
+  test("begin, end { __builtin_probetype }", R"(
+Program
+ begin
+ end
+  identifier: __builtin_probetype
+)");
+
+  test("begin, end, interval:1s { __builtin_probetype }", R"(
+Program
+ begin
+  identifier: __builtin_probetype
+ end
+  identifier: __builtin_probetype
+ interval:us:1000000
+  identifier: __builtin_probetype
+)");
+}
+
 #ifdef HAVE_LIBDW
 
 class probe_expansion_dwarf : public test_dwarf {};

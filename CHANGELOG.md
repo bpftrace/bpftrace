@@ -20,6 +20,8 @@ and this project adheres to
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)
 - Automatic dereferencing is supported via `.`, now the preferred access operator
   - [#4673](https://github.com/bpftrace/bpftrace/pull/4673)
+- Add `probetype` builtin
+  - [#4712](https://github.com/bpftrace/bpftrace/pull/4712)
 #### Changed
 - Apply `-B` buffering semantics to file outputs.
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)
