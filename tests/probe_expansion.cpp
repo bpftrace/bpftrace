@@ -172,6 +172,27 @@ Program
 )");
 }
 
+TEST_F(probe_expansion_btf, builtin_probe)
+{
+  test("fentry:vmlinux:func_1, fentry:vmlinux:func_2 { __builtin_probe }", R"(
+Program
+ fentry:vmlinux:func_1
+  builtin: __builtin_probe
+ fentry:vmlinux:func_2
+  builtin: __builtin_probe
+)");
+
+  test("fentry:vmlinux:func_* { __builtin_probe }", R"(
+Program
+ fentry:vmlinux:func_1
+  builtin: __builtin_probe
+ fentry:vmlinux:func_2
+  builtin: __builtin_probe
+ fentry:vmlinux:func_3
+  builtin: __builtin_probe
+)");
+}
+
 #ifdef HAVE_LIBDW
 
 class probe_expansion_dwarf : public test_dwarf {};
