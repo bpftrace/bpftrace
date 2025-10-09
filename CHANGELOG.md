@@ -22,6 +22,8 @@ and this project adheres to
   - [#4673](https://github.com/bpftrace/bpftrace/pull/4673)
 - Allow `signal()` to target either the current process or the current thread via an optional second argument
   - [#4721](https://github.com/bpftrace/bpftrace/pull/4721)
+- Add `probetype` builtin
+  - [#4712](https://github.com/bpftrace/bpftrace/pull/4712)
 #### Changed
 - Apply `-B` buffering semantics to file outputs.
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)

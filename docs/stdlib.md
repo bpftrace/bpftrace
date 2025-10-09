@@ -792,6 +792,16 @@ Name of the fully expanded probe
 For example: `kprobe:do_nanosleep`
 
 
+### probetype
+- `string probetype()`
+- `string probetype`
+
+Name of the probe type.
+Note: `begin` and `end` probes are of type `special`.
+
+For example: `kprobe`, `special`, `tracepoint`
+
+
 ### pton
 - `char addr[4] pton(const string *addr_v4)`
 - `char addr[16] pton(const string *addr_v6)`
