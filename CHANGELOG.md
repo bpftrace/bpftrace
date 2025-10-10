@@ -11,6 +11,8 @@ and this project adheres to
 #### Fixed
 - Fix off-by-one for function argument size comparison
   - [#4698](https://github.com/bpftrace/bpftrace/pull/4698)
+- Fix resolution of enum-typed tracepoint args
+  - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
 
 ## [0.24.1] 2025-10-03
 
