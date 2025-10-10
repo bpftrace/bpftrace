@@ -821,6 +821,15 @@ std::optional<Expression> LiteralFolder::visit(ArrayAccess &acc)
       return ast_.make_node<Integer>(static_cast<uint64_t>(s[index->value]),
                                      Location(acc.loc));
     }
+  } else if (acc.expr.type().IsTupleTy()) {
+    if (auto *index = acc.indexpr.as<Integer>()) {
+      return ast_.make_node<TupleAccess>(acc.expr,
+                                         static_cast<ssize_t>(index->value),
+                                         Location(acc.loc));
+    } else {
+      acc.addError()
+          << "Array-style access for tuples only valid for integer literals";
+    }
   } else if (comptime) {
     acc.addError() << "Unable to evaluate at compile time.";
   }

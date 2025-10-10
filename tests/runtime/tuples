@@ -88,6 +88,10 @@ PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int3
 EXPECT 20
 AFTER ./testprogs/array_access
 
+NAME array-style tuple access
+PROG begin{ $a = (1, 2, 3); print($a[1 + 1]); }
+EXPECT 3
+
 NAME nested tuple
 PROG begin{ @ = ((int8)1, ((int8)-20, (int8)30)); exit(); }
 EXPECT @: (1, (-20, 30))
