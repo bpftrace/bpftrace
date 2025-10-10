@@ -34,6 +34,8 @@ and this project adheres to
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
 - Fix off-by-one for function argument size comparison
   - [#4698](https://github.com/bpftrace/bpftrace/pull/4698)
+- Fix resolution of enum-typed tracepoint args
+  - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
 #### Security
 #### Docs
 #### Tools
