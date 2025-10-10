@@ -710,6 +710,14 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
+TEST_F(clang_parser_btf, struct_enum_fields)
+{
+  auto bpftrace = get_mock_bpftrace();
+  auto defs = parse("struct Foo { enum FooEnum e; }", *bpftrace);
+
+  ASSERT_TRUE(defs.enum_defs.contains("FooEnum"));
+}
+
 // Disabled because BTF flattens multi-dimensional arrays #3082.
 TEST_F(clang_parser_btf, DISABLED_btf_arrays_multi_dim)
 {
