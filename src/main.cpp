@@ -166,7 +166,7 @@ void usage(std::ostream& out)
   // clang-format on
 }
 
-static void enforce_infinite_rlimit()
+static void enforce_infinite_rlimit_memlock()
 {
   struct rlimit rl = {};
   int err;
@@ -856,7 +856,7 @@ int main(int argc, char* argv[])
 
     // FIXME (mmarchini): maybe we don't want to always enforce an infinite
     // rlimit?
-    enforce_infinite_rlimit();
+    enforce_infinite_rlimit_memlock();
   }
 
   // Temporarily, we make the full `BPFTrace` object available via the pass
