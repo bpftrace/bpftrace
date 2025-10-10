@@ -1672,25 +1672,20 @@ kprobe:dummy {
 bpftrace has support for immutable N-tuples.
 A tuple is a sequence type (like an array) where, unlike an array, every element can have a different type.
 
-Tuples are a comma separated list of expressions, enclosed in brackets, `(1,2)`.
-Individual fields can be accessed with the `.` operator.
-Tuples are zero indexed like arrays are.
+Tuples are a comma separated list of expressions, enclosed in brackets, `(1,"hello")`.
+Individual fields can be accessed with the `.` operator or via array-style access.
+The array index expression must evaluate to an integer literal at compile time (no variables but this is ok `(1, "hello")[1 - 1]`).
+Tuples are zero indexed like arrays. Examples:
 
 ```
 interval:s:1 {
-  $a = (1,2);
+  $a = (1,"hello");
   $b = (3,4, $a);
-  print($a);
-  print($b);
-  print($b.0);
+  print($a);     // (1, "hello")
+  print($b);     // (3, 4, (1, "hello"))
+  print($b.0);   // 3
+  print($a[1]);  // "hello"
 }
-
-/*
- * Sample output:
- * (1, 2)
- * (3, 4, (1, 2))
- * 3
- */
 ```
 
 Single-element and empty tuples can be specified using Python-like syntax.
