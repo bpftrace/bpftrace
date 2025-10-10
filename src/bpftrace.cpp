@@ -24,6 +24,7 @@
 #include <sys/epoll.h>
 #include <sys/personality.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -81,6 +82,34 @@ static void log_probe_attach_failure(const std::string &err_msg,
     }
     LOG(WARNING) << "Unable to attach probe: " << name << ". Skipping.";
   }
+}
+
+static void set_rlimit_nofile(size_t num_probes, size_t num_maps)
+{
+  // 3 fds per probe + maps + buffer for things like scratch maps
+  size_t needed_fd_count = (num_probes * 3) + num_maps + 50;
+
+  rlimit current_limit;
+  if (getrlimit(RLIMIT_NOFILE, &current_limit) != 0) {
+    LOG(V1) << "Could not get current RLIMIT_NOFILE";
+    return;
+  }
+
+  if (current_limit.rlim_cur >= needed_fd_count) {
+    return;
+  }
+
+  struct rlimit rl = {};
+  int err;
+
+  rl.rlim_max = needed_fd_count;
+  rl.rlim_cur = needed_fd_count;
+  err = setrlimit(RLIMIT_NOFILE, &rl);
+  if (err)
+    LOG(WARNING)
+        << std::strerror(err) << ": couldn't set RLIMIT_NOFILE for "
+        << "bpftrace. If your program is not loading, you can try increasing"
+        << "\"ulimit -n\" to fix the problem";
 }
 
 BPFtrace::~BPFtrace()
@@ -438,6 +467,8 @@ int BPFtrace::run(output::Output &out,
 
   bytecode_ = std::move(bytecode);
   bytecode_.set_map_ids(resources);
+
+  set_rlimit_nofile(resources.num_probes(), resources.maps_info.size());
 
   try {
     bytecode_.load_progs(resources, *btf_, *feature_, *config_);
