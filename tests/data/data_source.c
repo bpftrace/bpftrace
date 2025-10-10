@@ -31,6 +31,10 @@ struct Foo4 {
   unsigned int d : 20;
 };
 
+enum FooEnum {
+  VALUE
+};
+
 struct Foo3 *func_1(int a,
                     struct Foo1 *foo1,
                     struct Foo2 *foo2,
@@ -159,6 +163,7 @@ int main(void)
   struct bpf_iter__task_vma iter_task_vma;
   struct bpf_map bpf_map;
   struct sock sk;
+  enum FooEnum e;
 
   func_1(0, 0, 0, 0, 0);
 

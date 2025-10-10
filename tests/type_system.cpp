@@ -42,6 +42,7 @@ TEST(TypeSystemTest, basic)
     "restrict volatile const struct Foo2*",
     "struct Foo4",
     "unsigned int",
+    "enum FooEnum",
     "struct FirstFieldsAreAnonUnion",
     "struct Arrays",
     "int[4]",
