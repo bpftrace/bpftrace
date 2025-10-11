@@ -105,11 +105,11 @@ public:
   }
 
   RuntimeErrorInfo(RuntimeErrorId error_id, const ast::Location &loc)
-      : RuntimeErrorInfo(error_id, static_cast<bpf_func_id>(-1), loc) {};
+      : RuntimeErrorInfo(error_id, __BPF_FUNC_MAX_ID, loc) {};
 
   RuntimeErrorInfo()
       : error_id(RuntimeErrorId::HELPER_ERROR),
-        func_id(static_cast<bpf_func_id>(-1)) {};
+        func_id(__BPF_FUNC_MAX_ID) {};
 
   RuntimeErrorId error_id;
   bpf_func_id func_id;
