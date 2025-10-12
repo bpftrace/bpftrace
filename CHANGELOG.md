@@ -20,6 +20,8 @@ and this project adheres to
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)
 - Automatic dereferencing is supported via `.`, now the preferred access operator
   - [#4673](https://github.com/bpftrace/bpftrace/pull/4673)
+- Allow `signal()` to target either the current process or the current thread via an optional second argument
+  - [#4721](https://github.com/bpftrace/bpftrace/pull/4721)
 #### Changed
 - Apply `-B` buffering semantics to file outputs.
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)

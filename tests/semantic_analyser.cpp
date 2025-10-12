@@ -3298,6 +3298,22 @@ TEST_F(SemanticAnalyserTest, signal)
   bpftrace->add_param("hello");
   test("k:f { signal($1) }", UnsafeMode::Enable, Mock{ *bpftrace });
   test("k:f { signal($2) }", UnsafeMode::Enable, Mock{ *bpftrace }, Error{});
+
+  // signal target
+  test("k:f { signal(1, current_pid); }", UnsafeMode::Enable);
+  test("k:f { signal(1, current_tid); }", UnsafeMode::Enable);
+
+  // invalid signal target
+  test("k:f { signal(1, xxx); }", UnsafeMode::Enable, Error{ R"(
+stdin:1:17-20: ERROR: Invalid signal target: xxx (expects: current_pid or current_tid)
+k:f { signal(1, xxx); }
+                ~~~
+)" });
+  test("k:f { signal(1, 1); }", UnsafeMode::Enable, Error{ R"(
+stdin:1:7-19: ERROR: signal() only supports current_pid or current_tid as the second argument (int provided)
+k:f { signal(1, 1); }
+      ~~~~~~~~~~~~
+)" });
 }
 
 TEST_F(SemanticAnalyserTest, strncmp)
