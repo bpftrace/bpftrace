@@ -74,8 +74,13 @@ static auto getTargetMachine()
 {
   static auto *target = []() {
     std::string error_str;
-    const auto *target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple,
-                                                            error_str);
+    const auto *target = llvm::TargetRegistry::lookupTarget(
+#if LLVM_VERSION_MAJOR >= 22
+        Triple(LLVMTargetTriple),
+#else
+        LLVMTargetTriple,
+#endif
+        error_str);
     if (!target) {
       throw util::FatalUserException(
           "Could not find bpf llvm target, does your llvm support it?");
