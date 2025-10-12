@@ -178,7 +178,7 @@ public:
                          Value *fmt_size,
                          const std::vector<Value *> &values,
                          const Location &loc);
-  void CreateSignal(Value *sig, const Location &loc);
+  void CreateSignal(Value *sig, const Location &loc, bool target_thread);
   void CreateOverrideReturn(Value *ctx, Value *rc);
   void CreateRuntimeError(RuntimeErrorId rte_id, const Location &loc);
   void CreateRuntimeError(RuntimeErrorId rte_id,

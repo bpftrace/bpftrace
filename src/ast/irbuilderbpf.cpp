@@ -2091,19 +2091,30 @@ void IRBuilderBPF::CreateTracePrintk(Value *fmt_ptr,
                    loc);
 }
 
-void IRBuilderBPF::CreateSignal(Value *sig, const Location &loc)
+void IRBuilderBPF::CreateSignal(Value *sig,
+                                const Location &loc,
+                                bool target_thread)
 {
-  // long bpf_send_signal(u32 sig)
+  // target_thread = false: long bpf_send_signal(u32 sig)
+  // target_thread = true:  long bpf_send_signal_thread(u32 sig)
   // Return: 0 or error
   FunctionType *signal_func_type = FunctionType::get(getInt64Ty(),
                                                      { getInt32Ty() },
                                                      false);
   PointerType *signal_func_ptr_type = PointerType::get(getContext(), 0);
+
+  auto helper_func_id = BPF_FUNC_send_signal;
+  std::string name = "signal";
+  if (target_thread) {
+    helper_func_id = BPF_FUNC_send_signal_thread;
+    name = "signal_thread";
+  }
+
   Constant *signal_func = ConstantExpr::getCast(Instruction::IntToPtr,
-                                                getInt64(BPF_FUNC_send_signal),
+                                                getInt64(helper_func_id),
                                                 signal_func_ptr_type);
-  CallInst *call = createCall(signal_func_type, signal_func, { sig }, "signal");
-  CreateHelperErrorCond(call, BPF_FUNC_send_signal, loc);
+  CallInst *call = createCall(signal_func_type, signal_func, { sig }, name);
+  CreateHelperErrorCond(call, helper_func_id, loc);
 }
 
 void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)

@@ -1837,7 +1837,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "kstack" || call.func == "ustack") {
     return kstack_ustack(call.func, call.return_type.stack_type, call.loc);
   } else if (call.func == "signal") {
-    // long bpf_send_signal(u32 sig)
+    bool target_thread = false;
+    if (call.vargs.size() == 2 &&
+        call.vargs.at(1).as<Identifier>()->ident == "current_tid")
+      target_thread = true;
+
     auto &arg = call.vargs.at(0);
     if (arg.type().IsStringTy()) {
       auto signame = arg.as<String>()->value;
@@ -1846,14 +1850,14 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       if (sigid < 1) {
         LOG(BUG) << "Invalid signal ID for \"" << signame << "\"";
       }
-      b_.CreateSignal(b_.getInt32(sigid), call.loc);
+      b_.CreateSignal(b_.getInt32(sigid), call.loc, target_thread);
       return ScopedExpr();
     }
     auto scoped_arg = visit(arg);
     Value *sig_number = b_.CreateIntCast(scoped_arg.value(),
                                          b_.getInt32Ty(),
                                          arg.type().IsSigned());
-    b_.CreateSignal(sig_number, call.loc);
+    b_.CreateSignal(sig_number, call.loc, target_thread);
     return ScopedExpr();
   } else if (call.func == "strncmp") {
     auto &left_arg = call.vargs.at(0);
@@ -3970,7 +3974,7 @@ Result<> CodegenLLVM::generateWatchpointSetupProbe(
 
   // Send SIGSTOP to curtask
   if (!current_attach_point_->async)
-    b_.CreateSignal(b_.getInt32(SIGSTOP), current_attach_point_->loc);
+    b_.CreateSignal(b_.getInt32(SIGSTOP), current_attach_point_->loc, false);
 
   // Pull out function argument
   Value *ctx = func->arg_begin();
