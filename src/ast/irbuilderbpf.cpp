@@ -2300,7 +2300,7 @@ static bool return_zero_if_err(bpf_func_id func_id)
 void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
                                       const Location &loc)
 {
-  CreateRuntimeError(rte_id, getInt64(0), static_cast<bpf_func_id>(-1), loc);
+  CreateRuntimeError(rte_id, getInt64(0), __BPF_FUNC_MAX_ID, loc);
 }
 
 void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
