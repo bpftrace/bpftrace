@@ -18,11 +18,13 @@ public:
   std::optional<Expression> visit(Builtin &builtin);
   std::optional<Expression> visit(Identifier &identifier);
   std::optional<Expression> visit(Expression &expression);
+  std::optional<Expression> visit(Probe &probe);
   std::optional<Expression> check(const std::string &ident, Node &node);
 
 private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
+  Node *top_level_node_ = nullptr;
 };
 
 } // namespace
@@ -44,6 +46,13 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
   if (ident == "__builtin_safe_mode") {
     return ast_.make_node<Boolean>(bpftrace_.safe_mode_, Location(node.loc));
   }
+  if (ident == "__builtin_probe") {
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+      assert(probe->attach_points.size() == 1);
+      return ast_.make_node<String>(probe->attach_points.front()->name(),
+                                    Location(node.loc));
+    }
+  }
   return std::nullopt;
 }
 
@@ -64,6 +73,12 @@ std::optional<Expression> Builtins::visit(Expression &expression)
     expression.value = replacement->value;
   }
   return std::nullopt;
+}
+
+std::optional<Expression> Builtins::visit(Probe &probe)
+{
+  top_level_node_ = &probe;
+  return Visitor<Builtins, std::optional<Expression>>::visit(probe);
 }
 
 Pass CreateBuiltinsPass()

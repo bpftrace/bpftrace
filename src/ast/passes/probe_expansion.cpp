@@ -160,7 +160,9 @@ void ArgsResolver::visit(Probe &probe)
 
 void ProbeExpansion::visit(Builtin &builtin)
 {
-  if (builtin.ident == "args" || builtin.ident == "__builtin_retval") {
+  if (builtin.ident == "__builtin_probe") {
+    needs_expansion_ = true;
+  } else if (builtin.ident == "args" || builtin.ident == "__builtin_retval") {
     check_args(*probe_);
   }
 }

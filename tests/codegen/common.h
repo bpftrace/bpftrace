@@ -6,6 +6,7 @@
 
 #include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
+#include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
@@ -76,6 +77,7 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateProbeExpansionPass({ProbeType::tracepoint}))
+                .add(ast::CreateBuiltinsPass())
                 .add(ast::CreateCMacroExpansionPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())

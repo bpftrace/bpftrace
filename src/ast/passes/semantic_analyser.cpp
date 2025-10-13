@@ -1037,15 +1037,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     builtin.builtin_type = CreateUInt64();
     builtin.builtin_type.SetAS(addrspace);
-  } else if (builtin.ident == "__builtin_probe") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    size_t str_size = 0;
-    for (AttachPoint *attach_point : probe->attach_points) {
-      str_size = std::max(str_size, attach_point->name().length());
-    }
-    builtin.builtin_type = CreateString(str_size + 1);
   } else if (builtin.ident == "__builtin_username") {
     builtin.builtin_type = CreateUsername();
   } else if (builtin.ident == "__builtin_usermode") {

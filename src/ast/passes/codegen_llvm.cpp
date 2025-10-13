@@ -805,15 +805,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     }
     return ScopedExpr(value);
 
-  } else if (builtin.ident == "__builtin_probe") {
-    auto probe_str = probefull_;
-    probe_str.resize(builtin.builtin_type.GetSize() - 1);
-    auto *probe_var = llvm::dyn_cast<GlobalVariable>(module_->getOrInsertGlobal(
-        probe_str,
-        ArrayType::get(b_.getInt8Ty(), builtin.builtin_type.GetSize())));
-    probe_var->setInitializer(
-        ConstantDataArray::getString(module_->getContext(), probe_str));
-    return ScopedExpr(probe_var);
   } else if (builtin.ident == "args" &&
              probetype(current_attach_point_->provider) == ProbeType::uprobe) {
     // uprobe args record is built on stack

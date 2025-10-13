@@ -52,7 +52,6 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateApExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
-  passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateProbeExpansionPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
@@ -60,6 +59,7 @@ inline std::vector<Pass> AllParsePasses(
   // the `args` for tracepoints and expand probes but we need to resolve
   // the `args` for other probe types before the clang parse pass
   passes.emplace_back(CreateProbeExpansionPass({ProbeType::tracepoint}));
+  passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
   passes.emplace_back(CreateNamedParamsPass());
