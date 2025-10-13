@@ -214,7 +214,7 @@ public:
   bool safe_mode_ = true;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
-  int helper_check_level_ = 1;
+  int warning_level_ = 1;
   bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;

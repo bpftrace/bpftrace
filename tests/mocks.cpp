@@ -161,7 +161,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
 
   // Even though this is set to 1 by default, make it 0 here
   // to reduce the amount of repeated generated IR in the codegen tests
-  bpftrace.helper_check_level_ = 0;
+  bpftrace.warning_level_ = 0;
 }
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace()

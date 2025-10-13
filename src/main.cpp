@@ -301,7 +301,7 @@ struct Args {
   bool listing = false;
   bool safe_mode = true;
   bool usdt_file_activation = false;
-  int helper_check_level = 1;
+  int warning_level = 1;
   bool no_warnings = false;
   bool verify_llvm_ir = false;
   TestMode test_mode = TestMode::NONE;
@@ -468,7 +468,7 @@ Args parse_args(int argc, char* argv[])
       case Options::NO_WARNING: // --no-warnings
         DISABLE_LOG(WARNING);
         args.no_warnings = true;
-        args.helper_check_level = 0;
+        args.warning_level = 0;
         break;
       case Options::TEST_MODE: // --test-mode
         if (std::strcmp(optarg, "codegen") == 0) {
@@ -573,7 +573,7 @@ Args parse_args(int argc, char* argv[])
           exit(1);
         }
         if (!args.no_warnings) {
-          args.helper_check_level = 2;
+          args.warning_level = 2;
         }
         has_k = true;
         break;
@@ -595,8 +595,7 @@ Args parse_args(int argc, char* argv[])
   }
 
   // Difficult to serialize flex generated types
-  if (args.helper_check_level == 2 &&
-      args.build_mode == BuildMode::AHEAD_OF_TIME) {
+  if (args.warning_level == 2 && args.build_mode == BuildMode::AHEAD_OF_TIME) {
     LOG(ERROR) << "Cannot use -k with --aot";
     exit(1);
   }
@@ -716,7 +715,7 @@ int main(int argc, char* argv[])
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
   bpftrace.safe_mode_ = args.safe_mode;
-  bpftrace.helper_check_level_ = args.helper_check_level;
+  bpftrace.warning_level_ = args.warning_level;
   bpftrace.boottime_ = get_boottime();
   bpftrace.delta_taitime_ = get_delta_taitime();
   bpftrace.run_benchmarks_ = args.test_mode == TestMode::BPF_BENCHMARK;

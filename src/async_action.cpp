@@ -276,16 +276,11 @@ void AsyncHandlers::printf(const OpaqueValue &data)
     LOG(BUG) << "Error processing printf arguments: " << vals.takeError();
   }
 
-  switch (severity) {
-    case PrintfSeverity::NONE: {
-      out.printf(fmt.format(*vals));
-      return;
-    }
-    case PrintfSeverity::ERROR: {
-      out.errorf(fmt.format(*vals), source_info);
-      return;
-    }
+  if (severity == PrintfSeverity::WARNING && bpftrace.warning_level_ == 0) {
+    return;
   }
+
+  out.printf(fmt.format(*vals), source_info, severity);
 }
 
 } // namespace bpftrace::async_action

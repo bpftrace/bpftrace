@@ -407,26 +407,34 @@ void JsonOutput::value(const Value &value)
   emit_data(out_, "value", std::nullopt, value);
 }
 
-void JsonOutput::printf(const std::string &str)
+void JsonOutput::printf(const std::string &str,
+                        const SourceInfo &info,
+                        PrintfSeverity severity)
 {
-  emit_data(out_, "printf", std::nullopt, str);
-}
-
-void JsonOutput::errorf(const std::string &str, const SourceInfo &info)
-{
-  out_ << R"({"type": "errorf")";
-  out_ << R"(, "msg": )";
-  std::stringstream ss;
-  ss << str;
-  JsonEmitter<std::string>::emit(out_, ss.str());
-  // Json only prints the top level location
-  out_ << R"(, "filename": )";
-  JsonEmitter<std::string>::emit(out_, info.locations.begin()->filename);
-  out_ << R"(, "line": )";
-  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->line);
-  out_ << R"(, "col": )";
-  JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->column);
-  out_ << R"(})" << std::endl;
+  switch (severity) {
+    case PrintfSeverity::NONE: {
+      emit_data(out_, "printf", std::nullopt, str);
+      return;
+    }
+    case PrintfSeverity::WARNING:
+    case PrintfSeverity::ERROR: {
+      bool is_error = severity == PrintfSeverity::ERROR;
+      out_ << R"({"type": ")" << (is_error ? "errorf" : "warnf") << "\"";
+      out_ << R"(, "msg": )";
+      std::stringstream ss;
+      ss << str;
+      JsonEmitter<std::string>::emit(out_, ss.str());
+      // Json only prints the top level location
+      out_ << R"(, "filename": )";
+      JsonEmitter<std::string>::emit(out_, info.locations.begin()->filename);
+      out_ << R"(, "line": )";
+      JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->line);
+      out_ << R"(, "col": )";
+      JsonEmitter<uint64_t>::emit(out_, info.locations.begin()->column);
+      out_ << R"(})" << std::endl;
+      return;
+    }
+  }
 }
 
 void JsonOutput::time(const std::string &time)

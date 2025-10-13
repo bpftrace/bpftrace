@@ -2282,7 +2282,7 @@ static bool return_zero_if_err(bpf_func_id func_id)
     // When these function fails, bpftrace stores zero as a result.
     // A user script can check an error by seeing the value.
     // Therefore error checks of these functions are omitted if
-    // helper_check_level == 1.
+    // warning_level == 1.
     case BPF_FUNC_probe_read:
     case BPF_FUNC_probe_read_str:
     case BPF_FUNC_probe_read_kernel:
@@ -2311,8 +2311,8 @@ void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
   if (rte_id == RuntimeErrorId::HELPER_ERROR) {
     assert(return_value && return_value->getType() == getInt32Ty());
 
-    if (bpftrace_.helper_check_level_ == 0 ||
-        (bpftrace_.helper_check_level_ == 1 && return_zero_if_err(func_id)))
+    if (bpftrace_.warning_level_ == 0 ||
+        (bpftrace_.warning_level_ == 1 && return_zero_if_err(func_id)))
       return;
   }
 
@@ -2347,8 +2347,8 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *return_value,
                                          const Location &loc,
                                          bool suppress_error)
 {
-  if (bpftrace_.helper_check_level_ == 0 || suppress_error ||
-      (bpftrace_.helper_check_level_ == 1 && return_zero_if_err(func_id)))
+  if (bpftrace_.warning_level_ == 0 || suppress_error ||
+      (bpftrace_.warning_level_ == 1 && return_zero_if_err(func_id)))
     return;
 
   llvm::Function *parent = GetInsertBlock()->getParent();

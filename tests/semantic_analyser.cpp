@@ -1994,9 +1994,9 @@ TEST_F(SemanticAnalyserTest, unop_increment_decrement)
   test("kprobe:f { --true; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf_and_errorf)
+TEST_F(SemanticAnalyserTest, printf_errorf_warnf)
 {
-  std::vector<std::string> funcs = { "printf", "errorf" };
+  std::vector<std::string> funcs = { "printf", "errorf", "warnf" };
   for (const auto &func : funcs) {
     test("kprobe:f { " + func + "(\"hi\") }");
     test("kprobe:f { " + func + "(1234) }", Error{});
