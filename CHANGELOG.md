@@ -38,6 +38,8 @@ and this project adheres to
   - [#4698](https://github.com/bpftrace/bpftrace/pull/4698)
 - Fix resolution of enum-typed tracepoint args
   - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
+- Fix block expression handling inside print statements
+  - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
 #### Security
 #### Docs
 #### Tools
