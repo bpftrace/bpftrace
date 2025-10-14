@@ -210,6 +210,10 @@ public:
   std::vector<Probe> signal_probes;
   std::vector<Probe> watchpoint_probes;
 
+  size_t num_probes() {
+    return probes.size() + special_probes.size() + benchmark_probes.size() + signal_probes.size() + watchpoint_probes.size();
+  }
+
   // List of probes using userspace symbol resolution
   std::unordered_set<const ast::Probe *> probes_using_usym;
 

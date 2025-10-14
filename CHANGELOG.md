@@ -29,6 +29,8 @@ and this project adheres to
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)
 - Link against libbpf vendored from a submodule by default
   - [#4688](https://github.com/bpftrace/bpftrace/pull/4688)
+- Increase RLIMIT_NOFILE on startup as needed
+  - [#4716](https://github.com/bpftrace/bpftrace/pull/4716)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 16
