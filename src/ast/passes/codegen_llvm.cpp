@@ -1468,7 +1468,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       percpu_ptr = b_.CreatePerCpuPtr(var, scoped_cpu.value(), call.loc);
     }
     return ScopedExpr(b_.CreatePtrToInt(percpu_ptr, b_.getInt64Ty()));
-  } else if (call.func == "uaddr") {
+  } else if (call.func == "__builtin_uaddr") {
     auto name = call.vargs.at(0).as<String>()->value;
     struct symbol sym = {};
     int err = bpftrace_.resolve_uname(name,

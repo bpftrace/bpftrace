@@ -278,7 +278,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
       case ProbeType::rawtracepoint:
         return false;
     }
-  } else if (identifier == "uaddr") {
+  } else if (identifier == "__builtin_uaddr") {
     switch (type) {
       case ProbeType::usdt:
       case ProbeType::uretprobe:

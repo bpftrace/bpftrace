@@ -589,7 +589,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=1,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "uaddr",
+  { "__builtin_uaddr",
     { .min_args=1,
       .max_args=1,
       .discard_ret_warn = true,
@@ -1494,7 +1494,7 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.return_type = CreateUInt64();
     call.return_type.SetAS(AddrSpace::kernel);
-  } else if (call.func == "uaddr") {
+  } else if (call.func == "__builtin_uaddr") {
     auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
       return;

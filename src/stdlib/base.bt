@@ -1159,7 +1159,6 @@ macro signal_thread(expr) {
 //
 // bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 
-// :function uaddr
 // :variant T * uaddr(const string sym)
 //
 // **Supported probes**
@@ -1182,6 +1181,9 @@ macro signal_thread(expr) {
 //   printf("PS1: %s\n", str(*uaddr("ps1_prompt")));
 // }
 // ```
+macro uaddr(sym) {
+  __builtin_uaddr(sym)
+}
 
 // :variant uint64 uid()
 // User ID of the current thread, as seen from the init namespace
