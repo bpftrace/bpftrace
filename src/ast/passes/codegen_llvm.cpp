@@ -269,7 +269,7 @@ private:
                               async_action::AsyncAction async_action);
 
   void createPrintMapCall(Call &call);
-  void createPrintNonMapCall(Call &call, int id);
+  void createPrintNonMapCall(Call &call);
   void createJoinCall(Call &call, int id);
 
   void createMapDefinition(const std::string &name,
@@ -1806,7 +1806,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (call.vargs.at(0).is<Map>()) {
       createPrintMapCall(call);
     } else {
-      createPrintNonMapCall(call, async_ids_.non_map_print());
+      createPrintNonMapCall(call);
     }
     return ScopedExpr();
   } else if (call.func == "cgroup_path") {
@@ -4393,7 +4393,7 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
   b_.SetInsertPoint(failure_callback);
 }
 
-void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
+void CodegenLLVM::createPrintNonMapCall(Call &call)
 {
   auto &arg = call.vargs.at(0);
   auto scoped_arg = visit(arg);
@@ -4420,7 +4420,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int id)
 
   // Store print id
   b_.CreateStore(
-      b_.getInt64(id),
+      b_.getInt64(async_ids_.non_map_print()),
       b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
   // Store content

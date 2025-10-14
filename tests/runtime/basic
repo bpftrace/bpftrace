@@ -372,3 +372,8 @@ TIMEOUT 1
 NAME block expression
 PROG begin { let $a = { let $b = 1; $b }; print($a);  }
 EXPECT 1
+
+NAME print block expression with print
+PROG begin { print({ $x = 1; print ("bob"); $x > 1 }); }
+EXPECT bob
+EXPECT false
