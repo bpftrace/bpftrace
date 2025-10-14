@@ -6,6 +6,7 @@
 #include <glob.h>
 #include <iostream>
 #include <regex>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "log.h"
@@ -243,6 +244,29 @@ std::optional<std::filesystem::path> find_near_self(std::string_view filename)
   }
 
   return exe;
+}
+
+// Return 0 if failed, Otherwise, return inode number.
+unsigned long file_ino(const std::string &path)
+{
+  int fd, err;
+  struct stat stbuf;
+
+  fd = open(path.c_str(), O_RDONLY, 0);
+  if (fd < 0) {
+    return 0;
+  }
+  SCOPE_EXIT
+  {
+    ::close(fd);
+  };
+
+  err = stat(path.c_str(), &stbuf);
+  if (err == -1) {
+    return 0;
+  }
+
+  return stbuf.st_ino;
 }
 
 bool is_dir(const std::string &path)
