@@ -62,6 +62,7 @@
 #include "util/cgroup.h"
 #include "util/cpus.h"
 #include "util/exceptions.h"
+#include "util/paths.h"
 
 namespace bpftrace::ast {
 
@@ -551,6 +552,11 @@ ScopedExpr CodegenLLVM::visit(Identifier &identifier)
   if (c_definitions_.enums.contains(identifier.ident)) {
     return ScopedExpr(
         b_.getInt64(std::get<0>(c_definitions_.enums[identifier.ident])));
+  } else if (identifier.ident == "__builtin_elf_is_exe") {
+    return ScopedExpr(b_.getInt1(util::is_exe(current_attach_point_->target)));
+  } else if (identifier.ident == "__builtin_elf_ino") {
+    return ScopedExpr(
+        b_.getInt64(util::file_ino(current_attach_point_->target)));
   } else {
     LOG(BUG) << "unknown identifier \"" << identifier.ident << "\"";
     __builtin_unreachable();

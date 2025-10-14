@@ -228,6 +228,18 @@ Program
  kprobe:f
   builtin: args
 )");
+
+  test("uprobe:xxxx:f { __builtin_elf_is_exe }", R"(
+Program
+ uprobe:xxxx:f
+  identifier: __builtin_elf_is_exe
+)");
+
+  test("uprobe:xxxx:f { __builtin_elf_ino }", R"(
+Program
+ uprobe:xxxx:f
+  identifier: __builtin_elf_ino
+)");
 }
 
 TEST(Parser, positional_param)

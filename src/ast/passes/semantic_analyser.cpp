@@ -829,6 +829,26 @@ void SemanticAnalyser::visit(Identifier &identifier)
       identifier.addError() << "Invalid signal target: " << identifier.ident
                             << " (expects: current_pid or current_tid)";
     }
+  } else if (identifier.ident == "__builtin_elf_is_exe" ||
+             identifier.ident == "__builtin_elf_ino") {
+    auto *probe = get_probe(identifier, identifier.ident);
+    if (probe == nullptr)
+      return;
+    for (auto *attach_point : probe->attach_points) {
+      ProbeType type = probetype(attach_point->provider);
+      // Only for uprobe,uretprobe,USDT.
+      if (type != ProbeType::uprobe && type != ProbeType::uretprobe &&
+          type != ProbeType::usdt) {
+        identifier.addError()
+            << "The " << identifier.ident << " can not be used with '"
+            << attach_point->provider << "' probes";
+      }
+    }
+    if (identifier.ident == "__builtin_elf_is_exe") {
+      identifier.ident_type = CreateBool();
+    } else {
+      identifier.ident_type = CreateUInt64();
+    }
   } else {
     // Final attempt: try to parse as a stack mode.
     ConfigParser<StackMode> parser;
