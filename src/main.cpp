@@ -302,7 +302,6 @@ struct Args {
   bool safe_mode = true;
   bool usdt_file_activation = false;
   int warning_level = 1;
-  bool no_warnings = false;
   bool verify_llvm_ir = false;
   TestMode test_mode = TestMode::NONE;
   std::string script;
@@ -450,7 +449,6 @@ Args parse_args(int argc, char* argv[])
   };
 
   int c;
-  bool has_k = false;
   while ((c = getopt_long(argc, argv, short_options, long_options, nullptr)) !=
          -1) {
     switch (c) {
@@ -466,8 +464,11 @@ Args parse_args(int argc, char* argv[])
         args.output_llvm = optarg;
         break;
       case Options::NO_WARNING: // --no-warnings
+        if (args.warning_level == 2) {
+          LOG(ERROR) << "USAGE: -k conflicts with --no-warnings";
+          exit(1);
+        }
         DISABLE_LOG(WARNING);
-        args.no_warnings = true;
         args.warning_level = 0;
         break;
       case Options::TEST_MODE: // --test-mode
@@ -566,16 +567,17 @@ Args parse_args(int argc, char* argv[])
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
         exit(0);
       case 'k':
-        if (has_k) {
+        if (args.warning_level == 2) {
           LOG(ERROR) << "USAGE: -kk has been deprecated. Use a single -k for "
                         "runtime warnings for errors in map "
                         "lookups and probe reads.";
           exit(1);
         }
-        if (!args.no_warnings) {
-          args.warning_level = 2;
+        if (args.warning_level == 0) {
+          LOG(ERROR) << "USAGE: -k conflicts with --no-warnings";
+          exit(1);
         }
-        has_k = true;
+        args.warning_level = 2;
         break;
       default:
         usage(std::cerr);
