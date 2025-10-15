@@ -126,7 +126,7 @@ uprobe:libssl:SSL_do_handshake
 uretprobe:libssl:SSL_read,
 uretprobe:libssl:SSL_write,
 uretprobe:libssl:SSL_do_handshake
-/@start_ssl[tid] != 0/
+/has_key(@start_ssl, tid)/
 {
 	$lat_us = (nsecs - @start_ssl[tid]) / 1000;
 	if ((int8)retval >= 1) {
@@ -163,7 +163,7 @@ uretprobe:libcrypto:RSA_verify,
 uretprobe:libcrypto:ossl_ecdsa_sign,
 uretprobe:libcrypto:ossl_ecdsa_verify,
 uretprobe:libcrypto:ecdh_simple_compute_key
-/@start_crypto[tid] != 0/
+/has_key(@start_crypto, tid)/
 {
 	$lat_us = (nsecs - @start_crypto[tid]) / 1000;
 	@hist[@func_crypto[tid]] = lhist($lat_us, 0, 1000, 200);

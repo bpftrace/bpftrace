@@ -54,9 +54,9 @@ tracepoint:block:block_io_start
 }
 
 tracepoint:block:block_io_done
-/@start[args.dev, args.sector] != 0 &&
- @iopid[args.dev, args.sector] != 0 &&
- @iocomm[args.dev, args.sector] != ""/
+/has_key(@start, (args.dev, args.sector)) &&
+ has_key(@iopid, (args.dev, args.sector)) &&
+ has_key(@iocomm, (args.dev, args.sector))/
 
 {
 	$key = (args.dev, args.sector);
