@@ -1173,7 +1173,7 @@ bpftrace uses the `strftime(3)` function for formatting time and supports the sa
 * uretprobes
 * USDT
 
-***Does not work with ASLR, see issue [#75](https://github.com/bpftrace/bpftrace/issues/75)***
+If kernel supports task_vma open-coded iterator kfuncs (linux >= 6.7), uaddr() will correct the symbol addresses of PIE and dynamic libraries instead of directly using the symbol addresses in the ELF file, see https://github.com/torvalds/linux/commit/4ac454682158.
 
 The `uaddr` function returns the address of the specified symbol.
 This lookup happens during program compilation and cannot be used dynamically.

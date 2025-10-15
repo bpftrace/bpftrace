@@ -29,6 +29,8 @@ and this project adheres to
 - Allow array-style access for tuples
   - [#4715](https://github.com/bpftrace/bpftrace/pull/4715)
 #### Changed
+- `uaddr` support PIE and dynamic library symbols.
+  - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)
 - Apply `-B` buffering semantics to file outputs.
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)
 - Link against libbpf vendored from a submodule by default

@@ -107,12 +107,12 @@ EXPECT Attached 2 probes
 
 NAME usdt probes - attach to probes by wildcard file
 PROG usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }
-EXPECT Attached 3 probes
+EXPECT Attached 6 probes
 BEFORE ./testprogs/usdt_test
 
 NAME usdt probes - attach to probes by wildcard file with child
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }' -c ./testprogs/usdt_test
-EXPECT Attached 3 probes
+EXPECT Attached 6 probes
 
 # TODO(Jiawei Zhao): re-enable this test when libbpf can handle SIB usdt argument spec correctly
 # patch: https://patchwork.kernel.org/project/netdevbpf/list/?series=987857
