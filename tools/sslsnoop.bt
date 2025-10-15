@@ -71,7 +71,7 @@ uprobe:libssl:SSL_do_handshake
 uretprobe:libssl:SSL_read,
 uretprobe:libssl:SSL_write,
 uretprobe:libssl:SSL_do_handshake
-/@start_ssl[tid] != 0/
+/has_key(@start_ssl, tid)/
 {
 	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
 	       (nsecs - @start_ssl[tid])/1000, retval, @func_ssl[tid]);
@@ -102,7 +102,7 @@ uretprobe:libcrypto:RSA_verify,
 uretprobe:libcrypto:ossl_ecdsa_sign,
 uretprobe:libcrypto:ossl_ecdsa_verify,
 uretprobe:libcrypto:ossl_ecdh_compute_key
-/@start_crypto[tid] != 0/
+/has_key(@start_crypto, tid)/
 {
 	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
 	       (nsecs - @start_crypto[tid])/1000, retval, @func_crypto[tid]);
