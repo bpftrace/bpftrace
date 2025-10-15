@@ -21,10 +21,8 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !63 {
 entry:
+  %"@x_key11" = alloca i64, align 8
   %"@x_key9" = alloca i64, align 8
-  %"$$has_key_$key" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$has_key_$key")
-  store i64 0, ptr %"$$has_key_$key", align 8
   %initial_value7 = alloca i64, align 8
   %lookup_elem_val5 = alloca i64, align 8
   %"@y_key" = alloca [16 x i8], align 1
@@ -81,13 +79,16 @@ lookup_failure3:                                  ; preds = %lookup_merge
 lookup_merge4:                                    ; preds = %lookup_failure3, %lookup_success2
   call void @llvm.lifetime.end.p0(i64 -1, ptr %lookup_elem_val5)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@y_key")
-  store i64 1, ptr %"$$has_key_$key", align 8
-  %__has_key = call i1 @__has_key(ptr @AT_x, ptr %"$$has_key_$key"), !dbg !69
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key9")
   store i64 1, ptr %"@x_key9", align 8
-  %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %"@x_key9")
-  %delete_ret = icmp eq i64 %delete_elem, 0
+  %lookup_elem10 = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %"@x_key9")
+  %has_key = icmp ne ptr %lookup_elem10, null
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key9")
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key11")
+  store i64 1, ptr %"@x_key11", align 8
+  %delete_elem = call i64 inttoptr (i64 3 to ptr)(ptr @AT_x, ptr %"@x_key11")
+  %delete_ret = icmp eq i64 %delete_elem, 0
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key11")
   ret i64 0
 }
 
@@ -166,9 +167,6 @@ hist.is_not_zero:                                 ; preds = %hist.is_not_less_th
   ret i64 %48
 }
 
-; Function Attrs: alwaysinline nounwind
-declare dso_local i1 @__has_key(ptr noundef %0, ptr noundef %1) #2
-
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 attributes #2 = { alwaysinline nounwind }
@@ -245,4 +243,3 @@ attributes #2 = { alwaysinline nounwind }
 !66 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !67 = !{!68}
 !68 = !DILocalVariable(name: "ctx", arg: 1, scope: !63, file: !2, type: !66)
-!69 = !DILocation(line: 331, column: 5, scope: !63)

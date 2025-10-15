@@ -355,7 +355,7 @@ WILL_FAIL
 
 NAME has_key error type mismatch
 PROG begin { @g[1, "hi"] = 2; if (has_key(@g, (1, 2))) { printf("ok\n"); }  }
-EXPECT_REGEX .* ERROR: Mismatch for has_key\(\): key param has type '\(int64,int64\)' when map key type is '\(int64,string\)'.*
+EXPECT_REGEX .* ERROR: Argument mismatch for @g: trying to access with arguments: '\(int64,int64\)' when map expects arguments: '\(int64,string\)'.*
 WILL_FAIL
 
 NAME exit code
