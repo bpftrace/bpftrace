@@ -387,16 +387,6 @@ static bool btf_type_is_modifier(const struct btf_type *t)
   }
 }
 
-const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t,
-                                                    const struct btf *btf)
-{
-  while (t && btf_type_is_modifier(t)) {
-    t = btf__type_by_id(btf, t->type);
-  }
-
-  return t;
-}
-
 __u32 BTF::get_type_tags(std::unordered_set<std::string> &tags,
                          const BTFId &btf_id) const
 {
@@ -412,14 +402,72 @@ __u32 BTF::get_type_tags(std::unordered_set<std::string> &tags,
   return id;
 }
 
+static bool is_anon_btf_typename(const std::string &name)
+{
+  return name.empty() || name == "(anon)";
+}
+
+BTF::BTFId BTF::parse_anon_btf_name(const std::string &fullname)
+{
+  unsigned int btf_id;
+
+  // First, find BTF_ANON_STRUCT_PREFIX
+  auto prefix_pos = fullname.find(BTF_ANON_STRUCT_PREFIX);
+  if (prefix_pos == std::string::npos)
+    return BTFId{ .btf = nullptr };
+
+  // After BTF_ANON_STRUCT_PREFIX, should have <id>_<objname>
+  auto tail_pos = prefix_pos + BTF_ANON_STRUCT_PREFIX.length();
+  auto underscore_pos = fullname.find("_", tail_pos);
+  if (underscore_pos == std::string::npos)
+    return BTFId{ .btf = nullptr };
+
+  std::string idstr = fullname.substr(tail_pos, underscore_pos - tail_pos);
+  std::string btf_obj_name = fullname.substr(underscore_pos + 1);
+
+  try {
+    btf_id = std::stoul(idstr);
+  } catch (const std::invalid_argument &e) {
+    return BTFId{ .btf = nullptr };
+  }
+
+  for (const auto &btf_obj : btf_objects) {
+    if (btf_obj.name == btf_obj_name) {
+      struct btf *btf = btf__type_by_id(btf_obj.btf, btf_id) ? btf_obj.btf
+                                                             : nullptr;
+      return BTFId{ .btf = btf, .id = btf_id };
+    }
+  }
+
+  return BTFId{ .btf = nullptr };
+}
+
+std::string BTF::create_anon_btf_name(BTFId &btf_id)
+{
+  for (const auto &btf_obj : btf_objects) {
+    if (btf_obj.btf == btf_id.btf) {
+      return std::string(BTF_ANON_STRUCT_PREFIX) + std::to_string(btf_id.id) +
+             "_" + btf_obj.name;
+    }
+  }
+  return "";
+}
+
 SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
 {
-  const struct btf_type *t = btf__type_by_id(btf_id.btf, btf_id.id);
+  const struct btf_type *t;
+  BTFId id;
+
+  id = btf_id;
+
+  while ((t = btf__type_by_id(id.btf, id.id))) {
+    if (!btf_type_is_modifier(t))
+      break;
+    id.id = t->type;
+  }
 
   if (!t)
     return CreateNone();
-
-  t = btf_type_skip_modifiers(t, btf_id.btf);
 
   auto stype = CreateNone();
 
@@ -432,15 +480,24 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   } else if (btf_is_enum(t)) {
     stype = CreateInteger(t->size * 8, false);
   } else if (btf_is_composite(t)) {
-    std::string cast = btf_str(btf_id.btf, t->name_off);
-    if (cast.empty() || cast == "(anon)")
-      return CreateNone();
-    std::string comp = btf_is_struct(t) ? "struct" : "union";
-    std::string name = comp + " " + cast;
+    bool is_anon = false;
+    std::string recprefix = btf_is_struct(t) ? "struct " : "union ";
+    std::string rname = btf_str(btf_id.btf, t->name_off);
 
-    stype = CreateRecord(name, bpftrace_->structs.LookupOrAdd(name, t->size));
+    if (is_anon_btf_typename(rname)) {
+      is_anon = true;
+      rname = create_anon_btf_name(id);
+      if (rname.empty())
+        return CreateNone();
+    }
+    auto name = recprefix + rname;
+
+    auto record = bpftrace_->structs.LookupOrAdd(name, t->size).lock();
+    stype = CreateRecord(name, record);
+    if (is_anon)
+      stype.SetAnon();
     if (resolve_structs)
-      resolve_fields(stype);
+      resolve_fields(id, std::move(record), 0);
   } else if (btf_is_ptr(t)) {
     const BTFId pointee_btf_id = { .btf = btf_id.btf, .id = t->type };
     std::unordered_set<std::string> tags;
@@ -1119,19 +1176,26 @@ __s32 BTF::find_id_in_btf(struct btf *btf,
 
 void BTF::resolve_fields(const SizedType &type)
 {
+  BTFId type_id;
+
   if (!type.IsRecordTy())
     return;
 
-  auto record = bpftrace_->structs.Lookup(type.GetName()).lock();
+  auto const &name = type.GetName();
+  auto record = bpftrace_->structs.Lookup(name).lock();
   if (record->HasFields())
     return;
 
-  auto type_name = btf_type_str(type.GetName());
-  auto type_id = find_id(type_name, BTF_KIND_STRUCT);
-  if (!type_id.btf)
-    type_id = find_id(type_name, BTF_KIND_UNION);
-  if (!type_id.btf)
-    return;
+  if (type.IsAnonTy())
+    type_id = parse_anon_btf_name(name);
+  else {
+    __u32 kind = name.starts_with("struct") ? BTF_KIND_STRUCT : BTF_KIND_UNION;
+    auto type_name = btf_type_str(name);
+
+    type_id = find_id(type_name, kind);
+    if (!type_id.btf)
+      return;
+  }
 
   resolve_fields(type_id, std::move(record), 0);
 }
@@ -1172,8 +1236,7 @@ void BTF::resolve_fields(const BTFId &type_id,
     __u32 field_offset = start_offset +
                          (btf_member_bit_offset(btf_type, i) / 8);
 
-    if (btf_is_composite(field_type) &&
-        (field_name.empty() || field_name == "(anon)")) {
+    if (btf_is_composite(field_type) && is_anon_btf_typename(field_name)) {
       resolve_fields(field_id, record, field_offset);
       continue;
     }
