@@ -2117,20 +2117,6 @@ void IRBuilderBPF::CreateSignal(Value *sig,
   CreateHelperErrorCond(call, helper_func_id, loc);
 }
 
-void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
-{
-  // long bpf_override_return(struct pt_regs *regs, u64 rc)
-  // Return: 0
-  FunctionType *override_func_type = FunctionType::get(
-      getInt64Ty(), { getPtrTy(), getInt64Ty() }, false);
-  PointerType *override_func_ptr_type = PointerType::get(getContext(), 0);
-  Constant *override_func = ConstantExpr::getCast(Instruction::IntToPtr,
-                                                  getInt64(
-                                                      BPF_FUNC_override_return),
-                                                  override_func_ptr_type);
-  createCall(override_func_type, override_func, { ctx, rc }, "override");
-}
-
 CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
                                         Value *len,
                                         AllocaInst *data,

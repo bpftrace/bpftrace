@@ -5,6 +5,7 @@
 #include "ast/ast.h"
 #include "ast/passes/ap_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
+#include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/control_flow_analyser.h"
@@ -152,6 +153,7 @@ public:
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
                   .add(ast::CreateProbeExpansionPass({ ProbeType::tracepoint }))
+                  .add(ast::CreateBuiltinsPass())
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateMapSugarPass())
@@ -3411,20 +3413,44 @@ TEST_F(SemanticAnalyserTest, strncmp_posparam)
 
 TEST_F(SemanticAnalyserTest, override)
 {
+  ast::TypeMetadata types;
+
+  auto vd_ty = types.global.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(vd_ty));
+  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  ASSERT_TRUE(bool(vd_ptr));
+  auto uint64 = types.global.add<btf::Integer>("uint64", 8, 0);
+  ASSERT_TRUE(bool(uint64));
+
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "ctx", btf::ValueType(*vd_ptr) }, { "rc", btf::ValueType(*uint64) }
+  };
+  auto override_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*vd_ty), args);
+  ASSERT_TRUE(bool(override_proto));
+
+  auto override_func = types.global.add<btf::Function>(
+      "__override", btf::Function::Linkage::Global, *override_proto);
+  ASSERT_TRUE(bool(override_func));
+
   // literals
-  test("k:f { override(-1); }", UnsafeMode::Enable);
+  test("k:f { override(-1); }", UnsafeMode::Enable, Types{ types });
 
   // variables
-  test("k:f { override(arg0); }", UnsafeMode::Enable);
+  test("k:f { override(arg0); }", UnsafeMode::Enable, Types{ types });
 
   // Probe types
-  test("kr:f { override(-1); }", UnsafeMode::Enable, Error{});
-  test("u:/bin/sh:f { override(-1); }", UnsafeMode::Enable, Error{});
+  test("kr:f { override(-1); }", UnsafeMode::Enable, Error{}, Types{ types });
+  test("u:/bin/sh:f { override(-1); }",
+       UnsafeMode::Enable,
+       Error{},
+       Types{ types });
   test("t:syscalls:sys_enter_openat { override(-1); }",
        UnsafeMode::Enable,
-       Error{});
-  test("i:s:1 { override(-1); }", UnsafeMode::Enable, Error{});
-  test("p:hz:1 { override(-1); }", UnsafeMode::Enable, Error{});
+       Error{},
+       Types{ types });
+  test("i:s:1 { override(-1); }", UnsafeMode::Enable, Error{}, Types{ types });
+  test("p:hz:1 { override(-1); }", UnsafeMode::Enable, Error{}, Types{ types });
 }
 
 TEST_F(SemanticAnalyserTest, unwatch)

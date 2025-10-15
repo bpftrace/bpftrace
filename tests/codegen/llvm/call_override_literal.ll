@@ -16,11 +16,15 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %override = call i64 inttoptr (i64 58 to ptr)(ptr %0, i64 -1)
+  %__override = call void @__override(ptr %0, i64 -1), !dbg !41
   ret i64 0
 }
 
+; Function Attrs: alwaysinline nounwind
+declare dso_local void @__override(ptr noundef %0, i64 noundef %1) #1
+
 attributes #0 = { nounwind }
+attributes #1 = { alwaysinline nounwind }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}
@@ -66,3 +70,4 @@ attributes #0 = { nounwind }
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !39 = !{!40}
 !40 = !DILocalVariable(name: "ctx", arg: 1, scope: !35, file: !2, type: !38)
+!41 = !DILocation(line: 619, column: 5, scope: !35)
