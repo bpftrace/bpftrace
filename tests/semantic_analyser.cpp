@@ -5105,6 +5105,18 @@ TEST_F(SemanticAnalyserBTFTest, binop_late_ptr_resolution)
   test(R"(fentry:func_1 { if (@a[1] == args.foo1) { } @a[1] = args.foo1; })");
 }
 
+TEST_F(SemanticAnalyserBTFTest, anon_struct_resolution)
+{
+  test("fentry:func_anon_struct {\n"
+       "  @a1 = args.AnonStruct.AnonTypedefArray[0].a;\n"
+       "  @a2 = args.AnonTypedef.a;\n"
+       "  @b1 = args.AnonStruct.AnonArray[0].b;\n"
+       "  $x = args.AnonStruct.AnonArray[0];\n"
+       "  $y = $x.a;\n"
+       "  $z = $x.AnonSubArray[0].c;\n"
+       "}");
+}
+
 TEST_F(SemanticAnalyserTest, buf_strlen_too_large)
 {
   auto bpftrace = get_mock_bpftrace();
