@@ -24,6 +24,8 @@ and this project adheres to
   - [#4721](https://github.com/bpftrace/bpftrace/pull/4721)
 - Add `probetype` builtin
   - [#4712](https://github.com/bpftrace/bpftrace/pull/4712)
+- Allow array-style access for tuples
+  - [#4715](https://github.com/bpftrace/bpftrace/pull/4715)
 #### Changed
 - Apply `-B` buffering semantics to file outputs.
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)
