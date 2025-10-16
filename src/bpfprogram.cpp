@@ -45,7 +45,11 @@ void BpfProgram::set_expected_attach_type(const Probe &probe,
   if ((probe.type == ProbeType::kprobe || probe.type == ProbeType::kretprobe) &&
       !probe.funcs.empty() && probe.path.empty()) {
     if (probe.is_session && feature.has_kprobe_session())
+#ifdef BPF_TRACE_KPROBE_SESSION
       attach_type = BPF_TRACE_KPROBE_SESSION;
+#else
+      attach_type = BPF_TRACE_KPROBE_MULTI;
+#endif
     else if (feature.has_kprobe_multi())
       attach_type = BPF_TRACE_KPROBE_MULTI;
   }
