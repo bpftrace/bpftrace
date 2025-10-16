@@ -613,9 +613,12 @@ Result<std::unique_ptr<AttachedMultiKprobeProbe>> AttachedMultiKprobeProbe::
       LOG(V1) << " " << syms[i];
     }
   }
-
+#ifdef BPF_TRACE_KPROBE_SESSION
   auto attach_type = probe.is_session ? BPF_TRACE_KPROBE_SESSION
                                       : BPF_TRACE_KPROBE_MULTI;
+#else
+  auto attach_type = BPF_TRACE_KPROBE_MULTI;
+#endif
 
   int link_fd = bpf_link_create(prog.fd(), 0, attach_type, &opts);
   if (link_fd < 0) {
