@@ -19,15 +19,19 @@ entry:
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 112
   %arg0 = load volatile i64, ptr %2, align 8
-  %override = call i64 inttoptr (i64 58 to ptr)(ptr %0, i64 %arg0)
+  %__override = call void @__override(ptr %0, i64 %arg0), !dbg !41
   ret i64 0
 }
 
+; Function Attrs: alwaysinline nounwind
+declare dso_local void @__override(ptr noundef %0, i64 noundef %1) #1
+
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare ptr @llvm.preserve.static.offset(ptr readnone %0) #1
+declare ptr @llvm.preserve.static.offset(ptr readnone %0) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+attributes #1 = { alwaysinline nounwind }
+attributes #2 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.dbg.cu = !{!31}
 !llvm.module.flags = !{!33, !34}
@@ -73,3 +77,4 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !39 = !{!40}
 !40 = !DILocalVariable(name: "ctx", arg: 1, scope: !35, file: !2, type: !38)
+!41 = !DILocation(line: 619, column: 5, scope: !35)

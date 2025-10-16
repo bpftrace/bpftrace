@@ -1877,16 +1877,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateStrncmp(
         left_string.value(), right_string.value(), size, false));
-  } else if (call.func == "override") {
-    // long bpf_override(struct pt_regs *regs, u64 rc)
-    // returns: 0
-    auto &arg = call.vargs.at(0);
-    auto scoped_arg = visit(arg);
-    auto *expr = b_.CreateIntCast(scoped_arg.value(),
-                                  b_.getInt64Ty(),
-                                  arg.type().IsSigned());
-    b_.CreateOverrideReturn(ctx_, expr);
-    return ScopedExpr();
   } else if (call.func == "kptr" || call.func == "uptr") {
     return visit(call.vargs.at(0));
   } else if (call.func == "macaddr") {

@@ -608,6 +608,17 @@ macro numaid() {
 // ioctl(PERF_EVENT_IOC_SET_BPF): Invalid argument
 // Error attaching probe: 'kprobe:vfs_read'
 // ```
+macro override(expr) {
+  if comptime (probetype != "kprobe") {
+    fail("override() can only be used inside kprobes");
+  } else if comptime (__builtin_safe_mode) {
+    fail("override() is unsafe. To use you need the --unsafe flag");
+  } else if comptime (typeinfo(expr).1 != typeinfo(0).1) {
+    fail("override() only supports int arguments (%s provided)", typeinfo(expr).1);
+  } else {
+    __override((void *)ctx, (uint64)expr);
+  }
+}
 
 // :function path
 // :variant char * path(struct path * path [, int32 size])

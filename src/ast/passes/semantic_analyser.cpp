@@ -487,11 +487,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=2,
       .max_args=2,
       .discard_ret_warn = true, } },
-  { "override",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::integer } } } },
   { "path",
     { .min_args=1,
       .max_args=2,
@@ -1762,17 +1757,6 @@ void SemanticAnalyser::visit(Call &call)
       call.addError() << "Builtin strncmp requires a non-negative literal";
     }
     call.return_type = CreateUInt64();
-  } else if (call.func == "override") {
-    auto *probe = get_probe(call, call.func);
-    if (probe == nullptr)
-      return;
-
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kprobe) {
-        call.addError() << call.func << " can only be used with kprobes.";
-      }
-    }
   } else if (call.func == "kptr" || call.func == "uptr") {
     // kptr should accept both integer or pointer. Consider case: kptr($1)
     auto &arg = call.vargs.at(0);

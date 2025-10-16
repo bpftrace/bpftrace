@@ -8,7 +8,6 @@ namespace bpftrace {
 static std::unordered_set<std::string> UNSAFE_BUILTIN_FUNCS = {
   "system",
   "signal",
-  "override",
 };
 
 static std::unordered_set<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };

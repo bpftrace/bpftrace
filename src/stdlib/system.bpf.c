@@ -9,3 +9,7 @@
 long __get_numa_node_id() {
     return bpf_get_numa_node_id();
 }
+
+void __override(void * ctx, __u64 rc) {
+    bpf_override_return(ctx, rc);
+}
