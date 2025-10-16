@@ -5510,4 +5510,9 @@ kprobe:f { $x = 1; if comptime (typeinfo($x) == typeinfo(1)) { fail("no integers
 )" });
 }
 
+TEST_F(SemanticAnalyserBTFTest, ntop)
+{
+  test("fentry:func_4 { printf(\"%s\\n\", ntop(args.arrays.char_arr2)); }");
+}
+
 } // namespace bpftrace::test::semantic_analyser

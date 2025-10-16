@@ -68,6 +68,7 @@ struct FirstFieldsAreAnonUnion first_fields_anon_union;
 struct Arrays {
   int int_arr[4];
   char char_arr[8];
+  char char_arr2[16];
   void *ptr_arr[2];
   int multi_dim[3][2];
   int zero[0];
@@ -83,6 +84,12 @@ struct Arrays *func_arrays(struct Arrays *arr)
 struct ArrayWithCompoundData {
   struct Foo3 *data[2];
 };
+
+struct Foo3 *func_4(struct Arrays *arrays)
+{
+  return 0;
+}
+
 
 void func_array_with_compound_data(struct ArrayWithCompoundData *arr)
 {
