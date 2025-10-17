@@ -26,6 +26,8 @@ and this project adheres to
   - [#4712](https://github.com/bpftrace/bpftrace/pull/4712)
 - Allow array-style access for tuples
   - [#4715](https://github.com/bpftrace/bpftrace/pull/4715)
+- Add support for min+max parameters when printing `tseries` maps.
+  - [#4741](https://github.com/bpftrace/bpftrace/pull/4741)
 #### Changed
 - Apply `-B` buffering semantics to file outputs.
   - [#4637](https://github.com/bpftrace/bpftrace/pull/4637)
