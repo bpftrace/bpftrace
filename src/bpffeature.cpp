@@ -389,6 +389,7 @@ bool BPFfeature::has_kprobe_multi()
 
 bool BPFfeature::has_kprobe_session()
 {
+#ifdef BPF_TRACE_KPROBE_SESSION
   if (has_kprobe_session_.has_value())
     return *has_kprobe_session_;
 
@@ -409,6 +410,9 @@ bool BPFfeature::has_kprobe_session()
                                         link_opts,
                                         std::nullopt);
   return *has_kprobe_session_;
+#else
+  return false;
+#endif
 }
 
 bool BPFfeature::has_uprobe_multi()
