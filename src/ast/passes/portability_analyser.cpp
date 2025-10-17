@@ -52,16 +52,18 @@ void PortabilityAnalyser::visit(Call &call)
   for (auto &expr : call.vargs)
     visit(expr);
 
-  // kaddr() and uaddr() both resolve symbols -> address during codegen and
-  // embeds the values into the bytecode. For AOT to support kaddr()/uaddr(),
-  // the addresses must be resolved at runtime and fixed up during load time.
+  // kaddr() and __builtin_uaddr() both resolve symbols -> address during
+  // codegen and embeds the values into the bytecode. For AOT to support
+  // kaddr()/__builtin_uaddr(), the addresses must be resolved at runtime
+  // and fixed up during load time.
   //
   // cgroupid can vary across systems just like how a process does not
   // necessarily share the same PID across multiple systems. cgroupid() is also
   // resolved during codegen and the value embedded into the bytecode.  For AOT
   // to support cgroupid(), the cgroupid must be resolved at runtime and fixed
   // up during load time.
-  if (call.func == "kaddr" || call.func == "uaddr" || call.func == "cgroupid") {
+  if (call.func == "kaddr" || call.func == "__builtin_uaddr" ||
+      call.func == "cgroupid") {
     call.addError() << "AOT does not yet support " << call.func << "()";
   }
 }

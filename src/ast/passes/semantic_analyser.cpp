@@ -595,7 +595,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=1,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "uaddr",
+  { "__builtin_uaddr",
     { .min_args=1,
       .max_args=1,
       .discard_ret_warn = true,
@@ -823,6 +823,26 @@ void SemanticAnalyser::visit(Identifier &identifier)
         identifier.ident != "current_tid") {
       identifier.addError() << "Invalid signal target: " << identifier.ident
                             << " (expects: current_pid or current_tid)";
+    }
+  } else if (identifier.ident == "__builtin_elf_is_exe" ||
+             identifier.ident == "__builtin_elf_ino") {
+    auto *probe = get_probe(identifier, identifier.ident);
+    if (probe == nullptr)
+      return;
+    for (auto *attach_point : probe->attach_points) {
+      ProbeType type = probetype(attach_point->provider);
+      // Only for uprobe,uretprobe,USDT.
+      if (type != ProbeType::uprobe && type != ProbeType::uretprobe &&
+          type != ProbeType::usdt) {
+        identifier.addError()
+            << "The " << identifier.ident << " can not be used with '"
+            << attach_point->provider << "' probes";
+      }
+    }
+    if (identifier.ident == "__builtin_elf_is_exe") {
+      identifier.ident_type = CreateBool();
+    } else {
+      identifier.ident_type = CreateUInt64();
     }
   } else {
     // Final attempt: try to parse as a stack mode.
@@ -1518,7 +1538,7 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.return_type = CreateUInt64();
     call.return_type.SetAS(AddrSpace::kernel);
-  } else if (call.func == "uaddr") {
+  } else if (call.func == "__builtin_uaddr") {
     auto *probe = get_probe(call, call.func);
     if (probe == nullptr)
       return;
