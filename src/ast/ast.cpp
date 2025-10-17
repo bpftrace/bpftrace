@@ -174,7 +174,6 @@ AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
   auto *ap = ctx.make_node<AttachPoint>(raw_input,
                                         ignore_invalid,
                                         Location(loc));
-  ap->index_ = index_;
   ap->provider = provider;
   ap->target = target;
   ap->lang = lang;
@@ -364,16 +363,6 @@ std::string AttachPoint::name() const
   return n;
 }
 
-int AttachPoint::index() const
-{
-  return index_;
-}
-
-void AttachPoint::set_index(int index)
-{
-  index_ = index;
-}
-
 std::string Probe::args_typename() const
 {
   return "struct " + orig_name + "_" + attach_points.front()->func + "_args";
@@ -394,6 +383,15 @@ bool Probe::has_ap_of_probetype(ProbeType probe_type)
   return std::ranges::any_of(attach_points, [probe_type](auto *ap) {
     return probetype(ap->provider) == probe_type;
   });
+}
+
+ProbeType Probe::get_probetype()
+{
+  if (attach_points.empty()) {
+    return ProbeType::invalid;
+  }
+  assert(attach_points.size() == 1);
+  return probetype(attach_points.at(0)->provider);
 }
 
 void Program::clear_empty_probes()

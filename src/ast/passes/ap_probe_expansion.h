@@ -66,6 +66,6 @@ private:
   std::unordered_map<AttachPoint *, std::set<std::string>> expanded_funcs;
 };
 
-Pass CreateApExpansionPass();
+Pass CreateProbeAndApExpansionPass();
 
 } // namespace bpftrace::ast
