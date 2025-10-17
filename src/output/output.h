@@ -111,7 +111,10 @@ struct Value {
 
   // TimeSeries is a sequence of values that are collected over time.
   struct TimeSeries {
+    TimeSeries() : min(std::monostate{}), max(std::monostate{}) {};
     std::vector<std::pair<Primitive::Timestamp, Primitive>> values;
+    Primitive min;
+    Primitive max;
   };
 
   using Variant = std::variant<Primitive,

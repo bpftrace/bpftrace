@@ -354,19 +354,8 @@ struct TextEmitter<Value::TimeSeries> {
     }
 
     std::vector<std::string> times;
-    output::Primitive min_value = ts.values.front().second;
-    output::Primitive max_value = ts.values.front().second;
-    for (const auto &[epoch, v] : ts.values) {
-      if (std::holds_alternative<std::monostate>(v.variant)) {
-        continue; // Skip missing values.
-      }
-      if (v < min_value) {
-        min_value = v;
-      }
-      if (v > max_value) {
-        max_value = v;
-      }
-    }
+    output::Primitive min_value = ts.min;
+    output::Primitive max_value = ts.max;
     if (min_value == max_value) {
       // Generally prefer if we can add some buffer on both sides of the
       // points in the graph, but don't overflow if our min or max is at the
@@ -421,14 +410,16 @@ struct TextEmitter<Value::TimeSeries> {
       }
       // There may be epochs with no valid entry.
       if (!std::holds_alternative<std::monostate>(v.variant)) {
-        int point_offset = graph_width / 2;
-        if (min_value != max_value) {
-          point_offset = static_cast<float>(graph_width - 1) *
-                         static_cast<float>(distance(min_value, v)) /
-                         static_cast<float>(distance(min_value, max_value));
+        if (distance(v, min_value) >= 0 && distance(v, max_value) <= 0) {
+          int point_offset = graph_width / 2;
+          if (min_value != max_value) {
+            point_offset = static_cast<float>(graph_width - 1) *
+                           static_cast<float>(distance(min_value, v)) /
+                           static_cast<float>(distance(min_value, max_value));
+          }
+          // Ensure that we don't have floating point issues.
+          line[std::max(0, std::min(graph_width - 1, point_offset))] = '*';
         }
-        // Ensure that we don't have floating point issues.
-        line[std::max(0, std::min(graph_width - 1, point_offset))] = '*';
         res << line << " ";
         TextEmitter<Primitive>::emit(res, v);
       } else {

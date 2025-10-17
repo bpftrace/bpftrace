@@ -2,6 +2,7 @@
 #include <arpa/inet.h>
 #include <bpf/bpf.h>
 #include <cstring>
+#include <limits>
 #include <optional>
 #include <regex>
 #include <string>
@@ -1616,6 +1617,18 @@ void SemanticAnalyser::visit(Call &call)
             call.addWarning()
                 << "print()'s top and div arguments are ignored when used on "
                    "stats() maps.";
+          } else if (!map->value_type.IsTSeriesTy() && call.vargs.size() > 1) {
+            for (size_t i = 1; i < call.vargs.size(); i++) {
+              if (!call.vargs.at(i).is<Integer>() ||
+                  call.vargs.at(i).as<Integer>()->value >
+                      std::numeric_limits<uint32_t>::max()) {
+                call.addError()
+                    << "print()'s top and div arguments must be "
+                       "between 0 and "
+                    << std::numeric_limits<uint32_t>::max() << " inclusive";
+                break;
+              }
+            }
           }
         }
       }

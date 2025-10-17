@@ -3984,10 +3984,10 @@ void CodegenLLVM::createPrintMapCall(Call &call)
   }
   auto *ident_ptr = b_.CreateGEP(print_struct,
                                  buf,
-                                 { b_.getInt64(0), b_.getInt32(1) });
-  b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
+                                 { b_.getInt64(0), b_.getInt32(3) });
+  b_.CreateStore(b_.GetIntSameSize(id, elements.at(3)), ident_ptr);
 
-  // top, div
+  // top/min, div/max
   // first loops sets the arguments as passed by user. The second one zeros
   // the rest
   size_t arg_idx = 1;
@@ -3998,15 +3998,19 @@ void CodegenLLVM::createPrintMapCall(Call &call)
         b_.CreateIntCast(scoped_arg.value(), elements.at(arg_idx), false),
         b_.CreateGEP(print_struct,
                      buf,
-                     { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
+                     { b_.getInt64(0), b_.getInt32(arg_idx) }));
   }
 
   for (; arg_idx < 3; arg_idx++) {
     b_.CreateStore(b_.GetIntSameSize(0, elements.at(arg_idx)),
                    b_.CreateGEP(print_struct,
                                 buf,
-                                { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
+                                { b_.getInt64(0), b_.getInt32(arg_idx) }));
   }
+
+  b_.CreateStore(
+      b_.GetIntSameSize(call.vargs.size(), elements.at(4)),
+      b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(4) }));
 
   b_.CreateOutput(buf, getStructSize(print_struct), call.loc);
   b_.CreateLifetimeEnd(buf);

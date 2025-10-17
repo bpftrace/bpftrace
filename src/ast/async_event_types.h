@@ -25,9 +25,10 @@ namespace bpftrace::AsyncEvent {
 
 struct Print {
   uint64_t action_id;
+  uint64_t top_or_min;
+  uint64_t div_or_max;
   uint32_t mapid;
-  uint32_t top;
-  uint32_t div;
+  uint8_t n_args;
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));

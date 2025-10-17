@@ -107,7 +107,12 @@ void AsyncHandlers::print_map(const OpaqueValue &data)
   auto print = data.bitcast<AsyncEvent::Print>();
   const auto &map = bpftrace.bytecode_.getMap(print.mapid);
 
-  auto res = format(bpftrace, c_definitions, map, print.top, print.div);
+  auto res = format(bpftrace,
+                    c_definitions,
+                    map,
+                    print.top_or_min,
+                    print.div_or_max,
+                    print.n_args);
   if (!res) {
     LOG(BUG) << "Could not print map with ident \"" << map.name()
              << "\": " << res.takeError();

@@ -741,9 +741,29 @@ Get the pid of the parent process for the passed task or the current task if cal
 
 ### print
 - `void print(T val)`
+- `void print(map val, uint32 top)`
+- `void print(map val, uint32 top, uint32 div)`
+- `void print(tseries_t val, uint64 min, uint64 max)`
+- `void print(tseries_t val, int64 min, int64 max)`
 
 **async**
 
+`print()` prints data. Depending on the type of `val`, additional parameters may
+be specified to modify how values are printed.
+
+When printing non-scalar maps that are not of type `stats_t` or `tseries_t`,
+`top` limits the output to only keys containing the `top` highest values. For
+`hist_t` and `lhist_t` maps, "highest value" means the histogram with the
+highest number of samples. `div` scales the values contained in the map. For
+example, assuming `@` contained `5`, `print(@, 1, 2)` would output `2` (5 / 2).
+
+When printing `tseries_t` maps, the second and third parameters specify the
+range of the time series graph. Normally, when printing a `tseries_t` map, the
+range is automatically calculated by finding the minimum and maximum value
+currently contained in the time series. Specifying a fixed range with the `min`
+and `max` parameters can be useful for streaming, since the range remains the
+same every time the map is printed instead of changing when the minimum or
+maximum values contained in the series change.
 
 ### printf
 - `void printf(const string fmt, args...)`

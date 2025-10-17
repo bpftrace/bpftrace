@@ -16,7 +16,10 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
+#include "ast/passes/print_check.h"
+#include "ast/passes/printer.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "ast_matchers.h"
@@ -177,6 +180,8 @@ public:
                   .add(ast::CreateMapSugarPass())
                   .add(ast::CreateNamedParamsPass())
                   .add(ast::CreateSemanticPass())
+                  .add(ast::CreateResourcePass())
+                  .add(ast::CreatePrintCheckPass())
                   .run();
     EXPECT_TRUE(bool(ok));
 
@@ -1115,7 +1120,27 @@ TEST_F(SemanticAnalyserTest, call_print)
 {
   test("kprobe:f { @x = count(); print(@x); }");
   test("kprobe:f { @x = count(); print(@x, 5); }");
+  test("kprobe:f { @x = count(); print(@x, -1); }", Error{ R"(
+stdin:1:26-39: ERROR: print()'s top and div arguments must be between 0 and 4294967295 inclusive
+kprobe:f { @x = count(); print(@x, -1); }
+                         ~~~~~~~~~~~~~
+)" });
+  test("kprobe:f { @x = count(); print(@x, 4294967296); }", Error{ R"(
+stdin:1:26-47: ERROR: print()'s top and div arguments must be between 0 and 4294967295 inclusive
+kprobe:f { @x = count(); print(@x, 4294967296); }
+                         ~~~~~~~~~~~~~~~~~~~~~
+)" });
   test("kprobe:f { @x = count(); print(@x, 5, 10); }");
+  test("kprobe:f { @x = count(); print(@x, 5, -5); }", Error{ R"(
+stdin:1:26-42: ERROR: print()'s top and div arguments must be between 0 and 4294967295 inclusive
+kprobe:f { @x = count(); print(@x, 5, -5); }
+                         ~~~~~~~~~~~~~~~~
+)" });
+  test("kprobe:f { @x = count(); print(@x, 5, 4294967296); }", Error{ R"(
+stdin:1:26-50: ERROR: print()'s top and div arguments must be between 0 and 4294967295 inclusive
+kprobe:f { @x = count(); print(@x, 5, 4294967296); }
+                         ~~~~~~~~~~~~~~~~~~~~~~~~
+)" });
   test("kprobe:f { @x = count(); print(@x, 5, 10, 1); }", Error{});
   test("kprobe:f { @x = count(); @x = print(); }", Error{});
 
@@ -1132,6 +1157,19 @@ TEST_F(SemanticAnalyserTest, call_print)
        Warning{ "top and div arguments are ignored" });
   test("kprobe:f { @x = stats(10); print(@x, 2, 3); }",
        Warning{ "top and div arguments are ignored" });
+  test("kprobe:f { @x = tseries(1, 1s, 5); print(@x, 2); }", Error{ R"(
+stdin:1:36-48: ERROR: print() must provide both min and max arguments when used on tseries() maps.
+kprobe:f { @x = tseries(1, 1s, 5); print(@x, 2); }
+                                   ~~~~~~~~~~~~
+)" });
+  test("kprobe:f { @x = tseries(1, 1s, 5); print(@x, -2, 2); }");
+  test("kprobe:f { @x = tseries(1, 1s, 5); print(@x, -2, -2); }");
+  test("kprobe:f { @x = tseries(1, 1s, 5); print(@x, 2, 2); }");
+  test("kprobe:f { @x = tseries(1, 1s, 5); print(@x, 2, -2); }", Error{ R"(
+stdin:1:36-52: ERROR: print()'s min argument cannot be greater than its max argument.
+kprobe:f { @x = tseries(1, 1s, 5); print(@x, 2, -2); }
+                                   ~~~~~~~~~~~~~~~~
+)" });
 }
 
 TEST_F(SemanticAnalyserTest, call_print_map_item)
