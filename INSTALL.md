@@ -277,7 +277,7 @@ Use specific OS build sections listed earlier if available.
 ### Compilation
 
 ```
-git clone https://github.com/bpftrace/bpftrace
+git clone --recurse-submodules https://github.com/bpftrace/bpftrace
 mkdir -p bpftrace/build
 cd bpftrace/build
 cmake -DCMAKE_BUILD_TYPE=Release ../
