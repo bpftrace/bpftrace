@@ -78,18 +78,6 @@ private:
 
 } // namespace
 
-// This helper differs from SemanticAnalyser::single_provider_type() in that
-// for situations where a single probetype is required we assume the AST is
-// well formed.
-static ProbeType single_provider_type_postsema(Probe *probe)
-{
-  if (!probe->attach_points.empty()) {
-    return probetype(probe->attach_points.at(0)->provider);
-  }
-
-  return ProbeType::invalid;
-}
-
 ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace,
                                    MapMetadata &mm,
                                    NamedParamDefaults &named_param_defaults)
@@ -202,8 +190,7 @@ void ResourceAnalyser::visit(Call &call)
 
     auto fmtstr = call.vargs.at(0).as<String>()->value;
     if (call.func == "printf") {
-      if (probe_ != nullptr &&
-          single_provider_type_postsema(probe_) == ProbeType::iter) {
+      if (probe_ != nullptr && probe_->get_probetype() == ProbeType::iter) {
         resources_.bpf_print_fmts.emplace_back(fmtstr);
       } else {
         resources_.printf_args.emplace_back(

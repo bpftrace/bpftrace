@@ -258,7 +258,6 @@ private:
   void validate_map_key(const SizedType &key, Node &node);
   void resolve_struct_type(SizedType &type, Node &node);
 
-  ProbeType single_provider_type(Probe *probe);
   AddrSpace find_addrspace(ProbeType pt);
 
   void binop_ptr(Binop &op);
@@ -832,23 +831,6 @@ void SemanticAnalyser::visit(Identifier &identifier)
   }
 }
 
-ProbeType SemanticAnalyser::single_provider_type(Probe *probe)
-{
-  ProbeType type = ProbeType::invalid;
-
-  for (auto *attach_point : probe->attach_points) {
-    ProbeType ap = probetype(attach_point->provider);
-
-    if (type == ProbeType::invalid)
-      type = ap;
-
-    if (type != ap)
-      return ProbeType::invalid;
-  }
-
-  return type;
-}
-
 AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
 {
   switch (pt) {
@@ -959,7 +941,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
-    ProbeType type = single_provider_type(probe);
+    ProbeType type = probe->get_probetype();
 
     if (type == ProbeType::kretprobe || type == ProbeType::uretprobe) {
       builtin.builtin_type = CreateUInt64();
@@ -1075,8 +1057,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       }
     }
 
-    ProbeType type = single_provider_type(probe);
-    assert(type != ProbeType::invalid);
+    ProbeType type = probe->get_probetype();
 
     if (type == ProbeType::fentry || type == ProbeType::fexit ||
         type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
@@ -1495,7 +1476,7 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.return_type = CreateUInt64();
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      ProbeType pt = single_provider_type(probe);
+      ProbeType pt = probe->get_probetype();
       // In case of different attach_points, Set the addrspace to none.
       call.return_type.SetAS(find_addrspace(pt));
     } else {
@@ -3275,7 +3256,7 @@ void SemanticAnalyser::visit(Cast &cast)
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
   if (ty.GetAS() == AddrSpace::none) {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      ProbeType type = single_provider_type(probe);
+      ProbeType type = probe->get_probetype();
       ty.SetAS(find_addrspace(type));
     } else {
       // Assume kernel space for data in subprogs.

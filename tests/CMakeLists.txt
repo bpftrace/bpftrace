@@ -55,13 +55,12 @@ add_executable(bpftrace_test
   output.cpp
   parser.cpp
   portability_analyser.cpp
-  ap_expansion.cpp
+  ap_probe_expansion.cpp
   procmon.cpp
   probe.cpp
   config_analyser.cpp
   pass_manager.cpp
   pid_filter_pass.cpp
-  probe_expansion.cpp
   recursion_check.cpp
   resource_analyser.cpp
   result.cpp

@@ -1745,8 +1745,7 @@ public:
         async(other.async),
         address(other.address),
         func_offset(other.func_offset),
-        ignore_invalid(other.ignore_invalid),
-        index_(other.index_) {};
+        ignore_invalid(other.ignore_invalid) {};
 
   bool operator==(const AttachPoint &other) const
   {
@@ -1824,13 +1823,7 @@ public:
   AttachPoint *create_expansion_copy(ASTContext &ctx,
                                      const std::string &match) const;
 
-  int index() const;
-  void set_index(int index);
-
   bool check_available(const std::string &identifier) const;
-
-private:
-  int index_ = 0;
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
@@ -1853,6 +1846,15 @@ public:
         attach_points(std::move(attach_points)),
         block(block),
         orig_name(probe_orig_name(this->attach_points)) {};
+  explicit Probe(ASTContext &ctx,
+                 AttachPointList &&attach_points,
+                 BlockExpr *block,
+                 std::string orig_name,
+                 Location &&loc)
+      : Node(ctx, std::move(loc)),
+        attach_points(std::move(attach_points)),
+        block(block),
+        orig_name(std::move(orig_name)) {};
   explicit Probe(ASTContext &ctx, const Probe &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         attach_points(clone(ctx, other.attach_points, loc)),
@@ -1884,6 +1886,7 @@ public:
   void set_index(int index);
 
   bool has_ap_of_probetype(ProbeType probe_type);
+  ProbeType get_probetype();
 
 private:
   int index_ = 0;

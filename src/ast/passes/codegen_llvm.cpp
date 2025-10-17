@@ -38,7 +38,7 @@
 #include "ast/dibuilderbpf.h"
 #include "ast/irbuilderbpf.h"
 #include "ast/location.h"
-#include "ast/passes/ap_expansion.h"
+#include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/control_flow_analyser.h"
@@ -288,14 +288,11 @@ private:
                             const ::bpftrace::Config &bpftrace_config);
 
   // Generate a probe for `current_attach_point_`
-  //
-  // If `dummy` is passed, then code is generated but immediately thrown away.
   // This is used to progress state (eg. asyncids) in this class instance for
   // invalid probes that still need to be visited.
   void generateProbe(Probe &probe,
                      const std::string &name,
-                     FunctionType *func_type,
-                     bool dummy = false);
+                     FunctionType *func_type);
 
   // Generate a probe and register it to the BPFtrace class.
   void add_probe(AttachPoint &ap, Probe &probe, FunctionType *func_type);
@@ -433,8 +430,6 @@ private:
   AttachPoint *current_attach_point_ = nullptr;
   std::string probefull_;
   uint64_t probe_count_ = 0;
-  // Probes and attach points are indexed from 1, 0 means no index
-  // (no index is used for probes whose attach points are indexed individually)
   int next_probe_index_ = 1;
   bool inside_subprog_ = false;
 
@@ -3165,11 +3160,10 @@ ScopedExpr CodegenLLVM::visit(BlockExpr &block_expr)
 
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &name,
-                                FunctionType *func_type,
-                                bool dummy)
+                                FunctionType *func_type)
 {
   auto probe_type = probetype(current_attach_point_->provider);
-  int index = current_attach_point_->index() ?: probe.index();
+  int index = probe.index();
   auto func_name = util::get_function_name_for_probe(name, index);
   auto *func = llvm::Function::Create(
       func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
@@ -3190,11 +3184,6 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
   variables_.clear();
   auto scoped_block = visit(*probe.block);
-
-  if (dummy) {
-    func->eraseFromParent();
-    return;
-  }
 
   auto pt = probetype(current_attach_point_->provider);
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
@@ -3333,21 +3322,12 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
 
   // We begin by saving state that gets changed by the codegen pass, so we
   // can restore it for the next pass (printf_id_, time_id_).
-  auto reset_ids = async_ids_.create_reset_ids();
-  bool generated = false;
-  for (auto *attach_point : probe.attach_points) {
-    reset_ids();
-    current_attach_point_ = attach_point;
+  async_ids_.create_reset_ids();
+  assert(probe.attach_points.size() == 1);
+  current_attach_point_ = probe.attach_points.at(0);
+  probe.set_index(getNextIndexForProbe());
 
-    if (attach_point->index() == 0)
-      attach_point->set_index(getNextIndexForProbe());
-
-    add_probe(*attach_point, probe, func_type);
-    generated = true;
-  }
-  if (!generated) {
-    generateProbe(probe, "dummy", func_type, true);
-  }
+  add_probe(*current_attach_point_, probe, func_type);
 
   current_attach_point_ = nullptr;
   return ScopedExpr();

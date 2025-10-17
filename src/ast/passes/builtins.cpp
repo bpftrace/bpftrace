@@ -50,15 +50,19 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
   }
   if (ident == "__builtin_probe") {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      assert(probe->attach_points.size() == 1);
-      return ast_.make_node<String>(probe->attach_points.front()->name(),
+      return ast_.make_node<String>(probe->attach_points.empty()
+                                        ? "none"
+                                        : probe->attach_points.front()->name(),
                                     Location(node.loc));
     }
   }
   if (ident == "__builtin_probetype") {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
       return ast_.make_node<String>(
-          probetypeName(probetype(probe->attach_points.front()->provider)),
+          probe->attach_points.empty()
+              ? "none"
+              : probetypeName(
+                    probetype(probe->attach_points.front()->provider)),
           Location(node.loc));
     }
   }

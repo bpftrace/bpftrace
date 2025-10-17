@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ast/pass_manager.h"
-#include "ast/passes/ap_expansion.h"
+#include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
@@ -15,7 +15,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/pid_filter_pass.h"
-#include "ast/passes/probe_expansion.h"
+#include "ast/passes/args_resolver.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/usdt_arguments.h"
@@ -50,15 +50,15 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateControlFlowPass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateParseBTFPass());
-  passes.emplace_back(CreateApExpansionPass());
+  passes.emplace_back(CreateProbeAndApExpansionPass());
   passes.emplace_back(CreateParseTracepointFormatPass());
-  passes.emplace_back(CreateProbeExpansionPass());
+  passes.emplace_back(CreateArgsResolverPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
   // N.B. We need to run the clang parse pass before attempting to resolve
-  // the `args` for tracepoints and expand probes but we need to resolve
+  // the `args` for tracepoints but we need to resolve
   // the `args` for other probe types before the clang parse pass
-  passes.emplace_back(CreateProbeExpansionPass({ProbeType::tracepoint}));
+  passes.emplace_back(CreateArgsResolverPass({ProbeType::tracepoint}));
   passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());

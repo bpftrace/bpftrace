@@ -1,5 +1,5 @@
-#include "ast/passes/probe_expansion.h"
-#include "ast/passes/ap_expansion.h"
+#include "ast/passes/ap_probe_expansion.h"
+#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/printer.h"
@@ -30,9 +30,9 @@ void test(BPFtrace &bpftrace,
                     .add(CreateParsePass())
                     .add(ast::CreateParseAttachpointsPass())
                     .add(ast::CreateApExpansionPass())
-                    .add(ast::CreateProbeExpansionPass())
+                    .add(ast::CreateProbeAndApExpansionPass())
                     .add(ast::CreateClangParsePass())
-                    .add(ast::CreateProbeExpansionPass(
+                    .add(ast::CreateProbeAndApExpansionPass(
                         { ProbeType::tracepoint }))
                     .run();
   ASSERT_TRUE(bool(result)) << msg.str();
