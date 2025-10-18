@@ -1,7 +1,7 @@
 #include <climits>
 #include <sstream>
 
-#include "ast/passes/ap_expansion.h"
+#include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"

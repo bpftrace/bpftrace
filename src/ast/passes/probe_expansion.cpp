@@ -2,8 +2,8 @@
 #include <cassert>
 
 #include "arch/arch.h"
-#include "ast/passes/ap_expansion.h"
-#include "ast/passes/probe_expansion.h"
+#include "ast/passes/ap_probe_expansion.h"
+#include "ast/passes/args_resolver.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
@@ -294,7 +294,7 @@ void ProbeExpansion::visit(Program &prog)
   prog.probes = std::move(new_probe_list);
 }
 
-Pass CreateProbeExpansionPass(std::unordered_set<ProbeType> &&probe_types)
+Pass CreateProbeAndApExpansionPass(std::unordered_set<ProbeType> &&probe_types)
 {
   auto fn = [pt = std::move(probe_types)](ASTContext &ast,
                                           BPFtrace &b,
