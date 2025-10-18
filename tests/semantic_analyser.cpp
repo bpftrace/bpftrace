@@ -3337,57 +3337,114 @@ ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when 
 
 TEST_F(SemanticAnalyserTest, signal)
 {
-  // int literals
-  test("k:f { signal(1); }", UnsafeMode::Enable);
-  test("kr:f { signal(1); }", UnsafeMode::Enable);
-  test("u:/bin/sh:f { signal(11); }", UnsafeMode::Enable);
-  test("ur:/bin/sh:f { signal(11); }", UnsafeMode::Enable);
-  test("p:hz:1 { signal(1); }", UnsafeMode::Enable);
+  ast::TypeMetadata types;
 
-  // vars
-  test("k:f { @=1; signal(@); }", UnsafeMode::Enable);
-  test("k:f { @=1; signal((int32)arg0); }", UnsafeMode::Enable);
+  auto uint32 = types.global.add<btf::Integer>("uint32", 4, 0);
+  ASSERT_TRUE(bool(uint32));
+  auto int32 = types.global.add<btf::Integer>("int32", 4, 1);
+  ASSERT_TRUE(bool(int32));
 
-  // String
-  test("k:f { signal(\"KILL\"); }", UnsafeMode::Enable);
-  test("k:f { signal(\"SIGKILL\"); }", UnsafeMode::Enable);
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "sig", btf::ValueType(*uint32) }
+  };
+  auto signal_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*int32), args);
+  ASSERT_TRUE(bool(signal_proto));
 
-  // Not allowed for:
-  test("hardware:pcm:1000 { signal(1); }", UnsafeMode::Enable, Error{});
-  test("software:pcm:1000 { signal(1); }", UnsafeMode::Enable, Error{});
-  test("begin { signal(1); }", UnsafeMode::Enable, Error{});
-  test("end { signal(1); }", UnsafeMode::Enable, Error{});
-  test("i:s:1 { signal(1); }", UnsafeMode::Enable, Error{});
+  auto signal_process_func = types.global.add<btf::Function>(
+      "__signal_process", btf::Function::Linkage::Global, *signal_proto);
+  ASSERT_TRUE(bool(signal_process_func));
 
-  // invalid signals
-  test("k:f { signal(0); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(-100); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(100); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(\"SIGABC\"); }", UnsafeMode::Enable, Error{});
-  test("k:f { signal(\"ABC\"); }", UnsafeMode::Enable, Error{});
+  auto signal_thread_func = types.global.add<btf::Function>(
+      "__signal_thread", btf::Function::Linkage::Global, *signal_proto);
+  ASSERT_TRUE(bool(signal_process_func));
 
-  // Positional parameter
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->add_param("1");
-  bpftrace->add_param("hello");
-  test("k:f { signal($1) }", UnsafeMode::Enable, Mock{ *bpftrace });
-  test("k:f { signal($2) }", UnsafeMode::Enable, Mock{ *bpftrace }, Error{});
+  for (const auto &signal :
+       std::vector<std::string>{ "signal", "signal_thread" }) {
+    // int literals
+    test("k:f {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
+    test("k:f {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
+    test("kr:f {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
+    test("u:/bin/sh:f {" + signal + "(11); }",
+         UnsafeMode::Enable,
+         Types{ types });
+    test("ur:/bin/sh:f {" + signal + "(11); }",
+         UnsafeMode::Enable,
+         Types{ types });
+    test("p:hz:1 {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
 
-  // signal target
-  test("k:f { signal(1, current_pid); }", UnsafeMode::Enable);
-  test("k:f { signal(1, current_tid); }", UnsafeMode::Enable);
+    // vars
+    test("k:f { @=1;" + signal + "(@); }", UnsafeMode::Enable, Types{ types });
+    test("k:f { @=1;" + signal + "((int32)arg0); }",
+         UnsafeMode::Enable,
+         Types{ types });
 
-  // invalid signal target
-  test("k:f { signal(1, xxx); }", UnsafeMode::Enable, Error{ R"(
-stdin:1:17-20: ERROR: Invalid signal target: xxx (expects: current_pid or current_tid)
-k:f { signal(1, xxx); }
-                ~~~
-)" });
-  test("k:f { signal(1, 1); }", UnsafeMode::Enable, Error{ R"(
-stdin:1:7-19: ERROR: signal() only supports current_pid or current_tid as the second argument (int provided)
-k:f { signal(1, 1); }
-      ~~~~~~~~~~~~
-)" });
+    // String
+    test("k:f {" + signal + "(\"KILL\"); }",
+         UnsafeMode::Enable,
+         Types{ types });
+    test("k:f {" + signal + "(\"SIGKILL\"); }",
+         UnsafeMode::Enable,
+         Types{ types });
+
+    // Not allowed for:
+    test("hardware:pcm:1000 {" + signal + "(1); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("software:pcm:1000 {" + signal + "(1); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("begin {" + signal + "(1); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("end {" + signal + "(1); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("i:s:1 {" + signal + "(1); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+
+    // invalid signals
+    test("k:f {" + signal + "(0); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("k:f {" + signal + "(-100); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("k:f {" + signal + "(100); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("k:f {" + signal + "(\"SIGABC\"); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("k:f {" + signal + "(\"ABC\"); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+
+    // // Positional parameter
+    auto bpftrace = get_mock_bpftrace();
+    bpftrace->add_param("1");
+    bpftrace->add_param("hello");
+    test("k:f {" + signal + "($1) }",
+         UnsafeMode::Enable,
+         Mock{ *bpftrace },
+         Types{ types });
+    test("k:f {" + signal + "($2) }",
+         UnsafeMode::Enable,
+         Mock{ *bpftrace },
+         Types{ types },
+         Error{});
+  }
 }
 
 TEST_F(SemanticAnalyserTest, strncmp)

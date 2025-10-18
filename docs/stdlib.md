@@ -847,32 +847,42 @@ For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You c
 ### signal
 - `void signal(const string sig)`
 - `void signal(uint32 signum)`
-- `void signal(const string sig, [current_pid|current_tid])`
-- `void signal(uint32 signum, [current_pid|current_tid])`
 
 **unsafe**
 
-**Kernel** 5.3 (`current_pid`) / 5.6 (`current_tid`)
-
-This utilizes either the BPF helper `bpf_send_signal` or the BPF helper `bpf_send_signal_thread`, depending on the second argument.
+This utilizes the BPF helper `bpf_send_signal`.
 
 Probe types: k(ret)probe, u(ret)probe, USDT, profile
 
-Send a signal to the process or thread being traced.
+Send a signal to the process being traced (any thread).
+Use `signal_thread` to send to the thread being traced.
 The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
-Defaults to `current_pid` if the second argument is omitted.
-`current_pid` sends the signal to the process; `current_tid` sends it to the thread.
 
 ```
 kprobe:__x64_sys_execve
 /comm == "bash"/ {
-  signal(5); // same as `signal(5, current_pid)`
+  signal(5);
 }
 ```
 ```
 $ ls
 Trace/breakpoint trap (core dumped)
 ```
+
+
+### signal_thread
+- `void signal_thread(const string sig)`
+- `void signal_thread(uint32 signum)`
+
+**unsafe**
+
+This utilizes the BPF helper `bpf_send_signal_thread`.
+
+Probe types: k(ret)probe, u(ret)probe, USDT, profile
+
+Send a signal to the thread being traced.
+Use `signal` to send to the process being traced (any thread).
+The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
 
 
 ### sizeof
