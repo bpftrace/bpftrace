@@ -48,7 +48,8 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
 Result<output::Value> format(BPFtrace &bpftrace,
                              const ast::CDefinitions &c_definitions,
                              const BpfMap &map,
-                             size_t top = 0,
-                             uint32_t div = 1);
+                             uint64_t top_or_min = 0,
+                             uint64_t div_or_max = 1,
+                             uint8_t n_args = 1);
 
 } // namespace bpftrace

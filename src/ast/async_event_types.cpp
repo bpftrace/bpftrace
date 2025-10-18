@@ -10,9 +10,10 @@ std::vector<llvm::Type*> Print::asLLVMType(ast::IRBuilderBPF& b)
 {
   return {
     b.getInt64Ty(), // asyncid
+    b.getInt64Ty(), // top or min
+    b.getInt64Ty(), // div or max
     b.getInt32Ty(), // map id
-    b.getInt32Ty(), // top
-    b.getInt32Ty(), // div
+    b.getInt8Ty(),  // n_args
   };
 }
 
