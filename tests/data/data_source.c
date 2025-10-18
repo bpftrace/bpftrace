@@ -84,7 +84,30 @@ struct ArrayWithCompoundData {
   struct Foo3 *data[2];
 };
 
+typedef struct {
+  int a;
+} AnonStructTypedef;
+
+AnonStructTypedef AnonTypedefArray[8];
+
+struct anon_structs {
+  AnonStructTypedef AnonTypedefArray[8];
+  struct {
+    int a;
+    int b;
+    struct {
+      int c;
+      int d;
+    } AnonSubArray[2];
+  } AnonArray[4];
+};
+
 void func_array_with_compound_data(struct ArrayWithCompoundData *arr)
+{
+}
+
+void func_anon_struct(struct anon_structs *AnonStruct,
+                      AnonStructTypedef *AnonTypedef)
 {
 }
 
