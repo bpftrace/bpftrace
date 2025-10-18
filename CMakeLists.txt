@@ -224,6 +224,7 @@ endif()
 
 if(LIBBLAZESYM_FOUND)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BLAZESYM)
+  include_directories(SYSTEM ${LIBBLAZESYM_INCLUDE_DIRS})
 endif()
 
 add_subdirectory(src)

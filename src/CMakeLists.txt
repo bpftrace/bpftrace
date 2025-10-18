@@ -64,7 +64,6 @@ add_executable(bpftrace
 
 # TODO: Honor `STATIC_LINKING` properly.
 if(LIBBLAZESYM_FOUND)
-  target_include_directories(runtime PRIVATE ${LIBBLAZESYM_INCLUDE_DIRS})
   target_link_libraries(runtime ${LIBBLAZESYM_LIBRARIES})
 endif()
 
