@@ -1085,6 +1085,19 @@ The use of the `==` and `!=` operators is recommended over calling `strncmp` dir
 Returns the index of the first occurrence of the string needle in the string haystack. If needle is not in haystack then -1 is returned.
 
 
+### syscall_name
+- `string syscall_name(int nr_syscall)`
+
+Convert syscall number to string.
+
+```
+#include <syscall.h>
+begin {
+  print(syscall_name(__NR_read)); // outputs "read"
+}
+```
+
+
 ### system
 - `void system(string namefmt [, ...args])`
 
