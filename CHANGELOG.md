@@ -16,6 +16,8 @@ and this project adheres to
 - Remove the deprecated `sarg` builtin
   - [#4686](https://github.com/bpftrace/bpftrace/pull/4686)
 #### Added
+- Add `pcomm` to stdlib and `ppid` can be called without arguments.
+  - [#4744](https://github.com/bpftrace/bpftrace/pull/4744)
 - Add support for indexing string types
   - [#4540](https://github.com/bpftrace/bpftrace/pull/4540)
 - Automatic dereferencing is supported via `.`, now the preferred access operator
