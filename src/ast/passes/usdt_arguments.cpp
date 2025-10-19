@@ -1,7 +1,6 @@
 #include <set>
 
 #include "ast/ast.h"
-#include "ast/passes/resolve_imports.h"
 #include "ast/passes/usdt_arguments.h"
 #include "ast/visitor.h"
 
@@ -89,30 +88,28 @@ void USDTArgumentLift::visit(Expression &expr)
   }
 }
 
-Pass CreateUSDTImportPass()
+Pass CreateUSDTArgLiftPass()
 {
-  return Pass::create("USDTImport",
-                      [](ASTContext &ast, Imports &imports) -> Result<> {
-                        bool has_usdt = false;
-                        for (auto *probe : ast.root->probes) {
-                          for (auto *ap : probe->attach_points) {
-                            if (probetype(ap->provider) == ProbeType::usdt) {
-                              has_usdt = true;
-                              break;
-                            }
-                          }
-                          if (has_usdt)
-                            break;
-                        }
+  return Pass::create("USDTArgLift", [](ASTContext &ast) -> Result<> {
+    bool has_usdt = false;
+    for (auto *probe : ast.root->probes) {
+      for (auto *ap : probe->attach_points) {
+        if (probetype(ap->provider) == ProbeType::usdt) {
+          has_usdt = true;
+          break;
+        }
+      }
+      if (has_usdt)
+        break;
+    }
 
-                        if (has_usdt) {
-                          auto usdt_arguments = USDTArgumentLift(ast);
-                          usdt_arguments.visit(ast.root);
-                          return imports.import_any(*ast.root, "stdlib/usdt");
-                        }
+    if (has_usdt) {
+      auto usdt_arguments = USDTArgumentLift(ast);
+      usdt_arguments.visit(ast.root);
+    }
 
-                        return OK();
-                      });
+    return OK();
+  });
 }
 
 } // namespace bpftrace::ast

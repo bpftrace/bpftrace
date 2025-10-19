@@ -41,6 +41,7 @@ add_library(ast STATIC
   passes/resource_analyser.cpp
   passes/semantic_analyser.cpp
   passes/simplify_types.cpp
+  passes/stdlib_import.cpp
   passes/codegen_llvm.cpp
   passes/resolve_imports.cpp
   passes/recursion_check.cpp
