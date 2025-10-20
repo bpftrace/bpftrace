@@ -33,6 +33,7 @@ add_executable(bpftrace_test
   bpfbytecode.cpp
   bpftrace.cpp
   btf.cpp
+  cache.cpp
   child.cpp
   clang_parser.cpp
   named_param.cpp
