@@ -1,7 +1,8 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/ap_probe_expansion.h"
-#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
+#include "ast/passes/context_resolver.h"
+#include "ast/passes/macro_expansion.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -32,7 +33,8 @@ void test(BPFtrace &bpftrace,
                     .add(CreateParsePass())
                     .add(ast::CreateParseAttachpointsPass())
                     .add(ast::CreateProbeAndApExpansionPass())
-                    .add(ast::CreateArgsResolverPass())
+                    .add(ast::CreateMacroExpansionPass())
+                    .add(ast::CreateContextResolverPass())
                     .add(ast::CreateFieldAnalyserPass())
                     .run();
   ASSERT_TRUE(bool(result)) << msg.str();
