@@ -38,12 +38,6 @@ public:
   std::optional<Expression> visit(Variable &var);
   std::optional<Expression> visit(Map &map);
 
-  // Skip visiting in type expressions.
-  std::optional<Expression> visit([[maybe_unused]] Typeof &typeof)
-  {
-    return std::nullopt;
-  }
-
 private:
   // Return nullopt if we can't compare the tuples now
   // e.g. they contain variables, which are resolved at runtime
@@ -463,10 +457,6 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
     // Check for another string.
     auto *rs = other.as<String>();
     if (!rs) {
-      // Let's just make sure it's not a negative literal.
-      if (other.is<NegativeInteger>()) {
-        op.addError() << "illegal literal operation with strings";
-      }
       // This is a mix of a string and something else. This may be a runtime
       // type, and we need to leave it up to the semantic analysis.
       return std::nullopt;

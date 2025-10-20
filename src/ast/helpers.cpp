@@ -5,9 +5,10 @@
 
 namespace bpftrace {
 
+// N.B. there are other unsafe builtins but they are being checked
+// inside the macros themselves
 static std::unordered_set<std::string> UNSAFE_BUILTIN_FUNCS = {
   "system",
-  "signal",
 };
 
 static std::unordered_set<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };

@@ -18,7 +18,6 @@
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/simplify_types.h"
 #include "ast/passes/type_system.h"
-#include "ast/signal_bt.h"
 #include "btf/compat.h"
 #include "collect_nodes.h"
 #include "config.h"
@@ -525,10 +524,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .discard_ret_warn = true,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "signal",
-    { .min_args=1,
-      .max_args=2,
-       } },
   { "sizeof",
     { .min_args=1,
       .max_args=1,
@@ -1686,31 +1681,6 @@ void SemanticAnalyser::visit(Call &call)
     check_stack_call(call, true);
   } else if (call.func == "ustack") {
     check_stack_call(call, false);
-  } else if (call.func == "signal") {
-    auto &arg = call.vargs.at(0);
-    if (auto *sig = arg.as<String>()) {
-      if (signal_name_to_num(sig->value) < 1) {
-        call.addError() << sig << " is not a valid signal";
-      }
-    } else if (auto *integer = arg.as<Integer>()) {
-      if (integer->value < static_cast<uint64_t>(1) ||
-          integer->value > static_cast<uint64_t>(64)) {
-        call.addError() << std::to_string(integer->value)
-                        << " is not a valid signal, allowed range: [1,64]";
-      }
-    } else if (arg.is<NegativeInteger>() || !arg.type().IsIntTy()) {
-      call.addError()
-          << "signal only accepts literal strings and positive integers";
-    }
-    if (call.vargs.size() == 2) {
-      auto &signal_target = call.vargs.at(1);
-      if (!(signal_target.as<Identifier>())) {
-        call.addError() << call.func
-                        << "() only supports current_pid or current_tid as the "
-                           "second argument ("
-                        << signal_target.type().GetTy() << " provided)";
-      }
-    }
   } else if (call.func == "path") {
     auto *probe = get_probe(call, call.func);
     if (probe == nullptr)

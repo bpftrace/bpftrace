@@ -7,13 +7,13 @@ target triple = "bpf"
 %warnf_t = type { i64, %warnf_args_t }
 %warnf_args_t = type { i64 }
 %errorf_t = type { i64, %errorf_args_t }
-%errorf_args_t = type { [9 x i8], i32 }
+%errorf_args_t = type { [16 x i8], i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !22
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !29
-@"signal()" = global [9 x i8] c"signal()\00"
+@"signal_thread()" = global [16 x i8] c"signal_thread()\00"
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -30,7 +30,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$__signal_2_$sig")
   store i32 0, ptr %"$$__signal_2_$sig", align 4
   store i32 0, ptr %"$$__signal_2_$sig", align 4
-  store i32 9, ptr %"$$__signal_2_$sig", align 4
+  store i32 8, ptr %"$$__signal_2_$sig", align 4
   %1 = load i32, ptr %"$$__signal_2_$sig", align 4
   %2 = sext i32 %1 to i64
   %3 = icmp slt i64 %2, 1
@@ -39,23 +39,23 @@ entry:
 
 left:                                             ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %errorf_args)
-  call void @llvm.memset.p0.i64(ptr align 1 %errorf_args, i8 0, i64 24, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %errorf_args, i8 0, i64 32, i1 false)
   %4 = getelementptr %errorf_t, ptr %errorf_args, i32 0, i32 0
   store i64 0, ptr %4, align 8
   %5 = getelementptr %errorf_t, ptr %errorf_args, i32 0, i32 1
   %6 = getelementptr %errorf_args_t, ptr %5, i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %6, ptr align 1 @"signal()", i64 9, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %6, ptr align 1 @"signal_thread()", i64 16, i1 false)
   %7 = load i32, ptr %"$$__signal_2_$sig", align 4
   %8 = getelementptr %errorf_args_t, ptr %5, i32 0, i32 1
   store i32 %7, ptr %8, align 4
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %errorf_args, i64 24, i64 0)
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %errorf_args, i64 32, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 right:                                            ; preds = %entry
   %9 = load i32, ptr %"$$__signal_2_$sig", align 4
-  %__signal_process = call i64 @__signal_process(i32 %9), !dbg !41
-  store i64 %__signal_process, ptr %"$$__signal_2_$ret", align 8
+  %__signal_thread = call i64 @__signal_thread(i32 %9), !dbg !41
+  store i64 %__signal_thread, ptr %"$$__signal_2_$ret", align 8
   %10 = load i64, ptr %"$$__signal_2_$ret", align 8
   %11 = icmp ne i64 %10, 0
   %true_cond3 = icmp ne i1 %11, false
@@ -125,7 +125,7 @@ declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly %0, ptr noal
 declare void @llvm.lifetime.end.p0(i64 immarg %0, ptr nocapture %1) #1
 
 ; Function Attrs: alwaysinline nounwind
-declare dso_local i64 @__signal_process(i32 noundef %0) #4
+declare dso_local i64 @__signal_thread(i32 noundef %0) #4
 
 attributes #0 = { nounwind }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -178,4 +178,4 @@ attributes #5 = { memory(none) }
 !38 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !4, size: 64)
 !39 = !{!40}
 !40 = !DILocalVariable(name: "ctx", arg: 1, scope: !35, file: !2, type: !38)
-!41 = !DILocation(line: 38, column: 62, scope: !35)
+!41 = !DILocation(line: 38, column: 30, scope: !35)

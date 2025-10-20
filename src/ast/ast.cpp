@@ -303,30 +303,6 @@ bool AttachPoint::check_available(const std::string &identifier) const
       case ProbeType::rawtracepoint:
         return false;
     }
-  } else if (identifier == "signal") {
-    switch (type) {
-      case ProbeType::kprobe:
-      case ProbeType::kretprobe:
-      case ProbeType::uprobe:
-      case ProbeType::uretprobe:
-      case ProbeType::usdt:
-      case ProbeType::tracepoint:
-      case ProbeType::profile:
-      case ProbeType::fentry:
-      case ProbeType::fexit:
-      case ProbeType::rawtracepoint:
-        return true;
-      case ProbeType::invalid:
-      case ProbeType::special:
-      case ProbeType::benchmark:
-      case ProbeType::interval:
-      case ProbeType::software:
-      case ProbeType::hardware:
-      case ProbeType::watchpoint:
-      case ProbeType::asyncwatchpoint:
-      case ProbeType::iter:
-        return false;
-    }
   } else if (identifier == "skboutput" || identifier == "socket_cookie") {
     return bpftrace::progtype(type) == BPF_PROG_TYPE_TRACING;
   }
