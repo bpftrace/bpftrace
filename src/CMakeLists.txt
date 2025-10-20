@@ -39,6 +39,7 @@ add_library(runtime STATIC
   procmon.cpp
   run_bpftrace.cpp
   pcap_writer.cpp
+  tracepoint_format_parser.cpp
   types_format.cpp
   ksyms.cpp
   usyms.cpp

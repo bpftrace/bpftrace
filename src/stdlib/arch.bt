@@ -1,0 +1,875 @@
+macro registers()
+{
+  if comptime (__builtin_probetype != "uprobe" &&
+               __builtin_probetype != "uretprobe" &&
+               __builtin_probetype != "kprobe" && __builtin_probetype != "kretprobe") {
+    fail("reg can not be used with \"%s\" probes", __builtin_probetype)
+  } else {
+    ctx
+  }
+}
+
+macro reg(s)
+{
+  let $regs = registers();
+  if comptime (__builtin_arch == "x86_64") {
+    if comptime (s == "r15") {
+      $regs.r15
+    } else if comptime (s == "r14") {
+      $regs.r14
+    } else if comptime (s == "r13") {
+      $regs.r13
+    } else if comptime (s == "r12") {
+      $regs.r12
+    } else if comptime (s == "bp" || s == "rbp") {
+      $regs.bp
+    } else if comptime (s == "bx" || s == "rbx") {
+      $regs.bx
+    } else if comptime (s == "r11") {
+      $regs.r11
+    } else if comptime (s == "r10") {
+      $regs.r10
+    } else if comptime (s == "r9") {
+      $regs.r9
+    } else if comptime (s == "r8") {
+      $regs.r8
+    } else if comptime (s == "ax" || s == "rax") {
+      $regs.ax
+    } else if comptime (s == "cx" || s == "rcx") {
+      $regs.cx
+    } else if comptime (s == "dx" || s == "rdx") {
+      $regs.dx
+    } else if comptime (s == "si" || s == "rsi") {
+      $regs.si
+    } else if comptime (s == "di" || s == "rdi") {
+      $regs.di
+    } else if comptime (s == "orig_rax") {
+      $regs.orig_rax
+    } else if comptime (s == "ip" || s == "rip") {
+      $regs.ip
+    } else if comptime (s == "cs") {
+      $regs.cs
+    } else if comptime (s == "flags" || s == "eflags") {
+      $regs.flags
+    } else if comptime (s == "sp" || s == "rsp") {
+      $regs.sp
+    } else if comptime (s == "ss") {
+      $regs.ss
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "arm") {
+    if comptime (s == "r0") {
+      $regs.uregs[0]
+    } else if comptime (s == "r1") {
+      $regs.uregs[1]
+    } else if comptime (s == "r2") {
+      $regs.uregs[2]
+    } else if comptime (s == "r3") {
+      $regs.uregs[3]
+    } else if comptime (s == "r4") {
+      $regs.uregs[4]
+    } else if comptime (s == "r5") {
+      $regs.uregs[5]
+    } else if comptime (s == "r6") {
+      $regs.uregs[6]
+    } else if comptime (s == "r7") {
+      $regs.uregs[7]
+    } else if comptime (s == "r8") {
+      $regs.uregs[8]
+    } else if comptime (s == "r9") {
+      $regs.uregs[9]
+    } else if comptime (s == "r10") {
+      $regs.uregs[10]
+    } else if comptime (s == "regs[0]") {
+      $regs.uregs[0]
+    } else if comptime (s == "regs[1]") {
+      $regs.uregs[1]
+    } else if comptime (s == "regs[2]") {
+      $regs.uregs[2]
+    } else if comptime (s == "regs[3]") {
+      $regs.uregs[3]
+    } else if comptime (s == "regs[4]") {
+      $regs.uregs[4]
+    } else if comptime (s == "regs[5]") {
+      $regs.uregs[5]
+    } else if comptime (s == "regs[6]") {
+      $regs.uregs[6]
+    } else if comptime (s == "regs[7]") {
+      $regs.uregs[7]
+    } else if comptime (s == "regs[8]") {
+      $regs.uregs[8]
+    } else if comptime (s == "regs[9]") {
+      $regs.uregs[9]
+    } else if comptime (s == "regs[10]") {
+      $regs.uregs[10]
+    } else if comptime (s == "fp") {
+      $regs.uregs[11]
+    } else if comptime (s == "ip") {
+      $regs.uregs[12]
+    } else if comptime (s == "sp") {
+      $regs.uregs[13]
+    } else if comptime (s == "lr") {
+      $regs.uregs[14]
+    } else if comptime (s == "pc") {
+      $regs.uregs[15]
+    } else if comptime (s == "cpsr") {
+      $regs.uregs[16]
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "arm64") {
+    if comptime (s == "r0") {
+      $regs.regs[0]
+    } else if comptime (s == "r1") {
+      $regs.regs[1]
+    } else if comptime (s == "r2") {
+      $regs.regs[2]
+    } else if comptime (s == "r3") {
+      $regs.regs[3]
+    } else if comptime (s == "r4") {
+      $regs.regs[4]
+    } else if comptime (s == "r5") {
+      $regs.regs[5]
+    } else if comptime (s == "r6") {
+      $regs.regs[6]
+    } else if comptime (s == "r7") {
+      $regs.regs[7]
+    } else if comptime (s == "r8") {
+      $regs.regs[8]
+    } else if comptime (s == "r9") {
+      $regs.regs[9]
+    } else if comptime (s == "r10") {
+      $regs.regs[10]
+    } else if comptime (s == "r11") {
+      $regs.regs[11]
+    } else if comptime (s == "r12") {
+      $regs.regs[12]
+    } else if comptime (s == "r13") {
+      $regs.regs[13]
+    } else if comptime (s == "r14") {
+      $regs.regs[14]
+    } else if comptime (s == "r15") {
+      $regs.regs[15]
+    } else if comptime (s == "r16") {
+      $regs.regs[16]
+    } else if comptime (s == "r17") {
+      $regs.regs[17]
+    } else if comptime (s == "r18") {
+      $regs.regs[18]
+    } else if comptime (s == "r19") {
+      $regs.regs[19]
+    } else if comptime (s == "r20") {
+      $regs.regs[20]
+    } else if comptime (s == "r21") {
+      $regs.regs[21]
+    } else if comptime (s == "r22") {
+      $regs.regs[22]
+    } else if comptime (s == "r23") {
+      $regs.regs[23]
+    } else if comptime (s == "r24") {
+      $regs.regs[24]
+    } else if comptime (s == "r25") {
+      $regs.regs[25]
+    } else if comptime (s == "r26") {
+      $regs.regs[26]
+    } else if comptime (s == "r27") {
+      $regs.regs[27]
+    } else if comptime (s == "r28") {
+      $regs.regs[28]
+    } else if comptime (s == "r29") {
+      $regs.regs[29]
+    } else if comptime (s == "r30") {
+      $regs.regs[30]
+    } else if comptime (s == "regs[0]") {
+      $regs.regs[0]
+    } else if comptime (s == "regs[1]") {
+      $regs.regs[1]
+    } else if comptime (s == "regs[2]") {
+      $regs.regs[2]
+    } else if comptime (s == "regs[3]") {
+      $regs.regs[3]
+    } else if comptime (s == "regs[4]") {
+      $regs.regs[4]
+    } else if comptime (s == "regs[5]") {
+      $regs.regs[5]
+    } else if comptime (s == "regs[6]") {
+      $regs.regs[6]
+    } else if comptime (s == "regs[7]") {
+      $regs.regs[7]
+    } else if comptime (s == "regs[8]") {
+      $regs.regs[8]
+    } else if comptime (s == "regs[9]") {
+      $regs.regs[9]
+    } else if comptime (s == "regs[10]") {
+      $regs.regs[10]
+    } else if comptime (s == "regs[11]") {
+      $regs.regs[11]
+    } else if comptime (s == "regs[12]") {
+      $regs.regs[12]
+    } else if comptime (s == "regs[13]") {
+      $regs.regs[13]
+    } else if comptime (s == "regs[14]") {
+      $regs.regs[14]
+    } else if comptime (s == "regs[15]") {
+      $regs.regs[15]
+    } else if comptime (s == "regs[16]") {
+      $regs.regs[16]
+    } else if comptime (s == "regs[17]") {
+      $regs.regs[17]
+    } else if comptime (s == "regs[18]") {
+      $regs.regs[18]
+    } else if comptime (s == "regs[19]") {
+      $regs.regs[19]
+    } else if comptime (s == "regs[20]") {
+      $regs.regs[20]
+    } else if comptime (s == "regs[21]") {
+      $regs.regs[21]
+    } else if comptime (s == "regs[22]") {
+      $regs.regs[22]
+    } else if comptime (s == "regs[23]") {
+      $regs.regs[23]
+    } else if comptime (s == "regs[24]") {
+      $regs.regs[24]
+    } else if comptime (s == "regs[25]") {
+      $regs.regs[25]
+    } else if comptime (s == "regs[26]") {
+      $regs.regs[26]
+    } else if comptime (s == "regs[27]") {
+      $regs.regs[27]
+    } else if comptime (s == "regs[28]") {
+      $regs.regs[28]
+    } else if comptime (s == "regs[29]") {
+      $regs.regs[29]
+    } else if comptime (s == "regs[30]") {
+      $regs.regs[30]
+    } else if comptime (s == "compat_fp") {
+      $regs.regs[11]
+    } else if comptime (s == "compat_sp") {
+      $regs.regs[13]
+    } else if comptime (s == "compat_lr") {
+      $regs.regs[14]
+    } else if comptime (s == "sp") {
+      $regs.sp
+    } else if comptime (s == "pc") {
+      $regs.pc
+    } else if comptime (s == "pstate") {
+      $regs.pstate
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "powerpc") {
+    if comptime (s == "r0") {
+      $regs.gpr[0]
+    } else if comptime (s == "r1") {
+      $regs.gpr[1]
+    } else if comptime (s == "r2") {
+      $regs.gpr[2]
+    } else if comptime (s == "r3") {
+      $regs.gpr[3]
+    } else if comptime (s == "r4") {
+      $regs.gpr[4]
+    } else if comptime (s == "r5") {
+      $regs.gpr[5]
+    } else if comptime (s == "r6") {
+      $regs.gpr[6]
+    } else if comptime (s == "r7") {
+      $regs.gpr[7]
+    } else if comptime (s == "r8") {
+      $regs.gpr[8]
+    } else if comptime (s == "r9") {
+      $regs.gpr[9]
+    } else if comptime (s == "r10") {
+      $regs.gpr[10]
+    } else if comptime (s == "r11") {
+      $regs.gpr[11]
+    } else if comptime (s == "r12") {
+      $regs.gpr[12]
+    } else if comptime (s == "r13") {
+      $regs.gpr[13]
+    } else if comptime (s == "r14") {
+      $regs.gpr[14]
+    } else if comptime (s == "r15") {
+      $regs.gpr[15]
+    } else if comptime (s == "r16") {
+      $regs.gpr[16]
+    } else if comptime (s == "r17") {
+      $regs.gpr[17]
+    } else if comptime (s == "r18") {
+      $regs.gpr[18]
+    } else if comptime (s == "r19") {
+      $regs.gpr[19]
+    } else if comptime (s == "r20") {
+      $regs.gpr[20]
+    } else if comptime (s == "r21") {
+      $regs.gpr[21]
+    } else if comptime (s == "r22") {
+      $regs.gpr[22]
+    } else if comptime (s == "r23") {
+      $regs.gpr[23]
+    } else if comptime (s == "r24") {
+      $regs.gpr[24]
+    } else if comptime (s == "r25") {
+      $regs.gpr[25]
+    } else if comptime (s == "r26") {
+      $regs.gpr[26]
+    } else if comptime (s == "r27") {
+      $regs.gpr[27]
+    } else if comptime (s == "r28") {
+      $regs.gpr[28]
+    } else if comptime (s == "r29") {
+      $regs.gpr[29]
+    } else if comptime (s == "r30") {
+      $regs.gpr[30]
+    } else if comptime (s == "r31") {
+      $regs.gpr[31]
+    } else if comptime (s == "nip") {
+      $regs.nip
+    } else if comptime (s == "msr") {
+      $regs.msr
+    } else if comptime (s == "orig_gpr3") {
+      $regs.orig_gpr3
+    } else if comptime (s == "ctr") {
+      $regs.ctr
+    } else if comptime (s == "link") {
+      $regs.link
+    } else if comptime (s == "xer") {
+      $regs.xer
+    } else if comptime (s == "ccr") {
+      $regs.ccr
+    } else if comptime (s == "softe") {
+      $regs.softe
+    } else if comptime (s == "trap") {
+      $regs.trap
+    } else if comptime (s == "dar") {
+      $regs.dar
+    } else if comptime (s == "dsisr") {
+      $regs.dsisr
+    } else if comptime (s == "result") {
+      $regs.result
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "s390") {
+    if comptime (s == "arg") {
+      $regs.args[0]
+    } else if comptime (s == "pswmask") {
+      $regs.psw.mask
+    } else if comptime (s == "pswaddr") {
+      $regs.psw.addr
+    } else if comptime (s == "r0") {
+      $regs.gprs[0]
+    } else if comptime (s == "r1") {
+      $regs.gprs[1]
+    } else if comptime (s == "r2") {
+      $regs.gprs[2]
+    } else if comptime (s == "r3") {
+      $regs.gprs[3]
+    } else if comptime (s == "r4") {
+      $regs.gprs[4]
+    } else if comptime (s == "r5") {
+      $regs.gprs[5]
+    } else if comptime (s == "r6") {
+      $regs.gprs[6]
+    } else if comptime (s == "r7") {
+      $regs.gprs[7]
+    } else if comptime (s == "r8") {
+      $regs.gprs[8]
+    } else if comptime (s == "r9") {
+      $regs.gprs[9]
+    } else if comptime (s == "r10") {
+      $regs.gprs[10]
+    } else if comptime (s == "r11") {
+      $regs.gprs[11]
+    } else if comptime (s == "r12") {
+      $regs.gprs[12]
+    } else if comptime (s == "r13") {
+      $regs.gprs[13]
+    } else if comptime (s == "r14") {
+      $regs.gprs[14]
+    } else if comptime (s == "r15") {
+      $regs.gprs[15]
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "mips") {
+    if comptime (s == "zero") {
+      $regs.regs[0]
+    } else if comptime (s == "at") {
+      $regs.regs[1]
+    } else if comptime (s == "v0") {
+      $regs.regs[2]
+    } else if comptime (s == "v1") {
+      $regs.regs[3]
+    } else if comptime (s == "a0") {
+      $regs.regs[4]
+    } else if comptime (s == "a1") {
+      $regs.regs[5]
+    } else if comptime (s == "a2") {
+      $regs.regs[6]
+    } else if comptime (s == "a3") {
+      $regs.regs[7]
+    } else if comptime (s == "a4") {
+      $regs.regs[8]
+    } else if comptime (s == "a5") {
+      $regs.regs[9]
+    } else if comptime (s == "a6") {
+      $regs.regs[10]
+    } else if comptime (s == "a7") {
+      $regs.regs[11]
+    } else if comptime (s == "t0") {
+      $regs.regs[12]
+    } else if comptime (s == "t1") {
+      $regs.regs[13]
+    } else if comptime (s == "t2") {
+      $regs.regs[14]
+    } else if comptime (s == "t3") {
+      $regs.regs[15]
+    } else if comptime (s == "s0") {
+      $regs.regs[16]
+    } else if comptime (s == "s1") {
+      $regs.regs[17]
+    } else if comptime (s == "s2") {
+      $regs.regs[18]
+    } else if comptime (s == "s3") {
+      $regs.regs[19]
+    } else if comptime (s == "s4") {
+      $regs.regs[20]
+    } else if comptime (s == "s5") {
+      $regs.regs[21]
+    } else if comptime (s == "s6") {
+      $regs.regs[22]
+    } else if comptime (s == "s7") {
+      $regs.regs[23]
+    } else if comptime (s == "t8") {
+      $regs.regs[24]
+    } else if comptime (s == "t9") {
+      $regs.regs[25]
+    } else if comptime (s == "k0") {
+      $regs.regs[26]
+    } else if comptime (s == "k1") {
+      $regs.regs[27]
+    } else if comptime (s == "gp") {
+      $regs.regs[28]
+    } else if comptime (s == "sp") {
+      $regs.regs[29]
+    } else if comptime (s == "fp" || s == "fp/s8") {
+      $regs.regs[30]
+    } else if comptime (s == "ra") {
+      $regs.regs[31]
+    } else if comptime (s == "regs[0]") {
+      $regs.regs[0]
+    } else if comptime (s == "regs[1]") {
+      $regs.regs[1]
+    } else if comptime (s == "regs[2]") {
+      $regs.regs[2]
+    } else if comptime (s == "regs[3]") {
+      $regs.regs[3]
+    } else if comptime (s == "regs[4]") {
+      $regs.regs[4]
+    } else if comptime (s == "regs[5]") {
+      $regs.regs[5]
+    } else if comptime (s == "regs[6]") {
+      $regs.regs[6]
+    } else if comptime (s == "regs[7]") {
+      $regs.regs[7]
+    } else if comptime (s == "regs[8]") {
+      $regs.regs[8]
+    } else if comptime (s == "regs[9]") {
+      $regs.regs[9]
+    } else if comptime (s == "regs[10]") {
+      $regs.regs[10]
+    } else if comptime (s == "regs[11]") {
+      $regs.regs[11]
+    } else if comptime (s == "regs[12]") {
+      $regs.regs[12]
+    } else if comptime (s == "regs[13]") {
+      $regs.regs[13]
+    } else if comptime (s == "regs[14]") {
+      $regs.regs[14]
+    } else if comptime (s == "regs[15]") {
+      $regs.regs[15]
+    } else if comptime (s == "regs[16]") {
+      $regs.regs[16]
+    } else if comptime (s == "regs[17]") {
+      $regs.regs[17]
+    } else if comptime (s == "regs[18]") {
+      $regs.regs[18]
+    } else if comptime (s == "regs[19]") {
+      $regs.regs[19]
+    } else if comptime (s == "regs[20]") {
+      $regs.regs[20]
+    } else if comptime (s == "regs[21]") {
+      $regs.regs[21]
+    } else if comptime (s == "regs[22]") {
+      $regs.regs[22]
+    } else if comptime (s == "regs[23]") {
+      $regs.regs[23]
+    } else if comptime (s == "regs[24]") {
+      $regs.regs[24]
+    } else if comptime (s == "regs[25]") {
+      $regs.regs[25]
+    } else if comptime (s == "regs[26]") {
+      $regs.regs[26]
+    } else if comptime (s == "regs[27]") {
+      $regs.regs[27]
+    } else if comptime (s == "regs[28]") {
+      $regs.regs[28]
+    } else if comptime (s == "regs[29]") {
+      $regs.regs[29]
+    } else if comptime (s == "regs[30]") {
+      $regs.regs[30]
+    } else if comptime (s == "regs[31]") {
+      $regs.regs[31]
+    } else if comptime (s == "cp0_status") {
+      $regs.cp0_status
+    } else if comptime (s == "hi") {
+      $regs.hi
+    } else if comptime (s == "lo") {
+      $regs.lo
+    } else if comptime (s == "cp0_badvaddr") {
+      $regs.cp0_badvaddr
+    } else if comptime (s == "cp0_cause") {
+      $regs.cp0_cause
+    } else if comptime (s == "cp0_epc") {
+      $regs.cp0_epc
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "riscv") {
+    if comptime (s == "pc") {
+      $regs.epc
+    } else if comptime (s == "ra") {
+      $regs.ra
+    } else if comptime (s == "sp") {
+      $regs.sp
+    } else if comptime (s == "gp") {
+      $regs.gp
+    } else if comptime (s == "tp") {
+      $regs.tp
+    } else if comptime (s == "t0") {
+      $regs.t0
+    } else if comptime (s == "t1") {
+      $regs.t1
+    } else if comptime (s == "t2") {
+      $regs.t2
+    } else if comptime (s == "s0") {
+      $regs.s0
+    } else if comptime (s == "s1") {
+      $regs.s1
+    } else if comptime (s == "a0") {
+      $regs.a0
+    } else if comptime (s == "a1") {
+      $regs.a1
+    } else if comptime (s == "a2") {
+      $regs.a2
+    } else if comptime (s == "a3") {
+      $regs.a3
+    } else if comptime (s == "a4") {
+      $regs.a4
+    } else if comptime (s == "a5") {
+      $regs.a5
+    } else if comptime (s == "a6") {
+      $regs.a6
+    } else if comptime (s == "a7") {
+      $regs.a7
+    } else if comptime (s == "s2") {
+      $regs.s2
+    } else if comptime (s == "s3") {
+      $regs.s3
+    } else if comptime (s == "s4") {
+      $regs.s4
+    } else if comptime (s == "s5") {
+      $regs.s5
+    } else if comptime (s == "s6") {
+      $regs.s6
+    } else if comptime (s == "s7") {
+      $regs.s7
+    } else if comptime (s == "s8") {
+      $regs.s8
+    } else if comptime (s == "s9") {
+      $regs.s9
+    } else if comptime (s == "s10") {
+      $regs.s10
+    } else if comptime (s == "s11") {
+      $regs.s11
+    } else if comptime (s == "t3") {
+      $regs.t3
+    } else if comptime (s == "t4") {
+      $regs.t4
+    } else if comptime (s == "t5") {
+      $regs.t5
+    } else if comptime (s == "t6") {
+      $regs.t6
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "loongarch") {
+    if comptime (s == "r0") {
+      $regs.regs[0]
+    } else if comptime (s == "r1") {
+      $regs.regs[1]
+    } else if comptime (s == "r2") {
+      $regs.regs[2]
+    } else if comptime (s == "r3") {
+      $regs.regs[3]
+    } else if comptime (s == "r4") {
+      $regs.regs[4]
+    } else if comptime (s == "r5") {
+      $regs.regs[5]
+    } else if comptime (s == "r6") {
+      $regs.regs[6]
+    } else if comptime (s == "r7") {
+      $regs.regs[7]
+    } else if comptime (s == "r8") {
+      $regs.regs[8]
+    } else if comptime (s == "r9") {
+      $regs.regs[9]
+    } else if comptime (s == "r10") {
+      $regs.regs[10]
+    } else if comptime (s == "r11") {
+      $regs.regs[11]
+    } else if comptime (s == "r12") {
+      $regs.regs[12]
+    } else if comptime (s == "r13") {
+      $regs.regs[13]
+    } else if comptime (s == "r14") {
+      $regs.regs[14]
+    } else if comptime (s == "r15") {
+      $regs.regs[15]
+    } else if comptime (s == "r16") {
+      $regs.regs[16]
+    } else if comptime (s == "r17") {
+      $regs.regs[17]
+    } else if comptime (s == "r18") {
+      $regs.regs[18]
+    } else if comptime (s == "r19") {
+      $regs.regs[19]
+    } else if comptime (s == "r20") {
+      $regs.regs[20]
+    } else if comptime (s == "r21") {
+      $regs.regs[21]
+    } else if comptime (s == "r22") {
+      $regs.regs[22]
+    } else if comptime (s == "r23") {
+      $regs.regs[23]
+    } else if comptime (s == "r24") {
+      $regs.regs[24]
+    } else if comptime (s == "r25") {
+      $regs.regs[25]
+    } else if comptime (s == "r26") {
+      $regs.regs[26]
+    } else if comptime (s == "r27") {
+      $regs.regs[27]
+    } else if comptime (s == "r28") {
+      $regs.regs[28]
+    } else if comptime (s == "r29") {
+      $regs.regs[29]
+    } else if comptime (s == "r30") {
+      $regs.regs[30]
+    } else if comptime (s == "r31") {
+      $regs.regs[31]
+    } else if comptime (s == "regs[0]") {
+      $regs.regs[0]
+    } else if comptime (s == "regs[1]") {
+      $regs.regs[1]
+    } else if comptime (s == "regs[2]") {
+      $regs.regs[2]
+    } else if comptime (s == "regs[3]") {
+      $regs.regs[3]
+    } else if comptime (s == "regs[4]") {
+      $regs.regs[4]
+    } else if comptime (s == "regs[5]") {
+      $regs.regs[5]
+    } else if comptime (s == "regs[6]") {
+      $regs.regs[6]
+    } else if comptime (s == "regs[7]") {
+      $regs.regs[7]
+    } else if comptime (s == "regs[8]") {
+      $regs.regs[8]
+    } else if comptime (s == "regs[9]") {
+      $regs.regs[9]
+    } else if comptime (s == "regs[10]") {
+      $regs.regs[10]
+    } else if comptime (s == "regs[11]") {
+      $regs.regs[11]
+    } else if comptime (s == "regs[12]") {
+      $regs.regs[12]
+    } else if comptime (s == "regs[13]") {
+      $regs.regs[13]
+    } else if comptime (s == "regs[14]") {
+      $regs.regs[14]
+    } else if comptime (s == "regs[15]") {
+      $regs.regs[15]
+    } else if comptime (s == "regs[16]") {
+      $regs.regs[16]
+    } else if comptime (s == "regs[17]") {
+      $regs.regs[17]
+    } else if comptime (s == "regs[18]") {
+      $regs.regs[18]
+    } else if comptime (s == "regs[19]") {
+      $regs.regs[19]
+    } else if comptime (s == "regs[20]") {
+      $regs.regs[20]
+    } else if comptime (s == "regs[21]") {
+      $regs.regs[21]
+    } else if comptime (s == "regs[22]") {
+      $regs.regs[22]
+    } else if comptime (s == "regs[23]") {
+      $regs.regs[23]
+    } else if comptime (s == "regs[24]") {
+      $regs.regs[24]
+    } else if comptime (s == "regs[25]") {
+      $regs.regs[25]
+    } else if comptime (s == "regs[26]") {
+      $regs.regs[26]
+    } else if comptime (s == "regs[27]") {
+      $regs.regs[27]
+    } else if comptime (s == "regs[28]") {
+      $regs.regs[28]
+    } else if comptime (s == "regs[29]") {
+      $regs.regs[29]
+    } else if comptime (s == "regs[30]") {
+      $regs.regs[30]
+    } else if comptime (s == "regs[31]") {
+      $regs.regs[31]
+    } else if comptime (s == "orig_a0") {
+      $regs.orig_a0
+    } else if comptime (s == "pc") {
+      $regs.csr_era
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else {
+    fail("register lookup not supported for architecture: %s", __builtin_arch)
+  }
+}
+
+macro __arguments()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    ("di","si","dx","cx","r8","r9")
+  } else if comptime (__builtin_arch == "arm") {
+    ("r0","r1","r2","r3")
+  } else if comptime (__builtin_arch == "arm64") {
+    ("r0","r1","r2","r3","r4","r5","r6","r7")
+  } else if comptime (__builtin_arch == "powerpc") {
+    ("r3","r4","r5","r6","r7","r8","r9","r10")
+  } else if comptime (__builtin_arch == "s390") {
+    ("r2","r3","r4","r5","r6")
+  } else if comptime (__builtin_arch == "mips") {
+    ("a0","a1","a2","a3","a4","a5","a6","a7")
+  } else if comptime (__builtin_arch == "riscv") {
+    ("a0","a1","a2","a3","a4","a5","a6","a7")
+  } else if comptime (__builtin_arch == "loongarch") {
+    ("r4","r5","r6","r7","r8","r9","r10","r11")
+  } else {
+    fail("arguments not supported for architecture: %s", __builtin_arch)
+  }
+}
+
+macro arg(n)
+{
+  reg(__arguments()[n])
+}
+
+macro __return_value()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    "ax"
+  } else if comptime (__builtin_arch == "arm") {
+    "r0"
+  } else if comptime (__builtin_arch == "arm64") {
+    "r0"
+  } else if comptime (__builtin_arch == "powerpc") {
+    "r3"
+  } else if comptime (__builtin_arch == "s390") {
+    "r2"
+  } else if comptime (__builtin_arch == "mips") {
+    "v0"
+  } else if comptime (__builtin_arch == "riscv") {
+    "a0"
+  } else if comptime (__builtin_arch == "loongarch") {
+    "r4"
+  } else {
+    fail("return value register not defined for architecture: %s", __builtin_arch)
+  }
+}
+
+macro return_value()
+{
+  reg(__return_value())
+}
+
+macro __pc_value()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    "ip"
+  } else if comptime (__builtin_arch == "arm") {
+    "pc"
+  } else if comptime (__builtin_arch == "arm64") {
+    "pc"
+  } else if comptime (__builtin_arch == "powerpc") {
+    "nip"
+  } else if comptime (__builtin_arch == "s390") {
+    "pswaddr"
+  } else if comptime (__builtin_arch == "mips") {
+    "cp0_epc"
+  } else if comptime (__builtin_arch == "riscv") {
+    "pc"
+  } else if comptime (__builtin_arch == "loongarch") {
+    "pc"
+  } else {
+    fail("program counter register not defined for architecture: %s", __builtin_arch)
+  }
+}
+
+macro pc()
+{
+  reg(__pc_value())
+}
+
+macro __sp_value()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    "sp"
+  } else if comptime (__builtin_arch == "arm") {
+    "sp"
+  } else if comptime (__builtin_arch == "arm64") {
+    "sp"
+  } else if comptime (__builtin_arch == "powerpc") {
+    "r1"
+  } else if comptime (__builtin_arch == "s390") {
+    "r15"
+  } else if comptime (__builtin_arch == "mips") {
+    "sp"
+  } else if comptime (__builtin_arch == "riscv") {
+    "sp"
+  } else if comptime (__builtin_arch == "loongarch") {
+    "r3"
+  } else {
+    fail("stack pointer register not defined for architecture: %s", __builtin_arch)
+  }
+}
+
+macro stack_pointer()
+{
+  reg(__sp_value())
+}
+
+// :variant uint8 usermode()
+// Returns 1 if the current process is in user mode, 0 otherwise
+//
+// Currently only available on x86_64.
+macro usermode()
+{
+  if comptime (__builtin_arch != "x86_64") { fail("currently only available for x86_64") } else { reg("cs") & 0x3 == 0x3 }
+}
+
+// :variant string func()
+// Name of the current function being traced (kprobes,uprobes,fentry)
+macro func()
+{
+  import "stdlib/arch/arch.bpf.c";
+  usym(__bpf_get_func_ip((void *)ctx))
+}
