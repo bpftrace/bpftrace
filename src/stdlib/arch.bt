@@ -1,0 +1,907 @@
+macro registers()
+{
+  if comptime (__builtin_probetype != "uprobe" &&
+               __builtin_probetype != "uretprobe" &&
+               __builtin_probetype != "kprobe" && __builtin_probetype != "kretprobe") {
+    fail("registers can not be used with \"%s\" probes", __builtin_probetype)
+  } else {
+    ctx
+  }
+}
+
+macro reg(s)
+{
+  if comptime (__builtin_arch == "x86_64") {
+    if comptime (s == "r15") {
+      registers.r15
+    } else if comptime (s == "r14") {
+      registers.r14
+    } else if comptime (s == "r13") {
+      registers.r13
+    } else if comptime (s == "r12") {
+      registers.r12
+    } else if comptime (s == "bp" || s == "rbp") {
+      registers.bp
+    } else if comptime (s == "bx" || s == "rbx") {
+      registers.bx
+    } else if comptime (s == "r11") {
+      registers.r11
+    } else if comptime (s == "r10") {
+      registers.r10
+    } else if comptime (s == "r9") {
+      registers.r9
+    } else if comptime (s == "r8") {
+      registers.r8
+    } else if comptime (s == "ax" || s == "rax") {
+      registers.ax
+    } else if comptime (s == "cx" || s == "rcx") {
+      registers.cx
+    } else if comptime (s == "dx" || s == "rdx") {
+      registers.dx
+    } else if comptime (s == "si" || s == "rsi") {
+      registers.si
+    } else if comptime (s == "di" || s == "rdi") {
+      registers.di
+    } else if comptime (s == "orig_rax") {
+      registers.orig_rax
+    } else if comptime (s == "ip" || s == "rip") {
+      registers.ip
+    } else if comptime (s == "cs") {
+      registers.cs
+    } else if comptime (s == "flags" || s == "eflags") {
+      registers.flags
+    } else if comptime (s == "sp" || s == "rsp") {
+      registers.sp
+    } else if comptime (s == "ss") {
+      registers.ss
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "arm") {
+    if comptime (s == "r0") {
+      registers.uregs[0]
+    } else if comptime (s == "r1") {
+      registers.uregs[1]
+    } else if comptime (s == "r2") {
+      registers.uregs[2]
+    } else if comptime (s == "r3") {
+      registers.uregs[3]
+    } else if comptime (s == "r4") {
+      registers.uregs[4]
+    } else if comptime (s == "r5") {
+      registers.uregs[5]
+    } else if comptime (s == "r6") {
+      registers.uregs[6]
+    } else if comptime (s == "r7") {
+      registers.uregs[7]
+    } else if comptime (s == "r8") {
+      registers.uregs[8]
+    } else if comptime (s == "r9") {
+      registers.uregs[9]
+    } else if comptime (s == "r10") {
+      registers.uregs[10]
+    } else if comptime (s == "regs[0]") {
+      registers.uregs[0]
+    } else if comptime (s == "regs[1]") {
+      registers.uregs[1]
+    } else if comptime (s == "regs[2]") {
+      registers.uregs[2]
+    } else if comptime (s == "regs[3]") {
+      registers.uregs[3]
+    } else if comptime (s == "regs[4]") {
+      registers.uregs[4]
+    } else if comptime (s == "regs[5]") {
+      registers.uregs[5]
+    } else if comptime (s == "regs[6]") {
+      registers.uregs[6]
+    } else if comptime (s == "regs[7]") {
+      registers.uregs[7]
+    } else if comptime (s == "regs[8]") {
+      registers.uregs[8]
+    } else if comptime (s == "regs[9]") {
+      registers.uregs[9]
+    } else if comptime (s == "regs[10]") {
+      registers.uregs[10]
+    } else if comptime (s == "fp") {
+      registers.uregs[11]
+    } else if comptime (s == "ip") {
+      registers.uregs[12]
+    } else if comptime (s == "sp") {
+      registers.uregs[13]
+    } else if comptime (s == "lr") {
+      registers.uregs[14]
+    } else if comptime (s == "pc") {
+      registers.uregs[15]
+    } else if comptime (s == "cpsr") {
+      registers.uregs[16]
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "arm64") {
+    if comptime (s == "r0") {
+      registers.regs[0]
+    } else if comptime (s == "r1") {
+      registers.regs[1]
+    } else if comptime (s == "r2") {
+      registers.regs[2]
+    } else if comptime (s == "r3") {
+      registers.regs[3]
+    } else if comptime (s == "r4") {
+      registers.regs[4]
+    } else if comptime (s == "r5") {
+      registers.regs[5]
+    } else if comptime (s == "r6") {
+      registers.regs[6]
+    } else if comptime (s == "r7") {
+      registers.regs[7]
+    } else if comptime (s == "r8") {
+      registers.regs[8]
+    } else if comptime (s == "r9") {
+      registers.regs[9]
+    } else if comptime (s == "r10") {
+      registers.regs[10]
+    } else if comptime (s == "r11") {
+      registers.regs[11]
+    } else if comptime (s == "r12") {
+      registers.regs[12]
+    } else if comptime (s == "r13") {
+      registers.regs[13]
+    } else if comptime (s == "r14") {
+      registers.regs[14]
+    } else if comptime (s == "r15") {
+      registers.regs[15]
+    } else if comptime (s == "r16") {
+      registers.regs[16]
+    } else if comptime (s == "r17") {
+      registers.regs[17]
+    } else if comptime (s == "r18") {
+      registers.regs[18]
+    } else if comptime (s == "r19") {
+      registers.regs[19]
+    } else if comptime (s == "r20") {
+      registers.regs[20]
+    } else if comptime (s == "r21") {
+      registers.regs[21]
+    } else if comptime (s == "r22") {
+      registers.regs[22]
+    } else if comptime (s == "r23") {
+      registers.regs[23]
+    } else if comptime (s == "r24") {
+      registers.regs[24]
+    } else if comptime (s == "r25") {
+      registers.regs[25]
+    } else if comptime (s == "r26") {
+      registers.regs[26]
+    } else if comptime (s == "r27") {
+      registers.regs[27]
+    } else if comptime (s == "r28") {
+      registers.regs[28]
+    } else if comptime (s == "r29") {
+      registers.regs[29]
+    } else if comptime (s == "r30") {
+      registers.regs[30]
+    } else if comptime (s == "regs[0]") {
+      registers.regs[0]
+    } else if comptime (s == "regs[1]") {
+      registers.regs[1]
+    } else if comptime (s == "regs[2]") {
+      registers.regs[2]
+    } else if comptime (s == "regs[3]") {
+      registers.regs[3]
+    } else if comptime (s == "regs[4]") {
+      registers.regs[4]
+    } else if comptime (s == "regs[5]") {
+      registers.regs[5]
+    } else if comptime (s == "regs[6]") {
+      registers.regs[6]
+    } else if comptime (s == "regs[7]") {
+      registers.regs[7]
+    } else if comptime (s == "regs[8]") {
+      registers.regs[8]
+    } else if comptime (s == "regs[9]") {
+      registers.regs[9]
+    } else if comptime (s == "regs[10]") {
+      registers.regs[10]
+    } else if comptime (s == "regs[11]") {
+      registers.regs[11]
+    } else if comptime (s == "regs[12]") {
+      registers.regs[12]
+    } else if comptime (s == "regs[13]") {
+      registers.regs[13]
+    } else if comptime (s == "regs[14]") {
+      registers.regs[14]
+    } else if comptime (s == "regs[15]") {
+      registers.regs[15]
+    } else if comptime (s == "regs[16]") {
+      registers.regs[16]
+    } else if comptime (s == "regs[17]") {
+      registers.regs[17]
+    } else if comptime (s == "regs[18]") {
+      registers.regs[18]
+    } else if comptime (s == "regs[19]") {
+      registers.regs[19]
+    } else if comptime (s == "regs[20]") {
+      registers.regs[20]
+    } else if comptime (s == "regs[21]") {
+      registers.regs[21]
+    } else if comptime (s == "regs[22]") {
+      registers.regs[22]
+    } else if comptime (s == "regs[23]") {
+      registers.regs[23]
+    } else if comptime (s == "regs[24]") {
+      registers.regs[24]
+    } else if comptime (s == "regs[25]") {
+      registers.regs[25]
+    } else if comptime (s == "regs[26]") {
+      registers.regs[26]
+    } else if comptime (s == "regs[27]") {
+      registers.regs[27]
+    } else if comptime (s == "regs[28]") {
+      registers.regs[28]
+    } else if comptime (s == "regs[29]") {
+      registers.regs[29]
+    } else if comptime (s == "regs[30]") {
+      registers.regs[30]
+    } else if comptime (s == "compat_fp") {
+      registers.regs[11]
+    } else if comptime (s == "compat_sp") {
+      registers.regs[13]
+    } else if comptime (s == "compat_lr") {
+      registers.regs[14]
+    } else if comptime (s == "sp") {
+      registers.sp
+    } else if comptime (s == "pc") {
+      registers.pc
+    } else if comptime (s == "pstate") {
+      registers.pstate
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "powerpc") {
+    if comptime (s == "r0") {
+      registers.gpr[0]
+    } else if comptime (s == "r1") {
+      registers.gpr[1]
+    } else if comptime (s == "r2") {
+      registers.gpr[2]
+    } else if comptime (s == "r3") {
+      registers.gpr[3]
+    } else if comptime (s == "r4") {
+      registers.gpr[4]
+    } else if comptime (s == "r5") {
+      registers.gpr[5]
+    } else if comptime (s == "r6") {
+      registers.gpr[6]
+    } else if comptime (s == "r7") {
+      registers.gpr[7]
+    } else if comptime (s == "r8") {
+      registers.gpr[8]
+    } else if comptime (s == "r9") {
+      registers.gpr[9]
+    } else if comptime (s == "r10") {
+      registers.gpr[10]
+    } else if comptime (s == "r11") {
+      registers.gpr[11]
+    } else if comptime (s == "r12") {
+      registers.gpr[12]
+    } else if comptime (s == "r13") {
+      registers.gpr[13]
+    } else if comptime (s == "r14") {
+      registers.gpr[14]
+    } else if comptime (s == "r15") {
+      registers.gpr[15]
+    } else if comptime (s == "r16") {
+      registers.gpr[16]
+    } else if comptime (s == "r17") {
+      registers.gpr[17]
+    } else if comptime (s == "r18") {
+      registers.gpr[18]
+    } else if comptime (s == "r19") {
+      registers.gpr[19]
+    } else if comptime (s == "r20") {
+      registers.gpr[20]
+    } else if comptime (s == "r21") {
+      registers.gpr[21]
+    } else if comptime (s == "r22") {
+      registers.gpr[22]
+    } else if comptime (s == "r23") {
+      registers.gpr[23]
+    } else if comptime (s == "r24") {
+      registers.gpr[24]
+    } else if comptime (s == "r25") {
+      registers.gpr[25]
+    } else if comptime (s == "r26") {
+      registers.gpr[26]
+    } else if comptime (s == "r27") {
+      registers.gpr[27]
+    } else if comptime (s == "r28") {
+      registers.gpr[28]
+    } else if comptime (s == "r29") {
+      registers.gpr[29]
+    } else if comptime (s == "r30") {
+      registers.gpr[30]
+    } else if comptime (s == "r31") {
+      registers.gpr[31]
+    } else if comptime (s == "nip") {
+      registers.nip
+    } else if comptime (s == "msr") {
+      registers.msr
+    } else if comptime (s == "orig_gpr3") {
+      registers.orig_gpr3
+    } else if comptime (s == "ctr") {
+      registers.ctr
+    } else if comptime (s == "link") {
+      registers.link
+    } else if comptime (s == "xer") {
+      registers.xer
+    } else if comptime (s == "ccr") {
+      registers.ccr
+    } else if comptime (s == "softe") {
+      registers.softe
+    } else if comptime (s == "trap") {
+      registers.trap
+    } else if comptime (s == "dar") {
+      registers.dar
+    } else if comptime (s == "dsisr") {
+      registers.dsisr
+    } else if comptime (s == "result") {
+      registers.result
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "s390") {
+    if comptime (s == "arg") {
+      registers.args[0]
+    } else if comptime (s == "pswmask") {
+      registers.psw.mask
+    } else if comptime (s == "pswaddr") {
+      registers.psw.addr
+    } else if comptime (s == "r0") {
+      registers.gprs[0]
+    } else if comptime (s == "r1") {
+      registers.gprs[1]
+    } else if comptime (s == "r2") {
+      registers.gprs[2]
+    } else if comptime (s == "r3") {
+      registers.gprs[3]
+    } else if comptime (s == "r4") {
+      registers.gprs[4]
+    } else if comptime (s == "r5") {
+      registers.gprs[5]
+    } else if comptime (s == "r6") {
+      registers.gprs[6]
+    } else if comptime (s == "r7") {
+      registers.gprs[7]
+    } else if comptime (s == "r8") {
+      registers.gprs[8]
+    } else if comptime (s == "r9") {
+      registers.gprs[9]
+    } else if comptime (s == "r10") {
+      registers.gprs[10]
+    } else if comptime (s == "r11") {
+      registers.gprs[11]
+    } else if comptime (s == "r12") {
+      registers.gprs[12]
+    } else if comptime (s == "r13") {
+      registers.gprs[13]
+    } else if comptime (s == "r14") {
+      registers.gprs[14]
+    } else if comptime (s == "r15") {
+      registers.gprs[15]
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "mips") {
+    if comptime (s == "zero") {
+      registers.regs[0]
+    } else if comptime (s == "at") {
+      registers.regs[1]
+    } else if comptime (s == "v0") {
+      registers.regs[2]
+    } else if comptime (s == "v1") {
+      registers.regs[3]
+    } else if comptime (s == "a0") {
+      registers.regs[4]
+    } else if comptime (s == "a1") {
+      registers.regs[5]
+    } else if comptime (s == "a2") {
+      registers.regs[6]
+    } else if comptime (s == "a3") {
+      registers.regs[7]
+    } else if comptime (s == "a4") {
+      registers.regs[8]
+    } else if comptime (s == "a5") {
+      registers.regs[9]
+    } else if comptime (s == "a6") {
+      registers.regs[10]
+    } else if comptime (s == "a7") {
+      registers.regs[11]
+    } else if comptime (s == "t0") {
+      registers.regs[12]
+    } else if comptime (s == "t1") {
+      registers.regs[13]
+    } else if comptime (s == "t2") {
+      registers.regs[14]
+    } else if comptime (s == "t3") {
+      registers.regs[15]
+    } else if comptime (s == "s0") {
+      registers.regs[16]
+    } else if comptime (s == "s1") {
+      registers.regs[17]
+    } else if comptime (s == "s2") {
+      registers.regs[18]
+    } else if comptime (s == "s3") {
+      registers.regs[19]
+    } else if comptime (s == "s4") {
+      registers.regs[20]
+    } else if comptime (s == "s5") {
+      registers.regs[21]
+    } else if comptime (s == "s6") {
+      registers.regs[22]
+    } else if comptime (s == "s7") {
+      registers.regs[23]
+    } else if comptime (s == "t8") {
+      registers.regs[24]
+    } else if comptime (s == "t9") {
+      registers.regs[25]
+    } else if comptime (s == "k0") {
+      registers.regs[26]
+    } else if comptime (s == "k1") {
+      registers.regs[27]
+    } else if comptime (s == "gp") {
+      registers.regs[28]
+    } else if comptime (s == "sp") {
+      registers.regs[29]
+    } else if comptime (s == "fp" || s == "fp/s8") {
+      registers.regs[30]
+    } else if comptime (s == "ra") {
+      registers.regs[31]
+    } else if comptime (s == "regs[0]") {
+      registers.regs[0]
+    } else if comptime (s == "regs[1]") {
+      registers.regs[1]
+    } else if comptime (s == "regs[2]") {
+      registers.regs[2]
+    } else if comptime (s == "regs[3]") {
+      registers.regs[3]
+    } else if comptime (s == "regs[4]") {
+      registers.regs[4]
+    } else if comptime (s == "regs[5]") {
+      registers.regs[5]
+    } else if comptime (s == "regs[6]") {
+      registers.regs[6]
+    } else if comptime (s == "regs[7]") {
+      registers.regs[7]
+    } else if comptime (s == "regs[8]") {
+      registers.regs[8]
+    } else if comptime (s == "regs[9]") {
+      registers.regs[9]
+    } else if comptime (s == "regs[10]") {
+      registers.regs[10]
+    } else if comptime (s == "regs[11]") {
+      registers.regs[11]
+    } else if comptime (s == "regs[12]") {
+      registers.regs[12]
+    } else if comptime (s == "regs[13]") {
+      registers.regs[13]
+    } else if comptime (s == "regs[14]") {
+      registers.regs[14]
+    } else if comptime (s == "regs[15]") {
+      registers.regs[15]
+    } else if comptime (s == "regs[16]") {
+      registers.regs[16]
+    } else if comptime (s == "regs[17]") {
+      registers.regs[17]
+    } else if comptime (s == "regs[18]") {
+      registers.regs[18]
+    } else if comptime (s == "regs[19]") {
+      registers.regs[19]
+    } else if comptime (s == "regs[20]") {
+      registers.regs[20]
+    } else if comptime (s == "regs[21]") {
+      registers.regs[21]
+    } else if comptime (s == "regs[22]") {
+      registers.regs[22]
+    } else if comptime (s == "regs[23]") {
+      registers.regs[23]
+    } else if comptime (s == "regs[24]") {
+      registers.regs[24]
+    } else if comptime (s == "regs[25]") {
+      registers.regs[25]
+    } else if comptime (s == "regs[26]") {
+      registers.regs[26]
+    } else if comptime (s == "regs[27]") {
+      registers.regs[27]
+    } else if comptime (s == "regs[28]") {
+      registers.regs[28]
+    } else if comptime (s == "regs[29]") {
+      registers.regs[29]
+    } else if comptime (s == "regs[30]") {
+      registers.regs[30]
+    } else if comptime (s == "regs[31]") {
+      registers.regs[31]
+    } else if comptime (s == "cp0_status") {
+      registers.cp0_status
+    } else if comptime (s == "hi") {
+      registers.hi
+    } else if comptime (s == "lo") {
+      registers.lo
+    } else if comptime (s == "cp0_badvaddr") {
+      registers.cp0_badvaddr
+    } else if comptime (s == "cp0_cause") {
+      registers.cp0_cause
+    } else if comptime (s == "cp0_epc") {
+      registers.cp0_epc
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "riscv") {
+    if comptime (s == "pc") {
+      registers.epc
+    } else if comptime (s == "ra") {
+      registers.ra
+    } else if comptime (s == "sp") {
+      registers.sp
+    } else if comptime (s == "gp") {
+      registers.gp
+    } else if comptime (s == "tp") {
+      registers.tp
+    } else if comptime (s == "t0") {
+      registers.t0
+    } else if comptime (s == "t1") {
+      registers.t1
+    } else if comptime (s == "t2") {
+      registers.t2
+    } else if comptime (s == "s0") {
+      registers.s0
+    } else if comptime (s == "s1") {
+      registers.s1
+    } else if comptime (s == "a0") {
+      registers.a0
+    } else if comptime (s == "a1") {
+      registers.a1
+    } else if comptime (s == "a2") {
+      registers.a2
+    } else if comptime (s == "a3") {
+      registers.a3
+    } else if comptime (s == "a4") {
+      registers.a4
+    } else if comptime (s == "a5") {
+      registers.a5
+    } else if comptime (s == "a6") {
+      registers.a6
+    } else if comptime (s == "a7") {
+      registers.a7
+    } else if comptime (s == "s2") {
+      registers.s2
+    } else if comptime (s == "s3") {
+      registers.s3
+    } else if comptime (s == "s4") {
+      registers.s4
+    } else if comptime (s == "s5") {
+      registers.s5
+    } else if comptime (s == "s6") {
+      registers.s6
+    } else if comptime (s == "s7") {
+      registers.s7
+    } else if comptime (s == "s8") {
+      registers.s8
+    } else if comptime (s == "s9") {
+      registers.s9
+    } else if comptime (s == "s10") {
+      registers.s10
+    } else if comptime (s == "s11") {
+      registers.s11
+    } else if comptime (s == "t3") {
+      registers.t3
+    } else if comptime (s == "t4") {
+      registers.t4
+    } else if comptime (s == "t5") {
+      registers.t5
+    } else if comptime (s == "t6") {
+      registers.t6
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else if comptime (__builtin_arch == "loongarch") {
+    if comptime (s == "r0") {
+      registers.regs[0]
+    } else if comptime (s == "r1") {
+      registers.regs[1]
+    } else if comptime (s == "r2") {
+      registers.regs[2]
+    } else if comptime (s == "r3") {
+      registers.regs[3]
+    } else if comptime (s == "r4") {
+      registers.regs[4]
+    } else if comptime (s == "r5") {
+      registers.regs[5]
+    } else if comptime (s == "r6") {
+      registers.regs[6]
+    } else if comptime (s == "r7") {
+      registers.regs[7]
+    } else if comptime (s == "r8") {
+      registers.regs[8]
+    } else if comptime (s == "r9") {
+      registers.regs[9]
+    } else if comptime (s == "r10") {
+      registers.regs[10]
+    } else if comptime (s == "r11") {
+      registers.regs[11]
+    } else if comptime (s == "r12") {
+      registers.regs[12]
+    } else if comptime (s == "r13") {
+      registers.regs[13]
+    } else if comptime (s == "r14") {
+      registers.regs[14]
+    } else if comptime (s == "r15") {
+      registers.regs[15]
+    } else if comptime (s == "r16") {
+      registers.regs[16]
+    } else if comptime (s == "r17") {
+      registers.regs[17]
+    } else if comptime (s == "r18") {
+      registers.regs[18]
+    } else if comptime (s == "r19") {
+      registers.regs[19]
+    } else if comptime (s == "r20") {
+      registers.regs[20]
+    } else if comptime (s == "r21") {
+      registers.regs[21]
+    } else if comptime (s == "r22") {
+      registers.regs[22]
+    } else if comptime (s == "r23") {
+      registers.regs[23]
+    } else if comptime (s == "r24") {
+      registers.regs[24]
+    } else if comptime (s == "r25") {
+      registers.regs[25]
+    } else if comptime (s == "r26") {
+      registers.regs[26]
+    } else if comptime (s == "r27") {
+      registers.regs[27]
+    } else if comptime (s == "r28") {
+      registers.regs[28]
+    } else if comptime (s == "r29") {
+      registers.regs[29]
+    } else if comptime (s == "r30") {
+      registers.regs[30]
+    } else if comptime (s == "r31") {
+      registers.regs[31]
+    } else if comptime (s == "regs[0]") {
+      registers.regs[0]
+    } else if comptime (s == "regs[1]") {
+      registers.regs[1]
+    } else if comptime (s == "regs[2]") {
+      registers.regs[2]
+    } else if comptime (s == "regs[3]") {
+      registers.regs[3]
+    } else if comptime (s == "regs[4]") {
+      registers.regs[4]
+    } else if comptime (s == "regs[5]") {
+      registers.regs[5]
+    } else if comptime (s == "regs[6]") {
+      registers.regs[6]
+    } else if comptime (s == "regs[7]") {
+      registers.regs[7]
+    } else if comptime (s == "regs[8]") {
+      registers.regs[8]
+    } else if comptime (s == "regs[9]") {
+      registers.regs[9]
+    } else if comptime (s == "regs[10]") {
+      registers.regs[10]
+    } else if comptime (s == "regs[11]") {
+      registers.regs[11]
+    } else if comptime (s == "regs[12]") {
+      registers.regs[12]
+    } else if comptime (s == "regs[13]") {
+      registers.regs[13]
+    } else if comptime (s == "regs[14]") {
+      registers.regs[14]
+    } else if comptime (s == "regs[15]") {
+      registers.regs[15]
+    } else if comptime (s == "regs[16]") {
+      registers.regs[16]
+    } else if comptime (s == "regs[17]") {
+      registers.regs[17]
+    } else if comptime (s == "regs[18]") {
+      registers.regs[18]
+    } else if comptime (s == "regs[19]") {
+      registers.regs[19]
+    } else if comptime (s == "regs[20]") {
+      registers.regs[20]
+    } else if comptime (s == "regs[21]") {
+      registers.regs[21]
+    } else if comptime (s == "regs[22]") {
+      registers.regs[22]
+    } else if comptime (s == "regs[23]") {
+      registers.regs[23]
+    } else if comptime (s == "regs[24]") {
+      registers.regs[24]
+    } else if comptime (s == "regs[25]") {
+      registers.regs[25]
+    } else if comptime (s == "regs[26]") {
+      registers.regs[26]
+    } else if comptime (s == "regs[27]") {
+      registers.regs[27]
+    } else if comptime (s == "regs[28]") {
+      registers.regs[28]
+    } else if comptime (s == "regs[29]") {
+      registers.regs[29]
+    } else if comptime (s == "regs[30]") {
+      registers.regs[30]
+    } else if comptime (s == "regs[31]") {
+      registers.regs[31]
+    } else if comptime (s == "orig_a0") {
+      registers.orig_a0
+    } else if comptime (s == "pc") {
+      registers.csr_era
+    } else {
+      fail("unknown register: %s", s)
+    }
+  } else {
+    fail("register lookup not supported for architecture: %s", __builtin_arch)
+  }
+}
+
+macro __arguments()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    ("di","si","dx","cx","r8","r9")
+  } else if comptime (__builtin_arch == "arm") {
+    ("r0","r1","r2","r3")
+  } else if comptime (__builtin_arch == "arm64") {
+    ("r0","r1","r2","r3","r4","r5","r6","r7")
+  } else if comptime (__builtin_arch == "powerpc") {
+    ("r3","r4","r5","r6","r7","r8","r9","r10")
+  } else if comptime (__builtin_arch == "s390") {
+    ("r2","r3","r4","r5","r6")
+  } else if comptime (__builtin_arch == "mips") {
+    ("a0","a1","a2","a3","a4","a5","a6","a7")
+  } else if comptime (__builtin_arch == "riscv") {
+    ("a0","a1","a2","a3","a4","a5","a6","a7")
+  } else if comptime (__builtin_arch == "loongarch") {
+    ("r4","r5","r6","r7","r8","r9","r10","r11")
+  } else {
+    fail("arguments not supported for architecture: %s", __builtin_arch)
+  }
+}
+
+macro arg(n)
+{
+  reg(__arguments()[n])
+}
+
+macro __return_value()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    "ax"
+  } else if comptime (__builtin_arch == "arm") {
+    "r0"
+  } else if comptime (__builtin_arch == "arm64") {
+    "r0"
+  } else if comptime (__builtin_arch == "powerpc") {
+    "r3"
+  } else if comptime (__builtin_arch == "s390") {
+    "r2"
+  } else if comptime (__builtin_arch == "mips") {
+    "v0"
+  } else if comptime (__builtin_arch == "riscv") {
+    "a0"
+  } else if comptime (__builtin_arch == "loongarch") {
+    "r4"
+  } else {
+    fail("return value register not defined for architecture: %s", __builtin_arch)
+  }
+}
+
+macro return_value()
+{
+  reg(__return_value())
+}
+
+macro __pc_value()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    "ip"
+  } else if comptime (__builtin_arch == "arm") {
+    "pc"
+  } else if comptime (__builtin_arch == "arm64") {
+    "pc"
+  } else if comptime (__builtin_arch == "powerpc") {
+    "nip"
+  } else if comptime (__builtin_arch == "s390") {
+    "pswaddr"
+  } else if comptime (__builtin_arch == "mips") {
+    "cp0_epc"
+  } else if comptime (__builtin_arch == "riscv") {
+    "pc"
+  } else if comptime (__builtin_arch == "loongarch") {
+    "pc"
+  } else {
+    fail("program counter register not defined for architecture: %s", __builtin_arch)
+  }
+}
+
+macro pc()
+{
+  reg(__pc_value())
+}
+
+macro __sp_value()
+{
+  if comptime (__builtin_arch == "x86_64") {
+    "sp"
+  } else if comptime (__builtin_arch == "arm") {
+    "sp"
+  } else if comptime (__builtin_arch == "arm64") {
+    "sp"
+  } else if comptime (__builtin_arch == "powerpc") {
+    "r1"
+  } else if comptime (__builtin_arch == "s390") {
+    "r15"
+  } else if comptime (__builtin_arch == "mips") {
+    "sp"
+  } else if comptime (__builtin_arch == "riscv") {
+    "sp"
+  } else if comptime (__builtin_arch == "loongarch") {
+    "r3"
+  } else {
+    fail("stack pointer register not defined for architecture: %s", __builtin_arch)
+  }
+}
+
+macro stack_pointer()
+{
+  reg(__sp_value())
+}
+
+// :variant uint8 usermode()
+// Returns 1 if the current process is in user mode, 0 otherwise
+//
+// Currently only available on x86_64.
+macro usermode()
+{
+  if comptime (__builtin_probetype == "special" ||
+               __builtin_probetype == "usdt") {
+    // Pretend a user context.
+    true
+  } else if comptime (__builtin_probetype == "fentry" ||
+                      __builtin_probetype == "fexit" ||
+                      __builtin_probetype == "tracepoint" ||
+                      __builtin_probetype == "rawtracepoint" ||
+                      __builtin_probetype == "iter" ||
+                      __builtin_probetype == "software" ||
+                      __builtin_probetype == "hardware" ||
+                      __builtin_probetype == "interval" ||
+                      __builtin_probetype == "profile") {
+    // These probe types don't have a meaningful context
+    // and are triggered in kernel context.
+    false
+  } else if comptime (__builtin_arch != "x86_64") {
+    fail("currently only available for x86_64")
+  } else {
+    reg("cs") & 0x3 == 0x3
+  }
+}
+
+// :variant string func()
+// Name of the current function being traced (kprobes,uprobes,fentry)
+macro func()
+{
+  // For kprobes and uprobes, the instruction pointer register contains the
+  // address of the probed instruction. We use pc() directly because
+  // bpf_get_func_ip() only returns the function entry address, which does
+  // not work correctly for offset-based probes (e.g. kprobe:func+0x10).
+  // See https://docs.kernel.org/bpf/kfuncs.html#bpf-get-func-ip.
+  //
+  // For retprobes and fentry/fexit, the instruction pointer points to a
+  // trampoline rather than the traced function. We must use bpf_get_func_ip()
+  // to retrieve the correct function address in these cases.
+  if comptime (__builtin_probetype == "kprobe" || __builtin_probetype == "uprobe") {
+    usym(pc())
+  } else {
+    import "stdlib/arch/arch.bpf.c";
+    usym(__bpf_get_func_ip((void *)ctx))
+  }
+}

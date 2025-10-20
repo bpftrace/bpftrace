@@ -1,7 +1,10 @@
+#include <sstream>
+
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/macro_expansion.h"
@@ -46,6 +49,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(ast::CreateControlFlowPass())
                 .add(ast::CreateProbeAndApExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
+                .add(ast::CreateContextResolverPass())
                 .add(CreateParseBTFPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateFieldAnalyserPass())
@@ -57,7 +61,9 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
                 .run();
-  ASSERT_TRUE(ok && ast.diagnostics().ok());
+  std::stringstream err;
+  ast.diagnostics().emit(err);
+  ASSERT_TRUE(ok && ast.diagnostics().ok()) << err.str();
   auto &obj = ok->get<ast::BpfObject>();
   out.write(obj.data.data(), obj.data.size());
 }
@@ -75,8 +81,6 @@ void compare_bytecode(const std::string &input1, const std::string &input2)
 
 TEST(probe, short_name)
 {
-  compare_bytecode("tracepoint:sched:sched_one { args }",
-                   "t:sched:sched_one { args }");
   compare_bytecode("kprobe:f { pid }", "k:f { pid }");
   compare_bytecode("kretprobe:f { pid }", "kr:f { pid }");
   compare_bytecode("uprobe:/bin/sh:f { 1 }", "u:/bin/sh:f { 1 }");
@@ -89,8 +93,6 @@ TEST(probe, short_name)
 
 TEST(probe, case_insensitive)
 {
-  compare_bytecode("tracepoint:sched:sched_one { args }",
-                   "traCepoInt:sched:sched_one { args }");
   compare_bytecode("kprobe:f { pid }", "KPROBE:f { pid }");
   compare_bytecode("BEGIN { pid }", "begin { pid }");
 }

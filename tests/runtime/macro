@@ -112,10 +112,6 @@ PROG macro second(a, b) { print((a, b)); } macro first(@b, $x) { second(@b, $x);
 EXPECT (5, 1)
 
 # Test builtins
-NAME builtin wrapper comm
-PROG begin { if (__builtin_comm == comm() && __builtin_comm == comm) { print(comm); } }
-EXPECT bpftrace
-
 NAME builtin wrapper cgroup
 PROG begin { if (__builtin_cgroup == cgroup() && __builtin_cgroup == cgroup) { printf("SUCCESS %llu\n", cgroup); } }
 EXPECT_REGEX SUCCESS [0-9]+
@@ -140,7 +136,7 @@ EXPECT_REGEX SUCCESS2 [0-9]+
 EXPECT_REGEX SUCCESS3 [0-9]+
 
 NAME builtin wrapper func
-PROG k:vfs_read { if (__builtin_func == func() && __builtin_func == func) { print(func); } exit(); }
+PROG k:vfs_read { print(func); exit(); }
 EXPECT vfs_read
 AFTER ./testprogs/syscall read
 

@@ -13,6 +13,7 @@
 #include "ast/context.h"
 #include "ast/helpers.h"
 #include "ast/integer_types.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -380,42 +381,13 @@ AddrSpace TypeResolver::find_addrspace(ProbeType pt)
 void TypeResolver::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    ProbeType pt = probetype(probe->attach_points[0]->provider);
-    bpf_prog_type bt = progtype(pt);
-    std::string func = probe->attach_points[0]->func;
-    builtin.builtin_type = CreatePointer(CreateNone());
-    switch (bt) {
-      case BPF_PROG_TYPE_KPROBE: {
-        auto record = bpftrace_.structs.Lookup("struct pt_regs");
-        if (!record.expired()) {
-          builtin.builtin_type = CreatePointer(
-              CreateCStruct("struct pt_regs", record), AddrSpace::kernel);
-          builtin.builtin_type.MarkCtxAccess();
-        }
-        break;
-      }
-      case BPF_PROG_TYPE_PERF_EVENT:
-        builtin.builtin_type = CreatePointer(
-            CreateCStruct("struct bpf_perf_event_data",
-                          bpftrace_.structs.Lookup(
-                              "struct bpf_perf_event_data")),
-            AddrSpace::kernel);
-        builtin.builtin_type.MarkCtxAccess();
-        break;
-      case BPF_PROG_TYPE_TRACING:
-        if (pt == ProbeType::iter) {
-          std::string type = "struct bpf_iter__" + func;
-          builtin.builtin_type = CreatePointer(
-              CreateCStruct(type, bpftrace_.structs.Lookup(type)),
-              AddrSpace::kernel);
-          builtin.builtin_type.MarkCtxAccess();
-        }
-        break;
-      default:
-        break;
+    if (!dynamic_cast<Probe *>(top_level_node_)) {
+      // This is likely some expansion, but the user will see the
+      // correct location in the final error message.
+      builtin.addError() << "ctx cannot be used from a function.";
+    } else if (builtin.builtin_type.IsNoneTy()) {
+      LOG(BUG) << "ctx has no type; this should have been handled in an "
+                  "earlier pass.";
     }
   } else if (builtin.ident == "pid" || builtin.ident == "tid") {
     builtin.builtin_type = CreateUInt32();
@@ -459,70 +431,12 @@ void TypeResolver::visit(Builtin &builtin)
   } else if (builtin.ident == "ustack") {
     builtin.builtin_type = CreateStack(
         false, StackType{ .mode = bpftrace_.config_->stack_mode });
-  } else if (builtin.ident == "__builtin_comm") {
-    constexpr int COMM_SIZE = 16;
-    builtin.builtin_type = CreateString(COMM_SIZE);
-    // comm allocated in the bpf stack. See codegen
-    // Case: @=comm and strncmp(@, "name")
-    builtin.builtin_type.SetAS(AddrSpace::kernel);
-  } else if (builtin.ident == "__builtin_func") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    ProbeType type = probe->get_probetype();
-    if (type == ProbeType::uprobe || type == ProbeType::uretprobe) {
-      builtin.builtin_type = CreateUSym();
-    } else {
-      builtin.builtin_type = CreateKSym();
-    }
-  } else if (builtin.is_argx()) {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    builtin.builtin_type = CreateUInt64();
-    builtin.builtin_type.SetAS(
-        find_addrspace(probetype(probe->attach_points[0]->provider)));
   } else if (builtin.ident == "__builtin_username") {
     builtin.builtin_type = CreateUsername();
   } else if (builtin.ident == "__builtin_usermode") {
     builtin.builtin_type = CreateUInt8();
   } else if (builtin.ident == "__builtin_cpid") {
     builtin.builtin_type = CreateUInt64();
-  } else if (builtin.ident == "args") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-
-    ProbeType type = probe->get_probetype();
-    auto type_name = probe->args_typename();
-    if (!type_name) {
-      builtin.addError() << "Unable to resolve unique type name.";
-      return;
-    }
-
-    if (type == ProbeType::fentry || type == ProbeType::fexit ||
-        type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
-      builtin.builtin_type = CreateCStruct(
-          *type_name, bpftrace_.structs.Lookup(*type_name));
-      if (builtin.builtin_type.GetFieldCount() == 0)
-        builtin.addError() << "Cannot read function parameters";
-
-      builtin.builtin_type.MarkCtxAccess();
-      builtin.builtin_type.is_funcarg = true;
-      builtin.builtin_type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
-                                                           : AddrSpace::kernel);
-      // We'll build uprobe args struct on stack
-      if (type == ProbeType::uprobe)
-        builtin.builtin_type.is_internal = true;
-    } else if (type == ProbeType::tracepoint) {
-      builtin.builtin_type = CreateCStruct(
-          *type_name, bpftrace_.structs.Lookup(*type_name));
-      builtin.builtin_type.SetAS(probe->attach_points.front()->target ==
-                                         "syscalls"
-                                     ? AddrSpace::user
-                                     : AddrSpace::kernel);
-      builtin.builtin_type.MarkCtxAccess();
-    }
   } else {
     LOG(BUG) << "Unknown builtin variable: '" << builtin.ident << "'";
   }
@@ -726,16 +640,6 @@ void TypeResolver::visit(Call &call)
     call.return_type = CreateArray(addr_size, CreateUInt8());
     call.return_type.SetAS(AddrSpace::kernel);
     call.return_type.is_internal = true;
-  } else if (call.func == "reg") {
-    call.return_type = CreateUInt64();
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      ProbeType pt = probe->get_probetype();
-      // In case of different attach_points, Set the addrspace to none.
-      call.return_type.SetAS(find_addrspace(pt));
-    } else {
-      // Assume kernel space for data in subprogs
-      call.return_type.SetAS(AddrSpace::kernel);
-    }
   } else if (call.func == "kaddr") {
     call.return_type = CreateUInt64();
     call.return_type.SetAS(AddrSpace::kernel);
@@ -1592,18 +1496,21 @@ void TypeResolver::visit(Unop &unop)
   if (unop.op == Operator::MUL) {
     if (type.IsPtrTy()) {
       unop.result_type = type.GetPointeeTy();
-      if (type.IsCtxAccess())
-        unop.result_type.MarkCtxAccess();
       unop.result_type.is_internal = type.is_internal;
-      unop.result_type.SetAS(type.GetAS());
-    } else if (type.IsCStructTy()) {
-      // We allow dereferencing "args" with no effect (for backwards compat)
-      if (type.IsCtxAccess())
-        unop.result_type = type;
-      else {
-        unop.addError() << "Can not dereference struct/union of type '"
-                        << type.GetName() << "'. It is not a pointer.";
+      // The verifier does not always track the BTF type past the
+      // first level of indirection. We need to use explicit reads
+      // past this point, so we default to the kernel address space.
+      //
+      // FIXME: The correct solution here is to annotate the access
+      // operations with BTF information.
+      if (type.GetAS() == AddrSpace::none) {
+        unop.result_type.SetAS(AddrSpace::kernel);
+      } else {
+        unop.result_type.SetAS(type.GetAS());
       }
+    } else if (type.IsCStructTy()) {
+      unop.addError() << "Can not dereference struct/union of type '"
+                      << type.GetName() << "'. It is not a pointer.";
     } else if (type.IsIntTy()) {
       unop.result_type = CreateUInt64();
     }
@@ -1982,35 +1889,10 @@ void TypeResolver::visit(FieldAccess &acc)
   }
 
   const SizedType &type = acc.expr.type();
-
-  if (type.IsPtrTy()) {
-    acc.addError() << "Can not access field '" << acc.field << "' on type '"
-                   << type << "'. Try dereferencing it first, or using '->'";
-    return;
-  }
-
   if (!type.IsCStructTy() && !type.IsRecordTy()) {
     if (is_final_pass()) {
       acc.addError() << "Can not access field '" << acc.field
                      << "' on expression of type '" << type << "'";
-    }
-    return;
-  }
-
-  if (type.is_funcarg) {
-    auto *probe = get_probe(acc);
-    if (probe == nullptr)
-      return;
-    const auto *arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
-    if (arg) {
-      acc.field_type = arg->type;
-      acc.field_type.SetAS(acc.expr.type().GetAS());
-
-      if (is_final_pass() && acc.field_type.IsNoneTy()) {
-        acc.addError() << acc.field << " has unsupported type";
-      }
-    } else {
-      acc.addError() << "Can't find function parameter " << acc.field;
     }
     return;
   }
@@ -2027,9 +1909,7 @@ void TypeResolver::visit(FieldAccess &acc)
       acc.addError() << "Record does not contain a field named '" << acc.field
                      << "'";
     } else {
-      acc.addError() << "Struct/union of type '" << type.GetName()
-                     << "' does not contain a field named '" << acc.field
-                     << "'";
+      acc.addError() << "Unable to find field \"" << acc.field << "\"";
     }
   } else {
     const auto &field = record->GetField(acc.field);
@@ -2049,13 +1929,18 @@ void TypeResolver::visit(FieldAccess &acc)
     }
 
     acc.field_type = field.type;
-    if (acc.expr.type().IsCtxAccess() &&
-        (acc.field_type.IsArrayTy() || acc.field_type.IsCStructTy())) {
-      // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
-      acc.field_type.MarkCtxAccess();
-    }
     acc.field_type.is_internal = type.is_internal;
-    acc.field_type.SetAS(acc.expr.type().GetAS());
+    // If we are resolving through a pointer that has an address space
+    // tag, then we carry this tag over to the underlying type.
+    if (acc.expr.type().GetAS() != AddrSpace::none) {
+      acc.field_type.SetAS(acc.expr.type().GetAS());
+    }
+
+    // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
+    // access to the first 8 bytes results in verifier error.
+    if (record->is_tracepoint_args && field.offset < 8)
+      acc.addError()
+          << "BPF does not support accessing common tracepoint fields";
   }
 }
 
@@ -2202,9 +2087,6 @@ void TypeResolver::visit(Cast &cast)
     }
   }
 
-  if (cast.expr.type().IsCtxAccess() && !ty.IsIntTy()) {
-    ty.MarkCtxAccess();
-  }
   ty.SetAS(cast.expr.type().GetAS());
   // case : begin { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
@@ -2449,9 +2331,6 @@ void TypeResolver::visit(AssignMapStatement &assignment)
         assignment.addError() << buf.str();
       }
     }
-  } else if (type.IsCtxAccess()) {
-    // bpf_map_update_elem() only accepts a pointer to a element in the stack
-    assignment.addError() << "context cannot be assigned to a map";
   } else if (type.IsArrayTy()) {
     const auto &map_type = map_val_[map_ident];
     const auto &expr_type = assignment.expr.type();
@@ -3199,7 +3078,8 @@ Pass CreateTypeResolverPass()
                MapMetadata &mm,
                NamedParamDefaults &named_param_defaults,
                TypeMetadata &types,
-               MacroRegistry &macro_registry) {
+               MacroRegistry &macro_registry,
+               [[maybe_unused]] ContextTypes &context_types) {
     TypeResolver type_resolver(
         ast, b, c_definitions, mm, named_param_defaults, types, macro_registry);
     type_resolver.analyse();

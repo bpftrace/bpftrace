@@ -10,6 +10,15 @@
 
 namespace bpftrace {
 
+static std::string get_die_name(Dwarf_Die *die)
+{
+  const char *name = dwarf_diename(die);
+  if (name)
+    return name;
+  // If the DIE doesn't have a name, use the offset as a fallback.
+  return "__anon_" + std::to_string(dwarf_dieoffset(die));
+}
+
 struct FuncInfo {
   std::string name;
   Dwarf_Die die;
@@ -91,7 +100,7 @@ std::string Dwarf::get_type_name(Dwarf_Die &type_die) const
   switch (tag) {
     case DW_TAG_base_type:
     case DW_TAG_typedef:
-      return dwarf_diename(&type_die);
+      return get_die_name(&type_die);
     case DW_TAG_pointer_type: {
       if (dwarf_hasattr(&type_die, DW_AT_type)) {
         Dwarf_Die inner_type = type_of(type_die);
@@ -110,10 +119,7 @@ std::string Dwarf::get_type_name(Dwarf_Die &type_die) const
       else
         prefix = "enum ";
 
-      if (dwarf_hasattr(&type_die, DW_AT_name))
-        return prefix + dwarf_diename(&type_die);
-      else
-        return prefix + "<anonymous>";
+      return prefix + get_die_name(&type_die);
     }
     case DW_TAG_const_type: {
       Dwarf_Die inner_type = type_of(type_die);
@@ -173,8 +179,8 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
     }
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
-      std::string name = dwarf_diename(&type_die);
-      name = (tag == DW_TAG_structure_type ? "struct " : "union ") + name;
+      std::string name = (tag == DW_TAG_structure_type ? "struct " : "union ") +
+                         get_die_name(&type_die);
       auto result = CreateCStruct(
           name, bpftrace_->structs.LookupOrAdd(name, bit_size / 8));
       if (resolve_structs)
@@ -251,7 +257,7 @@ void Dwarf::resolve_fields(const SizedType &type) const
   if (!type.IsCStructTy())
     return;
 
-  auto str = bpftrace_->structs.Lookup(type.GetName()).lock();
+  auto str = bpftrace_->structs.LookupOrAdd(type.GetName(), 0).lock();
   if (str->HasFields())
     return;
 
@@ -265,7 +271,7 @@ void Dwarf::resolve_fields(const SizedType &type) const
   for (auto &field_die :
        get_all_children_with_tag(&type_die.value(), DW_TAG_member)) {
     Dwarf_Die field_type = type_of(field_die);
-    str->AddField(dwarf_diename(&field_die),
+    str->AddField(get_die_name(&field_die),
                   get_stype(field_type),
                   get_field_byte_offset(field_die),
                   resolve_bitfield(field_die));
@@ -280,7 +286,7 @@ std::vector<std::string> Dwarf::get_function_params(
     Dwarf_Die type_die = type_of(param_die);
     const std::string type_name = get_type_name(type_die);
     if (dwarf_hasattr(&param_die, DW_AT_name))
-      result.push_back(type_name + " " + dwarf_diename(&param_die));
+      result.push_back(type_name + " " + get_die_name(&param_die));
     else
       result.push_back(type_name);
   }
@@ -289,15 +295,25 @@ std::vector<std::string> Dwarf::get_function_params(
 
 std::shared_ptr<Struct> Dwarf::resolve_args(const std::string &function)
 {
+  // Note that this mechanism is a bit broken, and has been for a long time. We
+  // return a structure with a list of fields that is equal to the set of
+  // arguments. The context resolver will figure out the field number for a
+  // given reference and then just use the architecture calling convention with
+  // a cast. However, arguments could be found in many places: spanning multiple
+  // registers, in the stack, or even as a constant value. If we want to handle
+  // this properly, we'd need to actually return information based on the
+  // context resolver that would apply transformations to find the arguments.
+  // But this depends on the details of how it was compiled, so really the best
+  // bet is to use a USDT that has all of these encoded properly and the
+  // necessary runtime support to unpack them.
+  //
+  // It's safe to say that argument resolution for uprobes is "best effort".
   auto result = std::make_shared<Struct>(0, false);
-  int i = 0;
   for (auto &param_die : function_param_dies(function)) {
     Dwarf_Die type_die = type_of(param_die);
     SizedType arg_type = get_stype(type_die);
-    arg_type.is_funcarg = true;
-    arg_type.funcarg_idx = i++;
     const std::string name = dwarf_hasattr(&param_die, DW_AT_name)
-                                 ? dwarf_diename(&param_die)
+                                 ? get_die_name(&param_die)
                                  : "";
     result->AddField(name, arg_type, result->size);
     result->size += arg_type.GetSize();
@@ -329,7 +345,7 @@ std::optional<Dwarf_Die> Dwarf::get_child_with_tagname(Dwarf_Die *die,
 
   do {
     if (dwarf_tag(&child_die) == tag && dwarf_hasattr(&child_die, DW_AT_name) &&
-        dwarf_diename(&child_die) == name)
+        get_die_name(&child_die) == name)
       return child_die;
   } while (dwarf_siblingof(child_iter, &child_die) == 0);
 

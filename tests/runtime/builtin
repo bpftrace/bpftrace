@@ -61,10 +61,14 @@ PROG k:vfs_read { printf("func: '%s'\n", func); exit(); }
 EXPECT func: 'vfs_read'
 AFTER ./testprogs/syscall read
 
+NAME func_kprobe_pc
+PROG k:vfs_read { printf("pc: %d\n", pc() != 0); exit(); }
+EXPECT pc: 1
+AFTER ./testprogs/syscall read
+
 NAME func_kretprobe
 PROG kr:vfs_read { printf("func: '%s'\n", func); exit(); }
 EXPECT func: 'vfs_read'
-REQUIRES_FEATURE get_func_ip
 AFTER ./testprogs/syscall read
 
 NAME func_uprobe
@@ -78,7 +82,6 @@ PROG uretprobe:./testprogs/uprobe_symres:test { printf("func: '%s'\n", func); ex
 # work for uretprobes: it will always return 0.
 EXPECT_REGEX ^func: 'test'$|^func: '0'$
 AFTER ./testprogs/uprobe_symres
-REQUIRES_FEATURE get_func_ip
 
 # Disabled, since BCC code it depends on is prone to race condition,
 # (https://github.com/iovisor/bcc/pull/4319#issuecomment-1321731687)
@@ -283,7 +286,7 @@ AFTER ./testprogs/uprobe_symres
 ARCH x86_64
 
 NAME usermode_builtin_in_begin_end
-PROG begin { printf("%d ", usermode);  } end { print(usermode); }
+PROG begin { printf("%d ", usermode); } end { printf("%d", usermode); }
 EXPECT 1 1
 ARCH x86_64
 
