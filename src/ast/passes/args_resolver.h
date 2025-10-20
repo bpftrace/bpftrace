@@ -5,7 +5,7 @@
 
 namespace bpftrace::ast {
 
-Pass CreateProbeAndApExpansionPass(std::unordered_set<ProbeType>&& probe_types = {
+Pass CreateArgsResolverPass(std::vector<ProbeType>&& probe_types = {
     ProbeType::fentry,
     ProbeType::fexit,
     ProbeType::rawtracepoint,

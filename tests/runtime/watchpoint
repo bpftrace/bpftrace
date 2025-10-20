@@ -48,7 +48,7 @@ ARCH aarch64|x86_64
 NAME wildcarded_function
 RUN {{BPFTRACE}} -e 'config = { missing_probes = "warn" } watchpoint:increment_*+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_wildcard
 EXPECT WARNING: No more HW registers left
-EXPECT WARNING: Unable to attach probe: watchpoint:./testprogs/watchpoint_func_wildcard:increment_0:4:w. Skipping.
+EXPECT WARNING: Unable to attach probe: watchpoint:./testprogs/watchpoint_func_wildcard:increment_4:4:w. Skipping.
 ARCH aarch64|x86_64
 
 NAME unique_probe_bodies

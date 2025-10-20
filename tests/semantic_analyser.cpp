@@ -3,7 +3,8 @@
 
 #include "arch/arch.h"
 #include "ast/ast.h"
-#include "ast/passes/ap_expansion.h"
+#include "ast/passes/ap_probe_expansion.h"
+#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
@@ -16,7 +17,6 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/printer.h"
-#include "ast/passes/probe_expansion.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -148,11 +148,11 @@ public:
                   .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
-                  .add(ast::CreateApExpansionPass())
-                  .add(ast::CreateProbeExpansionPass())
+                  .add(ast::CreateProbeAndApExpansionPass())
+                  .add(ast::CreateArgsResolverPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
-                  .add(ast::CreateProbeExpansionPass({ ProbeType::tracepoint }))
+                  .add(ast::CreateArgsResolverPass({ ProbeType::tracepoint }))
                   .add(ast::CreateBuiltinsPass())
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateFoldLiteralsPass())
@@ -3658,7 +3658,6 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   EXPECT_TRUE(var->var_type.IsPtrTy());
 
   test("k:f, kr:f { @ = (uint64)ctx; }");
-  test("k:f, i:s:1 { @ = (uint64)ctx; }", Error{});
   test("t:sched:sched_one { @ = (uint64)ctx; }", Error{});
 }
 
