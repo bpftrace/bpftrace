@@ -1,10 +1,11 @@
 #include <llvm/Config/llvm-config.h>
 
 #include "ast/passes/ap_probe_expansion.h"
-#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_parser.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/macro_expansion.h"
 #include "bpftrace.h"
 #include "btf_common.h"
 #include "driver.h"
@@ -31,7 +32,8 @@ static ast::CDefinitions parse(
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeAndApExpansionPass())
-                .add(ast::CreateArgsResolverPass())
+                .add(ast::CreateMacroExpansionPass())
+                .add(ast::CreateContextResolverPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .run();

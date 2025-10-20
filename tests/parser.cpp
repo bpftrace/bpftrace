@@ -217,10 +217,6 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(Probe(
            { "kprobe:f" }, { ExprStatement(Builtin("__builtin_retval")) })));
 
-  test("kprobe:f { __builtin_func }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_func")) })));
-
   test("kprobe:f { __builtin_probe }",
        Program().WithProbe(Probe(
            { "kprobe:f" }, { ExprStatement(Builtin("__builtin_probe")) })));

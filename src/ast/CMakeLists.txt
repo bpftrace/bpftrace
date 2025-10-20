@@ -23,6 +23,7 @@ add_library(ast STATIC
   passes/c_macro_expansion.cpp
   passes/clang_parser.cpp
   passes/clang_build.cpp
+  passes/context_resolver.cpp
   passes/named_param.cpp
   passes/config_analyser.cpp
   passes/control_flow_analyser.cpp
@@ -37,14 +38,12 @@ add_library(ast STATIC
   passes/pid_filter_pass.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp
-  passes/args_resolver.cpp
   passes/probe_prune.cpp
   passes/resource_analyser.cpp
   passes/semantic_analyser.cpp
   passes/codegen_llvm.cpp
   passes/resolve_imports.cpp
   passes/recursion_check.cpp
-  passes/tracepoint_format_parser.cpp
   passes/type_system.cpp
   passes/unstable_feature.cpp
   passes/usdt_arguments.cpp

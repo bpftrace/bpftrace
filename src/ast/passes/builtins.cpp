@@ -146,7 +146,26 @@ std::optional<Expression> Builtins::visit(Call &call)
 
 std::optional<Expression> Builtins::visit(Builtin &builtin)
 {
-  return check(builtin.ident, builtin);
+  auto expr = check(builtin.ident, builtin);
+  if (expr) {
+    return expr;
+  }
+
+  // If the builtin is `argX`, then we rewrite this to be a call
+  // to the `arg` function with the appropriate argument number.
+  //
+  // We never need to handle any `argX` calls anywhere else.
+  auto index = builtin.argx();
+  if (index) {
+    auto *argument = ast_.make_node<Integer>(builtin.loc,
+                                             static_cast<uint64_t>(*index));
+    ExpressionList vargs;
+    vargs.emplace_back(argument);
+    auto *call = ast_.make_node<Call>(builtin.loc, "arg", std::move(vargs));
+    return call;
+  }
+
+  return std::nullopt;
 }
 
 std::optional<Expression> Builtins::visit(Identifier &identifier)

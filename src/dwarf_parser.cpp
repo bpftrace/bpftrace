@@ -251,7 +251,7 @@ void Dwarf::resolve_fields(const SizedType &type) const
   if (!type.IsRecordTy())
     return;
 
-  auto str = bpftrace_->structs.Lookup(type.GetName()).lock();
+  auto str = bpftrace_->structs.LookupOrAdd(type.GetName(), 0).lock();
   if (str->HasFields())
     return;
 
@@ -289,13 +289,23 @@ std::vector<std::string> Dwarf::get_function_params(
 
 std::shared_ptr<Struct> Dwarf::resolve_args(const std::string &function)
 {
+  // Note that this mechanism is a bit broken, and has been for a long time. We
+  // return a structure with a list of fields that is equal to the set of
+  // arguments. The context resolver will figure out the field number for a
+  // given reference and then just use the architecture calling convention with
+  // a cast. However, arguments could be found in many places: spanning multiple
+  // registers, in the stack, or even as a constant value. If we want to handle
+  // this properly, we'd need to actually return information based on the
+  // context resolver that would apply transformations to find the arguments.
+  // But this depends on the details of how it was compiled, so really the best
+  // bet is to use a USDT that has all of these encoded properly and the
+  // necessary runtime support to unpack them.
+  //
+  // It's safe to say that argument resolution for uprobes is "best effort".
   auto result = std::make_shared<Struct>(0, false);
-  int i = 0;
   for (auto &param_die : function_param_dies(function)) {
     Dwarf_Die type_die = type_of(param_die);
     SizedType arg_type = get_stype(type_die);
-    arg_type.is_funcarg = true;
-    arg_type.funcarg_idx = i++;
     const std::string name = dwarf_hasattr(&param_die, DW_AT_name)
                                  ? dwarf_diename(&param_die)
                                  : "";

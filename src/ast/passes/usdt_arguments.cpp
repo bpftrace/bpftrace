@@ -81,10 +81,10 @@ void USDTArgumentLift::visit(Expression &expr)
   Visitor<USDTArgumentLift>::visit(expr);
   if (auto *builtin = expr.as<Builtin>()) {
     // Check if this matches `argXX` and replace with the variable.
-    if (builtin->is_argx()) {
-      size_t arg_num = std::stoul(builtin->ident.substr(3));
-      args_.insert(arg_num);
-      expr = var(arg_num, *builtin);
+    auto index = builtin->argx();
+    if (index) {
+      args_.insert(*index);
+      expr = var(*index, *builtin);
     }
   }
 }

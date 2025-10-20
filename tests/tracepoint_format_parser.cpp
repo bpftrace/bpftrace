@@ -1,6 +1,5 @@
-#include "ast/passes/tracepoint_format_parser.h"
+#include "tracepoint_format_parser.h"
 #include "btf_common.h"
-#include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 

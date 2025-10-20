@@ -35,7 +35,7 @@ BEGIN
   printf("Tracing cap_capable syscalls... Hit Ctrl-C to end.\n");
   printf("%-9s %-6s %-6s %-16s %-4s %-20s AUDIT\n",
          "TIME", "UID", "PID", "COMM", "CAP", "NAME");
-  @cap[(uint64)0] = "CAP_CHOWN";
+  @cap[0] = "CAP_CHOWN";
   @cap[1] = "CAP_DAC_OVERRIDE";
   @cap[2] = "CAP_DAC_READ_SEARCH";
   @cap[3] = "CAP_FOWNER";

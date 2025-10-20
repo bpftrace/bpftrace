@@ -501,7 +501,6 @@ std::string BPFfeature::report()
   std::vector<std::pair<std::string, std::string>> helpers = {
     { "dpath", to_str(has_d_path()) },
     { "get_tai_ns", to_str(has_helper_ktime_get_tai_ns()) },
-    { "get_func_ip", to_str(has_helper_get_func_ip()) },
     { "lookup_percpu_elem", to_str(has_helper_map_lookup_percpu_elem()) },
   };
 

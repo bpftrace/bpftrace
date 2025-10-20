@@ -13,6 +13,7 @@
 #include "ast/context.h"
 #include "ast/helpers.h"
 #include "ast/integer_types.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -27,11 +28,6 @@
 #include "probe_matcher.h"
 #include "probe_types.h"
 #include "types.h"
-#include "util/elf_parser.h"
-#include "util/paths.h"
-#include "util/strings.h"
-#include "util/system.h"
-#include "util/wildcard.h"
 
 namespace bpftrace::ast {
 
@@ -526,12 +522,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=1,
       .max_args=1,
        } },
-  { "reg",
-    { .min_args=1,
-      .max_args=1,
-
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "sizeof",
     { .min_args=1,
       .max_args=1,
@@ -819,58 +809,13 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    ProbeType pt = probetype(probe->attach_points[0]->provider);
-    bpf_prog_type bt = progtype(pt);
-    std::string func = probe->attach_points[0]->func;
-
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType pt = probetype(attach_point->provider);
-      bpf_prog_type bt2 = progtype(pt);
-      if (bt != bt2)
-        builtin.addError()
-            << "ctx cannot be used in different BPF program types: "
-            << progtypeName(bt) << " and " << progtypeName(bt2);
-    }
-    switch (bt) {
-      case BPF_PROG_TYPE_KPROBE: {
-        auto record = bpftrace_.structs.Lookup("struct pt_regs");
-        if (!record.expired()) {
-          builtin.builtin_type = CreatePointer(
-              CreateRecord("struct pt_regs", record), AddrSpace::kernel);
-          builtin.builtin_type.MarkCtxAccess();
-        } else {
-          builtin.builtin_type = CreatePointer(CreateNone());
-        }
-        break;
-      }
-      case BPF_PROG_TYPE_TRACEPOINT:
-        builtin.addError() << "Use args instead of ctx in tracepoint";
-        break;
-      case BPF_PROG_TYPE_PERF_EVENT:
-        builtin.builtin_type = CreatePointer(
-            CreateRecord("struct bpf_perf_event_data",
-                         bpftrace_.structs.Lookup(
-                             "struct bpf_perf_event_data")),
-            AddrSpace::kernel);
-        builtin.builtin_type.MarkCtxAccess();
-        break;
-      case BPF_PROG_TYPE_TRACING:
-        if (pt == ProbeType::iter) {
-          std::string type = "struct bpf_iter__" + func;
-          builtin.builtin_type = CreatePointer(
-              CreateRecord(type, bpftrace_.structs.Lookup(type)),
-              AddrSpace::kernel);
-          builtin.builtin_type.MarkCtxAccess();
-        } else {
-          builtin.addError() << "invalid program type";
-        }
-        break;
-      default:
-        builtin.addError() << "invalid program type";
-        break;
+    if (!dynamic_cast<Probe *>(top_level_node_)) {
+      // This is likely some expansion, but the user will see the
+      // correct location in the final error message.
+      builtin.addError() << "ctx cannot be used from a function.";
+    } else if (builtin.builtin_type.IsNoneTy()) {
+      LOG(BUG) << "ctx has no type; this should have been handled in an "
+                  "earlier pass.";
     }
   } else if (builtin.ident == "pid" || builtin.ident == "tid") {
     builtin.builtin_type = CreateUInt32();
@@ -928,56 +873,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
     // comm allocated in the bpf stack. See codegen
     // Case: @=comm and strncmp(@, "name")
     builtin.builtin_type.SetAS(AddrSpace::kernel);
-  } else if (builtin.ident == "__builtin_func") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType type = probetype(attach_point->provider);
-      if (type == ProbeType::kprobe || type == ProbeType::kretprobe)
-        builtin.builtin_type = CreateKSym();
-      else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
-        builtin.builtin_type = CreateUSym();
-      else if (type == ProbeType::fentry || type == ProbeType::fexit) {
-        if (!bpftrace_.feature_->has_helper_get_func_ip()) {
-          builtin.addError()
-              << "BPF_FUNC_get_func_ip not available for your kernel version";
-        }
-        builtin.builtin_type = CreateKSym();
-      } else
-        builtin.addError() << "The func builtin can not be used with '"
-                           << attach_point->provider << "' probes";
-
-      if ((type == ProbeType::kretprobe || type == ProbeType::uretprobe) &&
-          !bpftrace_.feature_->has_helper_get_func_ip()) {
-        builtin.addError()
-            << "The 'func' builtin is not available for " << type
-            << "s on kernels without the get_func_ip BPF feature. Consider "
-               "using the 'probe' builtin instead.";
-      }
-    }
-  } else if (builtin.is_argx()) {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-    ProbeType pt = probetype(probe->attach_points[0]->provider);
-    AddrSpace addrspace = find_addrspace(pt);
-    int arg_num = atoi(builtin.ident.substr(3).c_str());
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
-          type != ProbeType::usdt && type != ProbeType::rawtracepoint)
-        builtin.addError() << "The " << builtin.ident
-                           << " builtin can only be used with "
-                           << "'kprobes', 'uprobes' and 'usdt' probes";
-      // argx in USDT probes doesn't need to check against arch::max_arg()
-      if (type != ProbeType::usdt &&
-          static_cast<size_t>(arg_num) >= arch::Host::arguments().size())
-        builtin.addError() << arch::Host::Machine << " doesn't support "
-                           << builtin.ident;
-    }
-    builtin.builtin_type = CreateUInt64();
-    builtin.builtin_type.SetAS(addrspace);
   } else if (builtin.ident == "__builtin_username") {
     builtin.builtin_type = CreateUsername();
   } else if (builtin.ident == "__builtin_usermode") {
@@ -991,52 +886,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.addError() << "cpid cannot be used without child command";
     }
     builtin.builtin_type = CreateUInt32();
-  } else if (builtin.ident == "args") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return;
-
-    ProbeType type = probe->get_probetype();
-    auto type_name = probe->args_typename();
-    if (!type_name) {
-      builtin.addError() << "Unable to resolve unique type name.";
-      return;
-    }
-
-    if (type == ProbeType::fentry || type == ProbeType::fexit ||
-        type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
-      for (auto *attach_point : probe->attach_points) {
-        if (attach_point->target == "bpf") {
-          builtin.addError() << "The args builtin cannot be used for "
-                                "'fentry/fexit:bpf' probes";
-          return;
-        }
-      }
-      builtin.builtin_type = CreateRecord(*type_name,
-                                          bpftrace_.structs.Lookup(*type_name));
-      if (builtin.builtin_type.GetFieldCount() == 0)
-        builtin.addError() << "Cannot read function parameters";
-
-      builtin.builtin_type.MarkCtxAccess();
-      builtin.builtin_type.is_funcarg = true;
-      builtin.builtin_type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
-                                                           : AddrSpace::kernel);
-      // We'll build uprobe args struct on stack
-      if (type == ProbeType::uprobe)
-        builtin.builtin_type.is_internal = true;
-    } else if (type == ProbeType::tracepoint) {
-      builtin.builtin_type = CreateRecord(*type_name,
-                                          bpftrace_.structs.Lookup(*type_name));
-      builtin.builtin_type.SetAS(probe->attach_points.front()->target ==
-                                         "syscalls"
-                                     ? AddrSpace::user
-                                     : AddrSpace::kernel);
-      builtin.builtin_type.MarkCtxAccess();
-    } else {
-      builtin.addError() << "The args builtin can only be used with "
-                            "tracepoint/fentry/uprobe probes ("
-                         << type << " used here)";
-    }
   } else {
     builtin.addError() << "Unknown builtin variable: '" << builtin.ident << "'";
   }
@@ -1219,7 +1068,8 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
     const auto &t = arg.type();
-    if (!t.IsStringTy() && !t.IsIntegerTy() && !t.IsPtrTy()) {
+    if (is_final_pass() && !t.IsStringTy() && !t.IsIntegerTy() &&
+        !t.IsPtrTy()) {
       call.addError()
           << call.func
           << "() expects a string, integer or a pointer type as first "
@@ -1306,7 +1156,7 @@ void SemanticAnalyser::visit(Call &call)
     // allow symbol lookups on casts (eg, function pointers)
     auto &arg = call.vargs.at(0);
     const auto &type = arg.type();
-    if (!type.IsIntegerTy() && !type.IsPtrTy()) {
+    if (is_final_pass() && !type.IsIntegerTy() && !type.IsPtrTy()) {
       call.addError() << call.func
                       << "() expects an integer or pointer argument";
     } else if (type.IsIntegerTy() && type.GetSize() != 8) {
@@ -1325,7 +1175,7 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     auto &arg = call.vargs.at(index);
-    if (!arg.type().IsIntTy() && !arg.type().IsStringTy() &&
+    if (is_final_pass() && !arg.type().IsIntTy() && !arg.type().IsStringTy() &&
         !arg.type().IsArrayTy())
       call.addError() << call.func
                       << "() expects an integer or array argument, got "
@@ -1395,23 +1245,6 @@ void SemanticAnalyser::visit(Call &call)
     if (!(arg.type().IsIntTy() || arg.type().IsPtrTy())) {
       call.addError() << "() only supports int or pointer arguments" << " ("
                       << arg.type().GetTy() << " provided)";
-    }
-  } else if (call.func == "reg") {
-    auto reg_name = call.vargs.at(0).as<String>()->value;
-    auto offset = arch::Host::register_to_pt_regs_offset(reg_name);
-    if (!offset) {
-      call.addError() << "'" << reg_name
-                      << "' is not a valid register on this architecture"
-                      << " (" << arch::Host::Machine << ")";
-    }
-    call.return_type = CreateUInt64();
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      ProbeType pt = probe->get_probetype();
-      // In case of different attach_points, Set the addrspace to none.
-      call.return_type.SetAS(find_addrspace(pt));
-    } else {
-      // Assume kernel space for data in subprogs
-      call.return_type.SetAS(AddrSpace::kernel);
     }
   } else if (call.func == "kaddr") {
     call.return_type = CreateUInt64();
@@ -1643,21 +1476,14 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.return_type = CreateUInt64();
   } else if (call.func == "kptr" || call.func == "uptr") {
-    // kptr should accept both integer or pointer. Consider case: kptr($1)
-    auto &arg = call.vargs.at(0);
-    if (!arg.type().IsIntTy() && !arg.type().IsPtrTy()) {
-      call.addError() << call.func << "() only supports "
-                      << "integer or pointer arguments (" << arg.type().GetTy()
-                      << " provided)";
-      return;
-    }
-
+    // Note that this does not concern itself with the specific type yet,
+    // it *always* copies the target type over and marks the address space.
     auto as = (call.func == "kptr" ? AddrSpace::kernel : AddrSpace::user);
     call.return_type = call.vargs.front().type();
     call.return_type.SetAS(as);
   } else if (call.func == "macaddr") {
     auto &arg = call.vargs.at(0);
-    if (!arg.type().IsIntTy() && !arg.type().IsArrayTy() &&
+    if (is_final_pass() && !arg.type().IsIntTy() && !arg.type().IsArrayTy() &&
         !arg.type().IsByteArray() && !arg.type().IsPtrTy())
       call.addError() << call.func
                       << "() only supports array or pointer arguments" << " ("
@@ -1681,12 +1507,14 @@ void SemanticAnalyser::visit(Call &call)
     // Leave as `none`.
   } else if (call.func == "bswap") {
     auto &arg = call.vargs.at(0);
-    if (!arg.type().IsIntTy()) {
+    if (is_final_pass() && !arg.type().IsIntTy()) {
       call.addError() << call.func << "() only supports integer arguments ("
                       << arg.type().GetTy() << " provided)";
       return;
     }
-    call.return_type = CreateUInt(arg.type().GetIntBitWidth());
+    if (arg.type().IsIntTy()) {
+      call.return_type = CreateUInt(arg.type().GetIntBitWidth());
+    }
   } else if (call.func == "skboutput") {
     call.return_type = CreateUInt32();
   } else if (call.func == "nsecs") {
@@ -2669,8 +2497,7 @@ void SemanticAnalyser::visit(Unop &unop)
     // and context (we allow args->field for backwards compatibility)
     if (type.IsBoolTy()) {
       invalid = unop.op != Operator::LNOT;
-    } else if (!type.IsIntegerTy() &&
-               !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op)) {
+    } else if (!type.IsIntegerTy() && !(type.IsPtrTy() && valid_ptr_op)) {
       invalid = true;
     }
     if (invalid) {
@@ -2683,18 +2510,11 @@ void SemanticAnalyser::visit(Unop &unop)
   if (unop.op == Operator::MUL) {
     if (type.IsPtrTy()) {
       unop.result_type = SizedType(*type.GetPointeeTy());
-      if (type.IsCtxAccess())
-        unop.result_type.MarkCtxAccess();
       unop.result_type.is_internal = type.is_internal;
       unop.result_type.SetAS(type.GetAS());
     } else if (type.IsRecordTy()) {
-      // We allow dereferencing "args" with no effect (for backwards compat)
-      if (type.IsCtxAccess())
-        unop.result_type = type;
-      else {
-        unop.addError() << "Can not dereference struct/union of type '"
-                        << type.GetName() << "'. It is not a pointer.";
-      }
+      unop.addError() << "Can not dereference struct/union of type '"
+                      << type.GetName() << "'. It is not a pointer.";
     } else if (type.IsIntTy()) {
       unop.result_type = CreateUInt64();
     }
@@ -3074,18 +2894,6 @@ void SemanticAnalyser::visit(For &f)
 
   scope_stack_.pop_back();
 
-  // Currently, we do not pass BPF context to the callback so disable builtins
-  // which require ctx access.
-  CollectNodes<Builtin> builtins;
-  builtins.visit(f.block);
-  for (const Builtin &builtin : builtins.nodes()) {
-    if (builtin.builtin_type.IsCtxAccess() || builtin.is_argx() ||
-        builtin.ident == "__builtin_retval") {
-      builtin.addError() << "'" << builtin.ident
-                         << "' builtin is not allowed in a for-loop";
-    }
-  }
-
   // Finally, create the context tuple now that all variables inside the loop
   // have been visited.
   std::vector<SizedType> ctx_types;
@@ -3116,35 +2924,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   }
 
   const SizedType &type = acc.expr.type();
-
-  if (type.IsPtrTy()) {
-    acc.addError() << "Can not access field '" << acc.field << "' on type '"
-                   << type << "'. Try dereferencing it first, or using '->'";
-    return;
-  }
-
   if (!type.IsRecordTy()) {
     if (is_final_pass()) {
       acc.addError() << "Can not access field '" << acc.field
                      << "' on expression of type '" << type << "'";
-    }
-    return;
-  }
-
-  if (type.is_funcarg) {
-    auto *probe = get_probe(acc);
-    if (probe == nullptr)
-      return;
-    const auto *arg = bpftrace_.structs.GetProbeArg(*probe, acc.field);
-    if (arg) {
-      acc.field_type = arg->type;
-      acc.field_type.SetAS(acc.expr.type().GetAS());
-
-      if (is_final_pass() && acc.field_type.IsNoneTy()) {
-        acc.addError() << acc.field << " has unsupported type";
-      }
-    } else {
-      acc.addError() << "Can't find function parameter " << acc.field;
     }
     return;
   }
@@ -3174,11 +2957,6 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     }
 
     acc.field_type = field.type;
-    if (acc.expr.type().IsCtxAccess() &&
-        (acc.field_type.IsArrayTy() || acc.field_type.IsRecordTy())) {
-      // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
-      acc.field_type.MarkCtxAccess();
-    }
     acc.field_type.is_internal = type.is_internal;
     acc.field_type.SetAS(acc.expr.type().GetAS());
 
@@ -3380,8 +3158,7 @@ void SemanticAnalyser::visit(Cast &cast)
       logError();
     }
 
-    if (ty.IsIntTy() && !rhs.IsBoolTy() && !rhs.IsCtxAccess() &&
-        !rhs.IsArrayTy()) {
+    if (ty.IsIntTy() && !rhs.IsBoolTy() && !rhs.IsArrayTy()) {
       logError();
     }
   }
@@ -3390,9 +3167,6 @@ void SemanticAnalyser::visit(Cast &cast)
     logError();
   }
 
-  if (cast.expr.type().IsCtxAccess() && !ty.IsIntTy()) {
-    ty.MarkCtxAccess();
-  }
   ty.SetAS(cast.expr.type().GetAS());
   // case : begin { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
@@ -3616,9 +3390,6 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
         assignment.addError() << buf.str();
       }
     }
-  } else if (type.IsCtxAccess()) {
-    // bpf_map_update_elem() only accepts a pointer to a element in the stack
-    assignment.addError() << "context cannot be assigned to a map";
   } else if (type.IsArrayTy()) {
     const auto &map_type = map_val_[map_ident];
     const auto &expr_type = assignment.expr.type();
@@ -4302,11 +4073,6 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
     new_key_type = CreateTuple(Struct::CreateTuple(elements));
   }
 
-  if (new_key_type.IsPtrTy() && new_key_type.IsCtxAccess()) {
-    // map functions only accepts a pointer to a element in the stack
-    node.addError() << "context cannot be part of a map key";
-  }
-
   if (new_key_type.IsHistTy() || new_key_type.IsLhistTy() ||
       new_key_type.IsStatsTy() || new_key_type.IsTSeriesTy()) {
     node.addError() << new_key_type << " cannot be part of a map key";
@@ -4497,7 +4263,8 @@ Pass CreateSemanticPass()
                MapMetadata &mm,
                NamedParamDefaults &named_param_defaults,
                TypeMetadata &types,
-               MacroRegistry &macro_registry) {
+               MacroRegistry &macro_registry,
+               [[maybe_unused]] ContextTypes &context_types) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
