@@ -44,6 +44,7 @@ private:
   std::map<std::string, std::vector<Macro *>> macros_;
 };
 
+// Expand a macro directly within an expression.
 void expand_macro(ASTContext &ast, Expression &expr, const MacroRegistry &registry);
 
 // Expand all possible macros. Macros can be defined recursively, and in these

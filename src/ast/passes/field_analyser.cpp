@@ -1,14 +1,11 @@
 #include <bpf/bpf.h>
 #include <cassert>
 
-#include "arch/arch.h"
-#include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
-#include "util/strings.h"
 
 namespace bpftrace::ast {
 
@@ -16,9 +13,7 @@ namespace {
 
 class FieldAnalyser : public Visitor<FieldAnalyser> {
 public:
-  explicit FieldAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
-  {
-  }
+  explicit FieldAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<FieldAnalyser>::visit;
   void visit(Identifier &identifier);
@@ -42,12 +37,8 @@ private:
   void resolve_fields(SizedType &type);
   void resolve_type(SizedType &type);
 
-  ProbeType probe_type_;
-  std::string attach_func_;
   SizedType sized_type_;
   BPFtrace &bpftrace_;
-  bpf_prog_type prog_type_{ BPF_PROG_TYPE_UNSPEC };
-  bool has_builtin_args_;
   Probe *probe_ = nullptr;
 
   std::map<std::string, SizedType> var_types_;
@@ -62,90 +53,54 @@ void FieldAnalyser::visit(Identifier &identifier)
 
 void FieldAnalyser::visit(Builtin &builtin)
 {
-  std::string builtin_type;
-  sized_type_ = CreateNone();
-  if (builtin.ident == "ctx") {
-    if (!probe_)
-      return;
-    switch (prog_type_) {
-      case BPF_PROG_TYPE_KPROBE:
-        builtin_type = "struct pt_regs";
-        break;
-      case BPF_PROG_TYPE_PERF_EVENT:
-        builtin_type = "struct bpf_perf_event_data";
-        break;
-      default:
-        break;
-    }
-    // For each iterator probe, the context is pointing to specific struct,
-    // make them resolved and available
-    if (probe_type_ == ProbeType::iter)
-      builtin_type = "struct bpf_iter__" + attach_func_;
-  } else if (builtin.ident == "args") {
-    if (!probe_)
-      return;
-    has_builtin_args_ = true;
-    return;
-  } else if (builtin.ident == "__builtin_retval") {
-    if (!probe_)
-      return;
-
-    const auto *arg = bpftrace_.structs.GetProbeArg(*probe_, RETVAL_FIELD_NAME);
-    if (arg)
-      sized_type_ = arg->type;
-    return;
+  // For ctx and other builtins that have types set by the context resolver,
+  // use those types. They may not yet be complete (waiting for clang to parse
+  // the specific context types), but they are already set.
+  if (!builtin.builtin_type.IsNoneTy()) {
+    sized_type_ = builtin.builtin_type;
   }
-
-  sized_type_ = bpftrace_.btf_->get_stype(builtin_type);
 }
 
 void FieldAnalyser::visit(Map &map)
 {
   auto it = var_types_.find(map.ident);
-  if (it != var_types_.end())
+  if (it != var_types_.end()) {
     sized_type_ = it->second;
+  } else {
+    sized_type_ = CreateNone();
+  }
 }
 
 void FieldAnalyser::visit(Variable &var)
 {
   auto it = var_types_.find(var.ident);
-  if (it != var_types_.end())
+  if (it != var_types_.end()) {
     sized_type_ = it->second;
+  } else {
+    sized_type_ = CreateNone();
+  }
 }
 
 void FieldAnalyser::visit(FieldAccess &acc)
 {
-  has_builtin_args_ = false;
-
   visit(acc.expr);
 
-  // Automatically resolve through pointers.
+  // Automatically resolve through pointers and arrays to ensure
+  // nested structs get their fields resolved.
   while (sized_type_.IsPtrTy()) {
     sized_type_ = sized_type_.GetPointeeTy();
-    resolve_fields(sized_type_);
   }
 
-  if (has_builtin_args_) {
-    const auto *arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
-    if (arg)
-      sized_type_ = arg->type;
-
-    has_builtin_args_ = false;
-  } else if (sized_type_.IsCStructTy()) {
-    SizedType field_type = CreateNone();
-    if (sized_type_.HasField(acc.field))
-      field_type = sized_type_.GetField(acc.field).type;
-
-    if (!field_type.IsNoneTy()) {
-      sized_type_ = field_type;
-    } else {
-      // If the struct type or the field type has not been resolved, add the
-      // type to the BTF set to let ClangParser resolve it
-      bpftrace_.btf_set_.insert(sized_type_.GetName());
-      auto field_type_name = bpftrace_.btf_->type_of(sized_type_.GetName(),
-                                                     acc.field);
-      bpftrace_.btf_set_.insert(field_type_name);
+  // Resolve as long as it is a structure.
+  if (sized_type_.IsCStructTy()) {
+    resolve_fields(sized_type_);
+    if (sized_type_.HasField(acc.field)) {
+      sized_type_ = sized_type_.GetField(acc.field).type;
+      return; // The type will already be set.    }
     }
+
+    // These no type, so we can't resolve.
+    sized_type_ = CreateNone();
   }
 }
 
@@ -153,12 +108,13 @@ void FieldAnalyser::visit(ArrayAccess &arr)
 {
   visit(arr.indexpr);
   visit(arr.expr);
+
   if (sized_type_.IsPtrTy()) {
     sized_type_ = sized_type_.GetPointeeTy();
-    resolve_fields(sized_type_);
   } else if (sized_type_.IsArrayTy()) {
     sized_type_ = sized_type_.GetElementTy();
-    resolve_fields(sized_type_);
+  } else {
+    sized_type_ = CreateNone();
   }
 }
 
@@ -212,8 +168,8 @@ void FieldAnalyser::visit(Unop &unop)
 {
   visit(unop.expr);
   if (unop.op == Operator::MUL && sized_type_.IsPtrTy()) {
+    // Need a temporary to prevent UAF from self-referential assignment.
     sized_type_ = sized_type_.GetPointeeTy();
-    resolve_fields(sized_type_);
   }
 }
 
@@ -235,39 +191,38 @@ void FieldAnalyser::resolve_fields(SizedType &type)
 
 void FieldAnalyser::resolve_type(SizedType &type)
 {
-  sized_type_ = CreateNone();
-
   SizedType inner_type = type;
   while (inner_type.IsPtrTy())
     inner_type = inner_type.GetPointeeTy();
-  if (!inner_type.IsCStructTy())
-    return;
+  if (!inner_type.IsCStructTy() && !inner_type.IsEnumTy()) {
+    sized_type_ = type;
+    return; // Not a struct or enum, so can't resolve.
+  }
+
   const auto &name = inner_type.GetName();
 
+  SizedType resolved_type = CreateNone();
   if (probe_) {
     for (auto &ap : probe_->attach_points)
       if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-        sized_type_ = dwarf->get_stype(name);
+        resolved_type = dwarf->get_stype(name);
   }
 
-  if (sized_type_.IsNoneTy()) {
-    sized_type_ = bpftrace_.btf_->get_stype(name);
+  if (resolved_type.IsNoneTy()) {
+    resolved_type = bpftrace_.btf_->get_stype(name);
   }
 
-  // Could not resolve destination type - let ClangParser do it
-  if (sized_type_.IsNoneTy())
+  // Could not resolve destination type.
+  if (resolved_type.IsNoneTy())
     bpftrace_.btf_set_.insert(name);
+
+  // Always set sized_type_ to the cast type
+  sized_type_ = resolved_type;
 }
 
 void FieldAnalyser::visit(Probe &probe)
 {
   probe_ = &probe;
-
-  for (AttachPoint *ap : probe.attach_points) {
-    probe_type_ = probetype(ap->provider);
-    prog_type_ = progtype(probe_type_);
-    attach_func_ = ap->func;
-  }
   visit(probe.block);
 }
 

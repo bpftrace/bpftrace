@@ -22,16 +22,15 @@
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
 
-#include "arch/arch.h"
 #include "ast/context.h"
 #include "ast/pass_manager.h"
-#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "bpftrace.h"
 #include "btf.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "symbols/kernel.h"
+#include "tracepoint_format_parser.h"
 #include "types.h"
 #include "util/strings.h"
 
@@ -497,7 +496,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     if (is_anon)
       stype.SetAnon();
     if (resolve_structs)
-      resolve_fields(id, std::move(record), 0);
+      resolve_fields(id, record, 0);
   } else if (btf_is_ptr(t)) {
     const BTFId pointee_btf_id = { .btf = btf_id.btf, .id = t->type };
     std::unordered_set<std::string> tags;
@@ -563,15 +562,6 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
 
   const struct btf_param *p = btf_params(t);
   __u16 vlen = btf_vlen(t);
-  if (vlen > arch::Host::arguments().size()) {
-    return make_error<ast::ArgParseError>(
-        func,
-        "functions with more than " +
-            std::to_string(arch::Host::arguments().size()) +
-            " parameters are not supported.");
-  }
-
-  int arg_idx = 0;
   auto args = std::make_shared<Struct>(0, false);
   for (__u16 j = 0; j < vlen; j++, p++) {
     if (j == 0 && skip_first_arg) {
@@ -585,24 +575,17 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
     }
 
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = p->type });
-    stype.funcarg_idx = arg_idx;
-    stype.is_funcarg = true;
     args->AddField(str, stype, args->size);
-    // fentry args are stored in a u64 array.
-    // Note that it's ok to represent them by a struct as we will use GEP with
-    // funcarg_idx to access them in codegen.
     auto type_size = btf__resolve_size(func_id.btf, p->type);
-    args->size += type_size;
-    arg_idx += std::ceil(static_cast<float>(type_size) / static_cast<float>(8));
+    args->size += type_size >= 8 ? type_size : 8;
   }
 
   if (ret) {
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = t->type });
-    stype.funcarg_idx = arg_idx;
-    stype.is_funcarg = true;
     args->AddField(RETVAL_FIELD_NAME, stype, args->size);
     // fentry args (incl. retval) are stored in a u64 array
-    args->size += btf__resolve_size(func_id.btf, t->type);
+    auto type_size = btf__resolve_size(func_id.btf, t->type);
+    args->size += type_size >= 8 ? type_size : 8;
   }
   return args;
 }
@@ -651,9 +634,6 @@ std::string BTF::get_all_traceable_funcs_from_btf(
       continue;
     }
 
-    if (btf_vlen(t) > arch::Host::arguments().size())
-      continue;
-
     funcs += btf_obj.name + ":" + func_name + "\n";
   }
 
@@ -692,9 +672,6 @@ std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
       LOG(ERROR) << func_name << " function does not have FUNC_PROTO record";
       break;
     }
-
-    if (btf_vlen(t) > arch::Host::arguments().size())
-      continue;
 
     bool found = false;
     for (const auto &prefix : RT_BTF_PREFIXES) {
@@ -1196,8 +1173,12 @@ void BTF::resolve_fields(const SizedType &type)
 
   auto const &name = type.GetName();
   auto record = structs_.Lookup(name).lock();
-  if (record->HasFields())
+  if (!record) {
     return;
+  }
+  if (record->HasFields()) {
+    return;
+  }
 
   if (type.IsAnonTy())
     type_id = parse_anon_btf_name(name);
@@ -1206,8 +1187,9 @@ void BTF::resolve_fields(const SizedType &type)
     auto type_name = btf_type_str(name);
 
     type_id = find_id(type_name, kind);
-    if (!type_id.btf)
+    if (!type_id.btf) {
       return;
+    }
   }
 
   resolve_fields(type_id, std::move(record), 0);

@@ -539,24 +539,18 @@ public:
     return builtin_type;
   }
 
-  // Check if the builtin is 'arg0' - 'arg255'
-  bool is_argx() const
+  // Check if the builtin is 'argX', where X is an integer.
+  //
+  // This returns the optional integer value. These are rewritten by the various
+  // passes fairly early on (e.g. usdt_arguments for USDT, args_resolver for
+  // probes), and should not exist by the time we reach code generation.
+  std::optional<size_t> argx() const
   {
-    if (ident.size() < 4 || ident.size() > 6 || !ident.starts_with("arg"))
-      return false;
-
-    std::string num_part = ident.substr(3);
-
-    // no leading zeros
-    if (num_part.size() > 1 && num_part.front() == '0')
-      return false;
-
-    int arg_num = 0;
-    auto [ptr, ec] = std::from_chars(num_part.data(),
-                                     num_part.data() + num_part.size(),
-                                     arg_num);
-    return ec == std::errc() && ptr == num_part.data() + num_part.size() &&
-           arg_num >= 0 && arg_num < 256;
+    if (ident.size() >= 4 && ident.starts_with("arg") && ident[3] >= '0' &&
+        ident[3] <= '9') {
+      return static_cast<size_t>(std::stoul(ident.substr(3)));
+    }
+    return std::nullopt;
   }
 
   bool operator==(const Builtin &other) const

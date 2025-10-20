@@ -77,6 +77,7 @@ TEST(TypeSystemTest, basic)
     "struct bpf_iter__task_vma",
     "struct vm_area_struct*",
     "struct bpf_map",
+    "struct pt_regs",
     "const struct bpf_map",
     "struct sock",
     "struct sock*",
