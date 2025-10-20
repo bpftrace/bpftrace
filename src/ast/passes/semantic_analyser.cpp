@@ -1043,8 +1043,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
         }
       }
       auto type_name = probe->args_typename();
-      builtin.builtin_type = CreateRecord(type_name,
-                                          bpftrace_.structs.Lookup(type_name));
+      if (!type_name) {
+        builtin.addError() << "Unable to resolve unique type name.";
+        return;
+      }
+      builtin.builtin_type = CreateRecord(*type_name,
+                                          bpftrace_.structs.Lookup(*type_name));
       if (builtin.builtin_type.GetFieldCount() == 0)
         builtin.addError() << "Cannot read function parameters";
 

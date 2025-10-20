@@ -85,13 +85,7 @@ const BpfProgram &BpfBytecode::getProgramForProbe(const Probe &probe) const
   auto prog = programs_.find(
       util::get_function_name_for_probe(probe.name, probe.index));
   if (prog == programs_.end()) {
-    std::stringstream msg;
-    if (probe.name != probe.orig_name)
-      msg << "Code not generated for probe " << probe.name << " (expanded from "
-          << probe.orig_name << ")";
-    else
-      msg << "Code not generated for probe: " << probe.name;
-    throw std::runtime_error(msg.str());
+    throw std::runtime_error("Code not generated for probe: " + probe.name);
   }
 
   return prog->second;

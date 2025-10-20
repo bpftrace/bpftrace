@@ -110,8 +110,6 @@ struct Probe {
   ProbeType type;
   std::string path;         // file path if used
   std::string attach_point; // probe name (last component)
-  std::string orig_name;    // original full probe name,
-                            // before wildcard expansion
   std::string name;         // full probe name
   bool need_expansion;
   std::string pin;  // pin file for iterator probes
@@ -137,7 +135,6 @@ private:
     archive(type,
             path,
             attach_point,
-            orig_name,
             name,
             pin,
             ns,

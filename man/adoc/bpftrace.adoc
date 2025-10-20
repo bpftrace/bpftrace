@@ -215,6 +215,7 @@ Syntax, types, and concepts for bpftrace are link:https://github.com/bpftrace/bp
 bpftrace supports various probe types which allow the user to attach BPF programs to different types of events.
 Each probe starts with a provider (e.g. `kprobe`) followed by a colon (`:`) separated list of options.
 The amount of options and their meaning depend on the provider.
+Optionally, the attachpoint specified can be prefixed by a user-provided name followed by equal sign (e.g. `myname=kprobe:...`); this is used for certain advanced features and is typically omitted.
 link:https://github.com/bpftrace/bpftrace/blob/master/docs/language.md#probes[Full list of probe types].
 
 == Standard library

@@ -316,6 +316,13 @@ bool AttachPoint::check_available(const std::string &identifier) const
 
 std::string AttachPoint::name() const
 {
+  // If there's an explicit name for this probe provided, then this
+  // is always used as the probe name.
+  if (user_provided_name.has_value()) {
+    return user_provided_name.value();
+  }
+
+  // Otherwise, construct from provider, target, etc.
   std::string n = provider;
   if (!target.empty())
     n += ":" + target;
@@ -341,12 +348,21 @@ std::string AttachPoint::name() const
   return n;
 }
 
-std::string Probe::args_typename() const
+std::optional<std::string> Probe::attachpoint_name() const
 {
-  auto *ap = attach_points.front();
-  if (probetype(ap->provider) == ProbeType::tracepoint)
-    return get_tracepoint_struct_name(*ap);
-  return "struct " + orig_name + "_" + ap->func + "_args";
+  if (attach_points.size() != 1) {
+    return std::nullopt;
+  }
+  return attach_points.front()->name();
+}
+
+std::optional<std::string> Probe::args_typename() const
+{
+  auto name = attachpoint_name();
+  if (!name) {
+    return std::nullopt;
+  }
+  return "struct " + *name + "_args";
 }
 
 int Probe::index() const
