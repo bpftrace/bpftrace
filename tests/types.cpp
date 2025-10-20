@@ -30,7 +30,6 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreatePointer(CreateInt8(), AddrSpace::kernel)), "int8 *");
 
   auto ptr_ctx = CreatePointer(CreateInt8(), AddrSpace::kernel);
-  ptr_ctx.MarkCtxAccess();
   EXPECT_EQ(to_str(ptr_ctx), "int8 *");
 
   EXPECT_EQ(to_str(CreateArray(2, CreateInt8())), "int8[2]");

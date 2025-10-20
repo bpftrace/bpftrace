@@ -21,6 +21,7 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -905,6 +906,7 @@ int main(int argc, char* argv[])
                         .add(CreateParseBTFPass())
                         .add(ast::CreateMapSugarPass())
                         .add(ast::CreateNamedParamsPass())
+                        .add(ast::CreateContextResolverPass())
                         .add(ast::CreateSemanticPass())
                         .run();
 
@@ -1043,6 +1045,7 @@ int main(int argc, char* argv[])
         .add(CreateParseBTFPass())
         .add(ast::CreateMapSugarPass())
         .add(ast::CreateNamedParamsPass())
+        .add(ast::CreateContextResolverPass())
         .add(ast::CreateSemanticPass());
 
     auto pmresult = pm.run();

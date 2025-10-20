@@ -4,11 +4,11 @@
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/passes/ap_probe_expansion.h"
-#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
@@ -171,7 +171,7 @@ public:
                   .add(ast::CreateMacroExpansionPass())
                   .add(ast::CreateParseAttachpointsPass())
                   .add(ast::CreateProbeAndApExpansionPass())
-                  .add(ast::CreateArgsResolverPass())
+                  .add(ast::CreateContextResolverPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
                   .add(ast::CreateFoldLiteralsPass())
@@ -243,8 +243,6 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("kprobe:f { ustack }");
   test("kprobe:f { arg0 }");
   test("kretprobe:f { retval }");
-  test("kprobe:f { func }");
-  test("uprobe:/bin/sh:f { func }");
   test("kprobe:f { probe }");
   test("kprobe:f { jiffies }");
 
@@ -253,8 +251,6 @@ stdin:1:12-16: ERROR: Unknown identifier: 'fake'
 kprobe:f { fake }
            ~~~~
 )" });
-
-  test("fentry:f { func }", NoFeatures::Enable, Error{});
 }
 
 TEST_F(SemanticAnalyserTest, builtin_cpid)
@@ -1178,7 +1174,10 @@ TEST_F(SemanticAnalyserTest, call_print_non_map)
 
   test(R"(begin { print(exit()) })", Error{});
   test(R"(begin { print(count()) })", Error{});
-  test(R"(begin { print(ctx) })", Error{});
+
+  // ctx is typed, and is a void* for many probes; it may be printed and will
+  // just be a fixed address.
+  test(R"(begin { print(ctx) })");
 }
 
 TEST_F(SemanticAnalyserTest, call_clear)
@@ -3648,7 +3647,6 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   auto *fieldaccess = assignment->expr.as<ast::FieldAccess>();
   EXPECT_EQ(CreateInt64(), fieldaccess->field_type);
   auto *unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
   auto *var = unop->expr.as<ast::Variable>();
   EXPECT_TRUE(var->var_type.IsPtrTy());
 
@@ -3658,9 +3656,7 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   auto *arrayaccess = assignment->expr.as<ast::ArrayAccess>();
   EXPECT_EQ(CreateInt16(), arrayaccess->element_type);
   fieldaccess = arrayaccess->expr.as<ast::FieldAccess>();
-  EXPECT_TRUE(fieldaccess->field_type.IsCtxAccess());
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
   var = unop->expr.as<ast::Variable>();
   EXPECT_TRUE(var->var_type.IsPtrTy());
 
@@ -3677,9 +3673,7 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   fieldaccess = assignment->expr.as<ast::FieldAccess>();
   EXPECT_EQ(chartype, fieldaccess->field_type);
   fieldaccess = fieldaccess->expr.as<ast::FieldAccess>();
-  EXPECT_TRUE(fieldaccess->field_type.IsCtxAccess());
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
   var = unop->expr.as<ast::Variable>();
   EXPECT_TRUE(var->var_type.IsPtrTy());
 
@@ -3693,12 +3687,11 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   fieldaccess = unop->expr.as<ast::FieldAccess>();
   EXPECT_TRUE(fieldaccess->field_type.IsPtrTy());
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
   var = unop->expr.as<ast::Variable>();
   EXPECT_TRUE(var->var_type.IsPtrTy());
 
+  // The context is castable, like anything else.
   test("k:f, kr:f { @ = (uint64)ctx; }");
-  test("t:sched:sched_one { @ = (uint64)ctx; }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, double_pointer_basic)
@@ -4345,14 +4338,6 @@ TEST_F(SemanticAnalyserTest, subprog_builtin)
   test("fn f(): uint64 { return nsecs; }");
 }
 
-TEST_F(SemanticAnalyserTest, subprog_builtin_disallowed)
-{
-  // Error location is incorrect: #3063
-  test("fn f(): int64 { return func; }", Error{ R"(
-ERROR: Builtin __builtin_func not supported outside probe
-)" });
-}
-
 class SemanticAnalyserBTFTest : public SemanticAnalyserHarness,
                                 public test_btf {};
 
@@ -4365,11 +4350,8 @@ TEST_F(SemanticAnalyserBTFTest, fentry)
   test("fentry:vmlinux:func_1 { 1 }");
   test("fentry:*:func_1 { 1 }");
 
-  test("fexit:func_1 { $x = args.foo; }", Error{ R"(
-stdin:1:25-26: ERROR: Can't find function parameter foo
-fexit:func_1 { $x = args.foo; }
-                        ~
-)" });
+  test("fexit:func_1 { $x = args.foo; }",
+       Error{ R"(ERROR: Unable to find field "foo")" });
   test("fexit:func_1 { $x = args; }");
   test("fentry:func_1 { @ = args; }");
   test("fentry:func_1 { @[args] = 1; }");
@@ -4483,22 +4465,14 @@ TEST_F(SemanticAnalyserBTFTest, iter)
   test("iter:task_file { $x = ctx->file->ino }");
   test("iter:task_vma { $x = ctx->vma->vm_start }");
   test("iter:task { printf(\"%d\", ctx->task->pid); }");
-  test("iter:task { $x = args.foo; }", Error{ R"(
-stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/fentry/uprobe probes (iter used here)
-iter:task { $x = args.foo; }
-                 ~~~~
-)" });
 }
 
 TEST_F(SemanticAnalyserBTFTest, rawtracepoint)
 {
   test("rawtracepoint:event_rt { args.first_real_arg }");
 
-  test("rawtracepoint:event_rt { args.bad_arg }", Error{ R"(
-stdin:1:30-31: ERROR: Can't find function parameter bad_arg
-rawtracepoint:event_rt { args.bad_arg }
-                             ~
-)" });
+  test("rawtracepoint:event_rt { args.bad_arg }",
+       Error{ R"(ERROR: Unable to find field "bad_arg")" });
 }
 
 // Sanity check for kfunc/kretfunc aliases
@@ -4510,13 +4484,9 @@ TEST_F(SemanticAnalyserBTFTest, kfunc)
   test("kretfunc:func_1 { $x = retval; }");
   test("kfunc:vmlinux:func_1 { 1 }");
   test("kfunc:*:func_1 { 1 }");
-  test("kfunc:func_1 { @[func] = 1; }");
 
-  test("kretfunc:func_1 { $x = args.foo; }", Error{ R"(
-stdin:1:28-29: ERROR: Can't find function parameter foo
-kretfunc:func_1 { $x = args.foo; }
-                           ~
-)" });
+  test("kretfunc:func_1 { $x = args.foo; }",
+       Error{ R"(ERROR: Unable to find field "foo")" });
   test("kretfunc:func_1 { $x = args; }");
   test("kfunc:func_1 { @ = args; }");
   test("kfunc:func_1 { @[args] = 1; }");
@@ -4958,15 +4928,6 @@ begin { for ($i : 0..5) { printf("%d", $i); } printf("%d", $i); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_range_context_access)
-{
-  test("kprobe:f { for ($i : 0..5) { arg0 } }", Error{ R"(
-stdin:1:30-34: ERROR: 'arg0' builtin is not allowed in a for-loop
-kprobe:f { for ($i : 0..5) { arg0 } }
-                             ~~~~
-)" });
-}
-
 TEST_F(SemanticAnalyserTest, for_range_nested_range)
 {
   test("begin { for ($i : 0..5) { for ($j : 0..$i) { "
@@ -5013,15 +4974,6 @@ begin { @a = count(); $b = @a; }
 stdin:1:36-38: ERROR: Missing required kernel feature: map_lookup_percpu_elem
 begin { @a = count(); @b = 1; @b = @a; }
                                    ~~
-)" });
-}
-
-TEST_F(SemanticAnalyserTest, for_loop_no_ctx_access)
-{
-  test("kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }", Error{ R"(
-stdin:1:44-48: ERROR: 'arg0' builtin is not allowed in a for-loop
-kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
-                                           ~~~~
 )" });
 }
 
