@@ -243,10 +243,10 @@ void ProbeAndApExpander::expand()
 
 void ProbeAndApExpander::visit(Program &prog)
 {
-  // Expand attachpoints first
+  // Expand attachpoints first.
   Visitor<ProbeAndApExpander>::visit(prog);
 
-  // Expand probes
+  // Expand probes.
   ProbeList new_probe_list;
   for (auto *probe : prog.probes) {
     if (probe->attach_points.size() < 2) {
@@ -256,8 +256,7 @@ void ProbeAndApExpander::visit(Program &prog)
         auto *new_probe = ast_.make_node<Probe>(
             probe->loc,
             AttachPointList{ ap },
-            clone(ast_, probe->block->loc, probe->block),
-            probe->orig_name);
+            clone(ast_, probe->block->loc, probe->block));
         new_probe_list.emplace_back(new_probe);
       }
     }
