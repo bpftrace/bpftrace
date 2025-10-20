@@ -71,7 +71,6 @@ inline std::vector<Pass> AllCompilePasses()
   passes.emplace_back(CreateVerifyPass());
   passes.emplace_back(CreateOptimizePass());
   passes.emplace_back(CreateObjectPass());
-  passes.emplace_back(CreateExternObjectPass());
   passes.emplace_back(CreateLinkPass());
   return passes;
 }

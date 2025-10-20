@@ -4,13 +4,14 @@
 #include <llvm/IR/Module.h>
 
 #include "ast/pass_manager.h"
+#include "util/cache.h"
 
 namespace bpftrace::ast {
 
 class BitcodeModules : public State<"bitcode"> {
 public:
   std::vector<std::unique_ptr<llvm::Module>> modules;
-  std::vector<std::string> objects;
+  std::vector<util::CacheObject> objects;
 };
 
 class ClangBuildError : public ErrorInfo<ClangBuildError> {

@@ -17,8 +17,9 @@ Pass CreateTypeSystemPass()
     // module or user binary).
     std::optional<btf::Types> aggregate;
     for (const auto &s : bm.objects) {
-      auto btf = btf::Types::parse(static_cast<const void *>(s.data()),
-                                   s.size());
+      auto str = s.data();
+      auto btf = btf::Types::parse(static_cast<const void *>(str.data()),
+                                   str.size());
       if (!btf) {
         return btf.takeError();
       }

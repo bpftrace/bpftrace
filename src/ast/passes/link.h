@@ -7,14 +7,6 @@
 
 namespace bpftrace::ast {
 
-class BpfExternObjects : public ast::State<"bpf-extern"> {
-public:
-  std::vector<std::filesystem::path> objects;
-};
-
-// Produces a set of external objects, `BpfExternObjects`.
-Pass CreateExternObjectPass();
-
 class LinkError : public ErrorInfo<LinkError> {
 public:
   LinkError(std::string origin, int err)

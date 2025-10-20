@@ -25,6 +25,7 @@ public:
 
   Result<std::string> read_all();
   Result<> write_all(const std::span<const char> &data);
+  int fd() const { return fd_; }
 
 private:
   MemFd(int fd) : fd_(fd), path_("/dev/fd/" + std::to_string(fd)) {};
