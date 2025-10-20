@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.0" = type { ptr, ptr }
-%uint8_usym_t_int64__tuple_t = type { i8, [16 x i8], i64 }
+%uint64_usym_t_int64__tuple_t = type { i64, [16 x i8], i64 }
 %usym_t = type { i64, i32, i32 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
@@ -21,7 +21,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !55 {
 entry:
   %"@t_key" = alloca i64, align 8
-  %tuple = alloca %uint8_usym_t_int64__tuple_t, align 8
+  %tuple = alloca %uint64_usym_t_int64__tuple_t, align 8
   %usym = alloca %usym_t, align 8
   %1 = call ptr @llvm.preserve.static.offset(ptr %0)
   %2 = getelementptr i8, ptr %1, i64 128
@@ -38,11 +38,11 @@ entry:
   store i32 0, ptr %6, align 4
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
   call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 32, i1 false)
-  %7 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %tuple, i32 0, i32 0
-  store i8 1, ptr %7, align 1
-  %8 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %tuple, i32 0, i32 1
+  %7 = getelementptr %uint64_usym_t_int64__tuple_t, ptr %tuple, i32 0, i32 0
+  store i64 1, ptr %7, align 8
+  %8 = getelementptr %uint64_usym_t_int64__tuple_t, ptr %tuple, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %8, ptr align 1 %usym, i64 16, i1 false)
-  %9 = getelementptr %uint8_usym_t_int64__tuple_t, ptr %tuple, i32 0, i32 2
+  %9 = getelementptr %uint64_usym_t_int64__tuple_t, ptr %tuple, i32 0, i32 2
   store i64 10, ptr %9, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8
@@ -102,8 +102,8 @@ attributes #5 = { memory(none) }
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !23, size: 64)
 !23 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !24)
 !24 = !{!25, !26, !30}
-!25 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !4, size: 8)
-!26 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !27, size: 128, offset: 8)
+!25 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !20, size: 64)
+!26 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !27, size: 128, offset: 64)
 !27 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 128, elements: !28)
 !28 = !{!29}
 !29 = !DISubrange(count: 16, lowerBound: 0)

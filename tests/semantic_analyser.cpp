@@ -3226,7 +3226,7 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
                     ~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   test("kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }", Error{ R"(
-stdin:1:35-56: ERROR: Type mismatch for $x: trying to assign value of type '(int64,int32)' when variable already contains a value of type '(int64,uint32)'
+stdin:1:35-56: ERROR: Type mismatch for $x: trying to assign value of type '(int64,int64)' when variable already contains a value of type '(int64,uint64)'
 kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }
                                   ~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -3823,12 +3823,7 @@ TEST_F(SemanticAnalyserTest, tuple)
   test(R"(begin { @t = (1, kstack()) })");
   test(R"(begin { @t = (1, (2,3)) })");
   test(R"(begin { $t = (1, (int64)2); $t = (2, (int32)3); })");
-
-  test(R"(begin { $t = (1, (int32)2); $t = (2, (int64)3); })", Error{ R"(
-stdin:1:29-47: ERROR: Type mismatch for $t: trying to assign value of type '(int64,int64)' when variable already contains a value of type '(int64,int32)'
-begin { $t = (1, (int32)2); $t = (2, (int64)3); }
-                            ~~~~~~~~~~~~~~~~~~
-)" });
+  test(R"(begin { $t = (1, (int32)2); $t = (2, (int64)3); })");
 
   test(R"(struct task_struct { int x; } begin { $t = (1, curtask); })");
   test(R"(struct task_struct { int x[4]; } begin { $t = (1, curtask->x); })");
@@ -3842,16 +3837,11 @@ begin { $t = (1, (int32)2); $t = (2, (int64)3); }
   test(R"(begin { @t = (1, count()) })", Error{});
 
   test(R"(begin { $t = (1, (2, 3)); $t = (4, ((int8)5, 6)); })");
-
-  test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, (5, 6)); })", Error{ R"(
-stdin:1:33-49: ERROR: Type mismatch for $t: trying to assign value of type '(int64,(int64,int64))' when variable already contains a value of type '(int64,(int8,int64))'
-begin { $t = (1, ((int8)2, 3)); $t = (4, (5, 6)); }
-                                ~~~~~~~~~~~~~~~~
-)" });
+  test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, (5, 6)); })");
 
   test(R"(begin { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); })",
        Error{ R"(
-stdin:1:34-56: ERROR: Type mismatch for $t: trying to assign value of type '(int64,(int8,int64))' when variable already contains a value of type '(uint8,(int64,int64))'
+stdin:1:34-56: ERROR: Type mismatch for $t: trying to assign value of type '(int64,(int64,int64))' when variable already contains a value of type '(uint64,(int64,int64))'
 begin { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); }
                                  ~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -4866,6 +4856,7 @@ TEST_F(SemanticAnalyserTest, variable_declarations)
   test("begin { let $a: int16 = 1; }");
   test("begin { let $a: uint8 = 1; $a = 100; }");
   test("begin { let $a: int8 = 1; $a = -100; }");
+  test("begin { let $a: uint64 = (uint8)1; $a = 100000; }");
   test(R"(begin { let $a: string; $a = "hiya"; })");
   test("begin { let $a: int16; print($a); }");
   test("begin { let $a; print($a); $a = 1; }");
@@ -4955,6 +4946,14 @@ stdin:1:28-34: ERROR: Variable declarations need to occur before variable usage 
 begin { $x = 2; if (pid) { let $x; } }
                            ~~~~~~
 )" });
+
+  test("begin { $a = (1, 2); let $b: typeof($a) = ((uint64)1, 2); }", Error{ R"(
+stdin:1:22-57: ERROR: Type mismatch for $b: trying to assign value of type '(uint64,int64)' when variable already has a type '(int64,int64)'
+begin { $a = (1, 2); let $b: typeof($a) = ((uint64)1, 2); }
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)" });
+
+  test("begin { $a = ((int8)1, 2); let $b: typeof($a) = (1, 2); }");
 }
 
 TEST_F(SemanticAnalyserTest, variable_address)
@@ -5466,6 +5465,8 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
 {
   test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = 2; }");
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bar"; })");
+  test(
+      R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "muchmuchlongerstr"; })");
 
   // These types should be enforced.
   test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
@@ -5478,12 +5479,6 @@ kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
 stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'int64' when variable already has a type 'string'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
                                             ~~~~~~
-)" });
-  test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bazz"; })",
-       Error{ R"(
-stdin:1:45-56: ERROR: Type mismatch for $y: trying to assign value of type 'string' when variable already has a type 'string'
-kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bazz"; }
-                                            ~~~~~~~~~~~
 )" });
 
   // But ordering should not matter, as long as the scope is the same.

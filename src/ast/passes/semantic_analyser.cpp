@@ -37,7 +37,6 @@ namespace {
 
 struct variable {
   SizedType type;
-  bool can_resize;
   bool was_assigned;
 };
 
@@ -2965,7 +2964,6 @@ void SemanticAnalyser::visit(For &f)
   scope_stack_.push_back(&f);
 
   variables_[scope_stack_.back()][decl_name] = { .type = f.decl->type(),
-                                                 .can_resize = true,
                                                  .was_assigned = true };
 
   loop_depth_++;
@@ -3268,6 +3266,7 @@ void SemanticAnalyser::visit(Cast &cast)
 void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
+  ExpressionList expr_list;
   for (auto &elem : tuple.elems) {
     visit(elem);
 
@@ -3280,9 +3279,22 @@ void SemanticAnalyser::visit(Tuple &tuple)
           << "Map type " << elem.type() << " cannot exist inside a tuple.";
     }
     elements.emplace_back(elem.type());
+    if (elem.type().IsIntegerTy()) {
+      if (elem.type().GetSize() < 8) {
+        // Like map keys and values, all integers in tuples are 64 bits
+        elements.back().SetSize(8);
+        auto *typeof = ctx_.make_node<Typeof>(elements.back(),
+                                              Location(elem.loc()));
+        expr_list.emplace_back(ctx_.make_node<Cast>(
+            typeof, clone(ctx_, elem, elem.loc()), Location(tuple.loc)));
+        continue;
+      }
+    }
+    expr_list.emplace_back(elem);
   }
 
   tuple.tuple_type = CreateTuple(Struct::CreateTuple(elements));
+  tuple.elems = std::move(expr_list);
 }
 
 void SemanticAnalyser::visit(Expression &expr)
@@ -3507,11 +3519,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         pass_tracker_.inc_num_unresolved();
       }
     } else if (assignTy.IsStringTy()) {
-      if (foundVar.can_resize) {
-        update_string_size(storedTy, assignTy);
-      } else if (!assignTy.FitsInto(storedTy)) {
-        type_mismatch_error = true;
-      }
+      update_string_size(storedTy, assignTy);
     } else if (storedTy.IsIntegerTy()) {
       if (storedTy.IsEqual(assignTy)) {
         // No checks or casts needed.
@@ -3584,13 +3592,15 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                      : ". The value may contain garbage.");
       }
     } else if (assignTy.IsTupleTy()) {
-      update_string_size(storedTy, assignTy);
-      // Early passes may not have been able to deduce the full types of tuple
-      // elements yet. So wait until final pass.
-      if (is_final_pass()) {
+      if (assignTy.IsSameType(storedTy)) {
+        update_string_size(storedTy, assignTy);
         if (!assignTy.FitsInto(storedTy)) {
           type_mismatch_error = true;
         }
+      } else if (is_final_pass()) {
+        // Early passes may not have been able to deduce the full types of tuple
+        // elements yet. So wait until final pass.
+        type_mismatch_error = true;
       }
     }
     if (type_mismatch_error) {
@@ -3607,6 +3617,10 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         // which could come from a variable declaration. The assign type may
         // resolve builtins like `curtask` which also specifies the address
         // space.
+        if (assignTy.IsIntegerTy() &&
+            (storedTy.GetSize() > assignTy.GetSize())) {
+          assignTy.SetSize(storedTy.GetSize());
+        }
         foundVar.type = assignTy;
         foundVar.was_assigned = true;
       }
@@ -3616,8 +3630,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   if (var_scope == nullptr) {
     variables_[scope_stack_.back()].insert(
-        { var_ident,
-          { .type = assignTy, .can_resize = true, .was_assigned = true } });
+        { var_ident, { .type = assignTy, .was_assigned = true } });
     var_scope = scope_stack_.back();
   }
 
@@ -3699,12 +3712,8 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
     }
   }
 
-  bool can_resize = decl.var->var_type.GetSize() == 0;
-
-  variables_[scope_stack_.back()].insert({ var_ident,
-                                           { .type = decl.var->var_type,
-                                             .can_resize = can_resize,
-                                             .was_assigned = false } });
+  variables_[scope_stack_.back()].insert(
+      { var_ident, { .type = decl.var->var_type, .was_assigned = false } });
   variable_decls_[scope_stack_.back()].insert({ var_ident, decl });
 }
 
@@ -3735,9 +3744,7 @@ void SemanticAnalyser::visit(Subprog &subprog)
     const auto &ty = arg->typeof->type();
     auto &var = variables_[scope_stack_.back()]
                     .emplace(arg->var->ident,
-                             variable{ .type = ty,
-                                       .can_resize = true,
-                                       .was_assigned = true })
+                             variable{ .type = ty, .was_assigned = true })
                     .first->second;
     var.type = ty; // Override in case it has changed.
   }
@@ -4246,11 +4253,11 @@ bool SemanticAnalyser::update_string_size(SizedType &type,
       new_elems.push_back(type.GetField(i).type);
     }
     if (updated) {
+      // Tuples need to get re-made to account for padding if they change size
       type = CreateTuple(Struct::CreateTuple(new_elems));
     }
     return updated;
   }
-
   return false;
 }
 
