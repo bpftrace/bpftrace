@@ -15,7 +15,7 @@ PROG macro set(@x) { @x = 2; } begin { @a = 1; set(@a);  }
 EXPECT @a: 2
 
 NAME it renames internal variables
-PROG macro add(x) { let $y; if (true) { $y = 1 } x + $y  } begin { print(add(1));  }
+PROG macro add(x) { let $y: typeof(x); if (true) { $y = 1 } x + $y  } begin { print(add(1));  }
 EXPECT 2
 
 NAME it reads the passed map

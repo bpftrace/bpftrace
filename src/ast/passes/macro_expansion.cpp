@@ -194,6 +194,7 @@ void MacroExpander::visit(VarDeclStatement &decl)
   }
   renamed_vars_.insert(var->ident);
 
+  visit(decl.typeof);
   visit(decl.var);
 }
 
