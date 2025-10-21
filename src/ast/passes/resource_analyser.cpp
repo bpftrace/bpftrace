@@ -354,8 +354,7 @@ void ResourceAnalyser::visit(Call &call)
   // a slightly different type due to type promotion in an earlier pass.
   // This requires us to allocate a new map key (or create a scratch buffer)
   // and copy individual elements of the tuple instead of the whole thing.
-  if (getAssignRewriteFuncs().contains(call.func) || call.func == "delete" ||
-      call.func == "has_key") {
+  if (getAssignRewriteFuncs().contains(call.func) || call.func == "delete") {
     if (call.func == "lhist" || call.func == "hist" || call.func == "tseries") {
       auto &map = *call.vargs.at(0).as<Map>();
       // Allocation is always needed for lhist/hist/tseries but we need to
