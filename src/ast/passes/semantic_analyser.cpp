@@ -854,6 +854,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     // if addrspace cannot be detected.
     case ProbeType::invalid:
     case ProbeType::special:
+    case ProbeType::test:
     case ProbeType::benchmark:
     case ProbeType::profile:
     case ProbeType::interval:

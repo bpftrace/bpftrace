@@ -35,7 +35,7 @@ static Result<std::vector<output::Primitive>> prepare_args(
 void AsyncHandlers::exit(const OpaqueValue &data)
 {
   auto exit = data.bitcast<AsyncEvent::Exit>();
-  BPFtrace::exit_code = exit.exit_code;
+  bpftrace.exit_code = exit.exit_code;
   bpftrace.request_finalize();
 }
 
@@ -52,7 +52,7 @@ void AsyncHandlers::join(const OpaqueValue &data)
       joined << delim;
     joined << (arg.data() + (i * bpftrace.join_argsize_));
   }
-  out.join(joined.str());
+  out->join(joined.str());
 }
 
 void AsyncHandlers::time(const OpaqueValue &data)
@@ -72,7 +72,7 @@ void AsyncHandlers::time(const OpaqueValue &data)
     LOG(WARNING) << "strftime returned 0";
     return;
   }
-  out.time(timestr);
+  out->time(timestr);
 }
 
 void AsyncHandlers::runtime_error(const OpaqueValue &data)
@@ -81,7 +81,7 @@ void AsyncHandlers::runtime_error(const OpaqueValue &data)
   auto error_id = runtime_error.error_id;
   const auto return_value = runtime_error.return_value;
   const auto &info = bpftrace.resources.runtime_error_info[error_id];
-  out.runtime_error(return_value, info);
+  out->runtime_error(return_value, info);
 }
 
 void AsyncHandlers::print_non_map(const OpaqueValue &data)
@@ -95,7 +95,7 @@ void AsyncHandlers::print_non_map(const OpaqueValue &data)
   if (!v) {
     LOG(BUG) << "error printing non-map value: " << v.takeError();
   }
-  out.value(*v);
+  out->value(*v);
 }
 
 void AsyncHandlers::print_map(const OpaqueValue &data)
@@ -109,7 +109,7 @@ void AsyncHandlers::print_map(const OpaqueValue &data)
              << "\": " << res.takeError();
   }
 
-  out.map(map.name(), *res);
+  out->map(map.name(), *res);
 }
 
 void AsyncHandlers::zero_map(const OpaqueValue &data)
@@ -241,7 +241,7 @@ void AsyncHandlers::syscall(const OpaqueValue &data)
     return;
   }
 
-  out.syscall(*result);
+  out->syscall(*result);
 }
 
 void AsyncHandlers::cat(const OpaqueValue &data)
@@ -259,7 +259,7 @@ void AsyncHandlers::cat(const OpaqueValue &data)
   util::cat_file(fmt.format(*vals).c_str(),
                  bpftrace.config_->max_cat_bytes,
                  buf);
-  out.cat(buf.str());
+  out->cat(buf.str());
 }
 
 void AsyncHandlers::printf(const OpaqueValue &data)
@@ -280,7 +280,7 @@ void AsyncHandlers::printf(const OpaqueValue &data)
     return;
   }
 
-  out.printf(fmt.format(*vals), source_info, severity);
+  out->printf(fmt.format(*vals), source_info, severity);
 }
 
 } // namespace bpftrace::async_action

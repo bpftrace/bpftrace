@@ -51,6 +51,7 @@ bool probe_needs_pid_filter(AttachPoint *ap)
     // We don't filter by pid at all for these special probes
     case ProbeType::interval:
     case ProbeType::special:
+    case ProbeType::test:
     case ProbeType::benchmark:
       return false;
   }

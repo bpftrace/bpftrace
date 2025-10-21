@@ -74,6 +74,10 @@ public:
   {
     return resources.special_probes;
   }
+  std::vector<::bpftrace::Probe> get_test_probes()
+  {
+    return resources.test_probes;
+  }
   std::vector<::bpftrace::Probe> get_benchmark_probes()
   {
     return resources.benchmark_probes;

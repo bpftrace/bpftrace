@@ -109,8 +109,7 @@ public:
       : RuntimeErrorInfo(error_id, __BPF_FUNC_MAX_ID, loc) {};
 
   RuntimeErrorInfo()
-      : error_id(RuntimeErrorId::HELPER_ERROR),
-        func_id(__BPF_FUNC_MAX_ID) {};
+      : error_id(RuntimeErrorId::HELPER_ERROR), func_id(__BPF_FUNC_MAX_ID) {};
 
   RuntimeErrorId error_id;
   bpf_func_id func_id;
@@ -206,12 +205,16 @@ public:
   // be collecting this, but it's complex to move the logic.
   std::vector<Probe> probes;
   std::unordered_map<std::string, Probe> special_probes;
+  std::vector<Probe> test_probes;
   std::vector<Probe> benchmark_probes;
   std::vector<Probe> signal_probes;
   std::vector<Probe> watchpoint_probes;
 
-  size_t num_probes() {
-    return probes.size() + special_probes.size() + benchmark_probes.size() + signal_probes.size() + watchpoint_probes.size();
+  size_t num_probes()
+  {
+    return probes.size() + special_probes.size() + test_probes.size() +
+           benchmark_probes.size() + signal_probes.size() +
+           watchpoint_probes.size();
   }
 
   // List of probes using userspace symbol resolution
@@ -238,6 +241,7 @@ private:
             probes,
             signal_probes,
             special_probes,
+            test_probes,
             benchmark_probes);
   }
 };

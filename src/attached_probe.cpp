@@ -48,6 +48,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
     case ProbeType::kprobe:    return BPF_PROBE_ENTRY;  break;
     case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
     case ProbeType::special:   return BPF_PROBE_ENTRY;  break;
+    case ProbeType::test:      return BPF_PROBE_ENTRY;  break;
     case ProbeType::benchmark: return BPF_PROBE_ENTRY;  break;
     case ProbeType::uprobe:    return BPF_PROBE_ENTRY;  break;
     case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
@@ -63,6 +64,7 @@ bpf_prog_type progtype(ProbeType t)
   switch (t) {
       // clang-format off
     case ProbeType::special:    return BPF_PROG_TYPE_RAW_TRACEPOINT; break;
+    case ProbeType::test:       return BPF_PROG_TYPE_XDP; break;
     case ProbeType::benchmark:  return BPF_PROG_TYPE_XDP; break;
     case ProbeType::kprobe:     return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::kretprobe:  return BPF_PROG_TYPE_KPROBE; break;
@@ -1547,6 +1549,7 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
     }
     case ProbeType::invalid:
     case ProbeType::special:
+    case ProbeType::test:
     case ProbeType::benchmark: {
       LOG(BUG) << "invalid attached probe type \"" << probe.type << "\"";
     }

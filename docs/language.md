@@ -922,15 +922,30 @@ end {
 }
 ```
 
+### test
+
+`test` is a special built-in probe type for creating tests.
+bpftrace executes each `test` probe and checks the return value, error count and possible exit calls to determine a pass.
+If multiple `test` probes exist in a script, bpftrace executes them sequentially in the order they are specified.
+To run `test` probes, you must run bpftrace in test mode: `bpftrace --test ...`; otherwise `test` probes will be ignored.
+
+```
+test:okay {
+  print("I'm okay! This output will be suppressed.");
+}
+
+test:failure {
+  print("This is a failure! This output will be shown");
+  return 1;
+}
+```
+
 ### bench
 
 `bench` is a special built-in probe type for creating micro benchmarks.
-bpftrace executes each `bench` probe repeatedly to measure the average
-execution time of the contained code. If multiple `bench` probes exist
-in a script, bpftrace executes them sequentially in the order they are
-specified. To run `bench` probes, you must run bpftrace in bench mode:
-`bpftrace --test-mode bench ...`; otherwise, `bench` probes will be
-ignored.
+bpftrace executes each `bench` probe repeatedly to measure the average execution time of the contained code.
+If multiple `bench` probes exist in a script, bpftrace executes them sequentially in the order they are specified.
+To run `bench` probes, you must run bpftrace in bench mode: `bpftrace --bench ...`; otherwise, `bench` probes will be ignored.
 
 ```
 bench:lhist {

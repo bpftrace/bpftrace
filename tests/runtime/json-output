@@ -223,12 +223,14 @@ TIMEOUT 1
 
 NAME bench
 RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'bench:a { @ = count(); }'
-EXPECT_REGEX {"type": "benchmark_results", "data": {"a": \d+}}
+EXPECT_REGEX {"type": "benchmark_result", "data": {"a": {"average": \d+, "iters": \d+}}}
 TIMEOUT 2
 
 NAME bench multiple
 RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'bench:a { @a++; } bench:b { @b++; } bench:c { @c++; }'
-EXPECT_REGEX {"type": "benchmark_results", "data": {"a": \d+, "b": \d+, "c": \d+}}
+EXPECT_REGEX {"type": "benchmark_result", "data": {"a": {"average": \d+, "iters": \d+}}}
+             {"type": "benchmark_result", "data": {"b": {"average": \d+, "iters": \d+}}}
+             {"type": "benchmark_result", "data": {"c": {"average": \d+, "iters": \d+}}}
 TIMEOUT 5
 
 NAME attached probes

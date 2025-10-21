@@ -3292,6 +3292,7 @@ int CodegenLLVM::getReturnValueForProbe(ProbeType probe_type)
       // programs bad citizens. Return 1 instead.
       return 1;
     case ProbeType::special:
+    case ProbeType::test:
     case ProbeType::benchmark:
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
