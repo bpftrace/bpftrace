@@ -240,6 +240,7 @@ AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
     case ProbeType::interval:
     case ProbeType::profile:
     case ProbeType::special:
+    case ProbeType::test:
     case ProbeType::benchmark:
     case ProbeType::iter:
     case ProbeType::invalid:
@@ -270,6 +271,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
         return true;
       case ProbeType::invalid:
       case ProbeType::special:
+      case ProbeType::test:
       case ProbeType::benchmark:
       case ProbeType::tracepoint:
       case ProbeType::fentry:
@@ -286,6 +288,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
         return true;
       case ProbeType::invalid:
       case ProbeType::special:
+      case ProbeType::test:
       case ProbeType::benchmark:
       case ProbeType::kprobe:
       case ProbeType::kretprobe:

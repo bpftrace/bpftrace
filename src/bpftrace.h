@@ -173,9 +173,10 @@ public:
   virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
       const std::string &name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
-  // This gets the number of perf or ring buffer pages in total across all cpus by first checking if the
-  // user set this manually with a config value (`perf_rb_pages`), then falling
-  // back to a dynamic default based on the amount of available system memory
+  // This gets the number of perf or ring buffer pages in total across all cpus
+  // by first checking if the user set this manually with a config value
+  // (`perf_rb_pages`), then falling back to a dynamic default based on the
+  // amount of available system memory
   virtual Result<uint64_t> get_buffer_pages(bool per_cpu = false) const;
   Result<uint64_t> get_buffer_pages_per_cpu() const;
 
@@ -187,9 +188,12 @@ public:
   std::set<std::string> list_modules(const ast::ASTContext &ctx);
 
   std::string cmd_;
+
+  // Set by the async `exit` handler.
   bool finalize_ = false;
-  static int exit_code;
-  // Global variables checking if an exit/usr1 signal was received
+  int exit_code = 0;
+
+  // Global variables checking if an exit/usr1 signal was received.
   static volatile sig_atomic_t exitsig_recv;
   static volatile sig_atomic_t sigusr1_recv;
 
@@ -207,7 +211,6 @@ public:
 
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;
-  std::unique_ptr<output::Output> out_;
   std::unique_ptr<BTF> btf_;
   std::unique_ptr<BPFfeature> feature_;
 
@@ -235,8 +238,8 @@ public:
   int ncpus_;
   int max_cpu_id_;
   std::unique_ptr<Config> config_;
+  bool run_tests_ = false;
   bool run_benchmarks_ = false;
-  std::vector<std::pair<std::string, uint32_t>> benchmark_results;
 
 private:
   Ksyms ksyms_;

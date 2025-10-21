@@ -42,6 +42,7 @@ private:
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
+  std::unordered_map<std::string, Location> test_locs_;
   std::unordered_map<std::string, Location> benchmark_locs_;
 };
 
@@ -294,6 +295,19 @@ void AttachPointChecker::visit(AttachPoint &ap)
       return;
     }
     ap.addError() << ap.target << " is not a supported trigger";
+  } else if (ap.provider == "test") {
+    if (ap.target.empty())
+      ap.addError() << "test probes must have a name";
+    auto it = test_locs_.find(ap.target);
+
+    if (it != test_locs_.end()) {
+      auto &err = ap.addError();
+      err << "\"" + ap.target + "\""
+          << " was used as the name for more than one TEST probe";
+      err.addContext(it->second) << "this is the other instance";
+    }
+
+    test_locs_.emplace(ap.target, ap.loc);
   } else if (ap.provider == "bench") {
     if (ap.target.empty())
       ap.addError() << "bench probes must have a name";
@@ -464,6 +478,8 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
   switch (probetype(ap.provider)) {
     case ProbeType::special:
       return special_parser();
+    case ProbeType::test:
+      return test_parser();
     case ProbeType::benchmark:
       return benchmark_parser();
     case ProbeType::kprobe:
@@ -597,19 +613,27 @@ AttachPointParser::State AttachPointParser::special_parser()
   return OK;
 }
 
+AttachPointParser::State AttachPointParser::test_parser()
+{
+  // Can only have reached here if provider is `test`
+  assert(ap_->provider == "test");
+  if (parts_.size() != 2) {
+    return argument_count_error(1);
+  }
+
+  ap_->target = parts_[1];
+  return OK;
+}
+
 AttachPointParser::State AttachPointParser::benchmark_parser()
 {
   // Can only have reached here if provider is `bench`
   assert(ap_->provider == "bench");
-
-  if (ap_->provider == "bench") {
-    if (parts_.size() != 2) {
-      return argument_count_error(1);
-    }
-
-    ap_->target = parts_[1];
+  if (parts_.size() != 2) {
+    return argument_count_error(1);
   }
 
+  ap_->target = parts_[1];
   return OK;
 }
 

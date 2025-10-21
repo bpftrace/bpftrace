@@ -33,6 +33,7 @@ private:
   State lex_attachpoint(const AttachPoint &ap);
 
   State special_parser();
+  State test_parser();
   State benchmark_parser();
   State kprobe_parser(bool allow_offset = true);
   State kretprobe_parser();

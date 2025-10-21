@@ -1,3 +1,4 @@
+#include "types_format.h"
 #include <arpa/inet.h>
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
@@ -33,7 +34,6 @@
 #include <systemd/sd-daemon.h>
 #endif
 
-#include "ast/async_event_types.h"
 #include "ast/context.h"
 #include "async_action.h"
 #include "attached_probe.h"
@@ -42,11 +42,12 @@
 #include "bpftrace.h"
 #include "btf.h"
 #include "log.h"
+#include "output/capture.h"
+#include "output/discard.h"
+#include "output/text.h"
 #include "scopeguard.h"
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
-#include "util/cpus.h"
-#include "util/exceptions.h"
 #include "util/kernel.h"
 #include "util/paths.h"
 #include "util/strings.h"
@@ -61,7 +62,6 @@ std::set<DebugStage> bt_debug = {};
 bool bt_quiet = false;
 bool bt_verbose = false;
 bool dry_run = false;
-int BPFtrace::exit_code = 0;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 
@@ -174,6 +174,8 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
     auto target = ap.target.empty() ? "" : "_" + ap.target;
     auto name = ap.provider + target;
     resources.special_probes[name] = std::move(probe);
+  } else if (ap.provider == "test") {
+    resources.test_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "bench") {
     resources.benchmark_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "self") {
@@ -204,7 +206,8 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
 int BPFtrace::num_probes() const
 {
   return resources.special_probes.size() + resources.probes.size() +
-         resources.signal_probes.size() + resources.benchmark_probes.size();
+         resources.signal_probes.size() + resources.benchmark_probes.size() +
+         resources.test_probes.size();
 }
 
 void BPFtrace::request_finalize()
@@ -361,6 +364,7 @@ bool attach_reverse(const Probe &p)
 {
   switch (p.type) {
     case ProbeType::special:
+    case ProbeType::test:
     case ProbeType::benchmark:
     case ProbeType::kprobe:
     case ProbeType::uprobe:
@@ -539,6 +543,8 @@ int BPFtrace::run(output::Output &out,
 
   int num_begin_end_attached = 0;
   int num_signal_attached = 0;
+  int num_test_attached = 0;
+  int num_benchmark_attached = 0;
 
   auto begin_probe = resources.special_probes.find("begin");
   if (begin_probe != resources.special_probes.end()) {
@@ -554,28 +560,145 @@ int BPFtrace::run(output::Output &out,
     ++num_begin_end_attached;
   }
 
-  if (run_benchmarks_) {
-    for (auto &probe : resources.benchmark_probes) {
-      auto &benchmark_prog = bytecode_.getProgramForProbe(probe);
-      // Note: on newer kernels you must provide a data_in buffer at least
-      // ETH_HLEN bytes long to make sure input validation works for
-      // opts. Otherwise, bpf_prog_test_run_opts will return -EINVAL for
-      // BPF_PROG_TYPE_XDP.
-      //
-      // https://github.com/torvalds/linux/commit/6b3d638ca897e099fa99bd6d02189d3176f80a47
-      constexpr size_t ETH_HLEN = 14;
-      char data_in[ETH_HLEN];
-      DECLARE_LIBBPF_OPTS(bpf_test_run_opts, opts);
-      opts.data_in = data_in;
-      opts.data_size_in = ETH_HLEN;
-      opts.repeat = 1'000'000;
+  int rval = 0; // Used for return below.
 
-      if (auto ret = ::bpf_prog_test_run_opts(benchmark_prog.fd(), &opts)) {
-        LOG(ERROR) << "bpf_prog_test_run_opts failed: " << ret;
-        return -1;
+  if (run_tests_ || run_benchmarks_) {
+    if (run_tests_) {
+      std::vector<std::string> all_tests;
+      std::vector<bool> all_passed;
+      for (auto &probe : resources.test_probes) {
+        all_tests.emplace_back(probe.path);
       }
 
-      benchmark_results.emplace_back(probe.path, opts.duration);
+      for (size_t index = 0; index < resources.test_probes.size(); index++) {
+        ++num_test_attached;
+        auto &probe = resources.test_probes[index];
+        auto &test_prog = bytecode_.getProgramForProbe(probe);
+
+        // We swap our output for something that will capture the
+        // result of executing this single test. `poll_output` should
+        // be called after each test, and `ss.str("")` to reset the
+        // output (or used as required).
+        std::stringstream ss;
+        auto text_output = std::make_unique<output::TextOutput>(ss);
+        auto test_output = std::make_unique<output::CaptureOutput>(
+            *text_output);
+        handlers.change_output(*test_output);
+
+        // See below; we must provide sufficient data.
+        constexpr size_t ETH_HLEN = 14;
+        char data_in[ETH_HLEN];
+        DECLARE_LIBBPF_OPTS(bpf_test_run_opts, opts);
+        opts.data_in = data_in;
+        opts.data_size_in = ETH_HLEN;
+        opts.repeat = 1;
+        if (auto ret = ::bpf_prog_test_run_opts(test_prog.fd(), &opts)) {
+          LOG(ERROR) << "bpf_prog_test_run_opts failed: " << ret;
+          return -1;
+        }
+
+        // See above; ensure the output is flushed.
+        bool passed = opts.retval == 0 && exit_code == 0 &&
+                      test_output->error_count == 0;
+        all_passed.push_back(passed);
+        poll_output(*test_output, true);
+        out.test_result(all_tests,
+                        index,
+                        std::chrono::nanoseconds(opts.duration),
+                        all_passed,
+                        ss.str());
+
+        // Override the return value.
+        if (rval == 0 && !passed) {
+          rval = 1;
+        }
+        exit_code = 0; // Reset for all tests.
+      }
+
+      // Return the original output.
+      handlers.change_output(out);
+    } else if (run_benchmarks_) {
+      std::vector<std::string> all_benches;
+      for (auto &probe : resources.benchmark_probes) {
+        all_benches.emplace_back(probe.path);
+      }
+
+      for (size_t index = 0; index < resources.benchmark_probes.size();
+           index++) {
+        ++num_benchmark_attached;
+        auto &probe = resources.benchmark_probes[index];
+        auto &benchmark_prog = bytecode_.getProgramForProbe(probe);
+
+        // Increase opts.repeat until we reach at least 1ms of run time. We
+        // double the repeat time each instance, so each probe should take
+        // a few milliseconds at most (plus loading time, etc).
+        size_t iters = 1;
+        while (true) {
+          // Benchmarks have all output suppressed.
+          auto discard = std::make_unique<output::DiscardOutput>();
+          auto test_output = std::make_unique<output::CaptureOutput>(*discard);
+          handlers.change_output(*test_output);
+
+          // Note: on newer kernels you must provide a data_in buffer at least
+          // ETH_HLEN bytes long to make sure input validation works for
+          // opts. Otherwise, bpf_prog_test_run_opts will return -EINVAL for
+          // BPF_PROG_TYPE_XDP.
+          //
+          // https://github.com/torvalds/linux/commit/6b3d638ca897e099fa99bd6d02189d3176f80a47
+          constexpr size_t ETH_HLEN = 14;
+          char data_in[ETH_HLEN];
+          DECLARE_LIBBPF_OPTS(bpf_test_run_opts, opts);
+          opts.data_in = data_in;
+          opts.data_size_in = ETH_HLEN;
+          opts.repeat = iters;
+
+          if (auto ret = ::bpf_prog_test_run_opts(benchmark_prog.fd(), &opts)) {
+            LOG(ERROR) << "bpf_prog_test_run_opts failed: " << ret;
+            return -1;
+          }
+
+          poll_output(*test_output, true);
+          // Allow skipping benchmarks by returning 1.
+          if (exit_code == 0 && opts.retval != 0) {
+            break;
+          }
+          // Did we run for enough time?
+          auto total = std::chrono::nanoseconds(opts.duration) * iters;
+          if (total < std::chrono::microseconds(1)) {
+            iters *= 10'00;
+            continue;
+          }
+          if (total < std::chrono::microseconds(10)) {
+            iters *= 100;
+            continue;
+          }
+          if (total < std::chrono::microseconds(100)) {
+            iters *= 10;
+            continue;
+          }
+          if (total < std::chrono::milliseconds(1)) {
+            iters *= 2;
+            continue;
+          }
+
+          // We don't include any benchmark results that have failed, but
+          // they are allowed to skip by returning 1. If they explicitly
+          // use errorf or something similar, then we fail the run.
+          if (exit_code != 0 || test_output->error_count != 0) {
+            LOG(ERROR) << "Benchmark '" << probe.path << "' failed.";
+            rval = 1;
+            exit_code = 0; // Always reset for tests.
+            break;
+          }
+
+          out.benchmark_result(all_benches,
+                               index,
+                               std::chrono::nanoseconds(opts.duration),
+                               iters);
+          handlers.change_output(out);
+          break;
+        }
+      }
     }
   } else {
     for (auto &probe : resources.signal_probes) {
@@ -637,7 +760,7 @@ int BPFtrace::run(output::Output &out,
 
     if (dry_run) {
       request_finalize();
-      return 0;
+      return rval;
     }
 
     // Kick the child to execute the command.
@@ -661,15 +784,25 @@ int BPFtrace::run(output::Output &out,
   }
 
   auto total_attached = num_attached + num_begin_end_attached +
-                        num_signal_attached + benchmark_results.size();
+                        num_signal_attached + num_test_attached +
+                        num_benchmark_attached;
 
   if (total_attached == 0) {
-    LOG(ERROR) << "Attachment failed for all probes.";
+    // Provide some helpful hints, there if there are test or benchmark probes
+    // defined, they won't be attached unless the appropriate mode is set.
+    if (!resources.test_probes.empty()) {
+      LOG(ERROR) << "No probes attached; use --test to run test probes.";
+    } else if (!resources.benchmark_probes.empty()) {
+      LOG(ERROR) << "No probes attached; use --bench to run benchmark probes.";
+    } else {
+      LOG(ERROR) << "Attachment failed for all probes.";
+    }
     return -1;
   }
 
-  if (!bt_quiet)
+  if (!bt_quiet && !run_tests_ && !run_benchmarks_) {
     out.attached_probes(total_attached);
+  }
 
   // Used by runtime test framework to know when to run AFTER directive
   if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))
@@ -687,7 +820,8 @@ int BPFtrace::run(output::Output &out,
     if (err)
       return err;
   } else {
-    bool should_drain = (num_begin_end_attached > 0 || run_benchmarks_) &&
+    bool should_drain = (num_begin_end_attached > 0 || run_benchmarks_ ||
+                         run_tests_) &&
                         num_signal_attached == 0 && num_attached == 0;
     poll_output(out, should_drain);
   }
@@ -726,7 +860,25 @@ int BPFtrace::run(output::Output &out,
     LOG(WARNING) << "Total lost event count: " << total_lost_events;
   }
 
-  return 0;
+  // Indicate that we are done the main loop.
+  out.end();
+
+  // Print maps if needed (true by default).
+  if (!err && !run_tests_ && !run_benchmarks_ && !dry_run &&
+      config_->print_maps_on_exit) {
+    for (const auto &[_, map] : bytecode_.maps()) {
+      if (!map.is_printable())
+        continue;
+      auto res = format(*this, c_definitions, map);
+      if (!res) {
+        std::cerr << "Error printing map: " << res.takeError();
+        continue;
+      }
+      out.map(map.name(), *res);
+    }
+  }
+
+  return rval;
 }
 
 int BPFtrace::setup_output(void *ctx)
@@ -784,8 +936,8 @@ void BPFtrace::poll_output(output::Output &out, bool drain)
   bool do_poll_ringbuf = true;
   auto should_retry = [](int ready) {
     // epoll_wait will set errno to EINTR if an interrupt received, it is
-    // retryable if not caused by SIGINT. ring_buffer__poll does not set errno,
-    // we will keep retrying till SIGINT.
+    // retryable if not caused by SIGINT. ring_buffer__poll does not set
+    // errno, we will keep retrying till SIGINT.
     return ready < 0 && (errno == 0 || errno == EINTR) &&
            !BPFtrace::exitsig_recv;
   };

@@ -39,7 +39,7 @@ struct Primitive {
     bool operator==(const Record& other) const;
   };
   struct Symbolic {
-    Symbolic(std::string s, uint64_t n) : symbol(std::move(s)), numeric(n) {};
+    Symbolic(std::string s, uint64_t n) : symbol(std::move(s)), numeric(n){};
     std::string symbol;
     uint64_t numeric;
     auto operator<=>(const Symbolic& other) const = default;
@@ -104,8 +104,8 @@ struct Value {
   // Stats is just an arbitrary classifier for another value. It changes
   // only some of the encoding used by some outputs.
   struct Stats {
-    Stats(OrderedMap&& m) : value(std::move(m)) {};
-    Stats(Primitive&& p) : value(std::move(p)) {};
+    Stats(OrderedMap&& m) : value(std::move(m)){};
+    Stats(Primitive&& p) : value(std::move(p)){};
     std::variant<OrderedMap, Primitive> value;
   };
 
@@ -148,17 +148,31 @@ public:
   virtual void value(const Value& value) = 0;
 
   // Specialized messages during execution.
-  virtual void printf(const std::string& str, const SourceInfo& info, PrintfSeverity severity) = 0;
+  virtual void printf(const std::string& str,
+                      const SourceInfo& info,
+                      PrintfSeverity severity) = 0;
   virtual void time(const std::string& time) = 0;
   virtual void cat(const std::string& cat) = 0;
   virtual void join(const std::string& join) = 0;
   virtual void syscall(const std::string& syscall) = 0;
+  virtual void end() = 0;
+
+  // General events.
   virtual void lost_events(uint64_t lost) = 0;
   virtual void attached_probes(uint64_t num_probes) = 0;
   virtual void runtime_error(int retcode, const RuntimeErrorInfo& info) = 0;
-  virtual void benchmark_results(
-      const std::vector<std::pair<std::string, uint32_t>>& results) = 0;
-  virtual void end() = 0;
+
+  // Testing hooks.
+  virtual void test_result(const std::vector<std::string>& all_tests,
+                           size_t index,
+                           std::chrono::nanoseconds result,
+                           const std::vector<bool> &passed,
+                           std::string output) = 0;
+
+  // Benchmark hooks.
+  virtual void benchmark_result(const std::vector<std::string>& all_benches,
+                                size_t index,
+                                std::chrono::nanoseconds average, size_t iters) = 0;
 };
 
 } // namespace bpftrace::output

@@ -36,7 +36,7 @@ public:
   AsyncHandlers(BPFtrace &bpftrace,
                 const ast::CDefinitions &c_definitions,
                 output::Output &output)
-      : bpftrace(bpftrace), c_definitions(c_definitions), out(output) {};
+      : bpftrace(bpftrace), c_definitions(c_definitions), out(&output) {};
 
   void exit(const OpaqueValue &data);
   void join(const OpaqueValue &data);
@@ -53,10 +53,15 @@ public:
   void cat(const OpaqueValue &data);
   void printf(const OpaqueValue &data);
 
+  void change_output(output::Output &out)
+  {
+    this->out = &out;
+  }
+
 private:
   BPFtrace &bpftrace;
   const ast::CDefinitions &c_definitions;
-  output::Output &out;
+  output::Output *out;
 };
 
 } // namespace bpftrace::async_action
