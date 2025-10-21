@@ -37,7 +37,6 @@ namespace {
 
 struct variable {
   SizedType type;
-  bool can_resize;
   bool was_assigned;
 };
 
@@ -2965,7 +2964,6 @@ void SemanticAnalyser::visit(For &f)
   scope_stack_.push_back(&f);
 
   variables_[scope_stack_.back()][decl_name] = { .type = f.decl->type(),
-                                                 .can_resize = true,
                                                  .was_assigned = true };
 
   loop_depth_++;
@@ -3507,11 +3505,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         pass_tracker_.inc_num_unresolved();
       }
     } else if (assignTy.IsStringTy()) {
-      if (foundVar.can_resize) {
-        update_string_size(storedTy, assignTy);
-      } else if (!assignTy.FitsInto(storedTy)) {
-        type_mismatch_error = true;
-      }
+      update_string_size(storedTy, assignTy);
     } else if (storedTy.IsIntegerTy()) {
       if (storedTy.IsEqual(assignTy)) {
         // No checks or casts needed.
@@ -3616,8 +3610,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   if (var_scope == nullptr) {
     variables_[scope_stack_.back()].insert(
-        { var_ident,
-          { .type = assignTy, .can_resize = true, .was_assigned = true } });
+        { var_ident, { .type = assignTy, .was_assigned = true } });
     var_scope = scope_stack_.back();
   }
 
@@ -3699,12 +3692,8 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
     }
   }
 
-  bool can_resize = decl.var->var_type.GetSize() == 0;
-
-  variables_[scope_stack_.back()].insert({ var_ident,
-                                           { .type = decl.var->var_type,
-                                             .can_resize = can_resize,
-                                             .was_assigned = false } });
+  variables_[scope_stack_.back()].insert(
+      { var_ident, { .type = decl.var->var_type, .was_assigned = false } });
   variable_decls_[scope_stack_.back()].insert({ var_ident, decl });
 }
 
@@ -3735,9 +3724,7 @@ void SemanticAnalyser::visit(Subprog &subprog)
     const auto &ty = arg->typeof->type();
     auto &var = variables_[scope_stack_.back()]
                     .emplace(arg->var->ident,
-                             variable{ .type = ty,
-                                       .can_resize = true,
-                                       .was_assigned = true })
+                             variable{ .type = ty, .was_assigned = true })
                     .first->second;
     var.type = ty; // Override in case it has changed.
   }
