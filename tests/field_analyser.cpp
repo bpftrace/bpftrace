@@ -31,7 +31,8 @@ void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
                     .add(ast::CreateFieldAnalyserPass())
                     .run();
   ASSERT_TRUE(bool(result)) << msg.str();
-  EXPECT_EQ(ast.diagnostics().ok(), ok);
+  ast.diagnostics().emit(msg);
+  EXPECT_EQ(ast.diagnostics().ok(), ok) << msg.str();
 }
 
 void test(const std::string &input, bool ok = true)
