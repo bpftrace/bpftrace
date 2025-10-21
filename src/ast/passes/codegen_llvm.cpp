@@ -27,6 +27,7 @@
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Target/TargetMachine.h>
 #include <llvm/Transforms/IPO.h>
+#include <llvm/Transforms/IPO/StripSymbols.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
 #include "arch/arch.h"
@@ -5075,6 +5076,8 @@ Pass CreateOptimizePass()
 
     ModulePassManager mpm = pb.buildPerModuleDefaultPipeline(
         llvm::OptimizationLevel::O3);
+
+    mpm.addPass(llvm::StripDeadDebugInfoPass());
     mpm.run(*cm.module, mam);
   });
 }
