@@ -36,6 +36,14 @@ TEST(TypeSystemTest, basic)
   // partial types (e.g. `union (anon)`), so we just skip those cases.
   std::unordered_set<std::string> removed;
   std::unordered_set<std::string> expected = {
+    "unsigned char",
+    "short int",
+    "short unsigned int",
+    "long int",
+    "long unsigned int",
+    "long long int",
+    "long long unsigned int",
+    "size_t",
     "void",
     "struct Foo1",
     "int",

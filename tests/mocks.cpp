@@ -110,55 +110,12 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)
 {
   bpftrace.delta_taitime_ = timespec{};
-  // Fill in some default tracepoint struct definitions
-  bpftrace.structs.Add("struct _tracepoint_sched_sched_one", 8);
-  bpftrace.structs.Lookup("struct _tracepoint_sched_sched_one")
+  // Fill in a tracepoint struct definition so that we don't need to mock the
+  // tracepoint format files.
+  bpftrace.structs.Add("struct tracepoint:sched:sched_one_args", 8);
+  bpftrace.structs.Lookup("struct tracepoint:sched:sched_one_args")
       .lock()
-      ->AddField("common_field", CreateUInt64(), 8, std::nullopt, false);
-
-  bpftrace.structs.Add("struct _tracepoint_sched_sched_two", 8);
-  bpftrace.structs.Lookup("struct _tracepoint_sched_sched_two")
-      .lock()
-      ->AddField("common_field",
-                 CreateUInt64(),
-                 16, // different offset than
-                     // sched_one.common_field
-                 std::nullopt,
-                 false);
-  bpftrace.structs.Add("struct _tracepoint_sched_extra_sched_extra", 8);
-  bpftrace.structs.Lookup("struct _tracepoint_sched_extra_sched_extra")
-      .lock()
-      ->AddField("common_field",
-                 CreateUInt64(),
-                 24, // different offset than
-                     // sched_(one|two).common_field
-                 std::nullopt,
-                 false);
-  bpftrace.structs.Add("struct _tracepoint_tcp_some_tcp_tp", 16);
-  bpftrace.structs.Lookup("struct _tracepoint_tcp_some_tcp_tp")
-      .lock()
-      ->AddField(
-          "saddr_v6", CreateArray(16, CreateUInt(8)), 8, std::nullopt, false);
-
-  auto ptr_type = CreatePointer(CreateInt8());
-  bpftrace.structs.Add("struct _tracepoint_file_filename", 8);
-  bpftrace.structs.Lookup("struct _tracepoint_file_filename")
-      .lock()
-      ->AddField("common_field", CreateUInt64(), 0, std::nullopt, false);
-  bpftrace.structs.Lookup("struct _tracepoint_file_filename")
-      .lock()
-      ->AddField("filename", ptr_type, 8, std::nullopt, false);
-  bpftrace.structs.Add("struct _tracepoint_btf_tag", 16);
-  auto ptr_type_w_tag = CreatePointer(CreateInt8());
-  ptr_type_w_tag.SetBtfTypeTags({ "rcu" });
-  auto ptr_type_w_bad_tag = CreatePointer(CreateInt8());
-  ptr_type_w_bad_tag.SetBtfTypeTags({ "rcu", "percpu" });
-  bpftrace.structs.Lookup("struct _tracepoint_btf_tag")
-      .lock()
-      ->AddField("parent", ptr_type_w_tag, 8, std::nullopt, false);
-  bpftrace.structs.Lookup("struct _tracepoint_btf_tag")
-      .lock()
-      ->AddField("real_parent", ptr_type_w_bad_tag, 16, std::nullopt, false);
+      ->AddField("common_field", CreateUInt64(), 8);
 }
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace()

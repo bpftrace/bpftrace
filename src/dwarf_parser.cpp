@@ -267,8 +267,7 @@ void Dwarf::resolve_fields(const SizedType &type) const
     str->AddField(dwarf_diename(&field_die),
                   get_stype(field_type),
                   get_field_byte_offset(field_die),
-                  resolve_bitfield(field_die),
-                  false);
+                  resolve_bitfield(field_die));
   }
 }
 
@@ -299,7 +298,7 @@ std::shared_ptr<Struct> Dwarf::resolve_args(const std::string &function)
     const std::string name = dwarf_hasattr(&param_die, DW_AT_name)
                                  ? dwarf_diename(&param_die)
                                  : "";
-    result->AddField(name, arg_type, result->size, std::nullopt, false);
+    result->AddField(name, arg_type, result->size);
     result->size += arg_type.GetSize();
   }
   return result;

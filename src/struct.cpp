@@ -150,15 +150,13 @@ const Field &Struct::GetField(const std::string &name) const
 void Struct::AddField(const std::string &field_name,
                       const SizedType &type,
                       ssize_t offset,
-                      const std::optional<Bitfield> &bitfield,
-                      bool is_data_loc)
+                      const std::optional<Bitfield> &bitfield)
 {
   if (!HasField(field_name))
     fields.push_back(Field{ .name = field_name,
                             .type = type,
                             .offset = offset,
-                            .bitfield = bitfield,
-                            .is_data_loc = is_data_loc });
+                            .bitfield = bitfield });
 }
 
 bool Struct::HasFields() const

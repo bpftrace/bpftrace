@@ -80,6 +80,7 @@ struct Struct {
   Fields fields;
 
   bool allow_override = true;
+  bool is_tracepoint_args = false;
 
   Struct() = default; // Used for serialization.
   Struct(const Struct &other) = delete;
@@ -97,8 +98,7 @@ struct Struct {
   void AddField(const std::string &field_name,
                 const SizedType &type,
                 ssize_t offset = 0,
-                const std::optional<Bitfield> &bitfield = std::nullopt,
-                bool is_data_loc = false);
+                const std::optional<Bitfield> &bitfield = std::nullopt);
   bool HasFields() const;
   void ClearFields();
 

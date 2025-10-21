@@ -17,7 +17,6 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/resolve_imports.h"
-#include "ast/passes/tracepoint_format_parser.h"
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/usdt_arguments.h"
 #include "btf.h"
@@ -50,7 +49,6 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateProbeAndApExpansionPass());
-  passes.emplace_back(CreateParseTracepointFormatPass());
   passes.emplace_back(CreateArgsResolverPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));

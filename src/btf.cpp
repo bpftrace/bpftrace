@@ -32,6 +32,9 @@
 #include "log.h"
 #include "tracefs/tracefs.h"
 #include "types.h"
+#include "util/strings.h"
+
+using namespace std::literals::string_view_literals;
 
 namespace bpftrace {
 
@@ -226,7 +229,6 @@ static std::string full_type_str(const struct btf *btf,
 
 static std::string_view btf_type_str(std::string_view type)
 {
-  using namespace std::literals::string_view_literals;
   if (type.starts_with("struct "))
     return type.substr("struct "sv.length());
   if (type.starts_with("union "))
@@ -523,7 +525,7 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = p->type });
     stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
-    args->AddField(str, stype, args->size, std::nullopt, false);
+    args->AddField(str, stype, args->size);
     // fentry args are stored in a u64 array.
     // Note that it's ok to represent them by a struct as we will use GEP with
     // funcarg_idx to access them in codegen.
@@ -536,7 +538,7 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = t->type });
     stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
-    args->AddField(RETVAL_FIELD_NAME, stype, args->size, std::nullopt, false);
+    args->AddField(RETVAL_FIELD_NAME, stype, args->size);
     // fentry args (incl. retval) are stored in a u64 array
     args->size += btf__resolve_size(func_id.btf, t->type);
   }
@@ -1181,8 +1183,7 @@ void BTF::resolve_fields(const BTFId &type_id,
     record->AddField(field_name,
                      get_stype(field_id),
                      field_offset,
-                     resolve_bitfield(btf_type, i),
-                     false);
+                     resolve_bitfield(btf_type, i));
   }
 }
 
@@ -1192,6 +1193,51 @@ SizedType BTF::get_stype(std::string_view type_name)
   auto type_id = find_id(btf_name);
   if (type_id.btf)
     return get_stype(type_id);
+
+  if (type_name.starts_with("const "))
+    return get_stype(type_name.substr("const "sv.length()));
+
+  if (type_name.ends_with(" const") || type_name.ends_with("*const")) {
+    auto new_name = std::string(type_name.substr(0, type_name.rfind("const")));
+    util::rtrim(new_name);
+    return get_stype(new_name);
+  }
+
+  if (type_name.ends_with("*")) {
+    auto pointee = std::string(type_name.substr(0, type_name.length() - 1));
+    util::rtrim(pointee);
+    return CreatePointer(get_stype(pointee));
+  }
+
+  if (type_name == "unsigned")
+    return get_stype("unsigned int");
+  if (type_name == "short")
+    return get_stype("short int");
+  if (type_name == "unsigned short")
+    return get_stype("short unsigned int");
+  if (type_name == "long")
+    return get_stype("long int");
+  if (type_name == "unsigned long")
+    return get_stype("long unsigned int");
+  if (type_name == "long long")
+    return get_stype("long long int");
+  if (type_name == "unsigned long long")
+    return get_stype("long long unsigned int");
+
+  if (type_name.ends_with(" short")) {
+    auto pos = type_name.rfind(" short");
+    return get_stype("short " + std::string(type_name.substr(0, pos)));
+  }
+
+  if (type_name.ends_with(" long")) {
+    auto pos = type_name.rfind(" long");
+    return get_stype("long " + std::string(type_name.substr(0, pos)));
+  }
+
+  if (type_name.ends_with(" unsigned")) {
+    auto pos = type_name.rfind(" long");
+    return get_stype("long " + std::string(type_name.substr(0, pos)));
+  }
 
   return CreateNone();
 }

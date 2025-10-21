@@ -377,14 +377,12 @@ EXPECT hit
 
 NAME tracepoint_missing
 PROG t:syscalls:nonsense { print("hit"); exit(); }
-EXPECT stdin:1:1-20: ERROR: Tracepoint not found: syscalls:nonsense
-EXPECT HINT: If this is expected, set the 'missing_probes' config variable to 'warn' or 'ignore'.
+EXPECT ERROR: Unable to attach probe: tracepoint:syscalls:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
 WILL_FAIL
 
 NAME tracepoint_multiattach_missing
 PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { print("hit"); exit(); }
-EXPECT stdin:1:31-50: ERROR: Tracepoint not found: syscalls:nonsense
-EXPECT HINT: If this is expected, set the 'missing_probes' config variable to 'warn' or 'ignore'.
+EXPECT ERROR: Unable to attach probe: tracepoint:syscalls:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
 WILL_FAIL
 
 NAME tracepoint args
@@ -605,8 +603,7 @@ EXPECT_REGEX (first)+ second
 
 NAME some_missing_probes_default_error
 PROG kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); }
-EXPECT stdin:1:29-48: ERROR: Tracepoint not found: syscalls:nonsense
-EXPECT HINT: If this is expected, set the 'missing_probes' config variable to 'warn' or 'ignore'.
+EXPECT ERROR: Unable to attach probe: tracepoint:syscalls:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
 WILL_FAIL
 
 NAME missing_probes_multiple_attach_points_default_error
@@ -616,7 +613,7 @@ WILL_FAIL
 
 NAME some_missing_probes_warn
 PROG config = { missing_probes=warn } kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); }
-EXPECT stdin:1:62-81: WARNING: Tracepoint not found: syscalls:nonsense
+EXPECT WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
 
 NAME some_missing_probes_ignore
 PROG config = { missing_probes=ignore } kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); }
@@ -625,7 +622,7 @@ EXPECT_NONE WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipp
 NAME all_missing_probes_warn
 PROG config = { missing_probes=warn } kprobe:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
 EXPECT WARNING: Unable to attach probe: kprobe:nonsense. Skipping.
-EXPECT stdin:1:62-81: WARNING: Tracepoint not found: syscalls:nonsense
+EXPECT WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
 EXPECT WARNING: Unable to attach probe: uprobe:./testprogs/uprobe_test:uprobeFunction3. Skipping.
 EXPECT ERROR: Attachment failed for all probes.
 WILL_FAIL
