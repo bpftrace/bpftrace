@@ -4,7 +4,6 @@
 
 #include "arch/arch.h"
 #include "ast/passes/args_resolver.h"
-#include "ast/passes/probe_expansion.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
