@@ -10,8 +10,9 @@ TEST(TypeSystemTest, basic)
 {
   // Use our synthetic BTF as the object.
   ast::BitcodeModules modules;
-  modules.objects.emplace_back(reinterpret_cast<const char *>(btf_data),
-                               sizeof(btf_data));
+  modules.objects.emplace_back(
+      std::string_view(reinterpret_cast<const char *>(btf_data),
+                       sizeof(btf_data)));
 
   // Run the pass and extract the types.
   auto ok =

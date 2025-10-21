@@ -99,7 +99,6 @@ static Result<OK> import_script(Node &node,
   if (contents.contains(name)) {
     return OK(); // Already added.
   }
-
   // Load the file.
   std::ifstream file(path);
   if (file.fail()) {
@@ -112,53 +111,41 @@ static Result<OK> import_script(Node &node,
   return import_script(node, imports, name, buf.str(), paths, contents, false);
 }
 
-static Result<OK> import_object(Node &node,
+static Result<OK> import_string(Node &node,
                                 const std::string &name,
-                                const std::filesystem::path &path,
-                                std::map<std::string, ExternalObject> &contents)
+                                const std::string_view &data,
+                                std::map<std::string, ImportObject> &contents)
 {
   if (contents.contains(name)) {
     return OK(); // Already added.
   }
 
-  auto added = contents.emplace(name, ExternalObject(node, path)).second;
+  auto added = contents
+                   .emplace(name, ImportObject(node, util::CacheObject(data)))
+                   .second;
   assert(added);
   return OK();
 }
 
-static Result<OK> import_c(Node &node,
-                           const std::string &name,
-                           const std::filesystem::path &path,
-                           std::map<std::string, LoadedObject> &contents)
+static Result<OK> import_path(Node &node,
+                              const std::string &name,
+                              const std::filesystem::path &path,
+                              std::map<std::string, ImportObject> &contents)
 {
   if (contents.contains(name)) {
     return OK(); // Already added.
   }
 
-  // Load the file.
-  std::ifstream file(path);
-  if (file.fail()) {
+  // Load the file,
+  auto obj = util::CacheObject::from(path);
+  if (!obj) {
     node.addError() << "error reading import '" << path
-                    << "': " << std::strerror(errno);
+                    << "': " << obj.takeError();
     return OK();
   }
-  std::stringstream buf;
-  buf << file.rdbuf();
-  auto [_, added] = contents.emplace(name, LoadedObject(node, buf.str()));
-  assert(added);
-  return OK();
-}
 
-static Result<OK> import_c(Node &node,
-                           const std::string &name,
-                           const std::string_view &data,
-                           std::map<std::string, LoadedObject> &contents)
-{
-  if (contents.contains(name)) {
-    return OK(); // Already added.
-  }
-
-  auto [_, added] = contents.emplace(name, LoadedObject(node, data));
+  auto added =
+      contents.emplace(name, ImportObject(node, std::move(*obj))).second;
   assert(added);
   return OK();
 }
@@ -200,11 +187,11 @@ Result<OK> Imports::import_any(Node &node,
     if (path.extension() == ".bt") {
       return import_script(node, *this, name, path, paths, scripts);
     } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
-      return import_c(node, name, path, c_sources);
+      return import_path(node, name, path, c_sources);
     } else if (path.extension() == ".h") {
-      return import_c(node, name, path, c_headers);
+      return import_path(node, name, path, c_headers);
     } else if (path.extension() == ".o" && path.stem().extension() == ".bpf") {
-      return import_object(node, name, path, objects);
+      return import_path(node, name, path, objects);
     } else if (!ignore_unknown) {
       node.addError() << "unknown import type: " << path.filename();
     }
@@ -224,9 +211,9 @@ Result<OK> Imports::import_any(Node &node,
     return import_script(
         node, *this, name, std::string(data), paths, scripts, true);
   } else if (path.extension() == ".c" && path.stem().extension() == ".bpf") {
-    return import_c(node, name, data, c_sources);
+    return import_string(node, name, data, c_sources);
   } else if (path.extension() == ".h") {
-    return import_c(node, name, data, c_headers);
+    return import_string(node, name, data, c_headers);
   } else if (!ignore_unknown) {
     node.addError() << "unknown import type: " << path;
   }
