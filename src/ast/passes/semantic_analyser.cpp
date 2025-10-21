@@ -3266,6 +3266,7 @@ void SemanticAnalyser::visit(Cast &cast)
 void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
+  ExpressionList expr_list;
   for (auto &elem : tuple.elems) {
     visit(elem);
 
@@ -3278,9 +3279,22 @@ void SemanticAnalyser::visit(Tuple &tuple)
           << "Map type " << elem.type() << " cannot exist inside a tuple.";
     }
     elements.emplace_back(elem.type());
+    if (elem.type().IsIntegerTy()) {
+      if (elem.type().GetSize() < 8) {
+        // Like map keys and values, all integers in tuples are 64 bits
+        elements.back().SetSize(8);
+        auto *typeof = ctx_.make_node<Typeof>(elements.back(),
+                                              Location(elem.loc()));
+        expr_list.emplace_back(ctx_.make_node<Cast>(
+            typeof, clone(ctx_, elem, elem.loc()), Location(tuple.loc)));
+        continue;
+      }
+    }
+    expr_list.emplace_back(elem);
   }
 
   tuple.tuple_type = CreateTuple(Struct::CreateTuple(elements));
+  tuple.elems = std::move(expr_list);
 }
 
 void SemanticAnalyser::visit(Expression &expr)
@@ -3578,13 +3592,15 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                      : ". The value may contain garbage.");
       }
     } else if (assignTy.IsTupleTy()) {
-      update_string_size(storedTy, assignTy);
-      // Early passes may not have been able to deduce the full types of tuple
-      // elements yet. So wait until final pass.
-      if (is_final_pass()) {
+      if (assignTy.IsSameType(storedTy)) {
+        update_string_size(storedTy, assignTy);
         if (!assignTy.FitsInto(storedTy)) {
           type_mismatch_error = true;
         }
+      } else if (is_final_pass()) {
+        // Early passes may not have been able to deduce the full types of tuple
+        // elements yet. So wait until final pass.
+        type_mismatch_error = true;
       }
     }
     if (type_mismatch_error) {
@@ -3601,6 +3617,10 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         // which could come from a variable declaration. The assign type may
         // resolve builtins like `curtask` which also specifies the address
         // space.
+        if (assignTy.IsIntegerTy() &&
+            (storedTy.GetSize() > assignTy.GetSize())) {
+          assignTy.SetSize(storedTy.GetSize());
+        }
         foundVar.type = assignTy;
         foundVar.was_assigned = true;
       }
@@ -4233,11 +4253,11 @@ bool SemanticAnalyser::update_string_size(SizedType &type,
       new_elems.push_back(type.GetField(i).type);
     }
     if (updated) {
+      // Tuples need to get re-made to account for padding if they change size
       type = CreateTuple(Struct::CreateTuple(new_elems));
     }
     return updated;
   }
-
   return false;
 }
 

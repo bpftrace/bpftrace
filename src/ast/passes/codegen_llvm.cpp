@@ -2870,13 +2870,6 @@ void CodegenLLVM::createTupleCopy(const SizedType &expr_type,
                               { b_.getInt32(0), b_.getInt32(i) });
     if (t_type.IsTupleTy() && !t_type.IsSameSizeRecursive(var_type)) {
       createTupleCopy(t_type, var_type.GetField(i).type, dst, offset_val);
-    } else if (t_type.IsIntTy() && t_type.GetSize() < 8) {
-      // Integers are always stored as 64-bit in map keys
-      b_.CreateStore(b_.CreateIntCast(b_.CreateLoad(b_.GetType(t_type),
-                                                    offset_val),
-                                      b_.getInt64Ty(),
-                                      t_type.IsSigned()),
-                     dst);
     } else {
       b_.CreateMemcpyBPF(dst, offset_val, t_type.GetSize());
     }
