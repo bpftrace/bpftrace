@@ -1,0 +1,30 @@
+test:stdlib_ppid
+{
+  if (ppid(curtask) == 0) {
+    return 1;
+  }
+}
+
+test:stdlib_strerror
+{
+  $result = strerror(22);
+  if ($result != "Invalid argument") {
+    return 1;
+  }
+}
+
+test:stdlib_comm
+{
+  $result = comm(pid);
+  if ($result != "bpftrace") {
+    return 1;
+  }
+}
+
+test:stdlib_strlen
+{
+  $a = "hello";
+  if (strlen($a) != 5) {
+    return 1;
+  }
+}

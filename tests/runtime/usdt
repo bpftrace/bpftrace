@@ -163,7 +163,7 @@ RUN {{BPFTRACE}} -e 'usdt:*:tracetest:testprobe { printf("%s\n", str(arg1) ); ex
 EXPECT USDT semaphore: 1
 BEFORE ./testprogs/usdt_semaphore_test
 
-NAME usdt probes - file based semaphore activation
+NAME usdt probes - file based semaphore activation with run
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' --usdt-file-activation
 EXPECT USDT semaphore: 1
 BEFORE ./testprogs/usdt_semaphore_test
@@ -172,7 +172,7 @@ NAME usdt probes - file based semaphore activation no process, kernel usdt semap
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { exit(); }' --usdt-file-activation
 EXPECT Attached 1 probe
 
-NAME usdt probes - file based semaphore activation
+NAME usdt probes - file based semaphore activation with prog
 PROG usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }
 EXPECT USDT semaphore: 1
 BEFORE ./testprogs/usdt_semaphore_test

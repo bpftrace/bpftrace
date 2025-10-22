@@ -1,0 +1,187 @@
+test:local_int
+{
+  $a = 10;
+  if ($a != 10) {
+    return 1;
+  }
+}
+
+test:local_string
+{
+  $a = "hi";
+  if ($a != "hi") {
+    return 1;
+  }
+}
+
+test:local_buf
+{
+  $a = buf("hi", 2);
+  $b = buf("hi", 2);
+  if ($a != $b) {
+    return 1;
+  }
+}
+
+test:global_string
+{
+  @gs = "hi";
+  if (@gs != "hi") {
+    return 1;
+  }
+}
+
+test:global_buf
+{
+  @gb = buf("hi", 2);
+  $b = buf("hi", 2);
+  if (@gb != $b) {
+    return 1;
+  }
+}
+
+test:buf_equality
+{
+  $a = buf("hi", 2);
+  $b = buf("bye", 3);
+  if ($a != $a || (!($a != $b))) {
+    return 1;
+  }
+}
+
+test:variable_string_type_resize
+{
+  $x = "hello";
+  $x = "hi";
+  if ($x != "hi") {
+    return 1;
+  }
+}
+
+test:variable_tuple_string_resize
+{
+  $a = ("hi",1);
+  if ($a.0 != "hi" || $a.1 != 1) {
+    return 1;
+  }
+  $a = ("hellolongstr",2);
+  if ($a.0 != "hellolongstr" || $a.1 != 2) {
+    return 1;
+  }
+  $a = ("by",3);
+  if ($a.0 != "by" || $a.1 != 3) {
+    return 1;
+  }
+}
+
+test:variable_nested_tuple_string_resize
+{
+  $a = ("hi",("hellolongstr",2));
+  if ($a.0 != "hi" || $a.1.0 != "hellolongstr" || $a.1.1 != 2) {
+    return 1;
+  }
+  $a = ("hellolongstr",("hi",5));
+  if ($a.0 != "hellolongstr" || $a.1.0 != "hi" || $a.1.1 != 5) {
+    return 1;
+  }
+}
+
+test:variable_declaration
+{
+  let $a;
+  $a = 10;
+  if ($a != 10) {
+    return 1;
+  }
+}
+
+test:variable_declaration_not_initialized
+{
+  let $a;
+  if $a {
+    $a = 1;
+  }
+  if ($a != 0) {
+    return 1;
+  }
+}
+
+
+test:map_string_type_resize
+{
+  @mstr = "hello";
+  @mstr = "hi";
+  if (@mstr != "hi") {
+    return 1;
+  }
+}
+
+test:map_key_string_type_resize
+{
+  @mkstr["hello"] = 0;
+  @mkstr["hi"] = 1;
+  if (@mkstr["hi"] != 1) {
+    return 1;
+  }
+}
+
+test:map_multi_key_string_type_resize
+{
+  @mmkstr["hello",0] = 0;
+  @mmkstr["hi",1] = 1;
+  if (@mmkstr["hi",1] != 1) {
+    return 1;
+  }
+}
+
+test:map_tuple_string_resize
+{
+  @mtstr[1] = ("hi",1);
+  @mtstr[1] = ("hellolongstr",2);
+  @mtstr[1] = ("by",3);
+  $result = @mtstr[1];
+  if ($result.0 != "by" || $result.1 != 3) {
+    return 1;
+  }
+}
+
+test:map_key_tuple_string_resize
+{
+  @mktstr["hi",1] = 1;
+  @mktstr["hellolongstr",2] = 2;
+  @mktstr["by",3] = 3;
+  if (@mktstr["hi",1] != 1 || @mktstr["hellolongstr",2] != 2 || @mktstr["by",3] != 3) {
+    return 1;
+  }
+}
+
+test:map_nested_tuple_string_resize
+{
+  @mntstr[1] = ("hi",("hellolongstr",2));
+  @mntstr[1] = ("hellolongstr",("hi",5));
+  $result = @mntstr[1];
+  if ($result.0 != "hellolongstr" || $result.1.0 != "hi" || $result.1.1 != 5) {
+    return 1;
+  }
+}
+
+test:map_key_nested_tuple_string_resize
+{
+  @mkntstr["hi",("hellolongstr",2)] = 1;
+  @mkntstr["hellolongstr",("hi",5)] = 2;
+  if (@mkntstr["hi",("hellolongstr",2)] != 1 || @mkntstr["hellolongstr",("hi",5)] != 2) {
+    return 1;
+  }
+}
+
+test:map_key_tuple_with_casted_ints
+{
+  @mktci[((int16)(-1)),(((int32)(-2)),3)] = 10;
+  @mktci[5,(6,7)] = 11;
+  $c = (((int8)(-4)),(((int16)(-5)),(-6)));
+  @mktci[$c] = 12;
+  if (@mktci[((int16)(-1)),(((int32)(-2)),3)] != 10 ||
+      @mktci[5,(6,7)] != 11 || @mktci[$c] != 12) {
+    return 1;
+  }
+}

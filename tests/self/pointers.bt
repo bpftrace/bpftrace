@@ -1,0 +1,197 @@
+test:u8_pointer_increment
+{
+  @p8i = (int8 *)0x32;
+  @p8i += 1;
+  if (@p8i != 0x33) {
+    return 1;
+  }
+}
+
+test:u16_pointer_increment
+{
+  @p16i = (int16 *)0x32;
+  @p16i += 1;
+  if (@p16i != 0x34) {
+    return 1;
+  }
+}
+
+test:u32_pointer_increment
+{
+  @p32i = (int32 *)0x32;
+  @p32i += 1;
+  if (@p32i != 0x36) {
+    return 1;
+  }
+}
+
+test:u64_pointer_increment
+{
+  @p64i = (int64 *)0x32;
+  @p64i += 1;
+  if (@p64i != 0x3a) {
+    return 1;
+  }
+}
+
+test:u8_pointer_unop_post_increment
+{
+  @p8 = (int8 *)0x32;
+  @p8++;
+  if (@p8 != 0x33) {
+    return 1;
+  }
+}
+
+test:u16_pointer_unop_post_increment
+{
+  @p16 = (int16 *)0x32;
+  @p16++;
+  if (@p16 != 0x34) {
+    return 1;
+  }
+}
+
+test:u32_pointer_unop_post_increment
+{
+  @p32 = (int32 *)0x32;
+  @p32++;
+  if (@p32 != 0x36) {
+    return 1;
+  }
+}
+
+test:u64_pointer_unop_post_increment
+{
+  @p64 = (int64 *)0x32;
+  @p64++;
+  if (@p64 != 0x3a) {
+    return 1;
+  }
+}
+
+test:u8_pointer_unop_pre_increment
+{
+  @pp8 = (int8 *)0x32;
+  ++@pp8;
+  if (@pp8 != 0x33) {
+    return 1;
+  }
+}
+
+test:u16_pointer_unop_pre_increment
+{
+  @pp16 = (int16 *)0x32;
+  ++@pp16;
+  if (@pp16 != 0x34) {
+    return 1;
+  }
+}
+
+test:u32_pointer_unop_pre_increment
+{
+  @pp32 = (int32 *)0x32;
+  ++@pp32;
+  if (@pp32 != 0x36) {
+    return 1;
+  }
+}
+
+test:u64_pointer_unop_pre_increment
+{
+  @pp64 = (int64 *)0x32;
+  ++@pp64;
+  if (@pp64 != 0x3a) {
+    return 1;
+  }
+}
+
+test:pointer_decrement_1
+{
+  @pd1 = (int32 *)0x32;
+  @pd1 -= 1;
+  if (@pd1 != 0x2e) {
+    return 1;
+  }
+}
+
+test:pointer_decrement
+{
+  @pd = (int32 *)0x32;
+  @pd--;
+  if (@pd != 0x2e) {
+    return 1;
+  }
+}
+
+test:pointer_increment_6
+{
+  @pi6 = (int32 *)0x32;
+  @pi6 += 6;
+  if (@pi6 != 0x4a) {
+    return 1;
+  }
+}
+
+test:pointer_decrement_6
+{
+  @pd6 = (int32 *)0x32;
+  @pd6 -= 6;
+  if (@pd6 != 0x1a) {
+    return 1;
+  }
+}
+
+test:pointer_decrement_with_map
+{
+  @dec = 4;
+  @pdm = (int32 *)0x32;
+  @pdm -= @dec;
+  if (@pdm != 0x22) {
+    return 1;
+  }
+}
+
+test:pointer_is_truthy_for_if_conditions
+{
+  $result = 0;
+  if curtask {
+    $result = 1;
+  }
+  if ($result != 1) {
+    return 1;
+  }
+}
+
+test:pointer_is_truthy_for_ternary_expressions
+{
+  $result = curtask ? 1 : 2;
+  if ($result != 1) {
+    return 1;
+  }
+}
+
+test:pointer_is_useable_in_logical_and_expressions
+{
+  $result = (curtask && 0) ? 1 : 2;
+  if ($result != 2) {
+    return 1;
+  }
+}
+
+test:pointer_is_useable_in_logical_or_expressions
+{
+  $result = (curtask || 0) ? 1 : 2;
+  if ($result != 1) {
+    return 1;
+  }
+}
+
+test:pointer_int_comparison
+{
+  $a = (int64 *)0x32;
+  $a++;
+  if (!(0x32 < $a && $a > 0x32)) {
+    return 1;
+  }
+}

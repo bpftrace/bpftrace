@@ -7,27 +7,3 @@ NAME Sum casted retval
 PROG ur:./testprogs/uprobe_negative_retval:function1 { @=stats((int32)retval); exit();} ur:./testprogs/uprobe_negative_retval:main { exit() }
 AFTER ./testprogs/uprobe_negative_retval
 EXPECT @: { .count = 221, .average = -10, .total = -2210 }
-
-NAME Casting ints
-PROG begin{printf("Values: %d %d\n", (uint8) -10, (uint16) 131087); exit(); }
-EXPECT Values: 246 15
-
-NAME Implicit truncation of ints
-PROG begin{ $a = (int16)0; $a = 2; $b = (int8)3; $b = -100; print(($a, $b)); exit(); }
-EXPECT (2, -100)
-
-NAME Binop on 32bit int
-PROG begin { $x = (uint32)5; $x += (uint32)1; print($x); exit() }
-EXPECT 6
-
-NAME Binop on 16bit int
-PROG begin { $x = (uint16)0xFF; $x &= (uint16)0xF; print($x); exit() }
-EXPECT 15
-
-NAME Binop on 8bit int
-PROG begin { $x = (uint8)0xF; $x |= (uint8)0xF0; print($x); exit() }
-EXPECT 255
-
-NAME Binop promotion
-PROG begin { $x = (uint32)0; $x = (uint32)5 + (uint16)1; print($x); exit() }
-EXPECT 6

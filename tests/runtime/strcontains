@@ -4,11 +4,6 @@ EXPECT OK
 REQUIRES_FEATURE dpath
 AFTER TMPDIR=/tmp ./testprogs/syscall open
 
-NAME literals
-PROG begin { if (strcontains("abc", "a")) { printf("OK\n");  } }
-EXPECT OK
-TIMEOUT 1
-
 NAME no literals
 # Clamping is done to not blow verifier complexity limits
 PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { print(strcontains(str(args.argv[1], 32), str(args.argv[2], 32))); exit(); }
@@ -21,111 +16,7 @@ PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/tr
 AFTER ./testprogs/true zztest test
 EXPECT true
 
-NAME basic substring match
-PROG begin { print(strcontains("hello-test-world", "test"));  }
-EXPECT true
-TIMEOUT 1
-
-NAME substring at end
-PROG begin { print(strcontains("hello-test-world", "world"));  }
-EXPECT true
-TIMEOUT 1
-
-NAME substring at beginning
-PROG begin { print(strcontains("hello-test-world", "hello"));  }
-EXPECT true
-TIMEOUT 1
-
-NAME no match
-PROG begin { print(strcontains("hello-test-world", "not-there"));  }
-EXPECT false
-TIMEOUT 1
-
-NAME empty haystack, empty needle
-PROG begin { print(strcontains("", ""));  }
-EXPECT true
-TIMEOUT 1
-
-NAME non-empty haystack, empty needle
-PROG begin { print(strcontains("hello", ""));  }
-EXPECT true
-TIMEOUT 1
-
-NAME empty haystack, non-empty needle
-PROG begin { print(strcontains("", "test"));  }
-EXPECT false
-TIMEOUT 1
-
-NAME exact match
-PROG begin { print(strcontains("hello", "hello"));  }
-EXPECT true
-TIMEOUT 1
-
-NAME needle longer than haystack
-PROG begin { print(strcontains("hello", "hello-longer"));  }
-EXPECT false
-TIMEOUT 1
-
-NAME case sensitivity check
-PROG begin { print(strcontains("Hello World", "hello"));  }
-EXPECT false
-TIMEOUT 1
-
-NAME multiple occurrences
-PROG begin { print(strcontains("test-test-test", "test"));  }
-EXPECT true
-TIMEOUT 1
-
-NAME overlapping potential matches
-PROG begin { print(strcontains("ababac", "abac"));  }
-EXPECT true
-TIMEOUT 1
-
-NAME special characters
-PROG begin { print(strcontains("hello\tworld", "\two"));  }
-EXPECT true
-TIMEOUT 1
-
-NAME null terminator inside haystack
-PROG begin { $str = "hello\0world"; print(strcontains($str, "world"));  }
-EXPECT false
-TIMEOUT 1
-
-NAME content after null terminator
-PROG begin { $str = "hello\0test"; print(strcontains($str, "test"));  }
-EXPECT false
-TIMEOUT 1
-
-NAME null character in needle
-PROG begin { $needle = "wo\0rld"; print(strcontains("hello world", $needle));  }
-EXPECT true
-TIMEOUT 1
-
-NAME null character in both
-PROG begin { $haystack = "hello\0world"; $needle = "wo\0rld"; print(strcontains($haystack, $needle));  }
-EXPECT false
-TIMEOUT 1
-
-NAME indexing
-PROG begin { $a = "foo"; printf("%c is the first letter", $a[0]); }
-EXPECT f is the first letter
-
-# This test just ensures that the probe passes verification. There are no
-# guardrails here, if the read comes from proberead then we expect zero, but if
-# it points to BPF memory then it may be legitimate but random.
-NAME invalid indexing
-PROG begin { $a = "foo"; $i = (uint64)10; printf("the mystery letter is %c", $a[$i]); }
-EXPECT_REGEX the mystery letter is .*
-
 NAME types
 PROG BEGIN { strcontains("foo", 1) }
 EXPECT_REGEX .* ERROR:.*
 WILL_FAIL
-
-NAME variable not present
-PROG BEGIN { $a = "bar"; print(strcontains("foo", $a)) }
-EXPECT false
-
-NAME variable present
-PROG BEGIN { $a = "bar"; print(strcontains("foobar", $a)) }
-EXPECT true

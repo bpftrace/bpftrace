@@ -1,0 +1,118 @@
+test:basic_tuple
+{
+  $v = 99;
+  $t = (0,1,"str",(5,6),$v);
+  if ($t.0 != 0 ||
+      $t.1 != 1 || $t.2 != "str" || $t.3.0 != 5 || $t.3.1 != 6 || $t.4 != 99) {
+    return 1;
+  }
+}
+
+test:basic_tuple_map
+{
+  $v = 99;
+  @t = (0,1,"str");
+  if (@t.0 != 0 || @t.1 != 1 || @t.2 != "str") {
+    return 1;
+  }
+}
+
+test:tuple_map_key_same_as_assoc_array
+{
+  @[1,"hello"] = 1;
+  @[2,"hello"] = 2;
+  delete(@, (1,"hello"));
+  if (@[2,"hello"] != 2) {
+    return 1;
+  }
+}
+
+test:tuple_map_key_variable
+{
+  $a = (1,"hello");
+  @[1,"hello"] = 1;
+  @[$a] = 2;
+  if (@[$a] != 2) {
+    return 1;
+  }
+}
+
+test:tuple_map_key_compatible_int_sizes
+{
+  $a = (1,(123,((uint64)1234)));
+  $b = (4,(1234,((uint8)123)));
+  @a[$a] = 1;
+  @a[$b] = 2;
+  if (@a[$a] != 1 || @a[$b] != 2) {
+    return 1;
+  }
+}
+
+test:tuple_struct_sizing_1
+{
+  $t = (((int8)1),((int64)1),((int8)1),((int64)1));
+  if (sizeof($t) != 32) {
+    return 1;
+  }
+}
+
+test:tuple_struct_sizing_2
+{
+  $t = (((int8)1),((int16)1),((int32)1));
+  if (sizeof($t) != 8) {
+    return 1;
+  }
+}
+
+test:tuple_struct_sizing_3
+{
+  $t = (((int32)1),((int16)1),((int8)1));
+  if (sizeof($t) != 8) {
+    return 1;
+  }
+}
+
+test:complex_tuple_4
+{
+  $a = (((int8)(-100)),((int8)100),
+        "abcdef",3,((int32)1),((int64)(-10)),((int8)10),((int16)(-555)),"abc");
+  if (sizeof($a) != 32) {
+    return 1;
+  }
+}
+
+test:array_style_tuple_access
+{
+  $a = (1,2,3);
+  if ($a[(1 + 1)] != 3) {
+    return 1;
+  }
+}
+
+test:tuple_binop_equals
+{
+  $x = ("hello",(-6));
+  $y = ("hello",(-6));
+  $a = (1,true,$x);
+  @b = (1,true,$y);
+  if ($a != @b) {
+    return 1;
+  }
+  if ($a == (1,true,("ello",(-6)))) {
+    return 1;
+  }
+}
+
+test:tuple_binop_not_equals
+{
+  $x = ("hello",(-6));
+  $y = ("hello",(-6));
+  $a = (1,true,$x);
+  @b = (1,true,$y);
+  if ($a != @b) {
+    return 1;
+  }
+  if (!($a != (1,true,("ello",(-6))))) {
+    return 1;
+  }
+}

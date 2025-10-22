@@ -1,0 +1,262 @@
+test:map_one_key_elements
+{
+  @moke[16] = 32;
+  $found = 0;
+  for $kv : @moke {
+    if ($kv.0 == 16 && $kv.1 == 32) {
+      $found = 1;
+    }
+  }
+  if ($found != 1) {
+    return 1;
+  }
+}
+
+test:map_two_keys
+{
+  @map2k[16,17] = 32;
+  @map2k[64,65] = 128;
+  $found_first = 0;
+  $found_second = 0;
+  for $kv : @map2k {
+    if ($kv.0.0 == 16 && $kv.0.1 == 17 && $kv.1 == 32) {
+      $found_first = 1;
+    }
+    if ($kv.0.0 == 64 && $kv.0.1 == 65 && $kv.1 == 128) {
+      $found_second = 1;
+    }
+  }
+  if ($found_first != 1 || $found_second != 1) {
+    return 1;
+  }
+}
+
+test:map_two_key_elements
+{
+  @map2[16,17] = 32;
+  $found = 0;
+  for $kv : @map2 {
+    if ($kv.0.0 == 16 && $kv.0.1 == 17 && $kv.1 == 32) {
+      $found = 1;
+    }
+  }
+  if ($found != 1) {
+    return 1;
+  }
+}
+
+test:map_create_map_in_body
+{
+  @mcmib[16] = 32;
+  @mcmib[64] = 128;
+  for $kv : @mcmib {
+    @new[$kv.1] = $kv.0;
+  }
+  if (@new[32] != 16 || @new[128] != 64) {
+    return 1;
+  }
+}
+
+test:map_strings
+{
+  @maps["abc"] = "aa";
+  @maps["def"] = "dd";
+  $found_abc = 0;
+  $found_def = 0;
+  for $kv : @maps {
+    if ($kv.0 == "abc" && $kv.1 == "aa") {
+      $found_abc = 1;
+    }
+    if ($kv.0 == "def" && $kv.1 == "dd") {
+      $found_def = 1;
+    }
+  }
+  if ($found_abc != 1 || $found_def != 1) {
+    return 1;
+  }
+}
+
+test:map_delete
+{
+  @md[0,0,0] = 1;
+  @md[0,0,1] = 1;
+  @md[0,1,0] = 1;
+  @md[1,0,0] = 1;
+  for $kv : @md {
+    if ($kv.0.1 == 1) {
+      delete(@md, $kv.0);
+    }
+  }
+  if (@md[0,1,0] == 1) {
+    return 1;
+  }
+  if (@md[0,0,0] != 1 || @md[0,0,1] != 1 || @md[1,0,0] != 1) {
+    return 1;
+  }
+}
+
+// Nested for loops are omitted due to BPF verifier complexity issues.
+
+test:variable_context_read_only
+{
+  @vcro[0] = 0;
+  $var = 123;
+  $result = 0;
+  for $kv : @vcro {
+    $result = $var;
+  }
+  if ($result != 123) {
+    return 1;
+  }
+}
+
+test:variable_context_update
+{
+  @vcu[0] = 0;
+  @vcu[1] = 1;
+  $var = 123;
+  for $kv : @vcu {
+    $var *= 2;
+  }
+  if ($var != 492) {
+    return 1;
+  }
+}
+
+test:variable_context_string
+{
+  @vcs[0] = 0;
+  @vcs[1] = 1;
+  $var = "abc";
+  for $kv : @vcs {
+    $var = "def";
+  }
+  if ($var != "def") {
+    return 1;
+  }
+}
+
+test:variable_context_multiple
+{
+  @vcm[0] = 0;
+  $var1 = 123;
+  $var2 = "abc";
+  $result1 = 0;
+  $result2 = "";
+  for $kv : @vcm {
+    $result1 = $var1;
+    $result2 = $var2;
+  }
+  if ($result1 != 123 || $result2 != "abc") {
+    return 1;
+  }
+}
+
+test:range_basic
+{
+  $count = 0;
+  for $i : 0..5 {
+    $count++;
+  }
+  if ($count != 5) {
+    return 1;
+  }
+}
+
+test:range_with_variables
+{
+  $start = 2;
+  $end = 7;
+  $count = 0;
+  for $i : ($start)..($end) {
+    $count++;
+  }
+  if ($count != 5) {
+    return 1;
+  }
+}
+
+test:range_with_expressions
+{
+  $count = 0;
+  for $i : (1 + 1)..(2 * 4) {
+    $count++;
+  }
+  if ($count != 6) {
+    return 1;
+  }
+}
+
+
+test:range_with_zero_iterations
+{
+  $count = 0;
+  for $i : 1..0 {
+    $count++;
+  }
+  if ($count != 0) {
+    return 1;
+  }
+}
+
+test:range_with_negative_start
+{
+  $sum = 0;
+  for $i : (-3)..3 {
+    $sum += $i;
+  }
+  if ($sum != (-3)) {
+    return 1;
+  }
+}
+
+test:range_with_same_start_and_end
+{
+  $count = 0;
+  for $i : 5..5 {
+    $count++;
+  }
+  if ($count != 0) {
+    return 1;
+  }
+}
+
+test:range_with_variable_modification
+{
+  $sum = 0;
+  for $i : 1..5 {
+    $sum += $i;
+  }
+  if ($sum != 10) {
+    return 1;
+  }
+}
+
+
+test:range_with_break
+{
+  $count = 0;
+  for $i : 1..4 {
+    if ($i == 2) {
+      break;
+    }
+    $count++;
+  }
+  if ($count != 1) {
+    return 1;
+  }
+}
+
+test:range_with_continue
+{
+  $sum = 0;
+  for $i : 1..4 {
+    if ($i == 2) {
+      continue;
+    }
+    $sum += $i;
+  }
+  if ($sum != 4) {
+    return 1;
+  }
+}

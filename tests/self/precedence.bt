@@ -1,0 +1,27 @@
+test:operator_precedence_1
+{
+  if ((1 + (2 * 3)) != 7) {
+    return 1;
+  }
+}
+
+test:operator_precedence_2
+{
+  if (((1 + (2 * 3)) + 1) != 8) {
+    return 1;
+  }
+}
+
+test:operator_precedence_3
+{
+  if (((1 + (2 * 3)) + (1 * 10)) != 17) {
+    return 1;
+  }
+}
+
+test:operator_precedence_4
+{
+  if ((1 + ((2 / 2) * 3)) != 4) {
+    return 1;
+  }
+}

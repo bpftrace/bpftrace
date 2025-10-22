@@ -1,0 +1,55 @@
+test:casting_ints
+{
+  $a = (uint8)(-10);
+  $b = (uint16)131087;
+  if ($a != 246 || $b != 15) {
+    return 1;
+  }
+}
+
+test:implicit_truncation_of_ints
+{
+  $a = (int16)0;
+  $a = 2;
+  $b = (int8)3;
+  $b = -100;
+  if ($a != 2 || $b != (-100)) {
+    return 1;
+  }
+}
+
+test:binop_on_32bit_int
+{
+  $x = (uint32)5;
+  $x += (uint32)1;
+  if ($x != 6) {
+    return 1;
+  }
+}
+
+test:binop_on_16bit_int
+{
+  $x = (uint16)0xFF;
+  $x &= (uint16)0xF;
+  if ($x != 15) {
+    return 1;
+  }
+}
+
+test:binop_on_8bit_int
+{
+  $x = (uint8)0xF;
+  $x |= (uint8)0xF0;
+  if ($x != 255) {
+    return 1;
+  }
+}
+
+test:binop_promotion
+{
+  $x = (uint32)0;
+  $x = ((uint32)5) + ((uint16)1);
+  if ($x != 6) {
+    return 1;
+  }
+}
