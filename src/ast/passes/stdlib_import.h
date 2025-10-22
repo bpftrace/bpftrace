@@ -4,6 +4,6 @@
 
 namespace bpftrace::ast {
 
-Pass CreateUSDTArgLiftPass();
+Pass CreateStdlibImportPass();
 
 } // namespace bpftrace::ast

@@ -22,6 +22,7 @@
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "ast/passes/stdlib_import.h"
 #include "ast/passes/type_system.h"
 #include "bpftrace.h"
 #include "btf_common.h"
@@ -82,6 +83,7 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateNamedParamsPass())
+                .add(ast::CreateStdlibImportPass())
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateClangBuildPass())
                 .add(ast::CreateTypeSystemPass())
