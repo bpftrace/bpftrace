@@ -212,7 +212,11 @@ bool StructManager::Has(const std::string &name) const
 const Field *StructManager::GetProbeArg(const ast::Probe &probe,
                                         const std::string &arg_name)
 {
-  auto args = Lookup(probe.args_typename()).lock();
+  auto type_name = probe.args_typename();
+  if (!type_name) {
+    return nullptr; // Ambiguous.
+  }
+  auto args = Lookup(*type_name).lock();
   if (!args || !args->HasField(arg_name))
     return nullptr;
 

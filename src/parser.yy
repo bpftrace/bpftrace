@@ -97,6 +97,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   LNOT       "!"
   BNOT       "~"
   DOT        "."
+  BACKTICK   "`"
   PTR        "->"
   STRUCT     "struct"
   UNION      "union"
@@ -215,7 +216,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %left PLUS MINUS
 %left MUL DIV MOD
 %right LNOT BNOT
-%left DOT PTR
+%left DOT PTR BACKTICK
 %right PAREN RPAREN
 %right LBRACKET RBRACKET
 
@@ -446,6 +447,7 @@ attach_point_def:
         |       attach_point_def MUL          { $$ = $1 + "*"; }
         |       attach_point_def LBRACKET     { $$ = $1 + "["; }
         |       attach_point_def RBRACKET     { $$ = $1 + "]"; }
+        |       attach_point_def BACKTICK     { $$ = $1 + "`"; }
         |       attach_point_def param
                 {
                   // "Un-parse" the positional parameter back into text so

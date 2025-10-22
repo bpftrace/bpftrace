@@ -95,7 +95,12 @@ void ArgsResolver::resolve_args(Probe &probe)
     return;
   }
 
-  bpftrace_.structs.Add(probe.args_typename(), std::move(probe_args));
+  auto type_name = probe.args_typename();
+  if (!type_name) {
+    ap->addError() << "Cannot resolve ambiguous types.";
+    return;
+  }
+  bpftrace_.structs.Add(*type_name, std::move(probe_args));
 }
 
 void ArgsResolver::visit(Probe &probe)

@@ -234,6 +234,7 @@ oct_esc  [0-7]{1,3}
   "!"                     { return Parser::make_LNOT(driver.loc); }
   "~"                     { return Parser::make_BNOT(driver.loc); }
   "."                     { return Parser::make_DOT(driver.loc); }
+  "`"                     { return Parser::make_BACKTICK(driver.loc); }
   "->"                    { return Parser::make_PTR(driver.loc); }
   "$"[0-9]+               { return Parser::make_PARAM(yytext, driver.loc); }
   "$"#                    { return Parser::make_PARAMCOUNT(driver.loc); }

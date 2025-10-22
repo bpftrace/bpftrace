@@ -1069,8 +1069,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
         }
       }
       auto type_name = probe->args_typename();
-      builtin.builtin_type = CreateRecord(type_name,
-                                          bpftrace_.structs.Lookup(type_name));
+      if (!type_name) {
+        builtin.addError() << "Unable to resolve unique type name.";
+        return;
+      }
+      builtin.builtin_type = CreateRecord(*type_name,
+                                          bpftrace_.structs.Lookup(*type_name));
       if (builtin.builtin_type.GetFieldCount() == 0)
         builtin.addError() << "Cannot read function parameters";
 
@@ -1897,8 +1901,8 @@ void SemanticAnalyser::visit(Call &call)
           continue;
         }
         call.addError() << "Unable to convert argument type, "
-                        << "function requires '" << type << "', "
-                        << "found '" << typestr(call.vargs[i].type())
+                        << "function requires '" << type << "', " << "found '"
+                        << typestr(call.vargs[i].type())
                         << "': " << compat_arg_type.takeError();
         continue;
       }
@@ -2702,8 +2706,8 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
 
   if (!lhs.IsSameType(rhs)) {
     if (is_final_pass()) {
-      if_expr.addError() << "Branches must return the same type: "
-                         << "have '" << lhs << "' and '" << rhs << "'";
+      if_expr.addError() << "Branches must return the same type: " << "have '"
+                         << lhs << "' and '" << rhs << "'";
     }
     // This assignment is just temporary to prevent errors
     // before the final pass

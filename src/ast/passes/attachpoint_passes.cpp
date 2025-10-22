@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <bcc/bcc_proc.h>
 #include <cctype>
-#include <exception>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -12,7 +11,6 @@
 #include "ast/helpers.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/visitor.h"
-#include "types.h"
 #include "util/int_parser.h"
 #include "util/paths.h"
 #include "util/strings.h"
@@ -23,20 +21,15 @@ namespace bpftrace::ast {
 
 class AttachPointChecker : public Visitor<AttachPointChecker> {
 public:
-  explicit AttachPointChecker(ASTContext &ast,
-                              BPFtrace &bpftrace,
+  explicit AttachPointChecker(BPFtrace &bpftrace,
                               bool listing,
                               bool has_child = true)
-      : ast_(ast),
-        bpftrace_(bpftrace),
-        listing_(listing),
-        has_child_(has_child) {};
+      : bpftrace_(bpftrace), listing_(listing), has_child_(has_child) {};
 
   using Visitor<AttachPointChecker>::visit;
   void visit(AttachPoint &ap);
 
 private:
-  ASTContext &ast_;
   BPFtrace &bpftrace_;
   bool listing_;
   bool has_begin_probe_ = false;
@@ -410,16 +403,25 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     return INVALID;
   }
 
-  if (parts_.front().empty()) {
+  auto &front = parts_.front();
+  if (front.empty()) {
     // Do not fail on empty attach point, could be just a trailing comma
     ap_->provider = "";
     return OK;
   }
 
+  // First, if there is a '`' in the provider, then this is treated
+  // as a deliminator for the user-provided name.
+  auto pos = front.find('`');
+  if (pos != std::string::npos && pos != front.size() - 1) {
+    ap.user_provided_name.emplace(front.substr(0, pos));
+    front = front.substr(pos + 1);
+  }
+
   std::set<std::string> probe_types;
-  if (util::has_wildcard(parts_.front())) {
+  if (util::has_wildcard(front)) {
     // Single argument listing looks at all relevant probe types
-    std::string probetype_query = (parts_.size() == 1) ? "*" : parts_.front();
+    std::string probetype_query = (parts_.size() == 1) ? "*" : front;
 
     // Probe type expansion
     // If PID is specified or the second part of the attach point is a path
@@ -434,13 +436,13 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
           probetype_query);
     }
   } else
-    probe_types = { parts_.front() };
+    probe_types = { front };
 
   if (probe_types.empty()) {
-    if (util::has_wildcard(parts_.front()))
-      errs_ << "No probe type matched for " << parts_.front() << std::endl;
+    if (util::has_wildcard(front))
+      errs_ << "No probe type matched for " << front << std::endl;
     else
-      errs_ << "Invalid probe type: " << parts_.front() << std::endl;
+      errs_ << "Invalid probe type: " << front << std::endl;
     return INVALID;
   } else if (probe_types.size() > 1) {
     // If the probe type string matches more than 1 probe, create a new set of
@@ -1111,15 +1113,29 @@ Pass CreateParseAttachpointsPass(bool listing)
 
 Pass CreateCheckAttachpointsPass(bool listing)
 {
-  return Pass::create("check-attachpoints",
-                      [listing](ASTContext &ast, BPFtrace &b) {
-                        AttachPointChecker ap_checker(ast,
-                                                      b,
-                                                      listing,
-                                                      !b.cmd_.empty() ||
-                                                          b.child_ != nullptr);
-                        ap_checker.visit(*ast.root);
-                      });
+  return Pass::create(
+      "check-attachpoints", [listing](ASTContext &ast, BPFtrace &b) {
+        AttachPointChecker ap_checker(b,
+                                      listing,
+                                      !b.cmd_.empty() || b.child_ != nullptr);
+        ap_checker.visit(*ast.root);
+
+        // Validate that all user-provided names are unique. We will issue a
+        // warning in this case, it may cause issues with other features.
+        std::map<std::string, Location> probe_handles;
+        for (const auto &probe : ast.root->probes) {
+          for (const auto &ap : probe->attach_points) {
+            auto name = ap->name();
+            auto it = probe_handles.find(name);
+            if (it != probe_handles.end()) {
+              auto &warn = ap->addWarning() << "duplicate probe name";
+              warn.addContext(it->second) << "this is the other instance";
+              warn.addHint() << "Add an explicit name with `name'...`?";
+            }
+            probe_handles.emplace(name, Location(ap->loc));
+          }
+        }
+      });
 }
 
 } // namespace bpftrace::ast
