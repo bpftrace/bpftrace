@@ -5566,4 +5566,17 @@ kprobe:f { $x = 1; if comptime (typeinfo($x) == typeinfo(1)) { fail("no integers
 )" });
 }
 
+TEST_F(SemanticAnalyserTest, no_meta_used_warnings)
+{
+  test("begin { let $a; print(sizeof($a)); $a = 1; }",
+       NoWarning{ "Variable used" });
+  test("struct Foo { int x; } begin { let $a : struct Foo*; "
+       "print(offsetof(*$a, x)); }",
+       NoWarning{ "Variable used" });
+  test("begin { let $a; let $b : typeof($a) = 0; $a = 1; }",
+       NoWarning{ "Variable used" });
+  test("begin { let $a; print(typeinfo($a)); $a = 1; }",
+       NoWarning{ "Variable used" });
+}
+
 } // namespace bpftrace::test::semantic_analyser
