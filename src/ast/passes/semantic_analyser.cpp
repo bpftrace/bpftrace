@@ -170,6 +170,7 @@ public:
   void visit(Sizeof &szof);
   void visit(Offsetof &offof);
   void visit(Typeof &typeof);
+  void visit(Typeinfo &typeinfo);
   void visit(Map &map);
   void visit(MapAddr &map_addr);
   void visit(MapDeclStatement &decl);
@@ -295,6 +296,7 @@ private:
   std::map<std::string, bpf_map_type> bpf_map_type_;
 
   uint32_t loop_depth_ = 0;
+  uint32_t meta_depth_ = 0; // sizeof, offsetof, etc.
   bool has_child_ = false;
 };
 
@@ -1898,8 +1900,8 @@ void SemanticAnalyser::visit(Call &call)
           continue;
         }
         call.addError() << "Unable to convert argument type, "
-                        << "function requires '" << type << "', "
-                        << "found '" << typestr(call.vargs[i].type())
+                        << "function requires '" << type << "', " << "found '"
+                        << typestr(call.vargs[i].type())
                         << "': " << compat_arg_type.takeError();
         continue;
       }
@@ -1946,7 +1948,9 @@ void SemanticAnalyser::visit(Call &call)
 
 std::optional<size_t> SemanticAnalyser::check(Sizeof &szof)
 {
+  meta_depth_++;
   Visitor<SemanticAnalyser>::visit(szof);
+  meta_depth_--;
 
   if (std::holds_alternative<SizedType>(szof.record)) {
     auto &ty = std::get<SizedType>(szof.record);
@@ -1974,7 +1978,9 @@ void SemanticAnalyser::visit(Sizeof &szof)
 
 std::optional<size_t> SemanticAnalyser::check(Offsetof &offof)
 {
+  meta_depth_++;
   Visitor<SemanticAnalyser>::visit(offof);
+  meta_depth_--;
 
   auto check_type = [&](SizedType record) -> std::optional<size_t> {
     size_t offset = 0;
@@ -2026,10 +2032,20 @@ void SemanticAnalyser::visit(Offsetof &offof)
 
 void SemanticAnalyser::visit(Typeof &typeof)
 {
+  meta_depth_++;
   Visitor<SemanticAnalyser>::visit(typeof);
+  meta_depth_--;
+
   if (std::holds_alternative<SizedType>(typeof.record)) {
     resolve_struct_type(std::get<SizedType>(typeof.record), typeof);
   }
+}
+
+void SemanticAnalyser::visit(Typeinfo &typeinfo)
+{
+  meta_depth_++;
+  Visitor<SemanticAnalyser>::visit(typeinfo);
+  meta_depth_--;
 }
 
 void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
@@ -2210,7 +2226,9 @@ void SemanticAnalyser::check_variable(Variable &var, bool check_assigned)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  check_variable(var, true);
+  // Warnings are suppressed when we are evaluating the variable in an
+  // expression that is not used, e.g. part of a sizeof, offsetof or a typeof.
+  check_variable(var, meta_depth_ == 0);
 }
 
 void SemanticAnalyser::visit(VariableAddr &var_addr)
@@ -2703,8 +2721,8 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
 
   if (!lhs.IsSameType(rhs)) {
     if (is_final_pass()) {
-      if_expr.addError() << "Branches must return the same type: "
-                         << "have '" << lhs << "' and '" << rhs << "'";
+      if_expr.addError() << "Branches must return the same type: " << "have '"
+                         << lhs << "' and '" << rhs << "'";
     }
     // This assignment is just temporary to prevent errors
     // before the final pass
