@@ -2,30 +2,6 @@ NAME global_int
 PROG i:ms:1 {@a = 10; printf("%d\n", @a); exit();}
 EXPECT @a: 10
 
-NAME global_string
-PROG i:ms:1 {@a = "hi"; printf("%s\n", @a); exit();}
-EXPECT @a: hi
-
-NAME global_buf
-PROG i:ms:1 {@a = buf("hi", 2); printf("%r\n", @a); exit();}
-EXPECT @a: hi
-
-NAME local_int
-PROG i:ms:1  {$a = 10; printf("a=%d\n", $a); exit();}
-EXPECT a=10
-
-NAME local_string
-PROG i:ms:1  {$a = "hi"; printf("a=%s\n", $a); exit();}
-EXPECT a=hi
-
-NAME local_buf
-PROG i:ms:1 {$a = buf("hi", 2); printf("a=%r\n", $a); exit();}
-EXPECT a=hi
-
-NAME buf_equality
-PROG i:ms:1 {$a = buf("hi", 2); $b = buf("bye", 3); printf("equal=%d, unequal=%d\n", $a == $a, $a != $b); exit();}
-EXPECT equal=1, unequal=1
-
 NAME global_associative_arrays
 PROG begin { @map[123] = 456; } end { printf("val: %d\n", @map[123]);  }
 EXPECT val: 456

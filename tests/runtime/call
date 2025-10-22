@@ -253,14 +253,6 @@ NAME tseries_scalar_map_key_scratch_buf
 PROG begin { @ = tseries(2,1s,2); exit() }
 EXPECT @:
 
-NAME tseries_map_key_scratch_buf
-PROG BEGIN { @["ok_key"] = tseries(2,1s,1); exit() }
-EXPECT @[ok_key]:
-
-NAME tseries_scalar_map_key_scratch_buf
-PROG BEGIN { @ = tseries(2,1s,2); exit() }
-EXPECT @:
-
 NAME str_big_for
 PROG t:syscalls:sys_enter_execve { @map[str(args.filename)] = str(args.filename); for ($kv : @map) { print($kv); } }
 ENV BPFTRACE_MAX_STRLEN=9999
@@ -268,12 +260,12 @@ EXPECT_REGEX \(/X{5555}, /X{5555}\)
 AFTER ./testprogs/syscall execve /$(python3 -c "print('X'*5555)")
 TIMEOUT 1
 
-NAME buf
+NAME buf little endian
 RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s.a, 4), buf($s.b, 4), buf($s.c), buf($s.d), buf($s.e), buf($s.f)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: \x09\x08\x07\x06-\x05\x04\x03\x02-\x01\x02\x03\x04-\x05\x00\x00\x00\x06\x00\x00\x00\x07\x00\x00\x00\x08\x00\x00\x00-\x09\x00\x0a\x00\x0b\x00\x0c\x00-\x0d\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10\x00\x00\x00\x00\x00\x00\x00
 ARCH x86_64|ppc64le|aarch64|armv7l
 
-NAME buf
+NAME buf big endian
 RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s.a, 4), buf($s.b, 4), buf($s.c), buf($s.d), buf($s.e), buf($s.f)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: \x09\x08\x07\x06-\x05\x04\x03\x02-\x01\x02\x03\x04-\x00\x00\x00\x05\x00\x00\x00\x06\x00\x00\x00\x07\x00\x00\x00\x08-\x00\x09\x00\x0a\x00\x0b\x00\x0c-\x00\x00\x00\x00\x00\x00\x00\x0d\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10
 ARCH s390x|ppc64
@@ -302,25 +294,25 @@ NAME buf_no_ascii_no_escaping
 PROG begin { printf("%rh", buf("Hello\0", 6));  }
 EXPECT 48 65 6c 6c 6f 00
 
-NAME ksym
+NAME ksym x86_64
 PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); exit();}
 EXPECT do_nanosleep
 ARCH x86_64
 AFTER ./testprogs/syscall nanosleep 1e8
 
-NAME ksym
+NAME ksym s390x
 PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("pswaddr"))); exit();}
 EXPECT do_nanosleep
 ARCH s390x
 AFTER ./testprogs/syscall nanosleep 1e8
 
-NAME ksym
+NAME ksym arm
 PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("pc"))); exit();}
 EXPECT do_nanosleep
 ARCH aarch64|armv7l
 AFTER ./testprogs/syscall nanosleep 1e8
 
-NAME ksym
+NAME ksym ppc
 PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("nip"))); exit();}
 EXPECT do_nanosleep
 ARCH ppc64|ppc64le
@@ -500,12 +492,12 @@ NAME uaddr pie elf
 RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test-pie:uprobeFunction1 { printf("0x%x -- 0x%x\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test-pie
 EXPECT 0x55555555 -- 0x33333333
 
-NAME ntop static ip
+NAME ntop static ip little endian
 PROG i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(1), ntop(0x0100007f), ntop(0xffff0000), ntop(0x0000ffff)); exit() }
 EXPECT IP: 1.0.0.0, 127.0.0.1, 0.0.255.255, 255.255.0.0
 ARCH x86_64|aarch64|ppc64le|armv7l
 
-NAME ntop static ip
+NAME ntop static ip big endian
 PROG i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(0x01000000), ntop(0x7f000001), ntop(0x0000ffff), ntop(0xffff0000)); exit() }
 EXPECT IP: 1.0.0.0, 127.0.0.1, 0.0.255.255, 255.255.0.0
 ARCH s390x|ppc64
