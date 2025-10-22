@@ -674,10 +674,26 @@ macro override(expr) {
 // * `pid(curr_ns)` - The process ID as seen from the PID namespace of bpftrace.
 // * `pid(init)` - The process ID as seen from the initial PID namespace.
 
+// :variant uint32 ppid()
 // :variant uint32 ppid(struct task_struct * task)
-// Get the pid of the parent process
+// Get the pid of the parent process for the passed task or the current task if called without arguments.
 macro ppid(task) {
     task->real_parent->pid
+}
+
+macro ppid() {
+    ppid(curtask)
+}
+
+// :variant string pcomm()
+// :variant string pcomm(struct task_struct * task)
+// Get the name of the parent process for the passed task or the current task if called without arguments.
+macro pcomm(task) {
+    task->real_parent->comm
+}
+
+macro pcomm() {
+    pcomm(curtask)
 }
 
 // :function print
