@@ -2,6 +2,7 @@
 
 #include "ast/pass_manager.h"
 #include "ast/passes/ap_probe_expansion.h"
+#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
@@ -15,7 +16,6 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/pid_filter_pass.h"
-#include "ast/passes/args_resolver.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/tracepoint_format_parser.h"
 #include "ast/passes/unstable_feature.h"

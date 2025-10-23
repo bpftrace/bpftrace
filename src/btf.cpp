@@ -26,6 +26,7 @@
 #include "arch/arch.h"
 #include "ast/context.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/args_resolver.h"
 #include "bpftrace.h"
 #include "btf.h"
 #include "log.h"
@@ -467,38 +468,40 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   return stype;
 }
 
-std::shared_ptr<Struct> BTF::resolve_args(std::string_view func,
-                                          bool ret,
-                                          bool check_traceable,
-                                          bool skip_first_arg,
-                                          std::string &err)
+Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
+                                                  bool ret,
+                                                  bool check_traceable,
+                                                  bool skip_first_arg)
 {
   if (!has_data()) {
-    err = "BTF data not available";
-    return nullptr;
+    return make_error<ast::ArgParseError>(func, "BTF data not available");
   }
 
   auto func_id = find_id(func, BTF_KIND_FUNC);
   if (!func_id.btf) {
-    err = "no BTF data for " + std::string(func);
-    return nullptr;
+    return make_error<ast::ArgParseError>(
+        func, "BTF data for the function not found");
   }
 
   const struct btf_type *t = btf__type_by_id(func_id.btf, func_id.id);
   t = btf__type_by_id(func_id.btf, t->type);
   if (!t || !btf_is_func_proto(t)) {
-    err = std::string(func) + " is not a function";
-    return nullptr;
+    return make_error<ast::ArgParseError>(func, "not a function");
   }
 
   if (check_traceable) {
     if (bpftrace_ && !bpftrace_->is_traceable_func(std::string(func))) {
       if (bpftrace_->get_traceable_funcs().empty()) {
-        err = "could not read traceable functions from " +
-              tracefs::available_filter_functions() + " (is tracefs mounted?)";
+        return make_error<ast::ArgParseError>(
+            func,
+            "could not read traceable functions from " +
+                tracefs::available_filter_functions() +
+                " (is tracefs mounted?)");
       } else {
-        err = "function not traceable (probably it is "
-              "inlined or marked as \"notrace\")";
+        return make_error<ast::ArgParseError>(
+            func,
+            "function not traceable (probably it is inlined or marked as "
+            "\"notrace\")");
       }
       return nullptr;
     }
@@ -507,10 +510,11 @@ std::shared_ptr<Struct> BTF::resolve_args(std::string_view func,
   const struct btf_param *p = btf_params(t);
   __u16 vlen = btf_vlen(t);
   if (vlen > arch::Host::arguments().size()) {
-    err = "functions with more than " +
-          std::to_string(arch::Host::arguments().size()) +
-          " parameters are not supported.";
-    return nullptr;
+    return make_error<ast::ArgParseError>(
+        func,
+        "functions with more than " +
+            std::to_string(arch::Host::arguments().size()) +
+            " parameters are not supported.");
   }
 
   int arg_idx = 0;
@@ -522,8 +526,8 @@ std::shared_ptr<Struct> BTF::resolve_args(std::string_view func,
 
     const char *str = btf_str(func_id.btf, p->name_off);
     if (!str) {
-      err = "failed to resolve arguments";
-      return nullptr;
+      return make_error<ast::ArgParseError>(func,
+                                            "failed to resolve arguments");
     }
 
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = p->type });
@@ -549,16 +553,18 @@ std::shared_ptr<Struct> BTF::resolve_args(std::string_view func,
   return args;
 }
 
-std::shared_ptr<Struct> BTF::resolve_raw_tracepoint_args(std::string_view func,
-                                                         std::string &err)
+Result<std::shared_ptr<Struct>> BTF::resolve_raw_tracepoint_args(
+    std::string_view func)
 {
   for (const auto &prefix : RT_BTF_PREFIXES) {
-    if (auto args = resolve_args(
-            std::string(prefix) + std::string(func), false, true, true, err)) {
+    auto args = resolve_args(
+        std::string(prefix) + std::string(func), false, true, true);
+    if (args) {
       return args;
     }
   }
-  return nullptr;
+  return make_error<ast::ArgParseError>(
+      func, "BTF data for the tracepoint not found");
 }
 
 std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
