@@ -7,7 +7,7 @@ using namespace testing;
 
 namespace bpftrace::test::tracepoint_format_parser {
 
-class MockTracepointFormatParser : public TracepointFormatParser {
+class MockTracepointFormatParser : public ast::TracepointFormatParser {
 public:
   static std::string get_tracepoint_struct_public(std::istream &format_file,
                                                   const std::string &category,

@@ -8,7 +8,7 @@
 #include "ast/visitor.h"
 #include "bpftrace.h"
 
-namespace bpftrace {
+namespace bpftrace::ast {
 
 class TracepointFormatParser {
 public:
@@ -39,4 +39,4 @@ protected:
 
 ast::Pass CreateParseTracepointFormatPass();
 
-} // namespace bpftrace
+} // namespace bpftrace::ast
