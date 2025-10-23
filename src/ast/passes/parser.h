@@ -17,11 +17,11 @@
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/args_resolver.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/tracepoint_format_parser.h"
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/usdt_arguments.h"
 #include "btf.h"
 #include "driver.h"
-#include "tracepoint_format_parser.h"
 
 namespace bpftrace::ast {
 

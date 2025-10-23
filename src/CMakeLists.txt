@@ -52,7 +52,6 @@ add_library(libbpftrace STATIC
   build_info.cpp
   driver.cpp
   lockdown.cpp
-  tracepoint_format_parser.cpp
 )
 # So it's not "liblibbpftrace"
 set_target_properties(libbpftrace PROPERTIES PREFIX "")

@@ -1,4 +1,4 @@
-#include "tracepoint_format_parser.h"
+#include "ast/passes/tracepoint_format_parser.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"

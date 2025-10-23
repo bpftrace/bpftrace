@@ -56,7 +56,6 @@
 #include "log.h"
 #include "map_info.h"
 #include "required_resources.h"
-#include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"
 #include "util/bpf_names.h"
