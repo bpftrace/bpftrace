@@ -24,6 +24,7 @@
 #include "config.h"
 #include "log.h"
 #include "probe_matcher.h"
+#include "probe_types.h"
 #include "types.h"
 #include "usdt.h"
 #include "util/paths.h"

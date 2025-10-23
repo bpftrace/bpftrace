@@ -13,6 +13,7 @@
 #include <unordered_set>
 
 #include "ast/pass_manager.h"
+#include "util/result.h"
 
 // Taken from libbpf
 #define BTF_INFO_ENC(kind, kind_flag, vlen)                                    \
@@ -106,13 +107,12 @@ public:
   FuncParamLists get_rawtracepoint_params(
       const std::set<std::string>& rawtracepoints) const;
 
-  std::shared_ptr<Struct> resolve_args(std::string_view func,
-                                       bool ret,
-                                       bool check_traceable,
-                                       bool skip_first_arg,
-                                       std::string& err);
-  std::shared_ptr<Struct> resolve_raw_tracepoint_args(std::string_view func,
-                                                      std::string& err);
+  Result<std::shared_ptr<Struct>> resolve_args(std::string_view func,
+                                               bool ret,
+                                               bool check_traceable,
+                                               bool skip_first_arg);
+  Result<std::shared_ptr<Struct>> resolve_raw_tracepoint_args(
+      std::string_view func);
   void resolve_fields(const SizedType& type);
 
   int get_btf_id(std::string_view func,

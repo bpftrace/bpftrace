@@ -8,10 +8,19 @@
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
+#include "log.h"
 #include "probe_matcher.h"
-#include "util/strings.h"
+#include "probe_types.h"
+#include "util/result.h"
 
 namespace bpftrace::ast {
+
+char ArgParseError::ID;
+
+void ArgParseError::log(llvm::raw_ostream &OS) const
+{
+  OS << "Could not parse arguments of \"" << probe_name_ << "\": " << detail_;
+}
 
 namespace {
 
@@ -34,6 +43,7 @@ public:
 
 private:
   void resolve_args(Probe &probe);
+  Result<std::shared_ptr<Struct>> resolve_args(const AttachPoint &ap);
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
@@ -51,6 +61,48 @@ void ArgsResolver::visit(Builtin &builtin)
   }
 }
 
+Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
+    const AttachPoint &ap)
+{
+  auto probe_type = probetype(ap.provider);
+  switch (probe_type) {
+    case ProbeType::fentry:
+    case ProbeType::fexit:
+      return bpftrace_.btf_->resolve_args(
+          ap.func, probe_type == ProbeType::fexit, true, false);
+    case ProbeType::rawtracepoint:
+      return bpftrace_.btf_->resolve_raw_tracepoint_args(ap.func);
+    case ProbeType::tracepoint: {
+      auto struct_name = TracepointFormatParser::get_struct_name(ap);
+      auto args = bpftrace_.structs.Lookup(struct_name).lock();
+      if (!args)
+        return make_error<ast::ArgParseError>(ap.name(), "args not found");
+      return args;
+    }
+    case ProbeType::uprobe: {
+      Dwarf *dwarf = bpftrace_.get_dwarf(ap.target);
+      if (dwarf) {
+        auto args = dwarf->resolve_args(ap.func);
+        if (args && args->fields.size() >= arch::Host::arguments().size()) {
+          return make_error<ast::ArgParseError>(
+              ap.name(),
+              "\'args\' builtin is not supported for probes with stack-passed "
+              "arguments.");
+        }
+        return args;
+      }
+      return make_error<ast::ArgParseError>(ap.name(),
+                                            "no debuginfo found for " +
+                                                ap.target);
+    }
+    default:
+      return make_error<ast::ArgParseError>(
+          ap.name(),
+          "args builtin is not supported for probe type \"" + ap.provider +
+              "\"");
+  }
+}
+
 void ArgsResolver::resolve_args(Probe &probe)
 {
   auto probe_type = probe.get_probetype();
@@ -62,40 +114,15 @@ void ArgsResolver::resolve_args(Probe &probe)
   // Everything should be expanded by now
   assert(probe.attach_points.size() == 1);
   auto *ap = probe.attach_points.at(0);
-  std::shared_ptr<Struct> probe_args;
-  std::string err;
 
-  if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-    probe_args = bpftrace_.btf_->resolve_args(
-        ap->func, probe_type == ProbeType::fexit, true, false, err);
-
-  } else if (probe_type == ProbeType::rawtracepoint) {
-    probe_args = bpftrace_.btf_->resolve_raw_tracepoint_args(ap->func, err);
-  } else if (probe_type == ProbeType::tracepoint) {
-    auto struct_name = TracepointFormatParser::get_struct_name(*ap);
-    probe_args = bpftrace_.structs.Lookup(struct_name).lock();
-  } else { // uprobe
-    Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);
-    if (dwarf) {
-      probe_args = dwarf->resolve_args(ap->func);
-    } else {
-      err = ("No debuginfo found for " + ap->target);
-    }
-  }
-
-  if (probe_type == ProbeType::uprobe && probe_args &&
-      probe_args->fields.size() >= arch::Host::arguments().size()) {
-    ap->addError() << "\'args\' builtin is not supported for "
-                   << "probes with stack-passed arguments.";
-  }
+  auto probe_args = resolve_args(*ap);
 
   if (!probe_args) {
-    ap->addError() << "Unable to get arguments for "
-                   << probetypeName(probe_type) << ap->func << ": " << err;
+    ap->addError() << probe_args.takeError();
     return;
   }
 
-  bpftrace_.structs.Add(probe.args_typename(), std::move(probe_args));
+  bpftrace_.structs.Add(probe.args_typename(), std::move(*probe_args));
 }
 
 void ArgsResolver::visit(Probe &probe)
