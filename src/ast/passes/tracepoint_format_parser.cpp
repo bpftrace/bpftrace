@@ -9,7 +9,7 @@
 #include "tracefs/tracefs.h"
 #include "tracepoint_format_parser.h"
 
-namespace bpftrace {
+namespace bpftrace::ast {
 
 std::set<std::string> TracepointFormatParser::struct_list;
 
@@ -234,4 +234,4 @@ ast::Pass CreateParseTracepointFormatPass()
   });
 }
 
-} // namespace bpftrace
+} // namespace bpftrace::ast
