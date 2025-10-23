@@ -1,0 +1,82 @@
+test:clear_map {
+  @ = 1;
+  @a[1] = 1;
+  clear(@);
+  clear(@a);
+}
+
+test:delete_map {
+  @ = 1;
+  @a[1] = 1;
+  @b[1, 2] = 2;
+  if (!delete(@)) {
+    return 1;
+  }
+  delete(@a, 1);
+  if (!delete(@b, (1, 2))) {
+    return 1;
+  }
+  if (delete(@b, (5, 6))) {
+    return 1;
+  }
+}
+
+test:increment_decrement_variable {
+  $x = 10;
+  $result1 = $x++;
+  $result2 = ++$x;
+  $result3 = $x--;
+  $result4 = --$x;
+  if ($result1 != 10 || $result2 != 12 || $result3 != 12 || $result4 != 10) {
+    return 1;
+  }
+}
+
+test:variable_strings_are_memset {
+  $x = "xxxxx";
+  $x = "a";
+  @vs[$x] = 1;
+  $y = "yyyyy";
+  $y = "a";
+  @vs[$y] = 1;
+  if (len(@vs) != 1) {
+    return 1;
+  }
+  clear(@vs);
+}
+
+test:map_strings_are_memset {
+  @x = "xxxxx";
+  @x = "a";
+  @ms[@x] = 1;
+  @y = "yyyyy";
+  @y = "a";
+  @ms[@y] = 1;
+  if (len(@ms) != 1) {
+    return 1;
+  }
+  clear(@ms);
+  clear(@x);
+  clear(@y);
+}
+
+test:print_large_int {
+  $a = 10223372036854775807;
+  if ($a != 10223372036854775807) {
+    return 1;
+  }
+}
+
+test:block_expression {
+  let $a = { let $b = 1; $b };
+  if ($a != 1) {
+    return 1;
+  }
+}
+
+test:print_block_expression_with_print {
+  $result = { $x = 1; $x > 1 };
+  if ($result != false) {
+    return 1;
+  }
+}

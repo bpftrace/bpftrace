@@ -1,0 +1,127 @@
+struct SizeofStruct { int x; char c; }
+struct OffsetStruct { int x; struct Inner { int y; } inner; }
+
+test:pid_exists {
+  if (pid == 0) {
+    return 1;
+  }
+}
+
+test:tid_exists {
+  if (tid == 0) {
+    return 1;
+  }
+}
+
+
+test:nsecs_exists {
+  if (nsecs == 0) {
+    return 1;
+  }
+}
+
+test:elapsed_exists {
+  // elapsed can be 0 at the very start
+  $a = elapsed;
+  if ($a < 0) {
+    return 1;
+  }
+}
+
+test:ncpus {
+  if (ncpus < 1) {
+    return 1;
+  }
+}
+
+
+test:curtask_exists {
+  if (curtask == 0) {
+    return 1;
+  }
+}
+
+test:rand_exists {
+  $r = rand;
+  // Just verify rand returns a value (can't test randomness)
+}
+
+test:cgroup_exists {
+  $c = cgroup;
+  // cgroup can be 0, just verify it's a valid uint64
+  if ($c < 0) {
+    return 1;
+  }
+}
+
+// Note: ctx_access test would need struct at top level, omitting for now
+
+test:sizeof_basic {
+  $x = 1;
+  if (sizeof($x) != 8) {
+    return 1;
+  }
+  if (sizeof(1 == 1) != 1) {
+    return 1;
+  }
+}
+
+test:sizeof_ints {
+  if (sizeof(uint8) != 1 || sizeof(int8) != 1) {
+    return 1;
+  }
+  if (sizeof(uint16) != 2 || sizeof(int16) != 2) {
+    return 1;
+  }
+  if (sizeof(uint32) != 4 || sizeof(int32) != 4) {
+    return 1;
+  }
+  if (sizeof(uint64) != 8 || sizeof(int64) != 8) {
+    return 1;
+  }
+}
+
+// Note: offsetof test would need struct at top level, omitting for now
+
+test:jiffies_exists {
+  if (jiffies == 0) {
+    return 1;
+  }
+}
+
+test:numaid_exists {
+  $n = numaid;
+  // numaid can be 0, just verify it exists
+  if ($n < 0) {
+    return 1;
+  }
+}
+
+test:cpu_exists {
+  $c = cpu;
+  // Just verify cpu exists and is a valid value
+  if ($c < 0) {
+    return 1;
+  }
+}
+
+test:sizeof_struct {
+  if (sizeof(struct SizeofStruct) != 8) {
+    return 1;
+  }
+  if (sizeof((*(struct SizeofStruct*)0).x) != 4) {
+    return 1;
+  }
+  if (sizeof((*(struct SizeofStruct*)0).c) != 1) {
+    return 1;
+  }
+}
+
+test:offsetof_struct {
+  if (offsetof(struct OffsetStruct, x) != 0) {
+    return 1;
+  }
+  if (offsetof(struct OffsetStruct, inner.y) != 4) {
+    return 1;
+  }
+}

@@ -1,0 +1,157 @@
+test:if_gt {
+  $a = 10;
+  if ($a > 2) {
+    $a = 20;
+  }
+  if ($a != 20) {
+    return 1;
+  }
+}
+
+test:if_lt {
+  $a = 10;
+  if ($a < 2) {
+    $a = 20;
+  }
+  if ($a != 10) {
+    return 1;
+  }
+}
+
+test:ifelse_go_else {
+  $a = "";
+  if (10 < 2) {
+    $a = "hi";
+  } else {
+    $a = "hello";
+  }
+  if ($a != "hello") {
+    return 1;
+  }
+}
+
+test:ifelse_go_if {
+  $a = "";
+  if (10 > 2) {
+    $a = "hi";
+  } else {
+    $a = "hello";
+  }
+  if ($a != "hi") {
+    return 1;
+  }
+}
+
+test:ifelseif_go_elseif {
+  $a = "";
+  if (1 > 2) {
+    $a = "hi";
+  } else if (2 < 3) {
+    $a = "hello";
+  }
+  if ($a != "hello") {
+    return 1;
+  }
+}
+
+test:ifelseifelse_go_else {
+  $a = "";
+  if (1 > 2) {
+    $a = "hi";
+  } else if (5 < 3) {
+    $a = "hello";
+  } else {
+    $a = "asdf";
+  }
+  if ($a != "asdf") {
+    return 1;
+  }
+}
+
+test:if_cast {
+  if ((int32)pid) {
+  }
+}
+
+test:ternary {
+  $a = 1 ? "yes" : "no";
+  if ($a != "yes") {
+    return 1;
+  }
+}
+
+test:ternary_lnot {
+  $a = !nsecs ? 0 : 1;
+  if ($a != 1) {
+    return 1;
+  }
+}
+
+test:ternary_int8 {
+  $a = 1 ? (int8)1 : 0;
+  if ($a != 1) {
+    return 1;
+  }
+}
+
+test:ternary_buf {
+  $a = nsecs ? buf("hi", 2) : buf("bye", 3);
+  if ($a != buf("hi", 2)) {
+    return 1;
+  }
+}
+
+test:ternary_tuple {
+  $a = nsecs ? ("hellolongstr", "a") : ("b", "hellolongstr");
+  if ($a.0 != "hellolongstr" || $a.1 != "a") {
+    return 1;
+  }
+}
+
+test:unroll {
+  $a = 1;
+  unroll (10) {
+    $a = $a + 1;
+  }
+  if ($a != 11) {
+    return 1;
+  }
+}
+
+
+test:optional_positional_int {
+  if ($1 != 0) {
+    return 1;
+  }
+}
+
+test:optional_positional_str {
+  if (str($1) != "") {
+    return 1;
+  }
+}
+
+test:lhist_can_be_cleared {
+  @lh[1] = lhist(3,0,10,1);
+  clear(@lh);
+}
+
+test:hist_can_be_cleared {
+  @h[1] = hist(1);
+  clear(@h);
+}
+
+test:stats_can_be_cleared {
+  @st[1] = stats(1);
+  clear(@st);
+}
+
+test:avg_can_be_cleared {
+  @av[1] = avg(1);
+  clear(@av);
+}
+
+test:tseries_can_be_cleared {
+  @ts[1] = tseries(1, 1ms, 5);
+  clear(@ts);
+}
