@@ -4,11 +4,11 @@
 
 #include "arch/arch.h"
 #include "ast/passes/args_resolver.h"
+#include "ast/passes/tracepoint_format_parser.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
-#include "tracepoint_format_parser.h"
 #include "util/strings.h"
 
 namespace bpftrace::ast {
