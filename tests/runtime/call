@@ -482,7 +482,11 @@ PROG i:ms:1 { cat("/%s%s%s%s/%s%s%s", "p", "r", "o", "c", "u", "p", "time"); exi
 EXPECT_REGEX [0-9]*.[0-9]* [0-9]*.[0-9]*
 
 NAME uaddr
-RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test:uprobeFunction1 { printf("0x%lx -- 0x%lx\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test
+RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test:uprobeFunction1 { printf("0x%x -- 0x%x\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test
+EXPECT 0x55555555 -- 0x33333333
+
+NAME uaddr pie elf
+RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test-pie:uprobeFunction1 { printf("0x%x -- 0x%x\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test-pie
 EXPECT 0x55555555 -- 0x33333333
 
 NAME ntop static ip

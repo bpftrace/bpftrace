@@ -5,6 +5,8 @@
 #include "ast/signal_bt.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
+#include "log.h"
+#include "util/paths.h"
 
 namespace bpftrace::ast {
 
@@ -64,6 +66,28 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
               : probetypeName(
                     probetype(probe->attach_points.front()->provider)),
           Location(node.loc));
+    }
+  }
+  if (ident == "__builtin_elf_is_exe" || ident == "__builtin_elf_ino") {
+    auto *probe = dynamic_cast<Probe *>(top_level_node_);
+    if (!probe) {
+      return std::nullopt;
+    }
+    ProbeType type = probetype(probe->attach_points.front()->provider);
+    // Only for uprobe,uretprobe,USDT.
+    if (type != ProbeType::uprobe && type != ProbeType::uretprobe &&
+        type != ProbeType::usdt) {
+      LOG(BUG) << "The " << ident << " can not be used with '"
+               << probe->attach_points.front()->provider << "' probes";
+    }
+    if (ident == "__builtin_elf_is_exe") {
+      return ast_.make_node<Boolean>(util::is_exe(
+                                         probe->attach_points.front()->target),
+                                     Location(node.loc));
+    } else {
+      return ast_.make_node<Integer>(util::file_ino(
+                                         probe->attach_points.front()->target),
+                                     Location(node.loc));
     }
   }
   return std::nullopt;

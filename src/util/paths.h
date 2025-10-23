@@ -16,6 +16,8 @@ std::optional<std::filesystem::path> find_in_path(std::string_view name);
 // Finds a file in the same directory as running binary
 std::optional<std::filesystem::path> find_near_self(std::string_view name);
 
+unsigned long file_ino(const std::string &path);
+
 bool is_dir(const std::string &path);
 bool is_exe(const std::string &path);
 

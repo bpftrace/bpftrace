@@ -30,14 +30,17 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   ast::ASTContext ast("stdin", input);
 
   ast::CDefinitions no_c_defs; // Output from clang parser.
+  // Because some stdlib's bpf.c file is conflicting with the custom BTF we
+  // generate for the test, just disable stdlib for this test right now.
+  ast::Imports no_imports;
 
   // N.B. No macro expansion.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put<BPFtrace>(*bpftrace)
                 .put(no_c_defs)
+                .put(no_imports)
                 .add(CreateParsePass())
-                .add(ast::CreateResolveImportsPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateControlFlowPass())
                 .add(ast::CreateProbeAndApExpansionPass())

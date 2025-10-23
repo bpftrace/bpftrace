@@ -4,14 +4,14 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.0" = type { ptr, ptr }
-%ctx_t.1 = type { ptr, ptr }
+%"struct map_internal_repr_t.163" = type { ptr, ptr }
+%ctx_t.164 = type { ptr, ptr }
 %ctx_t = type { ptr }
 %int64_int64__tuple_t = type { i64, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_ = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
-@ringbuf = dso_local global %"struct map_internal_repr_t.0" zeroinitializer, section ".maps", !dbg !26
+@ringbuf = dso_local global %"struct map_internal_repr_t.163" zeroinitializer, section ".maps", !dbg !26
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !40
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !44
 
@@ -21,7 +21,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @begin_1(ptr %0) #0 section "s_begin_1" !dbg !50 {
 entry:
-  %ctx1 = alloca %ctx_t.1, align 8
+  %ctx1 = alloca %ctx_t.164, align 8
   %ctx = alloca %ctx_t, align 8
   %"$var2" = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$var2")
@@ -47,10 +47,10 @@ entry:
   %for_each_map_elem = call i64 inttoptr (i64 164 to ptr)(ptr @AT_, ptr @map_for_each_cb, ptr %ctx, i64 0)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %ctx1)
   %2 = call ptr @llvm.preserve.static.offset(ptr %ctx1)
-  %"ctx.$var12" = getelementptr %ctx_t.1, ptr %2, i64 0, i32 0
+  %"ctx.$var12" = getelementptr %ctx_t.164, ptr %2, i64 0, i32 0
   store ptr %"$var1", ptr %"ctx.$var12", align 8
   %3 = call ptr @llvm.preserve.static.offset(ptr %ctx1)
-  %"ctx.$var2" = getelementptr %ctx_t.1, ptr %3, i64 0, i32 1
+  %"ctx.$var2" = getelementptr %ctx_t.164, ptr %3, i64 0, i32 1
   store ptr %"$var2", ptr %"ctx.$var2", align 8
   %for_each_map_elem3 = call i64 inttoptr (i64 164 to ptr)(ptr @AT_, ptr @map_for_each_cb.1, ptr %ctx1, i64 0)
   ret i64 0
@@ -103,9 +103,9 @@ for_body:
   store i64 %key, ptr %4, align 8
   %5 = getelementptr %int64_int64__tuple_t, ptr %"$_", i32 0, i32 1
   store i64 %val, ptr %5, align 8
-  %"ctx.$var1" = getelementptr %ctx_t.1, ptr %3, i64 0, i32 0
+  %"ctx.$var1" = getelementptr %ctx_t.164, ptr %3, i64 0, i32 0
   %"$var1" = load ptr, ptr %"ctx.$var1", align 8
-  %"ctx.$var2" = getelementptr %ctx_t.1, ptr %3, i64 0, i32 1
+  %"ctx.$var2" = getelementptr %ctx_t.164, ptr %3, i64 0, i32 1
   %"$var2" = load ptr, ptr %"ctx.$var2", align 8
   %6 = load i64, ptr %"$var1", align 8
   %7 = add i64 %6, 1

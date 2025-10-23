@@ -20,18 +20,30 @@ get_property(testprog_cflags GLOBAL PROPERTY testprog_cflags)
 
 file(GLOB testprog_sources CONFIGURE_DEPENDS *.c *.cpp)
 set(testprogtargets "")
-foreach(testprog_source ${testprog_sources})
-  get_filename_component(testprog_name ${testprog_source} NAME_WE)
-  add_executable(${testprog_name} ${testprog_source})
-  set_target_properties(${testprog_name}
-    PROPERTIES
-      LINK_SEARCH_START_STATIC FALSE
-      LINK_SEARCH_END_STATIC FALSE
-      COMPILE_FLAGS "${testprog_cflags}"
-      LINK_FLAGS "-no-pie")
-  target_include_directories(${testprog_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests/include)
-  list(APPEND testprogtargets ${testprog_name})
-endforeach()
+function(testprog_compile is_pie)
+  foreach(testprog_source ${testprog_sources})
+    get_filename_component(testprog_name ${testprog_source} NAME_WE)
+    set(extra_cflags "")
+    set(ldflags "-no-pie")
+    if(is_pie)
+      set(testprog_name "${testprog_name}-pie")
+      set(extra_cflags "-fpie")
+      set(ldflags "-pie")
+    endif()
+    add_executable(${testprog_name} ${testprog_source})
+    set_target_properties(${testprog_name}
+      PROPERTIES
+        LINK_SEARCH_START_STATIC FALSE
+        LINK_SEARCH_END_STATIC FALSE
+        COMPILE_FLAGS "${testprog_cflags} ${extra_cflags}"
+        LINK_FLAGS "${ldflags}")
+    target_include_directories(${testprog_name} PRIVATE ${CMAKE_SOURCE_DIR}/tests/include)
+    list(APPEND testprogtargets ${testprog_name})
+  endforeach()
+endfunction()
+# Compile all test programs into PIE and non-PIE ELF executables.
+testprog_compile(FALSE)
+testprog_compile(TRUE)
 
 find_program(GO_EXECUTABLE go)
 if(GO_EXECUTABLE)
@@ -65,6 +77,8 @@ endif()
 
 add_custom_target(testprogs ALL DEPENDS ${testprogtargets})
 
-target_include_directories(usdt_lib PRIVATE ${CMAKE_SOURCE_DIR}/tests/testlibs/)
-target_compile_options(usdt_lib PRIVATE -fPIC)
-target_link_libraries(usdt_lib usdt_tp)
+foreach(prog usdt_lib usdt_lib-pie)
+  target_include_directories(${prog} PRIVATE ${CMAKE_SOURCE_DIR}/tests/testlibs/)
+  target_compile_options(${prog} PRIVATE -fPIC)
+  target_link_libraries(${prog} usdt_tp)
+endforeach()
