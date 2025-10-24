@@ -1,40 +1,60 @@
 #pragma once
 
-#include <istream>
-#include <set>
+#include <fstream>
+#include <string>
 
 #include "ast/ast.h"
 #include "ast/pass_manager.h"
-#include "ast/visitor.h"
 #include "bpftrace.h"
 
 namespace bpftrace::ast {
 
+class TracepointFormatFileError : public ErrorInfo<TracepointFormatFileError> {
+public:
+  static char ID;
+  TracepointFormatFileError(std::string category,
+                            std::string event,
+                            std::string file_path)
+      : category_(std::move(category)),
+        event_(std::move(event)),
+        file_path_(std::move(file_path)) {};
+  void log(llvm::raw_ostream &OS) const override;
+  std::string err() const;
+  std::string hint() const;
+
+private:
+  std::string category_;
+  std::string event_;
+  std::string file_path_;
+};
+
 class TracepointFormatParser {
 public:
-  static bool parse(ast::ASTContext &ctx, BPFtrace &bpftrace);
+  TracepointFormatParser(std::string category,
+                         std::string event,
+                         BPFtrace &bpftrace)
+      : category_(std::move(category)),
+        event_(std::move(event)),
+        bpftrace_(bpftrace) {};
+
+  Result<> parse_format_file();
+  std::string get_tracepoint_struct();
+
   static std::string get_struct_name(const std::string &category,
                                      const std::string &event_name);
   static std::string get_struct_name(const ast::AttachPoint &ap);
   static bool is_tracepoint_struct(const std::string &name);
-  static void clear_struct_list()
-  {
-    struct_list.clear();
-  }
-
-private:
-  static std::string parse_field(const std::string &line,
-                                 int *last_offset,
-                                 BPFtrace &bpftrace);
-  static std::string adjust_integer_types(const std::string &field_type,
-                                          int size);
-  static std::set<std::string> struct_list;
 
 protected:
-  static std::string get_tracepoint_struct(std::istream &format_file,
-                                           const std::string &category,
-                                           const std::string &event_name,
-                                           BPFtrace &bpftrace);
+  std::string get_tracepoint_struct(std::istream &format_file);
+
+private:
+  std::string parse_field(const std::string &line, int *last_offset);
+
+  const std::string category_;
+  const std::string event_;
+  std::ifstream format_file_;
+  BPFtrace &bpftrace_;
 };
 
 ast::Pass CreateParseTracepointFormatPass();

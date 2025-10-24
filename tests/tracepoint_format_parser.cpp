@@ -9,12 +9,16 @@ namespace bpftrace::test::tracepoint_format_parser {
 
 class MockTracepointFormatParser : public ast::TracepointFormatParser {
 public:
-  static std::string get_tracepoint_struct_public(std::istream &format_file,
-                                                  const std::string &category,
-                                                  const std::string &event_name,
-                                                  BPFtrace &bpftrace)
+  MockTracepointFormatParser(std::string category,
+                             std::string event,
+                             BPFtrace &bpftrace)
+      : ast::TracepointFormatParser(std::move(category),
+                                    std::move(event),
+                                    bpftrace) {};
+
+  std::string get_tracepoint_struct_public(std::istream &format_file)
   {
-    return get_tracepoint_struct(format_file, category, event_name, bpftrace);
+    return get_tracepoint_struct(format_file);
   }
 };
 
@@ -60,8 +64,8 @@ TEST(tracepoint_format_parser, tracepoint_struct)
   std::istringstream format_file(input);
 
   auto bpftrace = get_mock_bpftrace();
-  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", *bpftrace);
+  MockTracepointFormatParser parser("syscalls", "sys_enter_read", *bpftrace);
+  std::string result = parser.get_tracepoint_struct_public(format_file);
 
   EXPECT_EQ(expected, result);
 }
@@ -81,8 +85,8 @@ TEST(tracepoint_format_parser, array)
   std::istringstream format_file(input);
 
   auto bpftrace = get_mock_bpftrace();
-  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", *bpftrace);
+  MockTracepointFormatParser parser("syscalls", "sys_enter_read", *bpftrace);
+  std::string result = parser.get_tracepoint_struct_public(format_file);
 
   EXPECT_EQ(expected, result);
 }
@@ -101,8 +105,8 @@ TEST(tracepoint_format_parser, data_loc)
   std::istringstream format_file(input);
 
   auto bpftrace = get_mock_bpftrace();
-  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", *bpftrace);
+  MockTracepointFormatParser parser("syscalls", "sys_enter_read", *bpftrace);
+  std::string result = parser.get_tracepoint_struct_public(format_file);
 
   EXPECT_EQ(expected, result);
 }
@@ -162,8 +166,8 @@ TEST(tracepoint_format_parser, adjust_integer_types)
   std::istringstream format_file(input);
 
   auto bpftrace = get_mock_bpftrace();
-  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", *bpftrace);
+  MockTracepointFormatParser parser("syscalls", "sys_enter_read", *bpftrace);
+  std::string result = parser.get_tracepoint_struct_public(format_file);
 
   EXPECT_EQ(expected, result);
 }
@@ -209,8 +213,8 @@ TEST(tracepoint_format_parser, padding)
   std::istringstream format_file(input);
 
   auto bpftrace = get_mock_bpftrace();
-  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "sched", "sched_wakeup", *bpftrace);
+  MockTracepointFormatParser parser("sched", "sched_wakeup", *bpftrace);
+  std::string result = parser.get_tracepoint_struct_public(format_file);
 
   EXPECT_EQ(expected, result);
 }
@@ -242,8 +246,8 @@ TEST(tracepoint_format_parser, tracepoint_struct_btf)
   std::istringstream format_file(input);
 
   auto bpftrace = get_mock_bpftrace();
-  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
-      format_file, "syscalls", "sys_enter_read", *bpftrace);
+  MockTracepointFormatParser parser("syscalls", "sys_enter_read", *bpftrace);
+  std::string result = parser.get_tracepoint_struct_public(format_file);
 
   // Check that BTF types are populated
   EXPECT_THAT(bpftrace->btf_set_, Contains("unsigned short"));
