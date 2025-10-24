@@ -24,9 +24,11 @@ public:
     int column = 1;
   };
 
-  SourceLocation() = default;
+  SourceLocation() = default; // Allowed, but see operator+.
   SourceLocation(const SourceLocation &) = default;
   SourceLocation &operator=(const SourceLocation &other) = default;
+  SourceLocation(SourceLocation &&) = default;
+  SourceLocation &operator=(SourceLocation &&other) = default;
   SourceLocation(std::shared_ptr<ASTSource> source)
       : source_(std::move(source)) {};
 
@@ -150,7 +152,7 @@ public:
     const Location loc;
   };
 
-  LocationChain(const SourceLocation &loc) : current(loc) {};
+  LocationChain(SourceLocation loc) : current(std::move(loc)) {};
 
   // See above.
   std::string filename() const

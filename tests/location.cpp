@@ -20,7 +20,7 @@ TEST(Location, single_line)
   ast::SourceLocation loc(ast.source());
   loc.begin = { .line = 3, .column = 9 };
   loc.end = { .line = 3, .column = 13 };
-  auto &call = *ast.make_node<ast::Call>("foo", ast::ExpressionList({}), loc);
+  auto &call = *ast.make_node<ast::Call>(loc, "foo", ast::ExpressionList({}));
   auto &err = call.addError();
 
   EXPECT_EQ(err.loc()->source_location(), "testfile:3:9-13");
@@ -39,7 +39,7 @@ TEST(Location, multi_line)
   ast::SourceLocation loc(ast.source());
   loc.begin = { .line = 3, .column = 3 };
   loc.end = { .line = 4, .column = 19 };
-  auto &call = *ast.make_node<ast::Call>("foo", ast::ExpressionList({}), loc);
+  auto &call = *ast.make_node<ast::Call>(loc, "foo", ast::ExpressionList({}));
   auto &err = call.addError();
 
   EXPECT_EQ(err.loc()->source_location(), "testfile:3-4");

@@ -46,7 +46,7 @@ static bool check_permissions(const std::filesystem::path &path)
   }
 }
 
-static Result<OK> import_script([[maybe_unused]] Node &node,
+static Result<OK> import_script(Node &node,
                                 Imports &imports,
                                 const std::string &name,
                                 const std::string &&data,
@@ -60,7 +60,7 @@ static Result<OK> import_script([[maybe_unused]] Node &node,
 
   // Construct our context.
   auto [it, added] = contents.emplace(
-      name, ScriptObject(ASTContext(name, data), internal));
+      name, ScriptObject(node, ASTContext(name, data), internal));
   assert(added);
   auto &ast = it->second.ast;
 

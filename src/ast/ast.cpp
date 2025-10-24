@@ -171,9 +171,7 @@ AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
   // Create a new node with the same raw tracepoint. We initialize all the
   // information about the attach point, and then override/reset values
   // depending on the specific probe type.
-  auto *ap = ctx.make_node<AttachPoint>(raw_input,
-                                        ignore_invalid,
-                                        Location(loc));
+  auto *ap = ctx.make_node<AttachPoint>(loc, raw_input, ignore_invalid);
   ap->provider = provider;
   ap->target = target;
   ap->lang = lang;

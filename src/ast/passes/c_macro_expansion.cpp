@@ -51,7 +51,7 @@ void CMacroExpander::visit(Expression &expr)
       }
 
       // Expand the macro expression in place.
-      expr.value = clone(ast_, expanded->value, ident->loc);
+      expr.value = clone(ast_, ident->loc, expanded->value);
 
       // Recursively visit the potentially expanded expression, ensuring that
       // we can catch recursive expansion, per above.

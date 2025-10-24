@@ -49,7 +49,12 @@ void Driver::error(const ast::SourceLocation &l, const std::string &m)
 {
   // This path is normally not allowed, however we don't yet have nodes
   // constructed. Therefore, we add diagnostics directly via the private field.
-  ctx.state_->diagnostics_->addError(ctx.wrap(l)) << m;
+  ast::SourceLocation valid(loc);
+  valid.begin = l.begin;
+  valid.end = l.end;
+  ctx.state_->diagnostics_->addError(
+      std::make_shared<ast::LocationChain>(std::move(valid)))
+      << m;
 }
 
 ast::Pass CreateParsePass(bool debug)

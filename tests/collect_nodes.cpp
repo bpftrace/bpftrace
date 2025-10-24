@@ -22,7 +22,7 @@ void test(const std::vector<std::reference_wrapper<T>> &expected,
 TEST(CollectNodes, direct)
 {
   ASTContext ctx;
-  auto &var = *ctx.make_node<Variable>("myvar", Location());
+  auto &var = *ctx.make_node<Variable>(Location(), "myvar");
 
   CollectNodes<Variable> visitor;
   visitor.visit(var);
@@ -33,8 +33,8 @@ TEST(CollectNodes, direct)
 TEST(CollectNodes, indirect)
 {
   ASTContext ctx;
-  auto &var = *ctx.make_node<Variable>("myvar", Location());
-  auto &unop = *ctx.make_node<Unop>(&var, Operator::PRE_INCREMENT, Location());
+  auto &var = *ctx.make_node<Variable>(Location(), "myvar");
+  auto &unop = *ctx.make_node<Unop>(Location(), &var, Operator::PRE_INCREMENT);
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop);
@@ -45,8 +45,8 @@ TEST(CollectNodes, indirect)
 TEST(CollectNodes, none)
 {
   ASTContext ctx;
-  auto &map = *ctx.make_node<Map>("myvar", Location());
-  auto &unop = *ctx.make_node<Unop>(&map, Operator::PRE_INCREMENT, Location());
+  auto &map = *ctx.make_node<Map>(Location(), "myvar");
+  auto &unop = *ctx.make_node<Unop>(Location(), &map, Operator::PRE_INCREMENT);
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop);
@@ -57,15 +57,15 @@ TEST(CollectNodes, none)
 TEST(CollectNodes, multiple_runs)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
-  auto &unop1 = *ctx.make_node<Unop>(&var1,
-                                     Operator::PRE_INCREMENT,
-                                     Location());
+  auto &var1 = *ctx.make_node<Variable>(Location(), "myvar1");
+  auto &unop1 = *ctx.make_node<Unop>(Location(),
+                                     &var1,
+                                     Operator::PRE_INCREMENT);
 
-  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
-  auto &unop2 = *ctx.make_node<Unop>(&var2,
-                                     Operator::PRE_INCREMENT,
-                                     Location());
+  auto &var2 = *ctx.make_node<Variable>(Location(), "myvar2");
+  auto &unop2 = *ctx.make_node<Unop>(Location(),
+                                     &var2,
+                                     Operator::PRE_INCREMENT);
 
   CollectNodes<Variable> visitor;
   visitor.visit(unop1);
@@ -77,9 +77,9 @@ TEST(CollectNodes, multiple_runs)
 TEST(CollectNodes, multiple_children)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
-  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
-  auto &binop = *ctx.make_node<Binop>(&var1, Operator::PLUS, &var2, Location());
+  auto &var1 = *ctx.make_node<Variable>(Location(), "myvar1");
+  auto &var2 = *ctx.make_node<Variable>(Location(), "myvar2");
+  auto &binop = *ctx.make_node<Binop>(Location(), &var1, Operator::PLUS, &var2);
 
   CollectNodes<Variable> visitor;
   visitor.visit(binop);
@@ -90,9 +90,9 @@ TEST(CollectNodes, multiple_children)
 TEST(CollectNodes, predicate)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
-  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
-  auto &binop = *ctx.make_node<Binop>(&var1, Operator::PLUS, &var2, Location());
+  auto &var1 = *ctx.make_node<Variable>(Location(), "myvar1");
+  auto &var2 = *ctx.make_node<Variable>(Location(), "myvar2");
+  auto &binop = *ctx.make_node<Binop>(Location(), &var1, Operator::PLUS, &var2);
 
   CollectNodes<Variable> visitor;
   visitor.visit(binop, [](const auto &var) { return var.ident == "myvar2"; });
@@ -103,13 +103,13 @@ TEST(CollectNodes, predicate)
 TEST(CollectNodes, nested)
 {
   ASTContext ctx;
-  auto &var1 = *ctx.make_node<Variable>("myvar1", Location());
-  auto &var2 = *ctx.make_node<Variable>("myvar2", Location());
-  auto &var3 = *ctx.make_node<Variable>("myvar3", Location());
+  auto &var1 = *ctx.make_node<Variable>(Location(), "myvar1");
+  auto &var2 = *ctx.make_node<Variable>(Location(), "myvar2");
+  auto &var3 = *ctx.make_node<Variable>(Location(), "myvar3");
   auto &binop1 = *ctx.make_node<Binop>(
-      &var1, Operator::PLUS, &var2, Location());
+      Location(), &var1, Operator::PLUS, &var2);
   auto &binop2 = *ctx.make_node<Binop>(
-      &binop1, Operator::MINUS, &var3, Location());
+      Location(), &binop1, Operator::MINUS, &var3);
 
   CollectNodes<Binop> visitor;
   visitor.visit(binop2,

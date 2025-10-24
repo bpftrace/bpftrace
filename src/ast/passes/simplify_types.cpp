@@ -43,10 +43,8 @@ Expression SimplifyTypes::create_land_chain(
     return end;
   }
 
-  auto *and_binop = ast_.make_node<Binop>(end,
-                                          Operator::LAND,
-                                          create_land_chain(equal_exprs, op),
-                                          Location(op.loc));
+  auto *and_binop = ast_.make_node<Binop>(
+      op.loc, end, Operator::LAND, create_land_chain(equal_exprs, op));
   and_binop->result_type = CreateBool();
 
   return and_binop;
@@ -77,7 +75,7 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
   }
 
   if (left_fields.empty()) {
-    return ast_.make_node<Boolean>(op.op == Operator::EQ, Location(op.loc));
+    return ast_.make_node<Boolean>(op.loc, op.op == Operator::EQ);
   }
 
   // N.B. Because of the way we're accessing each field of the tuple
@@ -103,44 +101,40 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
   // be equal
   var_id_++;
   if (op.left.is<Variable>() || op.left.is<MapAccess>()) {
-    left_tuple = clone(ast_, op.left, op.left.loc());
+    left_tuple = clone(ast_, op.left.loc(), op.left);
   } else {
-    left_tuple = ast_.make_node<Variable>("$$binop_tuple_left_" +
-                                              std::to_string(var_id_),
-                                          Location(op.left.loc()));
+    left_tuple = ast_.make_node<Variable>(op.left.loc(),
+                                          "$$binop_tuple_left_" +
+                                              std::to_string(var_id_));
     auto *left_var_assign = ast_.make_node<AssignVarStatement>(
-        clone(ast_, left_tuple.as<Variable>(), left_tuple.loc()),
-        clone(ast_, op.left, op.left.loc()),
-        Location(op.loc));
+        op.loc,
+        clone(ast_, left_tuple.loc(), left_tuple.as<Variable>()),
+        clone(ast_, op.left.loc(), op.left));
     block_stmts.emplace_back(left_var_assign);
   }
 
   if (op.right.is<Variable>() || op.right.is<MapAccess>()) {
-    right_tuple = clone(ast_, op.right, op.right.loc());
+    right_tuple = clone(ast_, op.right.loc(), op.right);
   } else {
-    right_tuple = ast_.make_node<Variable>("$$binop_tuple_right_" +
-                                               std::to_string(var_id_),
-                                           Location(op.right.loc()));
+    right_tuple = ast_.make_node<Variable>(op.right.loc(),
+                                           "$$binop_tuple_right_" +
+                                               std::to_string(var_id_));
     auto *right_var_assign = ast_.make_node<AssignVarStatement>(
-        clone(ast_, right_tuple.as<Variable>(), right_tuple.loc()),
-        clone(ast_, op.right, op.right.loc()),
-        Location(op.loc));
+        op.loc,
+        clone(ast_, right_tuple.loc(), right_tuple.as<Variable>()),
+        clone(ast_, op.right.loc(), op.right));
     block_stmts.emplace_back(right_var_assign);
   }
 
   for (size_t i = 0; i < left_fields.size(); ++i) {
-    auto *left_tpa = ast_.make_node<TupleAccess>(left_tuple,
-                                                 i,
-                                                 Location(op.loc));
+    auto *left_tpa = ast_.make_node<TupleAccess>(op.loc, left_tuple, i);
     left_tpa->element_type = left_fields[i].type;
 
-    auto *right_tpa = ast_.make_node<TupleAccess>(right_tuple,
-                                                  i,
-                                                  Location(op.loc));
+    auto *right_tpa = ast_.make_node<TupleAccess>(op.loc, right_tuple, i);
     right_tpa->element_type = right_fields[i].type;
 
     auto *equal = ast_.make_node<Binop>(
-        left_tpa, Operator::EQ, right_tpa, Location(op.loc));
+        op.loc, left_tpa, Operator::EQ, right_tpa);
     equal->result_type = CreateBool();
 
     auto expanded = Visitor<SimplifyTypes, std::optional<Expression>>::visit(
@@ -151,17 +145,13 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
 
   auto land_chain = create_land_chain(equal_exprs, op);
   if (op.op == Operator::NE) {
-    auto *not_binop = ast_.make_node<Unop>(land_chain,
-                                           Operator::LNOT,
-                                           Location(op.loc));
+    auto *not_binop = ast_.make_node<Unop>(op.loc, land_chain, Operator::LNOT);
     not_binop->result_type = CreateBool();
-    return ast_.make_node<BlockExpr>(std::move(block_stmts),
-                                     not_binop,
-                                     Location(op.loc));
+    return ast_.make_node<BlockExpr>(op.loc, std::move(block_stmts), not_binop);
   } else {
-    return ast_.make_node<BlockExpr>(std::move(block_stmts),
-                                     land_chain,
-                                     Location(op.loc));
+    return ast_.make_node<BlockExpr>(op.loc,
+                                     std::move(block_stmts),
+                                     land_chain);
   }
 }
 

@@ -4,7 +4,7 @@
 
 namespace bpftrace::ast {
 
-static void import_ast(ASTContext &ast, const ASTContext &other)
+static void import_ast(ASTContext &ast, Node &node, const ASTContext &other)
 {
   // Clone all map declarations, subfunctions, etc. into the primary AST.
   // Note that we may choose not to inline all definitions in the future, and
@@ -14,19 +14,19 @@ static void import_ast(ASTContext &ast, const ASTContext &other)
   ast.diagnostics().add(std::move(other.diagnostics()));
   if (other.root) {
     for (const auto &stmt : other.root->c_statements) {
-      ast.root->c_statements.push_back(clone(ast, stmt));
+      ast.root->c_statements.push_back(clone(ast, node.loc, stmt));
     }
     for (const auto &decl : other.root->map_decls) {
-      ast.root->map_decls.push_back(clone(ast, decl));
+      ast.root->map_decls.push_back(clone(ast, node.loc, decl));
     }
     for (const auto &fn : other.root->functions) {
-      ast.root->functions.push_back(clone(ast, fn));
+      ast.root->functions.push_back(clone(ast, node.loc, fn));
     }
     for (const auto &macro : other.root->macros) {
-      ast.root->macros.push_back(clone(ast, macro));
+      ast.root->macros.push_back(clone(ast, node.loc, macro));
     }
     for (const auto &probe : other.root->probes) {
-      ast.root->probes.push_back(clone(ast, probe));
+      ast.root->probes.push_back(clone(ast, node.loc, probe));
     }
   }
 }
@@ -37,7 +37,7 @@ Pass CreateImportExternalScriptsPass()
                       [](ASTContext &ast, Imports &imports) {
                         for (const auto &[name, obj] : imports.scripts) {
                           if (!obj.internal) {
-                            import_ast(ast, obj.ast);
+                            import_ast(ast, obj.node, obj.ast);
                           }
                         }
                       });
@@ -49,7 +49,7 @@ Pass CreateImportInternalScriptsPass()
                       [](ASTContext &ast, Imports &imports) {
                         for (const auto &[name, obj] : imports.scripts) {
                           if (obj.internal) {
-                            import_ast(ast, obj.ast);
+                            import_ast(ast, obj.node, obj.ast);
                           }
                         }
                       });

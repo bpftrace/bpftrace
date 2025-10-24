@@ -237,7 +237,7 @@ void MacroExpander::visit(Expression &expr)
 
   if (ident) {
     if (auto it = passed_exprs_.find(ident->ident); it != passed_exprs_.end()) {
-      expr = clone(ast_, it->second, ident->loc);
+      expr = clone(ast_, ident->loc, it->second);
       // Create a new expander because we're visiting an expression passed into
       // the macro so it's not part of the surounding macro code and therefore
       // variables, maps, and idents in this expression shouldn't be modified
@@ -381,7 +381,7 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)
       if (call.vargs.at(i).is<Variable>() || call.vargs.at(i).is<Map>()) {
         // Wrap variables and maps in a block to avoid mutation.
         passed_exprs_[mident->ident] = ast_.make_node<BlockExpr>(
-            StatementList({}), call.vargs.at(i), Location(call.loc));
+            call.loc, StatementList({}), call.vargs.at(i));
       } else {
         passed_exprs_[mident->ident] = call.vargs.at(i);
       }
@@ -396,7 +396,7 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)
     }
   }
 
-  auto *cloned_block = clone(ast_, macro.block, call.loc);
+  auto *cloned_block = clone(ast_, call.loc, macro.block);
   visit(cloned_block);
   return cloned_block;
 }
@@ -411,7 +411,7 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro,
     return std::nullopt;
   }
 
-  auto *cloned_block = clone(ast_, macro.block, ident.loc);
+  auto *cloned_block = clone(ast_, ident.loc, macro.block);
   visit(cloned_block);
   return cloned_block;
 }

@@ -69,7 +69,7 @@ Result<> benchmark(std::ostream &out, ast::PassManager &mgr)
     ast::ASTContext saved;
     if (ctx.has<ast::ASTContext>()) {
       auto &ast = ctx.get<ast::ASTContext>();
-      saved.root = saved.clone_node(ast.root, ast::Location());
+      saved.root = saved.clone_node(ast::Location(), ast.root);
     }
 
     // We run the function until we are able to accumulate at least three
@@ -107,7 +107,7 @@ Result<> benchmark(std::ostream &out, ast::PassManager &mgr)
       // Restore the original tree.
       auto &ast = ctx.get<ast::ASTContext>();
       ast.clear();
-      ast.root = clone(ast, saved.root, ast::Location());
+      ast.root = clone(ast, ast::Location(), saved.root);
     }
 
     // Compute the variance of the samples.
