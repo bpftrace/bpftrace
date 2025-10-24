@@ -66,7 +66,7 @@ EXPECT 8
 
 NAME complex tuple 4
 PROG begin { $a = ((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555, "abc"); print(sizeof($a));  }
-EXPECT 48
+EXPECT 32
 
 NAME struct in tuple
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }

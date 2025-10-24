@@ -30,9 +30,8 @@ entry:
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %3 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %3 to i32
-  %4 = zext i32 %pid to i64
-  %5 = icmp ult i64 %4, 10000
-  %true_cond = icmp ne i1 %5, false
+  %4 = icmp ult i32 %pid, 10000
+  %true_cond = icmp ne i1 %4, false
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry

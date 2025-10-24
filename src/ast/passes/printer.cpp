@@ -26,14 +26,15 @@ std::string Printer::type(const SizedType &ty)
 void Printer::visit(Integer &integer)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "int: " << integer.value << type(integer.integer_type)
+  out_ << indent << "int: " << integer.value << type(integer.type())
        << std::endl;
 }
 
 void Printer::visit(NegativeInteger &integer)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "negative int: " << integer.value << std::endl;
+  out_ << indent << "negative int: " << integer.value << type(integer.type())
+       << std::endl;
 }
 
 void Printer::visit(Boolean &boolean)

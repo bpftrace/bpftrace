@@ -158,7 +158,7 @@ void MapDefaultKey::visit(Statement &stmt)
   // Replace with a statement that has the default index, in the same way as
   // above. This will be type-checked during semantic analysis.
   if (auto *map = stmt.as<AssignScalarMapStatement>()) {
-    auto *index = ast_.make_node<Integer>(map->loc, 0);
+    auto *index = ast_.make_node<Integer>(map->loc, 0, CreateInt64());
     stmt.value = ast_.make_node<AssignMapStatement>(
         map->loc, map->map, index, map->expr);
   }

@@ -74,28 +74,26 @@ right:                                            ; preds = %entry
   %probe_read_kernel15 = call i64 inttoptr (i64 113 to ptr)(ptr %array_access, i32 1, ptr %18)
   %19 = load i8, ptr %array_access, align 1
   call void @llvm.lifetime.end.p0(i64 -1, ptr %array_access)
-  %20 = sext i8 %19 to i64
-  %21 = icmp eq i64 %20, 0
-  %true_cond16 = icmp ne i1 %21, false
+  %20 = icmp eq i8 %19, 0
+  %true_cond16 = icmp ne i1 %20, false
   br i1 %true_cond16, label %left13, label %right14
 
 done:                                             ; preds = %done17, %left
-  %result18 = phi i64 [ 0, %left ], [ %result, %done17 ]
-  %22 = icmp sge i64 %result18, 0
+  %result18 = phi i32 [ 0, %left ], [ %result, %done17 ]
+  %21 = icmp sge i32 %result18, 0
   ret i64 0
 
 left13:                                           ; preds = %right
   br label %done17
 
 right14:                                          ; preds = %right
-  %23 = load i64, ptr %"$$strstr_4_$haystack_size", align 8
-  %24 = load i64, ptr %"$$strstr_4_$needle_size", align 8
-  %__bpf_strnstr = call i32 @__bpf_strnstr(ptr %4, ptr %2, i64 %23, i64 %24), !dbg !54
-  %25 = sext i32 %__bpf_strnstr to i64
+  %22 = load i64, ptr %"$$strstr_4_$haystack_size", align 8
+  %23 = load i64, ptr %"$$strstr_4_$needle_size", align 8
+  %__bpf_strnstr = call i32 @__bpf_strnstr(ptr %4, ptr %2, i64 %22, i64 %23), !dbg !54
   br label %done17
 
 done17:                                           ; preds = %right14, %left13
-  %result = phi i64 [ 0, %left13 ], [ %25, %right14 ]
+  %result = phi i32 [ 0, %left13 ], [ %__bpf_strnstr, %right14 ]
   br label %done
 }
 

@@ -11,6 +11,7 @@
 
 #include "ast/clone.h"
 #include "ast/context.h"
+#include "ast/integer_types.h"
 #include "diagnostic.h"
 #include "probe_types.h"
 #include "types.h"
@@ -272,19 +273,27 @@ public:
   explicit Integer(ASTContext &ctx,
                    Location &&loc,
                    uint64_t n,
-                   bool force_unsigned = false,
                    std::optional<std::string> &&original = std::nullopt)
       : Node(ctx, std::move(loc)),
-        integer_type(force_unsigned || n > std::numeric_limits<int64_t>::max()
-                         ? CreateUInt64()
-                         : CreateInt64()),
         value(n),
-        original(std::move(original)) {};
+        original(std::move(original)),
+        integer_type(get_integer_type(n)) {};
+  explicit Integer(ASTContext &ctx,
+                   Location &&loc,
+                   uint64_t n,
+                   SizedType integer_ty,
+                   std::optional<std::string> &&original = std::nullopt)
+      : Node(ctx, std::move(loc)),
+        value(n),
+        original(std::move(original)),
+        integer_type(std::move(integer_ty)) {
+          assert(integer_type.IsIntTy());
+        };
   explicit Integer(ASTContext &ctx, const Location &loc, const Integer &other)
       : Node(ctx, loc + other.loc),
-        integer_type(other.integer_type),
         value(other.value),
-        original(other.original) {};
+        original(other.original),
+        integer_type(other.integer_type) {};
 
   const SizedType &type() const
   {
@@ -304,41 +313,47 @@ public:
 
   // This literal has a dynamic type, but it is not mutable. The type is
   // generally signed if the signed value is capable of holding the literal,
-  // otherwise it is unsigned. This is the existing convention.
+  // otherwise it is unsigned and the smallest possible sizedType.
   //
   // However, the `force_unsigned` parameter can override this. This can be
   // used for small cases that are explicitly unsigned (e.g. `sizeof`), and is
   // preserved when folding literals in order to provide the intuitive type.
-  const SizedType integer_type;
   const uint64_t value;
   const std::optional<std::string> original;
+  const SizedType integer_type;
 };
 
 class NegativeInteger : public Node {
 public:
   explicit NegativeInteger(ASTContext &ctx, Location &&loc, int64_t n)
-      : Node(ctx, std::move(loc)), value(n) {};
+      : Node(ctx, std::move(loc)), value(n), integer_type(get_signed_integer_type(n)) {};
+  explicit NegativeInteger(ASTContext &ctx, Location &&loc, int64_t n, SizedType integer_ty)
+      : Node(ctx, std::move(loc)), value(n), integer_type(std::move(integer_ty)) {
+        assert(integer_type.IsIntTy() && integer_type.IsSigned());
+      };
   explicit NegativeInteger(ASTContext &ctx,
                            const Location &loc,
                            const NegativeInteger &other)
-      : Node(ctx, loc + other.loc), value(other.value) {};
+      : Node(ctx, loc + other.loc), value(other.value), integer_type(other.integer_type) {};
 
   const SizedType &type() const
   {
-    static SizedType int64 = CreateInt64();
-    return int64;
+    return integer_type;
   }
 
   bool operator==(const NegativeInteger &other) const
   {
-    return value == other.value;
+     return value == other.value && integer_type == other.integer_type;
   }
   std::strong_ordering operator<=>(const NegativeInteger &other) const
   {
-    return value <=> other.value;
+    if (auto cmp = value <=> other.value; cmp != 0)
+      return cmp;
+    return integer_type <=> other.integer_type;
   }
 
   const int64_t value;
+  const SizedType integer_type;
 };
 
 class Boolean : public Node {

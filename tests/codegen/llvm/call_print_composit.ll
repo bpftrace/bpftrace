@@ -4,8 +4,8 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
-%print_tuple_16_t = type <{ i64, i64, [16 x i8] }>
-%"int64_string[4]__tuple_t" = type { i64, [4 x i8] }
+%print_tuple_5_t = type <{ i64, i64, [5 x i8] }>
+%"uint8_string[4]__tuple_t" = type { i8, [4 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -19,23 +19,23 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %print_tuple_16_t = alloca %print_tuple_16_t, align 8
-  %tuple = alloca %"int64_string[4]__tuple_t", align 8
+  %print_tuple_5_t = alloca %print_tuple_5_t, align 8
+  %tuple = alloca %"uint8_string[4]__tuple_t", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
-  %1 = getelementptr %"int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 0
-  store i64 1, ptr %1, align 8
-  %2 = getelementptr %"int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 1
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 5, i1 false)
+  %1 = getelementptr %"uint8_string[4]__tuple_t", ptr %tuple, i32 0, i32 0
+  store i8 1, ptr %1, align 1
+  %2 = getelementptr %"uint8_string[4]__tuple_t", ptr %tuple, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 @abc, i64 4, i1 false)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_tuple_16_t)
-  %3 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 0
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_tuple_5_t)
+  %3 = getelementptr %print_tuple_5_t, ptr %print_tuple_5_t, i64 0, i32 0
   store i64 30007, ptr %3, align 8
-  %4 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i64 0, i32 1
+  %4 = getelementptr %print_tuple_5_t, ptr %print_tuple_5_t, i64 0, i32 1
   store i64 0, ptr %4, align 8
-  %5 = getelementptr %print_tuple_16_t, ptr %print_tuple_16_t, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 16, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %5, ptr align 1 %tuple, i64 16, i1 false)
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_tuple_16_t, i64 32, i64 0)
+  %5 = getelementptr %print_tuple_5_t, ptr %print_tuple_5_t, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %5, i8 0, i64 5, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %5, ptr align 1 %tuple, i64 5, i1 false)
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_tuple_5_t, i64 21, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -50,7 +50,7 @@ event_loss_counter:                               ; preds = %entry
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %entry
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_tuple_16_t)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_tuple_5_t)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   ret i64 0
 }

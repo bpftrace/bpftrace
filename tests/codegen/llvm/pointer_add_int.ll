@@ -19,9 +19,9 @@ entry:
   %"$v" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$v")
   store i0 0, ptr %"$v", align 1
-  store ptr inttoptr (i64 1000 to ptr), ptr %"$v", align 8
+  store ptr inttoptr (i16 1000 to ptr), ptr %"$v", align 8
   %1 = load ptr, ptr %"$v", align 8
-  %2 = getelementptr i16, ptr %1, i64 10
+  %2 = getelementptr i16, ptr %1, i8 10
   store ptr %2, ptr %"$v", align 8
   ret i64 0
 }

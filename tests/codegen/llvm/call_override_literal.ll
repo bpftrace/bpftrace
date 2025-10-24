@@ -16,7 +16,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %__override = call void @__override(ptr %0, i64 -1), !dbg !41
+  %__override = call void @__override(ptr %0, i64 255), !dbg !41
   ret i64 0
 }
 

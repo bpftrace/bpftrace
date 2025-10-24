@@ -2,6 +2,7 @@ add_library(ast_defs STATIC
   ast.cpp
   context.cpp
   helpers.cpp
+  integer_types.cpp
   location.cpp
 )
 add_dependencies(ast_defs parser)

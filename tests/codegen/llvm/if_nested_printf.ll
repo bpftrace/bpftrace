@@ -24,16 +24,14 @@ entry:
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %1 = lshr i64 %get_pid_tgid, 32
   %pid = trunc i64 %1 to i32
-  %2 = zext i32 %pid to i64
-  %3 = icmp ugt i64 %2, 10000
-  %true_cond = icmp ne i1 %3, false
+  %2 = icmp ugt i32 %pid, 10000
+  %true_cond = icmp ne i1 %2, false
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
   %get_pid_tgid3 = call i64 inttoptr (i64 14 to ptr)() #3
-  %4 = lshr i64 %get_pid_tgid3, 32
-  %pid4 = trunc i64 %4 to i32
-  %5 = zext i32 %pid4 to i64
+  %3 = lshr i64 %get_pid_tgid3, 32
+  %pid4 = trunc i64 %3 to i32
   call void @llvm.lifetime.start.p0(i64 -1, ptr %op_result)
   br i1 false, label %is_zero, label %not_zero
 
@@ -43,8 +41,8 @@ right:                                            ; preds = %entry
 left1:                                            ; preds = %zero_merge
   call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
   call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 8, i1 false)
-  %6 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
-  store i64 0, ptr %6, align 8
+  %4 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
+  store i64 0, ptr %4, align 8
   %ringbuf_output6 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 8, i64 0)
   %ringbuf_loss9 = icmp slt i64 %ringbuf_output6, 0
   br i1 %ringbuf_loss9, label %event_loss_counter7, label %counter_merge8
@@ -55,36 +53,36 @@ right2:                                           ; preds = %zero_merge
 is_zero:                                          ; preds = %left
   store i64 1, ptr %op_result, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %runtime_error_t)
-  %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
-  store i64 30006, ptr %7, align 8
-  %8 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
-  store i64 0, ptr %8, align 8
-  %9 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
-  store i64 0, ptr %9, align 8
+  %5 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 0
+  store i64 30006, ptr %5, align 8
+  %6 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 1
+  store i64 0, ptr %6, align 8
+  %7 = getelementptr %runtime_error_t, ptr %runtime_error_t, i64 0, i32 2
+  store i64 0, ptr %7, align 8
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %runtime_error_t, i64 20, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 not_zero:                                         ; preds = %left
-  %10 = urem i64 %5, 2
-  store i64 %10, ptr %op_result, align 8
+  %8 = urem i32 %pid4, 2
+  store i32 %8, ptr %op_result, align 4
   br label %zero_merge
 
 zero_merge:                                       ; preds = %not_zero, %counter_merge
-  %11 = load i64, ptr %op_result, align 8
+  %9 = load i64, ptr %op_result, align 8
   call void @llvm.lifetime.end.p0(i64 -1, ptr %op_result)
-  %12 = icmp eq i64 %11, 0
-  %true_cond5 = icmp ne i1 %12, false
+  %10 = icmp eq i64 %9, 0
+  %true_cond5 = icmp ne i1 %10, false
   br i1 %true_cond5, label %left1, label %right2
 
 event_loss_counter:                               ; preds = %is_zero
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
-  %13 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %13
-  %14 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %15 = load i64, ptr %14, align 8
-  %16 = add i64 %15, 1
-  store i64 %16, ptr %14, align 8
+  %11 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %11
+  %12 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %13 = load i64, ptr %12, align 8
+  %14 = add i64 %13, 1
+  store i64 %14, ptr %12, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %is_zero
@@ -93,12 +91,12 @@ counter_merge:                                    ; preds = %event_loss_counter,
 
 event_loss_counter7:                              ; preds = %left1
   %get_cpu_id10 = call i64 inttoptr (i64 8 to ptr)() #3
-  %17 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded11 = and i64 %get_cpu_id10, %17
-  %18 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded11, i64 0
-  %19 = load i64, ptr %18, align 8
-  %20 = add i64 %19, 1
-  store i64 %20, ptr %18, align 8
+  %15 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded11 = and i64 %get_cpu_id10, %15
+  %16 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded11, i64 0
+  %17 = load i64, ptr %16, align 8
+  %18 = add i64 %17, 1
+  store i64 %18, ptr %16, align 8
   br label %counter_merge8
 
 counter_merge8:                                   ; preds = %event_loss_counter7, %left1

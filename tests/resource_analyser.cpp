@@ -69,7 +69,7 @@ TEST(resource_analyser, fmt_string_args_size_ints)
 {
   RequiredResources resources;
   test(R"(begin { printf("%d %d", 3, 4) })", true, &resources);
-  EXPECT_EQ(resources.max_fmtstring_args_size, 24);
+  EXPECT_EQ(resources.max_fmtstring_args_size, 16);
 }
 
 TEST(resource_analyser, fmt_string_args_below_on_stack_limit)
@@ -96,14 +96,14 @@ TEST(resource_analyser, fmt_string_args_size_strings)
       R"(begin { printf("%dst: %sa; %dnd: %sb;; %drd: %sc;;; %dth: %sd;;;;\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd") })",
       true,
       &resources);
-  EXPECT_EQ(resources.max_fmtstring_args_size, 72);
+  EXPECT_EQ(resources.max_fmtstring_args_size, 32);
 }
 
 TEST(resource_analyser, fmt_string_args_non_map_print_int)
 {
   RequiredResources resources;
   test(R"(begin { print(5) })", true, &resources);
-  EXPECT_EQ(resources.max_fmtstring_args_size, 24);
+  EXPECT_EQ(resources.max_fmtstring_args_size, 17);
 }
 
 TEST(resource_analyser, fmt_string_args_non_map_print_arr)

@@ -21,10 +21,10 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %print_bool_1_t = alloca %print_bool_1_t, align 8
   %print_string_4_t = alloca %print_string_4_t, align 8
-  %"$x" = alloca i64, align 8
+  %"$x" = alloca i8, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
-  store i64 0, ptr %"$x", align 8
-  store i64 1, ptr %"$x", align 8
+  store i8 0, ptr %"$x", align 1
+  store i8 1, ptr %"$x", align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %print_string_4_t)
   %1 = getelementptr %print_string_4_t, ptr %print_string_4_t, i64 0, i32 0
   store i64 30007, ptr %1, align 8
@@ -49,8 +49,8 @@ event_loss_counter:                               ; preds = %entry
 
 counter_merge:                                    ; preds = %event_loss_counter, %entry
   call void @llvm.lifetime.end.p0(i64 -1, ptr %print_string_4_t)
-  %8 = load i64, ptr %"$x", align 8
-  %9 = icmp sgt i64 %8, 1
+  %8 = load i8, ptr %"$x", align 1
+  %9 = icmp ugt i8 %8, 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %print_bool_1_t)
   %10 = getelementptr %print_bool_1_t, ptr %print_bool_1_t, i64 0, i32 0
   store i64 30007, ptr %10, align 8

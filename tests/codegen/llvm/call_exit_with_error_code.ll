@@ -22,7 +22,7 @@ entry:
   %1 = getelementptr %exit_t, ptr %exit, i64 0, i32 0
   store i64 30000, ptr %1, align 8
   %2 = getelementptr %exit_t, ptr %exit, i64 0, i32 1
-  store i64 1, ptr %2, align 8
+  store i8 1, ptr %2, align 1
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %exit, i64 9, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge

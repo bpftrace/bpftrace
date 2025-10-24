@@ -66,7 +66,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %me
   br label %while_cond
 
 is_set:                                           ; preds = %lookup_success
-  %7 = icmp sge i64 2, %3
+  %7 = icmp uge i64 2, %3
   br i1 %7, label %min_max, label %merge
 
 min_max:                                          ; preds = %is_set, %lookup_success
@@ -107,7 +107,7 @@ lookup_success2:                                  ; preds = %while_body
   %16 = load i64, ptr %val_2, align 8
   %ret_set_cond = icmp eq i64 %16, 1
   %17 = load i64, ptr %val_1, align 8
-  %max_cond = icmp sgt i64 %13, %17
+  %max_cond = icmp ugt i64 %13, %17
   br i1 %val_set_cond, label %val_set_success, label %min_max_merge
 
 lookup_failure3:                                  ; preds = %while_body

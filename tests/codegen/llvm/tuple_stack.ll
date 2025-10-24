@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
-%"int64_string[5]__tuple_t" = type { i64, [5 x i8] }
+%"uint8_string[5]__tuple_t" = type { i8, [5 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -18,12 +18,12 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %tuple = alloca %"int64_string[5]__tuple_t", align 8
+  %tuple = alloca %"uint8_string[5]__tuple_t", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
-  %1 = getelementptr %"int64_string[5]__tuple_t", ptr %tuple, i32 0, i32 0
-  store i64 1, ptr %1, align 8
-  %2 = getelementptr %"int64_string[5]__tuple_t", ptr %tuple, i32 0, i32 1
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 6, i1 false)
+  %1 = getelementptr %"uint8_string[5]__tuple_t", ptr %tuple, i32 0, i32 0
+  store i8 1, ptr %1, align 1
+  %2 = getelementptr %"uint8_string[5]__tuple_t", ptr %tuple, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 @xxxx, i64 5, i1 false)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   ret i64 0

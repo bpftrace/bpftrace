@@ -20,15 +20,16 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !46 {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %deref = alloca i64, align 8
+  %deref = alloca i16, align 2
   call void @llvm.lifetime.start.p0(i64 -1, ptr %deref)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %deref, i32 8, i64 1234)
-  %1 = load i64, ptr %deref, align 8
+  %probe_read_kernel = call i64 inttoptr (i64 113 to ptr)(ptr %deref, i32 2, i16 1234)
+  %1 = load i16, ptr %deref, align 2
+  %2 = zext i16 %1 to i64
   call void @llvm.lifetime.end.p0(i64 -1, ptr %deref)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
   store i64 0, ptr %"@x_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_val")
-  store i64 %1, ptr %"@x_val", align 8
+  store i64 %2, ptr %"@x_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %"@x_key", ptr %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")

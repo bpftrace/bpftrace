@@ -791,7 +791,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
   if (needMemcpy(type))
     CreateMemcpyBPF(value, call, type.GetSize());
   else {
-    CreateStore(CreateLoad(getPtrTy(), call), value);
+    CreateStore(CreateLoad(GetType(type), call), value);
   }
   CreateBr(lookup_merge_block);
 
@@ -1887,7 +1887,7 @@ CallInst *IRBuilderBPF::CreatePerCpuPtr(Value *var,
   //    A pointer pointing to the kernel percpu variable on
   //    cpu, or NULL, if cpu is invalid.
   FunctionType *percpuptr_func_type = FunctionType::get(
-      getPtrTy(), { getPtrTy(), getInt64Ty() }, false);
+      getPtrTy(), { getPtrTy(), getInt32Ty() }, false);
   return CreateHelperCall(BPF_FUNC_per_cpu_ptr,
                           percpuptr_func_type,
                           { var, cpu },

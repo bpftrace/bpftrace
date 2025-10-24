@@ -694,7 +694,7 @@ EXPECT 12
 TIMEOUT 1
 
 NAME bswap_int64_op
-RUN {{BPFTRACE}} -e 'begin { printf("%llx", bswap(0x12340000 + 0x5678));  }'
+RUN {{BPFTRACE}} -e 'begin { printf("%llx", bswap(0x12340000 + (uint64)0x5678));  }'
 EXPECT 7856341200000000
 TIMEOUT 1
 

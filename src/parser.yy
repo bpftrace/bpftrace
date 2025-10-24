@@ -643,7 +643,7 @@ integer:
                     YYERROR;
                   } else {
                     // Construct with the original string, which will be preserved.
-                    $$ = driver.ctx.make_node<ast::Integer>(@1, *res, false, std::move($1));
+                    $$ = driver.ctx.make_node<ast::Integer>(@1, *res, std::move($1));
                   }
                 }
                 ;

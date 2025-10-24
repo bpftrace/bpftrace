@@ -46,6 +46,8 @@ and this project adheres to
 - Root user check replaced with check for required capabilities
   (CAP_BPF, CAP_PERFMON, CAP_DAC_READ_SEARCH, CAP_DAC_OVERRIDE)
   - [#4773](https://github.com/bpftrace/bpftrace/pull/4773)
+- Remove automatic type promotion for integers, making them more flexible
+  - [#4768](https://github.com/bpftrace/bpftrace/pull/4768)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 16

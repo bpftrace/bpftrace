@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
 %system_t = type { i64, %system_args_t }
-%system_args_t = type { i64 }
+%system_args_t = type { i8 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -25,7 +25,7 @@ entry:
   store i64 10000, ptr %1, align 8
   %2 = getelementptr %system_t, ptr %system_args, i32 0, i32 1
   %3 = getelementptr %system_args_t, ptr %2, i32 0, i32 0
-  store i64 100, ptr %3, align 8
+  store i8 100, ptr %3, align 1
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %system_args, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge

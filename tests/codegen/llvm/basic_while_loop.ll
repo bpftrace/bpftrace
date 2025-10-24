@@ -28,7 +28,7 @@ entry:
 
 while_cond:                                       ; preds = %while_body, %entry
   %1 = load i64, ptr %"$a", align 8
-  %2 = icmp sle i64 %1, 150
+  %2 = icmp ule i64 %1, 150
   %true_cond = icmp ne i1 %2, false
   br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !52
 

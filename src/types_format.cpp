@@ -440,9 +440,14 @@ void sort_by_key(
           sort_by_key_type<int64_t>(values_by_key, field.offset);
         } else if (field.type.GetSize() == 4) {
           sort_by_key_type<int32_t>(values_by_key, field.offset);
+        } else if (field.type.GetSize() == 2) {
+          sort_by_key_type<int16_t>(values_by_key, field.offset);
+        } else if (field.type.GetSize() == 1) {
+          sort_by_key_type<int8_t>(values_by_key, field.offset);
         } else {
-          LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
-                   << field.type.GetSize() << " provided";
+          LOG(BUG)
+              << "invalid integer argument size. 1, 2, 4, or 8 expected, but "
+              << field.type.GetSize() << " provided";
         }
       } else if (field.type.IsStringTy()) {
         std::ranges::stable_sort(values_by_key, [&](auto &a, auto &b) {
@@ -458,8 +463,12 @@ void sort_by_key(
       sort_by_key_type<int64_t>(values_by_key, 0);
     } else if (key.GetSize() == 4) {
       sort_by_key_type<int32_t>(values_by_key, 0);
+    } else if (key.GetSize() == 2) {
+      sort_by_key_type<int16_t>(values_by_key, 0);
+    } else if (key.GetSize() == 1) {
+      sort_by_key_type<int8_t>(values_by_key, 0);
     } else {
-      LOG(BUG) << "invalid integer argument size. 4 or 8  expected, but "
+      LOG(BUG) << "invalid integer argument size. 1, 2, 4, or 8 expected, but "
                << key.GetSize() << " provided";
     }
   } else if (key.IsStringTy()) {

@@ -347,12 +347,12 @@ TEST_F(SemanticAnalyserTest, consistent_map_values)
   test(
       R"(begin { $a = (3, "hello"); @m[1] = $a; $a = (1,"aaaaaaaaaa"); @m[2] = $a; })");
   test("kprobe:f { @x = 0; @x = \"a\"; }", Error{ R"(
-stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64'
+stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'uint8'
 kprobe:f { @x = 0; @x = "a"; }
                    ~~~~~~~~
 )" });
   test("kprobe:f { @x = 0; @x = *curtask; }", Error{ R"(
-stdin:1:20-33: ERROR: Type mismatch for @x: trying to assign value of type 'struct task_struct' when map already contains a value of type 'int64'
+stdin:1:20-33: ERROR: Type mismatch for @x: trying to assign value of type 'struct task_struct' when map already contains a value of type 'uint8'
 kprobe:f { @x = 0; @x = *curtask; }
                    ~~~~~~~~~~~~~
 )" });
@@ -381,12 +381,12 @@ begin { @x[1] = 0; @x; }
   test("begin { @x[1, ((int8)2, ((int16)3, 4))] = 0; @x[5, (6, (7, 8))]; }");
 
   test("begin { @x[1,2] = 0; @x[3]; }", Error{ R"(
-stdin:1:25-26: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects arguments: '(int64,int64)'
+stdin:1:25-26: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
 begin { @x[1,2] = 0; @x[3]; }
                         ~
 )" });
   test("begin { @x[1] = 0; @x[2,3]; }", Error{ R"(
-stdin:1:20-27: ERROR: Argument mismatch for @x: trying to access with arguments: '(int64,int64)' when map expects arguments: 'int64'
+stdin:1:20-27: ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: 'uint8'
 begin { @x[1] = 0; @x[2,3]; }
                    ~~~~~~~
 )" });
@@ -399,7 +399,7 @@ begin { @x[1] = 0; @x[2,3]; }
       @x["b", 2, kstack];
     })",
        Error{ R"(
-stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],int64,kstack)' when map expects arguments: '(int64,string[2],kstack)'
+stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],uint8,kstack)' when map expects arguments: '(uint8,string[2],kstack)'
       @x["b", 2, kstack];
       ~~~~~~~~~~~~~~~~~~
 )" });
@@ -413,7 +413,7 @@ kprobe:f { @[1] = 5; @[2] = 10; delete(@); }
 
   test(R"(begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } })",
        Error{ R"(
-stdin:1:55-56: ERROR: Argument mismatch for @map: trying to access with arguments: 'int64' when map expects arguments: '(int64,int64)'
+stdin:1:55-56: ERROR: Argument mismatch for @map: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
 begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } }
                                                       ~
 )" });
@@ -516,25 +516,25 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
   // Error location is incorrect: #3063
   test("kprobe:f { $x = pid < 10000 ? 3 : cat(\"/proc/uptime\"); exit(); }",
        Error{ R"(
-stdin:1:17-54: ERROR: Branches must return the same type: have 'int64' and 'none'
+stdin:1:17-54: ERROR: Branches must return the same type: have 'uint8' and 'none'
 kprobe:f { $x = pid < 10000 ? 3 : cat("/proc/uptime"); exit(); }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", Error{ R"(
-stdin:1:17-41: ERROR: Branches must return the same type: have 'int64' and 'string[5]'
+stdin:1:17-41: ERROR: Branches must return the same type: have 'uint8' and 'string[5]'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
                 ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", Error{ R"(
-stdin:1:17-39: ERROR: Branches must return the same type: have 'string[3]' and 'int64'
+stdin:1:17-39: ERROR: Branches must return the same type: have 'string[3]' and 'uint8'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
                 ~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? (1, 2) : (\"a\", 4) }", Error{ R"(
-stdin:1:17-48: ERROR: Branches must return the same type: have '(int64,int64)' and '(string[2],int64)'
+stdin:1:17-48: ERROR: Branches must return the same type: have '(uint8,uint8)' and '(string[2],uint8)'
 kprobe:f { @x = pid < 10000 ? (1, 2) : ("a", 4) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -555,7 +555,7 @@ kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
 TEST_F(SemanticAnalyserTest, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already contains a value of type 'int64'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already contains a value of type 'uint8'
 kprobe:f { @x = 1; @x = count(); }
                         ~~~~~~~
 )" });
@@ -567,7 +567,7 @@ kprobe:f { @x = count(); @x = sum(pid); }
                               ~~~~~~~~
 )" });
   test("kprobe:f { @x = 1; @x = hist(0); }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already contains a value of type 'int64'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already contains a value of type 'uint8'
 kprobe:f { @x = 1; @x = hist(0); }
                         ~~~~~~~
 )" });
@@ -1007,7 +1007,7 @@ TEST_F(SemanticAnalyserTest, call_delete)
   test("kprobe:f { @y[5] = 5; delete(@y, "
        "(int8)5); }");
   test("kprobe:f { @y[5, 4] = 5; delete(@y, "
-       "((int8)5, (int64)4)); }");
+       "((int8)5, (int32)4)); }");
 
   test("kprobe:f { delete(1); }", Error{ R"(
 stdin:1:19-20: ERROR: delete() expects a map argument
@@ -1024,7 +1024,7 @@ kprobe:f { delete(1, 1); }
   test("kprobe:f { @y[(3, 4, 5)] = "
        "5; delete(@y, (1, 2)); }",
        Error{ R"(
-stdin:1:42-48: ERROR: Argument mismatch for @y: trying to access with arguments: '(int64,int64)' when map expects arguments: '(int64,int64,int64)'
+stdin:1:42-48: ERROR: Argument mismatch for @y: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,uint8,uint8)'
 kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2)); }
                                          ~~~~~~
 )" });
@@ -1059,7 +1059,7 @@ kprobe:f { @x = 1; @y = 5; delete(@x, @y); }
 )" });
 
   test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })", Error{ R"(
-stdin:1:36-47: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],int64)' when map expects arguments: '(int64,string[3])'
+stdin:1:36-47: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],uint8)' when map expects arguments: '(uint8,string[3])'
 kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); }
                                    ~~~~~~~~~~~
 )" });
@@ -1143,7 +1143,7 @@ TEST_F(SemanticAnalyserTest, call_print_map_item)
   test(R"_(begin { @x[1,2] = "asdf"; print((1, 2, @x[1,2])); })_");
 
   test("begin { @x[1] = 1; print(@x[\"asdf\"]); }", Error{ R"(
-stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'int64'
+stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'uint8'
 begin { @x[1] = 1; print(@x["asdf"]); }
                                  ~
 )" });
@@ -1263,14 +1263,14 @@ kprobe:f { @x = 1;  if (has_key(@x, 1)) {} }
 )" });
 
   test("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }", Error{ R"(
-stdin:1:43-44: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects arguments: '(int64,int64)'
+stdin:1:43-44: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
 kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }
                                           ~
 )" });
 
   test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
        Error{ R"(
-stdin:1:45-51: ERROR: Argument mismatch for @x: trying to access with arguments: '(int64,int64)' when map expects arguments: '(int64,string[3])'
+stdin:1:45-51: ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,string[3])'
 kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} }
                                             ~~~~~~
 )" });
@@ -1737,7 +1737,7 @@ TEST_F(SemanticAnalyserTest, variable_reassignment)
   test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = "bye"; })");
 
   test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = 1; })", Error{ R"(
-stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'int64' when variable already contains a value of type 'string[3]'
+stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'uint8' when variable already contains a value of type 'string[3]'
 kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = 1; }
                       ~~~~~~~
 )" });
@@ -1783,7 +1783,10 @@ TEST_F(SemanticAnalyserTest, array_access)
        Error{});
   test("struct MyStruct { int y[4]; } "
        "kprobe:f { $s = (struct MyStruct *) "
-       "arg0; $idx = 0; @x = $s->y[$idx];}",
+       "arg0; $idx = 0; @x = $s->y[$idx];}");
+  test("struct MyStruct { int y[4]; } "
+       "kprobe:f { $s = (struct MyStruct *) "
+       "arg0; $idx = -1; @x = $s->y[$idx];}",
        Error{});
   test("kprobe:f { $s = arg0; @x = $s[0]; }", Error{});
   test("struct MyStruct { void *y; } "
@@ -1795,7 +1798,7 @@ TEST_F(SemanticAnalyserTest, array_access)
                   "arg0; @x = $s->y[0];}");
   auto *assignment =
       ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignMapStatement>();
-  EXPECT_EQ(CreateInt64(), assignment->map->value_type);
+  EXPECT_EQ(CreateInt32(), assignment->map->value_type);
 
   ast = test("struct MyStruct { int y[4]; "
              "} kprobe:f { $s = ((struct "
@@ -1868,19 +1871,12 @@ TEST_F(SemanticAnalyserTest, array_as_map_key)
   test("struct MyStruct { int x[2]; int y[4]; }"
        "kprobe:f { @x[((struct MyStruct *)arg0)->x, "
        "              ((struct MyStruct *)arg0)->y] = 0; }");
-
-  // Mismatched key types
   test(R"(
     struct MyStruct { int x[2]; int y[4]; }
     begin {
       @x[((struct MyStruct *)0)->x] = 0;
       @x[((struct MyStruct *)0)->y] = 1;
-    })",
-       Error{ R"(
-stdin:4:32-34: ERROR: Argument mismatch for @x: trying to access with arguments: 'int32[4]' when map expects arguments: 'int32[2]'
-      @x[((struct MyStruct *)0)->y] = 1;
-                               ~~
-)" });
+    })");
 }
 
 TEST_F(SemanticAnalyserTest, array_compare)
@@ -1919,7 +1915,7 @@ TEST_F(SemanticAnalyserTest, array_compare)
 TEST_F(SemanticAnalyserTest, variable_type)
 {
   auto ast = test("kprobe:f { $x = 1 }");
-  auto st = CreateInt64();
+  auto st = CreateUInt8();
   auto *assignment =
       ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
   EXPECT_EQ(st, assignment->var()->var_type);
@@ -1956,25 +1952,7 @@ TEST_F(SemanticAnalyserTest, map_integer_sizes)
   auto *map_assignment =
       ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignMapStatement>();
   EXPECT_EQ(CreateInt32(), var_assignment->var()->var_type);
-  EXPECT_EQ(CreateInt64(), map_assignment->map->value_type);
-}
-
-TEST_F(SemanticAnalyserTest, binop_integer_promotion)
-{
-  auto ast = test("kprobe:f { $x = (int32)5 + (int16)6 }");
-
-  auto *var_assignment =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_EQ(CreateInt32(), var_assignment->var()->var_type);
-}
-
-TEST_F(SemanticAnalyserTest, binop_integer_no_promotion)
-{
-  auto ast = test("kprobe:f { $x = (int8)5 + (int8)6 }");
-
-  auto *var_assignment =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_EQ(CreateInt8(), var_assignment->var()->var_type);
+  EXPECT_EQ(CreateInt32(), map_assignment->map->value_type);
 }
 
 TEST_F(SemanticAnalyserTest, binop_tuple)
@@ -2413,39 +2391,39 @@ kprobe:f { @y = count(); @x = @y; }
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = sum(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'sum_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = sum(retval);`.
+stdin:1:25-32: ERROR: Map value 'usum_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = sum(retval);`.
 kprobe:f { @y = sum(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = min(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'min_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = min(retval);`.
+stdin:1:25-32: ERROR: Map value 'umin_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = min(retval);`.
 kprobe:f { @y = min(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = max(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'max_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = max(retval);`.
+stdin:1:25-32: ERROR: Map value 'umax_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = max(retval);`.
 kprobe:f { @y = max(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = avg(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'avg_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = avg(retval);`.
+stdin:1:25-32: ERROR: Map value 'uavg_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = avg(retval);`.
 kprobe:f { @y = avg(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = stats(5); @x = @y; }", Error{ R"(
-stdin:1:27-34: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
+stdin:1:27-34: ERROR: Map value 'ustats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
 kprobe:f { @y = stats(5); @x = @y; }
                           ~~~~~~~
 )" });
   test("kprobe:f { @x = 1; @y = stats(5); @x = @y; }", Error{ R"(
-stdin:1:35-42: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
+stdin:1:35-42: ERROR: Map value 'ustats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
 kprobe:f { @x = 1; @y = stats(5); @x = @y; }
                                   ~~~~~~~
-stdin:1:35-42: ERROR: Type mismatch for @x: trying to assign value of type 'stats_t' when map already contains a value of type 'int64'
+stdin:1:35-42: ERROR: Type mismatch for @x: trying to assign value of type 'ustats_t' when map already contains a value of type 'uint8'
 kprobe:f { @x = 1; @y = stats(5); @x = @y; }
                                   ~~~~~~~
 )" });
@@ -2457,13 +2435,13 @@ kprobe:f { @x = 1; @y = stats(5); @x = @y; }
   test("kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }");
 
   test("kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }", Error{ R"(
-stdin:1:31-32: ERROR: Type mismatch for '>': comparing hist_t with int64
+stdin:1:31-32: ERROR: Type mismatch for '>': comparing hist_t with uint8
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                               ~
 stdin:1:29-30: ERROR: left (hist_t)
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                             ~
-stdin:1:33-34: ERROR: right (int64)
+stdin:1:33-34: ERROR: right (uint8)
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                                 ~
 )" });
@@ -2728,25 +2706,25 @@ TEST_F(SemanticAnalyserTest, per_cpu_map_as_map_key)
   test("begin { @x = avg(1); @y[@x] = 1; }");
 
   test("begin { @x = hist(10); @y[@x] = 1; }", Error{ R"(
-stdin:1:27-29: ERROR: hist_t cannot be used as a map key
+stdin:1:27-29: ERROR: hist_t cannot be part of a map key
 begin { @x = hist(10); @y[@x] = 1; }
                           ~~
 )" });
 
   test("begin { @x = lhist(10, 0, 10, 1); @y[@x] = 1; }", Error{ R"(
-stdin:1:38-40: ERROR: lhist_t cannot be used as a map key
+stdin:1:38-40: ERROR: lhist_t cannot be part of a map key
 begin { @x = lhist(10, 0, 10, 1); @y[@x] = 1; }
                                      ~~
 )" });
 
   test("begin { @x = tseries(10, 1s, 10); @y[@x] = 1; }", Error{ R"(
-stdin:1:38-40: ERROR: tseries_t cannot be used as a map key
+stdin:1:38-40: ERROR: tseries_t cannot be part of a map key
 begin { @x = tseries(10, 1s, 10); @y[@x] = 1; }
                                      ~~
 )" });
 
   test("begin { @x = stats(10); @y[@x] = 1; }", Error{ R"(
-stdin:1:28-30: ERROR: stats_t cannot be used as a map key
+stdin:1:28-30: ERROR: ustats_t cannot be part of a map key
 begin { @x = stats(10); @y[@x] = 1; }
                            ~~
 )" });
@@ -3034,7 +3012,7 @@ TEST_F(SemanticAnalyserTest, binop_arithmetic)
     auto *varB = ast.root->probes.at(0)
                      ->block->stmts.at(2)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateUInt64(), varB->var()->var_type);
+    EXPECT_EQ(CreateInt64(), varB->var()->var_type);
     auto *varC = ast.root->probes.at(0)
                      ->block->stmts.at(3)
                      .as<ast::AssignVarStatement>();
@@ -3142,6 +3120,8 @@ TEST_F(SemanticAnalyserTest, intptr_cast_usage)
 TEST_F(SemanticAnalyserTest, intarray_cast_types)
 {
   test("kprobe:f { @ = (int8[8])1 }");
+  test("kprobe:f { @ = (int8[4])1 }");
+  test("kprobe:f { @ = (int8[2])1 }");
   test("kprobe:f { @ = (int16[4])1 }");
   test("kprobe:f { @ = (int32[2])1 }");
   test("kprobe:f { @ = (int64[1])1 }");
@@ -3152,7 +3132,6 @@ TEST_F(SemanticAnalyserTest, intarray_cast_types)
   test("kprobe:f { @ = (uint8[8])1 }");
   test("kretprobe:f { @ = (int8[8])retval }");
 
-  test("kprobe:f { @ = (int8[4])1 }", Error{});
   test("kprobe:f { @ = (int32[])(int16)1 }", Error{});
   test("kprobe:f { @ = (int8[6])\"hello\" }", Error{});
 
@@ -3162,10 +3141,10 @@ TEST_F(SemanticAnalyserTest, intarray_cast_types)
 TEST_F(SemanticAnalyserTest, bool_array_cast_types)
 {
   test("kprobe:f { @ = (bool[8])1 }");
+  test("kprobe:f { @ = (bool[4])1 }");
   test("kprobe:f { @ = (bool[4])(uint32)1 }");
   test("kprobe:f { @ = (bool[2])(uint16)1 }");
 
-  test("kprobe:f { @ = (bool[4])1 }", Error{});
   test("kprobe:f { @ = (bool[64])1 }", Error{});
 }
 
@@ -3208,71 +3187,47 @@ TEST_F(SemanticAnalyserTest, mixed_int_var_assignments)
   test("kprobe:f { $x = (uint8)1; $x = 200; }");
   test("kprobe:f { $x = (int8)1; $x = -2; }");
   test("kprobe:f { $x = (int16)1; $x = 20000; }");
-  // We'd like the below to work, but
-  // blocked on #3518. TLDR: It looks like a
-  // literal and thus amenable to static
-  // "fits into" checks. But it's not, the
-  // parser has actually desugared it to:
-  //    AssignVarStatement(Variable,
-  //    Binop(Variable, Integer(1)))
-  // test("kprobe:f { $x = (uint32)5; $x +=
-  // 1; }");
+  test("kprobe:f { $x = (uint32)5; $x += 1; }");
+  test("kprobe:f { $x = (uint8)1; $x = -1; }");
+  test("kprobe:f { $x = (int16)1; $x = 100000; }");
+  test("kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }");
+  test("kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }");
 
-  test("kprobe:f { $x = (uint8)1; $x = -1; }", Error{ R"(
-stdin:1:27-34: ERROR: Type mismatch for $x: trying to assign value of type 'int64' when variable already contains a value of type 'uint8'
-kprobe:f { $x = (uint8)1; $x = -1; }
-                          ~~~~~~~
-)" });
-  test("kprobe:f { $x = (int16)1; $x = 100000; }", Error{ R"(
-stdin:1:27-38: ERROR: Type mismatch for $x: trying to assign value '100000' which does not fit into the variable of type 'int16'
-kprobe:f { $x = (int16)1; $x = 100000; }
-                          ~~~~~~~~~~~
-)" });
-  test("kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }", Error{ R"(
-stdin:1:43-50: ERROR: Integer size mismatch. Assignment type 'uint16' is larger than the variable type 'uint8'.
-kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }
-                                          ~~~~~~~
-)" });
-  test("kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }", Error{ R"(
-stdin:1:42-49: ERROR: Type mismatch for $x: trying to assign value of type 'int8' when variable already contains a value of type 'uint8'
-kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }
-                                         ~~~~~~~
-)" });
+  // Errors
+  test("begin { $a = -1; $a = (uint64)2; }", Error{});
+  test("begin { $a = (int64)1; $a = (uint64)2; }", Error{});
+  test("begin { $a = -1; $a = 9223372036854775808; }", Error{});
+  test("begin { $a = 9223372036854775807; $a = -2147483648 }", Error{});
   test("kprobe:f { $x = -1; $x = 10223372036854775807; }", Error{ R"(
-stdin:1:21-46: ERROR: Type mismatch for $x: trying to assign value '10223372036854775807' which does not fit into the variable of type 'int64'
+stdin:1:21-46: ERROR: Type mismatch for $x: trying to assign value of type 'uint64' when variable already contains a value of type 'int8'
 kprobe:f { $x = -1; $x = 10223372036854775807; }
                     ~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
-  test("kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }", Error{ R"(
-stdin:1:35-56: ERROR: Type mismatch for $x: trying to assign value of type '(int64,int32)' when variable already contains a value of type '(int64,uint32)'
-kprobe:f { $x = (0, (uint32)123); $x = (0, (int32)-123); }
-                                  ~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("begin { $x = (uint8)1; $x = 5; }",
-       ExpectedAST{ Program().WithProbe(
-           Probe({ "begin" },
-                 { AssignVarStatement(Variable("$x"),
-                                      Cast(Typeof(SizedType(Type::integer)),
-                                           Integer(1))),
-                   AssignVarStatement(Variable("$x"),
-                                      Cast(Typeof(SizedType(Type::integer)),
-                                           Integer(5))),
-                   Jump(ast::JumpType::RETURN) })) });
+
   test("begin { $x = (int8)1; $x = 5; }",
        ExpectedAST{ Program().WithProbe(
            Probe({ "begin" },
                  { AssignVarStatement(Variable("$x"),
                                       Cast(Typeof(SizedType(Type::integer)),
                                            Integer(1))),
-                   AssignVarStatement(Variable("$x"),
-                                      Cast(Typeof(SizedType(Type::integer)),
-                                           Integer(5))),
+                   AssignVarStatement(Variable("$x"), Integer(5)),
                    Jump(ast::JumpType::RETURN) })) });
+  test("begin { $x = (int8)1; $x = (uint8)5; }",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "begin" },
+           { AssignVarStatement(Variable("$x"),
+                                Cast(Typeof(SizedType(Type::integer)),
+                                     Cast(Typeof(SizedType(Type::integer)),
+                                          Integer(1)))),
+             AssignVarStatement(Variable("$x"),
+                                Cast(Typeof(SizedType(Type::integer)),
+                                     Cast(Typeof(SizedType(Type::integer)),
+                                          Integer(5)))),
+             Jump(ast::JumpType::RETURN) })) });
 }
 
 TEST_F(SemanticAnalyserTest, mixed_int_like_map_assignments)
 {
-  // Map values are automatically promoted to 64bit ints
   test("kprobe:f { @x = (uint64)0; @x = (uint16)1; }");
   test("kprobe:f { @x = (int8)1; @x = 5; }");
   test("kprobe:f { @x = 1; @x = -1; }");
@@ -3282,40 +3237,41 @@ TEST_F(SemanticAnalyserTest, mixed_int_like_map_assignments)
   test("kprobe:f { @x = (uint16)1; @x = 10223372036854775807; }");
   test("kprobe:f { @x = 1; @x = 9223372036854775807; }");
   test("kprobe:f { @x = 1; @x = -9223372036854775808; }");
+  test("kprobe:f { @x = (uint8)1; @x = -1; }");
+  test("kprobe:f { @x = 1; @x = 10223372036854775807; }");
+  test("kprobe:f { @x = sum(1); @x = sum(-1); }");
+  test("kprobe:f { @x = sum((uint32)1); @x = sum(-1); }");
+  test("kprobe:f { @x = avg(1); @x = avg(-1); }");
+  test("kprobe:f { @x = avg((uint32)1); @x = avg(-1); }");
+  test("kprobe:f { @x = min(1); @x = min(-1); }");
+  test("kprobe:f { @x = min((uint32)1); @x = min(-1); }");
+  test("kprobe:f { @x = max(1); @x = max(-1); }");
+  test("kprobe:f { @x = max((uint32)1); @x = max(-1); }");
+  test("kprobe:f { @x = stats(1); @x = stats(-1); }");
+  test("kprobe:f { @x = stats((uint32)1); @x = stats(-1); }");
 
-  test("kprobe:f { @x = (uint8)1; @x = -1; }", Error{ R"(
-stdin:1:27-34: ERROR: Type mismatch for @x: trying to assign value of type 'int64' when map already contains a value of type 'uint64'
-kprobe:f { @x = (uint8)1; @x = -1; }
-                          ~~~~~~~
-)" });
-
-  test("kprobe:f { @x = 1; @x = 10223372036854775807; }", Error{ R"(
-stdin:1:20-45: ERROR: Type mismatch for @x: trying to assign value '10223372036854775807' which does not fit into the map of type 'int64'
-kprobe:f { @x = 1; @x = 10223372036854775807; }
-                   ~~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
   test("kprobe:f { @x = sum((uint64)1); @x = sum(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'sum_t' when map already contains a value of type 'usum_t'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
 kprobe:f { @x = sum((uint64)1); @x = sum(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = min((uint64)1); @x = min(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'min_t' when map already contains a value of type 'umin_t'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
 kprobe:f { @x = min((uint64)1); @x = min(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = max((uint64)1); @x = max(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'max_t' when map already contains a value of type 'umax_t'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
 kprobe:f { @x = max((uint64)1); @x = max(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = avg((uint64)1); @x = avg(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'avg_t' when map already contains a value of type 'uavg_t'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
 kprobe:f { @x = avg((uint64)1); @x = avg(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = stats((uint64)1); @x = stats(-1); }", Error{ R"(
-stdin:1:40-49: ERROR: Type mismatch for @x: trying to assign value of type 'stats_t' when map already contains a value of type 'ustats_t'
+stdin:1:40-49: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
 kprobe:f { @x = stats((uint64)1); @x = stats(-1); }
                                        ~~~~~~~~~
 )" });
@@ -3323,8 +3279,8 @@ kprobe:f { @x = stats((uint64)1); @x = stats(-1); }
 
 TEST_F(SemanticAnalyserTest, mixed_int_map_access)
 {
-  // Map keys are automatically promoted to 64bit ints
   test("kprobe:f { @x[1] = 1; @x[(int16)2] }");
+  test("kprobe:f { @x[-1] = 1; @x[1] }");
   test("kprobe:f { @x[(int16)1] = 1; @x[2] }");
   test("kprobe:f { @x[(int16)1] = 1; @x[(int64)2] }");
   test("kprobe:f { @x[(uint16)1] = 1; @x[(uint64)2] }");
@@ -3333,20 +3289,104 @@ TEST_F(SemanticAnalyserTest, mixed_int_map_access)
   test("kprobe:f { @x[(uint16)1] = 1; @x[10223372036854775807] }");
   test("kprobe:f { @x[1] = 1; @x[9223372036854775807] }");
   test("kprobe:f { @x[1] = 1; @x[-9223372036854775808] }");
+  test("kprobe:f { @x[1] = 1; @x[(uint64)1] }");
+  test("kprobe:f { @x[(uint32)-1] = 1; @x[1] }");
+  test("kprobe:f { @x[-1] = 1; @x[(uint32)1] }");
 
-  test("kprobe:f { @x[1] = 1; @x[10223372036854775807] }", Error{ R"(
-stdin:1:26-46: ERROR: Argument mismatch for @x: trying to access with argument '10223372036854775807' which does not fit into the map of key type 'int64'
-kprobe:f { @x[1] = 1; @x[10223372036854775807] }
-                         ~~~~~~~~~~~~~~~~~~~~
+  test("kprobe:f { @x[-1] = 1; @x[10223372036854775807] }", Error{ R"(
+stdin:1:27-47: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int8'
+kprobe:f { @x[-1] = 1; @x[10223372036854775807] }
+                          ~~~~~~~~~~~~~~~~~~~~
 )" });
   test("kprobe:f { @x[(uint64)1] = 1; @x[-1] }", Error{ R"(
-stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'int64' when map expects arguments: 'uint64'
+stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'int8' when map expects arguments: 'uint64'
 kprobe:f { @x[(uint64)1] = 1; @x[-1] }
                                  ~
 )" });
-  test("kretprobe:f { @x[1] = 1; @x[(uint64)1] }", Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int64'
+  test("kretprobe:f { @x[-1] = 1; @x[(uint64)1] }", Error{ R"(
+ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int8'
 )" });
+}
+
+TEST_F(SemanticAnalyserTest, mixed_int_like_binop)
+{
+  test("kprobe:f { $a = 1 == -1; }", NoWarning{ "comparison of integers" });
+  test("kprobe:f { $a = 1 == (int64)-1; }",
+       NoWarning{ "comparison of integers" });
+  test("kprobe:f { $a = (uint32)1 == (int32)-1; }",
+       NoWarning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(-1); $a = 1 == @a; }",
+       NoWarning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(-1); $a = @a == 1; }",
+       NoWarning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(1); $a = @a == (uint16)1; }",
+       NoWarning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(-1); $a = @a == (uint16)1; }",
+       NoWarning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(1); @b = count(); $a = @a == @b; }",
+       NoWarning{ "comparison of integers" });
+
+  test("kprobe:f { $a = (uint64)1 == (int64)-1; }",
+       Warning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(-1); $a = (uint64)1 == @a; }",
+       Warning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(-1); $a = @a == (uint64)1; }",
+       Warning{ "comparison of integers" });
+  test("kprobe:f { @a = sum(-1); @b = count(); $a = @a == @b; }",
+       Warning{ "comparison of integers" });
+
+  test("kprobe:f { $a = 1 + -1; }", NoWarning{ "arithmetic on integers" });
+  test("kprobe:f { $a = 1 + (int64)-1; }",
+       NoWarning{ "arithmetic on integers" });
+  test("kprobe:f { $a = (uint32)1 + (int32)-1; }",
+       NoWarning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(-1); $a = 1 + @a; }",
+       NoWarning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(-1); $a = @a + 1; }",
+       NoWarning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(1); $a = @a + (uint16)1; }",
+       NoWarning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(-1); $a = @a + (uint16)1; }",
+       NoWarning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(1); @b = count(); $a = @a + @b; }",
+       NoWarning{ "arithmetic on integers" });
+
+  test("kprobe:f { $a = (uint64)1 + (int64)-1; }",
+       Warning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(-1); $a = (uint64)1 + @a; }",
+       Warning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(-1); $a = @a + (uint64)1; }",
+       Warning{ "arithmetic on integers" });
+  test("kprobe:f { @a = sum(-1); @b = count(); $a = @a + @b; }",
+       Warning{ "arithmetic on integers" });
+
+  // Both are additionally casted to int16
+  test("kprobe:f { $a = (uint8)1 == (int8)-1; }",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { AssignVarStatement(
+                 Variable("$a"),
+                 Binop(Operator::EQ,
+                       Cast(Typeof(SizedType(Type::integer)),
+                            Cast(Typeof(SizedType(Type::integer)), Integer(1))),
+                       Cast(Typeof(SizedType(Type::integer)),
+                            Cast(Typeof(SizedType(Type::integer)),
+                                 NegativeInteger(-1))))),
+             Jump(ast::JumpType::RETURN) })) });
+
+  // The left has an additional cast to int64
+  test("kprobe:f { @a = sum(-1); $a = (uint8)1 == @a; }",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { ExprStatement(
+                 Call("sum", { Map("@a"), Integer(0), NegativeInteger(-1) })),
+             AssignVarStatement(
+                 Variable("$a"),
+                 Binop(Operator::EQ,
+                       Cast(Typeof(SizedType(Type::integer)),
+                            Cast(Typeof(SizedType(Type::integer)), Integer(1))),
+                       MapAccess(Map("@a"), Integer(0)))),
+             Jump(ast::JumpType::RETURN) })) });
 }
 
 TEST_F(SemanticAnalyserTest, signal)
@@ -3837,12 +3877,7 @@ TEST_F(SemanticAnalyserTest, tuple)
   test(R"(begin { @t = (1, kstack()) })");
   test(R"(begin { @t = (1, (2,3)) })");
   test(R"(begin { $t = (1, (int64)2); $t = (2, (int32)3); })");
-
-  test(R"(begin { $t = (1, (int32)2); $t = (2, (int64)3); })", Error{ R"(
-stdin:1:29-47: ERROR: Type mismatch for $t: trying to assign value of type '(int64,int64)' when variable already contains a value of type '(int64,int32)'
-begin { $t = (1, (int32)2); $t = (2, (int64)3); }
-                            ~~~~~~~~~~~~~~~~~~
-)" });
+  test(R"(begin { $t = (1, (int32)2); $t = (2, (int64)3); })");
 
   test(R"(struct task_struct { int x; } begin { $t = (1, curtask); })");
   test(R"(struct task_struct { int x[4]; } begin { $t = (1, curtask->x); })");
@@ -3854,22 +3889,18 @@ begin { $t = (1, (int32)2); $t = (2, (int64)3); }
   test(R"(begin { @t = (1, 2); @t = (4, "other"); })", Error{});
   test(R"(begin { @t = (1, 2); @t = 5; })", Error{});
   test(R"(begin { @t = (1, count()) })", Error{});
+  test(R"(begin { $t = (1, (2, 3)); $t = (4, ((uint8)5, 6)); })");
 
-  test(R"(begin { $t = (1, (2, 3)); $t = (4, ((int8)5, 6)); })");
+  test(R"(begin { $t = (1, (2, 3)); $t = (4, ((int64)5, 6)); })");
 
-  test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, (5, 6)); })", Error{ R"(
-stdin:1:33-49: ERROR: Type mismatch for $t: trying to assign value of type '(int64,(int64,int64))' when variable already contains a value of type '(int64,(int8,int64))'
-begin { $t = (1, ((int8)2, 3)); $t = (4, (5, 6)); }
-                                ~~~~~~~~~~~~~~~~
-)" });
-
-  test(R"(begin { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); })",
+  test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); })",
        Error{ R"(
-stdin:1:34-56: ERROR: Type mismatch for $t: trying to assign value of type '(int64,(int8,int64))' when variable already contains a value of type '(uint8,(int64,int64))'
-begin { $t = ((uint8)1, (2, 3)); $t = (4, ((int8)5, 6)); }
-                                 ~~~~~~~~~~~~~~~~~~~~~~
+stdin:1:33-57: ERROR: Type mismatch for $t: trying to assign value of type '(uint8,(uint64,uint8))' when variable already contains a value of type '(uint8,(int8,uint8))'
+begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); }
+                                ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
 
+  test(R"(begin { $t = ((uint8)1, (2, 3)); $t = (4, (5, 6)); })");
   test(R"(begin { @t = (1, 2, "hi"); @t = (3, 4, "hellolongstr"); })");
   test(R"(begin { $t = (1, ("hi", 2)); $t = (3, ("hellolongstr", 4)); })");
 
@@ -3896,7 +3927,7 @@ TEST_F(SemanticAnalyserTest, tuple_indexing)
 TEST_F(SemanticAnalyserTest, tuple_assign_var)
 {
   class SizedType ty = CreateTuple(
-      Struct::CreateTuple({ CreateInt64(), CreateString(6) }));
+      Struct::CreateTuple({ CreateUInt8(), CreateString(6) }));
   auto ast = test(R"(begin { $t = (1, "str"); $t = (4, "other"); })");
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
@@ -3918,13 +3949,13 @@ TEST_F(SemanticAnalyserTest, tuple_assign_map)
   // $t = (1, 3, 3, 7);
   auto *assignment = stmts.at(0).as<ast::AssignMapStatement>();
   class SizedType ty = CreateTuple(Struct::CreateTuple(
-      { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
+      { CreateUInt8(), CreateUInt8(), CreateUInt8(), CreateUInt8() }));
   EXPECT_EQ(ty, assignment->map->value_type);
 
   // $t = (0, 0, 0, 0);
   assignment = stmts.at(1).as<ast::AssignMapStatement>();
   ty = CreateTuple(Struct::CreateTuple(
-      { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
+      { CreateUInt8(), CreateUInt8(), CreateUInt8(), CreateUInt8() }));
   EXPECT_EQ(ty, assignment->map->value_type);
 }
 
@@ -3932,9 +3963,9 @@ TEST_F(SemanticAnalyserTest, tuple_assign_map)
 TEST_F(SemanticAnalyserTest, tuple_nested)
 {
   class SizedType ty_inner = CreateTuple(
-      Struct::CreateTuple({ CreateInt64(), CreateInt64() }));
+      Struct::CreateTuple({ CreateUInt8(), CreateUInt8() }));
   class SizedType ty = CreateTuple(
-      Struct::CreateTuple({ CreateInt64(), ty_inner }));
+      Struct::CreateTuple({ CreateUInt8(), ty_inner }));
   auto ast = test(R"(begin { $t = (1,(1,2)); })");
   auto &stmts = ast.root->probes.at(0)->block->stmts;
 
@@ -4093,8 +4124,8 @@ TEST_F(SemanticAnalyserTest, string_size)
   ASSERT_TRUE(map_assign->key.type().GetField(0).type.IsStringTy());
   ASSERT_EQ(map_assign->key.type().GetField(0).type.GetSize(), 3UL);
   ASSERT_EQ(map_assign->map->key_type.GetField(0).type.GetSize(), 6UL);
-  ASSERT_EQ(map_assign->key.type().GetSize(), 16UL);
-  ASSERT_EQ(map_assign->map->key_type.GetSize(), 16UL);
+  ASSERT_EQ(map_assign->key.type().GetSize(), 4UL);
+  ASSERT_EQ(map_assign->map->key_type.GetSize(), 7UL);
 
   ast = test(R"(k:f1 {$x = ("hello", 0);} k:f2 {$x = ("hi", 0); })");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
@@ -4102,8 +4133,8 @@ TEST_F(SemanticAnalyserTest, string_size)
   ASSERT_TRUE(var_assign->var()->var_type.IsTupleTy());
   ASSERT_TRUE(var_assign->var()->var_type.GetField(0).type.IsStringTy());
   ASSERT_EQ(var_assign->var()->var_type.GetSize(),
-            16UL); // tuples are not
-                   // packed
+            7UL); // tuples are not
+                  // packed
   ASSERT_EQ(var_assign->var()->var_type.GetField(0).type.GetSize(), 6UL);
 }
 
@@ -4144,11 +4175,11 @@ begin { $i = tid(1); }
 TEST_F(SemanticAnalyserTest, subprog_return)
 {
   test("fn f(): void { return; }");
-  test("fn f(): int64 { return 1; }");
+  test("fn f(): uint8 { return 1; }");
 
   // Error location is incorrect: #3063
   test("fn f(): void { return 1; }", Error{ R"(
-stdin:1:16-24: ERROR: Function f is of type void, cannot return int64
+stdin:1:16-24: ERROR: Function f is of type void, cannot return uint8
 fn f(): void { return 1; }
                ~~~~~~~~
 )" });
@@ -4174,15 +4205,15 @@ fn f($a : int64): string { return $a; }
 TEST_F(SemanticAnalyserTest, subprog_map)
 {
   test("fn f(): void { @a = 0; }");
-  test("fn f(): int64 { @a = 0; return @a + 1; }");
+  test("fn f(): uint64 { @a = 0; return @a + 1; }");
   test("fn f(): void { @a[0] = 0; }");
-  test("fn f(): int64 { @a[0] = 0; return @a[0] + 1; }");
+  test("fn f(): uint64 { @a[0] = 0; return @a[0] + 1; }");
 }
 
 TEST_F(SemanticAnalyserTest, subprog_builtin)
 {
   test("fn f(): void { print(\"Hello world\"); }");
-  test("fn f(): uint64 { return sizeof(int64); }");
+  test("fn f(): uint8 { return sizeof(int64); }");
   test("fn f(): uint64 { return nsecs; }");
 }
 
@@ -4496,7 +4527,7 @@ begin { @map[0] = tseries(10, 10s, 10); for ($kv : @map) { } }
                                                    ~~~~
 )" });
   test("begin { @map[0] = stats(10); for ($kv : @map) { } }", Error{ R"(
-stdin:1:41-45: ERROR: Loop expression does not support type: stats_t
+stdin:1:41-45: ERROR: Loop expression does not support type: ustats_t
 begin { @map[0] = stats(10); for ($kv : @map) { } }
                                         ~~~~
 )" });
@@ -4618,7 +4649,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
       $var2 = "abc";
       $var3 = "def";
       for ($kv : @map) {
-        $var1 = 456;
+        $var1 = 100;
         print($var3);
       }
     })",
@@ -4630,7 +4661,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
             AssignVarStatement(Variable("$var3"), String("def")),
             For(Variable("$kv"),
                 Map("@map"),
-                { AssignVarStatement(Variable("$var1"), Integer(456)),
+                { AssignVarStatement(Variable("$var1"), Integer(100)),
                   ExprStatement(Block(
                       { ExprStatement(Call("print", { Variable("$var3") })),
                         Jump(ast::JumpType::CONTINUE) })) })
@@ -4777,7 +4808,7 @@ begin { for ($i : 0.."str") { printf("%d", $i); } }
 )" });
 
   test(R"(begin { for ($i : 0.0..5) { printf("%d", $i); } })", Error{ R"(
-stdin:1:21-22: ERROR: Can not access index '0' on expression of type 'int64'
+stdin:1:21-22: ERROR: Can not access index '0' on expression of type 'uint8'
 begin { for ($i : 0.0..5) { printf("%d", $i); } }
                     ~
 stdin:1:19-25: ERROR: Loop range requires an integer for the start value
@@ -4945,31 +4976,25 @@ begin { let $a; let $a; }
 )" });
 
   test("begin { let $a: uint16; $a = -1; }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already has a type 'uint16'
+stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
 begin { let $a: uint16; $a = -1; }
                         ~~~~~~~
 )" });
 
   test("begin { let $a: uint8 = 1; $a = 10000; }", Error{ R"(
-stdin:1:28-38: ERROR: Type mismatch for $a: trying to assign value '10000' which does not fit into the variable of type 'uint8'
+stdin:1:28-38: ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already contains a value of type 'uint8'
 begin { let $a: uint8 = 1; $a = 10000; }
                            ~~~~~~~~~~
 )" });
 
   test("begin { let $a: int8 = 1; $a = -10000; }", Error{ R"(
-stdin:1:27-38: ERROR: Type mismatch for $a: trying to assign value '-10000' which does not fit into the variable of type 'int8'
+stdin:1:27-38: ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already contains a value of type 'int8'
 begin { let $a: int8 = 1; $a = -10000; }
                           ~~~~~~~~~~~
 )" });
 
-  test("begin { let $a; $a = (uint8)1; $a = -1; }", Error{ R"(
-stdin:1:32-39: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already contains a value of type 'uint8'
-begin { let $a; $a = (uint8)1; $a = -1; }
-                               ~~~~~~~
-)" });
-
   test("begin { let $a: int8; $a = 10000; }", Error{ R"(
-stdin:1:23-33: ERROR: Type mismatch for $a: trying to assign value '10000' which does not fit into the variable of type 'int8'
+stdin:1:23-33: ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already has a type 'int8'
 begin { let $a: int8; $a = 10000; }
                       ~~~~~~~~~~
 )" });
@@ -4981,7 +5006,7 @@ begin { $a = -1; let $a; }
 )" });
 
   test("begin { let $a: uint16 = -1; }", Error{ R"(
-stdin:1:9-28: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already has a type 'uint16'
+stdin:1:9-28: ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
 begin { let $a: uint16 = -1; }
         ~~~~~~~~~~~~~~~~~~~
 )" });
@@ -5218,7 +5243,7 @@ begin { @a = tseries(10, 10s, 1); let $b = @a; }
 
   test("begin { @a = stats(10); let $b = @a; }",
        Error{ R"(
-stdin:1:25-36: ERROR: Value 'stats_t' cannot be assigned to a scratch variable.
+stdin:1:25-36: ERROR: Value 'ustats_t' cannot be assigned to a scratch variable.
 begin { @a = stats(10); let $b = @a; }
                         ~~~~~~~~~~~
 )" },
@@ -5247,7 +5272,7 @@ begin { @a = tseries(10, 10s, 1); @b = @a; }
 )" });
 
   test("begin { @a = stats(10); @b = @a; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = stats(arg2);`.
+stdin:1:25-32: ERROR: Map value 'ustats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = stats(arg2);`.
 begin { @a = stats(10); @b = @a; }
                         ~~~~~~~
 )" });
@@ -5365,7 +5390,7 @@ TEST_F(SemanticAnalyserTest, macros)
   test("macro set($x) { $x = 1; $x } begin { $a = \"string\"; set($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already contains a value of type 'string[7]'
+stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'uint8' when variable already contains a value of type 'string[7]'
 macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
                 ~~~~~~
 stdin:1:53-60: ERROR: expanded from
@@ -5378,13 +5403,13 @@ macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
        "begin { $a = \"string\"; add1($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:21-22: ERROR: Type mismatch for '+': comparing string[7] with int64
+stdin:1:21-22: ERROR: Type mismatch for '+': comparing string[7] with uint8
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                     ~
 stdin:1:18-20: ERROR: left (string[7])
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                  ~~
-stdin:1:23-24: ERROR: right (int64)
+stdin:1:23-24: ERROR: right (uint8)
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                       ~
 stdin:1:44-52: ERROR: expanded from
@@ -5516,8 +5541,19 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bar"; })");
   test(
       R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "muchmuchlongerstr"; })");
+  test("begin { let $a: uint32 = 1; }");
+  test("begin { let $a: uint32; $a = (uint8)1; }");
+  test("begin { let $a: int8; $a = 1; }");
+  test("begin { let $a; $a = (int32)1; }");
+  test("begin { let $a; $a = (int8)1; }");
+  test("begin { let $a; $a = -1; }");
+  test("begin { let $a: int32 = 0; }");
 
   // These types should be enforced.
+  test("begin { let $a: int8 = 1; $a = (int32)1; }", Error{});
+  test("begin { let $a: uint8; $a = (int8)1; }", Error{});
+  test("begin { $y = (int8)1; let $a: uint8; $a = $y; }", Error{});
+  test("begin { let $a: uint8; $a = -1; }", Error{});
   test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
        Error{ R"(
 stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already has a type 'uint8'
@@ -5525,7 +5561,7 @@ kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
                                                ~~~~~~~~~~
 )" });
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })", Error{ R"(
-stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'int64' when variable already has a type 'string[4]'
+stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'uint8' when variable already has a type 'string[4]'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
                                             ~~~~~~
 )" });
@@ -5538,10 +5574,14 @@ kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
 TEST_F(SemanticAnalyserTest, typeof_subprog)
 {
   // Basic subprogram arguments can be defined relatively.
-  test("fn foo($x : int64, $y : typeof($x)) : int64 { return 0; }");
-  test("fn foo($x : typeof($y), $y : int64) : int64 { return 0; }");
+  test("fn foo($x : int64, $y : typeof($x)) : int8 { return 0; }");
+  test("fn foo($x : typeof($y), $y : int64) : int8 { return 0; }");
+  test("fn foo($x : typeof($y), $y : int64) : typeof($x) { return (int64)0; }");
+  test("fn foo($x : typeof($y), $y : int64) : typeof($y) { return (int64)0; }");
   test("fn foo($x : typeof($y), $y : int64) : typeof($x) { return 0; }");
-  test("fn foo($x : typeof($y), $y : int64) : typeof($y) { return 0; }");
+
+  test("fn foo($x : typeof($y), $y : int64) : int64 { return (uint64)0; }",
+       Error{});
 
   // But we can't define using non-existent variables.
   test("fn foo($x : int64, $y : typeof($z)) : int64 { return 0; }", Error{ R"(

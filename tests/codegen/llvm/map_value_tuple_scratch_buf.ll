@@ -6,8 +6,8 @@ target triple = "bpf"
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.163" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.164" = type { ptr, ptr }
-%"string[4]_int64__tuple_t" = type { [4 x i8], i64 }
-%"string[8]_int64__tuple_t" = type { [8 x i8], i64 }
+%"string[4]_uint8__tuple_t" = type { [4 x i8], i8 }
+%"string[8]_uint8__tuple_t" = type { [8 x i8], i8 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_x = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -16,9 +16,9 @@ target triple = "bpf"
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !46
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !48
 @__bt__map_key_buf = dso_local externally_initialized global [1 x [4 x [8 x i8]]] zeroinitializer, section ".data.map_key_buf", !dbg !52
-@__bt__write_map_val_buf = dso_local externally_initialized global [1 x [1 x [16 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !56
-@__bt__read_map_val_buf = dso_local externally_initialized global [1 x [1 x [16 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !63
-@__bt__tuple_buf = dso_local externally_initialized global [1 x [2 x [16 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !65
+@__bt__write_map_val_buf = dso_local externally_initialized global [1 x [1 x [9 x i8]]] zeroinitializer, section ".data.write_map_val_buf", !dbg !56
+@__bt__read_map_val_buf = dso_local externally_initialized global [1 x [1 x [9 x i8]]] zeroinitializer, section ".data.read_map_val_buf", !dbg !63
+@__bt__tuple_buf = dso_local externally_initialized global [1 x [2 x [9 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !65
 @xxx = global [4 x i8] c"xxx\00"
 @xxxxxxx = global [8 x i8] c"xxxxxxx\00"
 
@@ -31,12 +31,12 @@ entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [2 x [16 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
-  %3 = getelementptr %"string[4]_int64__tuple_t", ptr %2, i32 0, i32 0
+  %2 = getelementptr [1 x [2 x [9 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 5, i1 false)
+  %3 = getelementptr %"string[4]_uint8__tuple_t", ptr %2, i32 0, i32 0
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 @xxx, i64 4, i1 false)
-  %4 = getelementptr %"string[4]_int64__tuple_t", ptr %2, i32 0, i32 1
-  store i64 1, ptr %4, align 8
+  %4 = getelementptr %"string[4]_uint8__tuple_t", ptr %2, i32 0, i32 1
+  store i8 1, ptr %4, align 1
   %get_cpu_id1 = call i64 inttoptr (i64 8 to ptr)() #3
   %5 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded2 = and i64 %get_cpu_id1, %5
@@ -45,58 +45,59 @@ entry:
   %get_cpu_id3 = call i64 inttoptr (i64 8 to ptr)() #3
   %7 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded4 = and i64 %get_cpu_id3, %7
-  %8 = getelementptr [1 x [1 x [16 x i8]]], ptr @__bt__write_map_val_buf, i64 0, i64 %cpu.id.bounded4, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %8, i8 0, i64 16, i1 false)
-  %9 = getelementptr [16 x i8], ptr %2, i64 0, i64 0
-  %10 = getelementptr %"string[8]_int64__tuple_t", ptr %8, i32 0, i32 0
+  %8 = getelementptr [1 x [1 x [9 x i8]]], ptr @__bt__write_map_val_buf, i64 0, i64 %cpu.id.bounded4, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %8, i8 0, i64 9, i1 false)
+  %9 = getelementptr [5 x i8], ptr %2, i64 0, i64 0
+  %10 = getelementptr %"string[8]_uint8__tuple_t", ptr %8, i32 0, i32 0
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %10, ptr align 1 %9, i64 4, i1 false)
-  %11 = getelementptr [16 x i8], ptr %2, i64 0, i64 8
-  %12 = getelementptr %"string[8]_int64__tuple_t", ptr %8, i32 0, i32 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %12, ptr align 1 %11, i64 8, i1 false)
+  %11 = getelementptr [5 x i8], ptr %2, i64 0, i64 4
+  %12 = getelementptr %"string[8]_uint8__tuple_t", ptr %8, i32 0, i32 1
+  %13 = load i8, ptr %11, align 1
+  store i8 %13, ptr %12, align 1
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %6, ptr %8, i64 0)
   %get_cpu_id5 = call i64 inttoptr (i64 8 to ptr)() #3
-  %13 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded6 = and i64 %get_cpu_id5, %13
-  %14 = getelementptr [1 x [2 x [16 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded6, i64 1, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %14, i8 0, i64 16, i1 false)
-  %15 = getelementptr %"string[8]_int64__tuple_t", ptr %14, i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %15, ptr align 1 @xxxxxxx, i64 8, i1 false)
-  %16 = getelementptr %"string[8]_int64__tuple_t", ptr %14, i32 0, i32 1
-  store i64 1, ptr %16, align 8
+  %14 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded6 = and i64 %get_cpu_id5, %14
+  %15 = getelementptr [1 x [2 x [9 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded6, i64 1, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %15, i8 0, i64 9, i1 false)
+  %16 = getelementptr %"string[8]_uint8__tuple_t", ptr %15, i32 0, i32 0
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %16, ptr align 1 @xxxxxxx, i64 8, i1 false)
+  %17 = getelementptr %"string[8]_uint8__tuple_t", ptr %15, i32 0, i32 1
+  store i8 1, ptr %17, align 1
   %get_cpu_id7 = call i64 inttoptr (i64 8 to ptr)() #3
-  %17 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded8 = and i64 %get_cpu_id7, %17
-  %18 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded8, i64 1, i64 0
-  store i64 0, ptr %18, align 8
-  %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %18, ptr %14, i64 0)
+  %18 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded8 = and i64 %get_cpu_id7, %18
+  %19 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded8, i64 1, i64 0
+  store i64 0, ptr %19, align 8
+  %update_elem9 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_x, ptr %19, ptr %15, i64 0)
   %get_cpu_id10 = call i64 inttoptr (i64 8 to ptr)() #3
-  %19 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded11 = and i64 %get_cpu_id10, %19
-  %20 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded11, i64 2, i64 0
-  store i64 0, ptr %20, align 8
-  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %20)
+  %20 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded11 = and i64 %get_cpu_id10, %20
+  %21 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded11, i64 2, i64 0
+  store i64 0, ptr %21, align 8
+  %lookup_elem = call ptr inttoptr (i64 1 to ptr)(ptr @AT_x, ptr %21)
   %get_cpu_id12 = call i64 inttoptr (i64 8 to ptr)() #3
-  %21 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded13 = and i64 %get_cpu_id12, %21
-  %22 = getelementptr [1 x [1 x [16 x i8]]], ptr @__bt__read_map_val_buf, i64 0, i64 %cpu.id.bounded13, i64 0, i64 0
+  %22 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded13 = and i64 %get_cpu_id12, %22
+  %23 = getelementptr [1 x [1 x [9 x i8]]], ptr @__bt__read_map_val_buf, i64 0, i64 %cpu.id.bounded13, i64 0, i64 0
   %map_lookup_cond = icmp ne ptr %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %22, ptr align 1 %lookup_elem, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %23, ptr align 1 %lookup_elem, i64 9, i1 false)
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  call void @llvm.memset.p0.i64(ptr align 1 %22, i8 0, i64 16, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %23, i8 0, i64 9, i1 false)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %get_cpu_id14 = call i64 inttoptr (i64 8 to ptr)() #3
-  %23 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded15 = and i64 %get_cpu_id14, %23
-  %24 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
-  store i64 0, ptr %24, align 8
-  %update_elem16 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %24, ptr %22, i64 0)
+  %24 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded15 = and i64 %get_cpu_id14, %24
+  %25 = getelementptr [1 x [4 x [8 x i8]]], ptr @__bt__map_key_buf, i64 0, i64 %cpu.id.bounded15, i64 3, i64 0
+  store i64 0, ptr %25, align 8
+  %update_elem16 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_y, ptr %25, ptr %23, i64 0)
   ret i64 0
 }
 
@@ -137,13 +138,13 @@ attributes #3 = { memory(none) }
 !20 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !21 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !22, size: 64, offset: 192)
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !23, size: 64)
-!23 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !24)
+!23 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 72, elements: !24)
 !24 = !{!25, !29}
 !25 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !26, size: 64)
 !26 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 64, elements: !27)
 !27 = !{!28}
 !28 = !DISubrange(count: 8, lowerBound: 0)
-!29 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !20, size: 64, offset: 64)
+!29 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !4, size: 8, offset: 64)
 !30 = !DIGlobalVariableExpression(var: !31, expr: !DIExpression())
 !31 = distinct !DIGlobalVariable(name: "AT_y", linkageName: "global", scope: !2, file: !2, type: !9, isLocal: false, isDefinition: true)
 !32 = !DIGlobalVariableExpression(var: !33, expr: !DIExpression())
@@ -172,17 +173,17 @@ attributes #3 = { memory(none) }
 !55 = !DICompositeType(tag: DW_TAG_array_type, baseType: !26, size: 256, elements: !5)
 !56 = !DIGlobalVariableExpression(var: !57, expr: !DIExpression())
 !57 = distinct !DIGlobalVariable(name: "__bt__write_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !58, isLocal: false, isDefinition: true)
-!58 = !DICompositeType(tag: DW_TAG_array_type, baseType: !59, size: 128, elements: !15)
-!59 = !DICompositeType(tag: DW_TAG_array_type, baseType: !60, size: 128, elements: !15)
-!60 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 128, elements: !61)
+!58 = !DICompositeType(tag: DW_TAG_array_type, baseType: !59, size: 72, elements: !15)
+!59 = !DICompositeType(tag: DW_TAG_array_type, baseType: !60, size: 72, elements: !15)
+!60 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 72, elements: !61)
 !61 = !{!62}
-!62 = !DISubrange(count: 16, lowerBound: 0)
+!62 = !DISubrange(count: 9, lowerBound: 0)
 !63 = !DIGlobalVariableExpression(var: !64, expr: !DIExpression())
 !64 = distinct !DIGlobalVariable(name: "__bt__read_map_val_buf", linkageName: "global", scope: !2, file: !2, type: !58, isLocal: false, isDefinition: true)
 !65 = !DIGlobalVariableExpression(var: !66, expr: !DIExpression())
 !66 = distinct !DIGlobalVariable(name: "__bt__tuple_buf", linkageName: "global", scope: !2, file: !2, type: !67, isLocal: false, isDefinition: true)
-!67 = !DICompositeType(tag: DW_TAG_array_type, baseType: !68, size: 256, elements: !15)
-!68 = !DICompositeType(tag: DW_TAG_array_type, baseType: !60, size: 256, elements: !69)
+!67 = !DICompositeType(tag: DW_TAG_array_type, baseType: !68, size: 144, elements: !15)
+!68 = !DICompositeType(tag: DW_TAG_array_type, baseType: !60, size: 144, elements: !69)
 !69 = !{!70}
 !70 = !DISubrange(count: 2, lowerBound: 0)
 !71 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !72)
