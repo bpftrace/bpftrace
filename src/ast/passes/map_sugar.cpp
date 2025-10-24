@@ -146,8 +146,8 @@ void MapDefaultKey::visit(Expression &expr)
   // including `lhist` and `hist`, which are treated in a special way
   // subsequently.
   if (auto *map = expr.as<Map>()) {
-    auto *index = ast_.make_node<Integer>(0, Location(map->loc));
-    expr.value = ast_.make_node<MapAccess>(map, index, Location(map->loc));
+    auto *index = ast_.make_node<Integer>(map->loc, 0);
+    expr.value = ast_.make_node<MapAccess>(map->loc, map, index);
   }
 }
 
@@ -158,9 +158,9 @@ void MapDefaultKey::visit(Statement &stmt)
   // Replace with a statement that has the default index, in the same way as
   // above. This will be type-checked during semantic analysis.
   if (auto *map = stmt.as<AssignScalarMapStatement>()) {
-    auto *index = ast_.make_node<Integer>(0, Location(map->loc));
+    auto *index = ast_.make_node<Integer>(map->loc, 0);
     stmt.value = ast_.make_node<AssignMapStatement>(
-        map->map, index, map->expr, Location(map->loc));
+        map->loc, map->map, index, map->expr);
   }
 }
 
@@ -211,7 +211,7 @@ void MapDefaultKey::visit(Call &call)
         if (call.vargs.size() == 1) {
           // Inject the default key.
           checkCall(*map, false);
-          auto *index = ast_.make_node<Integer>(0, Location(map->loc));
+          auto *index = ast_.make_node<Integer>(map->loc, 0);
           call.vargs.emplace_back(index);
         } else if (call.vargs.size() == 2) {
           checkCall(*map, true);
@@ -309,8 +309,7 @@ void MapAssignmentCall::visit(Statement &stmt)
     auto expr = injectMap(assign->expr, assign->map, assign->key);
     if (expr) {
       // We injected a call, and can flatten the statement.
-      stmt.value = ast_.make_node<ExprStatement>(expr.value(),
-                                                 Location(assign->loc));
+      stmt.value = ast_.make_node<ExprStatement>(assign->loc, expr.value());
     }
   }
   Visitor<MapAssignmentCall>::visit(stmt);
@@ -336,7 +335,7 @@ void MapScalarCheck::visit(Expression &expr)
           expr.node().addError() << "Unknown map: " << map->ident;
           return;
         }
-        expr.value = ast_.make_node<Boolean>(val->second, Location(call->loc));
+        expr.value = ast_.make_node<Boolean>(call->loc, val->second);
       } else {
         expr.node().addError()
             << call->func << "() expects a map for the first argument";

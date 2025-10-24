@@ -262,8 +262,8 @@ using RootStatements = std::vector<RootStatement>;
 class Integer : public Node {
 public:
   explicit Integer(ASTContext &ctx,
-                   uint64_t n,
                    Location &&loc,
+                   uint64_t n,
                    bool force_unsigned = false,
                    std::optional<std::string> &&original = std::nullopt)
       : Node(ctx, std::move(loc)),
@@ -272,7 +272,7 @@ public:
                          : CreateInt64()),
         value(n),
         original(std::move(original)) {};
-  explicit Integer(ASTContext &ctx, const Integer &other, const Location &loc)
+  explicit Integer(ASTContext &ctx, const Location &loc, const Integer &other)
       : Node(ctx, loc + other.loc),
         integer_type(other.integer_type),
         value(other.value),
@@ -308,11 +308,11 @@ public:
 
 class NegativeInteger : public Node {
 public:
-  explicit NegativeInteger(ASTContext &ctx, int64_t n, Location &&loc)
+  explicit NegativeInteger(ASTContext &ctx, Location &&loc, int64_t n)
       : Node(ctx, std::move(loc)), value(n) {};
   explicit NegativeInteger(ASTContext &ctx,
-                           const NegativeInteger &other,
-                           const Location &loc)
+                           const Location &loc,
+                           const NegativeInteger &other)
       : Node(ctx, loc + other.loc), value(other.value) {};
 
   const SizedType &type() const
@@ -335,9 +335,9 @@ public:
 
 class Boolean : public Node {
 public:
-  explicit Boolean(ASTContext &ctx, bool val, Location &&loc)
+  explicit Boolean(ASTContext &ctx, Location &&loc, bool val)
       : Node(ctx, std::move(loc)), value(val) {};
-  explicit Boolean(ASTContext &ctx, const Boolean &other, const Location &loc)
+  explicit Boolean(ASTContext &ctx, const Location &loc, const Boolean &other)
       : Node(ctx, loc + other.loc), value(other.value) {};
 
   const SizedType &type() const
@@ -361,7 +361,7 @@ public:
 class None : public Node {
 public:
   explicit None(ASTContext &ctx, Location &&loc) : Node(ctx, std::move(loc)) {};
-  explicit None(ASTContext &ctx, const None &other, const Location &loc)
+  explicit None(ASTContext &ctx, const Location &loc, const None &other)
       : Node(ctx, loc + other.loc) {};
 
   const SizedType &type() const
@@ -382,11 +382,11 @@ public:
 
 class PositionalParameter : public Node {
 public:
-  explicit PositionalParameter(ASTContext &ctx, long n, Location &&loc)
+  explicit PositionalParameter(ASTContext &ctx, Location &&loc, long n)
       : Node(ctx, std::move(loc)), n(n) {};
   explicit PositionalParameter(ASTContext &ctx,
-                               const PositionalParameter &other,
-                               const Location &loc)
+                               const Location &loc,
+                               const PositionalParameter &other)
       : Node(ctx, loc + other.loc), n(other.n) {};
 
   const SizedType &type() const
@@ -413,8 +413,8 @@ public:
       : Node(ctx, std::move(loc)) {};
   explicit PositionalParameterCount(
       ASTContext &ctx,
-      [[maybe_unused]] const PositionalParameterCount &other,
-      const Location &loc)
+      const Location &loc,
+      [[maybe_unused]] const PositionalParameterCount &other)
       : Node(ctx, loc + other.loc) {};
 
   const SizedType &type() const
@@ -436,11 +436,11 @@ public:
 
 class String : public Node {
 public:
-  explicit String(ASTContext &ctx, std::string str, Location &&loc)
+  explicit String(ASTContext &ctx, Location &&loc, std::string str)
       : Node(ctx, std::move(loc)),
         value(std::move(str)),
         string_type(CreateString(value.size() + 1)) {};
-  explicit String(ASTContext &ctx, const String &other, const Location &loc)
+  explicit String(ASTContext &ctx, const Location &loc, const String &other)
       : Node(ctx, loc + other.loc),
         value(other.value),
         string_type(other.string_type) {};
@@ -467,11 +467,11 @@ public:
 
 class Identifier : public Node {
 public:
-  explicit Identifier(ASTContext &ctx, std::string ident, Location &&loc)
+  explicit Identifier(ASTContext &ctx, Location &&loc, std::string ident)
       : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
   explicit Identifier(ASTContext &ctx,
-                      const Identifier &other,
-                      const Location &loc)
+                      const Location &loc,
+                      const Identifier &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
         ident_type(other.ident_type) {};
@@ -498,9 +498,9 @@ public:
 
 class Builtin : public Node {
 public:
-  explicit Builtin(ASTContext &ctx, std::string ident, Location &&loc)
+  explicit Builtin(ASTContext &ctx, Location &&loc, std::string ident)
       : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
-  explicit Builtin(ASTContext &ctx, const Builtin &other, const Location &loc)
+  explicit Builtin(ASTContext &ctx, const Location &loc, const Builtin &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
         probe_id(other.probe_id),
@@ -553,16 +553,16 @@ public:
 class Call : public Node {
 public:
   explicit Call(ASTContext &ctx,
+                Location &&loc,
                 std::string func,
-                ExpressionList &&vargs,
-                Location &&loc)
+                ExpressionList &&vargs)
       : Node(ctx, std::move(loc)),
         func(std::move(func)),
         vargs(std::move(vargs)) {};
-  explicit Call(ASTContext &ctx, const Call &other, const Location &loc)
+  explicit Call(ASTContext &ctx, const Location &loc, const Call &other)
       : Node(ctx, loc + other.loc),
         func(other.func),
-        vargs(clone(ctx, other.vargs, loc)),
+        vargs(clone(ctx, loc, other.vargs)),
         return_type(other.return_type),
         injected_args(other.injected_args) {};
 
@@ -607,12 +607,12 @@ public:
 
 class Sizeof : public Node {
 public:
-  explicit Sizeof(ASTContext &ctx, SizedType type, Location &&loc)
+  explicit Sizeof(ASTContext &ctx, Location &&loc, SizedType type)
       : Node(ctx, std::move(loc)), record(type) {};
-  explicit Sizeof(ASTContext &ctx, Expression expr, Location &&loc)
+  explicit Sizeof(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), record(expr) {};
-  explicit Sizeof(ASTContext &ctx, const Sizeof &other, const Location &loc)
-      : Node(ctx, loc + other.loc), record(clone(ctx, other.record, loc)) {};
+  explicit Sizeof(ASTContext &ctx, const Location &loc, const Sizeof &other)
+      : Node(ctx, loc + other.loc), record(clone(ctx, loc, other.record)) {};
 
   const SizedType &type() const
   {
@@ -650,18 +650,18 @@ public:
 class Offsetof : public Node {
 public:
   explicit Offsetof(ASTContext &ctx,
+                    Location &&loc,
                     SizedType record,
-                    std::vector<std::string> &field,
-                    Location &&loc)
-      : Node(ctx, std::move(loc)), record(record), field(field) {};
+                    std::vector<std::string> field)
+      : Node(ctx, std::move(loc)), record(record), field(std::move(field)) {};
   explicit Offsetof(ASTContext &ctx,
+                    Location &&loc,
                     Expression expr,
-                    std::vector<std::string> &field,
-                    Location &&loc)
-      : Node(ctx, std::move(loc)), record(expr), field(field) {};
-  explicit Offsetof(ASTContext &ctx, const Offsetof &other, const Location &loc)
+                    std::vector<std::string> field)
+      : Node(ctx, std::move(loc)), record(expr), field(std::move(field)) {};
+  explicit Offsetof(ASTContext &ctx, const Location &loc, const Offsetof &other)
       : Node(ctx, loc + other.loc),
-        record(clone(ctx, other.record, loc + other.loc)),
+        record(clone(ctx, loc + other.loc, other.record)),
         field(other.field) {};
 
   const SizedType &type() const
@@ -704,9 +704,9 @@ public:
 
 class Map : public Node {
 public:
-  explicit Map(ASTContext &ctx, std::string ident, Location &&loc)
+  explicit Map(ASTContext &ctx, Location &&loc, std::string ident)
       : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
-  explicit Map(ASTContext &ctx, const Map &other, const Location &loc)
+  explicit Map(ASTContext &ctx, const Location &loc, const Map &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
         key_type(other.key_type),
@@ -738,13 +738,13 @@ public:
 
 class Typeof : public Node {
 public:
-  explicit Typeof(ASTContext &ctx, SizedType record, Location &&loc)
+  explicit Typeof(ASTContext &ctx, Location &&loc, SizedType record)
       : Node(ctx, std::move(loc)), record(record) {};
-  explicit Typeof(ASTContext &ctx, Expression expr, Location &&loc)
+  explicit Typeof(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), record(expr) {};
-  explicit Typeof(ASTContext &ctx, const Typeof &other, const Location &loc)
+  explicit Typeof(ASTContext &ctx, const Location &loc, const Typeof &other)
       : Node(ctx, loc + other.loc),
-        record(clone(ctx, other.record, loc + other.loc)) {};
+        record(clone(ctx, loc + other.loc, other.record)) {};
 
   const SizedType &type() const
   {
@@ -777,11 +777,11 @@ public:
 
 class Typeinfo : public Node {
 public:
-  explicit Typeinfo(ASTContext &ctx, Typeof *typeof, Location &&loc)
+  explicit Typeinfo(ASTContext &ctx, Location &&loc, Typeof *typeof)
       : Node(ctx, std::move(loc)), typeof(typeof) {};
-  explicit Typeinfo(ASTContext &ctx, const Typeinfo &other, const Location &loc)
+  explicit Typeinfo(ASTContext &ctx, const Location &loc, const Typeinfo &other)
       : Node(ctx, loc + other.loc),
-        typeof(clone(ctx, other.typeof, loc + other.loc)) {};
+        typeof(clone(ctx, loc + other.loc, other.typeof)) {};
 
   const SizedType &type() const
   {
@@ -805,11 +805,11 @@ public:
 
 class Comptime : public Node {
 public:
-  explicit Comptime(ASTContext &ctx, Expression expr, Location &&loc)
+  explicit Comptime(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), expr(std::move(expr)) {};
-  explicit Comptime(ASTContext &ctx, const Comptime &other, const Location &loc)
+  explicit Comptime(ASTContext &ctx, const Location &loc, const Comptime &other)
       : Node(ctx, loc + other.loc),
-        expr(clone(ctx, other.expr, loc + other.loc)) {};
+        expr(clone(ctx, loc + other.loc, other.expr)) {};
 
   const SizedType &type() const
   {
@@ -831,17 +831,17 @@ public:
 class MapDeclStatement : public Node {
 public:
   explicit MapDeclStatement(ASTContext &ctx,
+                            Location &&loc,
                             std::string ident,
                             std::string bpf_type,
-                            int max_entries,
-                            Location &&loc)
+                            int max_entries)
       : Node(ctx, std::move(loc)),
         ident(std::move(ident)),
         bpf_type(std::move(bpf_type)),
         max_entries(max_entries) {};
   explicit MapDeclStatement(ASTContext &ctx,
-                            const MapDeclStatement &other,
-                            const Location &loc)
+                            const Location &loc,
+                            const MapDeclStatement &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
         bpf_type(other.bpf_type),
@@ -869,9 +869,9 @@ using MapDeclList = std::vector<MapDeclStatement *>;
 
 class Variable : public Node {
 public:
-  explicit Variable(ASTContext &ctx, std::string ident, Location &&loc)
+  explicit Variable(ASTContext &ctx, Location &&loc, std::string ident)
       : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
-  explicit Variable(ASTContext &ctx, const Variable &other, const Location &loc)
+  explicit Variable(ASTContext &ctx, const Location &loc, const Variable &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
         var_type(other.var_type) {};
@@ -898,13 +898,13 @@ public:
 
 class VariableAddr : public Node {
 public:
-  explicit VariableAddr(ASTContext &ctx, Variable *var, Location &&loc)
+  explicit VariableAddr(ASTContext &ctx, Location &&loc, Variable *var)
       : Node(ctx, std::move(loc)), var(var), var_addr_type(CreateNone()) {};
   explicit VariableAddr(ASTContext &ctx,
-                        const VariableAddr &other,
-                        const Location &loc)
+                        const Location &loc,
+                        const VariableAddr &other)
       : Node(ctx, loc + other.loc),
-        var(clone(ctx, other.var, loc)),
+        var(clone(ctx, loc, other.var)),
         var_addr_type(other.var_addr_type) {};
 
   const SizedType &type() const
@@ -929,10 +929,10 @@ public:
 
 class MapAddr : public Node {
 public:
-  explicit MapAddr(ASTContext &ctx, Map *map, Location &&loc)
+  explicit MapAddr(ASTContext &ctx, Location &&loc, Map *map)
       : Node(ctx, std::move(loc)), map(map) {};
-  explicit MapAddr(ASTContext &ctx, const MapAddr &other, const Location &loc)
-      : Node(ctx, loc + other.loc), map(clone(ctx, other.map, loc)) {};
+  explicit MapAddr(ASTContext &ctx, const Location &loc, const MapAddr &other)
+      : Node(ctx, loc + other.loc), map(clone(ctx, loc, other.map)) {};
 
   const SizedType &type() const
   {
@@ -955,18 +955,18 @@ public:
 class Binop : public Node {
 public:
   explicit Binop(ASTContext &ctx,
+                 Location &&loc,
                  Expression left,
                  Operator op,
-                 Expression right,
-                 Location &&loc)
+                 Expression right)
       : Node(ctx, std::move(loc)),
         left(std::move(left)),
         right(std::move(right)),
         op(op) {};
-  explicit Binop(ASTContext &ctx, const Binop &other, const Location &loc)
+  explicit Binop(ASTContext &ctx, const Location &loc, const Binop &other)
       : Node(ctx, loc + other.loc),
-        left(clone(ctx, other.left, loc)),
-        right(clone(ctx, other.right, loc)),
+        left(clone(ctx, loc, other.left)),
+        right(clone(ctx, loc, other.right)),
         op(other.op),
         result_type(other.result_type) {};
 
@@ -999,11 +999,11 @@ public:
 
 class Unop : public Node {
 public:
-  explicit Unop(ASTContext &ctx, Expression expr, Operator op, Location &&loc)
+  explicit Unop(ASTContext &ctx, Location &&loc, Expression expr, Operator op)
       : Node(ctx, std::move(loc)), expr(std::move(expr)), op(op) {};
-  explicit Unop(ASTContext &ctx, const Unop &other, const Location &loc)
+  explicit Unop(ASTContext &ctx, const Location &loc, const Unop &other)
       : Node(ctx, loc + other.loc),
-        expr(clone(ctx, other.expr, loc)),
+        expr(clone(ctx, loc, other.expr)),
         op(other.op) {};
 
   const SizedType &type() const
@@ -1033,17 +1033,17 @@ public:
 class FieldAccess : public Node {
 public:
   explicit FieldAccess(ASTContext &ctx,
+                       Location &&loc,
                        Expression expr,
-                       std::string field,
-                       Location &&loc)
+                       std::string field)
       : Node(ctx, std::move(loc)),
         expr(std::move(expr)),
         field(std::move(field)) {};
   explicit FieldAccess(ASTContext &ctx,
-                       const FieldAccess &other,
-                       const Location &loc)
+                       const Location &loc,
+                       const FieldAccess &other)
       : Node(ctx, loc + other.loc),
-        expr(clone(ctx, other.expr, loc)),
+        expr(clone(ctx, loc, other.expr)),
         field(other.field),
         field_type(other.field_type) {};
 
@@ -1074,18 +1074,18 @@ public:
 class ArrayAccess : public Node {
 public:
   explicit ArrayAccess(ASTContext &ctx,
+                       Location &&loc,
                        Expression expr,
-                       Expression indexpr,
-                       Location &&loc)
+                       Expression indexpr)
       : Node(ctx, std::move(loc)),
         expr(std::move(expr)),
         indexpr(std::move(indexpr)) {};
   explicit ArrayAccess(ASTContext &ctx,
-                       const ArrayAccess &other,
-                       const Location &loc)
+                       const Location &loc,
+                       const ArrayAccess &other)
       : Node(ctx, loc + other.loc),
-        expr(clone(ctx, other.expr, loc)),
-        indexpr(clone(ctx, other.indexpr, loc)) {};
+        expr(clone(ctx, loc, other.expr)),
+        indexpr(clone(ctx, loc, other.indexpr)) {};
 
   const SizedType &type() const
   {
@@ -1114,15 +1114,15 @@ public:
 class TupleAccess : public Node {
 public:
   explicit TupleAccess(ASTContext &ctx,
+                       Location &&loc,
                        Expression expr,
-                       ssize_t index,
-                       Location &&loc)
+                       ssize_t index)
       : Node(ctx, std::move(loc)), expr(std::move(expr)), index(index) {};
   explicit TupleAccess(ASTContext &ctx,
-                       const TupleAccess &other,
-                       const Location &loc)
+                       const Location &loc,
+                       const TupleAccess &other)
       : Node(ctx, loc + other.loc),
-        expr(clone(ctx, other.expr, loc)),
+        expr(clone(ctx, loc, other.expr)),
         index(other.index),
         element_type(other.element_type) {};
 
@@ -1152,14 +1152,14 @@ public:
 
 class MapAccess : public Node {
 public:
-  explicit MapAccess(ASTContext &ctx, Map *map, Expression key, Location &&loc)
+  explicit MapAccess(ASTContext &ctx, Location &&loc, Map *map, Expression key)
       : Node(ctx, std::move(loc)), map(map), key(std::move(key)) {};
   explicit MapAccess(ASTContext &ctx,
-                     const MapAccess &other,
-                     const Location &loc)
+                     const Location &loc,
+                     const MapAccess &other)
       : Node(ctx, loc + other.loc),
-        map(clone(ctx, other.map, loc)),
-        key(clone(ctx, other.key, loc)) {};
+        map(clone(ctx, loc, other.map)),
+        key(clone(ctx, loc, other.key)) {};
 
   const SizedType &type() const
   {
@@ -1184,14 +1184,14 @@ public:
 class Cast : public Node {
 public:
   explicit Cast(ASTContext &ctx,
+                Location &&loc,
                 Typeof *typeof,
-                Expression expr,
-                Location &&loc)
+                Expression expr)
       : Node(ctx, std::move(loc)), typeof(typeof), expr(std::move(expr)) {};
-  explicit Cast(ASTContext &ctx, const Cast &other, const Location &loc)
+  explicit Cast(ASTContext &ctx, const Location &loc, const Cast &other)
       : Node(ctx, loc + other.loc),
-        typeof(clone(ctx, other.typeof, loc)),
-        expr(clone(ctx, other.expr, loc)) {};
+        typeof(clone(ctx, loc, other.typeof)),
+        expr(clone(ctx, loc, other.expr)) {};
 
   const SizedType &type() const
   {
@@ -1215,10 +1215,10 @@ public:
 
 class Tuple : public Node {
 public:
-  explicit Tuple(ASTContext &ctx, ExpressionList &&elems, Location &&loc)
+  explicit Tuple(ASTContext &ctx, Location &&loc, ExpressionList &&elems)
       : Node(ctx, std::move(loc)), elems(std::move(elems)) {};
-  explicit Tuple(ASTContext &ctx, const Tuple &other, const Location &loc)
-      : Node(ctx, loc + other.loc), elems(clone(ctx, other.elems, loc)) {};
+  explicit Tuple(ASTContext &ctx, const Location &loc, const Tuple &other)
+      : Node(ctx, loc + other.loc), elems(clone(ctx, loc, other.elems)) {};
 
   const SizedType &type() const
   {
@@ -1242,12 +1242,12 @@ public:
 
 class ExprStatement : public Node {
 public:
-  explicit ExprStatement(ASTContext &ctx, Expression expr, Location &&loc)
+  explicit ExprStatement(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), expr(expr) {};
   explicit ExprStatement(ASTContext &ctx,
-                         const ExprStatement &other,
-                         const Location &loc)
-      : Node(ctx, loc + other.loc), expr(clone(ctx, other.expr, loc)) {};
+                         const Location &loc,
+                         const ExprStatement &other)
+      : Node(ctx, loc + other.loc), expr(clone(ctx, loc, other.expr)) {};
 
   bool operator==(const ExprStatement &other) const
   {
@@ -1264,18 +1264,18 @@ public:
 class VarDeclStatement : public Node {
 public:
   explicit VarDeclStatement(ASTContext &ctx,
+                            Location &&loc,
                             Variable *var,
-                            Typeof *typeof,
-                            Location &&loc)
+                            Typeof *typeof)
       : Node(ctx, std::move(loc)), var(var), typeof(typeof) {};
-  explicit VarDeclStatement(ASTContext &ctx, Variable *var, Location &&loc)
+  explicit VarDeclStatement(ASTContext &ctx, Location &&loc, Variable *var)
       : Node(ctx, std::move(loc)), var(var) {};
   explicit VarDeclStatement(ASTContext &ctx,
-                            const VarDeclStatement &other,
-                            const Location &loc)
+                            const Location &loc,
+                            const VarDeclStatement &other)
       : Node(ctx, loc + other.loc),
-        var(clone(ctx, other.var, loc)),
-        typeof(clone(ctx, other.typeof, loc)) {};
+        var(clone(ctx, loc, other.var)),
+        typeof(clone(ctx, loc, other.typeof)) {};
 
   bool operator==(const VarDeclStatement &other) const
   {
@@ -1300,16 +1300,16 @@ public:
 class AssignScalarMapStatement : public Node {
 public:
   explicit AssignScalarMapStatement(ASTContext &ctx,
+                                    Location &&loc,
                                     Map *map,
-                                    Expression expr,
-                                    Location &&loc)
+                                    Expression expr)
       : Node(ctx, std::move(loc)), map(map), expr(std::move(expr)) {};
   explicit AssignScalarMapStatement(ASTContext &ctx,
-                                    const AssignScalarMapStatement &other,
-                                    const Location &loc)
+                                    const Location &loc,
+                                    const AssignScalarMapStatement &other)
       : Node(ctx, loc + other.loc),
-        map(clone(ctx, other.map, loc)),
-        expr(clone(ctx, other.expr, loc)) {};
+        map(clone(ctx, loc, other.map)),
+        expr(clone(ctx, loc, other.expr)) {};
 
   bool operator==(const AssignScalarMapStatement &other) const
   {
@@ -1329,21 +1329,21 @@ public:
 class AssignMapStatement : public Node {
 public:
   explicit AssignMapStatement(ASTContext &ctx,
+                              Location &&loc,
                               Map *map,
                               Expression key,
-                              Expression expr,
-                              Location &&loc)
+                              Expression expr)
       : Node(ctx, std::move(loc)),
         map(map),
         key(std::move(key)),
         expr(std::move(expr)) {};
   explicit AssignMapStatement(ASTContext &ctx,
-                              const AssignMapStatement &other,
-                              const Location &loc)
+                              const Location &loc,
+                              const AssignMapStatement &other)
       : Node(ctx, loc + other.loc),
-        map(clone(ctx, other.map, loc)),
-        key(clone(ctx, other.key, loc)),
-        expr(clone(ctx, other.expr, loc)) {};
+        map(clone(ctx, loc, other.map)),
+        key(clone(ctx, loc, other.key)),
+        expr(clone(ctx, loc, other.expr)) {};
 
   bool operator==(const AssignMapStatement &other) const
   {
@@ -1366,23 +1366,23 @@ public:
 class AssignVarStatement : public Node {
 public:
   explicit AssignVarStatement(ASTContext &ctx,
+                              Location &&loc,
                               Variable *var,
-                              Expression expr,
-                              Location &&loc)
+                              Expression expr)
       : Node(ctx, std::move(loc)), var_decl(var), expr(std::move(expr)) {};
   explicit AssignVarStatement(ASTContext &ctx,
+                              Location &&loc,
                               VarDeclStatement *var_decl_stmt,
-                              Expression expr,
-                              Location &&loc)
+                              Expression expr)
       : Node(ctx, std::move(loc)),
         var_decl(var_decl_stmt),
         expr(std::move(expr)) {};
   explicit AssignVarStatement(ASTContext &ctx,
-                              const AssignVarStatement &other,
-                              const Location &loc)
+                              const Location &loc,
+                              const AssignVarStatement &other)
       : Node(ctx, loc + other.loc),
-        var_decl(clone(ctx, other.var_decl, loc)),
-        expr(clone(ctx, other.expr, loc)) {};
+        var_decl(clone(ctx, loc, other.var_decl)),
+        expr(clone(ctx, loc, other.expr)) {};
 
   Variable *var() const
   {
@@ -1427,25 +1427,25 @@ public:
 class AssignConfigVarStatement : public Node {
 public:
   explicit AssignConfigVarStatement(ASTContext &ctx,
+                                    Location &&loc,
                                     std::string var,
-                                    uint64_t value,
-                                    Location &&loc)
+                                    uint64_t value)
       : Node(ctx, std::move(loc)), var(std::move(var)), value(value) {};
   explicit AssignConfigVarStatement(ASTContext &ctx,
+                                    Location &&loc,
                                     std::string var,
-                                    std::string value,
-                                    Location &&loc)
+                                    std::string value)
       : Node(ctx, std::move(loc)),
         var(std::move(var)),
         value(std::move(value)) {};
   explicit AssignConfigVarStatement(ASTContext &ctx,
+                                    Location &&loc,
                                     std::string var,
-                                    bool value,
-                                    Location &&loc)
+                                    bool value)
       : Node(ctx, std::move(loc)), var(std::move(var)), value(value) {};
   explicit AssignConfigVarStatement(ASTContext &ctx,
-                                    const AssignConfigVarStatement &other,
-                                    const Location &loc)
+                                    const Location &loc,
+                                    const AssignConfigVarStatement &other)
       : Node(ctx, loc + other.loc), var(other.var), value(other.value) {};
 
   bool operator==(const AssignConfigVarStatement &other) const
@@ -1467,18 +1467,18 @@ using ConfigStatementList = std::vector<AssignConfigVarStatement *>;
 class BlockExpr : public Node {
 public:
   explicit BlockExpr(ASTContext &ctx,
+                     Location &&loc,
                      StatementList &&stmts,
-                     Expression expr,
-                     Location &&loc)
+                     Expression expr)
       : Node(ctx, std::move(loc)),
         stmts(std::move(stmts)),
         expr(std::move(expr)) {};
   explicit BlockExpr(ASTContext &ctx,
-                     const BlockExpr &other,
-                     const Location &loc)
+                     const Location &loc,
+                     const BlockExpr &other)
       : Node(ctx, loc + other.loc),
-        stmts(clone(ctx, other.stmts, loc)),
-        expr(clone(ctx, other.expr, loc)) {};
+        stmts(clone(ctx, loc, other.stmts)),
+        expr(clone(ctx, loc, other.expr)) {};
 
   const SizedType &type() const
   {
@@ -1503,14 +1503,14 @@ public:
 class Unroll : public Node {
 public:
   explicit Unroll(ASTContext &ctx,
+                  Location &&loc,
                   Expression expr,
-                  BlockExpr *block,
-                  Location &&loc)
+                  BlockExpr *block)
       : Node(ctx, std::move(loc)), expr(std::move(expr)), block(block) {};
-  explicit Unroll(ASTContext &ctx, const Unroll &other, const Location &loc)
+  explicit Unroll(ASTContext &ctx, const Location &loc, const Unroll &other)
       : Node(ctx, loc + other.loc),
-        expr(clone(ctx, other.expr, loc)),
-        block(clone(ctx, other.block, loc)) {};
+        expr(clone(ctx, loc, other.expr)),
+        block(clone(ctx, loc, other.block)) {};
 
   bool operator==(const Unroll &other) const
   {
@@ -1530,18 +1530,18 @@ public:
 class Jump : public Node {
 public:
   explicit Jump(ASTContext &ctx,
+                Location &&loc,
                 JumpType ident,
-                Expression return_value,
-                Location &&loc)
+                Expression return_value)
       : Node(ctx, std::move(loc)),
         ident(ident),
         return_value(std::move(return_value)) {};
-  explicit Jump(ASTContext &ctx, JumpType ident, Location &&loc)
+  explicit Jump(ASTContext &ctx, Location &&loc, JumpType ident)
       : Node(ctx, std::move(loc)), ident(ident) {};
-  explicit Jump(ASTContext &ctx, const Jump &other, const Location &loc)
+  explicit Jump(ASTContext &ctx, const Location &loc, const Jump &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
-        return_value(clone(ctx, other.return_value, loc)) {};
+        return_value(clone(ctx, loc, other.return_value)) {};
 
   bool operator==(const Jump &other) const
   {
@@ -1561,19 +1561,19 @@ public:
 class IfExpr : public Node {
 public:
   explicit IfExpr(ASTContext &ctx,
+                  Location &&loc,
                   Expression cond,
                   Expression left,
-                  Expression right,
-                  Location &&loc)
+                  Expression right)
       : Node(ctx, std::move(loc)),
         cond(std::move(cond)),
         left(std::move(left)),
         right(std::move(right)) {};
-  explicit IfExpr(ASTContext &ctx, const IfExpr &other, const Location &loc)
+  explicit IfExpr(ASTContext &ctx, const Location &loc, const IfExpr &other)
       : Node(ctx, loc + other.loc),
-        cond(clone(ctx, other.cond, loc)),
-        left(clone(ctx, other.left, loc)),
-        right(clone(ctx, other.right, loc)),
+        cond(clone(ctx, loc, other.cond)),
+        left(clone(ctx, loc, other.left)),
+        right(clone(ctx, loc, other.right)),
         result_type(other.result_type) {};
 
   const SizedType &type() const
@@ -1606,14 +1606,14 @@ public:
 class While : public Node {
 public:
   explicit While(ASTContext &ctx,
+                 Location &&loc,
                  Expression cond,
-                 BlockExpr *block,
-                 Location &&loc)
+                 BlockExpr *block)
       : Node(ctx, std::move(loc)), cond(cond), block(block) {};
-  explicit While(ASTContext &ctx, const While &other, const Location &loc)
+  explicit While(ASTContext &ctx, const Location &loc, const While &other)
       : Node(ctx, loc + other.loc),
-        cond(clone(ctx, other.cond, loc)),
-        block(clone(ctx, other.block, loc)) {};
+        cond(clone(ctx, loc, other.cond)),
+        block(clone(ctx, loc, other.block)) {};
 
   bool operator==(const While &other) const
   {
@@ -1633,14 +1633,14 @@ public:
 class Range : public Node {
 public:
   explicit Range(ASTContext &ctx,
+                 Location &&loc,
                  Expression start,
-                 Expression end,
-                 Location &&loc)
+                 Expression end)
       : Node(ctx, std::move(loc)), start(start), end(end) {};
-  explicit Range(ASTContext &ctx, const Range &other, const Location &loc)
+  explicit Range(ASTContext &ctx, const Location &loc, const Range &other)
       : Node(ctx, loc + other.loc),
-        start(clone(ctx, other.start, loc)),
-        end(clone(ctx, other.end, loc)) {};
+        start(clone(ctx, loc, other.start)),
+        end(clone(ctx, loc, other.end)) {};
 
   bool operator==(const Range &other) const
   {
@@ -1666,19 +1666,19 @@ public:
 class For : public Node {
 public:
   explicit For(ASTContext &ctx,
+               Location &&loc,
                Variable *decl,
                Iterable iterable,
-               BlockExpr *block,
-               Location &&loc)
+               BlockExpr *block)
       : Node(ctx, std::move(loc)),
         decl(decl),
         iterable(iterable),
         block(block) {};
-  explicit For(ASTContext &ctx, const For &other, const Location &loc)
+  explicit For(ASTContext &ctx, const Location &loc, const For &other)
       : Node(ctx, loc + other.loc),
-        decl(clone(ctx, other.decl, loc)),
-        iterable(clone(ctx, other.iterable, loc)),
-        block(clone(ctx, other.block, loc)) {};
+        decl(clone(ctx, loc, other.decl)),
+        iterable(clone(ctx, loc, other.iterable)),
+        block(clone(ctx, loc, other.block)) {};
 
   bool operator==(const For &other) const
   {
@@ -1704,10 +1704,10 @@ public:
 
 class Config : public Node {
 public:
-  explicit Config(ASTContext &ctx, ConfigStatementList &&stmts, Location &&loc)
+  explicit Config(ASTContext &ctx, Location &&loc, ConfigStatementList &&stmts)
       : Node(ctx, std::move(loc)), stmts(std::move(stmts)) {};
-  explicit Config(ASTContext &ctx, const Config &other, const Location &loc)
-      : Node(ctx, loc + other.loc), stmts(clone(ctx, other.stmts, loc)) {};
+  explicit Config(ASTContext &ctx, const Location &loc, const Config &other)
+      : Node(ctx, loc + other.loc), stmts(clone(ctx, loc, other.stmts)) {};
 
   bool operator==(const Config &other) const
   {
@@ -1725,15 +1725,15 @@ class Probe;
 class AttachPoint : public Node {
 public:
   explicit AttachPoint(ASTContext &ctx,
+                       Location &&loc,
                        std::string raw_input,
-                       bool ignore_invalid,
-                       Location &&loc)
+                       bool ignore_invalid)
       : Node(ctx, std::move(loc)),
         raw_input(std::move(raw_input)),
         ignore_invalid(ignore_invalid) {};
   explicit AttachPoint(ASTContext &ctx,
-                       const AttachPoint &other,
-                       const Location &loc)
+                       const Location &loc,
+                       const AttachPoint &other)
       : Node(ctx, loc + other.loc),
         raw_input(other.raw_input),
         provider(other.provider),
@@ -1843,26 +1843,26 @@ inline std::string probe_orig_name(AttachPointList &aps)
 class Probe : public Node {
 public:
   explicit Probe(ASTContext &ctx,
+                 Location &&loc,
                  AttachPointList &&attach_points,
-                 BlockExpr *block,
-                 Location &&loc)
+                 BlockExpr *block)
       : Node(ctx, std::move(loc)),
         attach_points(std::move(attach_points)),
         block(block),
         orig_name(probe_orig_name(this->attach_points)) {};
   explicit Probe(ASTContext &ctx,
+                 Location &&loc,
                  AttachPointList &&attach_points,
                  BlockExpr *block,
-                 std::string orig_name,
-                 Location &&loc)
+                 std::string orig_name)
       : Node(ctx, std::move(loc)),
         attach_points(std::move(attach_points)),
         block(block),
         orig_name(std::move(orig_name)) {};
-  explicit Probe(ASTContext &ctx, const Probe &other, const Location &loc)
+  explicit Probe(ASTContext &ctx, const Location &loc, const Probe &other)
       : Node(ctx, loc + other.loc),
-        attach_points(clone(ctx, other.attach_points, loc)),
-        block(clone(ctx, other.block, loc)),
+        attach_points(clone(ctx, loc, other.attach_points)),
+        block(clone(ctx, loc, other.block)),
         orig_name(other.orig_name),
         index_(other.index_) {};
 
@@ -1900,16 +1900,16 @@ using ProbeList = std::vector<Probe *>;
 class SubprogArg : public Node {
 public:
   explicit SubprogArg(ASTContext &ctx,
+                      Location &&loc,
                       Variable *var,
-                      Typeof *typeof,
-                      Location &&loc)
+                      Typeof *typeof)
       : Node(ctx, std::move(loc)), var(var), typeof(typeof) {};
   explicit SubprogArg(ASTContext &ctx,
-                      const SubprogArg &other,
-                      const Location &loc)
+                      const Location &loc,
+                      const SubprogArg &other)
       : Node(ctx, loc + other.loc),
-        var(clone(ctx, other.var, loc)),
-        typeof(clone(ctx, other.typeof, loc)) {};
+        var(clone(ctx, loc, other.var)),
+        typeof(clone(ctx, loc, other.typeof)) {};
 
   bool operator==(const SubprogArg &other) const
   {
@@ -1930,22 +1930,22 @@ using SubprogArgList = std::vector<SubprogArg *>;
 class Subprog : public Node {
 public:
   explicit Subprog(ASTContext &ctx,
+                   Location &&loc,
                    std::string name,
                    Typeof *return_type,
                    SubprogArgList &&args,
-                   BlockExpr *block,
-                   Location &&loc)
+                   BlockExpr *block)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         return_type(return_type),
         args(std::move(args)),
         block(block) {};
-  explicit Subprog(ASTContext &ctx, const Subprog &other, const Location &loc)
+  explicit Subprog(ASTContext &ctx, const Location &loc, const Subprog &other)
       : Node(ctx, loc + other.loc),
         name(other.name),
-        return_type(clone(ctx, other.return_type, loc)),
-        args(clone(ctx, other.args, loc)),
-        block(clone(ctx, other.block, loc)) {};
+        return_type(clone(ctx, loc, other.return_type)),
+        args(clone(ctx, loc, other.args)),
+        block(clone(ctx, loc, other.block)) {};
 
   bool operator==(const Subprog &other) const
   {
@@ -1972,9 +1972,9 @@ using SubprogList = std::vector<Subprog *>;
 
 class Import : public Node {
 public:
-  explicit Import(ASTContext &ctx, std::string name, Location &&loc)
+  explicit Import(ASTContext &ctx, Location &&loc, std::string name)
       : Node(ctx, std::move(loc)), name(std::move(name)) {};
-  explicit Import(ASTContext &ctx, const Import &other, const Location &loc)
+  explicit Import(ASTContext &ctx, const Location &loc, const Import &other)
       : Node(ctx, loc + other.loc), name(other.name) {};
 
   bool operator==(const Import &other) const
@@ -1993,19 +1993,19 @@ using ImportList = std::vector<Import *>;
 class Macro : public Node {
 public:
   Macro(ASTContext &ctx,
+        Location &&loc,
         std::string name,
         ExpressionList &&vargs,
-        BlockExpr *block,
-        Location &&loc)
+        BlockExpr *block)
       : Node(ctx, std::move(loc)),
         name(std::move(name)),
         vargs(std::move(vargs)),
         block(block) {};
-  explicit Macro(ASTContext &ctx, const Macro &other, const Location &loc)
+  explicit Macro(ASTContext &ctx, const Location &loc, const Macro &other)
       : Node(ctx, loc + other.loc),
         name(other.name),
-        vargs(clone(ctx, other.vargs, loc)),
-        block(clone(ctx, other.block, loc)) {};
+        vargs(clone(ctx, loc, other.vargs)),
+        block(clone(ctx, loc, other.block)) {};
 
   bool operator==(const Macro &other) const
   {
@@ -2036,11 +2036,11 @@ using MacroList = std::vector<Macro *>;
 
 class CStatement : public Node {
 public:
-  CStatement(ASTContext &ctx, std::string data, Location &&loc)
+  CStatement(ASTContext &ctx, Location &&loc, std::string data)
       : Node(ctx, std::move(loc)), data(std::move(data)) {};
   explicit CStatement(ASTContext &ctx,
-                      const CStatement &other,
-                      const Location &loc)
+                      const Location &loc,
+                      const CStatement &other)
       : Node(ctx, loc + other.loc), data(other.data) {};
 
   bool operator==(const CStatement &other) const
@@ -2059,11 +2059,11 @@ using CStatementList = std::vector<CStatement *>;
 class Program : public Node {
 public:
   explicit Program(ASTContext &ctx,
+                   Location &&loc,
                    CStatementList &&c_statements,
                    Config *config,
                    ImportList &&imports,
                    RootStatements &&root_statements,
-                   Location &&loc,
                    std::optional<std::string> &&header = std::nullopt)
       : Node(ctx, std::move(loc)),
         c_statements(std::move(c_statements)),
@@ -2083,15 +2083,15 @@ public:
       }
     }
   };
-  explicit Program(ASTContext &ctx, const Program &other, const Location &loc)
+  explicit Program(ASTContext &ctx, const Location &loc, const Program &other)
       : Node(ctx, loc + other.loc),
-        c_statements(clone(ctx, other.c_statements, loc)),
-        config(clone(ctx, other.config, loc)),
-        imports(clone(ctx, other.imports, loc)),
-        map_decls(clone(ctx, other.map_decls, loc)),
-        macros(clone(ctx, other.macros, loc)),
-        functions(clone(ctx, other.functions, loc)),
-        probes(clone(ctx, other.probes, loc)),
+        c_statements(clone(ctx, loc, other.c_statements)),
+        config(clone(ctx, loc, other.config)),
+        imports(clone(ctx, loc, other.imports)),
+        map_decls(clone(ctx, loc, other.map_decls)),
+        macros(clone(ctx, loc, other.macros)),
+        functions(clone(ctx, loc, other.functions)),
+        probes(clone(ctx, loc, other.probes)),
         header(other.header) {};
 
   bool operator==(const Program &other) const

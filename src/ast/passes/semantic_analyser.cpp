@@ -1162,8 +1162,9 @@ void SemanticAnalyser::visit(Call &call)
 
   if (call.func == "hist") {
     if (call.vargs.size() == 3) {
-      call.vargs.emplace_back(
-          ctx_.make_node<Integer>(0, Location(call.loc))); // default bits is 0
+      call.vargs.emplace_back(ctx_.make_node<Integer>(call.loc, 0)); // default
+                                                                     // bits is
+                                                                     // 0
     } else {
       const auto *bits = call.vargs.at(3).as<Integer>();
       if (!bits) {
@@ -3027,9 +3028,9 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   // stores the underlying structs as pointers anyways. In the future, we will
   // likely want to do this in a different way if we are tracking l-values.
   while (acc.expr.type().IsPtrTy()) {
-    auto *unop = ctx_.make_node<Unop>(acc.expr,
-                                      Operator::MUL,
-                                      Location(acc.expr.node().loc));
+    auto *unop = ctx_.make_node<Unop>(acc.expr.node().loc,
+                                      acc.expr,
+                                      Operator::MUL);
     acc.expr.value = unop;
     visit(acc.expr);
   }
@@ -3315,15 +3316,17 @@ void SemanticAnalyser::visit(Expression &expr)
   if (auto *szof = expr.as<Sizeof>()) {
     const auto v = check(*szof);
     if (v) {
-      expr.value = ctx_.make_node<Integer>(*v,
-                                           Location(szof->loc),
+      expr.value = ctx_.make_node<Integer>(szof->loc,
+                                           *v,
+
                                            /*force_unsigned=*/true);
     }
   } else if (auto *offof = expr.as<Offsetof>()) {
     const auto v = check(*offof);
     if (v) {
-      expr.value = ctx_.make_node<Integer>(*v,
-                                           Location(offof->loc),
+      expr.value = ctx_.make_node<Integer>(offof->loc,
+                                           *v,
+
                                            /*force_unsigned=*/true);
     }
   } else if (auto *type_id = expr.as<Typeinfo>()) {
@@ -3331,13 +3334,12 @@ void SemanticAnalyser::visit(Expression &expr)
     if (!ty.IsNoneTy()) {
       // We currently lack a globally-unique enumeration of types. For
       // simplicity, just use the type string with a placeholder identifier.
-      auto *id = ctx_.make_node<Integer>(0, Location(type_id->loc));
-      auto *base_ty = ctx_.make_node<String>(to_string(ty.GetTy()),
-                                             Location(type_id->loc));
-      auto *full_ty = ctx_.make_node<String>(typestr(ty),
-                                             Location(type_id->loc));
-      expr.value = ctx_.make_node<Tuple>(ExpressionList{ id, base_ty, full_ty },
-                                         Location(type_id->loc));
+      auto *id = ctx_.make_node<Integer>(type_id->loc, 0);
+      auto *base_ty = ctx_.make_node<String>(type_id->loc,
+                                             to_string(ty.GetTy()));
+      auto *full_ty = ctx_.make_node<String>(type_id->loc, typestr(ty));
+      expr.value = ctx_.make_node<Tuple>(
+          type_id->loc, ExpressionList{ id, base_ty, full_ty });
     }
   }
 }
@@ -3383,11 +3385,10 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   // @y`
   const bool map_contains_int = map_type_before && map_type_before->IsIntTy();
   if (map_contains_int && assignment.expr.type().IsCastableMapTy()) {
-    auto *typeof = ctx_.make_node<Typeof>(*map_type_before,
-                                          Location(assignment.loc));
-    assignment.expr = ctx_.make_node<Cast>(typeof,
-                                           assignment.expr,
-                                           Location(assignment.loc));
+    auto *typeof = ctx_.make_node<Typeof>(assignment.loc, *map_type_before);
+    assignment.expr = ctx_.make_node<Cast>(assignment.loc,
+                                           typeof,
+                                           assignment.expr);
   }
 
   if (!is_valid_assignment(assignment.expr, map_type_before == nullptr)) {
@@ -3493,11 +3494,10 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
 
   if (assignment.expr.type().IsCastableMapTy()) {
-    auto *typeof = ctx_.make_node<Typeof>(CreateInt64(),
-                                          Location(assignment.loc));
-    assignment.expr = ctx_.make_node<Cast>(typeof,
-                                           assignment.expr,
-                                           Location(assignment.loc));
+    auto *typeof = ctx_.make_node<Typeof>(assignment.loc, CreateInt64());
+    assignment.expr = ctx_.make_node<Cast>(assignment.loc,
+                                           typeof,
+                                           assignment.expr);
   }
 
   if (!is_valid_assignment(assignment.expr, false)) {
@@ -3545,11 +3545,10 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           } else {
             assignTy = storedTy;
             auto *typeof = ctx_.make_node<Typeof>(
-                CreateInteger(storedTy.GetSize() * 8, true),
-                Location(assignment.loc));
-            assignment.expr = ctx_.make_node<Cast>(typeof,
-                                                   assignment.expr,
-                                                   Location(assignment.loc));
+                assignment.loc, CreateInteger(storedTy.GetSize() * 8, true));
+            assignment.expr = ctx_.make_node<Cast>(assignment.loc,
+                                                   typeof,
+                                                   assignment.expr);
             visit(assignment.expr);
           }
         }
@@ -3566,11 +3565,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         if (can_fit) {
           assignTy = storedTy;
           auto *typeof = ctx_.make_node<Typeof>(
-              CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()),
-              Location(assignment.loc));
-          assignment.expr = ctx_.make_node<Cast>(typeof,
-                                                 assignment.expr,
-                                                 Location(assignment.loc));
+              assignment.loc,
+              CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()));
+          assignment.expr = ctx_.make_node<Cast>(assignment.loc,
+                                                 typeof,
+                                                 assignment.expr);
           visit(assignment.expr);
         } else {
           assignment.addError()

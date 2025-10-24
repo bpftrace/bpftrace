@@ -52,8 +52,11 @@ public:
 
 class ScriptObject {
 public:
-  ScriptObject(ASTContext &&ast, bool internal)
-      : ast(std::move(ast)), internal(internal) {};
+  ScriptObject(Node &node, ASTContext &&ast, bool internal)
+      : node(node), ast(std::move(ast)), internal(internal) {};
+
+  // Per above, the original node.
+  Node &node;
 
   // The parsed source context.
   ASTContext ast;

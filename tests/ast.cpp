@@ -23,35 +23,35 @@ std::vector<T> variants(ASTContext &c, SourceLocation l);
 template <>
 std::vector<Integer *> variants<Integer>(ASTContext &c, SourceLocation l)
 {
-  return { c.make_node<Integer>(42UL, l),
-           c.make_node<Integer>(24UL, l),
-           c.make_node<Integer>(100UL, l),
-           c.make_node<Integer>(0UL, l) };
+  return { c.make_node<Integer>(l, 42UL),
+           c.make_node<Integer>(l, 24UL),
+           c.make_node<Integer>(l, 100UL),
+           c.make_node<Integer>(l, 0UL) };
 }
 
 template <>
 std::vector<NegativeInteger *> variants<NegativeInteger>(ASTContext &c,
                                                          SourceLocation l)
 {
-  return { c.make_node<NegativeInteger>(-42L, l),
-           c.make_node<NegativeInteger>(-24L, l),
-           c.make_node<NegativeInteger>(-100L, l),
-           c.make_node<NegativeInteger>(-1L, l) };
+  return { c.make_node<NegativeInteger>(l, -42L),
+           c.make_node<NegativeInteger>(l, -24L),
+           c.make_node<NegativeInteger>(l, -100L),
+           c.make_node<NegativeInteger>(l, -1L) };
 }
 
 template <>
 std::vector<Boolean *> variants<Boolean>(ASTContext &c, SourceLocation l)
 {
-  return { c.make_node<Boolean>(true, l), c.make_node<Boolean>(false, l) };
+  return { c.make_node<Boolean>(l, true), c.make_node<Boolean>(l, false) };
 }
 
 template <>
 std::vector<String *> variants<String>(ASTContext &c, SourceLocation l)
 {
-  return { c.make_node<String>(std::string("test"), l),
-           c.make_node<String>(std::string("different"), l),
-           c.make_node<String>(std::string("another"), l),
-           c.make_node<String>(std::string(""), l) };
+  return { c.make_node<String>(l, std::string("test")),
+           c.make_node<String>(l, std::string("different")),
+           c.make_node<String>(l, std::string("another")),
+           c.make_node<String>(l, std::string("")) };
 }
 
 template <>
@@ -63,37 +63,37 @@ std::vector<None *> variants<None>(ASTContext &c, SourceLocation l)
 template <>
 std::vector<Identifier *> variants<Identifier>(ASTContext &c, SourceLocation l)
 {
-  return { c.make_node<Identifier>(std::string("var"), l),
-           c.make_node<Identifier>(std::string("other"), l),
-           c.make_node<Identifier>(std::string("xyz"), l),
-           c.make_node<Identifier>(std::string("_test"), l) };
+  return { c.make_node<Identifier>(l, std::string("var")),
+           c.make_node<Identifier>(l, std::string("other")),
+           c.make_node<Identifier>(l, std::string("xyz")),
+           c.make_node<Identifier>(l, std::string("_test")) };
 }
 
 template <>
 std::vector<Builtin *> variants<Builtin>(ASTContext &c, SourceLocation l)
 {
-  return { c.make_node<Builtin>(std::string("pid"), l),
-           c.make_node<Builtin>(std::string("tid"), l),
-           c.make_node<Builtin>(std::string("uid"), l),
-           c.make_node<Builtin>(std::string("comm"), l) };
+  return { c.make_node<Builtin>(l, std::string("pid")),
+           c.make_node<Builtin>(l, std::string("tid")),
+           c.make_node<Builtin>(l, std::string("uid")),
+           c.make_node<Builtin>(l, std::string("comm")) };
 }
 
 template <>
 std::vector<Variable *> variants<Variable>(ASTContext &c, SourceLocation l)
 {
-  return { c.make_node<Variable>(std::string("$var"), l),
-           c.make_node<Variable>(std::string("$other"), l),
-           c.make_node<Variable>(std::string("$x"), l),
-           c.make_node<Variable>(std::string("$test123"), l) };
+  return { c.make_node<Variable>(l, std::string("$var")),
+           c.make_node<Variable>(l, std::string("$other")),
+           c.make_node<Variable>(l, std::string("$x")),
+           c.make_node<Variable>(l, std::string("$test123")) };
 }
 
 template <>
 std::vector<Map *> variants<Map>(ASTContext &c, SourceLocation l)
 {
-  return { c.make_node<Map>(std::string("@map"), l),
-           c.make_node<Map>(std::string("@other"), l),
-           c.make_node<Map>(std::string("@data"), l),
-           c.make_node<Map>(std::string("@count"), l) };
+  return { c.make_node<Map>(l, std::string("@map")),
+           c.make_node<Map>(l, std::string("@other")),
+           c.make_node<Map>(l, std::string("@data")),
+           c.make_node<Map>(l, std::string("@count")) };
 }
 
 template <>
@@ -101,10 +101,10 @@ std::vector<PositionalParameter *> variants<PositionalParameter>(
     ASTContext &c,
     SourceLocation l)
 {
-  return { c.make_node<PositionalParameter>(1L, l),
-           c.make_node<PositionalParameter>(2L, l),
-           c.make_node<PositionalParameter>(0L, l),
-           c.make_node<PositionalParameter>(10L, l) };
+  return { c.make_node<PositionalParameter>(l, 1L),
+           c.make_node<PositionalParameter>(l, 2L),
+           c.make_node<PositionalParameter>(l, 0L),
+           c.make_node<PositionalParameter>(l, 10L) };
 }
 
 template <>
@@ -119,31 +119,31 @@ template <>
 std::vector<Call *> variants<Call>(ASTContext &c, SourceLocation l)
 {
   ExpressionList args1;
-  args1.emplace_back(c.make_node<Integer>(1UL, l));
+  args1.emplace_back(c.make_node<Integer>(l, 1UL));
 
   ExpressionList args2;
-  args2.emplace_back(c.make_node<String>(std::string("test"), l));
+  args2.emplace_back(c.make_node<String>(l, std::string("test")));
 
   ExpressionList args3;
-  args3.emplace_back(c.make_node<Integer>(2UL, l));
-  args3.emplace_back(c.make_node<String>(std::string("arg"), l));
+  args3.emplace_back(c.make_node<Integer>(l, 2UL));
+  args3.emplace_back(c.make_node<String>(l, std::string("arg")));
 
   ExpressionList args4;
 
-  return { c.make_node<Call>(std::string("printf"), std::move(args1), l),
-           c.make_node<Call>(std::string("count"), std::move(args4), l),
-           c.make_node<Call>(std::string("printf"), std::move(args2), l),
-           c.make_node<Call>(std::string("printf"), std::move(args3), l) };
+  return { c.make_node<Call>(l, std::string("printf"), std::move(args1)),
+           c.make_node<Call>(l, std::string("count"), std::move(args4)),
+           c.make_node<Call>(l, std::string("printf"), std::move(args2)),
+           c.make_node<Call>(l, std::string("printf"), std::move(args3)) };
 }
 
 template <>
 std::vector<Sizeof *> variants<Sizeof>(ASTContext &c, SourceLocation l)
 {
-  Expression expr = c.make_node<Integer>(42UL, l);
-  return { c.make_node<Sizeof>(CreateInt32(), l),
-           c.make_node<Sizeof>(CreateInt64(), l),
-           c.make_node<Sizeof>(CreateUInt32(), l),
-           c.make_node<Sizeof>(std::move(expr), l) };
+  Expression expr = c.make_node<Integer>(l, 42UL);
+  return { c.make_node<Sizeof>(l, CreateInt32()),
+           c.make_node<Sizeof>(l, CreateInt64()),
+           c.make_node<Sizeof>(l, CreateUInt32()),
+           c.make_node<Sizeof>(l, std::move(expr)) };
 }
 
 template <>
@@ -152,89 +152,89 @@ std::vector<Offsetof *> variants<Offsetof>(ASTContext &c, SourceLocation l)
   std::vector<std::string> field1 = { "field" };
   std::vector<std::string> field2 = { "other" };
   std::vector<std::string> field3 = { "field", "nested" };
-  Expression expr = c.make_node<Variable>(std::string("$var"), l);
+  Expression expr = c.make_node<Variable>(l, std::string("$var"));
   std::vector<std::string> field4 = { "member" };
 
-  return { c.make_node<Offsetof>(CreateInteger(32, false), field1, l),
-           c.make_node<Offsetof>(CreateInteger(64, false), field2, l),
-           c.make_node<Offsetof>(CreateString(64), field3, l),
-           c.make_node<Offsetof>(std::move(expr), field4, l) };
+  return { c.make_node<Offsetof>(l, CreateInteger(32, false), field1),
+           c.make_node<Offsetof>(l, CreateInteger(64, false), field2),
+           c.make_node<Offsetof>(l, CreateString(64), field3),
+           c.make_node<Offsetof>(l, std::move(expr), field4) };
 }
 
 template <>
 std::vector<VariableAddr *> variants<VariableAddr>(ASTContext &c,
                                                    SourceLocation l)
 {
-  auto *var1 = c.make_node<Variable>(std::string("$var"), l);
-  auto *var2 = c.make_node<Variable>(std::string("$other"), l);
-  auto *var3 = c.make_node<Variable>(std::string("$x"), l);
+  auto *var1 = c.make_node<Variable>(l, std::string("$var"));
+  auto *var2 = c.make_node<Variable>(l, std::string("$other"));
+  auto *var3 = c.make_node<Variable>(l, std::string("$x"));
 
-  return { c.make_node<VariableAddr>(var1, l),
-           c.make_node<VariableAddr>(var2, l),
-           c.make_node<VariableAddr>(var3, l) };
+  return { c.make_node<VariableAddr>(l, var1),
+           c.make_node<VariableAddr>(l, var2),
+           c.make_node<VariableAddr>(l, var3) };
 }
 
 template <>
 std::vector<MapAddr *> variants<MapAddr>(ASTContext &c, SourceLocation l)
 {
-  auto *map1 = c.make_node<Map>(std::string("@map"), l);
-  auto *map2 = c.make_node<Map>(std::string("@other"), l);
-  auto *map3 = c.make_node<Map>(std::string("@data"), l);
+  auto *map1 = c.make_node<Map>(l, std::string("@map"));
+  auto *map2 = c.make_node<Map>(l, std::string("@other"));
+  auto *map3 = c.make_node<Map>(l, std::string("@data"));
 
-  return { c.make_node<MapAddr>(map1, l),
-           c.make_node<MapAddr>(map2, l),
-           c.make_node<MapAddr>(map3, l) };
+  return { c.make_node<MapAddr>(l, map1),
+           c.make_node<MapAddr>(l, map2),
+           c.make_node<MapAddr>(l, map3) };
 }
 
 template <>
 std::vector<Binop *> variants<Binop>(ASTContext &c, SourceLocation l)
 {
-  Expression left1 = c.make_node<Integer>(1UL, l);
-  Expression right1 = c.make_node<Integer>(2UL, l);
+  Expression left1 = c.make_node<Integer>(l, 1UL);
+  Expression right1 = c.make_node<Integer>(l, 2UL);
 
-  Expression left2 = c.make_node<Integer>(3UL, l);
-  Expression right2 = c.make_node<Integer>(4UL, l);
+  Expression left2 = c.make_node<Integer>(l, 3UL);
+  Expression right2 = c.make_node<Integer>(l, 4UL);
 
-  Expression left3 = c.make_node<Integer>(1UL, l);
-  Expression right3 = c.make_node<Integer>(2UL, l);
+  Expression left3 = c.make_node<Integer>(l, 1UL);
+  Expression right3 = c.make_node<Integer>(l, 2UL);
 
-  Expression left4 = c.make_node<Variable>(std::string("$x"), l);
-  Expression right4 = c.make_node<Integer>(5UL, l);
+  Expression left4 = c.make_node<Variable>(l, std::string("$x"));
+  Expression right4 = c.make_node<Integer>(l, 5UL);
 
   return {
-    c.make_node<Binop>(std::move(left1), Operator::PLUS, std::move(right1), l),
-    c.make_node<Binop>(std::move(left2), Operator::MINUS, std::move(right2), l),
-    c.make_node<Binop>(std::move(left3), Operator::MUL, std::move(right3), l),
-    c.make_node<Binop>(std::move(left4), Operator::PLUS, std::move(right4), l)
+    c.make_node<Binop>(l, std::move(left1), Operator::PLUS, std::move(right1)),
+    c.make_node<Binop>(l, std::move(left2), Operator::MINUS, std::move(right2)),
+    c.make_node<Binop>(l, std::move(left3), Operator::MUL, std::move(right3)),
+    c.make_node<Binop>(l, std::move(left4), Operator::PLUS, std::move(right4))
   };
 }
 
 template <>
 std::vector<Unop *> variants<Unop>(ASTContext &c, SourceLocation l)
 {
-  Expression expr1 = c.make_node<Integer>(42UL, l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
-  Expression expr3 = c.make_node<Variable>(std::string("$x"), l);
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
+  Expression expr3 = c.make_node<Variable>(l, std::string("$x"));
 
-  return { c.make_node<Unop>(std::move(expr1), Operator::LNOT, l),
-           c.make_node<Unop>(std::move(expr2), Operator::BNOT, l),
-           c.make_node<Unop>(std::move(expr3), Operator::LNOT, l) };
+  return { c.make_node<Unop>(l, std::move(expr1), Operator::LNOT),
+           c.make_node<Unop>(l, std::move(expr2), Operator::BNOT),
+           c.make_node<Unop>(l, std::move(expr3), Operator::LNOT) };
 }
 
 template <>
 std::vector<FieldAccess *> variants<FieldAccess>(ASTContext &c,
                                                  SourceLocation l)
 {
-  Expression expr1 = c.make_node<Variable>(std::string("$var"), l);
-  Expression expr2 = c.make_node<Variable>(std::string("$other"), l);
-  Expression expr3 = c.make_node<Variable>(std::string("$var"), l);
-  Expression expr4 = c.make_node<Builtin>(std::string("pid"), l);
+  Expression expr1 = c.make_node<Variable>(l, std::string("$var"));
+  Expression expr2 = c.make_node<Variable>(l, std::string("$other"));
+  Expression expr3 = c.make_node<Variable>(l, std::string("$var"));
+  Expression expr4 = c.make_node<Builtin>(l, std::string("pid"));
 
   return {
-    c.make_node<FieldAccess>(std::move(expr1), std::string("field"), l),
-    c.make_node<FieldAccess>(std::move(expr2), std::string("field"), l),
-    c.make_node<FieldAccess>(std::move(expr3), std::string("other"), l),
-    c.make_node<FieldAccess>(std::move(expr4), std::string("member"), l)
+    c.make_node<FieldAccess>(l, std::move(expr1), std::string("field")),
+    c.make_node<FieldAccess>(l, std::move(expr2), std::string("field")),
+    c.make_node<FieldAccess>(l, std::move(expr3), std::string("other")),
+    c.make_node<FieldAccess>(l, std::move(expr4), std::string("member"))
   };
 }
 
@@ -242,223 +242,223 @@ template <>
 std::vector<ArrayAccess *> variants<ArrayAccess>(ASTContext &c,
                                                  SourceLocation l)
 {
-  Expression expr1 = c.make_node<Variable>(std::string("$arr"), l);
-  Expression index1 = c.make_node<Integer>(0UL, l);
+  Expression expr1 = c.make_node<Variable>(l, std::string("$arr"));
+  Expression index1 = c.make_node<Integer>(l, 0UL);
 
-  Expression expr2 = c.make_node<Variable>(std::string("$other"), l);
-  Expression index2 = c.make_node<Integer>(1UL, l);
+  Expression expr2 = c.make_node<Variable>(l, std::string("$other"));
+  Expression index2 = c.make_node<Integer>(l, 1UL);
 
-  Expression expr3 = c.make_node<Variable>(std::string("$arr"), l);
-  Expression index3 = c.make_node<Integer>(2UL, l);
+  Expression expr3 = c.make_node<Variable>(l, std::string("$arr"));
+  Expression index3 = c.make_node<Integer>(l, 2UL);
 
-  Expression expr4 = c.make_node<Map>(std::string("@data"), l);
-  Expression index4 = c.make_node<Variable>(std::string("$key"), l);
+  Expression expr4 = c.make_node<Map>(l, std::string("@data"));
+  Expression index4 = c.make_node<Variable>(l, std::string("$key"));
 
-  return { c.make_node<ArrayAccess>(std::move(expr1), std::move(index1), l),
-           c.make_node<ArrayAccess>(std::move(expr2), std::move(index2), l),
-           c.make_node<ArrayAccess>(std::move(expr3), std::move(index3), l),
-           c.make_node<ArrayAccess>(std::move(expr4), std::move(index4), l) };
+  return { c.make_node<ArrayAccess>(l, std::move(expr1), std::move(index1)),
+           c.make_node<ArrayAccess>(l, std::move(expr2), std::move(index2)),
+           c.make_node<ArrayAccess>(l, std::move(expr3), std::move(index3)),
+           c.make_node<ArrayAccess>(l, std::move(expr4), std::move(index4)) };
 }
 
 template <>
 std::vector<TupleAccess *> variants<TupleAccess>(ASTContext &c,
                                                  SourceLocation l)
 {
-  Expression expr1 = c.make_node<Variable>(std::string("$tuple"), l);
-  Expression expr2 = c.make_node<Variable>(std::string("$other"), l);
-  Expression expr3 = c.make_node<Variable>(std::string("$tuple"), l);
-  Expression expr4 = c.make_node<Variable>(std::string("$xyz"), l);
+  Expression expr1 = c.make_node<Variable>(l, std::string("$tuple"));
+  Expression expr2 = c.make_node<Variable>(l, std::string("$other"));
+  Expression expr3 = c.make_node<Variable>(l, std::string("$tuple"));
+  Expression expr4 = c.make_node<Variable>(l, std::string("$xyz"));
 
-  return { c.make_node<TupleAccess>(std::move(expr1), 0, l),
-           c.make_node<TupleAccess>(std::move(expr2), 0, l),
-           c.make_node<TupleAccess>(std::move(expr3), 1, l),
-           c.make_node<TupleAccess>(std::move(expr4), 2, l) };
+  return { c.make_node<TupleAccess>(l, std::move(expr1), 0),
+           c.make_node<TupleAccess>(l, std::move(expr2), 0),
+           c.make_node<TupleAccess>(l, std::move(expr3), 1),
+           c.make_node<TupleAccess>(l, std::move(expr4), 2) };
 }
 
 template <>
 std::vector<MapAccess *> variants<MapAccess>(ASTContext &c, SourceLocation l)
 {
-  auto *map1 = c.make_node<Map>(std::string("@map"), l);
-  Expression key1 = c.make_node<Integer>(1UL, l);
+  auto *map1 = c.make_node<Map>(l, std::string("@map"));
+  Expression key1 = c.make_node<Integer>(l, 1UL);
 
-  auto *map2 = c.make_node<Map>(std::string("@other"), l);
-  Expression key2 = c.make_node<Integer>(2UL, l);
+  auto *map2 = c.make_node<Map>(l, std::string("@other"));
+  Expression key2 = c.make_node<Integer>(l, 2UL);
 
-  auto *map3 = c.make_node<Map>(std::string("@map"), l);
-  Expression key3 = c.make_node<String>(std::string("key"), l);
+  auto *map3 = c.make_node<Map>(l, std::string("@map"));
+  Expression key3 = c.make_node<String>(l, std::string("key"));
 
-  auto *map4 = c.make_node<Map>(std::string("@data"), l);
-  Expression key4 = c.make_node<Variable>(std::string("$key"), l);
+  auto *map4 = c.make_node<Map>(l, std::string("@data"));
+  Expression key4 = c.make_node<Variable>(l, std::string("$key"));
 
-  return { c.make_node<MapAccess>(map1, std::move(key1), l),
-           c.make_node<MapAccess>(map2, std::move(key2), l),
-           c.make_node<MapAccess>(map3, std::move(key3), l),
-           c.make_node<MapAccess>(map4, std::move(key4), l) };
+  return { c.make_node<MapAccess>(l, map1, std::move(key1)),
+           c.make_node<MapAccess>(l, map2, std::move(key2)),
+           c.make_node<MapAccess>(l, map3, std::move(key3)),
+           c.make_node<MapAccess>(l, map4, std::move(key4)) };
 }
 
 template <>
 std::vector<Cast *> variants<Cast>(ASTContext &c, SourceLocation l)
 {
-  auto *typeof1 = c.make_node<Typeof>(CreateInt32(), l);
-  Expression expr1 = c.make_node<Integer>(42UL, l);
+  auto *typeof1 = c.make_node<Typeof>(l, CreateInt32());
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
 
-  auto *typeof2 = c.make_node<Typeof>(CreateInt64(), l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
+  auto *typeof2 = c.make_node<Typeof>(l, CreateInt64());
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
 
-  auto *typeof3 = c.make_node<Typeof>(CreateInt32(), l);
-  Expression expr3 = c.make_node<Variable>(std::string("$x"), l);
+  auto *typeof3 = c.make_node<Typeof>(l, CreateInt32());
+  Expression expr3 = c.make_node<Variable>(l, std::string("$x"));
 
-  auto *typeof4 = c.make_node<Typeof>(CreateUInt32(), l);
-  Expression expr4 = c.make_node<Integer>(42UL, l);
+  auto *typeof4 = c.make_node<Typeof>(l, CreateUInt32());
+  Expression expr4 = c.make_node<Integer>(l, 42UL);
 
-  return { c.make_node<Cast>(typeof1, std::move(expr1), l),
-           c.make_node<Cast>(typeof2, std::move(expr2), l),
-           c.make_node<Cast>(typeof3, std::move(expr3), l),
-           c.make_node<Cast>(typeof4, std::move(expr4), l) };
+  return { c.make_node<Cast>(l, typeof1, std::move(expr1)),
+           c.make_node<Cast>(l, typeof2, std::move(expr2)),
+           c.make_node<Cast>(l, typeof3, std::move(expr3)),
+           c.make_node<Cast>(l, typeof4, std::move(expr4)) };
 }
 
 template <>
 std::vector<Tuple *> variants<Tuple>(ASTContext &c, SourceLocation l)
 {
   ExpressionList elems1;
-  elems1.emplace_back(c.make_node<Integer>(1UL, l));
-  elems1.emplace_back(c.make_node<Integer>(2UL, l));
+  elems1.emplace_back(c.make_node<Integer>(l, 1UL));
+  elems1.emplace_back(c.make_node<Integer>(l, 2UL));
 
   ExpressionList elems2;
-  elems2.emplace_back(c.make_node<Integer>(3UL, l));
-  elems2.emplace_back(c.make_node<Integer>(4UL, l));
+  elems2.emplace_back(c.make_node<Integer>(l, 3UL));
+  elems2.emplace_back(c.make_node<Integer>(l, 4UL));
 
   ExpressionList elems3;
-  elems3.emplace_back(c.make_node<String>(std::string("a"), l));
-  elems3.emplace_back(c.make_node<String>(std::string("b"), l));
+  elems3.emplace_back(c.make_node<String>(l, std::string("a")));
+  elems3.emplace_back(c.make_node<String>(l, std::string("b")));
 
   ExpressionList elems4;
-  elems4.emplace_back(c.make_node<Integer>(1UL, l));
-  elems4.emplace_back(c.make_node<String>(std::string("mixed"), l));
-  elems4.emplace_back(c.make_node<Boolean>(true, l));
+  elems4.emplace_back(c.make_node<Integer>(l, 1UL));
+  elems4.emplace_back(c.make_node<String>(l, std::string("mixed")));
+  elems4.emplace_back(c.make_node<Boolean>(l, true));
 
-  return { c.make_node<Tuple>(std::move(elems1), l),
-           c.make_node<Tuple>(std::move(elems2), l),
-           c.make_node<Tuple>(std::move(elems3), l),
-           c.make_node<Tuple>(std::move(elems4), l) };
+  return { c.make_node<Tuple>(l, std::move(elems1)),
+           c.make_node<Tuple>(l, std::move(elems2)),
+           c.make_node<Tuple>(l, std::move(elems3)),
+           c.make_node<Tuple>(l, std::move(elems4)) };
 }
 
 template <>
 std::vector<IfExpr *> variants<IfExpr>(ASTContext &c, SourceLocation l)
 {
-  Expression cond1 = c.make_node<Boolean>(true, l);
-  Expression left1 = c.make_node<Integer>(1UL, l);
-  Expression right1 = c.make_node<Integer>(2UL, l);
+  Expression cond1 = c.make_node<Boolean>(l, true);
+  Expression left1 = c.make_node<Integer>(l, 1UL);
+  Expression right1 = c.make_node<Integer>(l, 2UL);
 
-  Expression cond2 = c.make_node<Boolean>(false, l);
-  Expression left2 = c.make_node<Integer>(3UL, l);
-  Expression right2 = c.make_node<Integer>(4UL, l);
+  Expression cond2 = c.make_node<Boolean>(l, false);
+  Expression left2 = c.make_node<Integer>(l, 3UL);
+  Expression right2 = c.make_node<Integer>(l, 4UL);
 
-  Expression cond3 = c.make_node<Variable>(std::string("$flag"), l);
-  Expression left3 = c.make_node<String>(std::string("yes"), l);
-  Expression right3 = c.make_node<String>(std::string("no"), l);
+  Expression cond3 = c.make_node<Variable>(l, std::string("$flag"));
+  Expression left3 = c.make_node<String>(l, std::string("yes"));
+  Expression right3 = c.make_node<String>(l, std::string("no"));
 
-  Expression cond4 = c.make_node<Boolean>(true, l);
-  Expression left4 = c.make_node<Integer>(10UL, l);
-  Expression right4 = c.make_node<Integer>(20UL, l);
+  Expression cond4 = c.make_node<Boolean>(l, true);
+  Expression left4 = c.make_node<Integer>(l, 10UL);
+  Expression right4 = c.make_node<Integer>(l, 20UL);
 
   return { c.make_node<IfExpr>(
-               std::move(cond1), std::move(left1), std::move(right1), l),
+               l, std::move(cond1), std::move(left1), std::move(right1)),
            c.make_node<IfExpr>(
-               std::move(cond2), std::move(left2), std::move(right2), l),
+               l, std::move(cond2), std::move(left2), std::move(right2)),
            c.make_node<IfExpr>(
-               std::move(cond3), std::move(left3), std::move(right3), l),
+               l, std::move(cond3), std::move(left3), std::move(right3)),
            c.make_node<IfExpr>(
-               std::move(cond4), std::move(left4), std::move(right4), l) };
+               l, std::move(cond4), std::move(left4), std::move(right4)) };
 }
 
 template <>
 std::vector<BlockExpr *> variants<BlockExpr>(ASTContext &c, SourceLocation l)
 {
   StatementList stmts1;
-  Expression expr1 = c.make_node<Integer>(42UL, l);
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
 
   StatementList stmts2;
-  Expression expr2 = c.make_node<Integer>(24UL, l);
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
 
   StatementList stmts3;
-  Expression stmt_expr = c.make_node<Variable>(std::string("$x"), l);
-  stmts3.emplace_back(c.make_node<ExprStatement>(std::move(stmt_expr), l));
-  Expression expr3 = c.make_node<String>(std::string("result"), l);
+  Expression stmt_expr = c.make_node<Variable>(l, std::string("$x"));
+  stmts3.emplace_back(c.make_node<ExprStatement>(l, std::move(stmt_expr)));
+  Expression expr3 = c.make_node<String>(l, std::string("result"));
 
   StatementList stmts4;
-  Expression expr4 = c.make_node<Boolean>(true, l);
+  Expression expr4 = c.make_node<Boolean>(l, true);
 
-  return { c.make_node<BlockExpr>(std::move(stmts1), std::move(expr1), l),
-           c.make_node<BlockExpr>(std::move(stmts2), std::move(expr2), l),
-           c.make_node<BlockExpr>(std::move(stmts3), std::move(expr3), l),
-           c.make_node<BlockExpr>(std::move(stmts4), std::move(expr4), l) };
+  return { c.make_node<BlockExpr>(l, std::move(stmts1), std::move(expr1)),
+           c.make_node<BlockExpr>(l, std::move(stmts2), std::move(expr2)),
+           c.make_node<BlockExpr>(l, std::move(stmts3), std::move(expr3)),
+           c.make_node<BlockExpr>(l, std::move(stmts4), std::move(expr4)) };
 }
 
 template <>
 std::vector<Typeinfo *> variants<Typeinfo>(ASTContext &c, SourceLocation l)
 {
-  auto *typeof1 = c.make_node<Typeof>(CreateInt32(), l);
-  auto *typeof2 = c.make_node<Typeof>(CreateInt64(), l);
-  auto *typeof3 = c.make_node<Typeof>(CreateUInt32(), l);
-  Expression expr = c.make_node<Variable>(std::string("$x"), l);
-  auto *typeof4 = c.make_node<Typeof>(std::move(expr), l);
+  auto *typeof1 = c.make_node<Typeof>(l, CreateInt32());
+  auto *typeof2 = c.make_node<Typeof>(l, CreateInt64());
+  auto *typeof3 = c.make_node<Typeof>(l, CreateUInt32());
+  Expression expr = c.make_node<Variable>(l, std::string("$x"));
+  auto *typeof4 = c.make_node<Typeof>(l, std::move(expr));
 
-  return { c.make_node<Typeinfo>(typeof1, l),
-           c.make_node<Typeinfo>(typeof2, l),
-           c.make_node<Typeinfo>(typeof3, l),
-           c.make_node<Typeinfo>(typeof4, l) };
+  return { c.make_node<Typeinfo>(l, typeof1),
+           c.make_node<Typeinfo>(l, typeof2),
+           c.make_node<Typeinfo>(l, typeof3),
+           c.make_node<Typeinfo>(l, typeof4) };
 }
 
 template <>
 std::vector<Comptime *> variants<Comptime>(ASTContext &c, SourceLocation l)
 {
-  Expression expr1 = c.make_node<Integer>(42UL, l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
-  Expression expr3 = c.make_node<String>(std::string("test"), l);
-  Expression expr4 = c.make_node<Variable>(std::string("$x"), l);
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
+  Expression expr3 = c.make_node<String>(l, std::string("test"));
+  Expression expr4 = c.make_node<Variable>(l, std::string("$x"));
 
-  return { c.make_node<Comptime>(std::move(expr1), l),
-           c.make_node<Comptime>(std::move(expr2), l),
-           c.make_node<Comptime>(std::move(expr3), l),
-           c.make_node<Comptime>(std::move(expr4), l) };
+  return { c.make_node<Comptime>(l, std::move(expr1)),
+           c.make_node<Comptime>(l, std::move(expr2)),
+           c.make_node<Comptime>(l, std::move(expr3)),
+           c.make_node<Comptime>(l, std::move(expr4)) };
 }
 
 template <>
 std::vector<ExprStatement *> variants<ExprStatement>(ASTContext &c,
                                                      SourceLocation l)
 {
-  Expression expr1 = c.make_node<Integer>(42UL, l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
-  Expression expr3 = c.make_node<String>(std::string("test"), l);
-  Expression expr4 = c.make_node<Variable>(std::string("$x"), l);
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
+  Expression expr3 = c.make_node<String>(l, std::string("test"));
+  Expression expr4 = c.make_node<Variable>(l, std::string("$x"));
 
-  return { c.make_node<ExprStatement>(std::move(expr1), l),
-           c.make_node<ExprStatement>(std::move(expr2), l),
-           c.make_node<ExprStatement>(std::move(expr3), l),
-           c.make_node<ExprStatement>(std::move(expr4), l) };
+  return { c.make_node<ExprStatement>(l, std::move(expr1)),
+           c.make_node<ExprStatement>(l, std::move(expr2)),
+           c.make_node<ExprStatement>(l, std::move(expr3)),
+           c.make_node<ExprStatement>(l, std::move(expr4)) };
 }
 
 template <>
 std::vector<VarDeclStatement *> variants<VarDeclStatement>(ASTContext &c,
                                                            SourceLocation l)
 {
-  auto *var1 = c.make_node<Variable>(std::string("$var"), l);
-  auto *typeof1 = c.make_node<Typeof>(CreateInt32(), l);
+  auto *var1 = c.make_node<Variable>(l, std::string("$var"));
+  auto *typeof1 = c.make_node<Typeof>(l, CreateInt32());
 
-  auto *var2 = c.make_node<Variable>(std::string("$other"), l);
-  auto *typeof2 = c.make_node<Typeof>(CreateInt64(), l);
+  auto *var2 = c.make_node<Variable>(l, std::string("$other"));
+  auto *typeof2 = c.make_node<Typeof>(l, CreateInt64());
 
-  auto *var3 = c.make_node<Variable>(std::string("$x"), l);
-  auto *typeof3 = c.make_node<Typeof>(CreateUInt32(), l);
+  auto *var3 = c.make_node<Variable>(l, std::string("$x"));
+  auto *typeof3 = c.make_node<Typeof>(l, CreateUInt32());
 
-  auto *var4 = c.make_node<Variable>(std::string("$test"), l);
-  auto *typeof4 = c.make_node<Typeof>(CreateInt32(), l);
+  auto *var4 = c.make_node<Variable>(l, std::string("$test"));
+  auto *typeof4 = c.make_node<Typeof>(l, CreateInt32());
 
-  return { c.make_node<VarDeclStatement>(var1, typeof1, l),
-           c.make_node<VarDeclStatement>(var2, typeof2, l),
-           c.make_node<VarDeclStatement>(var3, typeof3, l),
-           c.make_node<VarDeclStatement>(var4, typeof4, l) };
+  return { c.make_node<VarDeclStatement>(l, var1, typeof1),
+           c.make_node<VarDeclStatement>(l, var2, typeof2),
+           c.make_node<VarDeclStatement>(l, var3, typeof3),
+           c.make_node<VarDeclStatement>(l, var4, typeof4) };
 }
 
 template <>
@@ -466,49 +466,49 @@ std::vector<AssignScalarMapStatement *> variants<AssignScalarMapStatement>(
     ASTContext &c,
     SourceLocation l)
 {
-  auto *map1 = c.make_node<Map>(std::string("@map"), l);
-  Expression expr1 = c.make_node<Integer>(42UL, l);
+  auto *map1 = c.make_node<Map>(l, std::string("@map"));
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
 
-  auto *map2 = c.make_node<Map>(std::string("@other"), l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
+  auto *map2 = c.make_node<Map>(l, std::string("@other"));
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
 
-  auto *map3 = c.make_node<Map>(std::string("@map"), l);
-  Expression expr3 = c.make_node<String>(std::string("value"), l);
+  auto *map3 = c.make_node<Map>(l, std::string("@map"));
+  Expression expr3 = c.make_node<String>(l, std::string("value"));
 
-  auto *map4 = c.make_node<Map>(std::string("@data"), l);
-  Expression expr4 = c.make_node<Variable>(std::string("$x"), l);
+  auto *map4 = c.make_node<Map>(l, std::string("@data"));
+  Expression expr4 = c.make_node<Variable>(l, std::string("$x"));
 
-  return { c.make_node<AssignScalarMapStatement>(map1, std::move(expr1), l),
-           c.make_node<AssignScalarMapStatement>(map2, std::move(expr2), l),
-           c.make_node<AssignScalarMapStatement>(map3, std::move(expr3), l),
-           c.make_node<AssignScalarMapStatement>(map4, std::move(expr4), l) };
+  return { c.make_node<AssignScalarMapStatement>(l, map1, std::move(expr1)),
+           c.make_node<AssignScalarMapStatement>(l, map2, std::move(expr2)),
+           c.make_node<AssignScalarMapStatement>(l, map3, std::move(expr3)),
+           c.make_node<AssignScalarMapStatement>(l, map4, std::move(expr4)) };
 }
 
 template <>
 std::vector<AssignMapStatement *> variants<AssignMapStatement>(ASTContext &c,
                                                                SourceLocation l)
 {
-  auto *map1 = c.make_node<Map>(std::string("@map"), l);
-  Expression key1 = c.make_node<Integer>(1UL, l);
-  Expression expr1 = c.make_node<Integer>(42UL, l);
+  auto *map1 = c.make_node<Map>(l, std::string("@map"));
+  Expression key1 = c.make_node<Integer>(l, 1UL);
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
 
-  auto *map2 = c.make_node<Map>(std::string("@other"), l);
-  Expression key2 = c.make_node<Integer>(2UL, l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
+  auto *map2 = c.make_node<Map>(l, std::string("@other"));
+  Expression key2 = c.make_node<Integer>(l, 2UL);
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
 
-  auto *map3 = c.make_node<Map>(std::string("@map"), l);
-  Expression key3 = c.make_node<String>(std::string("key"), l);
-  Expression expr3 = c.make_node<String>(std::string("value"), l);
+  auto *map3 = c.make_node<Map>(l, std::string("@map"));
+  Expression key3 = c.make_node<String>(l, std::string("key"));
+  Expression expr3 = c.make_node<String>(l, std::string("value"));
 
-  auto *map4 = c.make_node<Map>(std::string("@data"), l);
-  Expression key4 = c.make_node<Variable>(std::string("$k"), l);
-  Expression expr4 = c.make_node<Variable>(std::string("$v"), l);
+  auto *map4 = c.make_node<Map>(l, std::string("@data"));
+  Expression key4 = c.make_node<Variable>(l, std::string("$k"));
+  Expression expr4 = c.make_node<Variable>(l, std::string("$v"));
 
   return {
-    c.make_node<AssignMapStatement>(map1, std::move(key1), std::move(expr1), l),
-    c.make_node<AssignMapStatement>(map2, std::move(key2), std::move(expr2), l),
-    c.make_node<AssignMapStatement>(map3, std::move(key3), std::move(expr3), l),
-    c.make_node<AssignMapStatement>(map4, std::move(key4), std::move(expr4), l)
+    c.make_node<AssignMapStatement>(l, map1, std::move(key1), std::move(expr1)),
+    c.make_node<AssignMapStatement>(l, map2, std::move(key2), std::move(expr2)),
+    c.make_node<AssignMapStatement>(l, map3, std::move(key3), std::move(expr3)),
+    c.make_node<AssignMapStatement>(l, map4, std::move(key4), std::move(expr4))
   };
 }
 
@@ -516,177 +516,177 @@ template <>
 std::vector<AssignVarStatement *> variants<AssignVarStatement>(ASTContext &c,
                                                                SourceLocation l)
 {
-  auto *var1 = c.make_node<Variable>(std::string("$var"), l);
-  Expression expr1 = c.make_node<Integer>(42UL, l);
+  auto *var1 = c.make_node<Variable>(l, std::string("$var"));
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
 
-  auto *var2 = c.make_node<Variable>(std::string("$other"), l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
+  auto *var2 = c.make_node<Variable>(l, std::string("$other"));
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
 
-  auto *var3 = c.make_node<Variable>(std::string("$var"), l);
-  Expression expr3 = c.make_node<String>(std::string("value"), l);
+  auto *var3 = c.make_node<Variable>(l, std::string("$var"));
+  Expression expr3 = c.make_node<String>(l, std::string("value"));
 
-  auto *var4 = c.make_node<Variable>(std::string("$x"), l);
-  Expression expr4 = c.make_node<Boolean>(true, l);
+  auto *var4 = c.make_node<Variable>(l, std::string("$x"));
+  Expression expr4 = c.make_node<Boolean>(l, true);
 
-  return { c.make_node<AssignVarStatement>(var1, std::move(expr1), l),
-           c.make_node<AssignVarStatement>(var2, std::move(expr2), l),
-           c.make_node<AssignVarStatement>(var3, std::move(expr3), l),
-           c.make_node<AssignVarStatement>(var4, std::move(expr4), l) };
+  return { c.make_node<AssignVarStatement>(l, var1, std::move(expr1)),
+           c.make_node<AssignVarStatement>(l, var2, std::move(expr2)),
+           c.make_node<AssignVarStatement>(l, var3, std::move(expr3)),
+           c.make_node<AssignVarStatement>(l, var4, std::move(expr4)) };
 }
 
 template <>
 std::vector<Unroll *> variants<Unroll>(ASTContext &c, SourceLocation l)
 {
-  Expression expr1 = c.make_node<Integer>(10UL, l);
+  Expression expr1 = c.make_node<Integer>(l, 10UL);
   StatementList stmts1;
-  Expression block_expr1 = c.make_node<Integer>(1UL, l);
-  auto *block1 = c.make_node<BlockExpr>(std::move(stmts1),
-                                        std::move(block_expr1),
-                                        l);
+  Expression block_expr1 = c.make_node<Integer>(l, 1UL);
+  auto *block1 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts1),
+                                        std::move(block_expr1));
 
-  Expression expr2 = c.make_node<Integer>(5UL, l);
+  Expression expr2 = c.make_node<Integer>(l, 5UL);
   StatementList stmts2;
-  Expression block_expr2 = c.make_node<Integer>(2UL, l);
-  auto *block2 = c.make_node<BlockExpr>(std::move(stmts2),
-                                        std::move(block_expr2),
-                                        l);
+  Expression block_expr2 = c.make_node<Integer>(l, 2UL);
+  auto *block2 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts2),
+                                        std::move(block_expr2));
 
-  Expression expr3 = c.make_node<Variable>(std::string("$count"), l);
+  Expression expr3 = c.make_node<Variable>(l, std::string("$count"));
   StatementList stmts3;
-  Expression block_expr3 = c.make_node<String>(std::string("loop"), l);
-  auto *block3 = c.make_node<BlockExpr>(std::move(stmts3),
-                                        std::move(block_expr3),
-                                        l);
+  Expression block_expr3 = c.make_node<String>(l, std::string("loop"));
+  auto *block3 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts3),
+                                        std::move(block_expr3));
 
-  Expression expr4 = c.make_node<Integer>(10UL, l);
+  Expression expr4 = c.make_node<Integer>(l, 10UL);
   StatementList stmts4;
-  Expression block_expr4 = c.make_node<Integer>(3UL, l);
-  auto *block4 = c.make_node<BlockExpr>(std::move(stmts4),
-                                        std::move(block_expr4),
-                                        l);
+  Expression block_expr4 = c.make_node<Integer>(l, 3UL);
+  auto *block4 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts4),
+                                        std::move(block_expr4));
 
-  return { c.make_node<Unroll>(std::move(expr1), block1, l),
-           c.make_node<Unroll>(std::move(expr2), block2, l),
-           c.make_node<Unroll>(std::move(expr3), block3, l),
-           c.make_node<Unroll>(std::move(expr4), block4, l) };
+  return { c.make_node<Unroll>(l, std::move(expr1), block1),
+           c.make_node<Unroll>(l, std::move(expr2), block2),
+           c.make_node<Unroll>(l, std::move(expr3), block3),
+           c.make_node<Unroll>(l, std::move(expr4), block4) };
 }
 
 template <>
 std::vector<Jump *> variants<Jump>(ASTContext &c, SourceLocation l)
 {
-  Expression return_val1 = c.make_node<Integer>(42UL, l);
-  Expression return_val2 = c.make_node<String>(std::string("done"), l);
+  Expression return_val1 = c.make_node<Integer>(l, 42UL);
+  Expression return_val2 = c.make_node<String>(l, std::string("done"));
 
-  return { c.make_node<Jump>(JumpType::RETURN, l),
-           c.make_node<Jump>(JumpType::CONTINUE, l),
-           c.make_node<Jump>(JumpType::BREAK, l),
-           c.make_node<Jump>(JumpType::RETURN, std::move(return_val1), l),
-           c.make_node<Jump>(JumpType::RETURN, std::move(return_val2), l) };
+  return { c.make_node<Jump>(l, JumpType::RETURN),
+           c.make_node<Jump>(l, JumpType::CONTINUE),
+           c.make_node<Jump>(l, JumpType::BREAK),
+           c.make_node<Jump>(l, JumpType::RETURN, std::move(return_val1)),
+           c.make_node<Jump>(l, JumpType::RETURN, std::move(return_val2)) };
 }
 
 template <>
 std::vector<While *> variants<While>(ASTContext &c, SourceLocation l)
 {
-  Expression cond1 = c.make_node<Boolean>(true, l);
+  Expression cond1 = c.make_node<Boolean>(l, true);
   StatementList stmts1;
-  Expression block_expr1 = c.make_node<Integer>(42UL, l);
-  auto *block1 = c.make_node<BlockExpr>(std::move(stmts1),
-                                        std::move(block_expr1),
-                                        l);
+  Expression block_expr1 = c.make_node<Integer>(l, 42UL);
+  auto *block1 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts1),
+                                        std::move(block_expr1));
 
-  Expression cond2 = c.make_node<Boolean>(false, l);
+  Expression cond2 = c.make_node<Boolean>(l, false);
   StatementList stmts2;
-  Expression block_expr2 = c.make_node<Integer>(24UL, l);
-  auto *block2 = c.make_node<BlockExpr>(std::move(stmts2),
-                                        std::move(block_expr2),
-                                        l);
+  Expression block_expr2 = c.make_node<Integer>(l, 24UL);
+  auto *block2 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts2),
+                                        std::move(block_expr2));
 
-  Expression cond3 = c.make_node<Variable>(std::string("$flag"), l);
+  Expression cond3 = c.make_node<Variable>(l, std::string("$flag"));
   StatementList stmts3;
-  Expression block_expr3 = c.make_node<String>(std::string("loop"), l);
-  auto *block3 = c.make_node<BlockExpr>(std::move(stmts3),
-                                        std::move(block_expr3),
-                                        l);
+  Expression block_expr3 = c.make_node<String>(l, std::string("loop"));
+  auto *block3 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts3),
+                                        std::move(block_expr3));
 
-  Expression cond4 = c.make_node<Boolean>(true, l);
+  Expression cond4 = c.make_node<Boolean>(l, true);
   StatementList stmts4;
-  Expression block_expr4 = c.make_node<Integer>(100UL, l);
-  auto *block4 = c.make_node<BlockExpr>(std::move(stmts4),
-                                        std::move(block_expr4),
-                                        l);
+  Expression block_expr4 = c.make_node<Integer>(l, 100UL);
+  auto *block4 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts4),
+                                        std::move(block_expr4));
 
-  return { c.make_node<While>(std::move(cond1), block1, l),
-           c.make_node<While>(std::move(cond2), block2, l),
-           c.make_node<While>(std::move(cond3), block3, l),
-           c.make_node<While>(std::move(cond4), block4, l) };
+  return { c.make_node<While>(l, std::move(cond1), block1),
+           c.make_node<While>(l, std::move(cond2), block2),
+           c.make_node<While>(l, std::move(cond3), block3),
+           c.make_node<While>(l, std::move(cond4), block4) };
 }
 
 template <>
 std::vector<For *> variants<For>(ASTContext &c, SourceLocation l)
 {
-  auto *decl1 = c.make_node<Variable>(std::string("$i"), l);
-  auto *map1 = c.make_node<Map>(std::string("@data"), l);
+  auto *decl1 = c.make_node<Variable>(l, std::string("$i"));
+  auto *map1 = c.make_node<Map>(l, std::string("@data"));
   Iterable iterable1 = map1;
   StatementList stmts1;
-  Expression block_expr1 = c.make_node<Integer>(42UL, l);
-  auto *block1 = c.make_node<BlockExpr>(std::move(stmts1),
-                                        std::move(block_expr1),
-                                        l);
+  Expression block_expr1 = c.make_node<Integer>(l, 42UL);
+  auto *block1 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts1),
+                                        std::move(block_expr1));
 
-  auto *decl2 = c.make_node<Variable>(std::string("$j"), l);
-  auto *map2 = c.make_node<Map>(std::string("@other"), l);
+  auto *decl2 = c.make_node<Variable>(l, std::string("$j"));
+  auto *map2 = c.make_node<Map>(l, std::string("@other"));
   Iterable iterable2 = map2;
   StatementList stmts2;
-  Expression block_expr2 = c.make_node<Integer>(24UL, l);
-  auto *block2 = c.make_node<BlockExpr>(std::move(stmts2),
-                                        std::move(block_expr2),
-                                        l);
+  Expression block_expr2 = c.make_node<Integer>(l, 24UL);
+  auto *block2 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts2),
+                                        std::move(block_expr2));
 
-  auto *decl3 = c.make_node<Variable>(std::string("$k"), l);
-  Expression start = c.make_node<Integer>(0UL, l);
-  Expression end = c.make_node<Integer>(10UL, l);
-  auto *range = c.make_node<Range>(std::move(start), std::move(end), l);
+  auto *decl3 = c.make_node<Variable>(l, std::string("$k"));
+  Expression start = c.make_node<Integer>(l, 0UL);
+  Expression end = c.make_node<Integer>(l, 10UL);
+  auto *range = c.make_node<Range>(l, std::move(start), std::move(end));
   Iterable iterable3 = range;
   StatementList stmts3;
-  Expression block_expr3 = c.make_node<String>(std::string("loop"), l);
-  auto *block3 = c.make_node<BlockExpr>(std::move(stmts3),
-                                        std::move(block_expr3),
-                                        l);
+  Expression block_expr3 = c.make_node<String>(l, std::string("loop"));
+  auto *block3 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts3),
+                                        std::move(block_expr3));
 
-  auto *decl4 = c.make_node<Variable>(std::string("$i"), l);
-  auto *map4 = c.make_node<Map>(std::string("@count"), l);
+  auto *decl4 = c.make_node<Variable>(l, std::string("$i"));
+  auto *map4 = c.make_node<Map>(l, std::string("@count"));
   Iterable iterable4 = map4;
   StatementList stmts4;
-  Expression block_expr4 = c.make_node<Integer>(100UL, l);
-  auto *block4 = c.make_node<BlockExpr>(std::move(stmts4),
-                                        std::move(block_expr4),
-                                        l);
+  Expression block_expr4 = c.make_node<Integer>(l, 100UL);
+  auto *block4 = c.make_node<BlockExpr>(l,
+                                        std::move(stmts4),
+                                        std::move(block_expr4));
 
-  return { c.make_node<For>(decl1, std::move(iterable1), block1, l),
-           c.make_node<For>(decl2, std::move(iterable2), block2, l),
-           c.make_node<For>(decl3, std::move(iterable3), block3, l),
-           c.make_node<For>(decl4, std::move(iterable4), block4, l) };
+  return { c.make_node<For>(l, decl1, std::move(iterable1), block1),
+           c.make_node<For>(l, decl2, std::move(iterable2), block2),
+           c.make_node<For>(l, decl3, std::move(iterable3), block3),
+           c.make_node<For>(l, decl4, std::move(iterable4), block4) };
 }
 
 template <>
 std::vector<Range *> variants<Range>(ASTContext &c, SourceLocation l)
 {
-  Expression start1 = c.make_node<Integer>(0UL, l);
-  Expression end1 = c.make_node<Integer>(10UL, l);
+  Expression start1 = c.make_node<Integer>(l, 0UL);
+  Expression end1 = c.make_node<Integer>(l, 10UL);
 
-  Expression start2 = c.make_node<Integer>(1UL, l);
-  Expression end2 = c.make_node<Integer>(5UL, l);
+  Expression start2 = c.make_node<Integer>(l, 1UL);
+  Expression end2 = c.make_node<Integer>(l, 5UL);
 
-  Expression start3 = c.make_node<Variable>(std::string("$start"), l);
-  Expression end3 = c.make_node<Variable>(std::string("$end"), l);
+  Expression start3 = c.make_node<Variable>(l, std::string("$start"));
+  Expression end3 = c.make_node<Variable>(l, std::string("$end"));
 
-  Expression start4 = c.make_node<Integer>(0UL, l);
-  Expression end4 = c.make_node<Integer>(100UL, l);
+  Expression start4 = c.make_node<Integer>(l, 0UL);
+  Expression end4 = c.make_node<Integer>(l, 100UL);
 
-  return { c.make_node<Range>(std::move(start1), std::move(end1), l),
-           c.make_node<Range>(std::move(start2), std::move(end2), l),
-           c.make_node<Range>(std::move(start3), std::move(end3), l),
-           c.make_node<Range>(std::move(start4), std::move(end4), l) };
+  return { c.make_node<Range>(l, std::move(start1), std::move(end1)),
+           c.make_node<Range>(l, std::move(start2), std::move(end2)),
+           c.make_node<Range>(l, std::move(start3), std::move(end3)),
+           c.make_node<Range>(l, std::move(start4), std::move(end4)) };
 }
 
 template <>
@@ -694,12 +694,12 @@ std::vector<Expression> variants<Expression>(ASTContext &c, SourceLocation l)
 {
   // Include same type with different values and different types
   return {
-    c.make_node<Integer>(42UL, l),                 // Primary variant
-    c.make_node<Integer>(24UL, l),                 // Same type, different value
-    c.make_node<String>(std::string("test"), l),   // Different type
-    c.make_node<Boolean>(true, l),                 // Different type
-    c.make_node<Variable>(std::string("$var"), l), // Different type
-    c.make_node<NegativeInteger>(-10L, l)          // Different type
+    c.make_node<Integer>(l, 42UL),                 // Primary variant
+    c.make_node<Integer>(l, 24UL),                 // Same type, different value
+    c.make_node<String>(l, std::string("test")),   // Different type
+    c.make_node<Boolean>(l, true),                 // Different type
+    c.make_node<Variable>(l, std::string("$var")), // Different type
+    c.make_node<NegativeInteger>(l, -10L)          // Different type
   };
 }
 
@@ -707,41 +707,41 @@ template <>
 std::vector<Statement> variants<Statement>(ASTContext &c, SourceLocation l)
 {
   // Include same type with different values and different types
-  Expression expr1 = c.make_node<Integer>(42UL, l);
-  Expression expr2 = c.make_node<Integer>(24UL, l);
-  auto *var = c.make_node<Variable>(std::string("$var"), l);
-  auto *typeof_node = c.make_node<Typeof>(CreateInt32(), l);
-  auto *map = c.make_node<Map>(std::string("@map"), l);
-  Expression expr3 = c.make_node<String>(std::string("value"), l);
+  Expression expr1 = c.make_node<Integer>(l, 42UL);
+  Expression expr2 = c.make_node<Integer>(l, 24UL);
+  auto *var = c.make_node<Variable>(l, std::string("$var"));
+  auto *typeof_node = c.make_node<Typeof>(l, CreateInt32());
+  auto *map = c.make_node<Map>(l, std::string("@map"));
+  Expression expr3 = c.make_node<String>(l, std::string("value"));
 
   return {
-    c.make_node<ExprStatement>(std::move(expr1), l),    // Primary variant
-    c.make_node<ExprStatement>(std::move(expr2), l),    // Same type, different
+    c.make_node<ExprStatement>(l, std::move(expr1)),    // Primary variant
+    c.make_node<ExprStatement>(l, std::move(expr2)),    // Same type, different
                                                         // value
-    c.make_node<VarDeclStatement>(var, typeof_node, l), // Different type
-    c.make_node<AssignScalarMapStatement>(map,
-                                          std::move(expr3),
-                                          l), // Different
-                                              // type
-    c.make_node<Jump>(JumpType::RETURN, l),   // Different type
+    c.make_node<VarDeclStatement>(l, var, typeof_node), // Different type
+    c.make_node<AssignScalarMapStatement>(l,
+                                          map,
+                                          std::move(expr3)), // Different
+                                                             // type
+    c.make_node<Jump>(l, JumpType::RETURN),                  // Different type
   };
 }
 
 template <>
 std::vector<Iterable> variants<Iterable>(ASTContext &c, SourceLocation l)
 {
-  auto *map1 = c.make_node<Map>(std::string("@map"), l);
-  auto *map2 = c.make_node<Map>(std::string("@other"), l);
+  auto *map1 = c.make_node<Map>(l, std::string("@map"));
+  auto *map2 = c.make_node<Map>(l, std::string("@other"));
 
-  Expression start1 = c.make_node<Integer>(0UL, l);
-  Expression end1 = c.make_node<Integer>(10UL, l);
-  auto *range1 = c.make_node<Range>(std::move(start1), std::move(end1), l);
+  Expression start1 = c.make_node<Integer>(l, 0UL);
+  Expression end1 = c.make_node<Integer>(l, 10UL);
+  auto *range1 = c.make_node<Range>(l, std::move(start1), std::move(end1));
 
-  auto *map3 = c.make_node<Map>(std::string("@data"), l);
+  auto *map3 = c.make_node<Map>(l, std::string("@data"));
 
-  Expression start2 = c.make_node<Integer>(5UL, l);
-  Expression end2 = c.make_node<Integer>(15UL, l);
-  auto *range2 = c.make_node<Range>(std::move(start2), std::move(end2), l);
+  Expression start2 = c.make_node<Integer>(l, 5UL);
+  Expression end2 = c.make_node<Integer>(l, 15UL);
+  auto *range2 = c.make_node<Range>(l, std::move(start2), std::move(end2));
 
   return {
     map1,   // Primary variant
@@ -816,7 +816,7 @@ TYPED_TEST(ASTTest, Cloning)
   ASSERT_FALSE(nodes.empty());
 
   for (size_t i = 0; i < nodes.size(); ++i) {
-    auto *cloned = clone(this->ctx, nodes[i], nullptr);
+    auto *cloned = clone(this->ctx, Location(), nodes[i]);
     for (size_t j = 0; j < nodes.size(); ++j) {
       if (j == i) {
         EXPECT_EQ(deref(cloned), deref(nodes[j]));

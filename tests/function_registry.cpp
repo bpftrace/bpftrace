@@ -145,9 +145,9 @@ void TestFunctionRegistryPopulated::test(
     const Function *expected_result)
 {
   ast::ASTContext ast;
-  auto &call = *ast.make_node<ast::Call>(func_name,
-                                         ast::ExpressionList({}),
-                                         ast::Location());
+  auto &call = *ast.make_node<ast::Call>(ast::Location(),
+                                         func_name,
+                                         ast::ExpressionList({}));
   EXPECT_EQ(expected_result, reg_.get("", func_name, arg_types, call));
   EXPECT_TRUE(ast.diagnostics().ok());
 }
@@ -158,9 +158,9 @@ void TestFunctionRegistryPopulated::test(
     std::string_view expected_error)
 {
   ast::ASTContext ast;
-  auto &call = *ast.make_node<ast::Call>(func_name,
-                                         ast::ExpressionList({}),
-                                         ast::Location());
+  auto &call = *ast.make_node<ast::Call>(ast::Location(),
+                                         func_name,
+                                         ast::ExpressionList({}));
   EXPECT_EQ(nullptr, reg_.get("", func_name, arg_types, call));
   EXPECT_FALSE(ast.diagnostics().ok());
 
@@ -346,9 +346,9 @@ TEST(TestFunctionRegistry, add_namespaced)
   const auto *foo = reg.add(
       Function::Origin::Script, "ns", "foo", CreateNone(), {});
   ast::ASTContext ast;
-  auto &call = *ast.make_node<ast::Call>("foo",
-                                         ast::ExpressionList({}),
-                                         ast::Location());
+  auto &call = *ast.make_node<ast::Call>(ast::Location(),
+                                         "foo",
+                                         ast::ExpressionList({}));
   EXPECT_EQ(nullptr, reg.get("", "foo", {}, call));
   EXPECT_EQ(foo, reg.get("ns", "foo", {}, call));
 }

@@ -45,27 +45,27 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
   if (ident == "__builtin_arch") {
     std::stringstream ss;
     ss << bpftrace::arch::current();
-    return ast_.make_node<String>(ss.str(), Location(node.loc));
+    return ast_.make_node<String>(node.loc, ss.str());
   }
   if (ident == "__builtin_safe_mode") {
-    return ast_.make_node<Boolean>(bpftrace_.safe_mode_, Location(node.loc));
+    return ast_.make_node<Boolean>(node.loc, bpftrace_.safe_mode_);
   }
   if (ident == "__builtin_probe") {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      return ast_.make_node<String>(probe->attach_points.empty()
+      return ast_.make_node<String>(node.loc,
+                                    probe->attach_points.empty()
                                         ? "none"
-                                        : probe->attach_points.front()->name(),
-                                    Location(node.loc));
+                                        : probe->attach_points.front()->name());
     }
   }
   if (ident == "__builtin_probetype") {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
       return ast_.make_node<String>(
+          node.loc,
           probe->attach_points.empty()
               ? "none"
               : probetypeName(
-                    probetype(probe->attach_points.front()->provider)),
-          Location(node.loc));
+                    probetype(probe->attach_points.front()->provider)));
     }
   }
   if (ident == "__builtin_elf_is_exe" || ident == "__builtin_elf_ino") {
@@ -81,13 +81,11 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
                << probe->attach_points.front()->provider << "' probes";
     }
     if (ident == "__builtin_elf_is_exe") {
-      return ast_.make_node<Boolean>(util::is_exe(
-                                         probe->attach_points.front()->target),
-                                     Location(node.loc));
+      return ast_.make_node<Boolean>(
+          node.loc, util::is_exe(probe->attach_points.front()->target));
     } else {
-      return ast_.make_node<Integer>(util::file_ino(
-                                         probe->attach_points.front()->target),
-                                     Location(node.loc));
+      return ast_.make_node<Integer>(
+          node.loc, util::file_ino(probe->attach_points.front()->target));
     }
   }
   return std::nullopt;
@@ -105,7 +103,7 @@ std::optional<Expression> Builtins::visit(Call &call)
         if (signal_num < 1) {
           call.addError() << "Invalid string for signal: " << str->value;
         }
-        return ast_.make_node<Integer>(signal_num, Location(str->loc));
+        return ast_.make_node<Integer>(str->loc, signal_num);
       }
     }
   }

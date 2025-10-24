@@ -36,7 +36,16 @@ std::ostream &operator<<(std::ostream &out, const SourceLocation &loc)
 
 SourceLocation operator+(const SourceLocation &orig, const SourceLocation &loc)
 {
-  auto result = SourceLocation(orig.source_);
+  // The parser constructs source locations that don't have any source. These
+  // are quickly joined into locations that do have source, so we allow for this
+  // and quickly converge to what is expected.
+  auto source = orig.source_;
+  if (source == nullptr && loc.source_ != nullptr) {
+    source = loc.source_;
+  } else if (loc.source_ != nullptr) {
+    assert(source == loc.source_);
+  }
+  auto result = SourceLocation(source);
   result.begin.line = std::min(orig.begin.line, loc.begin.line);
   result.end.line = std::max(orig.end.line, loc.end.line);
 

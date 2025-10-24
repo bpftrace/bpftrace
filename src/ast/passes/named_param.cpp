@@ -50,7 +50,7 @@ void NamedParamPass::visit(Expression &expr)
 
   globalvars::GlobalVarValue np_default;
 
-  auto *map_node = ast_.make_node<Map>(arg_name->value, Location(call->loc));
+  auto *map_node = ast_.make_node<Map>(call->loc, arg_name->value);
   map_node->key_type = CreateInt64();
 
   if (call->vargs.size() == 1) {
@@ -94,10 +94,8 @@ void NamedParamPass::visit(Expression &expr)
     return;
   }
 
-  auto *index = ast_.make_node<Integer>(0, Location(map_node->loc));
-  expr.value = ast_.make_node<MapAccess>(map_node,
-                                         index,
-                                         Location(map_node->loc));
+  auto *index = ast_.make_node<Integer>(map_node->loc, 0);
+  expr.value = ast_.make_node<MapAccess>(map_node->loc, map_node, index);
 
   used_args[arg_name->value] = np_default;
   defaults.defaults[arg_name->value] = std::move(np_default);

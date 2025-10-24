@@ -193,19 +193,18 @@ void SessionExpander::visit(Probe &probe)
 
     AttachPointList attach_points = probe.attach_points;
     auto *expr = ast_.make_node<IfExpr>(
-        ast_.make_node<Call>("__session_is_return",
-                             ExpressionList{},
-                             Location(probe.block->loc)),
+        probe.block->loc,
+        ast_.make_node<Call>(probe.block->loc,
+                             "__session_is_return",
+                             ExpressionList{}),
         retprobe->block,
-        probe.block,
-        Location(probe.block->loc));
-    auto *stmt = ast_.make_node<ExprStatement>(expr,
-                                               Location(probe.block->loc));
+        probe.block);
+    auto *stmt = ast_.make_node<ExprStatement>(probe.block->loc, expr);
 
-    probe.block = ast_.make_node<BlockExpr>(StatementList({ stmt }),
+    probe.block = ast_.make_node<BlockExpr>(probe.block->loc,
+                                            StatementList({ stmt }),
                                             ast_.make_node<None>(
-                                                Location(probe.block->loc)),
-                                            Location(probe.block->loc));
+                                                probe.block->loc));
 
     expansion_result_.set_expansion(*probe.attach_points[0],
                                     ExpansionType::SESSION);
@@ -255,10 +254,10 @@ void ProbeAndApExpander::visit(Program &prog)
     } else {
       for (auto *ap : probe->attach_points) {
         auto *new_probe = ast_.make_node<Probe>(
+            probe->loc,
             AttachPointList{ ap },
-            clone(ast_, probe->block, probe->block->loc),
-            probe->orig_name,
-            Location(probe->loc));
+            clone(ast_, probe->block->loc, probe->block),
+            probe->orig_name);
         new_probe_list.emplace_back(new_probe);
       }
     }

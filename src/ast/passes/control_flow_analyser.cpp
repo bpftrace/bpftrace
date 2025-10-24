@@ -113,10 +113,8 @@ public:
           // Since the expression is unreachable it just becomes another
           // statement in the dead code list, and not the block value.
           dead_code.emplace_back(
-              ast_.make_node<ExprStatement>(block.expr,
-                                            Location(block.expr.node().loc)));
-          block.expr = ast_.make_node<None>(
-              Location(block.stmts[i].node().loc));
+              ast_.make_node<ExprStatement>(block.expr.node().loc, block.expr));
+          block.expr = ast_.make_node<None>(block.stmts[i].node().loc);
         }
         if (!dead_code.empty()) {
           // We rewrite the terminating statement to include the dead code in
@@ -142,19 +140,18 @@ public:
           auto original_ret = block.stmts[i];
           auto original_loc = original_ret.node().loc;
           block.stmts.resize(i);
-          auto *cond = ast_.make_node<Boolean>(true, Location(original_loc));
+          auto *cond = ast_.make_node<Boolean>(original_loc, true);
           auto *ret_block = ast_.make_node<BlockExpr>(
+              original_loc,
               StatementList({ original_ret }),
-              ast_.make_node<None>(Location(original_loc)),
-              Location(original_loc));
-          auto *dead_block = ast_.make_node<BlockExpr>(
-              std::move(dead_code),
-              ast_.make_node<None>(Location(original_loc)),
-              Location(original_loc));
+              ast_.make_node<None>(original_loc));
+          auto *dead_block = ast_.make_node<BlockExpr>(original_loc,
+                                                       std::move(dead_code),
+                                                       ast_.make_node<None>(
+                                                           original_loc));
           auto *if_expr = ast_.make_node<IfExpr>(
-              cond, ret_block, dead_block, Location(original_loc));
-          auto *if_stmt = ast_.make_node<ExprStatement>(if_expr,
-                                                        Location(original_loc));
+              original_loc, cond, ret_block, dead_block);
+          auto *if_stmt = ast_.make_node<ExprStatement>(original_loc, if_expr);
           block.stmts.emplace_back(if_stmt);
           // The deadcode still needs to have both branches covered.
           return visit(if_stmt);
@@ -243,12 +240,12 @@ void inject_jump(ASTContext &ast, Expression &expr)
   } else {
     // If we don't need to inject into an existing block, or a partial branch,
     // then we can inject a jump simply by converting to a block expression.
-    auto *stmt = ast.make_node<ExprStatement>(expr, Location(expr.node().loc));
-    auto *ret = ast.make_node<Jump>(T, Location(expr.node().loc));
-    auto *none = ast.make_node<None>(Location(expr.node().loc));
-    auto *block = ast.make_node<BlockExpr>(StatementList({ stmt, ret }),
-                                           none,
-                                           Location(expr.node().loc));
+    auto *stmt = ast.make_node<ExprStatement>(expr.node().loc, expr);
+    auto *ret = ast.make_node<Jump>(expr.node().loc, T);
+    auto *none = ast.make_node<None>(expr.node().loc);
+    auto *block = ast.make_node<BlockExpr>(expr.node().loc,
+                                           StatementList({ stmt, ret }),
+                                           none);
     expr.value = block;
   }
 }
@@ -264,7 +261,7 @@ void inject_jump(ASTContext &ast, BlockExpr &block)
     if (!block.stmts.empty() && block.stmts.back().is<ExprStatement>()) {
       inject_jump<T, Ts...>(ast, block.stmts.back().as<ExprStatement>()->expr);
     } else {
-      auto *jump = ast.make_node<Jump>(T, Location(block.loc));
+      auto *jump = ast.make_node<Jump>(block.loc, T);
       block.stmts.emplace_back(jump);
     }
   } else {

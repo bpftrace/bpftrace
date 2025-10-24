@@ -30,8 +30,8 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
 
   if (!bpftrace.has_btf_data())
     program->c_statements.emplace_back(
-        ctx.make_node<ast::CStatement>("#include <linux/types.h>",
-                                       ast::Location()));
+        ctx.make_node<ast::CStatement>(ast::Location(),
+                                       "#include <linux/types.h>"));
   for (ast::Probe *probe : probes_with_tracepoint) {
     ast::AttachPointList new_aps;
     for (ast::AttachPoint *ap : probe->attach_points) {
@@ -80,9 +80,9 @@ bool TracepointFormatParser::parse(ast::ASTContext &ctx, BPFtrace &bpftrace)
         std::string struct_name = get_struct_name(*ap);
         if (TracepointFormatParser::struct_list.insert(struct_name).second) {
           program->c_statements.emplace_back(ctx.make_node<ast::CStatement>(
+              ast::Location(),
               get_tracepoint_struct(
-                  format_file, category, event_name, bpftrace),
-              ast::Location()));
+                  format_file, category, event_name, bpftrace)));
         }
       }
       new_aps.push_back(ap);

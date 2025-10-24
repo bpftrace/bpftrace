@@ -65,17 +65,16 @@ static BlockExpr *create_pid_filter(ASTContext &ast,
                                     BlockExpr *orig_block)
 {
   return ast.make_node<BlockExpr>(
+      orig_block->loc,
       StatementList({}), // All in the expression below.
       ast.make_node<IfExpr>(
-          ast.make_node<Binop>(
-              ast.make_node<Builtin>("pid", Location(orig_block->loc)),
-              Operator::NE,
-              ast.make_node<Integer>(pid, Location(orig_block->loc)),
-              Location(orig_block->loc)),
-          ast.make_node<None>(Location(orig_block->loc)), // Empty.
-          orig_block,
-          Location(orig_block->loc)),
-      Location(orig_block->loc));
+          orig_block->loc,
+          ast.make_node<Binop>(orig_block->loc,
+                               ast.make_node<Builtin>(orig_block->loc, "pid"),
+                               Operator::NE,
+                               ast.make_node<Integer>(orig_block->loc, pid)),
+          ast.make_node<None>(orig_block->loc), // Empty.
+          orig_block));
 }
 
 void PidFilterPass::visit(Probe &probe)
