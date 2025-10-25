@@ -246,13 +246,21 @@ public:
 };
 using StatementList = std::vector<Statement>;
 
+class Config;
+class Import;
+class CStatement;
 class Macro;
 class MapDeclStatement;
 class Probe;
 class Subprog;
 
-class RootStatement
-    : public VariantNode<Probe, Subprog, Macro, MapDeclStatement> {
+class RootStatement : public VariantNode<Config,
+                                         Import,
+                                         CStatement,
+                                         Probe,
+                                         Subprog,
+                                         Macro,
+                                         MapDeclStatement> {
 public:
   using VariantNode::VariantNode;
   RootStatement() : RootStatement(static_cast<Probe *>(nullptr)) {};
