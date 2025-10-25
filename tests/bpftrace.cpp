@@ -454,7 +454,9 @@ TEST(bpftrace, trailing_comma)
 
   // Trailing comma is fine
   driver.parse_program();
-  ASSERT_TRUE(ast.diagnostics().ok());
+  std::stringstream ss;
+  ast.diagnostics().emit(ss);
+  ASSERT_TRUE(ast.diagnostics().ok()) << ss.str();
 }
 
 TEST(bpftrace, empty_attachpoint)
@@ -842,7 +844,9 @@ static std::set<std::string> list_modules(std::string_view ap)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .run();
-  EXPECT_TRUE(ok && ast.diagnostics().ok());
+  std::stringstream out;
+  ast.diagnostics().emit(out);
+  EXPECT_TRUE(ok && ast.diagnostics().ok()) << out.str();
 
   return bpftrace->list_modules(ast);
 }
@@ -850,7 +854,7 @@ static std::set<std::string> list_modules(std::string_view ap)
 // Test modules are extracted when module is not explicit in attachpoint
 TEST(bpftrace, list_modules_kprobe_implicit)
 {
-  auto modules = list_modules("k:queued_spin_lock_slowpath{},kr:func_in_mod{}");
+  auto modules = list_modules("k:queued_spin_lock_slowpath,kr:func_in_mod{}");
   EXPECT_EQ(modules.size(), 3);
   EXPECT_THAT(modules, Contains("vmlinux"));
   EXPECT_THAT(modules, Contains("kernel_mod"));
@@ -861,7 +865,7 @@ TEST(bpftrace, list_modules_kprobe_implicit)
 TEST(bpftrace, list_modules_kprobe_explicit)
 {
   auto modules = list_modules(
-      "k:vmlinux:queued_spin_lock_slowpath{},kr:kernel_mod:func_in_mod{}");
+      "k:vmlinux:queued_spin_lock_slowpath,kr:kernel_mod:func_in_mod{}");
   EXPECT_EQ(modules.size(), 2);
   EXPECT_THAT(modules, Contains("vmlinux"));
   EXPECT_THAT(modules, Contains("kernel_mod"));
@@ -875,7 +879,7 @@ TEST(bpftrace, list_modules_kprobe_explicit)
 
 TEST_F(bpftrace_btf, list_modules_fentry_explicit)
 {
-  auto modules = list_modules("fentry:vmlinux:func_1{},fexit:vmlinux:func_2{}");
+  auto modules = list_modules("fentry:vmlinux:func_1,fexit:vmlinux:func_2{}");
   EXPECT_EQ(modules.size(), 1);
   EXPECT_THAT(modules, Contains("vmlinux"));
 }

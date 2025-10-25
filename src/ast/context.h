@@ -1,6 +1,8 @@
 #pragma once
 
+#include <map>
 #include <memory>
+#include <variant>
 #include <vector>
 
 #include "ast/diagnostic.h"
@@ -32,10 +34,52 @@ public:
   const std::string filename;
   const std::string contents;
 
+  // Reads the contents of the source corresponding to a specific location.
+  std::string read(const SourceLocation &loc);
+
 private:
   std::vector<std::string> lines_;
 
   friend class SourceLocation;
+};
+
+// MetadataIndex is an index of comments and spacing.
+//
+// It allows for looking up and removing comments associated with specific
+// source locations. It can efficiently claim all comments up until a given
+// location.
+class MetadataIndex {
+public:
+  MetadataIndex() = default; // Allow, map will be empty.
+  MetadataIndex(std::shared_ptr<ASTSource> source)
+      : source_(std::move(source)) {};
+
+  // The Variant describes either comments (strings) or vspace (size_t).
+  using Variant = std::variant<std::string, size_t>;
+
+  // Returns all metadata in this index.
+  std::vector<Variant> all();
+
+  // Finds and removes all metadata that precedes this location, returning
+  // a new index. This new index can be subsequently sliced, or `all` can
+  // be used to retrieve all associated metadata. Note that `all` does not
+  // remove the metadata from the index, this only happens with `before`.
+  MetadataIndex before(const SourceLocation::Position &pos);
+
+private:
+  struct CommentSentinel {};
+  struct VspaceSentinel {
+    size_t amount;
+  };
+  using InternalMap =
+      std::map<SourceLocation,
+               std::variant<CommentSentinel, VspaceSentinel>>;
+  MetadataIndex(std::shared_ptr<ASTSource> source, InternalMap other)
+      : source_(std::move(source)), map_(std::move(other)) {};
+
+  std::shared_ptr<ASTSource> source_;
+  InternalMap map_;
+  friend class ASTContext;
 };
 
 // Manages the lifetime of AST nodes.
@@ -109,6 +153,29 @@ public:
     return source_;
   }
 
+  void add_comment(SourceLocation loc)
+  {
+    // Comments are simply stored as monostate in the map, they are
+    // resolved only when the comment is used.
+    state_->metadata_.emplace(std::move(loc), MetadataIndex::CommentSentinel{});
+  }
+
+  void add_vspace(SourceLocation loc, size_t elems)
+  {
+    // Vspace is stored as a simple unsigned value.
+    state_->metadata_.emplace(std::move(loc),
+                              MetadataIndex::VspaceSentinel{ .amount = elems });
+  }
+
+  // This function returns a unique a metadata object for the AST.
+  //
+  // This object consumed by this call is a copy, and can be used
+  // to iterate over all the available metadata while printing.
+  MetadataIndex metadata() const
+  {
+    return { source_, state_->metadata_ };
+  }
+
   // clears all the nodes and diagnostics, but does not affect the underlying
   // `ASTSource` object. This is useful if you want to e.g. reparse the full
   // syntax tree in place.
@@ -125,6 +192,7 @@ private:
     State();
     std::vector<std::unique_ptr<Node>> nodes_;
     std::unique_ptr<Diagnostics> diagnostics_;
+    MetadataIndex::InternalMap metadata_;
   };
 
   std::unique_ptr<State> state_;

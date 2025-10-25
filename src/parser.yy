@@ -142,7 +142,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <bool> BOOL "bool"
 
 %type <ast::Operator> unary_op compound_op
-%type <std::string> attach_point_def ident keyword external_name
+%type <std::string> attach_point_def attach_point_elem ident keyword external_name
 %type <std::vector<std::string>> struct_field
 
 %type <ast::ArrayAccess *> array_access_expr
@@ -188,7 +188,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::VariableAddr *> var_addr
 %type <ast::MapAddr *> map_addr
 %type <ast::Program *> program
-%type <std::string> header
+%type <std::string> header c_struct
 
 
 // A pseudo token, which is the lowest precedence among all tokens.
@@ -231,24 +231,34 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %%
 
-start:          START_PROGRAM program END { driver.result = $2; }
-        |       START_EXPR expr END       { driver.result = $2; }
+start:          START_PROGRAM program { driver.result = $2; }
+        |       START_EXPR expr END   { driver.result = $2; }
                 ;
 
 header:
-                HEADER { $$ = $1; }
+                HEADER { auto s = $1; $$ = util::rtrim(s); }
         |       %empty { $$ = ""; }
 
 program:
-                header c_definitions config imports root_stmts {
+                header c_definitions config imports root_stmts END {
                     $$ = driver.ctx.make_node<ast::Program>(@$, std::move($2), $3, std::move($4), std::move($5), $1);
                 }
                 ;
 
+c_struct:       STRUCT STRUCT_DEFN { $$ = $2; }
+        |       STRUCT ENUM        { $$ = $2; }
+                ;
+
 c_definitions:
-                c_definitions CPREPROC           { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, $2)); }
-        |       c_definitions STRUCT STRUCT_DEFN { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, $3 + ";")); }
-        |       c_definitions STRUCT ENUM        { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, $3 + ";")); }
+                c_definitions CPREPROC  { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, $2)); }
+        |       c_definitions c_struct  {
+                    $$ = std::move($1);
+                    auto s = $2;
+                    if (s.empty() || s.back() != ';') {
+                        s += ";";
+                    }
+                    $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, s));
+                }
         |       %empty                           { $$ = ast::CStatementList(); }
                 ;
 
@@ -340,7 +350,7 @@ struct_type:
 
 config:
                 CONFIG ASSIGN config_block     { $$ = driver.ctx.make_node<ast::Config>(@$, std::move($3)); }
-        |        %empty                        { $$ = nullptr; }
+        |       %empty                         { $$ = nullptr; }
                 ;
 
 /*
@@ -414,9 +424,9 @@ probe:
                     // If there a predicate, consider this as an `if` statement
                     // over the full block. This simplifies all later steps, and
                     // the predicate may still be folded, eliminating the probe.
-                    auto *none = driver.ctx.make_node<ast::None>(@1);
+                    auto *none = driver.ctx.make_node<ast::None>(@2);
                     auto *cond = driver.ctx.make_node<ast::IfExpr>(@2, $2.value(), block, none);
-                    block = driver.ctx.make_node<ast::BlockExpr>(@$, ast::StatementList{}, cond);
+                    block = driver.ctx.make_node<ast::BlockExpr>(@2+@3, ast::StatementList{}, cond);
                   }
                   $$ = driver.ctx.make_node<ast::Probe>(@1, std::move($1), block);
                 }
@@ -424,38 +434,43 @@ probe:
 
 attach_points:
                 attach_points "," attach_point { $$ = std::move($1); $$.push_back($3); }
+        |       attach_points ","              { $$ = std::move($1); }
         |       attach_point                   { $$ = ast::AttachPointList{$1}; }
                 ;
 
 attach_point:
-                attach_point_def                { $$ = driver.ctx.make_node<ast::AttachPoint>(@$, $1, false); }
+                attach_point_def               { $$ = driver.ctx.make_node<ast::AttachPoint>(@$, $1, false); }
                 ;
 
 attach_point_def:
-                attach_point_def ident    { $$ = $1 + $2; }
+                attach_point_elem                  { $$ = $1; }
+        |       attach_point_def attach_point_elem { $$ = $1 + $2; }
+                ;
+
+attach_point_elem:
+                ident        { $$ = $1; }
                 // Since we're double quoting the STRING for the benefit of the
                 // AttachPointParser, we have to make sure we re-escape any double
                 // quotes. Note that this is a general escape hatch for many cases,
                 // since we can't handle the general parsing and unparsing of e.g.
                 // integer types that use `_` separators, or exponential notation,
                 // or hex vs. non-hex representation etc.
-        |       attach_point_def STRING       { $$ = $1 + "\"" + std::regex_replace($2, std::regex("\""), "\\\"") + "\""; }
-        |       attach_point_def UNSIGNED_INT { $$ = $1 + $2; }
-        |       attach_point_def PATH         { $$ = $1 + $2; }
-        |       attach_point_def COLON        { $$ = $1 + ":"; }
-        |       attach_point_def DOT          { $$ = $1 + "."; }
-        |       attach_point_def PLUS         { $$ = $1 + "+"; }
-        |       attach_point_def MUL          { $$ = $1 + "*"; }
-        |       attach_point_def LBRACKET     { $$ = $1 + "["; }
-        |       attach_point_def RBRACKET     { $$ = $1 + "]"; }
-        |       attach_point_def param
+        |       STRING       { $$ = "\"" + std::regex_replace($1, std::regex("\""), "\\\"") + "\""; }
+        |       UNSIGNED_INT { $$ = $1; }
+        |       PATH         { $$ = $1; }
+        |       COLON        { $$ = ":"; }
+        |       DOT          { $$ = "."; }
+        |       PLUS         { $$ = "+"; }
+        |       MUL          { $$ = "*"; }
+        |       LBRACKET     { $$ = "["; }
+        |       RBRACKET     { $$ = "]"; }
+        |       param
                 {
                   // "Un-parse" the positional parameter back into text so
                   // we can give it to the AttachPointParser. This is kind of
                   // a hack but there doesn't look to be any other way.
-                  $$ = $1 + "$" + std::to_string($2->n);
+                  $$ = "$" + std::to_string($1->n);
                 }
-        |       %empty                    { $$ = ""; }
                 ;
 
 pred:
@@ -544,8 +559,8 @@ if_stmt:
         |       IF cond_expr bare_block ELSE if_expr
                 {
                   // This is a pure statement; override the value with `none`.
-                  auto *stmt = driver.ctx.make_node<ast::ExprStatement>(@$, $5);
-                  auto *none = driver.ctx.make_node<ast::None>(@2);
+                  auto *stmt = driver.ctx.make_node<ast::ExprStatement>(@5, $5);
+                  auto *none = driver.ctx.make_node<ast::None>(@4);
                   auto *block = driver.ctx.make_node<ast::BlockExpr>(@5, ast::StatementList{ stmt }, none);
                   $$ = driver.ctx.make_node<ast::IfExpr>(@$, $2, $3, block);
                 }

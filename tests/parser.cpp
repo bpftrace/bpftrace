@@ -3,11 +3,9 @@
 #include <sstream>
 
 #include "ast/ast.h"
-#include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/passes/clang_parser.h"
-#include "ast/passes/printer.h"
 #include "ast_matchers.h"
 #include "driver.h"
 #include "gtest/gtest.h"
@@ -2424,9 +2422,9 @@ TEST(Parser, non_fatal_errors)
   // displayed
   test_parse_failure("uprobe:asdf:Stream {} tracepoint:only_one_arg {}",
                      R"(
-stdin:1:22-46: ERROR: tracepoint probe type requires 2 arguments, found 1
+stdin:1:23-46: ERROR: tracepoint probe type requires 2 arguments, found 1
 uprobe:asdf:Stream {} tracepoint:only_one_arg {}
-                     ~~~~~~~~~~~~~~~~~~~~~~~~
+                      ~~~~~~~~~~~~~~~~~~~~~~~
 )");
 }
 
@@ -2466,7 +2464,7 @@ TEST(Parser, config_error)
 {
   test_parse_failure("i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }",
                      R"(
-stdin:1:19-25: ERROR: syntax error, unexpected config, expecting {
+stdin:1:19-25: ERROR: syntax error, unexpected config
 i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }
                   ~~~~~~
 )");
@@ -2486,7 +2484,7 @@ config = { @start = nsecs; } i:s:1 { exit(); }
   test_parse_failure("begin { @start = nsecs; } config = { "
                      "BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }",
                      R"(
-stdin:1:27-33: ERROR: syntax error, unexpected config, expecting {
+stdin:1:27-33: ERROR: syntax error, unexpected config
 begin { @start = nsecs; } config = { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }
                           ~~~~~~
 )");
@@ -2931,7 +2929,7 @@ TEST(Parser, map_declarations)
            .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
 
   test_parse_failure("@a = hash(); begin { $x; }", R"(
-stdin:1:1-3: ERROR: syntax error, unexpected map, expecting {
+stdin:1:1-3: ERROR: syntax error, unexpected map
 @a = hash(); begin { $x; }
 ~~
 )");
@@ -2995,7 +2993,7 @@ TEST(Parser, imports)
            .WithProbe(Probe({ "begin" }, {})));
 
   test_parse_failure(R"(begin { }; import "foo";)", R"(
-stdin:1:10-11: ERROR: syntax error, unexpected ;, expecting {
+stdin:1:10-11: ERROR: syntax error, unexpected ;
 begin { }; import "foo";
          ~
 )");
