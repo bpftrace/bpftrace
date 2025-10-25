@@ -164,18 +164,7 @@ oct_esc  [0-7]{1,3}
   {builtin}               { return Parser::make_BUILTIN(yytext, driver.loc); }
   {subprog}               { return Parser::make_SUBPROG(yytext, driver.loc); }
   {macro}                 { return Parser::make_MACRO(yytext, driver.loc); }
-  {int}|{hex}|{exponent}  {
-                            // Note that we have no unsigned integers in the lexer, these
-                            // are purely derived as a result of folding constants.
-                            auto res = util::to_uint(yytext, 0);
-                            if (!res) {
-                              std::stringstream ss;
-                              ss << res.takeError();
-                              driver.error(driver.loc, ss.str());
-                            } else {
-                              return Parser::make_UNSIGNED_INT(*res, driver.loc);
-                            }
-                          }
+  {int}|{hex}|{exponent}  { return Parser::make_UNSIGNED_INT(yytext, driver.loc); }
   {bool}                  {
                             if (std::string(yytext) == "true") {
                               return Parser::make_BOOL(true, driver.loc);

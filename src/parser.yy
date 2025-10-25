@@ -34,6 +34,7 @@ class Node;
 #include "ast/ast.h"
 #include "ast/context.h"
 #include "ast/location.h"
+#include "util/int_parser.h"
 }
 
 %{
@@ -120,7 +121,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
 %token <std::string> PARAM "positional parameter"
-%token <uint64_t> UNSIGNED_INT "integer"
+%token <std::string> UNSIGNED_INT "integer"
 %token <std::string> CONFIG "config"
 %token <std::string> UNROLL "unroll"
 %token <std::string> WHILE "while"
@@ -167,6 +168,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::PositionalParameterCount *> param_count
 %type <std::optional<ast::Expression>> pred
 %type <ast::Config *> config
+%type <ast::Integer *> integer
 %type <ast::Import *> import_stmt
 %type <ast::ImportList> imports
 %type <ast::Statement> assign_stmt block_stmt expr_stmt nonexpr_stmt jump_stmt while_stmt for_stmt
@@ -290,20 +292,20 @@ type:
                         $$ = CreateString(0);
                     }
                 }
-        |       SIZED_TYPE "[" UNSIGNED_INT "]" {
+        |       SIZED_TYPE "[" integer "]" {
                     if ($1 == "inet") {
-                        $$ = CreateInet($3);
+                        $$ = CreateInet($3->value);
                     } else if ($1 == "buffer") {
-                        $$ = CreateBuffer($3);
+                        $$ = CreateBuffer($3->value);
                     } else if ($1 == "string") {
-                        $$ = CreateString($3);
+                        $$ = CreateString($3->value);
                     }
                 }
-        |       int_type "[" UNSIGNED_INT "]" {
-                  $$ = CreateArray($3, $1);
+        |       int_type "[" integer "]" {
+                  $$ = CreateArray($3->value, $1);
                 }
-        |       struct_type "[" UNSIGNED_INT "]" {
-                  $$ = CreateArray($3, $1);
+        |       struct_type "[" integer "]" {
+                  $$ = CreateArray($3->value, $1);
                 }
         |       int_type "[" "]" {
                   $$ = CreateArray(0, $1);
@@ -354,10 +356,10 @@ config_assign_stmt_list:
                 ;
 
 config_assign_stmt:
-                IDENT ASSIGN UNSIGNED_INT { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
-        |       IDENT ASSIGN IDENT        { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
-        |       IDENT ASSIGN STRING       { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
-        |       IDENT ASSIGN BOOL         { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+                IDENT ASSIGN integer { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3->value, @$); }
+        |       IDENT ASSIGN IDENT   { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN STRING  { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
+        |       IDENT ASSIGN BOOL    { $$ = driver.ctx.make_node<ast::AssignConfigVarStatement>($1, $3, @$); }
                 ;
 
 subprog:
@@ -438,7 +440,7 @@ attach_point_def:
                 // integer types that use `_` separators, or exponential notation,
                 // or hex vs. non-hex representation etc.
         |       attach_point_def STRING       { $$ = $1 + "\"" + std::regex_replace($2, std::regex("\""), "\\\"") + "\""; }
-        |       attach_point_def UNSIGNED_INT { $$ = $1 + std::to_string($2); }
+        |       attach_point_def UNSIGNED_INT { $$ = $1 + $2; }
         |       attach_point_def PATH         { $$ = $1 + $2; }
         |       attach_point_def COLON        { $$ = $1 + ":"; }
         |       attach_point_def DOT          { $$ = $1 + "."; }
@@ -582,7 +584,7 @@ assign_stmt:
         ;
 
 map_decl_stmt:
-                LET MAP ASSIGN IDENT LPAREN UNSIGNED_INT RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>($2, $4, $6, @$); }
+                LET MAP ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>($2, $4, $6->value, @$); }
         ;
 
 var_decl_stmt:
@@ -609,9 +611,25 @@ tuple_expr:
                 }
                 ;
 
+integer:
+                UNSIGNED_INT
+                {
+                  auto res = util::to_uint($1, 0);
+                  if (!res) {
+                    std::stringstream ss;
+                    ss << res.takeError();
+                    error(@1, ss.str());
+                    YYERROR;
+                  } else {
+                    // Construct with the original string, which will be preserved.
+                    $$ = driver.ctx.make_node<ast::Integer>(*res, @1, false, std::move($1));
+                  }
+                }
+                ;
+
 primary_expr:
                 LPAREN expr RPAREN { $$ = $2; }
-        |       UNSIGNED_INT       { $$ = driver.ctx.make_node<ast::Integer>($1, @$); }
+        |       integer            { $$ = $1; }
         |       BOOL               { $$ = driver.ctx.make_node<ast::Boolean>($1, @$); }
         |       STRING             { $$ = driver.ctx.make_node<ast::String>($1, @$); }
         |       BUILTIN            { $$ = driver.ctx.make_node<ast::Builtin>($1, @$); }
@@ -658,7 +676,7 @@ postfix_expr:
                 ;
 
 tuple_access_expr:
-                primary_expr DOT UNSIGNED_INT { $$ = driver.ctx.make_node<ast::TupleAccess>($1, $3, @3); }
+                primary_expr DOT integer { $$ = driver.ctx.make_node<ast::TupleAccess>($1, $3->value, @3); }
                 ;
 
 array_access_expr:

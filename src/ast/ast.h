@@ -264,16 +264,19 @@ public:
   explicit Integer(ASTContext &ctx,
                    uint64_t n,
                    Location &&loc,
-                   bool force_unsigned = false)
+                   bool force_unsigned = false,
+                   std::optional<std::string> &&original = std::nullopt)
       : Node(ctx, std::move(loc)),
         integer_type(force_unsigned || n > std::numeric_limits<int64_t>::max()
                          ? CreateUInt64()
                          : CreateInt64()),
-        value(n) {};
+        value(n),
+        original(std::move(original)) {};
   explicit Integer(ASTContext &ctx, const Integer &other, const Location &loc)
       : Node(ctx, loc + other.loc),
         integer_type(other.integer_type),
-        value(other.value) {};
+        value(other.value),
+        original(other.original) {};
 
   const SizedType &type() const
   {
@@ -300,6 +303,7 @@ public:
   // preserved when folding literals in order to provide the intuitive type.
   const SizedType integer_type;
   const uint64_t value;
+  const std::optional<std::string> original;
 };
 
 class NegativeInteger : public Node {
