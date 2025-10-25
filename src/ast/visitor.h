@@ -249,6 +249,7 @@ public:
   R visit(Program &program)
   {
     // This order is important.
+    visitImpl(program.c_statements);
     visitImpl(program.config);
     visitImpl(program.imports);
     visitImpl(program.macros);
@@ -268,6 +269,14 @@ public:
   R visit(Statement &stmt)
   {
     return visitImpl(stmt.value);
+  }
+  R visit(RootStatement &root)
+  {
+    return visitImpl(root.value);
+  }
+  R visit([[maybe_unused]] CStatement &cstmt)
+  {
+    return default_value();
   }
   R visit([[maybe_unused]] const SizedType &type)
   {
