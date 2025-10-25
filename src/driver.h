@@ -30,6 +30,7 @@ public:
 
   // These are mutable state that can be modified by the lexer.
   ast::SourceLocation loc;
+  ast::SourceLocation orig_loc;
   std::string struct_type;
   std::string buffer;
 

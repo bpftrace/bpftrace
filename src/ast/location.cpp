@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <sstream>
 
 #include "ast/context.h"
@@ -34,40 +35,37 @@ std::ostream &operator<<(std::ostream &out, const SourceLocation &loc)
   return out;
 }
 
-SourceLocation operator+(const SourceLocation &orig, const SourceLocation &loc)
+SourceLocation operator+(const SourceLocation &orig,
+                         const SourceLocation &other)
 {
   // The parser constructs source locations that don't have any source. These
   // are quickly joined into locations that do have source, so we allow for this
   // and quickly converge to what is expected.
   auto source = orig.source_;
-  if (source == nullptr && loc.source_ != nullptr) {
-    source = loc.source_;
-  } else if (loc.source_ != nullptr) {
-    assert(source == loc.source_);
+  if (source == nullptr && other.source_ != nullptr) {
+    source = other.source_;
+  } else if (other.source_ != nullptr) {
+    assert(source == other.source_);
   }
   auto result = SourceLocation(source);
-  result.begin.line = std::min(orig.begin.line, loc.begin.line);
-  result.end.line = std::max(orig.end.line, loc.end.line);
+  result.begin.line = std::min(orig.begin.line, other.begin.line);
+  result.end.line = std::max(orig.end.line, other.end.line);
 
-  if (orig.begin.line < loc.begin.line) {
+  if (orig.begin.line < other.begin.line) {
     result.begin.column = orig.begin.column;
-  } else if (orig.begin.line == loc.begin.line) {
-    result.begin.column = std::min(orig.begin.column, loc.begin.column);
+  } else if (orig.begin.line == other.begin.line) {
+    result.begin.column = std::min(orig.begin.column, other.begin.column);
   } else {
-    result.begin.column = loc.begin.column;
+    result.begin.column = other.begin.column;
   }
 
-  if (orig.end.line < loc.end.line) {
-    result.end.column = loc.end.column;
-  } else if (orig.end.line == loc.end.line) {
-    result.end.column = std::max(orig.end.column, loc.end.column);
+  if (orig.end.line < other.end.line) {
+    result.end.column = other.end.column;
+  } else if (orig.end.line == other.end.line) {
+    result.end.column = std::max(orig.end.column, other.end.column);
   } else {
     result.end.column = orig.end.column;
   }
-
-  // Anything that spans inherits the *first* location's comments.
-  result.comments_ = orig.comments_;
-  result.vspace_ = orig.vspace_;
 
   return result;
 }
@@ -132,6 +130,48 @@ Location operator+(const Location &orig, const Location &expansion)
   nlink->parent.emplace(LocationChain::Context(Location(orig)));
   nlink->parent->msg << "expanded from";
   return nlink;
+}
+
+std::strong_ordering operator<=>(const SourceLocation::Position &lhs,
+                                 const SourceLocation::Position &rhs)
+{
+  if (auto cmp = lhs.line <=> rhs.line; cmp != 0) {
+    return cmp;
+  }
+  return lhs.column <=> rhs.column;
+}
+
+std::strong_ordering operator<=>(const SourceLocation &lhs,
+                                 const SourceLocation &rhs)
+{
+  if (auto cmp = lhs.begin <=> rhs.begin; cmp != 0) {
+    return cmp;
+  }
+
+  // If begin positions are equal, compare by span length. The shortest spans
+  // are considered to be the first nodes here. This allows us to use
+  // lower_bound matching to find the first reasonable matching node for
+  // metadata.
+  auto lhs_span_lines = lhs.end.line - lhs.begin.line;
+  auto rhs_span_lines = rhs.end.line - rhs.begin.line;
+  if (auto cmp = lhs_span_lines <=> rhs_span_lines; cmp != 0) {
+    return cmp;
+  }
+
+  auto lhs_span_cols = lhs.end.column - lhs.begin.column;
+  auto rhs_span_cols = rhs.end.column - rhs.begin.column;
+  return lhs_span_cols <=> rhs_span_cols;
+}
+
+bool operator==(const SourceLocation::Position &lhs,
+                const SourceLocation::Position &rhs)
+{
+  return lhs.line == rhs.line && lhs.column == rhs.column;
+}
+
+bool operator==(const SourceLocation &lhs, const SourceLocation &rhs)
+{
+  return lhs.begin == rhs.begin && lhs.end == rhs.end;
 }
 
 } // namespace bpftrace::ast

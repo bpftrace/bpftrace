@@ -193,9 +193,9 @@ bench: { 1 }
 ~~~~~~
 )");
   test_error("BENCH:a { 1 } BENCH:a { 2 }", R"(
-stdin:1:14-22: ERROR: "a" was used as the name for more than one BENCH probe
+stdin:1:15-22: ERROR: "a" was used as the name for more than one BENCH probe
 BENCH:a { 1 } BENCH:a { 2 }
-             ~~~~~~~~
+              ~~~~~~~
 stdin:1:1-8: ERROR: this is the other instance
 BENCH:a { 1 } BENCH:a { 2 }
 ~~~~~~~
