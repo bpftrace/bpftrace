@@ -68,6 +68,7 @@ public:
   static char ID;
   ParseError(int err) : err_(err >= 0 ? err : -err) {};
   void log(llvm::raw_ostream &OS) const override;
+  int error_code() const { return err_; }
 
 private:
   int err_;
@@ -79,6 +80,7 @@ public:
   static char ID;
   TypeError(int err) : err_(err >= 0 ? err : -err) {};
   void log(llvm::raw_ostream &OS) const override;
+  int error_code() const { return err_; }
 
 private:
   int err_;

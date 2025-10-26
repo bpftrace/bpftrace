@@ -4,14 +4,12 @@
 #include <clang/Frontend/FrontendActions.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <fcntl.h>
-#include <fstream>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/TargetParser/Host.h>
-#include <sstream>
 #include <sys/mman.h>
 
 #include "arch/arch.h"
@@ -33,12 +31,12 @@ void ClangBuildError::log(llvm::raw_ostream &OS) const
   OS << msg_;
 }
 
-static Result<> build(CompileContext &ctx,
-                      const std::string &name,
-                      LoadedObject &obj,
-                      const llvm::MemoryBufferRef &vmlinux_h,
-                      Imports &imports,
-                      BitcodeModules &result)
+static Result<BitcodeModules::Result> build(
+    CompileContext &ctx,
+    const std::string &name,
+    LoadedObject &obj,
+    const llvm::MemoryBufferRef &vmlinux_h,
+    Imports &imports)
 {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> vfs(
       new llvm::vfs::InMemoryFileSystem());
@@ -147,10 +145,7 @@ static Result<> build(CompileContext &ctx,
     // This is likely a build failure, we can surface this directly
     // into the user context. We first highlight the location of the
     // original import, then include the C message as a "hint".
-    auto &e = obj.node.addError();
-    e << "failed to build";
-    e.addHint() << errstr;
-    return OK();
+    return make_error<ClangBuildError>(errstr);
   }
   if (!errstr.empty()) {
     // If the compilation didn't fail, then these weren't errors but we
@@ -169,9 +164,11 @@ static Result<> build(CompileContext &ctx,
   if (!data) {
     return data.takeError();
   }
-  result.modules.emplace_back(std::move(mod));
-  result.objects.emplace_back(std::move(*data));
-  return OK();
+  return BitcodeModules::Result{
+    .module = std::move(mod),
+    .object = std::move(*data),
+    .loc = obj.node.loc,
+  };
 }
 
 ast::Pass CreateClangBuildPass()
@@ -181,11 +178,11 @@ ast::Pass CreateClangBuildPass()
       [](BPFtrace &bpftrace,
          CompileContext &ctx,
          ast::Imports &imports) -> Result<BitcodeModules> {
-        BitcodeModules result;
+        BitcodeModules bm;
 
         // Nothing to do? Return directly.
         if (imports.c_sources.empty()) {
-          return result;
+          return bm;
         }
 
         // Construct our kernel headers. This is a rather expensive operation,
@@ -195,19 +192,23 @@ ast::Pass CreateClangBuildPass()
         // For each of the source files in the imports, we
         // build it and turn it into a bitcode file.
         for (auto &[name, obj] : imports.c_sources) {
-          auto ok = build(ctx,
-                          name,
-                          obj,
-                          llvm::MemoryBufferRef(llvm::StringRef(vmlinux_h),
-                                                "vmlinux.h"),
-                          imports,
-                          result);
-          if (!ok) {
-            return ok.takeError();
+          auto result = build(ctx,
+                              name,
+                              obj,
+                              llvm::MemoryBufferRef(llvm::StringRef(vmlinux_h),
+                                                    "vmlinux.h"),
+                              imports);
+
+          if (!result) {
+            auto &e = obj.node.addError();
+            e << "failed to build";
+            e.addHint() << result.takeError();
+            continue;
           }
+          bm.modules.push_back(std::move(*result));
         }
 
-        return result;
+        return bm;
       });
 }
 
