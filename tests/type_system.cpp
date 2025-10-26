@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "ast/ast.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/type_system.h"
 #include "data/data_source_btf.h"
@@ -8,14 +9,23 @@ namespace bpftrace::test::type_system {
 
 TEST(TypeSystemTest, basic)
 {
+  ast::ASTContext ast;
+
   // Use our synthetic BTF as the object.
-  ast::BitcodeModules modules;
-  modules.objects.emplace_back(reinterpret_cast<const char *>(btf_data),
-                               sizeof(btf_data));
+  ast::BitcodeModules bm;
+  bm.modules.emplace_back(ast::BitcodeModules::Result{
+      .module = nullptr,
+      .object = std::string(reinterpret_cast<const char *>(btf_data),
+                            sizeof(btf_data)),
+      .loc = nullptr,
+  });
 
   // Run the pass and extract the types.
-  auto ok =
-      ast::PassManager().put(modules).add(ast::CreateTypeSystemPass()).run();
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bm)
+                .add(ast::CreateTypeSystemPass())
+                .run();
   ASSERT_TRUE(bool(ok));
   auto types = ok->get<ast::TypeMetadata>();
 

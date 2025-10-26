@@ -25,7 +25,12 @@ BpfBytecode codegen(const std::string &input)
                 .add(ast::CreateSemanticPass())
                 .add(ast::AllCompilePasses())
                 .run();
-  EXPECT_TRUE(ok && ast.diagnostics().ok());
+  if (!ok) {
+    EXPECT_TRUE(bool(ok)) << ok.takeError();
+  }
+  std::stringstream out;
+  ast.diagnostics().emit(out);
+  EXPECT_TRUE(ast.diagnostics().ok()) << out.str();
   auto &output = ok->get<BpfBytecode>();
   return std::move(output);
 }

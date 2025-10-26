@@ -4996,10 +4996,14 @@ Pass CreateLinkBitcodePass()
 {
   return Pass::create(
       "LinkBitcode", [](BitcodeModules &bm, CompiledModule &cm) -> Result<> {
-        for (auto &mod : bm.modules) {
+        for (auto &result : bm.modules) {
+          if (!result.module) {
+            continue;
+          }
+
           // Make a copy of the module, to ensure this is not modifying the
           // original. The link step must consume the module below.
-          auto copy = llvm::CloneModule(*mod);
+          auto copy = llvm::CloneModule(*result.module);
 
           // Modify to ensure everything is inlined. Note that this is also
           // marking all these functions for below, which will adjust their
