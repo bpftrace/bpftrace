@@ -22,16 +22,16 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %warnf_args = alloca %warnf_t, align 8
-  %"$$__signal_2_$ret" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$__signal_2_$ret")
-  store i64 0, ptr %"$$__signal_2_$ret", align 8
+  %"_1___signal_2_$ret" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1___signal_2_$ret")
+  store i64 0, ptr %"_1___signal_2_$ret", align 8
   %errorf_args = alloca %errorf_t, align 8
-  %"$$__signal_2_$sig" = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$__signal_2_$sig")
-  store i32 0, ptr %"$$__signal_2_$sig", align 4
-  store i32 0, ptr %"$$__signal_2_$sig", align 4
-  store i32 9, ptr %"$$__signal_2_$sig", align 4
-  %1 = load i32, ptr %"$$__signal_2_$sig", align 4
+  %"_1___signal_2_$sig" = alloca i32, align 4
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1___signal_2_$sig")
+  store i32 0, ptr %"_1___signal_2_$sig", align 4
+  store i32 0, ptr %"_1___signal_2_$sig", align 4
+  store i32 9, ptr %"_1___signal_2_$sig", align 4
+  %1 = load i32, ptr %"_1___signal_2_$sig", align 4
   %2 = sext i32 %1 to i64
   %3 = icmp slt i64 %2, 1
   %true_cond = icmp ne i1 %3, false
@@ -45,7 +45,7 @@ left:                                             ; preds = %entry
   %5 = getelementptr %errorf_t, ptr %errorf_args, i32 0, i32 1
   %6 = getelementptr %errorf_args_t, ptr %5, i32 0, i32 0
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %6, ptr align 1 @"signal()", i64 9, i1 false)
-  %7 = load i32, ptr %"$$__signal_2_$sig", align 4
+  %7 = load i32, ptr %"_1___signal_2_$sig", align 4
   %8 = getelementptr %errorf_args_t, ptr %5, i32 0, i32 1
   store i32 %7, ptr %8, align 4
   %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %errorf_args, i64 24, i64 0)
@@ -53,10 +53,10 @@ left:                                             ; preds = %entry
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 right:                                            ; preds = %entry
-  %9 = load i32, ptr %"$$__signal_2_$sig", align 4
+  %9 = load i32, ptr %"_1___signal_2_$sig", align 4
   %__signal_process = call i64 @__signal_process(i32 %9), !dbg !41
-  store i64 %__signal_process, ptr %"$$__signal_2_$ret", align 8
-  %10 = load i64, ptr %"$$__signal_2_$ret", align 8
+  store i64 %__signal_process, ptr %"_1___signal_2_$ret", align 8
+  %10 = load i64, ptr %"_1___signal_2_$ret", align 8
   %11 = icmp ne i64 %10, 0
   %true_cond3 = icmp ne i1 %11, false
   br i1 %true_cond3, label %left1, label %right2
@@ -84,7 +84,7 @@ left1:                                            ; preds = %right
   %16 = getelementptr %warnf_t, ptr %warnf_args, i32 0, i32 0
   store i64 1, ptr %16, align 8
   %17 = getelementptr %warnf_t, ptr %warnf_args, i32 0, i32 1
-  %18 = load i64, ptr %"$$__signal_2_$ret", align 8
+  %18 = load i64, ptr %"_1___signal_2_$ret", align 8
   %19 = getelementptr %warnf_args_t, ptr %17, i32 0, i32 0
   store i64 %18, ptr %19, align 8
   %ringbuf_output4 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %warnf_args, i64 16, i64 0)

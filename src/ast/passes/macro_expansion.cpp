@@ -6,6 +6,7 @@
 #include "ast/context.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/visitor.h"
+#include "bpftrace.h"
 #include "log.h"
 
 namespace bpftrace::ast {
@@ -126,10 +127,12 @@ public:
   MacroExpander(ASTContext &ast,
                 const MacroRegistry &registry,
                 std::vector<const Macro *> &stack,
+                uint64_t temp_variable_prefix,
                 bool should_rename = true)
       : ast_(ast),
         registry_(registry),
         stack_(stack),
+        temp_variable_prefix_(temp_variable_prefix),
         should_rename_(should_rename) {};
 
   using Visitor<MacroExpander>::visit;
@@ -147,6 +150,7 @@ private:
   ASTContext &ast_;
   const MacroRegistry &registry_;
   std::vector<const Macro *> stack_;
+  uint64_t temp_variable_prefix_;
   bool should_rename_;
 
   bool rename_ok();
@@ -243,7 +247,8 @@ void MacroExpander::visit(Expression &expr)
       // variables, maps, and idents in this expression shouldn't be modified
       // and this expression *is* permitted to be un-hygienic.
 
-      MacroExpander expander(ast_, registry_, stack_, false);
+      MacroExpander expander(
+          ast_, registry_, stack_, temp_variable_prefix_, false);
       expander.visit(expr);
       return;
     }
@@ -343,8 +348,10 @@ void MacroExpander::visit(Expression &expr)
 
   // Expand this macro.
   stack_.push_back(macro);
-  auto r = ident ? MacroExpander(ast_, registry_, stack_).expand(*macro, *ident)
-                 : MacroExpander(ast_, registry_, stack_).expand(*macro, *call);
+  auto r = ident ? MacroExpander(ast_, registry_, stack_, temp_variable_prefix_)
+                       .expand(*macro, *ident)
+                 : MacroExpander(ast_, registry_, stack_, temp_variable_prefix_)
+                       .expand(*macro, *call);
   stack_.pop_back();
   if (r) {
     expr.value = *r;
@@ -358,11 +365,12 @@ bool MacroExpander::rename_ok()
 
 std::string MacroExpander::get_new_var_ident(std::string original_ident)
 {
-  // This is a name like $$foo_0_x, where `x` is the original name,
+  // This is a name like _1_foo_0_x, where `x` is the original name,
   // `foo` is the macro name, and `0` is the depth of the call.
   assert(rename_ok());
   const auto *macro = stack_.back();
-  std::string base = "$$" + macro->name;
+  std::string base = "_" + std::to_string(temp_variable_prefix_) + "_" +
+                     macro->name;
   if (stack_.size() != 1) {
     base += "_" + std::to_string(stack_.size());
   }
@@ -418,11 +426,11 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro,
 
 Pass CreateMacroExpansionPass()
 {
-  auto fn = [](ASTContext &ast) {
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
     auto macros = MacroRegistry::create(ast);
     if (ast.diagnostics().ok()) {
       std::vector<const Macro *> stack;
-      MacroExpander expander(ast, macros, stack);
+      MacroExpander expander(ast, macros, stack, b.get_temp_variable_prefix());
       expander.visit(ast.root);
     }
     return macros;

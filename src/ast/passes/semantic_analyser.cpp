@@ -3309,7 +3309,7 @@ void SemanticAnalyser::visit(Expression &expr)
   // Visit and fold all other values.
   Visitor<SemanticAnalyser>::visit(expr);
   fold(ctx_, expr);
-  simplify(ctx_, expr);
+  simplify(ctx_, expr, bpftrace_);
 
   // Inline specific constant expressions.
   if (auto *szof = expr.as<Sizeof>()) {

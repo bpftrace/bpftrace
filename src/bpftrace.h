@@ -238,6 +238,10 @@ public:
   bool run_benchmarks_ = false;
   std::vector<std::pair<std::string, uint32_t>> benchmark_results;
 
+  uint64_t get_temp_variable_prefix() {
+    return temp_prefix_id_++;
+  }
+
 private:
   Ksyms ksyms_;
   Usyms usyms_;
@@ -273,6 +277,7 @@ private:
   struct ring_buffer *ringbuf_ = nullptr;
   struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
+  uint64_t temp_prefix_id_ = 1;
 
   // Mapping traceable functions to modules (or "vmlinux") they appear in.
   // Needs to be mutable to allow lazy loading of the mapping from const lookup

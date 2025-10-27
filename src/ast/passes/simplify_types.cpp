@@ -10,7 +10,8 @@ namespace bpftrace::ast {
 
 class SimplifyTypes : public Visitor<SimplifyTypes, std::optional<Expression>> {
 public:
-  SimplifyTypes(ASTContext &ast) : ast_(ast) {};
+  SimplifyTypes(ASTContext &ast, uint64_t temp_variable_prefix = 0)
+      : ast_(ast), temp_variable_prefix_(temp_variable_prefix) {};
 
   using Visitor<SimplifyTypes, std::optional<Expression>>::visit;
 
@@ -20,6 +21,7 @@ public:
 private:
   Expression create_land_chain(std::vector<Expression> &equal_exprs, Binop &op);
   ASTContext &ast_;
+  uint64_t temp_variable_prefix_;
   int var_id_ = 0;
 };
 
@@ -105,9 +107,10 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
   if (op.left.is<Variable>() || op.left.is<MapAccess>()) {
     left_tuple = clone(ast_, op.left, op.left.loc());
   } else {
-    left_tuple = ast_.make_node<Variable>("$$binop_tuple_left_" +
-                                              std::to_string(var_id_),
-                                          Location(op.left.loc()));
+    left_tuple = ast_.make_node<Variable>(
+        "_" + std::to_string(temp_variable_prefix_) + "_binop_tuple_left_" +
+            std::to_string(var_id_),
+        Location(op.left.loc()));
     auto *left_var_assign = ast_.make_node<AssignVarStatement>(
         clone(ast_, left_tuple.as<Variable>(), left_tuple.loc()),
         clone(ast_, op.left, op.left.loc()),
@@ -165,9 +168,9 @@ std::optional<Expression> SimplifyTypes::visit(Binop &op)
   }
 }
 
-void simplify(ASTContext &ast, Expression &expr)
+void simplify(ASTContext &ast, Expression &expr, BPFtrace &b)
 {
-  SimplifyTypes simplifier(ast);
+  SimplifyTypes simplifier(ast, b.get_temp_variable_prefix());
   simplifier.visit(expr);
 }
 
