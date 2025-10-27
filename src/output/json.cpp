@@ -407,6 +407,10 @@ void JsonOutput::value(const Value &value)
   emit_data(out_, "value", std::nullopt, value);
 }
 
+void JsonOutput::empty()
+{
+}
+
 void JsonOutput::printf(const std::string &str,
                         const SourceInfo &info,
                         PrintfSeverity severity)
@@ -529,11 +533,6 @@ void JsonOutput::benchmark_result(const std::vector<std::string> &all_benches,
   result.fields.emplace_back("average", average.count());
   result.fields.emplace_back("iters", iters);
   emit_data(out_, "benchmark_result", all_benches[index], result);
-}
-
-void JsonOutput::end()
-{
-  // Nothing emitted.
 }
 
 } // namespace bpftrace::output

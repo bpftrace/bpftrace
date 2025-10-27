@@ -22,6 +22,7 @@ enum class AsyncAction {
   join,
   runtime_error,
   print_non_map,
+  print_empty,
   strftime,
   watchpoint_attach,
   watchpoint_detach,
@@ -42,6 +43,7 @@ public:
   void join(const OpaqueValue &data);
   void time(const OpaqueValue &data);
   void runtime_error(const OpaqueValue &data);
+  void print_empty(const OpaqueValue &data);
   void print_non_map(const OpaqueValue &data);
   void print_map(const OpaqueValue &data);
   void zero_map(const OpaqueValue &data);

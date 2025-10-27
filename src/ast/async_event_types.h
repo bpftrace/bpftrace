@@ -41,6 +41,12 @@ struct PrintNonMap {
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, size_t size);
 } __attribute__((packed));
 
+struct PrintEmpty {
+  uint64_t action_id;
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
+} __attribute__((packed));
+
 struct MapEvent {
   uint64_t action_id;
   uint32_t mapid;

@@ -12,6 +12,7 @@ public:
 
   void map(const std::string &name, const Value &value) override;
   void value(const Value &value) override;
+  void empty() override;
   void printf(const std::string &str,
               const SourceInfo &info,
               PrintfSeverity severity) override;
@@ -23,7 +24,6 @@ public:
   void lost_events(uint64_t lost) override;
   void attached_probes(uint64_t num_probes) override;
   void runtime_error(int retcode, const RuntimeErrorInfo &info) override;
-  void end() override;
 
   void test_result(const std::vector<std::string> &all_tests,
                    size_t index,

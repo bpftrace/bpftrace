@@ -26,6 +26,13 @@ std::vector<llvm::Type*> PrintNonMap::asLLVMType(ast::IRBuilderBPF& b,
   };
 }
 
+std::vector<llvm::Type*> PrintEmpty::asLLVMType(ast::IRBuilderBPF& b)
+{
+  return {
+    b.getInt64Ty(), // asyncid
+  };
+}
+
 std::vector<llvm::Type*> MapEvent::asLLVMType(ast::IRBuilderBPF& b)
 {
   return {

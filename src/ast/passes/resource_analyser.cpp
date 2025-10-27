@@ -303,13 +303,16 @@ void ResourceAnalyser::visit(Call &call)
     resources_.strftime_args.push_back(call.vargs.at(0).as<String>()->value);
   } else if (call.func == "print") {
     constexpr auto nonmap_headroom = sizeof(AsyncEvent::PrintNonMap);
-    auto &arg = call.vargs.at(0);
-    if (!arg.is<Map>()) {
-      resources_.non_map_print_args.push_back(arg.type());
-      const size_t fmtstring_args_size = nonmap_headroom + arg.type().GetSize();
-      if (exceeds_stack_limit(fmtstring_args_size)) {
-        resources_.max_fmtstring_args_size = std::max<uint64_t>(
-            resources_.max_fmtstring_args_size, fmtstring_args_size);
+    if (!call.vargs.empty()) {
+      auto &arg = call.vargs.at(0);
+      if (!arg.is<Map>()) {
+        resources_.non_map_print_args.push_back(arg.type());
+        const size_t fmtstring_args_size = nonmap_headroom +
+                                           arg.type().GetSize();
+        if (exceeds_stack_limit(fmtstring_args_size)) {
+          resources_.max_fmtstring_args_size = std::max<uint64_t>(
+              resources_.max_fmtstring_args_size, fmtstring_args_size);
+        }
       }
     }
   } else if (call.func == "cgroup_path") {

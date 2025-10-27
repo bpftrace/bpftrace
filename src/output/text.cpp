@@ -520,6 +520,11 @@ void TextOutput::value(const Value &value)
   out_ << std::endl;
 }
 
+void TextOutput::empty()
+{
+  out_ << std::endl;
+}
+
 void TextOutput::primitive(const Primitive &p)
 {
   TextEmitter<Primitive>::emit(out_, p);
@@ -735,12 +740,6 @@ void TextOutput::benchmark_result(const std::vector<std::string> &all_benches,
   out_ << std::left << std::setw(time_width) << std::setfill(' ')
        << average.count();
   out_ << std::left << iters;
-  out_ << std::endl;
-}
-
-void TextOutput::end()
-{
-  out_ << std::endl;
   out_ << std::endl;
 }
 

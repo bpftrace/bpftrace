@@ -88,6 +88,11 @@ void AsyncHandlers::runtime_error(const OpaqueValue &data)
   out->runtime_error(return_value, info);
 }
 
+void AsyncHandlers::print_empty([[maybe_unused]] const OpaqueValue &data)
+{
+  out->empty();
+}
+
 void AsyncHandlers::print_non_map(const OpaqueValue &data)
 {
   auto print = data.bitcast<AsyncEvent::PrintNonMap>();

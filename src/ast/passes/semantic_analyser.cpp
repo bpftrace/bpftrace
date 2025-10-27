@@ -503,7 +503,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
         arg_type_spec{ .type=Type::string, .literal=true },
         arg_type_spec{ .type=Type::integer } } } },
   { "print",
-    { .min_args=1,
+    { .min_args=0,
       .max_args=3,
       .arg_types={
         // This may be a pure map or not.
@@ -1598,48 +1598,50 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "exit") {
     // Leave as `none`.
   } else if (call.func == "print") {
-    if (auto *map = call.vargs.at(0).as<Map>()) {
-      if (is_final_pass()) {
-        // N.B. that print is parameteric in the type, so this is not checked
-        // by `check_arg` as there is no spec for the first argument.
-        if (map->type().IsNoneTy()) {
-          map->addError() << "Undefined map: " + map->ident;
-        } else {
-          if (in_loop()) {
-            call.addWarning() << "Due to it's asynchronous nature using "
-                                 "'print()' in a loop can "
-                                 "lead to unexpected behavior. The map will "
-                                 "likely be updated "
-                                 "before the runtime can 'print' it.";
-          }
-          if (map->value_type.IsStatsTy() && call.vargs.size() > 1) {
-            call.addWarning()
-                << "print()'s top and div arguments are ignored when used on "
-                   "stats() maps.";
+    if (!call.vargs.empty()) {
+      if (auto *map = call.vargs.at(0).as<Map>()) {
+        if (is_final_pass()) {
+          // N.B. that print is parameteric in the type, so this is not checked
+          // by `check_arg` as there is no spec for the first argument.
+          if (map->type().IsNoneTy()) {
+            map->addError() << "Undefined map: " + map->ident;
+          } else {
+            if (in_loop()) {
+              call.addWarning() << "Due to it's asynchronous nature using "
+                                   "'print()' in a loop can "
+                                   "lead to unexpected behavior. The map will "
+                                   "likely be updated "
+                                   "before the runtime can 'print' it.";
+            }
+            if (map->value_type.IsStatsTy() && call.vargs.size() > 1) {
+              call.addWarning()
+                  << "print()'s top and div arguments are ignored when used on "
+                     "stats() maps.";
+            }
           }
         }
       }
-    }
-    // Note that IsPrintableTy() is somewhat disingenuous here. Printing a
-    // non-map value requires being able to serialize the entire value, so
-    // map-backed types like count(), min(), max(), etc. cannot be printed
-    // through the non-map printing mechanism.
-    //
-    // We rely on the fact that semantic analysis enforces types like count(),
-    // min(), max(), etc. to be assigned directly to a map.
-    else if (call.vargs.at(0).type().IsMultiKeyMapTy()) {
-      call.addError()
-          << "Map type " << call.vargs.at(0).type()
-          << " cannot print the value of individual keys. You must print "
-             "the whole map.";
-    } else if (call.vargs.at(0).type().IsPrintableTy()) {
-      if (call.vargs.size() != 1)
-        call.addError() << "Non-map print() only takes 1 argument, "
-                        << call.vargs.size() << " found";
-    } else {
-      if (is_final_pass())
-        call.addError() << call.vargs.at(0).type() << " type passed to "
-                        << call.func << "() is not printable";
+      // Note that IsPrintableTy() is somewhat disingenuous here. Printing a
+      // non-map value requires being able to serialize the entire value, so
+      // map-backed types like count(), min(), max(), etc. cannot be printed
+      // through the non-map printing mechanism.
+      //
+      // We rely on the fact that semantic analysis enforces types like count(),
+      // min(), max(), etc. to be assigned directly to a map.
+      else if (call.vargs.at(0).type().IsMultiKeyMapTy()) {
+        call.addError()
+            << "Map type " << call.vargs.at(0).type()
+            << " cannot print the value of individual keys. You must print "
+               "the whole map.";
+      } else if (call.vargs.at(0).type().IsPrintableTy()) {
+        if (call.vargs.size() != 1)
+          call.addError() << "Non-map print() only takes 1 argument, "
+                          << call.vargs.size() << " found";
+      } else {
+        if (is_final_pass())
+          call.addError() << call.vargs.at(0).type() << " type passed to "
+                          << call.func << "() is not printable";
+      }
     }
   } else if (call.func == "cgroup_path") {
     call.return_type = CreateCgroupPath();
