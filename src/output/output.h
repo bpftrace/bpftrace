@@ -158,7 +158,6 @@ public:
   virtual void runtime_error(int retcode, const RuntimeErrorInfo& info) = 0;
   virtual void benchmark_results(
       const std::vector<std::pair<std::string, uint32_t>>& results) = 0;
-  virtual void end() = 0;
 };
 
 } // namespace bpftrace::output

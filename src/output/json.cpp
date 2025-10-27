@@ -513,9 +513,4 @@ void JsonOutput::benchmark_results(
   emit_data(out_, "benchmark_results", std::nullopt, results);
 }
 
-void JsonOutput::end()
-{
-  // Nothing emitted.
-}
-
 } // namespace bpftrace::output

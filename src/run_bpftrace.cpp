@@ -232,9 +232,6 @@ int run_bpftrace(BPFtrace &bpftrace,
   if (err)
     return err;
 
-  // Indicate that we are done the main loop.
-  output->end();
-
   // We are now post-processing. If we receive another SIGINT,
   // handle it normally (exit)
   act.sa_handler = SIG_DFL;

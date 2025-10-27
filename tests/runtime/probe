@@ -508,7 +508,7 @@ TIMEOUT 2
 NAME bench
 RUN {{BPFTRACE}} --test-mode bench -e 'begin { print("begin\n"); } bench:a { @ = count(); } end { print(@); clear(@); }'
 EXPECT_REGEX begin\n
-             @: 1000000\n\n
+             @: 1000000
              \+-----------\+--------------\+
              \| BENCHMARK \| AVERAGE TIME \|
              \+-----------\+--------------\+
@@ -521,7 +521,7 @@ RUN {{BPFTRACE}} --test-mode bench -e 'begin { printf("begin\n"); } bench:a { @a
 EXPECT_REGEX begin
              @a: 1000000
              @b: 1000000
-             @c: 1000000\n\n
+             @c: 1000000
              \+-----------\+--------------\+
              \| BENCHMARK \| AVERAGE TIME \|
              \+-----------\+--------------\+

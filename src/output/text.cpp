@@ -689,10 +689,4 @@ void TextOutput::benchmark_results(
   out_ << std::endl;
 }
 
-void TextOutput::end()
-{
-  out_ << std::endl;
-  out_ << std::endl;
-}
-
 } // namespace bpftrace::output

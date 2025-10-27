@@ -22,7 +22,6 @@ public:
   void runtime_error(int retcode, const RuntimeErrorInfo &info) override;
   void benchmark_results(
       const std::vector<std::pair<std::string, uint32_t>> &results) override;
-  void end() override;
 
 private:
   std::ostream &out_;
