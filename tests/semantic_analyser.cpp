@@ -5475,6 +5475,8 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
 {
   test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = 2; }");
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bar"; })");
+  test(
+      R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "muchmuchlongerstr"; })");
 
   // These types should be enforced.
   test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
@@ -5487,12 +5489,6 @@ kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
 stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'int64' when variable already has a type 'string'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
                                             ~~~~~~
-)" });
-  test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bazz"; })",
-       Error{ R"(
-stdin:1:45-56: ERROR: Type mismatch for $y: trying to assign value of type 'string' when variable already has a type 'string'
-kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bazz"; }
-                                            ~~~~~~~~~~~
 )" });
 
   // But ordering should not matter, as long as the scope is the same.

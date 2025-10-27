@@ -3526,11 +3526,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         pass_tracker_.inc_num_unresolved();
       }
     } else if (assignTy.IsStringTy()) {
-      if (foundVar.can_resize) {
-        update_string_size(storedTy, assignTy);
-      } else if (!assignTy.FitsInto(storedTy)) {
-        type_mismatch_error = true;
-      }
+      update_string_size(storedTy, assignTy);
     } else if (storedTy.IsIntegerTy()) {
       if (storedTy.IsEqual(assignTy)) {
         // No checks or casts needed.
