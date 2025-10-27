@@ -19,12 +19,12 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_foo_1(ptr %0) #0 section "s_kprobe_foo_1" !dbg !48 {
 entry:
   %array_access = alloca i8, align 1
-  %"$$strstr_4_$needle_size" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$needle_size")
-  store i64 0, ptr %"$$strstr_4_$needle_size", align 8
-  %"$$strstr_4_$haystack_size" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$haystack_size")
-  store i64 0, ptr %"$$strstr_4_$haystack_size", align 8
+  %"_1_strstr_4_$needle_size" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1_strstr_4_$needle_size")
+  store i64 0, ptr %"_1_strstr_4_$needle_size", align 8
+  %"_1_strstr_4_$haystack_size" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1_strstr_4_$haystack_size")
+  store i64 0, ptr %"_1_strstr_4_$haystack_size", align 8
   %get_cpu_id9 = call i64 inttoptr (i64 8 to ptr)() #4
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded10 = and i64 %get_cpu_id9, %1
@@ -55,9 +55,9 @@ entry:
   %arg1 = load volatile i64, ptr %12, align 8
   %probe_read_kernel_str8 = call i64 inttoptr (i64 115 to ptr)(ptr %10, i32 1024, i64 %arg1)
   %probe_read_kernel12 = call i64 inttoptr (i64 113 to ptr)(ptr %2, i32 1024, ptr %10)
-  store i64 1024, ptr %"$$strstr_4_$haystack_size", align 8
-  store i64 1024, ptr %"$$strstr_4_$needle_size", align 8
-  %13 = load i64, ptr %"$$strstr_4_$needle_size", align 8
+  store i64 1024, ptr %"_1_strstr_4_$haystack_size", align 8
+  store i64 1024, ptr %"_1_strstr_4_$needle_size", align 8
+  %13 = load i64, ptr %"_1_strstr_4_$needle_size", align 8
   %14 = icmp eq i64 %13, 0
   %true_cond = icmp ne i1 %14, false
   br i1 %true_cond, label %left, label %right
@@ -88,8 +88,8 @@ left13:                                           ; preds = %right
   br label %done17
 
 right14:                                          ; preds = %right
-  %23 = load i64, ptr %"$$strstr_4_$haystack_size", align 8
-  %24 = load i64, ptr %"$$strstr_4_$needle_size", align 8
+  %23 = load i64, ptr %"_1_strstr_4_$haystack_size", align 8
+  %24 = load i64, ptr %"_1_strstr_4_$needle_size", align 8
   %__bpf_strnstr = call i32 @__bpf_strnstr(ptr %4, ptr %2, i64 %23, i64 %24), !dbg !54
   %25 = sext i32 %__bpf_strnstr to i64
   br label %done17

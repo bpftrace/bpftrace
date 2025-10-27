@@ -19,23 +19,23 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_foo_1(ptr %0) #0 section "s_kprobe_foo_1" !dbg !35 {
 entry:
   %array_access = alloca i8, align 1
-  %"$$strstr_4_$needle_size" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$needle_size")
-  store i64 0, ptr %"$$strstr_4_$needle_size", align 8
-  %"$$strstr_4_$haystack_size" = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_4_$haystack_size")
-  store i64 0, ptr %"$$strstr_4_$haystack_size", align 8
-  %"$$strstr_3_$needle" = alloca [5 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_3_$needle")
-  call void @llvm.memset.p0.i64(ptr align 1 %"$$strstr_3_$needle", i8 0, i64 5, i1 false)
-  %"$$strstr_2_$haystack" = alloca [17 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %"$$strstr_2_$haystack")
-  call void @llvm.memset.p0.i64(ptr align 1 %"$$strstr_2_$haystack", i8 0, i64 17, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strstr_2_$haystack", ptr align 1 @hello-test-world, i64 17, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"$$strstr_3_$needle", ptr align 1 @test, i64 5, i1 false)
-  store i64 17, ptr %"$$strstr_4_$haystack_size", align 8
-  store i64 5, ptr %"$$strstr_4_$needle_size", align 8
-  %1 = load i64, ptr %"$$strstr_4_$needle_size", align 8
+  %"_1_strstr_4_$needle_size" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1_strstr_4_$needle_size")
+  store i64 0, ptr %"_1_strstr_4_$needle_size", align 8
+  %"_1_strstr_4_$haystack_size" = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1_strstr_4_$haystack_size")
+  store i64 0, ptr %"_1_strstr_4_$haystack_size", align 8
+  %"_1_strstr_3_$needle" = alloca [5 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1_strstr_3_$needle")
+  call void @llvm.memset.p0.i64(ptr align 1 %"_1_strstr_3_$needle", i8 0, i64 5, i1 false)
+  %"_1_strstr_2_$haystack" = alloca [17 x i8], align 1
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %"_1_strstr_2_$haystack")
+  call void @llvm.memset.p0.i64(ptr align 1 %"_1_strstr_2_$haystack", i8 0, i64 17, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"_1_strstr_2_$haystack", ptr align 1 @hello-test-world, i64 17, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %"_1_strstr_3_$needle", ptr align 1 @test, i64 5, i1 false)
+  store i64 17, ptr %"_1_strstr_4_$haystack_size", align 8
+  store i64 5, ptr %"_1_strstr_4_$needle_size", align 8
+  %1 = load i64, ptr %"_1_strstr_4_$needle_size", align 8
   %2 = icmp eq i64 %1, 0
   %true_cond = icmp ne i1 %2, false
   br i1 %true_cond, label %left, label %right
@@ -44,7 +44,7 @@ left:                                             ; preds = %entry
   br label %done
 
 right:                                            ; preds = %entry
-  %3 = ptrtoint ptr %"$$strstr_3_$needle" to i64
+  %3 = ptrtoint ptr %"_1_strstr_3_$needle" to i64
   %4 = inttoptr i64 %3 to ptr
   %5 = call ptr @llvm.preserve.static.offset(ptr %4)
   %6 = getelementptr i8, ptr %5, i64 0
@@ -66,9 +66,9 @@ left1:                                            ; preds = %right
   br label %done4
 
 right2:                                           ; preds = %right
-  %11 = load i64, ptr %"$$strstr_4_$haystack_size", align 8
-  %12 = load i64, ptr %"$$strstr_4_$needle_size", align 8
-  %__bpf_strnstr = call i32 @__bpf_strnstr(ptr %"$$strstr_2_$haystack", ptr %"$$strstr_3_$needle", i64 %11, i64 %12), !dbg !41
+  %11 = load i64, ptr %"_1_strstr_4_$haystack_size", align 8
+  %12 = load i64, ptr %"_1_strstr_4_$needle_size", align 8
+  %__bpf_strnstr = call i32 @__bpf_strnstr(ptr %"_1_strstr_2_$haystack", ptr %"_1_strstr_3_$needle", i64 %11, i64 %12), !dbg !41
   %13 = sext i32 %__bpf_strnstr to i64
   br label %done4
 
