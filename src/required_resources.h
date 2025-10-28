@@ -218,16 +218,17 @@ public:
   // Probe metadata that codegen creates. Ideally ResourceAnalyser pass should
   // be collecting this, but it's complex to move the logic.
   std::vector<Probe> probes;
-  std::unordered_map<std::string, Probe> special_probes;
+  std::vector<Probe> begin_probes;
+  std::vector<Probe> end_probes;
   std::vector<Probe> test_probes;
   std::vector<Probe> benchmark_probes;
   std::vector<Probe> signal_probes;
   std::vector<Probe> watchpoint_probes;
 
-  size_t num_probes()
+  size_t num_probes() const
   {
-    return probes.size() + special_probes.size() + test_probes.size() +
-           benchmark_probes.size() + signal_probes.size() +
+    return probes.size() + begin_probes.size() + end_probes.size() +
+           test_probes.size() + benchmark_probes.size() + signal_probes.size() +
            watchpoint_probes.size();
   }
 
@@ -254,7 +255,8 @@ private:
             using_skboutput,
             probes,
             signal_probes,
-            special_probes,
+            begin_probes,
+            end_probes,
             test_probes,
             benchmark_probes);
   }
