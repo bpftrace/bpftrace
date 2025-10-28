@@ -37,6 +37,9 @@ and this project adheres to
   - [#4688](https://github.com/bpftrace/bpftrace/pull/4688)
 - Increase RLIMIT_NOFILE on startup as needed
   - [#4716](https://github.com/bpftrace/bpftrace/pull/4716)
+- Root user check replaced with check for required capabilities
+  (CAP_BPF, CAP_PERFMON, CAP_DAC_READ_SEARCH, CAP_DAC_OVERRIDE)
+  - [#4773](https://github.com/bpftrace/bpftrace/pull/4773)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 16

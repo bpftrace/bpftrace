@@ -453,7 +453,7 @@ Args parse_args(int argc, char* argv[])
          -1) {
     switch (c) {
       case Options::INFO: // --info
-        check_is_root();
+        check_privileges();
         info(args.no_feature);
         exit(0);
         break;
@@ -761,7 +761,7 @@ int main(int argc, char* argv[])
 
   // Listing probes when there is no program.
   if (args.listing && args.script.empty() && args.filename.empty()) {
-    check_is_root();
+    check_privileges();
 
     if (args.search.find(".") != std::string::npos &&
         args.search.find_first_of(":*") == std::string::npos) {
@@ -845,9 +845,9 @@ int main(int argc, char* argv[])
     bpftrace.add_param(param);
   }
 
-  // If we are not running anything, then we don't require root.
+  // If we are not running anything, then we don't require privileges.
   if (args.test_mode == TestMode::NONE) {
-    check_is_root();
+    check_privileges();
 
     auto lockdown_state = lockdown::detect();
     if (lockdown_state == lockdown::LockdownState::Confidentiality) {

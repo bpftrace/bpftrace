@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  check_is_root();
+  check_privileges();
 
   libbpf_set_print(libbpf_print);
 

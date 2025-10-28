@@ -1,6 +1,7 @@
 #include <csignal>
 #include <cstring>
 #include <fstream>
+#include <linux/capability.h>
 #include <linux/version.h>
 #include <optional>
 #include <sys/utsname.h>
@@ -37,10 +38,50 @@ int libbpf_print(enum libbpf_print_level level, const char *msg, va_list ap)
   return vprintf(msg, ap);
 }
 
-void check_is_root()
+void check_privileges()
 {
-  if (geteuid() != 0) {
-    LOG(ERROR) << "bpftrace currently only supports running as the root user.";
+  struct __user_cap_header_struct header = {
+    .version = _LINUX_CAPABILITY_VERSION_3,
+    .pid = getpid(),
+  };
+  static_assert(_LINUX_CAPABILITY_U32S_3 == 2);
+  struct __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
+
+  // There is no syscall wrapper for capget() in libc so we have
+  // to use syscall() here.
+  if (syscall(SYS_capget, &header, data) < 0) {
+    LOG(ERROR) << "Failed to query process capabilities: " << strerror(errno);
+    exit(1);
+  }
+
+  uint64_t effective = static_cast<uint64_t>(data[0].effective) |
+                       (static_cast<uint64_t>(data[1].effective) << 32);
+
+  static const char *root_user_msg = "please run bpftrace as the root user.";
+
+  // If we're not running as root, we need both CAP_DAC capabilities to be able
+  // to read inside of /sys/fs/bpf which is mounted with mode 0700 by default.
+  if (geteuid() != 0 && !(effective & (1ULL << CAP_DAC_READ_SEARCH))) {
+    LOG(ERROR) << "Missing CAP_DAC_READ_SEARCH capability, " << root_user_msg;
+    exit(1);
+  }
+
+  if (geteuid() != 0 && !(effective & (1ULL << CAP_DAC_OVERRIDE))) {
+    LOG(ERROR) << "Missing CAP_DAC_OVERRIDE capability" << root_user_msg;
+    exit(1);
+  }
+
+  // CAP_SYS_ADMIN covers both CAP_BPF and CAP_PERFMON for backwards compat.
+  if (effective & (1ULL << CAP_SYS_ADMIN))
+    return;
+
+  if (!(effective & (1ULL << CAP_BPF))) {
+    LOG(ERROR) << "Missing CAP_BPF capability, " << root_user_msg;
+    exit(1);
+  }
+
+  if (!(effective & (1ULL << CAP_PERFMON))) {
+    LOG(ERROR) << "Missing CAP_PERFMON capability, " << root_user_msg;
     exit(1);
   }
 }
