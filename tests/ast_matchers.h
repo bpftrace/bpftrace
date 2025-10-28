@@ -49,6 +49,10 @@ public:
     return static_cast<Derived&>(*this);
   }
 
+  const std::vector<PredicateType>& predicates() const {
+    return predicates_;
+  }
+
 protected:
   std::vector<PredicateType> predicates_;
 };
@@ -61,21 +65,23 @@ class NodeMatcher
 public:
   NodeMatcher() = default;
 
+  using PredicateMatcher<Derived, NodeType, std::function<bool(const NodeType&)>>::predicates;
+
   operator Matcher<const NodeType&>() const
   {
-    return ::testing::MakeMatcher(new Impl<NodeType>(predicates_));
+    return ::testing::MakeMatcher(new Impl<NodeType>(predicates()));
   }
 
   operator Matcher<const ast::ASTContext&>() const
   {
-    return ::testing::MakeMatcher(new Impl<ast::ASTContext>(predicates_));
+    return ::testing::MakeMatcher(new Impl<ast::ASTContext>(predicates()));
   }
 
   template <typename U>
   operator Matcher<const U&>() const
     requires requires(NodeType* ptr) { U(ptr); }
   {
-    return ::testing::MakeMatcher(new Impl<U>(predicates_));
+    return ::testing::MakeMatcher(new Impl<U>(predicates()));
   }
 
   Derived& WithValue(const auto& value)
@@ -150,8 +156,6 @@ public:
   }
 
 private:
-  std::vector<std::function<bool(const NodeType&)>> predicates_;
-
   template <typename U = NodeType>
   class Impl : public MatcherInterface<const U&> {
   public:
@@ -165,7 +169,14 @@ private:
       if constexpr (std::is_same_v<U, ast::Expression> ||
                     std::is_same_v<U, ast::Statement>) {
         if (!node.template is<NodeType>()) {
-          node.node().addError() << "is not the expected type";
+          const auto& n = node.node();
+          std::string actual_type_name = std::visit(
+              [](auto* v) -> std::string {
+                using T = std::decay_t<decltype(*v)>;
+                return ::testing::internal::GetTypeName<T>();
+              },
+              node.value);
+          n.addError() << "is not the expected type; got " << actual_type_name;
           return false;
         } else {
           const NodeType& concrete = *node.template as<NodeType>();
@@ -416,9 +427,6 @@ public:
   }
 
 private:
-  std::vector<std::function<bool(const SizedType&, MatchResultListener*)>>
-      predicates_;
-
   class Impl : public MatcherInterface<const SizedType&> {
   public:
     explicit Impl(const std::vector<
