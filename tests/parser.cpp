@@ -118,7 +118,7 @@ void test(BPFtrace &bpftrace, const std::string &input, const MatcherT &matcher)
   ASSERT_TRUE(bool(ok));
 
   ast.diagnostics().emit(out);
-  ASSERT_TRUE(ast.diagnostics().ok()) << out.str();
+  ASSERT_TRUE(ast.diagnostics().ok()) << out.str() << input;
 
   EXPECT_THAT(ast, matcher);
 }
