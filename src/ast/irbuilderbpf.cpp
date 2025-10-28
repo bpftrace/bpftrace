@@ -361,7 +361,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
     for (const auto &elem : stype.GetFields()) {
       const auto &elemtype = elem.type;
       llvm_elems.emplace_back(GetType(elemtype));
-      ty_name += typestr(elemtype, true) + "_";
+      ty_name += typestr(elemtype) + "_";
     }
     ty_name += "_tuple_t";
 
