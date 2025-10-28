@@ -166,8 +166,7 @@ public:
   }
   R visit(AssignMapStatement &assignment)
   {
-    visitImpl(assignment.map);
-    visitImpl(assignment.key);
+    visitImpl(assignment.map_access);
     return visitImpl(assignment.expr);
   }
   R visit(AssignVarStatement &assignment)

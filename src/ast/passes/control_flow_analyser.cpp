@@ -86,9 +86,13 @@ public:
   {
     return visit(acc.expr) || visit(acc.indexpr);
   }
+  bool visit(MapAccess &acc)
+  {
+    return visit(acc.key);
+  }
   bool visit(AssignMapStatement &map_assign)
   {
-    return visit(map_assign.key) || visit(map_assign.expr);
+    return visit(map_assign.map_access) || visit(map_assign.expr);
   }
   bool visit(BlockExpr &block)
   {
