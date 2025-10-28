@@ -35,6 +35,7 @@ class Node;
 #include "ast/context.h"
 #include "ast/location.h"
 #include "util/int_parser.h"
+#include "util/strings.h"
 }
 
 %{
@@ -250,16 +251,21 @@ c_struct:       STRUCT STRUCT_DEFN { $$ = $2; }
                 ;
 
 c_definitions:
-                c_definitions CPREPROC  { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, $2)); }
+                c_definitions CPREPROC
+                {
+                    $$ = std::move($1);
+                    auto s = util::rtrim($2);
+                    $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, s));
+                }
         |       c_definitions c_struct  {
                     $$ = std::move($1);
-                    auto s = $2;
-                    if (s.empty() || s.back() != ';') {
-                        s += ";";
+                    auto s = util::rtrim($2);
+                    if (!s.empty() && s.back() != ';') {
+                      s += ";";
                     }
                     $$.push_back(driver.ctx.make_node<ast::CStatement>(driver.loc, s));
                 }
-        |       %empty                           { $$ = ast::CStatementList(); }
+        |       %empty { $$ = ast::CStatementList(); }
                 ;
 
 imports:

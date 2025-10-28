@@ -118,7 +118,7 @@ void test(BPFtrace &bpftrace, const std::string &input, const MatcherT &matcher)
   ASSERT_TRUE(bool(ok));
 
   ast.diagnostics().emit(out);
-  ASSERT_TRUE(ast.diagnostics().ok()) << out.str();
+  ASSERT_TRUE(ast.diagnostics().ok()) << out.str() << input;
 
   EXPECT_THAT(ast, matcher);
 }
@@ -1770,7 +1770,7 @@ TEST(Parser, offsetof_expression)
   test("struct Foo { int x; }; "
        "begin { $foo = (struct Foo *)0; offsetof(*$foo, x); }",
        Program()
-           .WithCStatements({ CStatement("struct Foo { int x; };;") })
+           .WithCStatements({ CStatement("struct Foo { int x; };") })
            .WithProbe(Probe(
                { "begin" },
                { AssignVarStatement(Variable("$foo"),
@@ -1905,7 +1905,7 @@ TEST(Parser, cstruct_semicolon)
   test("struct Foo { int x, y; char *str; }; kprobe:sys_read { 1; }",
        Program()
            .WithCStatements(
-               { CStatement("struct Foo { int x, y; char *str; };;") })
+               { CStatement("struct Foo { int x, y; char *str; };") })
            .WithProbe(
                Probe({ "kprobe:sys_read" }, { ExprStatement(Integer(1)) })));
 }
