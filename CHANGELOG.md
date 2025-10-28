@@ -42,6 +42,8 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
+- join(): Fix wrong index of GEP that was causing truncation
+  - [#4786](https://github.com/bpftrace/bpftrace/pull/4786)
 - Improved tuple binop comparison
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
 - Fix off-by-one for function argument size comparison
