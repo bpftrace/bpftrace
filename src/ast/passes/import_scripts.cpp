@@ -1,11 +1,18 @@
-#include "ast/passes/import_scripts.h"
+#include <algorithm>
+
 #include "ast/ast.h"
+#include "ast/passes/import_scripts.h"
 #include "ast/passes/resolve_imports.h"
 
 namespace bpftrace::ast {
 
 static void import_ast(ASTContext &ast, Node &node, const ASTContext &other)
 {
+  // The ordering of all probes is reversed before and after appending,
+  // in order to provide a partial ordering over imports. Consider the
+  // left node import -- this will wind up being the first thing initialized.
+  std::ranges::reverse(ast.root->probes);
+
   // Clone all map declarations, subfunctions, etc. into the primary AST.
   // Note that we may choose not to inline all definitions in the future, and
   // define that namespace-based resolution is used for e.g. macro expansion,
@@ -29,6 +36,10 @@ static void import_ast(ASTContext &ast, Node &node, const ASTContext &other)
       ast.root->probes.push_back(clone(ast, node.loc, probe));
     }
   }
+
+  // See above. We re-reverse the set of probes available to provide the
+  // intended partial ordering.
+  std::ranges::reverse(ast.root->probes);
 }
 
 Pass CreateImportExternalScriptsPass()

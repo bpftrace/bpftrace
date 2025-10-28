@@ -921,6 +921,8 @@ Most providers also support a short name which can be used instead of the full n
 These are special built-in events provided by the bpftrace runtime.
 `begin` is triggered before all other probes are attached.
 `end` is triggered after all other probes are detached.
+Each of these probes can be used any number of times, and they will be executed in the same order they are declared.
+For imports containing `begin` and `end` probes, an effort is made to preserve the partial order implied by the import graph (e.g. if `A` depends on `B`, then `B` will have both its `begin` and `end` probes executed first), but this is not strictly guaranteed.
 
 Note that specifying an `end` probe doesn’t override the printing of 'non-empty' maps at exit.
 To prevent printing all used maps need be cleared in the `end` probe:
