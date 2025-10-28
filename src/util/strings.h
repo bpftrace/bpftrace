@@ -8,14 +8,14 @@ namespace bpftrace::util {
 // trim from end of string (right)
 inline std::string &rtrim(std::string &s)
 {
-  s.erase(s.find_last_not_of(" ") + 1);
+  s.erase(s.find_last_not_of(" \t\r\n") + 1);
   return s;
 }
 
 // trim from beginning of string (left)
 inline std::string &ltrim(std::string &s)
 {
-  s.erase(0, s.find_first_not_of(" "));
+  s.erase(0, s.find_first_not_of(" \t\r\n"));
   return s;
 }
 
