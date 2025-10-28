@@ -501,7 +501,7 @@ public:
 
   bool NeedsPercpuMap() const;
 
-  friend std::string typestr(const SizedType &type, bool debug);
+  friend std::string typestr(const SizedType &type);
 
   // Factories
 
@@ -570,7 +570,7 @@ SizedType CreateTimestampMode();
 
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
-std::string typestr(const SizedType &type, bool debug = false);
+std::string typestr(const SizedType &type);
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
 enum class TSeriesAggFunc { none, avg, max, min, sum };

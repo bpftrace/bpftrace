@@ -22,7 +22,7 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateUInt32()), "uint32");
   EXPECT_EQ(to_str(CreateUInt64()), "uint64");
 
-  EXPECT_EQ(to_str(CreateString(10)), "string");
+  EXPECT_EQ(to_str(CreateString(10)), "string[10]");
 
   EXPECT_EQ(to_str(CreateInet(10)), "inet[10]");
   EXPECT_EQ(to_str(CreateBuffer(10)), "buffer[14]"); // metadata headroom
@@ -31,7 +31,7 @@ TEST(types, to_str)
 
   auto ptr_ctx = CreatePointer(CreateInt8(), AddrSpace::kernel);
   ptr_ctx.MarkCtxAccess();
-  EXPECT_EQ(to_str(ptr_ctx), "(ctx) int8 *");
+  EXPECT_EQ(to_str(ptr_ctx), "int8 *");
 
   EXPECT_EQ(to_str(CreateArray(2, CreateInt8())), "int8[2]");
 
@@ -39,7 +39,7 @@ TEST(types, to_str)
 
   std::shared_ptr<Struct> tuple = Struct::CreateTuple(
       { CreateInt8(), CreateString(10) });
-  EXPECT_EQ(to_str(CreateTuple(std::move(tuple))), "(int8,string)");
+  EXPECT_EQ(to_str(CreateTuple(std::move(tuple))), "(int8,string[10])");
 
   EXPECT_EQ(to_str(CreateSum(true)), "sum_t");
   EXPECT_EQ(to_str(CreateSum(false)), "usum_t");
