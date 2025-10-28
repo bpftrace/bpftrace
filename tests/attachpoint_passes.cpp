@@ -178,10 +178,10 @@ TEST(attachpoint_checker, usdt)
 TEST(attachpoint_checker, begin_end_probes)
 {
   test("begin { 1 }");
-  test_error("begin { 1 } begin { 2 }");
+  test("begin { 1 } begin { 2 }");
 
   test("end { 1 }");
-  test_error("end { 1 } end { 2 }");
+  test("end { 1 } end { 2 }");
 }
 
 TEST(attachpoint_checker, bench_probes)

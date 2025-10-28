@@ -70,9 +70,13 @@ public:
   {
     return resources.probes;
   }
-  std::unordered_map<std::string, ::bpftrace::Probe> get_special_probes()
+  std::vector<::bpftrace::Probe> get_begin_probes()
   {
-    return resources.special_probes;
+    return resources.begin_probes;
+  }
+  std::vector<::bpftrace::Probe> get_end_probes()
+  {
+    return resources.end_probes;
   }
   std::vector<::bpftrace::Probe> get_test_probes()
   {
