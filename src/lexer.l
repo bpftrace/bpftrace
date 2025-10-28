@@ -255,7 +255,8 @@ oct_esc  [0-7]{1,3}
   "->"                    { return Parser::make_PTR(driver.loc); }
   "$"[0-9]+               { return Parser::make_PARAM(yytext, driver.loc); }
   "$"#                    { return Parser::make_PARAMCOUNT(driver.loc); }
-  "#"[^!].*               { return Parser::make_CPREPROC(yytext, driver.loc); }
+  /* N.B. The C preprocessor directives also span the line. */
+  [#][^!][^\n]*\n         { driver.loc.trim(); auto v = Parser::make_CPREPROC(yytext, driver.loc); driver.loc.advance_lines(1); return v; }
   "if"                    { return Parser::make_IF(yytext, driver.loc); }
   "else"                  { return Parser::make_ELSE(yytext, driver.loc); }
   "?"                     { return Parser::make_QUES(driver.loc); }
@@ -374,8 +375,15 @@ oct_esc  [0-7]{1,3}
                           driver.buffer += yytext[0];
                         }
   "{"                   yy_push_state(BRACE, yyscanner); driver.buffer += '{';
-  "}"|"};"              {
+  [}][;]?[\n]?          {
                           driver.buffer += yytext;
+                          if (yytext[yyleng-1] == '\n') {
+                            driver.loc.trim();
+                          }
+                          auto loc = driver.loc;
+                          if (yytext[yyleng-1] == '\n') {
+                            driver.loc.advance_lines(1);
+                          }
                           yy_pop_state(yyscanner);
                           if (YY_START == STRUCT)
                           {
@@ -384,7 +392,7 @@ oct_esc  [0-7]{1,3}
                             // will go through Clang before we get them back
                             // anyway.
                             yy_pop_state(yyscanner);
-                            return Parser::make_STRUCT_DEFN(driver.struct_type + driver.buffer, driver.loc);
+                            return Parser::make_STRUCT_DEFN(driver.struct_type + driver.buffer, loc);
                           }
                         }
   .                     driver.buffer += yytext[0];
