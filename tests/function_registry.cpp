@@ -181,7 +181,7 @@ ERROR: Function not found: 'does_not_exist'
 TEST_F(TestFunctionRegistryPopulated, unique_wrong_args)
 {
   test("unique_int32", { CreateString(32) }, R"(
-ERROR: Cannot call function 'unique_int32' using argument types: (string)
+ERROR: Cannot call function 'unique_int32' using argument types: (string[32])
 HINT: Candidate function:
   unique_int32(int32)
 )");
@@ -281,16 +281,16 @@ TEST_F(TestFunctionRegistryPopulated, unique_tuple)
   test("unique_tuple", { tuple2 }, unique_tuple_);
 
   test("unique_tuple", { tuple3 }, R"(
-ERROR: Cannot call function 'unique_tuple' using argument types: ((int64,string))
+ERROR: Cannot call function 'unique_tuple' using argument types: ((int64,string[64]))
 HINT: Candidate function:
-  unique_tuple((int32,string))
+  unique_tuple((int32,string[64]))
 )");
 
   // Can't pass deconstructed tuple fields as multiple arguments
   test("unique_tuple", { CreateInt32(), CreateString(64) }, R"(
-ERROR: Cannot call function 'unique_tuple' using argument types: (int32, string)
+ERROR: Cannot call function 'unique_tuple' using argument types: (int32, string[64])
 HINT: Candidate function:
-  unique_tuple((int32,string))
+  unique_tuple((int32,string[64]))
 )");
 }
 
