@@ -22,8 +22,9 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
   const auto &map = *assignment.map;
   const auto &expr_type = assignment.expr.type();
   if (shouldBeInBpfMemoryAlready(expr_type)) {
-    return !expr_type.IsSameSizeRecursive(map.value_type);
-  } else if (map.value_type.IsRecordTy() || map.value_type.IsArrayTy()) {
+    return !expr_type.IsSameSizeRecursive(map.map->value_type);
+  } else if (map.map->value_type.IsRecordTy() ||
+             map.map->value_type.IsArrayTy()) {
     return !expr_type.is_internal;
   }
   return true;

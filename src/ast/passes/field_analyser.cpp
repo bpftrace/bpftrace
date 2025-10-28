@@ -204,9 +204,8 @@ void FieldAnalyser::visit(Typeof &typeof)
 void FieldAnalyser::visit(AssignMapStatement &assignment)
 {
   visit(assignment.map);
-  visit(assignment.key);
   visit(assignment.expr);
-  var_types_.emplace(assignment.map->ident, sized_type_);
+  var_types_.emplace(assignment.map->map->ident, sized_type_);
 }
 
 void FieldAnalyser::visit(AssignVarStatement &assignment)

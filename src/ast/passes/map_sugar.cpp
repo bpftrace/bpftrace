@@ -132,8 +132,8 @@ void MapDefaultKey::visit(AssignScalarMapStatement &assign)
 
 void MapDefaultKey::visit(AssignMapStatement &assign)
 {
-  checkAccess(*assign.map, true);
-  visit(assign.key);
+  checkAccess(*assign.map->map, true);
+  visit(assign.map);
   visit(assign.expr);
 }
 
@@ -159,8 +159,8 @@ void MapDefaultKey::visit(Statement &stmt)
   // above. This will be type-checked during semantic analysis.
   if (auto *map = stmt.as<AssignScalarMapStatement>()) {
     auto *index = ast_.make_node<Integer>(map->loc, 0);
-    stmt.value = ast_.make_node<AssignMapStatement>(
-        map->loc, map->map, index, map->expr);
+    auto *acc = ast_.make_node<MapAccess>(map->loc, map->map, index);
+    stmt.value = ast_.make_node<AssignMapStatement>(map->loc, acc, map->expr);
   }
 }
 
@@ -306,7 +306,7 @@ void MapAssignmentCall::visit(Statement &stmt)
   // Any assignments that are direct calls to special functions may
   // be rewritten to simply be the function expression.
   if (auto *assign = stmt.as<AssignMapStatement>()) {
-    auto expr = injectMap(assign->expr, assign->map, assign->key);
+    auto expr = injectMap(assign->expr, assign->map->map, assign->map->key);
     if (expr) {
       // We injected a call, and can flatten the statement.
       stmt.value = ast_.make_node<ExprStatement>(assign->loc, expr.value());

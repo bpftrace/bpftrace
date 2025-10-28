@@ -1084,7 +1084,7 @@ public:
       const Matcher<const ast::Map&>& map_matcher)
   {
     return Where([map_matcher](const ast::AssignMapStatement& node) {
-      return MatchWith(node, map_matcher, *node.map);
+      return MatchWith(node, map_matcher, *node.map->map);
     });
   }
 
@@ -1092,7 +1092,7 @@ public:
       const Matcher<const ast::Expression&>& key_matcher)
   {
     return Where([key_matcher](const ast::AssignMapStatement& node) {
-      return MatchWith(node, key_matcher, node.key);
+      return MatchWith(node, key_matcher, node.map->key);
     });
   }
 };

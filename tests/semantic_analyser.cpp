@@ -1791,7 +1791,7 @@ TEST_F(SemanticAnalyserTest, array_access)
                   "arg0; @x = $s->y[0];}");
   auto *assignment =
       ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignMapStatement>();
-  EXPECT_EQ(CreateInt64(), assignment->map->value_type);
+  EXPECT_EQ(CreateInt64(), assignment->map->map->value_type);
 
   ast = test("struct MyStruct { int y[4]; "
              "} kprobe:f { $s = ((struct "
@@ -1809,7 +1809,7 @@ TEST_F(SemanticAnalyserTest, array_access)
   auto *array_map_assignment =
       ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignMapStatement>();
   EXPECT_EQ(CreateArray(4, CreateInt32()),
-            array_map_assignment->map->value_type);
+            array_map_assignment->map->map->value_type);
 
   ast = test("kprobe:f { $s = (int32 *) "
              "arg0; $x = $s[0]; }");
@@ -1952,7 +1952,7 @@ TEST_F(SemanticAnalyserTest, map_integer_sizes)
   auto *map_assignment =
       ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignMapStatement>();
   EXPECT_EQ(CreateInt32(), var_assignment->var()->var_type);
-  EXPECT_EQ(CreateInt64(), map_assignment->map->value_type);
+  EXPECT_EQ(CreateInt64(), map_assignment->map->map->value_type);
 }
 
 TEST_F(SemanticAnalyserTest, binop_integer_promotion)
@@ -2683,7 +2683,7 @@ TEST_F(SemanticAnalyserTest, field_access_is_internal)
     auto &stmts = ast.root->probes.at(0)->block->stmts;
     auto *map_assignment = stmts.at(0).as<ast::AssignMapStatement>();
     auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
-    EXPECT_TRUE(map_assignment->map->value_type.is_internal);
+    EXPECT_TRUE(map_assignment->map->map->value_type.is_internal);
     EXPECT_TRUE(var_assignment2->var()->var_type.is_internal);
   }
 }
@@ -3908,13 +3908,13 @@ TEST_F(SemanticAnalyserTest, tuple_assign_map)
   auto *assignment = stmts.at(0).as<ast::AssignMapStatement>();
   class SizedType ty = CreateTuple(Struct::CreateTuple(
       { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
-  EXPECT_EQ(ty, assignment->map->value_type);
+  EXPECT_EQ(ty, assignment->map->map->value_type);
 
   // $t = (0, 0, 0, 0);
   assignment = stmts.at(1).as<ast::AssignMapStatement>();
   ty = CreateTuple(Struct::CreateTuple(
       { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
-  EXPECT_EQ(ty, assignment->map->value_type);
+  EXPECT_EQ(ty, assignment->map->map->value_type);
 }
 
 // More in depth inspection of AST
@@ -4065,25 +4065,25 @@ TEST_F(SemanticAnalyserTest, string_size)
   ast = test(R"(k:f1 {@ = "hi";} k:f2 {@ = "hello";})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   auto *map_assign = stmt.as<ast::AssignMapStatement>();
-  ASSERT_TRUE(map_assign->map->value_type.IsStringTy());
-  ASSERT_EQ(map_assign->map->value_type.GetSize(), 6UL);
+  ASSERT_TRUE(map_assign->map->map->value_type.IsStringTy());
+  ASSERT_EQ(map_assign->map->map->value_type.GetSize(), 6UL);
 
   ast = test(R"(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
-  ASSERT_TRUE(map_assign->key.type().IsStringTy());
-  ASSERT_EQ(map_assign->key.type().GetSize(), 3UL);
-  ASSERT_EQ(map_assign->map->key_type.GetSize(), 6UL);
+  ASSERT_TRUE(map_assign->map->key.type().IsStringTy());
+  ASSERT_EQ(map_assign->map->key.type().GetSize(), 3UL);
+  ASSERT_EQ(map_assign->map->map->key_type.GetSize(), 6UL);
 
   ast = test(R"(k:f1 {@["hi", 0] = 0;} k:f2 {@["hello", 1] = 1;})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
-  ASSERT_TRUE(map_assign->key.type().IsTupleTy());
-  ASSERT_TRUE(map_assign->key.type().GetField(0).type.IsStringTy());
-  ASSERT_EQ(map_assign->key.type().GetField(0).type.GetSize(), 3UL);
-  ASSERT_EQ(map_assign->map->key_type.GetField(0).type.GetSize(), 6UL);
-  ASSERT_EQ(map_assign->key.type().GetSize(), 16UL);
-  ASSERT_EQ(map_assign->map->key_type.GetSize(), 16UL);
+  ASSERT_TRUE(map_assign->map->key.type().IsTupleTy());
+  ASSERT_TRUE(map_assign->map->key.type().GetField(0).type.IsStringTy());
+  ASSERT_EQ(map_assign->map->key.type().GetField(0).type.GetSize(), 3UL);
+  ASSERT_EQ(map_assign->map->map->key_type.GetField(0).type.GetSize(), 6UL);
+  ASSERT_EQ(map_assign->map->key.type().GetSize(), 16UL);
+  ASSERT_EQ(map_assign->map->map->key_type.GetSize(), 16UL);
 
   ast = test(R"(k:f1 {$x = ("hello", 0);} k:f2 {$x = ("hi", 0); })");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);

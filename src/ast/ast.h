@@ -1338,36 +1338,28 @@ class AssignMapStatement : public Node {
 public:
   explicit AssignMapStatement(ASTContext &ctx,
                               Location &&loc,
-                              Map *map,
-                              Expression key,
+                              MapAccess *map,
                               Expression expr)
-      : Node(ctx, std::move(loc)),
-        map(map),
-        key(std::move(key)),
-        expr(std::move(expr)) {};
+      : Node(ctx, std::move(loc)), map(map), expr(std::move(expr)) {};
   explicit AssignMapStatement(ASTContext &ctx,
                               const Location &loc,
                               const AssignMapStatement &other)
       : Node(ctx, loc + other.loc),
         map(clone(ctx, loc, other.map)),
-        key(clone(ctx, loc, other.key)),
         expr(clone(ctx, loc, other.expr)) {};
 
   bool operator==(const AssignMapStatement &other) const
   {
-    return *map == *other.map && key == other.key && expr == other.expr;
+    return *map == *other.map && expr == other.expr;
   }
   std::strong_ordering operator<=>(const AssignMapStatement &other) const
   {
     if (auto cmp = *map <=> *other.map; cmp != 0)
       return cmp;
-    if (auto cmp = key <=> other.key; cmp != 0)
-      return cmp;
     return expr <=> other.expr;
   }
 
-  Map *map = nullptr;
-  Expression key;
+  MapAccess *map = nullptr;
   Expression expr;
 };
 

@@ -3374,11 +3374,10 @@ static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
 void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
   visit(assignment.map);
-  visit(assignment.key);
   visit(assignment.expr);
 
-  reconcile_map_key(assignment.map, assignment.key);
-  const auto *map_type_before = get_map_type(*assignment.map);
+  reconcile_map_key(assignment.map->map, assignment.map->key);
+  const auto *map_type_before = get_map_type(*assignment.map->map);
 
   // Add an implicit cast when copying the value of an aggregate map to an
   // existing map of int. Enables the following: `@x = 1; @y = count(); @x =
@@ -3403,23 +3402,23 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
              "The function that returns this type must be called directly "
              "e.g. "
              "`"
-          << assignment.map->ident << " = " << hint->second << ";`.";
+          << assignment.map->map->ident << " = " << hint->second << ";`.";
 
       if (const auto *acc = assignment.expr.as<MapAccess>()) {
         if (type.IsCastableMapTy()) {
           err.addHint() << "Add a cast to integer if you want the value of the "
                            "aggregate, "
-                        << "e.g. `" << assignment.map->ident << " = (int64)"
-                        << acc->map->ident << ";`.";
+                        << "e.g. `" << assignment.map->map->ident
+                        << " = (int64)" << acc->map->ident << ";`.";
         }
       }
     }
   }
 
   assign_map_type(
-      *assignment.map, assignment.expr.type(), &assignment, &assignment);
+      *assignment.map->map, assignment.expr.type(), &assignment, &assignment);
 
-  const auto &map_ident = assignment.map->ident;
+  const auto &map_ident = assignment.map->map->ident;
   const auto &type = assignment.expr.type();
 
   if (type.IsRecordTy() && map_val_[map_ident].IsRecordTy()) {

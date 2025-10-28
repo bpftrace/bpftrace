@@ -354,9 +354,6 @@ void Printer::visit(AssignMapStatement &assignment)
 
   ++depth_;
   visit(assignment.map);
-  ++depth_;
-  visit(assignment.key);
-  --depth_;
   visit(assignment.expr);
   --depth_;
 }

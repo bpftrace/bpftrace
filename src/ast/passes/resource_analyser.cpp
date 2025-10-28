@@ -468,20 +468,20 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   // an additional read map buffer. Thus to mimic CodegenLLVM, we
   // skip calling ResourceAnalser::visit(a.map) and do the AST traversal
   // ourselves.
-  visit(assignment.map);
-  visit(assignment.key);
+  visit(assignment.map->map);
+  visit(assignment.map->key);
   visit(assignment.expr);
 
   // The `MapAccess` validated the read limit, we know this to be
   // a write, so we validate the write limit.
   if (needAssignMapStatementAllocation(assignment)) {
-    if (exceeds_stack_limit(assignment.map->value_type.GetSize())) {
+    if (exceeds_stack_limit(assignment.map->map->value_type.GetSize())) {
       resources_.max_write_map_value_size = std::max(
           resources_.max_write_map_value_size,
-          assignment.map->value_type.GetSize());
+          assignment.map->map->value_type.GetSize());
     }
   }
-  maybe_allocate_map_key_buffer(*assignment.map, assignment.key);
+  maybe_allocate_map_key_buffer(*assignment.map->map, assignment.map->key);
 }
 
 void ResourceAnalyser::visit(IfExpr &if_expr)
