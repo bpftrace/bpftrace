@@ -14,7 +14,7 @@ std::string Printer::type(const SizedType &ty)
   if (ty.IsNoneTy())
     return "";
   std::stringstream buf;
-  buf << " :: [" << typestr(ty, true);
+  buf << " :: [" << typestr(ty);
   if (ty.IsCtxAccess())
     buf << ", ctx: 1";
   if (ty.GetAS() != AddrSpace::none)
@@ -187,10 +187,10 @@ void Printer::visit(Map &map)
     out_ << " :: ";
   }
   if (!map.key_type.IsNoneTy()) {
-    out_ << "[" << typestr(map.key_type, true) << "]";
+    out_ << "[" << typestr(map.key_type) << "]";
   }
   if (!map.value_type.IsNoneTy()) {
-    out_ << typestr(map.value_type, true);
+    out_ << typestr(map.value_type);
   }
   out_ << std::endl;
 }

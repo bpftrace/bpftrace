@@ -347,7 +347,7 @@ TEST_F(SemanticAnalyserTest, consistent_map_values)
   test(
       R"(begin { $a = (3, "hello"); @m[1] = $a; $a = (1,"aaaaaaaaaa"); @m[2] = $a; })");
   test("kprobe:f { @x = 0; @x = \"a\"; }", Error{ R"(
-stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string' when map already contains a value of type 'int64'
+stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'int64'
 kprobe:f { @x = 0; @x = "a"; }
                    ~~~~~~~~
 )" });
@@ -399,7 +399,7 @@ begin { @x[1] = 0; @x[2,3]; }
       @x["b", 2, kstack];
     })",
        Error{ R"(
-stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string,int64,kstack)' when map expects arguments: '(int64,string,kstack)'
+stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],int64,kstack)' when map expects arguments: '(int64,string[2],kstack)'
       @x["b", 2, kstack];
       ~~~~~~~~~~~~~~~~~~
 )" });
@@ -522,19 +522,19 @@ kprobe:f { $x = pid < 10000 ? 3 : cat("/proc/uptime"); exit(); }
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", Error{ R"(
-stdin:1:17-41: ERROR: Branches must return the same type: have 'int64' and 'string'
+stdin:1:17-41: ERROR: Branches must return the same type: have 'int64' and 'string[5]'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
                 ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", Error{ R"(
-stdin:1:17-39: ERROR: Branches must return the same type: have 'string' and 'int64'
+stdin:1:17-39: ERROR: Branches must return the same type: have 'string[3]' and 'int64'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
                 ~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? (1, 2) : (\"a\", 4) }", Error{ R"(
-stdin:1:17-48: ERROR: Branches must return the same type: have '(int64,int64)' and '(string,int64)'
+stdin:1:17-48: ERROR: Branches must return the same type: have '(int64,int64)' and '(string[2],int64)'
 kprobe:f { @x = pid < 10000 ? (1, 2) : ("a", 4) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -1059,7 +1059,7 @@ kprobe:f { @x = 1; @y = 5; delete(@x, @y); }
 )" });
 
   test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })", Error{ R"(
-stdin:1:36-47: ERROR: Argument mismatch for @x: trying to access with arguments: '(string,int64)' when map expects arguments: '(int64,string)'
+stdin:1:36-47: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],int64)' when map expects arguments: '(int64,string[3])'
 kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); }
                                    ~~~~~~~~~~~
 )" });
@@ -1143,7 +1143,7 @@ TEST_F(SemanticAnalyserTest, call_print_map_item)
   test(R"_(begin { @x[1,2] = "asdf"; print((1, 2, @x[1,2])); })_");
 
   test("begin { @x[1] = 1; print(@x[\"asdf\"]); }", Error{ R"(
-stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'string' when map expects arguments: 'int64'
+stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'int64'
 begin { @x[1] = 1; print(@x["asdf"]); }
                                  ~
 )" });
@@ -1270,7 +1270,7 @@ kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }
 
   test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
        Error{ R"(
-stdin:1:45-51: ERROR: Argument mismatch for @x: trying to access with arguments: '(int64,int64)' when map expects arguments: '(int64,string)'
+stdin:1:45-51: ERROR: Argument mismatch for @x: trying to access with arguments: '(int64,int64)' when map expects arguments: '(int64,string[3])'
 kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} }
                                             ~~~~~~
 )" });
@@ -1737,7 +1737,7 @@ TEST_F(SemanticAnalyserTest, variable_reassignment)
   test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = "bye"; })");
 
   test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = 1; })", Error{ R"(
-stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'int64' when variable already contains a value of type 'string'
+stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'int64' when variable already contains a value of type 'string[3]'
 kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = 1; }
                       ~~~~~~~
 )" });
@@ -2846,7 +2846,7 @@ enum Foo { a = 1, b } kprobe:f { print((enum Bar)1); }
   test("enum named { a = 1, b } kprobe:f { $a = \"str\"; print((enum "
        "named)$a); }",
        Error{ R"(
-stdin:1:54-66: ERROR: Cannot cast from "string" to "enum named"
+stdin:1:54-66: ERROR: Cannot cast from "string[4]" to "enum named"
 enum named { a = 1, b } kprobe:f { $a = "str"; print((enum named)$a); }
                                                      ~~~~~~~~~~~~
 )" });
@@ -5365,7 +5365,7 @@ TEST_F(SemanticAnalyserTest, macros)
   test("macro set($x) { $x = 1; $x } begin { $a = \"string\"; set($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already contains a value of type 'string'
+stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'int64' when variable already contains a value of type 'string[7]'
 macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
                 ~~~~~~
 stdin:1:53-60: ERROR: expanded from
@@ -5378,10 +5378,10 @@ macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
        "begin { $a = \"string\"; add1($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:21-22: ERROR: Type mismatch for '+': comparing string with int64
+stdin:1:21-22: ERROR: Type mismatch for '+': comparing string[7] with int64
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                     ~
-stdin:1:18-20: ERROR: left (string)
+stdin:1:18-20: ERROR: left (string[7])
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                  ~~
 stdin:1:23-24: ERROR: right (int64)
@@ -5520,12 +5520,12 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
   // These types should be enforced.
   test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
        Error{ R"(
-stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string' when variable already has a type 'uint8'
+stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already has a type 'uint8'
 kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
                                                ~~~~~~~~~~
 )" });
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })", Error{ R"(
-stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'int64' when variable already has a type 'string'
+stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'int64' when variable already has a type 'string[4]'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
                                             ~~~~~~
 )" });
