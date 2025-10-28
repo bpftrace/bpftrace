@@ -459,10 +459,10 @@ macro jiffies() {
 // For kstack/ustack, return the depth (measured in # of frames) of the call stack.
 
 macro len(@map) {
-  if (comptime is_scalar(@map)) {
+  if comptime is_scalar(@map) {
     fail("call to len() expects a map with explicit keys (non-scalar map)")
   } else {
-    (int64)__elem_count((void *)&@map)
+    (int64)__elem_count((void *)(&@map))
   }
 }
 
@@ -611,7 +611,7 @@ macro numaid() {
 macro override(expr) {
   if comptime (probetype != "kprobe") {
     fail("override() can only be used inside kprobes");
-  } else if comptime (__builtin_safe_mode) {
+  } else if comptime __builtin_safe_mode {
     fail("override() is unsafe. To use you need the --unsafe flag");
   } else if comptime (typeinfo(expr).1 != typeinfo(0).1) {
     fail("override() only supports int arguments (%s provided)", typeinfo(expr).1);
@@ -678,22 +678,22 @@ macro override(expr) {
 // :variant uint32 ppid(struct task_struct * task)
 // Get the pid of the parent process for the passed task or the current task if called without arguments.
 macro ppid(task) {
-    task->real_parent->pid
+  task.real_parent.pid
 }
 
 macro ppid() {
-    ppid(curtask)
+  ppid(curtask)
 }
 
 // :variant string pcomm()
 // :variant string pcomm(struct task_struct * task)
 // Get the name of the parent process for the passed task or the current task if called without arguments.
 macro pcomm(task) {
-    task->real_parent->comm
+  task.real_parent.comm
 }
 
 macro pcomm() {
-    pcomm(curtask)
+  pcomm(curtask)
 }
 
 // :function print
@@ -919,7 +919,7 @@ macro retval() {
 // Trace/breakpoint trap (core dumped)
 // ```
 macro signal($var) {
-  if comptime (is_str($var)) {
+  if comptime is_str($var) {
     fail("this first argument to signal() must be a string literal or a positive integer");
   }
   __signal($var, false);
@@ -942,8 +942,10 @@ macro signal(expr) {
 // Use `signal` to send to the process being traced (any thread).
 // The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
 macro signal_thread($var) {
-  if comptime (is_str($var)) {
-    fail("this first argument to signal_thread() must be a string literal or a positive integer");
+  if comptime is_str($var) {
+    fail(
+      "this first argument to signal_thread() must be a string literal or a positive integer"
+    );
   }
   __signal($var, true);
 }

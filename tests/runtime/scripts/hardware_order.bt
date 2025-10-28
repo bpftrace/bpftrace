@@ -1,10 +1,8 @@
-hardware:cache-misses:10
-{
+hardware:cache-misses:10 {
   printf("first");
 }
 
-hardware:cache-misses:10
-{
+hardware:cache-misses:10 {
   printf(" second\n");
   exit();
 }

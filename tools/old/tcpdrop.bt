@@ -1,26 +1,18 @@
 #!/usr/bin/env bpftrace
-/*
- * tcpdrop.bt   Trace TCP kernel-dropped packets/segments.
- *              For Linux, uses bpftrace and eBPF.
- *
- * USAGE: tcpdrop.bt
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * This provides information such as packet details, socket state, and kernel
- * stack trace for packets/segments that were dropped via tcp_drop().
- * It cannot show tcp flags.
-
- * WARNING: this script attaches to the tcp_drop kprobe which is likely inlined
- *          on newer kernels and not replaced by anything else, therefore
- *          the script will stop working
- *
- * For Linux <= 5.18.
- *
- * Copyright (c) 2018 Dale Hamel.
- *
- * 23-Nov-2018	Dale Hamel	created this.
- */
+// tcpdrop.bt   Trace TCP kernel-dropped packets/segments.
+//              For Linux, uses bpftrace and eBPF.
+// USAGE: tcpdrop.bt
+// This is a bpftrace version of the bcc tool of the same name.
+// This provides information such as packet details, socket state, and kernel
+// stack trace for packets/segments that were dropped via tcp_drop().
+// It cannot show tcp flags.
+//
+// WARNING: this script attaches to the tcp_drop kprobe which is likely inlined
+//          on newer kernels and not replaced by anything else, therefore
+//          the script will stop working
+// For Linux <= 5.18.
+// Copyright (c) 2018 Dale Hamel.
+// 23-Nov-2018	Dale Hamel	created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/socket.h>
@@ -29,46 +21,50 @@
 #include <sys/socket.h>
 #endif
 
-BEGIN
-{
+BEGIN {
   printf("Tracing tcp drops. Hit Ctrl-C to end.\n");
-  printf("%-8s %-8s %-16s %-21s %-21s %-8s\n", "TIME", "PID", "COMM", "SADDR:SPORT", "DADDR:DPORT", "STATE");
+  printf("%-8s %-8s %-16s %-21s %-21s %-8s\n",
+         "TIME",
+         "PID",
+         "COMM",
+         "SADDR:SPORT",
+         "DADDR:DPORT",
+         "STATE");
 
   // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
-  @tcp_states[(uint64)1] = "ESTABLISHED";
-  @tcp_states[2] = "SYN_SENT";
-  @tcp_states[3] = "SYN_RECV";
-  @tcp_states[4] = "FIN_WAIT1";
-  @tcp_states[5] = "FIN_WAIT2";
-  @tcp_states[6] = "TIME_WAIT";
-  @tcp_states[7] = "CLOSE";
-  @tcp_states[8] = "CLOSE_WAIT";
-  @tcp_states[9] = "LAST_ACK";
-  @tcp_states[10] = "LISTEN";
-  @tcp_states[11] = "CLOSING";
-  @tcp_states[12] = "NEW_SYN_RECV";
+  @tcp_states = "ESTABLISHED";
+  @tcp_states = "SYN_SENT";
+  @tcp_states = "SYN_RECV";
+  @tcp_states = "FIN_WAIT1";
+  @tcp_states = "FIN_WAIT2";
+  @tcp_states = "TIME_WAIT";
+  @tcp_states = "CLOSE";
+  @tcp_states = "CLOSE_WAIT";
+  @tcp_states = "LAST_ACK";
+  @tcp_states = "LISTEN";
+  @tcp_states = "CLOSING";
+  @tcp_states = "NEW_SYN_RECV";
 }
 
-kprobe:tcp_drop
-{
-  $sk = ((struct sock *) arg0);
-  $inet_family = $sk->__sk_common.skc_family;
+kprobe:tcp_drop {
+  $sk = (struct sock *)arg0;
+  $inet_family = $sk.__sk_common.skc_family;
 
   if ($inet_family == AF_INET || $inet_family == AF_INET6) {
     if ($inet_family == AF_INET) {
-      $daddr = ntop($sk->__sk_common.skc_daddr);
-      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+      $daddr = ntop($sk.__sk_common.skc_daddr);
+      $saddr = ntop($sk.__sk_common.skc_rcv_saddr);
     } else {
-      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
-      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+      $daddr = ntop($sk.__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+      $saddr = ntop($sk.__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
     }
-    $lport = $sk->__sk_common.skc_num;
-    $dport = $sk->__sk_common.skc_dport;
+    $lport = $sk.__sk_common.skc_num;
+    $dport = $sk.__sk_common.skc_dport;
 
     // Destination port is big endian, it must be flipped
     $dport = bswap($dport);
 
-    $state = $sk->__sk_common.skc_state;
+    $state = $sk.__sk_common.skc_state;
     $statestr = @tcp_states[$state];
 
     time("%H:%M:%S ");
@@ -78,7 +74,6 @@ kprobe:tcp_drop
   }
 }
 
-END
-{
+END {
   clear(@tcp_states);
 }

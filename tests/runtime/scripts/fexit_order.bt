@@ -1,11 +1,7 @@
-fexit:vmlinux:hrtimer_nanosleep
-/comm == "syscall"/
-{
+fexit:vmlinux:hrtimer_nanosleep /comm == "syscall"/ {
   printf("first");
 }
 
-fexit:vmlinux:hrtimer_nanosleep
-/comm == "syscall"/
-{
+fexit:vmlinux:hrtimer_nanosleep /comm == "syscall"/ {
   printf(" second\n");
 }

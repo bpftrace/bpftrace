@@ -1,10 +1,8 @@
-profile:ms:1000
-{
+profile:ms:1000 {
   printf("first");
 }
 
-profile:ms:1000
-{
+profile:ms:1000 {
   printf(" second\n");
   exit();
 }

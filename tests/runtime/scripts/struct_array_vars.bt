@@ -15,11 +15,11 @@ struct C {
 };
 
 uprobe:./testprogs/struct_array:clear {
-  $c = (struct C *) arg0;
+  $c = (struct C *)arg0;
 
-  $w = $c->w;
-  @w[0] = $c->w;
-  @[$c->w] = 42;
+  $w = $c.w;
+  @w = $c.w;
+  @ = 42;
 
   printf("%d ", $w[0].a);
   printf("%d ", $w[2].a);
@@ -35,12 +35,12 @@ uprobe:./testprogs/struct_array:clear {
   printf("%d ", @w[0][9].t.a);
 
   printf("-- ");
-  printf("%d ", @w[0][0].t.b[1]);
-  printf("%d ", @w[0][1].t.b[1]);
-  printf("%d ", @w[0][2].t.b[1]);
-  printf("%d ", @w[0][3].t.b[1]);
-  printf("%d ", @w[0][4].t.b[1]);
+  printf("%d ", (@w[0][0].t.b)[1]);
+  printf("%d ", (@w[0][1].t.b)[1]);
+  printf("%d ", (@w[0][2].t.b)[1]);
+  printf("%d ", (@w[0][3].t.b)[1]);
+  printf("%d ", (@w[0][4].t.b)[1]);
 
   printf("-- ");
-  printf("%d ", @[$c->w]);
+  printf("%d ", @[($c.w)]);
 }

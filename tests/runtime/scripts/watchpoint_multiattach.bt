@@ -1,5 +1,4 @@
-begin
-{
+begin {
   @count = 0;
 }
 
@@ -7,10 +6,9 @@ watchpoint:increment_0+arg0:4:w,
 watchpoint:increment_1+arg0:4:w,
 watchpoint:increment_2+arg0:4:w
 {
-  @count++;
+  ++@count;
 }
 
-end
-{
+end {
   printf("count=%d\n", @count);
 }

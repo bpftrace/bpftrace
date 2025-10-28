@@ -17,10 +17,12 @@ macro assert_str(exp) {
   if comptime is_str(exp) {
     true
   } else if comptime is_array(exp) {
-    static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like arrays must contain a char-like type");
+    static_assert(typeinfo(exp[0]) == typeinfo(int8),
+                  "string-like arrays must contain a char-like type");
     true
   } else if comptime is_ptr(exp) {
-    static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like pointers must point to a char-like type");
+    static_assert(typeinfo(exp[0]) == typeinfo(int8),
+                  "string-like pointers must point to a char-like type");
     true
   } else {
     static_assert(false, "string-like values must be either strings, arrays or pointers");
@@ -30,7 +32,7 @@ macro assert_str(exp) {
 
 // Returns the default unbounded length.
 macro default_str_length() {
-  sizeof(str((int8*)0))
+  sizeof(str((int8 *)0))
 }
 
 // Returns the length of a string-like object.
@@ -78,7 +80,7 @@ macro strcap(exp) {
   if comptime is_str(exp) {
     sizeof(exp)
   } else if comptime is_array(exp) {
-    sizeof(exp)/sizeof(exp[0])
+    sizeof(exp) / sizeof(exp[0])
   } else {
     strlen(exp) // Pointer, so pass by value.
   }
@@ -137,7 +139,8 @@ macro strerror(errno) {
   // Ensure that the size of the string is equal to the size of the returned
   // buffer. On the C side, it will be a compilation error if any of the
   // strings exceed this size.
-  static_assert(sizeof($v) == sizeof(*__strerror((int32)errno, &$v)), "$v is sized correctly");
+  static_assert(sizeof($v) == sizeof(*__strerror((int32)errno, &$v)),
+                "$v is sized correctly");
   __strerror((int32)errno, &$v);
   $v
 }

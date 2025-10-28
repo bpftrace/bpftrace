@@ -1,127 +1,104 @@
 #!/usr/bin/env bpftrace
-/*
- * opensnoop	Trace open() syscalls.
- *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: opensnoop.bt -- [--depth=<N>]
- *
- * Example of usage:
- * 
- * # ./opensnoop.bt
- * Attached 8 probes
- * Tracing open syscalls... Hit Ctrl-C to end.
- * PID    COMM               FD ERR PATH
- * 37421  bpftrace           33   0 /sys/kernel/debug/tracing/events/syscalls/sys_exit_openat2/id
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/.
- * 1400   systemd-oomd       13   0 /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-gnome\x2dsession\x2dmanager.slice/memory.pressure
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3122/cgroup.procs
- * 1615   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
- * 1614   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
- * 1613   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3150/cgroup.procs
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/17355/cgroup.procs
- * 2440   snmp-pass           4   0 /proc/cpuinfo
- * 2440   snmp-pass           4   0 /proc/stat
- * 
- * While tracing, at "ls" command was launched: the libraries it uses can be seen
- * as they were opened.
- * 
- * opensnoop can be useful for discovering configuration and log files, if used
- * during application startup.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides command line options to customize the output.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
- * 16-Sep-2025	Rong Tao	Support fullpath of file.
- */
+// opensnoop	Trace open() syscalls.
+// 		For Linux, uses bpftrace and eBPF.
+// USAGE: opensnoop.bt -- [--depth=<N>]
+// Example of usage:
+// # ./opensnoop.bt
+// Attached 8 probes
+// Tracing open syscalls... Hit Ctrl-C to end.
+// PID    COMM               FD ERR PATH
+// 37421  bpftrace           33   0 /sys/kernel/debug/tracing/events/syscalls/sys_exit_openat2/id
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/.
+// 1400   systemd-oomd       13   0 /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-gnome\x2dsession\x2dmanager.slice/memory.pressure
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3122/cgroup.procs
+// 1615   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+// 1614   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+// 1613   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3150/cgroup.procs
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/17355/cgroup.procs
+// 2440   snmp-pass           4   0 /proc/cpuinfo
+// 2440   snmp-pass           4   0 /proc/stat
+// While tracing, at "ls" command was launched: the libraries it uses can be seen
+// as they were opened.
+// opensnoop can be useful for discovering configuration and log files, if used
+// during application startup.
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides command line options to customize the output.
+// Copyright 2018 Netflix, Inc.
+// 08-Sep-2018	Brendan Gregg	Created this.
+// 16-Sep-2025	Rong Tao	Support fullpath of file.
 
-config = {
-	missing_probes=warn;
-	unstable_macro=enable;
-}
+config = {}
 
-BEGIN
-{
-	printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
-	printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
+BEGIN {
+  printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
+  printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
 }
 
 tracepoint:syscalls:sys_enter_open,
 tracepoint:syscalls:sys_enter_openat,
 tracepoint:syscalls:sys_enter_openat2
 {
-	@filename[tid] = args.filename;
+  @filename = args.filename;
 }
 
 macro getcwd(@paths) {
-	$dentry = curtask->fs->pwd.dentry;
+  $dentry = curtask.fs.pwd.dentry;
 
-	$max_path_depth = getopt("depth", 35);
+  $max_path_depth = getopt("depth", 35);
 
-	for ($j : ((uint64)0)..((uint64)$max_path_depth)) {
-		$parent_dentry = $dentry->d_parent;
-		if ($dentry == $parent_dentry) {
-			break;
-		}
-		@paths[$j] = str($dentry->d_name.name);
-		$dentry = $parent_dentry;
-	}
+  for $j : ((uint64)0)..((uint64)$max_path_depth) {
+    $parent_dentry = $dentry.d_parent;
+    if ($dentry == $parent_dentry) {
+      break;
+    }
+    @paths = str($dentry.d_name.name);
+    $dentry = $parent_dentry;
+  }
 }
 
 macro printcwd(@paths) {
-	for ($j : ((uint64)0)..((uint64)len(@paths))) {
-		printf("/%s", @paths[(uint64)len(@paths) - $j - 1]);
-	}
-	printf("/");
-	clear(@paths);
+  for $j : ((uint64)0)..((uint64)len(@paths)) {
+    printf("/%s", @paths[((((uint64)len(@paths)) - $j) - 1)]);
+  }
+  printf("/");
+  clear(@paths);
 }
 
 macro sys_exit(ret, @filename, @paths) {
-	$ret = ret;
-	$fd = $ret >= 0 ? $ret : -1;
-	$errno = $ret >= 0 ? 0 : - $ret;
+  $ret = ret;
+  $fd = ($ret >= 0) ? $ret : (-1);
+  $errno = ($ret >= 0) ? 0 : (-$ret);
 
-	getcwd(@paths);
+  getcwd(@paths);
 
-	$path = str(@filename[tid]);
+  $path = str(@filename[tid]);
 
-	printf("%-6d %-16s %4d %3d ", pid, comm, $fd, $errno);
+  printf("%-6d %-16s %4d %3d ", pid, comm, $fd, $errno);
 
-	/**
-	 * Skip display cwd if path start with '/'.
-	 */
-	if ($path[0] != "/"[0]) {
-		printcwd(@paths);
-	}
-	printf("%s\n", str(@filename[tid]));
-	delete(@filename, tid);
+  // Skip display cwd if path start with '/'.
+  if ($path[0] != "/"[0]) {
+    printcwd(@paths);
+  }
+  printf("%s\n", str(@filename[tid]));
+  delete(@filename, tid);
 }
 
-tracepoint:syscalls:sys_exit_open
-/@filename[tid]/
-{
-	sys_exit(args.ret, @filename, @open_paths);
+tracepoint:syscalls:sys_exit_open /@filename[tid]/ {
+  sys_exit(args.ret, @filename, @open_paths);
 }
 
-tracepoint:syscalls:sys_exit_openat
-/@filename[tid]/
-{
-	sys_exit(args.ret, @filename, @openat_paths);
+tracepoint:syscalls:sys_exit_openat /@filename[tid]/ {
+  sys_exit(args.ret, @filename, @openat_paths);
 }
 
-tracepoint:syscalls:sys_exit_openat2
-/@filename[tid]/
-{
-	sys_exit(args.ret, @filename, @openat2_paths);
+tracepoint:syscalls:sys_exit_openat2 /@filename[tid]/ {
+  sys_exit(args.ret, @filename, @openat2_paths);
 }
 
-END
-{
-	clear(@filename);
-	clear(@open_paths);
-	clear(@openat_paths);
-	clear(@openat2_paths);
+END {
+  clear(@filename);
+  clear(@open_paths);
+  clear(@openat_paths);
+  clear(@openat2_paths);
 }

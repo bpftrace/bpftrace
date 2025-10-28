@@ -1,5 +1,4 @@
-begin
-{
-    printf("hello world!\n");
-    exit();
+begin {
+  printf("hello world!\n");
+  exit();
 }
