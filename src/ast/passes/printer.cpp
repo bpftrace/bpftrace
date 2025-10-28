@@ -354,10 +354,7 @@ void Printer::visit(AssignMapStatement &assignment)
   out_ << indent << "=" << std::endl;
 
   ++depth_;
-  visit(assignment.map);
-  ++depth_;
-  visit(assignment.key);
-  --depth_;
+  visit(assignment.map_access);
   visit(assignment.expr);
   --depth_;
 }

@@ -505,10 +505,14 @@ std::vector<AssignMapStatement *> variants<AssignMapStatement>(ASTContext &c,
   Expression expr4 = c.make_node<Variable>(l, std::string("$v"));
 
   return {
-    c.make_node<AssignMapStatement>(l, map1, std::move(key1), std::move(expr1)),
-    c.make_node<AssignMapStatement>(l, map2, std::move(key2), std::move(expr2)),
-    c.make_node<AssignMapStatement>(l, map3, std::move(key3), std::move(expr3)),
-    c.make_node<AssignMapStatement>(l, map4, std::move(key4), std::move(expr4))
+    c.make_node<AssignMapStatement>(
+        l, c.make_node<MapAccess>(l, map1, std::move(key1)), std::move(expr1)),
+    c.make_node<AssignMapStatement>(
+        l, c.make_node<MapAccess>(l, map2, std::move(key2)), std::move(expr2)),
+    c.make_node<AssignMapStatement>(
+        l, c.make_node<MapAccess>(l, map3, std::move(key3)), std::move(expr3)),
+    c.make_node<AssignMapStatement>(
+        l, c.make_node<MapAccess>(l, map4, std::move(key4)), std::move(expr4))
   };
 }
 

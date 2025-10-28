@@ -2941,18 +2941,18 @@ ScopedExpr CodegenLLVM::visit(ExprStatement &expr)
 ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
 {
   auto scoped_expr = visit(assignment.expr);
-  auto scoped_key = getMapKey(*assignment.map, assignment.key);
+  auto scoped_key = getMapKey(*assignment.map_access->map,
+                              assignment.map_access->key);
   Value *expr = scoped_expr.value();
 
-  const auto &map_type = assignment.map->type();
+  const auto &map_type = assignment.map_access->map->type();
   const auto &expr_type = assignment.expr.type();
   const auto self_alloca = needAssignMapStatementAllocation(assignment);
-  Value *value = self_alloca
-                     ? b_.CreateWriteMapValueAllocation(map_type,
-                                                        assignment.map->ident +
-                                                            "_val",
-                                                        assignment.loc)
-                     : expr;
+  Value *value = self_alloca ? b_.CreateWriteMapValueAllocation(
+                                   map_type,
+                                   assignment.map_access->map->ident + "_val",
+                                   assignment.loc)
+                             : expr;
   if (shouldBeInBpfMemoryAlready(expr_type)) {
     if (!expr_type.IsSameSizeRecursive(map_type)) {
       b_.CreateMemsetBPF(value, b_.getInt8(0), map_type.GetSize());
@@ -2975,8 +2975,10 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
   } else {
     b_.CreateStore(expr, value);
   }
-  b_.CreateMapUpdateElem(
-      assignment.map->ident, scoped_key.value(), value, assignment.loc);
+  b_.CreateMapUpdateElem(assignment.map_access->map->ident,
+                         scoped_key.value(),
+                         value,
+                         assignment.loc);
   if (self_alloca && dyn_cast<AllocaInst>(value))
     b_.CreateLifetimeEnd(value);
   return ScopedExpr();

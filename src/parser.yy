@@ -584,7 +584,7 @@ assign_stmt:
                   YYERROR;
                 }
         |       map ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignScalarMapStatement>(@$, $1, $3); }
-        |       map_expr ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignMapStatement>(@$, $1->map, $1->key, $3); }
+        |       map_expr ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignMapStatement>(@$, $1, $3); }
         |       var_decl_stmt ASSIGN expr { $$ = driver.ctx.make_node<ast::AssignVarStatement>(@$, $1, $3); }
         |       var ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignVarStatement>(@$, $1, $3); }
         |       map compound_op expr
@@ -595,7 +595,7 @@ assign_stmt:
         |       map_expr compound_op expr
                 {
                   auto b = driver.ctx.make_node<ast::Binop>(@2, $1, $2, $3);
-                  $$ = driver.ctx.make_node<ast::AssignMapStatement>(@$, $1->map, $1->key, b);
+                  $$ = driver.ctx.make_node<ast::AssignMapStatement>(@$, $1, b);
                 }
         |       var compound_op expr
                 {
