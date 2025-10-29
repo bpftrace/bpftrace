@@ -48,9 +48,13 @@ void AsyncHandlers::join(const OpaqueValue &data)
   size_t arg_count = arg.count<char>() / bpftrace.join_argsize_;
   std::stringstream joined;
   for (unsigned int i = 0; i < arg_count; i++) {
+    const char *current_str = arg.data() + (i * bpftrace.join_argsize_);
+    if (current_str == nullptr || current_str[0] == '\0') {
+      break;
+    }
     if (i)
       joined << delim;
-    joined << (arg.data() + (i * bpftrace.join_argsize_));
+    joined << current_str;
   }
   out.join(joined.str());
 }
