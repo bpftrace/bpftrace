@@ -1,10 +1,8 @@
-interval:ms:100
-{
+interval:ms:100 {
   printf("first");
 }
 
-interval:ms:100
-{
+interval:ms:100 {
   printf(" second\n");
   exit();
 }

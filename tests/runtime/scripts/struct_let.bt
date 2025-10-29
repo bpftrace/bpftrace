@@ -15,11 +15,11 @@ struct C {
 };
 
 uprobe:./testprogs/struct_array:clear {
-  let $c: struct C *;
-  let $w: struct W[10];
+  let $c : struct C *;
+  let $w : struct W[10];
 
-  $c = (struct C *) arg0;
-  $w = $c->w;
+  $c = (struct C *)arg0;
+  $w = $c.w;
 
   printf("%d ", $w[0].a);
   printf("%d ", $w[2].a);
