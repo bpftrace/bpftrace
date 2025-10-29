@@ -741,8 +741,99 @@ Get the pid of the parent process for the passed task or the current task if cal
 
 ### print
 - `void print(T val)`
+- `void print(T val)`
+- `void print(@map)`
+- `void print(@map, uint64 top)`
+- `void print(@map, uint64 top, uint64 div)`
 
 **async**
+
+`print` prints a the value, which can be a map or a scalar value, with the default formatting for the type.
+
+```
+interval:s:1 {
+  print(123);
+  print("abc");
+  exit();
+}
+
+/*
+ * Sample output:
+ * 123
+ * abc
+ */
+```
+
+```
+interval:ms:10 { @=hist(rand); }
+interval:s:1 {
+  print(@);
+  exit();
+}
+```
+
+Prints:
+
+```
+@:
+[16M, 32M)             3 |@@@                                                 |
+[32M, 64M)             2 |@@                                                  |
+[64M, 128M)            1 |@                                                   |
+[128M, 256M)           4 |@@@@                                                |
+[256M, 512M)           3 |@@@                                                 |
+[512M, 1G)            14 |@@@@@@@@@@@@@@                                      |
+[1G, 2G)              22 |@@@@@@@@@@@@@@@@@@@@@@                              |
+[2G, 4G)              51 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+```
+
+Declared maps and histograms are automatically printed out on program termination.
+
+Note that maps are printed by reference while scalar values are copied.
+This means that updating and printing maps in a fast loop will likely result in bogus map values as the map will be updated before userspace gets the time to dump and print it.
+
+The printing of maps supports the optional `top` and `div` arguments.
+`top` limits the printing to the top N entries with the highest integer values
+
+```
+BEGIN {
+  $i = 11;
+  while($i) {
+    @[$i] = --$i;
+  }
+  print(@, 2);
+  clear(@);
+  exit()
+}
+
+/*
+ * Sample output:
+ * @[9]: 9
+ * @[10]: 10
+ */
+```
+
+The `div` argument scales the values prior to printing them.
+Scaling values before storing them can result in rounding errors.
+Consider the following program:
+
+```
+kprobe:f {
+  @[func] += arg0/10;
+}
+```
+
+With the following sequence as numbers for arg0: `134, 377, 111, 99`.
+The total is `721` which rounds to `72` when scaled by 10 but the program would print `70` due to the rounding of individual values.
+
+Changing the print call to `print(@, 5, 2)` will take the top 5 values and scale them by 2:
+
+```
+@[6]: 3
+@[7]: 3
+@[8]: 4
+@[9]: 4
+@[10]: 5
+```
 
 
 ### printf

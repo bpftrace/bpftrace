@@ -700,7 +700,6 @@ macro pcomm() {
 // :variant void print(T val)
 //
 // **async**
-
 // :variant void print(T val)
 // :variant void print(@map)
 // :variant void print(@map, uint64 top)
