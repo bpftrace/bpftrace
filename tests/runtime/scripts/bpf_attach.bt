@@ -1,13 +1,16 @@
 // This script is used to test attaching to other BPF programs
-interval:100ms {
-    @a = 1;
+interval:100ms
+{
+  @a = 1;
 }
 
-interval:100ms {
-    @a = 2;
+interval:100ms
+{
+  @a = 2;
 }
 
-interval:10s {
-    clear(@a);
-    exit();
+interval:10s
+{
+  clear(@a);
+  exit();
 }

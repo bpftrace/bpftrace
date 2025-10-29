@@ -1,132 +1,130 @@
 #!/usr/bin/env bpftrace
-/*
- * opensnoop	Trace open() syscalls.
- *		For Linux, uses bpftrace and eBPF.
- *
- * USAGE: opensnoop.bt -- [--depth=<N>]
- *
- * Example of usage:
- *
- * # ./opensnoop.bt
- * Attached 8 probes
- * Tracing open syscalls... Hit Ctrl-C to end.
- * PID    COMM               FD ERR PATH
- * 37421  bpftrace           33   0 /sys/kernel/debug/tracing/events/syscalls/sys_exit_openat2/id
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/.
- * 1400   systemd-oomd       13   0 /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-gnome\x2dsession\x2dmanager.slice/memory.pressure
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3122/cgroup.procs
- * 1615   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
- * 1614   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
- * 1613   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3150/cgroup.procs
- * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/17355/cgroup.procs
- * 2440   snmp-pass           4   0 /proc/cpuinfo
- * 2440   snmp-pass           4   0 /proc/stat
- *
- * While tracing, at "ls" command was launched: the libraries it uses can be seen
- * as they were opened.
- *
- * opensnoop can be useful for discovering configuration and log files, if used
- * during application startup.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides command line options to customize the output.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
- * 16-Sep-2025	Rong Tao	Support fullpath of file.
- */
+// opensnoop	Trace open() syscalls.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// USAGE: opensnoop.bt -- [--depth=<N>]
+//
+// Example of usage:
+//
+// # ./opensnoop.bt
+// Attached 8 probes
+// Tracing open syscalls... Hit Ctrl-C to end.
+// PID    COMM               FD ERR PATH
+// 37421  bpftrace           33   0 /sys/kernel/debug/tracing/events/syscalls/sys_exit_openat2/id
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/.
+// 1400   systemd-oomd       13   0 /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/app-gnome\x2dsession\x2dmanager.slice/memory.pressure
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3122/cgroup.procs
+// 1615   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+// 1614   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+// 1613   abrt-dump-journ     4   0 /var/log/journal/c27675f9250c4420a7479dd37bd7e8e2/system.journal
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/3150/cgroup.procs
+// 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/17355/cgroup.procs
+// 2440   snmp-pass           4   0 /proc/cpuinfo
+// 2440   snmp-pass           4   0 /proc/stat
+//
+// While tracing, at "ls" command was launched: the libraries it uses can be seen
+// as they were opened.
+//
+// opensnoop can be useful for discovering configuration and log files, if used
+// during application startup.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides command line options to customize the output.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 08-Sep-2018	Brendan Gregg	Created this.
+// 16-Sep-2025	Rong Tao	Support fullpath of file.
 
 config = {
-	missing_probes=warn;
+  missing_probes = warn;
 }
 
 BEGIN
 {
-	printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
-	printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
+  printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
+  printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
 }
 
 tracepoint:syscalls:sys_enter_open,
 tracepoint:syscalls:sys_enter_openat,
 tracepoint:syscalls:sys_enter_openat2
 {
-	@filename[tid] = args.filename;
+  @filename[tid] = args.filename;
 }
 
-macro getcwd(@paths) {
-	$dentry = curtask->fs->pwd.dentry;
-	$vfsmnt = curtask->fs->pwd.mnt;
-	$mnt = (struct mount *)((uint64)$vfsmnt - offsetof(struct mount, mnt));
-	$mnt_root = $vfsmnt->mnt_root;
+macro getcwd(@paths)
+{
+  $dentry = curtask.fs.pwd.dentry;
+  $vfsmnt = curtask.fs.pwd.mnt;
+  $mnt = (struct mount *)(((uint64)$vfsmnt) - offsetof(struct mount, mnt));
+  $mnt_root = $vfsmnt.mnt_root;
 
-	$max_path_depth = getopt("depth", 35);
+  $max_path_depth = getopt("depth", 35);
 
-	for ($j : ((uint64)0)..((uint64)$max_path_depth)) {
+  for $j : ((uint64)0)..((uint64)$max_path_depth) {
 
-		@paths[tid, $j] = str($dentry->d_name.name);
-		$parent_dentry = $dentry->d_parent;
+    @paths[tid,$j] = str($dentry.d_name.name);
+    $parent_dentry = $dentry.d_parent;
 
-		if ($dentry == $parent_dentry || $dentry == $mnt_root) {
-			$mnt_parent = (struct mount *)$mnt->mnt_parent;
+    if ($dentry == $parent_dentry || $dentry == $mnt_root) {
+      $mnt_parent = (struct mount *)$mnt.mnt_parent;
 
-			/* Real root directory */
-			if ($mnt == $mnt_parent) {
-				break;
-			}
+      // Real root directory
 
-			$dentry = $mnt->mnt_mountpoint;
-			$mnt = $mnt_parent;
-			$mnt_root = $mnt->mnt.mnt_root;
-			continue;
-		}
+      if ($mnt == $mnt_parent) {
+        break;
+      }
 
-		$dentry = $parent_dentry;
-	}
+      $dentry = $mnt.mnt_mountpoint;
+      $mnt = $mnt_parent;
+      $mnt_root = $mnt.mnt.mnt_root;
+      continue;
+    }
+
+    $dentry = $parent_dentry;
+  }
 }
 
-macro printcwd(@paths) {
-	$max_path_depth = getopt("depth", 35);
+macro printcwd(@paths)
+{
+  $max_path_depth = getopt("depth", 35);
 
-	for ($j : ((uint64)0)..((uint64)$max_path_depth)) {
-		let $key = (tid, (uint64)$max_path_depth - $j - 1);
-		let $name = @paths[$key];
-		/**
-		 * If it is a mount point, there will be a '/', because
-		 * the '/' will be added below, so just skip this '/'.
-		 *
-		 * And, if @paths don't have the $key, just skip the
-		 * empty string.
-		 */
-		if ($name == "/" || $name == "") {
-			continue;
-		}
-		printf("/%s", $name);
-		delete(@paths, $key);
-	}
-	printf("/");
+  for $j : ((uint64)0)..((uint64)$max_path_depth) {
+    let $key = (tid,((((uint64)$max_path_depth) - $j) - 1));
+    let $name = @paths[$key];
+    // If it is a mount point, there will be a '/', because
+    // the '/' will be added below, so just skip this '/'.
+    //
+    // And, if @paths don't have the $key, just skip the
+    // empty string.
+    if ($name == "/" || $name == "") {
+      continue;
+    }
+    printf("/%s", $name);
+    delete(@paths, $key);
+  }
+  printf("/");
 }
 
-macro sys_exit(ret, @filename, @paths) {
-	$ret = ret;
-	$fd = $ret >= 0 ? $ret : -1;
-	$errno = $ret >= 0 ? 0 : - $ret;
+macro sys_exit(ret, @filename, @paths)
+{
+  $ret = ret;
+  $fd = ($ret >= 0) ? $ret : (-1);
+  $errno = ($ret >= 0) ? 0 : (-$ret);
 
-	getcwd(@paths);
+  getcwd(@paths);
 
-	$path = str(@filename[tid]);
+  $path = str(@filename[tid]);
 
-	printf("%-6d %-16s %4d %3d ", pid, comm, $fd, $errno);
+  printf("%-6d %-16s %4d %3d ", pid, comm, $fd, $errno);
 
-	/**
-	 * Skip display cwd if path start with '/'.
-	 */
-	if ($path[0] != "/"[0]) {
-		printcwd(@paths);
-	}
-	printf("%s\n", str(@filename[tid]));
-	delete(@filename, tid);
+  // Skip display cwd if path start with '/'.
+  if ($path[0] != "/"[0]) {
+    printcwd(@paths);
+  }
+  printf("%s\n", str(@filename[tid]));
+  delete(@filename, tid);
 }
 
 tracepoint:syscalls:sys_exit_open,
@@ -134,11 +132,11 @@ tracepoint:syscalls:sys_exit_openat,
 tracepoint:syscalls:sys_exit_openat2
 /@filename[tid]/
 {
-	sys_exit(args.ret, @filename, @paths);
+  sys_exit(args.ret, @filename, @paths);
 }
 
 END
 {
-	clear(@filename);
-	clear(@paths);
+  clear(@filename);
+  clear(@paths);
 }

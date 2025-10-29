@@ -3,7 +3,7 @@
 kprobe:hrtimer_nanosleep
 {
   if (arg0 == 1001) {
-     printf("first");
+    printf("first");
   }
 }
 

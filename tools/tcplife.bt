@@ -1,30 +1,28 @@
 #!/usr/bin/env bpftrace
-/*
- * tcplife - Trace TCP session lifespans with connection details.
- *
- * See BPF Performance Tools, Chapter 10, for an explanation of this tool.
- * 
- * Example of usage:
- * 
- * # ./tcplife.bt
- * PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS
- * 20976 ssh        127.0.0.1       56766 127.0.0.1       22         6 10584 3059
- * 20977 sshd       127.0.0.1       22    127.0.0.1       56766  10584     6 3059
- * 14519 monitord   127.0.0.1       44832 127.0.0.1       44444      0     0 0
- * 4496  Chrome_IOT 7f00:6:5ea7::a00:0 42846 0:0:bb01::      443        0     3 12441
- * 
- * The output begins with a localhost ssh connection, so both endpoints can be
- * seen: the ssh process (PID 20976) which received 10584 Kbytes, and the sshd
- * process (PID 20977) which transmitted 10584 Kbytes. This session lasted 3059
- * milliseconds. Other sessions can also be seen, including IPv6 connections.
- *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
- * 17-Apr-2019  Brendan Gregg   Created this.
- */
+// tcplife - Trace TCP session lifespans with connection details.
+//
+// See BPF Performance Tools, Chapter 10, for an explanation of this tool.
+//
+// Example of usage:
+//
+// # ./tcplife.bt
+// PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS
+// 20976 ssh        127.0.0.1       56766 127.0.0.1       22         6 10584 3059
+// 20977 sshd       127.0.0.1       22    127.0.0.1       56766  10584     6 3059
+// 14519 monitord   127.0.0.1       44832 127.0.0.1       44444      0     0 0
+// 4496  Chrome_IOT 7f00:6:5ea7::a00:0 42846 0:0:bb01::      443        0     3 12441
+//
+// The output begins with a localhost ssh connection, so both endpoints can be
+// seen: the ssh process (PID 20976) which received 10584 Kbytes, and the sshd
+// process (PID 20977) which transmitted 10584 Kbytes. This session lasted 3059
+// milliseconds. Other sessions can also be seen, including IPv6 connections.
+//
+// Copyright (c) 2019 Brendan Gregg.
+// This was originally created for the BPF Performance Tools book
+// published by Addison Wesley. ISBN-13: 9780136554820
+// When copying or porting, include this comment.
+//
+// 17-Apr-2019  Brendan Gregg   Created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <net/tcp_states.h>
@@ -32,91 +30,86 @@
 #include <linux/socket.h>
 #include <linux/tcp.h>
 #else
-/*
- * With BTF providing types, socket headers are not needed.
- * We only need to supply the preprocessor defines in this script.
- * AF_INET/AF_INET6 are part of the stable arch-independent Linux ABI
- */
+// With BTF providing types, socket headers are not needed.
+// We only need to supply the preprocessor defines in this script.
+// AF_INET/AF_INET6 are part of the stable arch-independent Linux ABI
 #define AF_INET   2
 #define AF_INET6 10
 #endif
 
 BEGIN
 {
-	printf("%-5s %-10s %-15s %-5s %-15s %-5s ", "PID", "COMM",
-	    "LADDR", "LPORT", "RADDR", "RPORT");
-	printf("%5s %5s %s\n", "TX_KB", "RX_KB", "MS");
+  printf("%-5s %-10s %-15s %-5s %-15s %-5s ",
+         "PID", "COMM", "LADDR", "LPORT", "RADDR", "RPORT");
+  printf("%5s %5s %s\n", "TX_KB", "RX_KB", "MS");
 }
 
 kprobe:tcp_set_state
 {
-	$sk = (struct sock *)arg0;
-	$newstate = arg1;
+  $sk = (struct sock *)arg0;
+  $newstate = arg1;
 
-	/*
-	 * This tool includes PID and comm context. From TCP this is best
-	 * effort, and may be wrong in some situations. It does this:
-	 * - record timestamp on any state < TCP_FIN_WAIT1
-	 *	note some state transitions may not be present via this kprobe
-	 * - cache task context on:
-	 *	TCP_SYN_SENT: tracing from client
-	 *	TCP_LAST_ACK: client-closed from server
-	 * - do output on TCP_CLOSE:
-	 *	fetch task context if cached, or use current task
-	 */
+  // This tool includes PID and comm context. From TCP this is best
+  // effort, and may be wrong in some situations. It does this:
+  // - record timestamp on any state < TCP_FIN_WAIT1
+  // 	note some state transitions may not be present via this kprobe
+  // - cache task context on:
+  // 	TCP_SYN_SENT: tracing from client
+  // 	TCP_LAST_ACK: client-closed from server
+  // - do output on TCP_CLOSE:
+  // 	fetch task context if cached, or use current task
 
-	// record first timestamp seen for this socket
-	if ($newstate < TCP_FIN_WAIT1 && @birth[$sk] == 0) {
-		@birth[$sk] = nsecs;
-	}
+  // record first timestamp seen for this socket
+  if ($newstate < TCP_FIN_WAIT1 && @birth[$sk] == 0) {
+    @birth[$sk] = nsecs;
+  }
 
-	// record PID & comm on SYN_SENT
-	if ($newstate == TCP_SYN_SENT || $newstate == TCP_LAST_ACK) {
-		@skpid[$sk] = pid;
-		@skcomm[$sk] = comm;
-	}
+  // record PID & comm on SYN_SENT
+  if ($newstate == TCP_SYN_SENT || $newstate == TCP_LAST_ACK) {
+    @skpid[$sk] = pid;
+    @skcomm[$sk] = comm;
+  }
 
-	// session ended: calculate lifespan and print
-	if ($newstate == TCP_CLOSE && @birth[$sk]) {
-		$delta_ms = (nsecs - @birth[$sk]) / 1e6;
-		$lport = $sk->__sk_common.skc_num;
-		$dport = $sk->__sk_common.skc_dport;
-		$dport = bswap($dport);
-		$tp = (struct tcp_sock *)$sk;
-		$pid = @skpid[$sk];
-		$comm = @skcomm[$sk];
-		if ($comm == "") {
-			// not cached, use current task
-			$pid = pid;
-			$comm = comm;
-		}
+  // session ended: calculate lifespan and print
+  if ($newstate == TCP_CLOSE && @birth[$sk]) {
+    $delta_ms = (nsecs - @birth[$sk]) / 1e6;
+    $lport = $sk.__sk_common.skc_num;
+    $dport = $sk.__sk_common.skc_dport;
+    $dport = bswap($dport);
+    $tp = (struct tcp_sock *)$sk;
+    $pid = @skpid[$sk];
+    $comm = @skcomm[$sk];
+    if ($comm == "") {
+      // not cached, use current task
+      $pid = pid;
+      $comm = comm;
+    }
 
-		$family = $sk->__sk_common.skc_family;
-		$saddr = ntop(0);
-		$daddr = ntop(0);
-		if ($family == AF_INET) {
-			$saddr = ntop(AF_INET, $sk->__sk_common.skc_rcv_saddr);
-			$daddr = ntop(AF_INET, $sk->__sk_common.skc_daddr);
-		} else {
-			// AF_INET6
-			$saddr = ntop(AF_INET6,
-			    $sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
-			$daddr = ntop(AF_INET6,
-			    $sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
-		}
-		printf("%-5d %-10.10s %-15s %-5d %-15s %-6d ", $pid,
-		    $comm, $saddr, $lport, $daddr, $dport);
-		printf("%5d %5d %d\n", $tp->bytes_acked / 1024,
-		    $tp->bytes_received / 1024, $delta_ms);
+    $family = $sk.__sk_common.skc_family;
+    $saddr = ntop(0);
+    $daddr = ntop(0);
+    if ($family == AF_INET) {
+      $saddr = ntop(AF_INET, $sk.__sk_common.skc_rcv_saddr);
+      $daddr = ntop(AF_INET, $sk.__sk_common.skc_daddr);
+    } else {
+      // AF_INET6
+      $saddr = ntop(AF_INET6, $sk.__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+      $daddr = ntop(AF_INET6, $sk.__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+    }
+    printf("%-5d %-10.10s %-15s %-5d %-15s %-6d ",
+           $pid, $comm, $saddr, $lport, $daddr, $dport);
+    printf("%5d %5d %d\n", $tp.bytes_acked / 1024, $tp.bytes_received / 1024, $delta_ms);
 
-		// Swallowing deletion failures as they are expected
-		$ignore = delete(@birth, $sk);
-		$ignore = delete(@skpid, $sk);
-		$ignore = delete(@skcomm, $sk);
-	}
+    // Swallowing deletion failures as they are expected
+    $ignore = delete(@birth, $sk);
+    $ignore = delete(@skpid, $sk);
+    $ignore = delete(@skcomm, $sk);
+  }
 }
 
 END
 {
-	clear(@birth); clear(@skpid); clear(@skcomm);
+  clear(@birth);
+  clear(@skpid);
+  clear(@skcomm);
 }

@@ -1,41 +1,39 @@
 #!/usr/bin/env bpftrace
-/*
- * dcsnoop	Trace directory entry cache (dcache) lookups.
- *		For Linux, uses bpftrace and eBPF.
- *
- * This uses kernel dynamic tracing of kernel functions, lookup_fast() and
- * d_lookup(), which will need to be modified to match kernel changes. See
- * code comments.
- * 
- * Example of usage:
- * 
- * # ./dcsnoop.bt
- * Attaching 4 probes...
- * Tracing dcache lookups... Hit Ctrl-C to end.
- * TIME     PID    COMM             T FILE
- * 427      1518   irqbalance       R proc/interrupts
- * 427      1518   irqbalance       R interrupts
- * 427      1518   irqbalance       R proc/stat
- * 427      1518   irqbalance       R stat
- * [...]
- * 5173     934    cksum            R usr/bin/bdftruncate
- * 5173     934    cksum            R bin/bdftruncate
- * 5173     934    cksum            R bdftruncate
- * 5173     934    cksum            M bdftruncate
- * 
- * The way the dcache is currently implemented, each component of a path is
- * checked in turn. The first line, showing "proc/interrupts" from irqbalance,
- * will be a lookup for "proc" in a directory (that isn't shown here). If it
- * finds "proc", it will then lookup "interrupts" inside net.
- * 
- * The script is easily modifiable to only show misses, reducing the volume of
- * the output. Or use the bcc version of this tool, which only shows misses by
- * default: https://github.com/iovisor/bcc
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
- */
+// dcsnoop	Trace directory entry cache (dcache) lookups.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// This uses kernel dynamic tracing of kernel functions, lookup_fast() and
+// d_lookup(), which will need to be modified to match kernel changes. See
+// code comments.
+//
+// Example of usage:
+//
+// # ./dcsnoop.bt
+// Attaching 4 probes...
+// Tracing dcache lookups... Hit Ctrl-C to end.
+// TIME     PID    COMM             T FILE
+// 427      1518   irqbalance       R proc/interrupts
+// 427      1518   irqbalance       R interrupts
+// 427      1518   irqbalance       R proc/stat
+// 427      1518   irqbalance       R stat
+// [...]
+// 5173     934    cksum            R usr/bin/bdftruncate
+// 5173     934    cksum            R bin/bdftruncate
+// 5173     934    cksum            R bdftruncate
+// 5173     934    cksum            M bdftruncate
+//
+// The way the dcache is currently implemented, each component of a path is
+// checked in turn. The first line, showing "proc/interrupts" from irqbalance,
+// will be a lookup for "proc" in a directory (that isn't shown here). If it
+// finds "proc", it will then lookup "interrupts" inside net.
+//
+// The script is easily modifiable to only show misses, reducing the volume of
+// the output. Or use the bcc version of this tool, which only shows misses by
+// default: https://github.com/iovisor/bcc
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 08-Sep-2018	Brendan Gregg	Created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/fs.h>
@@ -51,29 +49,27 @@ struct nameidata {
 
 BEGIN
 {
-	printf("Tracing dcache lookups... Hit Ctrl-C to end.\n");
-	printf("%-8s %-6s %-16s %1s %s\n", "TIME", "PID", "COMM", "T", "FILE");
+  printf("Tracing dcache lookups... Hit Ctrl-C to end.\n");
+  printf("%-8s %-6s %-16s %1s %s\n", "TIME", "PID", "COMM", "T", "FILE");
 }
 
 // comment out this block to avoid showing hits:
 kprobe:lookup_fast,
 kprobe:lookup_fast.constprop.*
 {
-	$nd = (struct nameidata *)arg0;
-	printf("%-8d %-6d %-16s R %s\n", elapsed / 1e6, pid, comm,
-	    str($nd->last.name));
+  $nd = (struct nameidata *)arg0;
+  printf("%-8d %-6d %-16s R %s\n", elapsed / 1e6, pid, comm, str($nd.last.name));
 }
 
 kprobe:d_lookup
 {
-	$name = (struct qstr *)arg1;
-	@fname[tid] = $name->name;
+  $name = (struct qstr *)arg1;
+  @fname[tid] = $name.name;
 }
 
 kretprobe:d_lookup
 /@fname[tid]/
 {
-	printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm,
-	    str(@fname[tid]));
-	delete(@fname, tid);
+  printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm, str(@fname[tid]));
+  delete(@fname, tid);
 }

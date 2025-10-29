@@ -14,12 +14,13 @@ struct C {
   struct W w[10];
 };
 
-uprobe:./testprogs/struct_array:clear {
-  $c = (struct C *) arg0;
+uprobe:./testprogs/struct_array:clear
+{
+  $c = (struct C *)arg0;
 
-  $w = $c->w;
-  @w[0] = $c->w;
-  @[$c->w] = 42;
+  $w = $c.w;
+  @w[0] = $c.w;
+  @[$c.w] = 42;
 
   printf("%d ", $w[0].a);
   printf("%d ", $w[2].a);
@@ -42,5 +43,5 @@ uprobe:./testprogs/struct_array:clear {
   printf("%d ", @w[0][4].t.b[1]);
 
   printf("-- ");
-  printf("%d ", @[$c->w]);
+  printf("%d ", @[$c.w]);
 }

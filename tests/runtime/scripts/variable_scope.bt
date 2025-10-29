@@ -1,14 +1,15 @@
-begin {
-	if (1) {
-		$x = 1;
-	}
+begin
+{
+  if 1 {
+    $x = 1;
+  }
 
-	if (1) {
-		let $x;
-		if ($x) {
-			$x = 5;
-		}
-		print($x);
-	}
-	exit();
+  if 1 {
+    let $x;
+    if $x {
+      $x = 5;
+    }
+    print($x);
+  }
+  exit();
 }

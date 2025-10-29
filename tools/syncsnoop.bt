@@ -1,31 +1,29 @@
 #!/usr/bin/env bpftrace
-/*
- * syncsnoop	Trace sync() variety of syscalls.
- *		For Linux, uses bpftrace and eBPF.
- * 
- * Example of usage:
- * 
- * # ./syncsnoop.bt
- * Attaching 7 probes...
- * Tracing sync syscalls... Hit Ctrl-C to end.
- * TIME      PID    COMM             EVENT
- * 02:02:17  27933  sync             tracepoint:syscalls:sys_enter_sync
- * 02:03:43  27936  sync             tracepoint:syscalls:sys_enter_sync
- * 
- * The output shows calls to the sync() syscall (traced via its tracepoint),
- * along with various details.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 06-Sep-2018	Brendan Gregg	Created this.
- */
+// syncsnoop	Trace sync() variety of syscalls.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// Example of usage:
+//
+// # ./syncsnoop.bt
+// Attaching 7 probes...
+// Tracing sync syscalls... Hit Ctrl-C to end.
+// TIME      PID    COMM             EVENT
+// 02:02:17  27933  sync             tracepoint:syscalls:sys_enter_sync
+// 02:03:43  27936  sync             tracepoint:syscalls:sys_enter_sync
+//
+// The output shows calls to the sync() syscall (traced via its tracepoint),
+// along with various details.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 06-Sep-2018	Brendan Gregg	Created this.
 
 BEGIN
 {
-	printf("Tracing sync syscalls... Hit Ctrl-C to end.\n");
-	printf("%-9s %-6s %-16s %s\n", "TIME", "PID", "COMM", "EVENT");
+  printf("Tracing sync syscalls... Hit Ctrl-C to end.\n");
+  printf("%-9s %-6s %-16s %s\n", "TIME", "PID", "COMM", "EVENT");
 }
 
 tracepoint:syscalls:sys_enter_sync,
@@ -35,6 +33,6 @@ tracepoint:syscalls:sys_enter_fdatasync,
 tracepoint:syscalls:sys_enter_sync_file_range*,
 tracepoint:syscalls:sys_enter_msync
 {
-	time("%H:%M:%S  ");
-	printf("%-6d %-16s %s\n", pid, comm, probe);
+  time("%H:%M:%S  ");
+  printf("%-6d %-16s %s\n", pid, comm, probe);
 }

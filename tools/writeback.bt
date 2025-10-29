@@ -1,84 +1,79 @@
 #!/usr/bin/env bpftrace
-/*
- * writeback	Trace file system writeback events with details.
- * 		For Linux, uses bpftrace and eBPF.
- *
- * This traces when file system dirtied pages are flushed to disk by kernel
- * writeback, and prints details including when the event occurred, and the
- * duration of the event. This can be useful for correlating these times with
- * other performance problems, and if there is a match, it would be a clue
- * that the problem may be caused by writeback. How quickly the kernel does
- * writeback can be tuned: see the kernel docs, eg,
- * vm.dirty_writeback_centisecs.
- * 
- * Example of usage:
- * 
- * # ./writeback.bt
- * Attaching 4 probes...
- * Tracing writeback... Hit Ctrl-C to end.
- * TIME      DEVICE   PAGES    REASON           ms
- * 23:28:47  259:1    15791    periodic         0.005
- * 23:28:48  259:0    15792    periodic         0.004
- * 23:28:52  259:1    15784    periodic         0.003
- * 23:28:53  259:0    18682    periodic         0.003
- * 23:28:55  259:0    41970    background       326.663
- * 23:28:56  259:0    18418    background       332.689
- * 23:28:56  259:0    60402    background       362.446
- * [...]
- * 
- * By looking a the timestamps and latency, it can be seen that the system was
- * not spending much time in writeback until 23:28:55, when "background"
- * writeback began, taking over 300 milliseconds per flush.
- * 
- * If timestamps of heavy writeback coincide with times when applications suffered
- * performance issues, that would be a clue that they are correlated and there
- * is contention for the disk devices. There are various ways to tune this:
- * eg, vm.dirty_writeback_centisecs.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 14-Sep-2018	Brendan Gregg	Created this.
- */
+// writeback	Trace file system writeback events with details.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// This traces when file system dirtied pages are flushed to disk by kernel
+// writeback, and prints details including when the event occurred, and the
+// duration of the event. This can be useful for correlating these times with
+// other performance problems, and if there is a match, it would be a clue
+// that the problem may be caused by writeback. How quickly the kernel does
+// writeback can be tuned: see the kernel docs, eg,
+// vm.dirty_writeback_centisecs.
+//
+// Example of usage:
+//
+// # ./writeback.bt
+// Attaching 4 probes...
+// Tracing writeback... Hit Ctrl-C to end.
+// TIME      DEVICE   PAGES    REASON           ms
+// 23:28:47  259:1    15791    periodic         0.005
+// 23:28:48  259:0    15792    periodic         0.004
+// 23:28:52  259:1    15784    periodic         0.003
+// 23:28:53  259:0    18682    periodic         0.003
+// 23:28:55  259:0    41970    background       326.663
+// 23:28:56  259:0    18418    background       332.689
+// 23:28:56  259:0    60402    background       362.446
+// [...]
+//
+// By looking a the timestamps and latency, it can be seen that the system was
+// not spending much time in writeback until 23:28:55, when "background"
+// writeback began, taking over 300 milliseconds per flush.
+//
+// If timestamps of heavy writeback coincide with times when applications suffered
+// performance issues, that would be a clue that they are correlated and there
+// is contention for the disk devices. There are various ways to tune this:
+// eg, vm.dirty_writeback_centisecs.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 14-Sep-2018	Brendan Gregg	Created this.
 
 BEGIN
 {
-	printf("Tracing writeback... Hit Ctrl-C to end.\n");
-	printf("%-9s %-8s %-8s %-16s %s\n", "TIME", "DEVICE", "PAGES",
-	    "REASON", "ms");
+  printf("Tracing writeback... Hit Ctrl-C to end.\n");
+  printf("%-9s %-8s %-8s %-16s %s\n", "TIME", "DEVICE", "PAGES", "REASON", "ms");
 
-	// see /sys/kernel/debug/tracing/events/writeback/writeback_start/format
-	@reason[0] = "background";
-	@reason[1] = "vmscan";
-	@reason[2] = "sync";
-	@reason[3] = "periodic";
-	@reason[4] = "laptop_timer";
-	@reason[5] = "free_more_memory";
-	@reason[6] = "fs_free_space";
-	@reason[7] = "forker_thread";
+  // see /sys/kernel/debug/tracing/events/writeback/writeback_start/format
+  @reason[0] = "background";
+  @reason[1] = "vmscan";
+  @reason[2] = "sync";
+  @reason[3] = "periodic";
+  @reason[4] = "laptop_timer";
+  @reason[5] = "free_more_memory";
+  @reason[6] = "fs_free_space";
+  @reason[7] = "forker_thread";
 }
 
 tracepoint:writeback:writeback_start
 {
-	@start[args.sb_dev] = nsecs;
+  @start[args.sb_dev] = nsecs;
 }
 
 tracepoint:writeback:writeback_written
-/ @start[args.sb_dev] /
+/@start[args.sb_dev]/
 {
-	$sb_dev = args.sb_dev;
-	$s = @start[$sb_dev];
-	delete(@start, $sb_dev);
-	$lat = (nsecs - $s) / 1000;
+  $sb_dev = args.sb_dev;
+  $s = @start[$sb_dev];
+  delete(@start, $sb_dev);
+  $lat = (nsecs - $s) / 1000;
 
-	time("%H:%M:%S  ");
-	printf("%-8s %-8d %-16s %d.%03d\n", args.name,
-	    args.nr_pages & 0xffff,	// TODO: explain these bitmasks
-	    @reason[args.reason & 0xffffffff],
-	    $lat / 1000, $lat % 1000);
+  time("%H:%M:%S  ");
+  printf("%-8s %-8d %-16s %d.%03d\n", args.name, args.nr_pages & 0xffff,
+         @reason[args.reason & 0xffffffff], $lat / 1000, $lat % 1000);
 }
 
 END
 {
-	clear(@reason);
-	clear(@start);
+  clear(@reason);
+  clear(@start);
 }

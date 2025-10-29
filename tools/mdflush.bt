@@ -1,37 +1,35 @@
 #!/usr/bin/env bpftrace
-/*
- * mdflush	Trace md flush events.
- *		For Linux, uses bpftrace and eBPF.
- * 
- * Example of usage:
- * 
- * # ./mdflush.bt
- * Tracing md flush requests... Hit Ctrl-C to end.
- * TIME     PID    COMM             DEVICE
- * 03:13:49 16770  sync             md0
- * 03:14:08 16864  sync             md0
- * 03:14:49 496    kworker/1:0H     md0
- * 03:14:49 488    xfsaild/md0      md0
- * 03:14:54 488    xfsaild/md0      md0
- * [...]
- * 
- * This can be useful for correlation with latency outliers or spikes in disk
- * latency, as measured using another tool (eg, system monitoring). If spikes in
- * disk latency often coincide with md flush events, then it would make flushing
- * a target for tuning.
- * 
- * Note that the flush events are likely to originate from higher in the I/O
- * stack, such as from file systems. This traces md processing them, and the
- * timestamp corresponds with when md began to issue the flush to disks.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * For Linux 5.12+ (see tools/old for script for lower versions).
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
- */
+// mdflush	Trace md flush events.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// Example of usage:
+//
+// # ./mdflush.bt
+// Tracing md flush requests... Hit Ctrl-C to end.
+// TIME     PID    COMM             DEVICE
+// 03:13:49 16770  sync             md0
+// 03:14:08 16864  sync             md0
+// 03:14:49 496    kworker/1:0H     md0
+// 03:14:49 488    xfsaild/md0      md0
+// 03:14:54 488    xfsaild/md0      md0
+// [...]
+//
+// This can be useful for correlation with latency outliers or spikes in disk
+// latency, as measured using another tool (eg, system monitoring). If spikes in
+// disk latency often coincide with md flush events, then it would make flushing
+// a target for tuning.
+//
+// Note that the flush events are likely to originate from higher in the I/O
+// stack, such as from file systems. This traces md processing them, and the
+// timestamp corresponds with when md began to issue the flush to disks.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// For Linux 5.12+ (see tools/old for script for lower versions).
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 08-Sep-2018	Brendan Gregg	Created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/blkdev.h>
@@ -40,13 +38,12 @@
 
 BEGIN
 {
-	printf("Tracing md flush events... Hit Ctrl-C to end.\n");
-	printf("%-8s %-6s %-16s %s\n", "TIME", "PID", "COMM", "DEVICE");
+  printf("Tracing md flush events... Hit Ctrl-C to end.\n");
+  printf("%-8s %-6s %-16s %s\n", "TIME", "PID", "COMM", "DEVICE");
 }
 
 kprobe:md_flush_request
 {
-	time("%H:%M:%S ");
-	printf("%-6d %-16s %s\n", pid, comm,
-	    ((struct bio *)arg1)->bi_bdev->bd_disk->disk_name);
+  time("%H:%M:%S ");
+  printf("%-6d %-16s %s\n", pid, comm, ((struct bio *)arg1).bi_bdev.bd_disk.disk_name);
 }
