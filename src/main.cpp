@@ -52,6 +52,7 @@
 #include "util/int_parser.h"
 #include "util/kernel.h"
 #include "util/strings.h"
+#include "util/temp.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -64,6 +65,7 @@ enum class TestMode {
   COMPILER_BENCHMARK,
   BPF_BENCHMARK,
   BPF_TEST,
+  FORMAT,
 };
 
 enum class BuildMode {
@@ -82,6 +84,7 @@ enum Options {
   DRY_RUN,
   EMIT_ELF,
   EMIT_LLVM,
+  FMT, // Alias for --test-mode=fmt.
   HELP,
   INCLUDE,
   INFO,
@@ -427,6 +430,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::EMIT_LLVM },
+    option{ .name = "fmt",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::FMT },
     option{ .name = "help",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -532,9 +539,11 @@ Args parse_args(int argc, char* argv[])
           args.test_mode = TestMode::BPF_BENCHMARK;
         } else if (std::strcmp(optarg, "test") == 0) {
           args.test_mode = TestMode::BPF_TEST;
+        } else if (std::strcmp(optarg, "format") == 0) {
+          args.test_mode = TestMode::FORMAT;
         } else {
           LOG(ERROR) << "USAGE: --test-mode can only be 'codegen', "
-                        "'compiler-bench', 'bench' or 'test'.";
+                        "'compiler-bench', 'bench', 'test' or 'format'.";
           exit(1);
         }
         break;
@@ -551,6 +560,13 @@ Args parse_args(int argc, char* argv[])
           exit(1);
         }
         args.test_mode = TestMode::BPF_BENCHMARK;
+        break;
+      case Options::FMT: // --fmt
+        if (args.test_mode != TestMode::NONE) {
+          LOG(ERROR) << "USAGE: --fmt conflicts with existing --test-mode";
+          exit(1);
+        }
+        args.test_mode = TestMode::FORMAT;
         break;
       case Options::AOT: // --aot
         args.aot = optarg;
@@ -919,12 +935,56 @@ int main(int argc, char* argv[])
     ast = ast::ASTContext("stdin", args.script);
   }
 
+  if (args.test_mode == TestMode::FORMAT) {
+    // For formatting, we parse the full file, but don't apply any other passes
+    // or use any other diagnostics. It only matters whether the parse itself
+    // was successful, and then we emit the formatted source code.
+    ast::PassManager pm;
+    pm.put(ast);
+    pm.put(bpftrace);
+    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)));
+    auto ok = pm.run();
+    if (!ok) {
+      std::cerr << ok.takeError() << "\n";
+      return 2;
+    }
+    if (!ast.diagnostics().ok()) {
+      // We didn't successfully parse the file, so can't format it.
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+    if (!args.output_file.empty()) {
+      // To make this operation safe, we open a temporary file next to the
+      // intented output file, and atomically rename when completed.
+      auto file = util::TempFile::create(args.output_file + ".XXXXXX");
+      if (!file) {
+        LOG(ERROR) << "unable to create temporary file: " << file.takeError();
+        return 1;
+      }
+      std::ofstream out(file->path());
+      if (out.fail()) {
+        LOG(ERROR) << "failed to open file '" << file->path()
+                   << "': " << std::strerror(errno);
+        return 1;
+      }
+      ast::Printer printer(ast, out);
+      printer.visit(ast.root);
+      std::filesystem::rename(file->path(), args.output_file);
+    } else {
+      ast::Printer printer(ast, std::cout);
+      printer.visit(ast.root);
+    }
+    return 0; // All done.
+  }
+
   for (const auto& param : args.params) {
     bpftrace.add_param(param);
   }
 
   // If we are not running anything, then we don't require privileges.
-  if (args.test_mode == TestMode::NONE) {
+  if (args.test_mode == TestMode::NONE ||
+      args.test_mode == TestMode::BPF_TEST ||
+      args.test_mode == TestMode::BPF_BENCHMARK) {
     check_privileges();
 
     auto lockdown_state = lockdown::detect();
