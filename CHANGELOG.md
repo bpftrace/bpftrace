@@ -45,6 +45,8 @@ and this project adheres to
   - [#4752](https://github.com/bpftrace/bpftrace/pull/4752)
 - Add support for more vmlinux BTF types as identifiers
   - [#4853](https://github.com/bpftrace/bpftrace/pull/4853)
+- Add support for `--fmt` mode (automatic formatting)
+  - [#4621](https://github.com/bpftrace/bpftrace/pull/4621)
 #### Changed
 - Disallow builtin and type idents as macro parameter names
   - [#4873](https://github.com/bpftrace/bpftrace/pull/4873)
