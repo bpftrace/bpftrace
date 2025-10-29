@@ -1,14 +1,10 @@
 // Check comm to make sure these are the nanosleeps we issued
 
-fentry:vmlinux:hrtimer_nanosleep
-/comm == "syscall"/
-{
+fentry:vmlinux:hrtimer_nanosleep /comm == "syscall"/ {
   printf("first");
 }
 
-fentry:vmlinux:hrtimer_nanosleep
-/comm == "syscall"/
-{
+fentry:vmlinux:hrtimer_nanosleep /comm == "syscall"/ {
   printf(" second\n");
   exit();
 }

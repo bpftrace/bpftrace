@@ -140,28 +140,28 @@ macro comm() {
 }
 
 macro comm($pid) {
-    if comptime !is_integer($pid) {
-        fail("Only integer supported for comm()'s pid");
-    }
+  if comptime (!is_integer($pid)) {
+    fail("Only integer supported for comm()'s pid");
+  }
 
-    let $name : string[64];
-    let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
-    // EOPNOTSUPP: Operation not supported
-    if ($ret == (int32)-95) {
-      warnf("'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system.");
-      $name = "[unknown]";
-    // ESRCH: No such process
-    } else if ($ret == (int32)-3) {
-      warnf("No such process (pid=%d)", $pid);
-      $name = "N/A";
-    }
-
-    $name
+  let $name : string[64];
+  let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
+  // EOPNOTSUPP: Operation not supported
+  if ($ret == ((int32)(-95))) {
+    warnf(
+      "'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system."
+    );
+    $name = "[unknown]"; // ESRCH: No such process
+  } else if ($ret == ((int32)(-3))) {
+    warnf("No such process (pid=%d)", $pid);
+    $name = "N/A";
+  }
+  $name
 }
 
 macro comm(arg_pid) {
-    let $pid = arg_pid;
-    comm($pid)
+  let $pid = arg_pid;
+  comm($pid)
 }
 
 // :variant uint32 cpid()
@@ -356,10 +356,10 @@ macro has_key(@map, key) {
     // has_key(@c, (1, ("hello", (uint8)5))) - now the key type is (uint8, (string, int16))
     // Other than that this has no side effects and shouldn't fail
     if comptime (typeinfo(@map[key]).1 == "__dummy_key_type") {
-      fail("__dummy_key_type shouldn't exist")
+      fail("__dummy_key_type shouldn't exist");
     }
-    let $key: typeof(@map) = key;
-    __has_key((void *)&@map, (void *)&$key)
+    let $key : typeof(@map) = key;
+    __has_key((void *)(&@map), (void *)(&$key))
   }
 }
 
@@ -502,10 +502,10 @@ macro jiffies() {
 // For kstack/ustack, return the depth (measured in # of frames) of the call stack.
 
 macro len(@map) {
-  if (comptime is_scalar(@map)) {
+  if comptime is_scalar(@map) {
     fail("call to len() expects a map with explicit keys (non-scalar map)")
   } else {
-    (int64)__elem_count((void *)&@map)
+    (int64)__elem_count((void *)(&@map))
   }
 }
 
@@ -654,7 +654,7 @@ macro numaid() {
 macro override(expr) {
   if comptime (probetype != "kprobe") {
     fail("override() can only be used inside kprobes");
-  } else if comptime (__builtin_safe_mode) {
+  } else if comptime __builtin_safe_mode {
     fail("override() is unsafe. To use you need the --unsafe flag");
   } else if comptime (typeinfo(expr).1 != typeinfo(0).1) {
     fail("override() only supports int arguments (%s provided)", typeinfo(expr).1);
@@ -721,22 +721,22 @@ macro override(expr) {
 // :variant uint32 ppid(struct task_struct * task)
 // Get the pid of the parent process for the passed task or the current task if called without arguments.
 macro ppid(task) {
-    task->real_parent->pid
+  task.real_parent.pid
 }
 
 macro ppid() {
-    ppid(curtask)
+  ppid(curtask)
 }
 
 // :variant string pcomm()
 // :variant string pcomm(struct task_struct * task)
 // Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
 macro pcomm(task) {
-    task->group_leader->comm
+  task.group_leader.comm
 }
 
 macro pcomm() {
-    pcomm(curtask)
+  pcomm(curtask)
 }
 
 // :function print
@@ -961,7 +961,7 @@ macro retval() {
 // Trace/breakpoint trap (core dumped)
 // ```
 macro signal($var) {
-  if comptime (is_str($var)) {
+  if comptime is_str($var) {
     fail("this first argument to signal() must be a string literal or a positive integer");
   }
   __signal($var, false);
@@ -984,8 +984,10 @@ macro signal(expr) {
 // Use `signal` to send to the process being traced (any thread).
 // The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
 macro signal_thread($var) {
-  if comptime (is_str($var)) {
-    fail("this first argument to signal_thread() must be a string literal or a positive integer");
+  if comptime is_str($var) {
+    fail(
+      "this first argument to signal_thread() must be a string literal or a positive integer"
+    );
   }
   __signal($var, true);
 }

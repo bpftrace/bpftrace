@@ -1,16 +1,14 @@
 // Check tv_nsec to make sure these are the nanosleeps we issued
 
-tracepoint:syscalls:sys_enter_nanosleep
-{
-  $tv_nsecs = (*args.rqtp).tv_nsec;
+tracepoint:syscalls:sys_enter_nanosleep {
+  $tv_nsecs = (*(args.rqtp)).tv_nsec;
   if ($tv_nsecs == 100000001) {
     printf("first");
   }
 }
 
-tracepoint:syscalls:sys_enter_nanosleep
-{
-  $tv_nsecs = (*args.rqtp).tv_nsec;
+tracepoint:syscalls:sys_enter_nanosleep {
+  $tv_nsecs = (*(args.rqtp)).tv_nsec;
   if ($tv_nsecs == 100000001) {
     printf(" second\n");
     exit();
