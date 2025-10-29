@@ -141,3 +141,23 @@ macro strerror(errno) {
   __strerror((int32)errno, &$v);
   $v
 }
+
+// :variant string syscall_name(int nr_syscall)
+//
+// Convert syscall number to string.
+//
+// ```
+// #include <syscall.h>
+// begin {
+//   print(syscall_name(__NR_read)); // outputs "read"
+// }
+// ```
+macro syscall_name(n) {
+  let $v : string[64];
+  // Ensure that the size of the string is equal to the size of the returned
+  // buffer. On the C side, it will be a compilation error if any of the
+  // strings exceed this size.
+  static_assert(sizeof($v) == sizeof(*__syscall_name((int32)n, &$v)), "$v is sized correctly");
+  __syscall_name((int32)n, &$v);
+  $v
+}
