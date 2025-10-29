@@ -150,9 +150,14 @@ on the topic.
 We use clang-format with our custom config for formatting code. This was
 [introduced](https://github.com/bpftrace/bpftrace/pull/639) after a lot of code
 was already written. Instead of formatting the whole code base at once and
-breaking `git blame` we're taking an incremental approach, each new/modified bit
-of code needs to be formatted.
-The CI checks this too, if the changes don't adhere to our style the job will fail.
+breaking `git blame` we're taking an incremental approach, each new/modified
+bit of code needs to be formatted.
+
+For bpftrace code (standard library and scripts), it should be formatted by
+bpftrace itself. You can use `bpftrace --fmt` or `scripts/bpftrace_tidy.sh`.
+
+Note that these are both checked by tests; if the changes don't adhere to our
+style CI jobs will fail.
 
 ### Using clang-format
 

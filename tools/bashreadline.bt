@@ -1,44 +1,44 @@
 #!/usr/bin/env bpftrace
-/*
- * bashreadline    Print entered bash commands from all running shells.
- *                 For Linux, uses bpftrace and eBPF.
- *
- * This works by tracing the readline() function using a uretprobe (uprobes).
- *
- * Example of usage:
- * 
- * # ./bashreadline.bt
- * Attaching 2 probes...
- * Tracing bash commands... Hit Ctrl-C to end.
- * TIME      PID    COMMAND
- * 06:40:06  5526   df -h
- * 06:40:09  5526   ls -l
- * 06:40:18  5526   echo hello bpftrace
- * 06:40:42  5526   echooo this is a failed command, but we can see it anyway
- * ^C
- * 
- * The entered command may fail. This is just showing what command lines were
- * entered interactively for bash to process.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * 
- * Copyright 2018 Netflix, Inc.
- *
- * 06-Sep-2018	Brendan Gregg	Created this.
- */
+// bashreadline    Print entered bash commands from all running shells.
+//                 For Linux, uses bpftrace and eBPF.
+//
+// This works by tracing the readline() function using a uretprobe (uprobes).
+//
+// Example of usage:
+//
+// # ./bashreadline.bt
+// Attaching 2 probes...
+// Tracing bash commands... Hit Ctrl-C to end.
+// TIME      PID    COMMAND
+// 06:40:06  5526   df -h
+// 06:40:09  5526   ls -l
+// 06:40:18  5526   echo hello bpftrace
+// 06:40:42  5526   echooo this is a failed command, but we can see it anyway
+// ^C
+//
+// The entered command may fail. This is just showing what command lines were
+// entered interactively for bash to process.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 06-Sep-2018	Brendan Gregg	Created this.
 
-config = { missing_probes = "ignore" }
+config = {
+  missing_probes = ignore;
+}
 
 BEGIN
 {
-	printf("Tracing bash commands... Hit Ctrl-C to end.\n");
-	printf("%-9s %-6s %s\n", "TIME", "PID", "COMMAND");
+  printf("Tracing bash commands... Hit Ctrl-C to end.\n");
+  printf("%-9s %-6s %s\n", "TIME", "PID", "COMMAND");
 }
 
 uretprobe:/bin/bash:readline,
 uretprobe:libreadline:readline
 /comm == "bash"/
 {
-	time("%H:%M:%S  ");
-	printf("%-6d %s\n", pid, str(retval));
+  time("%H:%M:%S  ");
+  printf("%-6d %s\n", pid, str(retval));
 }

@@ -5,20 +5,34 @@
 // For more information, please refer to:
 // https://github.com/bpftrace/bpftrace/pull/2623
 
-i:us:1 {
-    @data[rand % 5] = count();
-    if (rand % 5 == 0) {
-        delete(@data, rand % 10);
-    }
+i:us:1
+{
+  @data[rand % 5] = count();
+  if ((rand % 5) == 0) {
+    delete(@data, rand % 10);
+  }
 }
 
-i:ms:50 {
-    print(@data);
-    clear(@data);
-    zero(@data);
+i:ms:50
+{
+  print(@data);
+  clear(@data);
+  zero(@data);
+  @data[rand % 100] = count();
+  if ((rand % 5) == 0) {
+    delete(@data, rand % 10);
+  }
 }
 
-i:s:1 {
-    print("SUCCESS");
-    exit();
+i:ms:1
+{
+  print(@data);
+  clear(@data);
+  zero(@data);
+}
+
+i:s:1
+{
+  print("SUCCESS");
+  exit();
 }

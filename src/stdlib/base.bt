@@ -1,6 +1,7 @@
 // :variant void assert(bool condition, string message)
 // Simple assertion macro that will exit the entire script with an error code if the condition is not met.
-macro assert(cond, msg) {
+macro assert(cond, msg)
+{
   if (!cond) {
     errorf("assert failed: %s", msg);
     exit(1);
@@ -69,7 +70,8 @@ macro assert(cond, msg) {
 // Only works with cgroupv2
 //
 // This utilizes the BPF helper `get_current_cgroup_id`
-macro cgroup() {
+macro cgroup()
+{
   __builtin_cgroup
 }
 
@@ -135,42 +137,47 @@ macro cgroup() {
 // Name of the current thread or the process with the specified PID
 //
 // This utilizes the BPF helper `get_current_comm`
-macro comm() {
+macro comm()
+{
   __builtin_comm
 }
 
-macro comm($pid) {
-    import "stdlib/task/task.bpf.c";
-    if comptime !is_integer($pid) {
-        fail("Only integer supported for comm()'s pid");
-    }
+macro comm($pid)
+{
+  import "stdlib/task/task.bpf.c";
+  if comptime (!is_integer($pid)) {
+    fail("Only integer supported for comm()'s pid");
+  }
 
-    let $name : string[64];
-    if comptime kfunc_allowed("bpf_task_from_pid") {
-      let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
-      // EOPNOTSUPP: Operation not supported
-      if ($ret == (int32)-95) {
-        warnf("'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system.");
-        $name = "[unknown]";
-      // ESRCH: No such process
-      } else if ($ret == (int32)-3) {
-        warnf("No such process (pid=%d)", $pid);
-        $name = "N/A";
-      }
-    } else {
-      fail("Syntax comm(PID) is not supported in this probe type yet. Type: %s", probetype);
+  let $name : string[64];
+  if comptime kfunc_allowed("bpf_task_from_pid") {
+    let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
+    // EOPNOTSUPP: Operation not supported
+    if ($ret == ((int32)(-95))) {
+      warnf(
+        "'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system."
+      );
+      $name = "[unknown]"; // ESRCH: No such process
+    } else if ($ret == ((int32)(-3))) {
+      warnf("No such process (pid=%d)", $pid);
+      $name = "N/A";
     }
-    $name
+  } else {
+    fail("Syntax comm(PID) is not supported in this probe type yet. Type: %s", probetype);
+  }
+  $name
 }
 
-macro comm(arg_pid) {
-    let $pid = arg_pid;
-    comm($pid)
+macro comm(arg_pid)
+{
+  let $pid = arg_pid;
+  comm($pid)
 }
 
 // :variant uint32 cpid()
 // Child process ID, if bpftrace is invoked with `-c`
-macro cpid() {
+macro cpid()
+{
   __builtin_cpid
 }
 
@@ -180,7 +187,8 @@ macro cpid() {
 // BPF program, in this case, is the probe body
 //
 // This utilizes the BPF helper `raw_smp_processor_id`
-macro cpu() {
+macro cpu()
+{
   __builtin_cpu
 }
 
@@ -188,7 +196,8 @@ macro cpu() {
 // Pointer to `struct task_struct` of the current task
 //
 // This utilizes the BPF helper `get_current_task`
-macro curtask() {
+macro curtask()
+{
   __builtin_curtask
 }
 
@@ -235,31 +244,37 @@ macro curtask() {
 //     delete(@associative[1, 2]);
 // }
 // ```
-macro delete(@map, $key) {
+macro delete(@map, $key)
+{
   import "stdlib/map/map.bpf.c";
   check_key(@map, $key, "delete() with two arguments");
-  __delete((void *)&@map, (void *)&$key) == 0
+  __delete((void *)(&@map), (void *)(&$key)) == 0
 }
 
-macro delete(@map, key) {
+macro delete(@map, key)
+{
   import "stdlib/map/map.bpf.c";
   check_key(@map, key, "delete() with two arguments");
-  let $key: typeof(@map) = key;
-  __delete((void *)&@map, (void *)&$key) == 0
+  let $key : typeof(@map) = key;
+  __delete((void *)(&@map), (void *)(&$key)) == 0
 }
 
-macro delete(@map) {
+macro delete(@map)
+{
   import "stdlib/map/map.bpf.c";
-  if comptime !is_scalar(@map) {
-    fail("call to delete() with a single argument expects a map without explicit keys (scalar map)");
+  if comptime (!is_scalar(@map)) {
+    fail(
+      "call to delete() with a single argument expects a map without explicit keys (scalar map)"
+    );
     false
   } else {
-    let $key: int64 = 0;
-    __delete((void *)&@map, (void *)&$key) == 0
+    let $key : int64 = 0;
+    __delete((void *)(&@map), (void *)(&$key)) == 0
   }
 }
 
-macro delete(map_access) {
+macro delete(map_access)
+{
   // This supports the deprecated delete API, e.g. `delete(@a[1])`
   // which is handled in the map_sugar pass
   __deprecated_delete(map_access)
@@ -267,7 +282,8 @@ macro delete(map_access) {
 
 // :variant uint64 elapsed()
 // ktime_get_ns - ktime_get_boot_ns
-macro elapsed() {
+macro elapsed()
+{
   __builtin_elapsed
 }
 
@@ -323,7 +339,8 @@ macro elapsed() {
 
 // :variant string func()
 // Name of the current function being traced (kprobes,uprobes,fentry)
-macro func() {
+macro func()
+{
   __builtin_func
 }
 
@@ -353,7 +370,8 @@ macro func() {
 // Group ID of the current thread, as seen from the init namespace
 //
 // This utilizes the BPF helper `get_current_uid_gid`
-macro gid() {
+macro gid()
+{
   __builtin_gid
 }
 
@@ -376,11 +394,12 @@ macro gid() {
 //     }
 // }
 // ```
-macro has_key(@map, key) {
+macro has_key(@map, key)
+{
   import "stdlib/map/map.bpf.c";
   check_key(@map, key, "has_key()");
-  let $key: typeof(@map) = key;
-  __has_key((void *)&@map, (void *)&$key)
+  let $key : typeof(@map) = key;
+  __has_key((void *)(&@map), (void *)(&$key))
 }
 
 // :variant uint64 jiffies()
@@ -389,7 +408,8 @@ macro has_key(@map, key) {
 // On 32-bit systems, using this builtin might be slower
 //
 // This utilizes the BPF helper `get_jiffies_64`
-macro jiffies() {
+macro jiffies()
+{
   __builtin_jiffies
 }
 
@@ -521,16 +541,18 @@ macro jiffies() {
 //
 // For kstack/ustack, return the depth (measured in # of frames) of the call stack.
 
-macro len(@map) {
+macro len(@map)
+{
   import "stdlib/map/map.bpf.c";
-  if (comptime is_scalar(@map)) {
+  if comptime is_scalar(@map) {
     fail("call to len() expects a map with explicit keys (non-scalar map)")
   } else {
-    (int64)__elem_count((void *)&@map)
+    (int64)__elem_count((void *)(&@map))
   }
 }
 
-macro len(e) {
+macro len(e)
+{
   if comptime (typeinfo(e) != typeinfo(ustack) && typeinfo(e) != typeinfo(kstack)) {
     fail("call to len() expects a map, ustack, or kstack")
   } else {
@@ -564,21 +586,25 @@ macro len(e) {
 // negative value if the first differing byte in left is less
 // than the corresponding byte in right.
 //
-macro memcmp($left, $right, count) {
-  __memcmp((void *)&$left, (void *)&$right, count)
+macro memcmp($left, $right, count)
+{
+  __memcmp((void *)(&$left), (void *)(&$right), count)
 }
 
-macro memcmp($left, right, count) {
-   $right = right;
-   memcmp($left, $right, count)
+macro memcmp($left, right, count)
+{
+  $right = right;
+  memcmp($left, $right, count)
 }
 
-macro memcmp(left, $right, count) {
-   $left = left;
-   memcmp($left, $right, count)
+macro memcmp(left, $right, count)
+{
+  $left = left;
+  memcmp($left, $right, count)
 }
 
-macro memcmp(left, right, count) {
+macro memcmp(left, right, count)
+{
   $left = left;
   $right = right;
   memcmp($left, $right, count)
@@ -586,7 +612,8 @@ macro memcmp(left, right, count) {
 
 // :variant uint64 ncpus()
 // Number of CPUs
-macro ncpus() {
+macro ncpus()
+{
   __builtin_ncpus
 }
 
@@ -633,7 +660,8 @@ macro ncpus() {
 // BPF program, in this case, is the probe body
 //
 // This utilizes the BPF helper `numa_node_id`
-macro numaid() {
+macro numaid()
+{
   import "stdlib/system/system.bpf.c";
   (uint64)__get_numa_node_id()
 }
@@ -699,11 +727,12 @@ macro numaid() {
 // ioctl(PERF_EVENT_IOC_SET_BPF): Invalid argument
 // Error attaching probe: 'kprobe:vfs_read'
 // ```
-macro override(expr) {
+macro override(expr)
+{
   import "stdlib/system/system.bpf.c";
   if comptime (probetype != "kprobe") {
     fail("override() can only be used inside kprobes");
-  } else if comptime (__builtin_safe_mode) {
+  } else if comptime __builtin_safe_mode {
     fail("override() is unsafe. To use you need the --unsafe flag");
   } else if comptime (typeinfo(expr).1 != typeinfo(0).1) {
     fail("override() only supports int arguments (%s provided)", typeinfo(expr).1);
@@ -769,23 +798,27 @@ macro override(expr) {
 // :variant uint32 ppid()
 // :variant uint32 ppid(struct task_struct * task)
 // Get the pid of the parent process for the passed task or the current task if called without arguments.
-macro ppid(task) {
-    task->real_parent->pid
+macro ppid(task)
+{
+  task.real_parent.pid
 }
 
-macro ppid() {
-    ppid(curtask)
+macro ppid()
+{
+  ppid(curtask)
 }
 
 // :variant string pcomm()
 // :variant string pcomm(struct task_struct * task)
 // Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
-macro pcomm(task) {
-    task->group_leader->comm
+macro pcomm(task)
+{
+  task.group_leader.comm
 }
 
-macro pcomm() {
-    pcomm(curtask)
+macro pcomm()
+{
+  pcomm(curtask)
 }
 
 // :function print
@@ -935,7 +968,8 @@ macro pcomm() {
 // Name of the fully expanded probe
 //
 // For example: `kprobe:do_nanosleep`
-macro probe() {
+macro probe()
+{
   __builtin_probe
 }
 
@@ -944,7 +978,8 @@ macro probe() {
 // Note: `begin` and `end` probes are of type `special`.
 //
 // For example: `kprobe`, `special`, `tracepoint`
-macro probetype() {
+macro probetype()
+{
   __builtin_probetype
 }
 
@@ -962,7 +997,8 @@ macro probetype() {
 // Get a pseudo random number
 //
 // This utilizes the BPF helper `get_prandom_u32`
-macro rand() {
+macro rand()
+{
   __builtin_rand
 }
 
@@ -982,7 +1018,8 @@ macro rand() {
 //
 // (kretprobe, uretprobe, fexit)
 // For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You can look up the type using `bpftrace -lv`
-macro retval() {
+macro retval()
+{
   __builtin_retval
 }
 
@@ -1009,7 +1046,8 @@ macro retval() {
 // $ ls
 // Trace/breakpoint trap (core dumped)
 // ```
-macro signal(expr) {
+macro signal(expr)
+{
   __signal(expr, false);
 }
 
@@ -1025,7 +1063,8 @@ macro signal(expr) {
 // Send a signal to the thread being traced.
 // Use `signal` to send to the process being traced (any thread).
 // The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
-macro signal_thread(expr) {
+macro signal_thread(expr)
+{
   __signal(expr, true);
 }
 
@@ -1258,7 +1297,8 @@ macro signal_thread(expr) {
 //   printf("PS1: %s\n", str(*uaddr("ps1_prompt")));
 // }
 // ```
-macro uaddr(sym) {
+macro uaddr(sym)
+{
   import "stdlib/task/vma.bpf.c";
   let $addr = (uint64)__builtin_uaddr(sym);
 
@@ -1276,7 +1316,8 @@ macro uaddr(sym) {
 // User ID of the current thread, as seen from the init namespace
 //
 // This utilizes the BPF helper `get_current_uid_gid`
-macro uid() {
+macro uid()
+{
   __builtin_uid
 }
 
@@ -1291,7 +1332,8 @@ macro uid() {
 // Returns 1 if the current process is in user mode, 0 otherwise
 //
 // Currently only available on x86_64.
-macro usermode() {
+macro usermode()
+{
   __builtin_usermode
 }
 
@@ -1299,7 +1341,8 @@ macro usermode() {
 // Get the current username
 //
 // Often this is just "root"
-macro username() {
+macro username()
+{
   __builtin_username
 }
 

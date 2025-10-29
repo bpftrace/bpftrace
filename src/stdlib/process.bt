@@ -1,51 +1,48 @@
-macro __signal(expr, is_tid) {
+macro __signal(expr, is_tid)
+{
   import "stdlib/process/process.bpf.c";
-  let $sig: uint64 = 0;
+  let $sig : uint64 = 0;
 
-  if comptime (
-       probetype != "kprobe"
-    && probetype != "kretprobe"
-    && probetype != "uprobe"
-    && probetype != "uretprobe"
-    && probetype != "usdt"
-    && probetype != "tracepoint"
-    && probetype != "profile"
-    && probetype != "fentry"
-    && probetype != "fexit"
-    && probetype != "rawtracepoint") {
+  if comptime (probetype != "kprobe" && probetype != "kretprobe" &&
+               probetype != "uprobe" && probetype != "uretprobe" &&
+               probetype != "usdt" && probetype != "tracepoint" &&
+               probetype != "profile" && probetype != "fentry" &&
+               probetype != "fexit" && probetype != "rawtracepoint") {
     fail("%s can not be used for this probetype %s",
-      is_tid ? "signal_thread()" : "signal()", probetype);
+         is_tid ? "signal_thread()" : "signal()", probetype);
   }
 
-  if comptime (__builtin_safe_mode) {
+  if comptime __builtin_safe_mode {
     fail("%s is unsafe. To use you need the --unsafe flag",
-      is_tid ? "signal_thread()" : "signal()");
-  } else if comptime (is_literal(expr)) {
-    if comptime (is_str(expr)) {
+         is_tid ? "signal_thread()" : "signal()");
+  } else if comptime is_literal(expr) {
+    if comptime is_str(expr) {
       $sig = __builtin_signal_num(expr);
-    } else if comptime (is_integer(expr)) {
+    } else if comptime is_integer(expr) {
       if comptime (expr < 1 || expr > 64) {
         fail("%s accepts a string literal or an integer between 1 and 64 (inclusive)",
-        is_tid ? "signal_thread()" : "signal()");
+             is_tid ? "signal_thread()" : "signal()");
       } else {
         $sig = expr;
       }
     } else {
       fail("%s accepts a string literal or a positive integer",
-      is_tid ? "signal_thread()" : "signal()");
+           is_tid ? "signal_thread()" : "signal()");
     }
   } else if comptime (!is_unsigned_integer(expr)) {
     fail("%s accepts a string literal or a unsigned integer",
-      is_tid ? "signal_thread()" : "signal()");
+         is_tid ? "signal_thread()" : "signal()");
   } else {
     $sig = expr;
   }
 
   if ($sig == 0 || $sig > 64) {
     errorf("%s expects an integer between 1 and 64 (inclusive). Got %d",
-      is_tid ? "signal_thread()" : "signal()", $sig);
+           is_tid ? "signal_thread()" : "signal()", $sig);
   } else {
-    $ret = comptime is_tid ? __signal_thread((uint32)$sig) : __signal_process((uint32)$sig);
+    $ret = comptime is_tid
+           ? __signal_thread((uint32)$sig)
+           : __signal_process((uint32)$sig);
     if ($ret != 0) {
       warnf("signal call failed with error %d", $ret);
     }

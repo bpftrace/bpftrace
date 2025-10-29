@@ -1,50 +1,48 @@
 #!/usr/bin/env bpftrace
-/*
- * execsnoop.bt   Trace new processes via exec() syscalls.
- *                For Linux, uses bpftrace and eBPF.
- *
- * This traces when processes call exec(). It is handy for identifying new
- * processes created via the usual fork()->exec() sequence. Note that the
- * return value is not currently traced, so the exec() may have failed.
- *
- * TODO: switch to tracepoints args. Support more args. Include retval.
- * 
- * Example of usage:
- * 
- * # ./execsnoop.bt
- * Attaching 3 probes...
- * TIME            PID     PPID    ARGS
- * 08:57:52.430193 3187374 1971701 ls --color --color=auto -lh execsnoop.bt execsnoop.bt.0 execsnoop.bt.1
- * 08:57:52.441868 3187378 3187375 man ls
- * 08:57:52.473565 3187384 3187378 preconv -e UTF-8
- * 08:57:52.473620 3187384 3187378 preconv -e UTF-8
- * 08:57:52.473658 3187384 3187378 preconv -e UTF-8
- * 08:57:52.473839 3187385 3187378 tbl
- * 08:57:52.473897 3187385 3187378 tbl
- * 08:57:52.473944 3187385 3187378 tbl
- * 08:57:52.474055 3187386 3187378 nroff -mandoc -Tutf8
- * 08:57:52.474107 3187386 3187378 nroff -mandoc -Tutf8
- * 08:57:52.474145 3187386 3187378 nroff -mandoc -Tutf8
- * 08:57:52.474684 3187388 3187378 less
- * 08:57:52.474739 3187388 3187378 less
- * 08:57:52.474780 3187388 3187378 less
- * 08:57:52.475502 3187389 3187386 groff -Tutf8 -mtty-char -mandoc
- * 08:57:52.476717 3187390 3187389 troff -mtty-char -mandoc -Tutf8
- * 08:57:52.476811 3187391 3187389 grotty
- * 
- * The output begins by showing an "ls" command, and then the process execution
- * to serve "man ls". The same exec arguments appear multiple times: in this case
- * they are failing as the $PATH variable is walked, until one finally succeeds.
- * 
- * This tool can be used to discover unwanted short-lived processes that may be
- * causing performance issues such as latency perturbations.
- * 
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides more fields and command line options.
- * 
- * 15-Nov-2017	Brendan Gregg	Created this.
- * 11-Sep-2018	   "     "	Switched to use join().
- */
+// execsnoop.bt   Trace new processes via exec() syscalls.
+//                For Linux, uses bpftrace and eBPF.
+//
+// This traces when processes call exec(). It is handy for identifying new
+// processes created via the usual fork()->exec() sequence. Note that the
+// return value is not currently traced, so the exec() may have failed.
+//
+// TODO: switch to tracepoints args. Support more args. Include retval.
+//
+// Example of usage:
+//
+// # ./execsnoop.bt
+// Attaching 3 probes...
+// TIME            PID     PPID    ARGS
+// 08:57:52.430193 3187374 1971701 ls --color --color=auto -lh execsnoop.bt execsnoop.bt.0 execsnoop.bt.1
+// 08:57:52.441868 3187378 3187375 man ls
+// 08:57:52.473565 3187384 3187378 preconv -e UTF-8
+// 08:57:52.473620 3187384 3187378 preconv -e UTF-8
+// 08:57:52.473658 3187384 3187378 preconv -e UTF-8
+// 08:57:52.473839 3187385 3187378 tbl
+// 08:57:52.473897 3187385 3187378 tbl
+// 08:57:52.473944 3187385 3187378 tbl
+// 08:57:52.474055 3187386 3187378 nroff -mandoc -Tutf8
+// 08:57:52.474107 3187386 3187378 nroff -mandoc -Tutf8
+// 08:57:52.474145 3187386 3187378 nroff -mandoc -Tutf8
+// 08:57:52.474684 3187388 3187378 less
+// 08:57:52.474739 3187388 3187378 less
+// 08:57:52.474780 3187388 3187378 less
+// 08:57:52.475502 3187389 3187386 groff -Tutf8 -mtty-char -mandoc
+// 08:57:52.476717 3187390 3187389 troff -mtty-char -mandoc -Tutf8
+// 08:57:52.476811 3187391 3187389 grotty
+//
+// The output begins by showing an "ls" command, and then the process execution
+// to serve "man ls". The same exec arguments appear multiple times: in this case
+// they are failing as the $PATH variable is walked, until one finally succeeds.
+//
+// This tool can be used to discover unwanted short-lived processes that may be
+// causing performance issues such as latency perturbations.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides more fields and command line options.
+//
+// 15-Nov-2017	Brendan Gregg	Created this.
+// 11-Sep-2018	   "     "	Switched to use join().
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/sched.h>
@@ -52,11 +50,11 @@
 
 BEGIN
 {
-	printf("%-15s %-7s %-7s %s\n", "TIME", "PID", "PPID", "ARGS");
+  printf("%-15s %-7s %-7s %s\n", "TIME", "PID", "PPID", "ARGS");
 }
 
 tracepoint:syscalls:sys_enter_exec*
 {
-	printf("%15s %-7d %-7d ", strftime("%H:%M:%S.%f", nsecs), pid, ppid);
-	join(args.argv);
+  printf("%15s %-7d %-7d ", strftime("%H:%M:%S.%f", nsecs), pid, ppid);
+  join(args.argv);
 }

@@ -1,45 +1,45 @@
-begin {
-    $count = 0;
-    // Test basic functionality
-    @a[1] = 0;
-    if (has_key(@a, 1)) {
-        ++$count;
-    }
+begin
+{
+  $count = 0;
+  // Test basic functionality
+  @a[1] = 0;
+  if has_key(@a, 1) {
+    ++$count;
+  }
 
-    if (!has_key(@a, 2)) {
-        ++$count;
-    }
+  if (!has_key(@a, 2)) {
+    ++$count;
+  }
 
-    $b = 1;
-    if (has_key(@a, $b)) {
-        ++$count;
-    }
+  $b = 1;
+  if has_key(@a, $b) {
+    ++$count;
+  }
 
-    @b["longerstr"] = 0;
-    if (!has_key(@b, "byeasdfasdfasdfasdfasdfasdf")) {
-        ++$count;
-    }
+  @b["longerstr"] = 0;
+  if (!has_key(@b, "byeasdfasdfasdfasdfasdfasdf")) {
+    ++$count;
+  }
 
-    @b["longerstr"] = 0;
-    if (has_key(@b, "longerstr")) {
-        ++$count;
-    }
+  @b["longerstr"] = 0;
+  if has_key(@b, "longerstr") {
+    ++$count;
+  }
 
-    // Test a more complex key
-    @c[1, ("hello", (int8)5)] = 0;
-    if (has_key(@c, (1, ("hello", 5)))) {
-        ++$count;
-    }
+  // Test a more complex key
+  @c[1,("hello",((int8)5))] = 0;
+  if has_key(@c, (1,("hello",5))) {
+    ++$count;
+  }
 
-    if (!has_key(@c, (1, ("bye", (uint16)5)))) {
-        ++$count;
-    }
+  if (!has_key(@c, (1,("bye",((uint16)5))))) {
+    ++$count;
+  }
 
-    @c[2, ("evenlongerstr", 10)] = 0;
-    $a = (2, ("evenlongerstr", 10));
-    if (has_key(@c, $a)) {
-        ++$count;
-    }
-
-    print($count)
+  @c[2,("evenlongerstr",10)] = 0;
+  $a = (2,("evenlongerstr",10));
+  if has_key(@c, $a) {
+    ++$count;
+  }
+  print($count);
 }

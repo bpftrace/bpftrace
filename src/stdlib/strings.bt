@@ -13,12 +13,15 @@
 //  * Native bpftrace `string` objects of various sizes
 
 // Checks that this value is string-like.
-macro assert_str(exp) {
-  if comptime !is_str(exp) {
-   if comptime is_array(exp) {
-      static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like arrays must contain a char-like type");
+macro assert_str(exp)
+{
+  if comptime (!is_str(exp)) {
+    if comptime is_array(exp) {
+      static_assert(typeinfo(exp[0]) == typeinfo(int8),
+                    "string-like arrays must contain a char-like type");
     } else if comptime is_ptr(exp) {
-      static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like pointers must point to a char-like type");
+      static_assert(typeinfo(exp[0]) == typeinfo(int8),
+                    "string-like pointers must point to a char-like type");
     } else {
       fail("string-like values must be either strings, arrays or pointers");
     }
@@ -26,15 +29,17 @@ macro assert_str(exp) {
 }
 
 // Returns the default unbounded length.
-macro default_str_length() {
-  sizeof(str((int8*)0))
+macro default_str_length()
+{
+  sizeof(str((int8 *)0))
 }
 
 // Returns the length of a string-like object.
 // :variant uint64 strlen(string exp)
 // :variant uint64 strlen(int8 exp[])
 // :variant uint64 strlen(int8 *exp)
-macro strlen($var) {
+macro strlen($var)
+{
   assert_str($var);
   let $sz = (int64)0;
   if comptime is_str($var) {
@@ -47,7 +52,8 @@ macro strlen($var) {
   (uint64)$sz
 }
 
-macro strlen(exp) {
+macro strlen(exp)
+{
   assert_str(exp);
   if comptime (is_str(exp) || is_array(exp)) {
     // This must be unbound, unfortunately we need to bind it.
@@ -58,7 +64,8 @@ macro strlen(exp) {
   }
 }
 
-macro __strnlen(ptr, max_size) {
+macro __strnlen(ptr, max_size)
+{
   import "stdlib/strings/strings.bpf.c";
   __bpf_strnlen(ptr, (size_t)max_size)
 }
@@ -71,12 +78,13 @@ macro __strnlen(ptr, max_size) {
 // :variant int64 strcap(string exp)
 // :variant int64 strcap(int8 exp[])
 // :variant int64 strcap(int8 *exp)
-macro strcap(exp) {
+macro strcap(exp)
+{
   assert_str(exp);
   if comptime is_str(exp) {
     sizeof(exp)
   } else if comptime is_array(exp) {
-    sizeof(exp)/sizeof(exp[0])
+    sizeof(exp) / sizeof(exp[0])
   } else {
     strlen(exp) // Pointer, so pass by value.
   }
@@ -84,7 +92,8 @@ macro strcap(exp) {
 
 // Returns the index of the first occurrence of the string needle in the string haystack. If needle is not in haystack then -1 is returned.
 // :variant int64 strstr(string haystack, string needle)
-macro strstr($haystack, $needle) {
+macro strstr($haystack, $needle)
+{
   import "stdlib/strings/strings.bpf.c";
   assert_str($haystack);
   assert_str($needle);
@@ -100,15 +109,18 @@ macro strstr($haystack, $needle) {
     __bpf_strnstr(&$haystack, &$needle, $haystack_size, $needle_size)
   }
 }
-macro strstr($haystack, needle) {
+macro strstr($haystack, needle)
+{
   let $needle = needle;
   strstr($haystack, $needle)
 }
-macro strstr(haystack, $needle) {
+macro strstr(haystack, $needle)
+{
   let $haystack = haystack;
   strstr($haystack, $needle)
 }
-macro strstr(haystack, needle) {
+macro strstr(haystack, needle)
+{
   let $haystack = haystack;
   strstr($haystack, needle)
 }
@@ -117,7 +129,8 @@ macro strstr(haystack, needle) {
 // Compares whether the string haystack contains the string needle.
 //
 // If needle is contained then true is returned, else false is returned.
-macro strcontains(haystack, needle) {
+macro strcontains(haystack, needle)
+{
   strstr(haystack, needle) >= 0
 }
 
@@ -131,13 +144,15 @@ macro strcontains(haystack, needle) {
 //   print(strerror(EPERM));
 // }
 // ```
-macro strerror(errno) {
+macro strerror(errno)
+{
   import "stdlib/strings/strings.bpf.c";
   let $v : string[64];
   // Ensure that the size of the string is equal to the size of the returned
   // buffer. On the C side, it will be a compilation error if any of the
   // strings exceed this size.
-  static_assert(sizeof($v) == sizeof(*__strerror((int32)errno, &$v)), "$v is sized correctly");
+  static_assert(sizeof($v) == sizeof(*__strerror((int32)errno, &$v)),
+                "$v is sized correctly");
   __strerror((int32)errno, &$v);
   $v
 }
@@ -152,13 +167,15 @@ macro strerror(errno) {
 //   print(syscall_name(__NR_read)); // outputs "read"
 // }
 // ```
-macro syscall_name(n) {
+macro syscall_name(n)
+{
   import "stdlib/strings/strings.bpf.c";
   let $v : string[64];
   // Ensure that the size of the string is equal to the size of the returned
   // buffer. On the C side, it will be a compilation error if any of the
   // strings exceed this size.
-  static_assert(sizeof($v) == sizeof(*__syscall_name((int32)n, &$v)), "$v is sized correctly");
+  static_assert(sizeof($v) == sizeof(*__syscall_name((int32)n, &$v)),
+                "$v is sized correctly");
   __syscall_name((int32)n, &$v);
   $v
 }
