@@ -1,5 +1,5 @@
 NAME printf to file
-RUN {{BPFTRACE}} -e 'i:ms:10 { printf("%s %d\n", "SUCCESS", 1); exit() }' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
+RUN {{BPFTRACE}} -e 'i:ms:10 { printf("%s %d\n", "SUCCESS", 1); exit() }' --output /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
 EXPECT SUCCESS 1
 
 NAME cat to file

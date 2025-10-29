@@ -255,7 +255,7 @@ REQUIRES_FEATURE uprobe_multi
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe_multi_wildcard_target_wildcard
-RUN {{BPFTRACE}} --unsafe -e 'uretprobe:*:uprobeFunction* { printf("link: "); system("bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} --unsafe -e 'uretprobe:*:uprobeFunction* { printf("link: "); system("bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }' --pid {{BEFORE_PID}}
 EXPECT link: 1
 REQUIRES bpftool
 REQUIRES_FEATURE uprobe_multi
