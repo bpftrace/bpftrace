@@ -510,14 +510,14 @@ EXPECT Hello
 TIMEOUT 2
 
 NAME bench
-RUN {{BPFTRACE}} --test-mode bench -e 'begin { print("begin\n"); } bench:a { @ = count(); } end { print(@); clear(@); }'
+RUN {{BPFTRACE}} --mode bench -e 'begin { print("begin\n"); } bench:a { @ = count(); } end { print(@); clear(@); }'
 EXPECT_REGEX Benchmark                                Time\(ns\)       Iterations
              ------------------------------------------------------------------
              a                                        \d+[ ]+\d+
 TIMEOUT 5
 
 NAME bench multiple
-RUN {{BPFTRACE}} --test-mode bench -e 'begin { printf("begin\n"); } bench:a { @a++; } bench:b { if (@b == 0) { print(@a); } @b++; } bench:c { if(@c == 0) { print(@b);  } @c++; } end { print(@c); clear(@a); clear(@b); clear(@c); }'
+RUN {{BPFTRACE}} --mode bench -e 'begin { printf("begin\n"); } bench:a { @a++; } bench:b { if (@b == 0) { print(@a); } @b++; } bench:c { if(@c == 0) { print(@b);  } @c++; } end { print(@c); clear(@a); clear(@b); clear(@c); }'
 EXPECT_REGEX Benchmark                                Time\(ns\)       Iterations
              ------------------------------------------------------------------
              a                                        \d+[ ]+\d+

@@ -222,12 +222,12 @@ EXPECT {"type": "value", "data": [true,false]}
 TIMEOUT 1
 
 NAME bench
-RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'bench:a { @ = count(); }'
+RUN {{BPFTRACE}} -q -f json --mode bench -e 'bench:a { @ = count(); }'
 EXPECT_REGEX {"type": "benchmark_result", "data": {"a": {"average": \d+, "iters": \d+}}}
 TIMEOUT 2
 
 NAME bench multiple
-RUN {{BPFTRACE}} -q -f json --test-mode bench -e 'bench:a { @a++; } bench:b { @b++; } bench:c { @c++; }'
+RUN {{BPFTRACE}} -q -f json --mode bench -e 'bench:a { @a++; } bench:b { @b++; } bench:c { @c++; }'
 EXPECT_REGEX {"type": "benchmark_result", "data": {"a": {"average": \d+, "iters": \d+}}}
              {"type": "benchmark_result", "data": {"b": {"average": \d+, "iters": \d+}}}
              {"type": "benchmark_result", "data": {"c": {"average": \d+, "iters": \d+}}}
