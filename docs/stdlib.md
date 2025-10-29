@@ -686,7 +686,7 @@ This function can only be used by functions that are allowed to, these functions
 - `string pcomm`
 - `string pcomm(struct task_struct * task)`
 
-Get the name of the parent process for the passed task or the current task if called without arguments.
+Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
 
 
 ### percpu_kaddr
