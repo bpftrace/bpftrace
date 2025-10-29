@@ -42,7 +42,7 @@ void test(const std::string& input,
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
     EXPECT_THAT(ast,
                 Program().WithProbe(
-                    Probe({ "begin" }, { ExprStatement(expr_matcher) })));
+                    Probe({ "begin" }, { ExprStatement(expr_matcher), _ })));
     if (!warn.empty()) {
       EXPECT_THAT(out.str(), HasSubstr(warn)) << msg.str() << out.str();
     }
