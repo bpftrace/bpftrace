@@ -60,4 +60,6 @@ Result<SizedType> getCompatType(const T &type)
   return op(type);
 }
 
+Result<ValueType> convertType(Types &btf, const SizedType &type);
+
 } // namespace bpftrace::btf
