@@ -44,7 +44,6 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateDeprecatedPass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateCheckAttachpointsPass());
-  passes.emplace_back(CreatePidFilterPass());
   passes.emplace_back(CreateUSDTImportPass());
   passes.emplace_back(CreateImportInternalScriptsPass());
   passes.emplace_back(CreateControlFlowPass());
@@ -63,6 +62,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
   passes.emplace_back(CreateNamedParamsPass());
+  passes.emplace_back(CreatePidFilterPass());
   return passes;
 }
 
