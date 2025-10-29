@@ -68,16 +68,14 @@ int __bpf_strnstr(const char *haystack,
 }
 
 m_str* __strerror(int errno, m_arg *out) {
-  m_str *result;
   if (errno < 0) {
     errno = -errno;
   }
   if (errno >= 0 && errno <= EHWPOISON) {
-    result = &errors[errno];
+    __builtin_memcpy(&out->data, &errors[errno], sizeof(*out));
   } else {
-    result = &unknown_error;
+    __builtin_memcpy(&out->data, &unknown_error, sizeof(*out));
   }
-  __builtin_memcpy(&out->data, result, sizeof(*out));
   return &out->data;
 }
 
