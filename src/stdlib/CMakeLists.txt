@@ -13,9 +13,11 @@ include(Embed)
 
 file(GLOB_RECURSE STDLIB_SOURCES "*.c" "*.h" "*.bt")
 file(GLOB_RECURSE PUBLIC_HEADERS "include/*.h")
+file(GLOB_RECURSE TEST_SCRIPTS "*_test.bt")
 file(GLOB_RECURSE BPF_HEADERS "${LIBBPF_INCLUDE_DIRS}/bpf/*.h")
 list(REMOVE_ITEM STDLIB_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/stdlib.h")
 list(REMOVE_ITEM STDLIB_SOURCES ${PUBLIC_HEADERS})
+list(REMOVE_ITEM STDLIB_SOURCES ${TEST_SCRIPTS})
 
 function(add_stdlib_source PREFIX FILENAME)
   # Generate our embedded header.

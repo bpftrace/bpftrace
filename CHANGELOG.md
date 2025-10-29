@@ -15,6 +15,8 @@ and this project adheres to
   - [#4677](https://github.com/bpftrace/bpftrace/pull/4677)
 - Remove the deprecated `sarg` builtin
   - [#4686](https://github.com/bpftrace/bpftrace/pull/4686)
+- Benchmark formats changed slightly, to reflect gbenchmark
+  - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
 #### Added
 - Add `syscall_name()` to convert system call numbers into names.
   - [#4746](https://github.com/bpftrace/bpftrace/pull/4746)
@@ -30,6 +32,8 @@ and this project adheres to
   - [#4712](https://github.com/bpftrace/bpftrace/pull/4712)
 - Allow array-style access for tuples
   - [#4715](https://github.com/bpftrace/bpftrace/pull/4715)
+- Add `test` probes as means to improve runtime test latency
+  - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
 #### Changed
 - `uaddr` support PIE and dynamic library symbols.
   - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)

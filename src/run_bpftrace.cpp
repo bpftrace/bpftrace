@@ -228,37 +228,14 @@ int run_bpftrace(BPFtrace &bpftrace,
   act.sa_handler = [](int) { BPFtrace::sigusr1_recv = true; };
   sigaction(SIGUSR1, &act, nullptr);
 
+  // Record the error code, but finish the actions below.
   err = bpftrace.run(*output, c_definitions, std::move(bytecode));
-  if (err)
-    return err;
 
-  // Indicate that we are done the main loop.
-  output->end();
-
-  // We are now post-processing. If we receive another SIGINT,
-  // handle it normally (exit)
+  // We are now post-processing, remove our signal handler.
   act.sa_handler = SIG_DFL;
   sigaction(SIGINT, &act, nullptr);
 
-  // Print maps if needed (true by default).
-  if (!dry_run) {
-    if (bpftrace.run_benchmarks_) {
-      output->benchmark_results(bpftrace.benchmark_results);
-    }
-    if (bpftrace.config_->print_maps_on_exit) {
-      for (const auto &[_, map] : bpftrace.bytecode_.maps()) {
-        if (!map.is_printable())
-          continue;
-        auto res = format(bpftrace, c_definitions, map);
-        if (!res) {
-          std::cerr << "Error printing map: " << res.takeError();
-          continue;
-        }
-        output->map(map.name(), *res);
-      }
-    }
-  }
-
+  // Kill the child, if needed.
   if (bpftrace.child_) {
     auto val = 0;
     if ((val = bpftrace.child_->term_signal()) > -1)
@@ -267,8 +244,10 @@ int run_bpftrace(BPFtrace &bpftrace,
       LOG(V1) << "Child exited with code: " << val;
   }
 
-  if (err)
+  // See above; return any error.
+  if (err) {
     return err;
+  }
 
-  return BPFtrace::exit_code;
+  return bpftrace.exit_code;
 }

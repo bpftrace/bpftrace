@@ -63,6 +63,7 @@ enum class TestMode {
   CODEGEN,
   COMPILER_BENCHMARK,
   BPF_BENCHMARK,
+  BPF_TEST,
 };
 
 enum class BuildMode {
@@ -89,6 +90,8 @@ enum Options {
   DEBUG,
   DRY_RUN,
   VERIFY_LLVM_IR,
+  TEST,  // Alias for --test-mode=test.
+  BENCH, // Alias for --test-mode=bench.
 };
 
 constexpr auto FULL_SEARCH = "*:*";
@@ -125,6 +128,8 @@ void usage(std::ostream& out)
   out << "    -k             emit a warning when probe read helpers return an error" << std::endl;
   out << "    -V, --version  bpftrace version" << std::endl;
   out << "    --no-warnings  disable all warning messages" << std::endl;
+  out << "    --test         run all test: probes" << std::endl;
+  out << "    --bench        run all bench: probes" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    -v                      verbose messages" << std::endl;
@@ -423,6 +428,14 @@ Args parse_args(int argc, char* argv[])
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::TEST_MODE },
+    option{ .name = "test",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::TEST },
+    option{ .name = "bench",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::BENCH },
     option{ .name = "aot",
             .has_arg = required_argument,
             .flag = nullptr,
@@ -478,11 +491,27 @@ Args parse_args(int argc, char* argv[])
           args.test_mode = TestMode::COMPILER_BENCHMARK;
         } else if (std::strcmp(optarg, "bench") == 0) {
           args.test_mode = TestMode::BPF_BENCHMARK;
+        } else if (std::strcmp(optarg, "test") == 0) {
+          args.test_mode = TestMode::BPF_TEST;
         } else {
-          LOG(ERROR) << "USAGE: --test can only be 'codegen', "
-                        "'compiler-bench', or 'bench'.";
+          LOG(ERROR) << "USAGE: --test-mode can only be 'codegen', "
+                        "'compiler-bench', 'bench' or 'test'.";
           exit(1);
         }
+        break;
+      case Options::TEST: // --test
+        if (args.test_mode != TestMode::NONE) {
+          LOG(ERROR) << "USAGE: --test conflicts with existing --test-mode";
+          exit(1);
+        }
+        args.test_mode = TestMode::BPF_TEST;
+        break;
+      case Options::BENCH: // --bench
+        if (args.test_mode != TestMode::NONE) {
+          LOG(ERROR) << "USAGE: --bench conflicts with existing --test-mode";
+          exit(1);
+        }
+        args.test_mode = TestMode::BPF_BENCHMARK;
         break;
       case Options::AOT: // --aot
         args.aot = optarg;
@@ -722,6 +751,7 @@ int main(int argc, char* argv[])
   bpftrace.warning_level_ = args.warning_level;
   bpftrace.boottime_ = get_boottime();
   bpftrace.delta_taitime_ = get_delta_taitime();
+  bpftrace.run_tests_ = args.test_mode == TestMode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.test_mode == TestMode::BPF_BENCHMARK;
 
   if (!args.pid_str.empty()) {
