@@ -4,12 +4,12 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.163" = type { ptr, ptr }
-%print_t = type <{ i64, i32, i32, i32 }>
+%"struct map_internal_repr_t.161" = type { ptr, ptr }
+%print_t = type <{ i64, i64, i64, i32, i8 }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_x = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
-@ringbuf = dso_local global %"struct map_internal_repr_t.163" zeroinitializer, section ".maps", !dbg !22
+@ringbuf = dso_local global %"struct map_internal_repr_t.161" zeroinitializer, section ".maps", !dbg !22
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !36
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !40
 
@@ -44,24 +44,26 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"print_@x")
   %1 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 0
   store i64 30001, ptr %1, align 8
-  %2 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 1
+  %2 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 3
   store i32 0, ptr %2, align 4
-  %3 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 2
-  store i32 0, ptr %3, align 4
-  %4 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 3
-  store i32 0, ptr %4, align 4
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %"print_@x", i64 20, i64 0)
+  %3 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 1
+  store i64 0, ptr %3, align 8
+  %4 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 2
+  store i64 0, ptr %4, align 8
+  %5 = getelementptr %print_t, ptr %"print_@x", i64 0, i32 4
+  store i8 1, ptr %5, align 1
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %"print_@x", i64 29, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 event_loss_counter:                               ; preds = %entry
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #2
-  %5 = load i64, ptr @__bt__max_cpu_id, align 8
-  %cpu.id.bounded = and i64 %get_cpu_id, %5
-  %6 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
-  %7 = load i64, ptr %6, align 8
-  %8 = add i64 %7, 1
-  store i64 %8, ptr %6, align 8
+  %6 = load i64, ptr @__bt__max_cpu_id, align 8
+  %cpu.id.bounded = and i64 %get_cpu_id, %6
+  %7 = getelementptr [1 x [1 x i64]], ptr @__bt__event_loss_counter, i64 0, i64 %cpu.id.bounded, i64 0
+  %8 = load i64, ptr %7, align 8
+  %9 = add i64 %8, 1
+  store i64 %9, ptr %7, align 8
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %entry

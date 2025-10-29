@@ -604,6 +604,24 @@ PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); 
 EXPECT_REGEX begin\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 
+NAME print_tseries_avg_map_min_max_args
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 100) { @a = tseries($i % 10, 100ms, 5, "avg"); @ts += 10 * $ms; $i++; } print(@a, 0, 10); clear(@ts); clear(@a); exit(); }
+EXPECT_FILE runtime/outputs/print_tseries_avg_map_min_max_args.txt
+LOCALIZE_TIMESTAMPS 0
+
+NAME print_tseries_multiple_min_max_args
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @ts = (uint64)0; } i:ms:1 { $us = (uint64)1000; $ms = 1000*$us; $s = 1000*$ms; $i = (uint64)0; $interval = 100 * $ms; @ts /= $interval; @ts *= $interval; while ($i < 5) { @a["one"] = tseries(5, 100ms, 10); @ts += 100 * $ms; $i++; } $i = 0; while($i < 5) { @a["two"] = tseries(4, 100ms, 10); @ts += 100 * $ms; $i++; } print(@a, 0, 10); clear(@ts); clear(@a); exit(); }
+EXPECT_FILE runtime/outputs/print_tseries_multiple_min_max_args.txt
+LOCALIZE_TIMESTAMPS 0
+
+NAME print_tseries_zigzag_min_max_args
+ENV BPFTRACE_DUMMY_TS_MAP=@ts
+PROG BEGIN { @dir = 1; @c = -5; @ts = (uint64)100ms; } i:ms:1 { $i = 0; while ($i < 20) { @ = tseries(@c, 100ms, 20); @ts += 100ms; @c += @dir; $i++; if (@c > 5) { @dir = -1; @c = 4 } else if (@c < -5) { @dir = 1; @c = -4; } } print(@, -10, 10); clear(@ts); clear(@); clear(@c); clear(@dir); exit(); }
+EXPECT_FILE runtime/outputs/print_tseries_zigzag_min_max_args.txt
+LOCALIZE_TIMESTAMPS 0
+
 NAME path
 RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (!strncmp(path(args.file.f_path), "/tmp/bpftrace_runtime_test_syscall_gen_open_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK

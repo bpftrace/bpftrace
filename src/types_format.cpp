@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <variant>
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
@@ -494,6 +495,16 @@ static output::Value::TimeSeries build_time_series(
               static_cast<uint64_t>(TimestampMode::tai),
               epoch * args.interval_ns)),
           v != values.end() ? v->second : std::monostate{});
+      if (v != values.end()) {
+        tseries.min = std::holds_alternative<std::monostate>(
+                          tseries.min.variant)
+                          ? v->second
+                          : std::min(tseries.min, v->second);
+        tseries.max = std::holds_alternative<std::monostate>(
+                          tseries.max.variant)
+                          ? v->second
+                          : std::max(tseries.max, v->second);
+      }
     }
   }
   return tseries;
@@ -502,14 +513,17 @@ static output::Value::TimeSeries build_time_series(
 Result<output::Value> format(BPFtrace &bpftrace,
                              const ast::CDefinitions &c_definitions,
                              const BpfMap &map,
-                             size_t top,
-                             uint32_t div)
+                             uint64_t top_or_min,
+                             uint64_t div_or_max,
+                             uint8_t n_args)
 {
   uint32_t i = 0;
   const auto &map_info = bpftrace.resources.maps_info.at(map.name());
   const auto &key_type = map_info.key_type;
   const auto &value_type = map_info.value_type;
   uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
+  auto div = static_cast<uint32_t>(div_or_max);
+  auto top = static_cast<size_t>(top_or_min);
   output::Value::OrderedMap rval;
 
   if (value_type.IsHistTy() || value_type.IsLhistTy()) {
@@ -620,6 +634,15 @@ Result<output::Value> format(BPFtrace &bpftrace,
         return key_res.takeError();
       }
       auto ts = build_time_series(bpftrace, values, range, args);
+      if (n_args == 3) {
+        if (reduced_type.IsSigned()) {
+          ts.min = static_cast<int64_t>(top_or_min);
+          ts.max = static_cast<int64_t>(div_or_max);
+        } else {
+          ts.min = top_or_min;
+          ts.max = div_or_max;
+        }
+      }
       if (map_info.is_scalar) {
         return ts;
       }

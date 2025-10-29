@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
-%printf_t.163 = type { i64 }
+%printf_t.161 = type { i64 }
 %printf_t = type { i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
@@ -18,7 +18,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %printf_args1 = alloca %printf_t.163, align 8
+  %printf_args1 = alloca %printf_t.161, align 8
   %printf_args = alloca %printf_t, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to ptr)() #3
   %1 = lshr i64 %get_pid_tgid, 32
@@ -40,7 +40,7 @@ left:                                             ; preds = %entry
 right:                                            ; preds = %entry
   call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args1)
   call void @llvm.memset.p0.i64(ptr align 1 %printf_args1, i8 0, i64 8, i1 false)
-  %5 = getelementptr %printf_t.163, ptr %printf_args1, i32 0, i32 0
+  %5 = getelementptr %printf_t.161, ptr %printf_args1, i32 0, i32 0
   store i64 1, ptr %5, align 8
   %ringbuf_output2 = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args1, i64 8, i64 0)
   %ringbuf_loss5 = icmp slt i64 %ringbuf_output2, 0

@@ -34,6 +34,8 @@ and this project adheres to
   - [#4715](https://github.com/bpftrace/bpftrace/pull/4715)
 - Add `test` probes as means to improve runtime test latency
   - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
+- Add support for min+max parameters when printing `tseries` maps.
+  - [#4741](https://github.com/bpftrace/bpftrace/pull/4741)
 #### Changed
 - `uaddr` support PIE and dynamic library symbols.
   - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)

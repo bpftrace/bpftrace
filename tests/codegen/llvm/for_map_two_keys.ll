@@ -4,15 +4,15 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.163" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.164" = type { ptr, ptr }
+%"struct map_internal_repr_t.161" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.162" = type { ptr, ptr }
 %int64_int64__tuple_t = type { i64, i64 }
 %"(int64,int64)_int64__tuple_t" = type { %int64_int64__tuple_t, i64 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_map = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
-@AT_x = dso_local global %"struct map_internal_repr_t.163" zeroinitializer, section ".maps", !dbg !31
-@ringbuf = dso_local global %"struct map_internal_repr_t.164" zeroinitializer, section ".maps", !dbg !43
+@AT_x = dso_local global %"struct map_internal_repr_t.161" zeroinitializer, section ".maps", !dbg !31
+@ringbuf = dso_local global %"struct map_internal_repr_t.162" zeroinitializer, section ".maps", !dbg !43
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !57
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !61
 
