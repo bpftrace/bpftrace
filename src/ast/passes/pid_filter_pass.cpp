@@ -38,6 +38,7 @@ bool probe_needs_pid_filter(AttachPoint *ap)
     case ProbeType::tracepoint:
     case ProbeType::rawtracepoint:
       return true;
+    // These probe types support passing the pid during attachment
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
@@ -65,16 +66,22 @@ static BlockExpr *create_pid_filter(ASTContext &ast,
                                     int pid,
                                     BlockExpr *orig_block)
 {
+  auto *ret_block = ast.make_node<BlockExpr>(
+      orig_block->loc,
+      StatementList(
+          { ast.make_node<Jump>(orig_block->loc, ast::JumpType::RETURN) }),
+      ast.make_node<None>(orig_block->loc));
+
   return ast.make_node<BlockExpr>(
       orig_block->loc,
-      StatementList({}), // All in the expression below.
+      StatementList({}),
       ast.make_node<IfExpr>(
           orig_block->loc,
           ast.make_node<Binop>(orig_block->loc,
                                ast.make_node<Builtin>(orig_block->loc, "pid"),
                                Operator::NE,
                                ast.make_node<Integer>(orig_block->loc, pid)),
-          ast.make_node<None>(orig_block->loc), // Empty.
+          ret_block,
           orig_block));
 }
 

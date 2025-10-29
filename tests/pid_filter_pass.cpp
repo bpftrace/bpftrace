@@ -104,13 +104,4 @@ TEST(pid_filter_pass, no_add_filter)
   }
 }
 
-TEST(DISABLED_pid_filter_pass, mixed_probes)
-{
-  // FIXME: This functionality is a bit broken, this should be fixed.
-  test("kprobe:f, uprobe:/bin/sh:f", true, { false, true });
-  test("usdt:sh:probe, uprobe:/bin/sh:f, profile:ms:1",
-       true,
-       { true, true, true });
-}
-
 } // namespace bpftrace::test::pid_filter_pass
