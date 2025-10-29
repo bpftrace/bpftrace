@@ -1,91 +1,83 @@
 #!/usr/bin/env bpftrace
-/*
- * tcpaccept.bt Trace TCP accept()s
- *              For Linux, uses bpftrace and eBPF.
- *
- * This uses dynamic tracing of the kernel inet_csk_accept() socket function
- * (from tcp_prot.accept), and will need to be modified to match kernel changes.
- * 
- * Example of usage:
- * 
- * # ./tcpaccept.bt
- * Tracing tcp accepts. Hit Ctrl-C to end.
- * TIME     PID     COMM           RADDR          RPORT LADDR          LPORT BL
- * 00:34:19 3949061 nginx          10.228.22.228  44226 10.229.20.169  8088  0/128
- * 00:34:19 3951399 ruby           127.0.0.1      52422 127.0.0.1      8000  0/128
- * 00:34:19 3949062 nginx          10.228.23.128  35408 10.229.20.169  8080  0/128
- * 
- * 
- * This output shows three connections, an IPv4 connections to PID 3951399, a "ruby"
- * process listening on port 8000, and one connection to a "nginx" process
- * listening on port 8080. The remote address and port are also printed, and the accept queue
- * current size as well as maximum size are shown.
- * 
- * The overhead of this tool should be negligible, since it is only tracing the
- * kernel function performing accept. It is not tracing every packet and then
- * filtering.
- * 
- * This tool only traces successful TCP accept()s. Connection attempts to closed
- * ports will not be shown (those can be traced via other functions).
- * 
- * This is a bpftrace version of the bcc tool of the same name.
- * 
- * Copyright (c) 2018 Dale Hamel.
- * 
- * 23-Nov-2018	Dale Hamel	created this.
- */
+// tcpaccept.bt Trace TCP accept()s
+//              For Linux, uses bpftrace and eBPF.
+//
+// This uses dynamic tracing of the kernel inet_csk_accept() socket function
+// (from tcp_prot.accept), and will need to be modified to match kernel changes.
+//
+// Example of usage:
+//
+// # ./tcpaccept.bt
+// Tracing tcp accepts. Hit Ctrl-C to end.
+// TIME     PID     COMM           RADDR          RPORT LADDR          LPORT BL
+// 00:34:19 3949061 nginx          10.228.22.228  44226 10.229.20.169  8088  0/128
+// 00:34:19 3951399 ruby           127.0.0.1      52422 127.0.0.1      8000  0/128
+// 00:34:19 3949062 nginx          10.228.23.128  35408 10.229.20.169  8080  0/128
+//
+//
+// This output shows three connections, an IPv4 connections to PID 3951399, a "ruby"
+// process listening on port 8000, and one connection to a "nginx" process
+// listening on port 8080. The remote address and port are also printed, and the accept queue
+// current size as well as maximum size are shown.
+//
+// The overhead of this tool should be negligible, since it is only tracing the
+// kernel function performing accept. It is not tracing every packet and then
+// filtering.
+//
+// This tool only traces successful TCP accept()s. Connection attempts to closed
+// ports will not be shown (those can be traced via other functions).
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// Copyright (c) 2018 Dale Hamel.
+//
+// 23-Nov-2018	Dale Hamel	created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/socket.h>
 #include <net/sock.h>
 #else
-/*
- * With BTF providing types, socket headers are not needed.
- * We only need to supply the preprocessor defines in this script.
- * AF_INET/AF_INET6 are part of the stable arch-independent Linux ABI
- */
+// With BTF providing types, socket headers are not needed.
+// We only need to supply the preprocessor defines in this script.
+// AF_INET/AF_INET6 are part of the stable arch-independent Linux ABI
 #define AF_INET   2
 #define AF_INET6 10
 #endif
 
 BEGIN
 {
-	printf("Tracing TCP accepts. Hit Ctrl-C to end.\n");
-	printf("%-8s %-6s %-14s ", "TIME", "PID", "COMM");
-	printf("%-39s %-5s %-39s %-5s %s\n", "RADDR", "RPORT", "LADDR",
-	    "LPORT", "BL");
+  printf("Tracing TCP accepts. Hit Ctrl-C to end.\n");
+  printf("%-8s %-6s %-14s ", "TIME", "PID", "COMM");
+  printf("%-39s %-5s %-39s %-5s %s\n", "RADDR", "RPORT", "LADDR", "LPORT", "BL");
 }
 
 kretprobe:inet_csk_accept
 {
-	$sk = (struct sock *)retval;
-	$inet_family = $sk->__sk_common.skc_family;
+  $sk = (struct sock *)retval;
+  $inet_family = $sk.__sk_common.skc_family;
 
-	if ($inet_family == AF_INET || $inet_family == AF_INET6) {
-		// initialize variable type:
-		$daddr = ntop(0);
-		$saddr = ntop(0);
-		if ($inet_family == AF_INET) {
-			$daddr = ntop($sk->__sk_common.skc_daddr);
-			$saddr = ntop($sk->__sk_common.skc_rcv_saddr);
-		} else {
-			$daddr = ntop(
-			    $sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
-			$saddr = ntop(
-			    $sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
-		}
-		$lport = $sk->__sk_common.skc_num;
-		$dport = $sk->__sk_common.skc_dport;
-		$qlen  = $sk->sk_ack_backlog;
-		$qmax  = $sk->sk_max_ack_backlog;
+  if ($inet_family == AF_INET || $inet_family == AF_INET6) {
+    // initialize variable type:
+    $daddr = ntop(0);
+    $saddr = ntop(0);
+    if ($inet_family == AF_INET) {
+      $daddr = ntop($sk.__sk_common.skc_daddr);
+      $saddr = ntop($sk.__sk_common.skc_rcv_saddr);
+    } else {
+      $daddr = ntop($sk.__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+      $saddr = ntop($sk.__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+    }
+    $lport = $sk.__sk_common.skc_num;
+    $dport = $sk.__sk_common.skc_dport;
+    $qlen = $sk.sk_ack_backlog;
+    $qmax = $sk.sk_max_ack_backlog;
 
-		// Destination port is big endian, it must be flipped
-		$dport = bswap($dport);
+    // Destination port is big endian, it must be flipped
+    $dport = bswap($dport);
 
-		time("%H:%M:%S ");
-		printf("%-6d %-14s ", pid, comm);
-		printf("%-39s %-5d %-39s %-5d ", $daddr, $dport, $saddr,
-		    $lport);
-		printf("%d/%d\n", $qlen, $qmax);
-	}
+    time("%H:%M:%S ");
+    printf("%-6d %-14s ", pid, comm);
+    printf("%-39s %-5d %-39s %-5d ", $daddr, $dport, $saddr, $lport);
+    printf("%d/%d\n", $qlen, $qmax);
+  }
 }

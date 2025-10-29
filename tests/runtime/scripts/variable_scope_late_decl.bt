@@ -1,20 +1,21 @@
-begin {
-	@a[1] = 1;
-	if (1) {
-		$x = 1;
-		print(("a", $x));
-	}
+begin
+{
+  @a[1] = 1;
+  if 1 {
+    $x = 1;
+    print(("a",$x));
+  }
 
-	for ($kv : @a) {
-		$x = 2;
-		print(("b", $x));
-	}
+  for $kv : @a {
+    $x = 2;
+    print(("b",$x));
+  }
 
-	let $x;
-	if (0) {
-		$x = 3;
-	}
-	print(("c", $x));
+  let $x;
+  if 0 {
+    $x = 3;
+  }
+  print(("c",$x));
 
-	exit();
+  exit();
 }

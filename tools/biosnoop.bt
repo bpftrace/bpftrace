@@ -1,80 +1,74 @@
 #!/usr/bin/env bpftrace
-/*
- * biosnoop.bt   Block I/O tracing tool, showing per I/O latency.
- *               For Linux, uses bpftrace, eBPF.
- *
- * TODO: Add offset and size columns.
- *
- * Example of usage:
- *
- * # ./biosnoop.bt
- * Attaching 4 probes...
- * TIME(ms)     DISK ID        COMM             PID    LAT(ms)
- * 				MAJOR MINOR
- * 611          259   0        bash             4179        10
- * 611          259   0        cksum            4179         0
- * 627          259   0        cksum            4179        15
- * 641          259   0        cksum            4179        13
- * [...]
- *
- * This output shows the cksum process was issuing block I/O, which were
- * completing with around 12 milliseconds of latency. Each block I/O event is
- * printed out, with a completion time as the first column, measured from
- * program start.
- *
- *
- * An example of some background flushing:
- *
- * # ./biosnoop.bt
- * Attaching 4 probes...
- * TIME(ms)     DISK ID        COMM             PID    LAT(ms)
- *              MAJOR MINOR
- * 2966         259   0        jbd2/nvme0n1-8   615          0
- * 2967         259   0        jbd2/nvme0n1-8   615          0
- * [...]
- *
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides more fields.
- */
+// biosnoop.bt   Block I/O tracing tool, showing per I/O latency.
+//               For Linux, uses bpftrace, eBPF.
+//
+// TODO: Add offset and size columns.
+//
+// Example of usage:
+//
+// # ./biosnoop.bt
+// Attaching 4 probes...
+// TIME(ms)     DISK ID        COMM             PID    LAT(ms)
+// 				MAJOR MINOR
+// 611          259   0        bash             4179        10
+// 611          259   0        cksum            4179         0
+// 627          259   0        cksum            4179        15
+// 641          259   0        cksum            4179        13
+// [...]
+//
+// This output shows the cksum process was issuing block I/O, which were
+// completing with around 12 milliseconds of latency. Each block I/O event is
+// printed out, with a completion time as the first column, measured from
+// program start.
+//
+//
+// An example of some background flushing:
+//
+// # ./biosnoop.bt
+// Attaching 4 probes...
+// TIME(ms)     DISK ID        COMM             PID    LAT(ms)
+//              MAJOR MINOR
+// 2966         259   0        jbd2/nvme0n1-8   615          0
+// 2967         259   0        jbd2/nvme0n1-8   615          0
+// [...]
+//
+//
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides more fields.
 
 BEGIN
 {
-	printf("%-12s %-14s %-16s %-6s %7s\n",
-		   "TIME(ms)", "DISK ID", "COMM", "PID", "LAT(ms)");
-	printf("             MAJOR MINOR\n")
+  printf("%-12s %-14s %-16s %-6s %7s\n", "TIME(ms)", "DISK ID", "COMM", "PID", "LAT(ms)");
+  printf("             MAJOR MINOR\n");
 }
 
 tracepoint:block:block_io_start
 {
-	$key = (args.dev, args.sector);
-	@start[$key] = nsecs;
-	@iopid[$key] = pid;
-	@iocomm[$key] = comm;
+  $key = (args.dev,args.sector);
+  @start[$key] = nsecs;
+  @iopid[$key] = pid;
+  @iocomm[$key] = comm;
 }
 
 tracepoint:block:block_io_done
-/has_key(@start, (args.dev, args.sector)) &&
- has_key(@iopid, (args.dev, args.sector)) &&
- has_key(@iocomm, (args.dev, args.sector))/
-
+/has_key(@start, (args.dev,args.sector)) &&
+ has_key(@iopid, (args.dev,args.sector)) && has_key(@iocomm, (args.dev,args.sector))/
 {
-	$key = (args.dev, args.sector);
-	$now = nsecs;
-	$major = args.dev >> 20;
-	$minor = args.dev & ((1 << 20) - 1);
-	printf("%-12u %-5d %-8d %-16s %-6d %7d\n",
-	    elapsed / 1e6, $major, $minor, @iocomm[$key], @iopid[$key],
-	    ($now - @start[$key]) / 1e6);
+  $key = (args.dev,args.sector);
+  $now = nsecs;
+  $major = args.dev >> 20;
+  $minor = args.dev & ((1 << 20) - 1);
+  printf("%-12u %-5d %-8d %-16s %-6d %7d\n", elapsed / 1e6,
+         $major, $minor, @iocomm[$key], @iopid[$key], ($now - @start[$key]) / 1e6);
 
-	delete(@start, $key);
-	delete(@iopid, $key);
-	delete(@iocomm, $key);
+  delete(@start, $key);
+  delete(@iopid, $key);
+  delete(@iocomm, $key);
 }
 
 END
 {
-	clear(@start);
-	clear(@iopid);
-	clear(@iocomm);
+  clear(@start);
+  clear(@iopid);
+  clear(@iocomm);
 }

@@ -1,71 +1,71 @@
 #!/usr/bin/env bpftrace
-/*
- * sslsnoop	Trace SSL/TLS handshake for OpenSSL.
- * 		For Linux, uses bpftrace and eBPF.
- *
- * sslsnoop shows handshake latency and retval. This is useful for SSL/TLS
- * performance analysis.
- * 
- * Example of usage:
- * 
- * # ./sslsnoop.bt
- * Attaching 25 probes...
- * Tracing SSL/TLS handshake... Hit Ctrl-C to end.
- * TIME(us)   TID      COMM     LAT(us)   RET FUNC
- * 1623016    2834695  openssl       71     1 ossl_ecdh_compute_key
- * 1623319    2834695  openssl       32    51 rsa_ossl_public_decrypt
- * 1623418    2834695  openssl       31    51 rsa_ossl_public_decrypt
- * 1623547    2834695  openssl       27   256 rsa_ossl_public_decrypt
- * 1623612    2834695  openssl   361150     0 SSL_write
- * 1804646    2834695  openssl       92    -1 SSL_read
- * 1804730    2834695  openssl       76    -1 SSL_read
- * ^C
- * 
- * Above shows the output of 'openssl s_client -connect example.com:443'.
- * The first SSL_write call returned after 361ms that is the TLS handshake
- * time. Local ECDH and RSA crypto calculation is fast at client side. Most
- * time is spent at server side including crypto and network latency.
- * 
- * # ./sslsnoop.bt
- * Attaching 25 probes...
- * Tracing SSL/TLS handshake... Hit Ctrl-C to end.
- * TIME(us)   TID      COMM     LAT(us)   RET FUNC
- * 1133960    2826460  nginx         81    -1 SSL_do_handshake
- * 1134910    2826460  nginx        631   256 rsa_ossl_private_decrypt
- * 1134977    2826460  nginx        709     1 SSL_do_handshake
- * 1134984    2826460  nginx          3    -1 SSL_read
- * 1134209    2834970  openssl       37   256 rsa_ossl_public_encrypt
- * 1134994    2834970  openssl     1244     0 SSL_write
- * ^C
- * 
- * Change example.com to localhost to exclude network latency. Output above
- * shows 1.2ms overall handshake time, and RSA calculation took 0.7ms at nginx
- * server. As event print is asynchronous, timestamp is not guaranteed to show
- * in order.
- * 
- * The bcc tool sslsniff shows similar event latency, and additional plaintext
- * and ciphertext in SSL_read/wirte: https://github.com/iovisor/bcc
- *
- * Copyright (c) 2021 Tao Xu.
- *
- * 15-Dec-2021	Tao Xu	created this.
- */
+// sslsnoop	Trace SSL/TLS handshake for OpenSSL.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// sslsnoop shows handshake latency and retval. This is useful for SSL/TLS
+// performance analysis.
+//
+// Example of usage:
+//
+// # ./sslsnoop.bt
+// Attaching 25 probes...
+// Tracing SSL/TLS handshake... Hit Ctrl-C to end.
+// TIME(us)   TID      COMM     LAT(us)   RET FUNC
+// 1623016    2834695  openssl       71     1 ossl_ecdh_compute_key
+// 1623319    2834695  openssl       32    51 rsa_ossl_public_decrypt
+// 1623418    2834695  openssl       31    51 rsa_ossl_public_decrypt
+// 1623547    2834695  openssl       27   256 rsa_ossl_public_decrypt
+// 1623612    2834695  openssl   361150     0 SSL_write
+// 1804646    2834695  openssl       92    -1 SSL_read
+// 1804730    2834695  openssl       76    -1 SSL_read
+// ^C
+//
+// Above shows the output of 'openssl s_client -connect example.com:443'.
+// The first SSL_write call returned after 361ms that is the TLS handshake
+// time. Local ECDH and RSA crypto calculation is fast at client side. Most
+// time is spent at server side including crypto and network latency.
+//
+// # ./sslsnoop.bt
+// Attaching 25 probes...
+// Tracing SSL/TLS handshake... Hit Ctrl-C to end.
+// TIME(us)   TID      COMM     LAT(us)   RET FUNC
+// 1133960    2826460  nginx         81    -1 SSL_do_handshake
+// 1134910    2826460  nginx        631   256 rsa_ossl_private_decrypt
+// 1134977    2826460  nginx        709     1 SSL_do_handshake
+// 1134984    2826460  nginx          3    -1 SSL_read
+// 1134209    2834970  openssl       37   256 rsa_ossl_public_encrypt
+// 1134994    2834970  openssl     1244     0 SSL_write
+// ^C
+//
+// Change example.com to localhost to exclude network latency. Output above
+// shows 1.2ms overall handshake time, and RSA calculation took 0.7ms at nginx
+// server. As event print is asynchronous, timestamp is not guaranteed to show
+// in order.
+//
+// The bcc tool sslsniff shows similar event latency, and additional plaintext
+// and ciphertext in SSL_read/wirte: https://github.com/iovisor/bcc
+//
+// Copyright (c) 2021 Tao Xu.
+//
+// 15-Dec-2021	Tao Xu	created this.
 
-config = { missing_probes = "ignore" }
+config = {
+  missing_probes = ignore;
+}
 
 BEGIN
 {
-	printf("Tracing SSL/TLS handshake... Hit Ctrl-C to end.\n");
-	printf("%-10s %-8s %-8s %7s %5s %s\n", "TIME(us)", "TID",
-	       "COMM", "LAT(us)", "RET", "FUNC");
+  printf("Tracing SSL/TLS handshake... Hit Ctrl-C to end.\n");
+  printf("%-10s %-8s %-8s %7s %5s %s\n",
+         "TIME(us)", "TID", "COMM", "LAT(us)", "RET", "FUNC");
 }
 
 uprobe:libssl:SSL_read,
 uprobe:libssl:SSL_write,
 uprobe:libssl:SSL_do_handshake
 {
-	@start_ssl[tid] = nsecs;
-	@func_ssl[tid] = func; // store for uretprobe
+  @start_ssl[tid] = nsecs;
+  @func_ssl[tid] = func; // store for uretprobe
 }
 
 uretprobe:libssl:SSL_read,
@@ -73,9 +73,10 @@ uretprobe:libssl:SSL_write,
 uretprobe:libssl:SSL_do_handshake
 /has_key(@start_ssl, tid)/
 {
-	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
-	       (nsecs - @start_ssl[tid])/1000, retval, @func_ssl[tid]);
-	delete(@start_ssl, tid); delete(@func_ssl, tid);
+  printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed / 1000,
+         tid, comm, (nsecs - @start_ssl[tid]) / 1000, retval, @func_ssl[tid]);
+  delete(@start_ssl, tid);
+  delete(@func_ssl, tid);
 }
 
 // need debug symbol for ossl local functions
@@ -89,8 +90,8 @@ uprobe:libcrypto:ossl_ecdsa_sign,
 uprobe:libcrypto:ossl_ecdsa_verify,
 uprobe:libcrypto:ossl_ecdh_compute_key
 {
-	@start_crypto[tid] = nsecs;
-	@func_crypto[tid] = func; // store for uretprobe
+  @start_crypto[tid] = nsecs;
+  @func_crypto[tid] = func; // store for uretprobe
 }
 
 uretprobe:libcrypto:rsa_ossl_public_encrypt,
@@ -104,7 +105,8 @@ uretprobe:libcrypto:ossl_ecdsa_verify,
 uretprobe:libcrypto:ossl_ecdh_compute_key
 /has_key(@start_crypto, tid)/
 {
-	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
-	       (nsecs - @start_crypto[tid])/1000, retval, @func_crypto[tid]);
-	delete(@start_crypto, tid); delete(@func_crypto, tid);
+  printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed / 1000,
+         tid, comm, (nsecs - @start_crypto[tid]) / 1000, retval, @func_crypto[tid]);
+  delete(@start_crypto, tid);
+  delete(@func_crypto, tid);
 }

@@ -1,53 +1,50 @@
 #!/usr/bin/env bpftrace
-/*
- * vfsstat	Count some VFS calls, with per-second summaries.
- *		For Linux, uses bpftrace and eBPF.
- *
- * Written as a basic example of counting multiple events and printing a
- * per-second summary.
- *
- * Example of usage:
- *
- * # ./vfsstat.bt
- * Attaching 8 probes...
- * Tracing key VFS calls... Hit Ctrl-C to end.
- * 21:30:38
- * @[vfs_write]: 1274
- * @[vfs_open]: 8675
- * @[vfs_read]: 11515
- *
- * 21:30:39
- * @[vfs_write]: 1155
- * @[vfs_open]: 8077
- * @[vfs_read]: 10398
- *
- * 21:30:40
- * @[vfs_write]: 1222
- * @[vfs_open]: 8554
- * @[vfs_read]: 11011
- *
- * 21:30:41
- * @[vfs_write]: 1230
- * @[vfs_open]: 8605
- * @[vfs_read]: 11077
- * ^C
- *
- * Each second, a timestamp is printed ("HH:MM:SS") followed by common VFS
- * functions and the number of calls for that second. While tracing, the vfs_read()
- * kernel function was most frequent, occurring over 10,000 times per second.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides command line options.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 06-Sep-2018	Brendan Gregg	Created this.
- */
+// vfsstat	Count some VFS calls, with per-second summaries.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// Written as a basic example of counting multiple events and printing a
+// per-second summary.
+//
+// Example of usage:
+//
+// # ./vfsstat.bt
+// Attaching 8 probes...
+// Tracing key VFS calls... Hit Ctrl-C to end.
+// 21:30:38
+// @[vfs_write]: 1274
+// @[vfs_open]: 8675
+// @[vfs_read]: 11515
+//
+// 21:30:39
+// @[vfs_write]: 1155
+// @[vfs_open]: 8077
+// @[vfs_read]: 10398
+//
+// 21:30:40
+// @[vfs_write]: 1222
+// @[vfs_open]: 8554
+// @[vfs_read]: 11011
+//
+// 21:30:41
+// @[vfs_write]: 1230
+// @[vfs_open]: 8605
+// @[vfs_read]: 11077
+// ^C
+//
+// Each second, a timestamp is printed ("HH:MM:SS") followed by common VFS
+// functions and the number of calls for that second. While tracing, the vfs_read()
+// kernel function was most frequent, occurring over 10,000 times per second.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides command line options.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 06-Sep-2018	Brendan Gregg	Created this.
 
 BEGIN
 {
-	printf("Tracing key VFS calls... Hit Ctrl-C to end.\n");
-
+  printf("Tracing key VFS calls... Hit Ctrl-C to end.\n");
 }
 
 kprobe:vfs_read*,
@@ -56,17 +53,17 @@ kprobe:vfs_fsync,
 kprobe:vfs_open,
 kprobe:vfs_create
 {
-	@[func] = count();
+  @[func] = count();
 }
 
 interval:1s
 {
-	time();
-	print(@);
-	clear(@);
+  time();
+  print(@);
+  clear(@);
 }
 
 END
 {
-	clear(@);
+  clear(@);
 }

@@ -1,34 +1,32 @@
 #!/usr/bin/env bpftrace
-/*
- * biolatency.bt	Block I/O latency as a histogram.
- *			For Linux, uses bpftrace, eBPF.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 13-Sep-2018	Brendan Gregg	Created this.
- */
+// biolatency.bt	Block I/O latency as a histogram.
+// 			For Linux, uses bpftrace, eBPF.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 13-Sep-2018	Brendan Gregg	Created this.
 
 BEGIN
 {
-	printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
+  printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
 }
 
 tracepoint:block:block_bio_queue
 {
-	@start[args.sector] = nsecs;
+  @start[args.sector] = nsecs;
 }
 
 tracepoint:block:block_rq_complete,
 tracepoint:block:block_bio_complete
 /@start[args.sector]/
 {
-	@usecs = hist((nsecs - @start[args.sector]) / 1000);
-	delete(@start, args.sector);
+  @usecs = hist((nsecs - @start[args.sector]) / 1000);
+  delete(@start, args.sector);
 }
 
 END
 {
-	clear(@start);
+  clear(@start);
 }

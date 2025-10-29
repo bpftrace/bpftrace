@@ -1,32 +1,30 @@
 #!/usr/bin/env bpftrace
-/*
- * runqlen.bt	CPU scheduler run queue length as a histogram.
- *		For Linux, uses bpftrace, eBPF.
- * 
- * Example of usage:
- * 
- * # ./runqlen.bt
- * Attaching 2 probes...
- * Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.
- * ^C
- * 
- * @runqlen:
- * [0, 1)              1967 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
- * [1, 2)                 0 |                                                    |
- * [2, 3)                 0 |                                                    |
- * [3, 4)               306 |@@@@@@@@                                            |
- * 
- * This output shows that the run queue length was usually zero, except for some
- * samples where it was 3. This was caused by binding 4 CPU bound threads to a
- * single CPUs.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides options to customize the output.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Oct-2018	Brendan Gregg	Created this.
- */
+// runqlen.bt	CPU scheduler run queue length as a histogram.
+// 		For Linux, uses bpftrace, eBPF.
+//
+// Example of usage:
+//
+// # ./runqlen.bt
+// Attaching 2 probes...
+// Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.
+// ^C
+//
+// @runqlen:
+// [0, 1)              1967 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+// [1, 2)                 0 |                                                    |
+// [2, 3)                 0 |                                                    |
+// [3, 4)               306 |@@@@@@@@                                            |
+//
+// This output shows that the run queue length was usually zero, except for some
+// samples where it was 3. This was caused by binding 4 CPU bound threads to a
+// single CPUs.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides options to customize the output.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 07-Oct-2018	Brendan Gregg	Created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/sched.h>
@@ -43,14 +41,15 @@ struct cfs_rq {
 
 BEGIN
 {
-	printf("Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.\n");
+  printf("Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.\n");
 }
 
 profile:hz:99
 {
-	$task = (struct task_struct *)curtask;
-	$my_q = (struct cfs_rq *)$task->se.cfs_rq;
-	$len = (uint64)$my_q->nr_queued;
-	$len = $len > 0 ? $len - 1 : 0;	// subtract currently running task
-	@runqlen = lhist($len, 0, 100, 1);
+  $task = (struct task_struct *)curtask;
+  $my_q = (struct cfs_rq *)$task.se.cfs_rq;
+  $len = (uint64)$my_q.nr_queued;
+  $len = ($len > 0) ? ($len - 1) : 0;
+  // subtract currently running task
+  @runqlen = lhist($len, 0, 100, 1);
 }
