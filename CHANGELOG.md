@@ -15,6 +15,8 @@ and this project adheres to
   - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
 - Fix block expression handling inside print statements
   - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
+- join(): Fix wrong index of GEP that was causing truncation
+  - [#4786](https://github.com/bpftrace/bpftrace/pull/4786)
 
 ## [0.24.1] 2025-10-03
 
