@@ -19,6 +19,32 @@ For features that have clear boundaries (eg. new builtins or helpers), bpftrace
 is free to opportunistically depend on newer kernels as long as there is a
 reasonable runtime fallback strategy or detailed error message.
 
+### Required configuration
+
+The kernel needs to be built with the following options:
+
+```
+CONFIG_BPF=y
+CONFIG_BPF_SYSCALL=y
+CONFIG_BPF_JIT=y
+CONFIG_HAVE_EBPF_JIT=y
+CONFIG_BPF_EVENTS=y
+CONFIG_FTRACE_SYSCALLS=y
+CONFIG_FUNCTION_TRACER=y
+CONFIG_HAVE_DYNAMIC_FTRACE=y
+CONFIG_DYNAMIC_FTRACE=y
+CONFIG_HAVE_KPROBES=y
+CONFIG_KPROBES=y
+CONFIG_KPROBE_EVENTS=y
+CONFIG_ARCH_SUPPORTS_UPROBES=y
+CONFIG_UPROBES=y
+CONFIG_UPROBE_EVENTS=y
+CONFIG_DEBUG_FS=y
+```
+
+This can be verified by running the `check_kernel_features` script from the
+`scripts` directory.
+
 ## LLVM (dynamically linked)
 
 LLVM is bpftrace's biggest build time dependency. The project always supports
@@ -34,10 +60,7 @@ release in the static build configuration.
 We do not yet have a policy on when the LLVM version is updated, but we will
 document any changes in the release notes.
 
-Please consult [static.sh][0] for the source of truth.
-
-
-[0]: https://github.com/bpftrace/bpftrace/blob/master/.github/include/static.sh
+Please consult [static.sh][static] for the source of truth.
 
 ## libbpf
 
@@ -55,3 +78,5 @@ that it is the responsibility of the builder to ensure that the linked libbpf
 contains all the necessary patches. The general recommendation is that the
 linked libbpf should be at or beyond the commit referenced by the libbpf
 submodule, which will be kept up to date when required patches change.
+
+[static]: https://github.com/bpftrace/bpftrace/blob/master/.github/include/static.sh
