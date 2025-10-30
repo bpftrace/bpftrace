@@ -1,0 +1,30 @@
+name: "Bpftrace Tidy"
+
+on: [ pull_request ]
+
+# Cancel previous run if a new one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+      # For flakehub cache
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: DeterminateSystems/nix-installer-action@v17
+        with:
+          determinate: true
+      - uses: DeterminateSystems/flakehub-cache-action@v2
+      - name: Run bpftrace-tidy
+        run: ./scripts/bpftrace_tidy.sh
