@@ -3,7 +3,6 @@
 #include <fstream>
 #include <string>
 
-#include "ast/ast.h"
 #include "ast/pass_manager.h"
 #include "bpftrace.h"
 
@@ -39,11 +38,6 @@ public:
 
   Result<> parse_format_file();
   std::string get_tracepoint_struct();
-
-  static std::string get_struct_name(const std::string &category,
-                                     const std::string &event_name);
-  static std::string get_struct_name(const ast::AttachPoint &ap);
-  static bool is_tracepoint_struct(const std::string &name);
 
 protected:
   std::string get_tracepoint_struct(std::istream &format_file);

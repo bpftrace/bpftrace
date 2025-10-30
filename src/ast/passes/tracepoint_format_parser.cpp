@@ -4,6 +4,7 @@
 #include <unordered_set>
 
 #include "ast/ast.h"
+#include "ast/tracepoint_helpers.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "config.h"
@@ -11,8 +12,6 @@
 #include "tracepoint_format_parser.h"
 
 namespace bpftrace::ast {
-
-constexpr std::string_view TRACEPOINT_STRUCT_PREFIX = "struct _tracepoint_";
 
 char TracepointFormatFileError::ID;
 
@@ -111,23 +110,6 @@ Result<> TracepointFormatParser::parse_format_file()
   }
   format_file_ = std::move(format_file);
   return OK();
-}
-
-std::string TracepointFormatParser::get_struct_name(
-    const std::string &category,
-    const std::string &event_name)
-{
-  return std::string(TRACEPOINT_STRUCT_PREFIX) + category + "_" + event_name;
-}
-
-bool TracepointFormatParser::is_tracepoint_struct(const std::string &name)
-{
-  return name.starts_with(TRACEPOINT_STRUCT_PREFIX);
-}
-
-std::string TracepointFormatParser::get_struct_name(const ast::AttachPoint &ap)
-{
-  return get_struct_name(ap.target, ap.func);
 }
 
 std::string adjust_integer_types(const std::string &field_type, int size)
@@ -229,7 +211,8 @@ std::string TracepointFormatParser::parse_field(const std::string &line,
 std::string TracepointFormatParser::get_tracepoint_struct(
     std::istream &format_file)
 {
-  std::string format_struct = get_struct_name(category_, event_) + "\n{\n";
+  std::string format_struct = get_tracepoint_struct_name(category_, event_) +
+                              "\n{\n";
   int last_offset = 0;
 
   for (std::string line; getline(format_file, line);) {

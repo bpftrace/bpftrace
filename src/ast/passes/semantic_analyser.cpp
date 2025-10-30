@@ -17,8 +17,9 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/simplify_types.h"
-#include "ast/passes/tracepoint_format_parser.h"
 #include "ast/passes/type_system.h"
+#include "ast/tracepoint_helpers.h"
+#include "bpftrace.h"
 #include "btf/compat.h"
 #include "collect_nodes.h"
 #include "config.h"
@@ -1049,7 +1050,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       ProbeType type = probetype(attach_point->provider);
 
       if (type == ProbeType::tracepoint) {
-        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
+        std::string tracepoint_struct = get_tracepoint_struct_name(
             *attach_point);
         builtin.builtin_type = CreateRecord(
             tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
@@ -3110,8 +3111,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
     // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
     // access to the first 8 bytes results in verifier error.
-    if (TracepointFormatParser::is_tracepoint_struct(type.GetName()) &&
-        field.offset < 8)
+    if (is_tracepoint_struct(type.GetName()) && field.offset < 8)
       acc.addError()
           << "BPF does not support accessing common tracepoint fields";
   }
@@ -4073,8 +4073,7 @@ void SemanticAnalyser::assign_map_type(Map &map,
 {
   const std::string &map_ident = map.ident;
 
-  if (type.IsRecordTy() &&
-      TracepointFormatParser::is_tracepoint_struct(type.GetName())) {
+  if (type.IsRecordTy() && is_tracepoint_struct(type.GetName())) {
     loc_node->addError() << "Storing tracepoint args in maps is not supported";
   }
 

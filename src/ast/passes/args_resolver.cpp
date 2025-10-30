@@ -4,7 +4,7 @@
 
 #include "arch/arch.h"
 #include "ast/passes/args_resolver.h"
-#include "ast/passes/tracepoint_format_parser.h"
+#include "ast/tracepoint_helpers.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
@@ -73,7 +73,7 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
     case ProbeType::rawtracepoint:
       return bpftrace_.btf_->resolve_raw_tracepoint_args(ap.func);
     case ProbeType::tracepoint: {
-      auto struct_name = TracepointFormatParser::get_struct_name(ap);
+      auto struct_name = get_tracepoint_struct_name(ap);
       auto args = bpftrace_.structs.Lookup(struct_name).lock();
       if (!args)
         return make_error<ast::ArgParseError>(ap.name(), "args not found");
