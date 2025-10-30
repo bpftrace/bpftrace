@@ -157,8 +157,9 @@ interval:s:10 {
 ### comm
 - `string comm()`
 - `string comm`
+- `string comm(uint32 pid)`
 
-Name of the current thread
+Name of the current thread or the process with the specified PID
 
 This utilizes the BPF helper `get_current_comm`
 
@@ -366,6 +367,12 @@ kprobe:dummy {
 - `bool is_array(any expression)`
 
 Determine whether the given expression is an array.
+
+
+### is_integer
+- `bool is_integer(any expression)`
+
+Determine whether the given expression is an integer.
 
 
 ### is_ptr

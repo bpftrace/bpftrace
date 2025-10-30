@@ -4,13 +4,13 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.163" = type { ptr, ptr }
+%"struct map_internal_repr_t.616" = type { ptr, ptr }
 %"uint8_string[13]__tuple_t" = type { i8, [13 x i8] }
 %"uint8_string[3]__tuple_t" = type { i8, [3 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_a = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
-@ringbuf = dso_local global %"struct map_internal_repr_t.163" zeroinitializer, section ".maps", !dbg !30
+@ringbuf = dso_local global %"struct map_internal_repr_t.616" zeroinitializer, section ".maps", !dbg !30
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !44
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !48
 @hi = global [3 x i8] c"hi\00"
