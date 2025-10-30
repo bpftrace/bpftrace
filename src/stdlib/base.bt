@@ -687,9 +687,9 @@ macro ppid() {
 
 // :variant string pcomm()
 // :variant string pcomm(struct task_struct * task)
-// Get the name of the parent process for the passed task or the current task if called without arguments.
+// Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
 macro pcomm(task) {
-    task->real_parent->comm
+    task->group_leader->comm
 }
 
 macro pcomm() {
