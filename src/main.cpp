@@ -74,24 +74,31 @@ enum class BuildMode {
 };
 
 enum Options {
-  INFO = 2000,
-  NO_WARNING,
-  TEST_MODE,
-  AOT,
-  HELP,
-  VERSION,
-  USDT_SEMAPHORE,
-  UNSAFE,
+  AOT = 2000,
+  BENCH, // Alias for --test-mode=bench.
   BTF,
-  INCLUDE,
-  EMIT_ELF,
-  EMIT_LLVM,
-  NO_FEATURE,
+  CMD,
   DEBUG,
   DRY_RUN,
+  EMIT_ELF,
+  EMIT_LLVM,
+  HELP,
+  INCLUDE,
+  INFO,
+  LIST,
+  NO_FEATURE,
+  NO_WARNING,
+  OUTPUT,
+  PID,
+  QUIET,
+  TEST, // Alias for --test-mode=test.
+  TEST_MODE,
+  UNSAFE,
+  USDT_SEMAPHORE,
+  VERBOSE,
   VERIFY_LLVM_IR,
-  TEST,  // Alias for --test-mode=test.
-  BENCH, // Alias for --test-mode=bench.
+  VERSION,
+  WARNINGS,
 };
 
 constexpr auto FULL_SEARCH = "*:*";
@@ -109,33 +116,37 @@ void usage(std::ostream& out)
   out << "OPTIONS:" << std::endl;
   out << "    -B MODE        output buffering mode ('line', 'full', 'none')" << std::endl;
   out << "    -f FORMAT      output format ('text', 'json')" << std::endl;
-  out << "    -o file        redirect bpftrace output to file" << std::endl;
+  out << "    -o, --output FILE" << std::endl;
+  out << "                   redirect bpftrace output to FILE" << std::endl;
   out << "    -e 'program'   execute this program" << std::endl;
   out << "    -h, --help     show this help message" << std::endl;
   out << "    -I DIR         add the directory to the include search path" << std::endl;
   out << "    --include FILE add an #include file before preprocessing" << std::endl;
-  out << "    -l [search|filename]" << std::endl;
+  out << "    -l, --list [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
-  out << "    -p PID         filter actions and enable USDT probes on PID" << std::endl;
-  out << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
+  out << "    -p, --pid PID  filter actions and enable USDT probes on PID" << std::endl;
+  out << "    -c, --cmd CMD  run CMD and enable USDT probes on resulting process" << std::endl;
   out << "    --no-feature FEATURE[,FEATURE]" << std::endl;
   out << "                   disable use of detected features" << std::endl;
   out << "    --usdt-file-activation" << std::endl;
   out << "                   activate usdt semaphores based on file path" << std::endl;
   out << "    --unsafe       allow unsafe/destructive functionality" << std::endl;
-  out << "    -q             keep messages quiet" << std::endl;
+  out << "    -q, --quiet    keep messages quiet" << std::endl;
   out << "    --info         Print information about kernel BPF support" << std::endl;
-  out << "    -k             emit a warning when probe read helpers return an error" << std::endl;
+  out << "    -k, --warnings emit a warning when probe read helpers return an error" << std::endl;
   out << "    -V, --version  bpftrace version" << std::endl;
   out << "    --no-warnings  disable all warning messages" << std::endl;
-  out << "    --test         run all test: probes" << std::endl;
-  out << "    --bench        run all bench: probes" << std::endl;
+  out << "    --test-mode MODE" << std::endl;
+  out << "                   used for benchmarking and testing; run bpftrace in MODE" << std::endl;
+  out << "                   ('codegen', 'compiler-bench', 'bench', 'test')" << std::endl;
+  out << "    --test         run all test: probes (same as --test-mode test)" << std::endl;
+  out << "    --bench        run all bench: probes (same as --test-mode bench)" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
-  out << "    -v                      verbose messages" << std::endl;
+  out << "    -v, --verbose           verbose messages" << std::endl;
   out << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
   out << "    --verify-llvm-ir        check that the generated LLVM IR is valid" << std::endl;
-  out << "    -d STAGE                debug info for various stages of bpftrace execution" << std::endl;
+  out << "    -d, --debug STAGE       debug info for various stages of bpftrace execution" << std::endl;
   out << "                            ('all', 'ast', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
   out << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
   out << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
@@ -384,66 +395,22 @@ Args parse_args(int argc, char* argv[])
 
   const char* const short_options = "d:bB:f:e:hlp:vqc:Vo:I:k";
   option long_options[] = {
-    option{ .name = "help",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::HELP },
-    option{ .name = "version",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::VERSION },
-    option{ .name = "usdt-file-activation",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::USDT_SEMAPHORE },
-    option{ .name = "unsafe",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::UNSAFE },
-    option{ .name = "btf",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::BTF },
-    option{ .name = "include",
-            .has_arg = required_argument,
-            .flag = nullptr,
-            .val = Options::INCLUDE },
-    option{ .name = "info",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::INFO },
-    option{ .name = "emit-llvm",
-            .has_arg = required_argument,
-            .flag = nullptr,
-            .val = Options::EMIT_LLVM },
-    option{ .name = "emit-elf",
-            .has_arg = required_argument,
-            .flag = nullptr,
-            .val = Options::EMIT_ELF },
-    option{ .name = "no-warnings",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::NO_WARNING },
-    option{ .name = "test-mode",
-            .has_arg = required_argument,
-            .flag = nullptr,
-            .val = Options::TEST_MODE },
-    option{ .name = "test",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::TEST },
-    option{ .name = "bench",
-            .has_arg = no_argument,
-            .flag = nullptr,
-            .val = Options::BENCH },
     option{ .name = "aot",
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::AOT },
-    option{ .name = "no-feature",
+    option{ .name = "bench",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::BENCH },
+    option{ .name = "btf",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::BTF },
+    option{ .name = "cmd",
             .has_arg = required_argument,
             .flag = nullptr,
-            .val = Options::NO_FEATURE },
+            .val = Options::CMD },
     option{ .name = "debug",
             .has_arg = required_argument,
             .flag = nullptr,
@@ -452,10 +419,82 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::DRY_RUN },
+    option{ .name = "emit-elf",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::EMIT_ELF },
+    option{ .name = "emit-llvm",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::EMIT_LLVM },
+    option{ .name = "help",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::HELP },
+    option{ .name = "include",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::INCLUDE },
+    option{ .name = "info",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::INFO },
+    option{ .name = "list",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::LIST },
+    option{ .name = "no-feature",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::NO_FEATURE },
+    option{ .name = "no-warnings",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::NO_WARNING },
+    option{ .name = "output",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::OUTPUT },
+    option{ .name = "pid",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::PID },
+    option{ .name = "quiet",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::QUIET },
+    option{ .name = "test",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::TEST },
+    option{ .name = "test-mode",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::TEST_MODE },
+    option{ .name = "unsafe",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::UNSAFE },
+    option{ .name = "usdt-file-activation",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::USDT_SEMAPHORE },
+    option{ .name = "verbose",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::VERBOSE },
     option{ .name = "verify-llvm-ir",
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::VERIFY_LLVM_IR },
+    option{ .name = "version",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::VERSION },
+    option{ .name = "warnings",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::WARNINGS },
     option{ .name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0 }, // Must
                                                                         // be
                                                                         // last
@@ -478,7 +517,7 @@ Args parse_args(int argc, char* argv[])
         break;
       case Options::NO_WARNING: // --no-warnings
         if (args.warning_level == 2) {
-          LOG(ERROR) << "USAGE: -k conflicts with --no-warnings";
+          LOG(ERROR) << "USAGE: -k, --warnings conflicts with --no-warnings";
           exit(1);
         }
         DISABLE_LOG(WARNING);
@@ -531,6 +570,7 @@ Args parse_args(int argc, char* argv[])
         args.verify_llvm_ir = true;
         break;
       case 'o':
+      case Options::OUTPUT:
         args.output_file = optarg;
         break;
       case 'd':
@@ -539,9 +579,11 @@ Args parse_args(int argc, char* argv[])
           exit(1);
         break;
       case 'q':
+      case Options::QUIET:
         bt_quiet = true;
         break;
       case 'v':
+      case Options::VERBOSE:
         ENABLE_LOG(V1);
         bt_verbose = true;
         break;
@@ -564,6 +606,7 @@ Args parse_args(int argc, char* argv[])
         args.script = optarg;
         break;
       case 'p':
+      case Options::PID:
         args.pid_str = optarg;
         break;
       case 'I':
@@ -573,9 +616,11 @@ Args parse_args(int argc, char* argv[])
         args.include_files.emplace_back(optarg);
         break;
       case 'l':
+      case Options::LIST:
         args.listing = true;
         break;
       case 'c':
+      case Options::CMD:
         args.cmd_str = optarg;
         break;
       case Options::USDT_SEMAPHORE:
@@ -596,6 +641,7 @@ Args parse_args(int argc, char* argv[])
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
         exit(0);
       case 'k':
+      case Options::WARNINGS:
         if (args.warning_level == 2) {
           LOG(ERROR) << "USAGE: -kk has been deprecated. Use a single -k for "
                         "runtime warnings for errors in map "
@@ -603,7 +649,7 @@ Args parse_args(int argc, char* argv[])
           exit(1);
         }
         if (args.warning_level == 0) {
-          LOG(ERROR) << "USAGE: -k conflicts with --no-warnings";
+          LOG(ERROR) << "USAGE: -k, --warnings conflicts with --no-warnings";
           exit(1);
         }
         args.warning_level = 2;

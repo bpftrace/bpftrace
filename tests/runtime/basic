@@ -26,7 +26,7 @@ EXPECT hello world!
 TIMEOUT 1
 
 NAME it lists kprobes
-RUN {{BPFTRACE}} -l | grep kprobes
+RUN {{BPFTRACE}} --list | grep kprobes
 EXPECT_REGEX kprobe:.*
 TIMEOUT 1
 
@@ -174,7 +174,7 @@ EXPECT fentry:vmlinux:vfs_read
 EXPECT_NONE fentry:vmlinux:vfs_write
 
 NAME it lists uprobes in the program
-RUN {{BPFTRACE}} -l -e 'uretprobe:*:uprobeFunction* { exit(); }' -p {{BEFORE_PID}}
+RUN {{BPFTRACE}} -l -e 'uretprobe:*:uprobeFunction* { exit(); }' --pid {{BEFORE_PID}}
 EXPECT_REGEX uretprobe:[\S]+uprobe_test:uprobeFunction1
 BEFORE ./testprogs/uprobe_test
 
@@ -295,7 +295,7 @@ EXPECT 10 12 12 10
 TIMEOUT 1
 
 NAME spawn child
-RUN {{BPFTRACE}} -e 'i:ms:500 { printf("%d\n", cpid); }' -c './testprogs/syscall nanosleep 1e9'
+RUN {{BPFTRACE}} -e 'i:ms:500 { printf("%d\n", cpid); }' --cmd './testprogs/syscall nanosleep 1e9'
 EXPECT_REGEX [0-9]+
 TIMEOUT 3
 
