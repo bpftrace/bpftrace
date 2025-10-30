@@ -6,13 +6,13 @@
 // https://github.com/bpftrace/bpftrace/pull/2623
 
 i:us:1 {
-    @data[rand % 100] = count();
+    @data[rand % 5] = count();
     if (rand % 5 == 0) {
         delete(@data, rand % 10);
     }
 }
 
-i:ms:1 {
+i:ms:50 {
     print(@data);
     clear(@data);
     zero(@data);
