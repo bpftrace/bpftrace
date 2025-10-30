@@ -90,4 +90,74 @@ TEST(TextOutput, lhist_suffix)
             out.str());
 }
 
+TEST(TextOutput, lhist_overflow_only)
+{
+  std::stringstream out;
+  ::bpftrace::output::TextOutput output(out, out);
+
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->resources.maps_info["@mymap"] = MapInfo{
+    .key_type = CreateInt64(),
+    .value_type = SizedType{ Type::lhist_t, 8 },
+    .detail = LinearHistogramArgs{ .min = 0, .max = 100, .step = 10 },
+    .id = {},
+    .is_scalar = true,
+  };
+
+  // histogram with only overflow bucket has value
+  const HistogramMap values_by_key = {
+    { OpaqueValue::from<uint64_t>(0), { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 } },
+  };
+
+  auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                               "@mymap");
+  EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
+      .WillOnce(testing::Return(testing::ByMove(HistogramMap(values_by_key))));
+
+  auto hist = format(*bpftrace, no_c_defs, *mock_map);
+  ASSERT_TRUE(bool(hist));
+  output.map(mock_map->name(), *hist);
+
+  EXPECT_EQ(R"(@mymap:
+[100, ...)             1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)",
+            out.str());
+}
+
+TEST(TextOutput, lhist_underflow_only)
+{
+  std::stringstream out;
+  ::bpftrace::output::TextOutput output(out, out);
+
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->resources.maps_info["@mymap"] = MapInfo{
+    .key_type = CreateInt64(),
+    .value_type = SizedType{ Type::lhist_t, 8 },
+    .detail = LinearHistogramArgs{ .min = 10, .max = 110, .step = 10 },
+    .id = {},
+    .is_scalar = true,
+  };
+
+  // histogram with only underflow bucket has value
+  const HistogramMap values_by_key = {
+    { OpaqueValue::from<uint64_t>(0), { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+  };
+
+  auto mock_map = std::make_unique<MockBpfMap>(libbpf::BPF_MAP_TYPE_HASH,
+                                               "@mymap");
+  EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
+      .WillOnce(testing::Return(testing::ByMove(HistogramMap(values_by_key))));
+
+  auto hist = format(*bpftrace, no_c_defs, *mock_map);
+  ASSERT_TRUE(bool(hist));
+  output.map(mock_map->name(), *hist);
+
+  EXPECT_EQ(R"(@mymap:
+(..., 10)              1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+)",
+            out.str());
+}
+
 } // namespace bpftrace::test::output

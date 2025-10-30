@@ -17,6 +17,8 @@ and this project adheres to
   - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
 - join(): Fix wrong index of GEP that was causing truncation
   - [#4786](https://github.com/bpftrace/bpftrace/pull/4786)
+- output: prevent crash when printing overflow-only lhist
+  - [#4801](https://github.com/bpftrace/bpftrace/pull/4801)
 
 ## [0.24.1] 2025-10-03
 

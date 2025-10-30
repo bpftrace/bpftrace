@@ -221,6 +221,11 @@ struct TextEmitter<Value::Histogram> {
           header << "(..., ";
           TextEmitter<Primitive>::emit(header, hist.labels[i]);
           header << ")";
+        } else if (hist.labels.empty()) {
+          // Histogram contains overflow-only case
+          header << "[";
+          TextEmitter<Primitive>::emit(header, *hist.lower_bound);
+          header << ", ...)";
         } else if (single_value(*hist.lower_bound, hist.labels[i])) {
           header << "[";
           TextEmitter<Primitive>::emit(header, *hist.lower_bound);
