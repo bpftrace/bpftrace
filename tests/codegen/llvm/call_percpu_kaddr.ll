@@ -17,7 +17,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @begin_1(ptr %0) #0 section "s_begin_1" !dbg !37 {
 entry:
-  %per_cpu_ptr = call ptr inttoptr (i64 153 to ptr)(ptr @process_counts, i64 0) #1
+  %per_cpu_ptr = call ptr inttoptr (i64 153 to ptr)(ptr @process_counts, i32 0) #1
   %1 = ptrtoint ptr %per_cpu_ptr to i64
   ret i64 0
 }

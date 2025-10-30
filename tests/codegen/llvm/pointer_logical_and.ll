@@ -20,7 +20,7 @@ entry:
   %"$v" = alloca ptr, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$v")
   store i0 0, ptr %"$v", align 1
-  store ptr inttoptr (i64 1 to ptr), ptr %"$v", align 8
+  store ptr inttoptr (i8 1 to ptr), ptr %"$v", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"&&_result")
   %1 = load ptr, ptr %"$v", align 8
   %lhs_true_cond = icmp ne ptr %1, null

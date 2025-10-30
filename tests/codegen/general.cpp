@@ -92,8 +92,8 @@ kprobe:f
   EXPECT_EQ(args[2].offset, 8);
 
   EXPECT_TRUE(args[3].type.IsIntTy());
-  EXPECT_EQ(args[3].type.GetSize(), 8U);
-  EXPECT_EQ(args[3].offset, 24);
+  EXPECT_EQ(args[3].type.GetSize(), 1U);
+  EXPECT_EQ(args[3].offset, 19);
 }
 
 } // namespace bpftrace::test::codegen

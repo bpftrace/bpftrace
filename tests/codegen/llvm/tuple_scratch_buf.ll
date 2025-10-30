@@ -4,13 +4,13 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
-%"int64_string[5]__tuple_t" = type { i64, [5 x i8] }
+%"uint8_string[5]__tuple_t" = type { i8, [5 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !22
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !29
-@__bt__tuple_buf = dso_local externally_initialized global [1 x [1 x [16 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !31
+@__bt__tuple_buf = dso_local externally_initialized global [1 x [1 x [6 x i8]]] zeroinitializer, section ".data.tuple_buf", !dbg !31
 @xxxx = global [5 x i8] c"xxxx\00"
 
 ; Function Attrs: nounwind
@@ -22,11 +22,11 @@ entry:
   %get_cpu_id = call i64 inttoptr (i64 8 to ptr)() #3
   %1 = load i64, ptr @__bt__max_cpu_id, align 8
   %cpu.id.bounded = and i64 %get_cpu_id, %1
-  %2 = getelementptr [1 x [1 x [16 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
-  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 16, i1 false)
-  %3 = getelementptr %"int64_string[5]__tuple_t", ptr %2, i32 0, i32 0
-  store i64 1, ptr %3, align 8
-  %4 = getelementptr %"int64_string[5]__tuple_t", ptr %2, i32 0, i32 1
+  %2 = getelementptr [1 x [1 x [6 x i8]]], ptr @__bt__tuple_buf, i64 0, i64 %cpu.id.bounded, i64 0, i64 0
+  call void @llvm.memset.p0.i64(ptr align 1 %2, i8 0, i64 6, i1 false)
+  %3 = getelementptr %"uint8_string[5]__tuple_t", ptr %2, i32 0, i32 0
+  store i8 1, ptr %3, align 1
+  %4 = getelementptr %"uint8_string[5]__tuple_t", ptr %2, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %4, ptr align 1 @xxxx, i64 5, i1 false)
   ret i64 0
 }
@@ -78,11 +78,11 @@ attributes #3 = { memory(none) }
 !30 = distinct !DIGlobalVariable(name: "__bt__max_cpu_id", linkageName: "global", scope: !2, file: !2, type: !26, isLocal: false, isDefinition: true)
 !31 = !DIGlobalVariableExpression(var: !32, expr: !DIExpression())
 !32 = distinct !DIGlobalVariable(name: "__bt__tuple_buf", linkageName: "global", scope: !2, file: !2, type: !33, isLocal: false, isDefinition: true)
-!33 = !DICompositeType(tag: DW_TAG_array_type, baseType: !34, size: 128, elements: !27)
-!34 = !DICompositeType(tag: DW_TAG_array_type, baseType: !35, size: 128, elements: !27)
-!35 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 128, elements: !36)
+!33 = !DICompositeType(tag: DW_TAG_array_type, baseType: !34, size: 48, elements: !27)
+!34 = !DICompositeType(tag: DW_TAG_array_type, baseType: !35, size: 48, elements: !27)
+!35 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 48, elements: !36)
 !36 = !{!37}
-!37 = !DISubrange(count: 16, lowerBound: 0)
+!37 = !DISubrange(count: 6, lowerBound: 0)
 !38 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, globals: !39)
 !39 = !{!0, !7, !22, !29, !31}
 !40 = !{i32 2, !"Debug Info Version", i32 3}

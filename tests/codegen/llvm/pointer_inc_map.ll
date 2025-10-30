@@ -26,7 +26,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_key")
   store i64 0, ptr %"@_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@_val")
-  store ptr inttoptr (i64 1000 to ptr), ptr %"@_val", align 8
+  store ptr inttoptr (i16 1000 to ptr), ptr %"@_val", align 8
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_, ptr %"@_key", ptr %"@_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@_key")

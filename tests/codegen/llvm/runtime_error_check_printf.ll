@@ -23,7 +23,7 @@ entry:
   call void @llvm.lifetime.start.p0(i64 -1, ptr %data)
   call void @llvm.memset.p0.i64(ptr align 1 %data, i8 0, i64 8, i1 false)
   %1 = getelementptr [1 x i64], ptr %data, i64 0, i32 0
-  store i64 1, ptr %1, align 8
+  store i8 1, ptr %1, align 1
   %2 = call ptr @llvm.preserve.static.offset(ptr %0)
   %3 = getelementptr i64, ptr %2, i64 0
   %meta = load volatile ptr, ptr %3, align 8

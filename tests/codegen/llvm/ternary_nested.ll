@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
-%print_int_8_t = type <{ i64, i64, [8 x i8] }>
+%print_int_1_t = type <{ i64, i64, [1 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -17,68 +17,68 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %print_int_8_t = alloca %print_int_8_t, align 8
-  %"$z" = alloca i64, align 8
+  %print_int_1_t = alloca %print_int_1_t, align 8
+  %"$z" = alloca i8, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$z")
-  store i64 0, ptr %"$z", align 8
-  %"$y" = alloca i64, align 8
+  store i8 0, ptr %"$z", align 1
+  %"$y" = alloca i8, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$y")
-  store i64 0, ptr %"$y", align 8
-  %"$x" = alloca i64, align 8
+  store i8 0, ptr %"$y", align 1
+  %"$x" = alloca i8, align 1
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"$x")
-  store i64 0, ptr %"$x", align 8
-  store i64 1, ptr %"$x", align 8
-  store i64 1, ptr %"$y", align 8
-  store i64 1, ptr %"$z", align 8
-  %1 = load i64, ptr %"$x", align 8
-  %true_cond = icmp ne i64 %1, 0
+  store i8 0, ptr %"$x", align 1
+  store i8 1, ptr %"$x", align 1
+  store i8 1, ptr %"$y", align 1
+  store i8 1, ptr %"$z", align 1
+  %1 = load i8, ptr %"$x", align 1
+  %true_cond = icmp ne i8 %1, 0
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
-  %2 = load i64, ptr %"$y", align 8
-  %true_cond3 = icmp ne i64 %2, 0
+  %2 = load i8, ptr %"$y", align 1
+  %true_cond3 = icmp ne i8 %2, 0
   br i1 %true_cond3, label %left1, label %right2
 
 right:                                            ; preds = %entry
-  %3 = load i64, ptr %"$y", align 8
+  %3 = load i8, ptr %"$y", align 1
   br label %done9
 
 left1:                                            ; preds = %left
-  %4 = load i64, ptr %"$z", align 8
-  %true_cond6 = icmp ne i64 %4, 0
+  %4 = load i8, ptr %"$z", align 1
+  %true_cond6 = icmp ne i8 %4, 0
   br i1 %true_cond6, label %left4, label %right5
 
 right2:                                           ; preds = %left
-  %5 = load i64, ptr %"$z", align 8
+  %5 = load i8, ptr %"$z", align 1
   br label %done7
 
 left4:                                            ; preds = %left1
-  %6 = load i64, ptr %"$x", align 8
+  %6 = load i8, ptr %"$x", align 1
   br label %done
 
 right5:                                           ; preds = %left1
-  %7 = load i64, ptr %"$y", align 8
+  %7 = load i8, ptr %"$y", align 1
   br label %done
 
 done:                                             ; preds = %right5, %left4
-  %result = phi i64 [ %6, %left4 ], [ %7, %right5 ]
+  %result = phi i8 [ %6, %left4 ], [ %7, %right5 ]
   br label %done7
 
 done7:                                            ; preds = %right2, %done
-  %result8 = phi i64 [ %result, %done ], [ %5, %right2 ]
+  %result8 = phi i8 [ %result, %done ], [ %5, %right2 ]
   br label %done9
 
 done9:                                            ; preds = %right, %done7
-  %result10 = phi i64 [ %result8, %done7 ], [ %3, %right ]
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_int_8_t)
-  %8 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 0
+  %result10 = phi i8 [ %result8, %done7 ], [ %3, %right ]
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_int_1_t)
+  %8 = getelementptr %print_int_1_t, ptr %print_int_1_t, i64 0, i32 0
   store i64 30007, ptr %8, align 8
-  %9 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 1
+  %9 = getelementptr %print_int_1_t, ptr %print_int_1_t, i64 0, i32 1
   store i64 0, ptr %9, align 8
-  %10 = getelementptr %print_int_8_t, ptr %print_int_8_t, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 8, i1 false)
-  store i64 %result10, ptr %10, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_int_8_t, i64 24, i64 0)
+  %10 = getelementptr %print_int_1_t, ptr %print_int_1_t, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %10, i8 0, i64 1, i1 false)
+  store i8 %result10, ptr %10, align 1
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_int_1_t, i64 17, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -93,7 +93,7 @@ event_loss_counter:                               ; preds = %done9
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %done9
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_int_8_t)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_int_1_t)
   ret i64 0
 }
 

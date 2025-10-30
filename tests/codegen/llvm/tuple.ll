@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.163" = type { ptr, ptr }
-%"int64_int64_string[4]__tuple_t" = type { i64, i64, [4 x i8] }
+%"uint8_uint8_string[4]__tuple_t" = type { i8, i8, [4 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_t = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -21,14 +21,14 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !52 {
 entry:
   %"@t_key" = alloca i64, align 8
-  %tuple = alloca %"int64_int64_string[4]__tuple_t", align 8
+  %tuple = alloca %"uint8_uint8_string[4]__tuple_t", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 24, i1 false)
-  %1 = getelementptr %"int64_int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 0
-  store i64 1, ptr %1, align 8
-  %2 = getelementptr %"int64_int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 1
-  store i64 2, ptr %2, align 8
-  %3 = getelementptr %"int64_int64_string[4]__tuple_t", ptr %tuple, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 6, i1 false)
+  %1 = getelementptr %"uint8_uint8_string[4]__tuple_t", ptr %tuple, i32 0, i32 0
+  store i8 1, ptr %1, align 1
+  %2 = getelementptr %"uint8_uint8_string[4]__tuple_t", ptr %tuple, i32 0, i32 1
+  store i8 2, ptr %2, align 1
+  %3 = getelementptr %"uint8_uint8_string[4]__tuple_t", ptr %tuple, i32 0, i32 2
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 @str, i64 4, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@t_key")
   store i64 0, ptr %"@t_key", align 8
@@ -81,11 +81,11 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !20 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !21 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !22, size: 64, offset: 192)
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !23, size: 64)
-!23 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 192, elements: !24)
+!23 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 48, elements: !24)
 !24 = !{!25, !26, !27}
-!25 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !20, size: 64)
-!26 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !20, size: 64, offset: 64)
-!27 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !3, size: 32, offset: 128)
+!25 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !4, size: 8)
+!26 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !4, size: 8, offset: 8)
+!27 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !3, size: 32, offset: 16)
 !28 = !DIGlobalVariableExpression(var: !29, expr: !DIExpression())
 !29 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !30, isLocal: false, isDefinition: true)
 !30 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !31)

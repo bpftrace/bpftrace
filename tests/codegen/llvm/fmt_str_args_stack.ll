@@ -5,7 +5,7 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
 %printf_t = type { i64, %printf_args_t }
-%printf_args_t = type { [5 x i8], i64 }
+%printf_args_t = type { [5 x i8], i8 }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -21,15 +21,15 @@ define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
   %printf_args = alloca %printf_t, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %printf_args)
-  call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 24, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %printf_args, i8 0, i64 16, i1 false)
   %1 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 0
   store i64 0, ptr %1, align 8
   %2 = getelementptr %printf_t, ptr %printf_args, i32 0, i32 1
   %3 = getelementptr %printf_args_t, ptr %2, i32 0, i32 0
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %3, ptr align 1 @xxxx, i64 5, i1 false)
   %4 = getelementptr %printf_args_t, ptr %2, i32 0, i32 1
-  store i64 1, ptr %4, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 24, i64 0)
+  store i8 1, ptr %4, align 1
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %printf_args, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 

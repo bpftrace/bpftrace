@@ -4,7 +4,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr }
-%print_int_8_t = type <{ i64, i64, [8 x i8] }>
+%print_int_1_t = type <{ i64, i64, [1 x i8] }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @ringbuf = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -17,16 +17,16 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 ; Function Attrs: nounwind
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !35 {
 entry:
-  %print_int_8_t = alloca %print_int_8_t, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_int_8_t)
-  %1 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 0
+  %print_int_1_t = alloca %print_int_1_t, align 8
+  call void @llvm.lifetime.start.p0(i64 -1, ptr %print_int_1_t)
+  %1 = getelementptr %print_int_1_t, ptr %print_int_1_t, i64 0, i32 0
   store i64 30007, ptr %1, align 8
-  %2 = getelementptr %print_int_8_t, ptr %print_int_8_t, i64 0, i32 1
+  %2 = getelementptr %print_int_1_t, ptr %print_int_1_t, i64 0, i32 1
   store i64 0, ptr %2, align 8
-  %3 = getelementptr %print_int_8_t, ptr %print_int_8_t, i32 0, i32 2
-  call void @llvm.memset.p0.i64(ptr align 1 %3, i8 0, i64 8, i1 false)
-  store i64 3, ptr %3, align 8
-  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_int_8_t, i64 24, i64 0)
+  %3 = getelementptr %print_int_1_t, ptr %print_int_1_t, i32 0, i32 2
+  call void @llvm.memset.p0.i64(ptr align 1 %3, i8 0, i64 1, i1 false)
+  store i8 3, ptr %3, align 1
+  %ringbuf_output = call i64 inttoptr (i64 130 to ptr)(ptr @ringbuf, ptr %print_int_1_t, i64 17, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -41,7 +41,7 @@ event_loss_counter:                               ; preds = %entry
   br label %counter_merge
 
 counter_merge:                                    ; preds = %event_loss_counter, %entry
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_int_8_t)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %print_int_1_t)
   ret i64 0
 }
 

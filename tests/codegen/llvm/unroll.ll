@@ -55,8 +55,8 @@ entry:
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
-  %1 = load ptr, ptr %lookup_elem, align 8
-  store ptr %1, ptr %lookup_elem_val, align 8
+  %1 = load i64, ptr %lookup_elem, align 8
+  store i64 %1, ptr %lookup_elem_val, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
@@ -83,8 +83,8 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   br i1 %map_lookup_cond11, label %lookup_success7, label %lookup_failure8
 
 lookup_success7:                                  ; preds = %lookup_merge
-  %4 = load ptr, ptr %lookup_elem6, align 8
-  store ptr %4, ptr %lookup_elem_val10, align 8
+  %4 = load i64, ptr %lookup_elem6, align 8
+  store i64 %4, ptr %lookup_elem_val10, align 8
   br label %lookup_merge9
 
 lookup_failure8:                                  ; preds = %lookup_merge
@@ -111,8 +111,8 @@ lookup_merge9:                                    ; preds = %lookup_failure8, %l
   br i1 %map_lookup_cond21, label %lookup_success17, label %lookup_failure18
 
 lookup_success17:                                 ; preds = %lookup_merge9
-  %7 = load ptr, ptr %lookup_elem16, align 8
-  store ptr %7, ptr %lookup_elem_val20, align 8
+  %7 = load i64, ptr %lookup_elem16, align 8
+  store i64 %7, ptr %lookup_elem_val20, align 8
   br label %lookup_merge19
 
 lookup_failure18:                                 ; preds = %lookup_merge9
@@ -139,8 +139,8 @@ lookup_merge19:                                   ; preds = %lookup_failure18, %
   br i1 %map_lookup_cond31, label %lookup_success27, label %lookup_failure28
 
 lookup_success27:                                 ; preds = %lookup_merge19
-  %10 = load ptr, ptr %lookup_elem26, align 8
-  store ptr %10, ptr %lookup_elem_val30, align 8
+  %10 = load i64, ptr %lookup_elem26, align 8
+  store i64 %10, ptr %lookup_elem_val30, align 8
   br label %lookup_merge29
 
 lookup_failure28:                                 ; preds = %lookup_merge19
@@ -167,8 +167,8 @@ lookup_merge29:                                   ; preds = %lookup_failure28, %
   br i1 %map_lookup_cond41, label %lookup_success37, label %lookup_failure38
 
 lookup_success37:                                 ; preds = %lookup_merge29
-  %13 = load ptr, ptr %lookup_elem36, align 8
-  store ptr %13, ptr %lookup_elem_val40, align 8
+  %13 = load i64, ptr %lookup_elem36, align 8
+  store i64 %13, ptr %lookup_elem_val40, align 8
   br label %lookup_merge39
 
 lookup_failure38:                                 ; preds = %lookup_merge29

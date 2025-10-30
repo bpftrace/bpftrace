@@ -12,6 +12,7 @@
 #include "ast/async_event_types.h"
 #include "ast/context.h"
 #include "ast/helpers.h"
+#include "ast/integer_types.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
@@ -215,22 +216,22 @@ private:
   std::optional<size_t> check(Sizeof &szof);
   std::optional<size_t> check(Offsetof &offof);
 
-  [[nodiscard]] bool check_arg(const Call &call,
+  [[nodiscard]] bool check_arg(Call &call,
                                size_t index,
                                const arg_type_spec &spec);
-  [[nodiscard]] bool check_arg(const Call &call,
+  [[nodiscard]] bool check_arg(Call &call,
                                size_t index,
                                const map_type_spec &spec);
-  [[nodiscard]] bool check_arg(const Call &call,
+  [[nodiscard]] bool check_arg(Call &call,
                                size_t index,
                                const map_key_spec &spec);
-  [[nodiscard]] bool check_call(const Call &call);
+  [[nodiscard]] bool check_call(Call &call);
   [[nodiscard]] bool check_nargs(const Call &call, size_t expected_nargs);
   [[nodiscard]] bool check_varargs(const Call &call,
                                    size_t min_nargs,
                                    size_t max_nargs);
 
-  bool check_arg(const Call &call,
+  bool check_arg(Call &call,
                  Type type,
                  size_t index,
                  bool want_literal = false);
@@ -248,16 +249,17 @@ private:
                        const Node *loc_node,
                        AssignMapStatement *assignment = nullptr);
   SizedType create_key_type(const SizedType &expr_type, Node &node);
-  void reconcile_map_key(Map *map, const Expression &key_expr);
-  void update_current_key(SizedType &current_key_type,
-                          const SizedType &new_key_type);
-  void validate_new_key(const SizedType &current_key_type,
-                        const SizedType &new_key_type,
-                        const std::string &map_ident,
-                        const Expression &key_expr);
-  bool update_string_size(SizedType &type, const SizedType &new_type);
-  SizedType create_merged_tuple(const SizedType &left, const SizedType &right);
-  void validate_map_key(const SizedType &key, Node &node);
+  void reconcile_map_key(Map *map, Expression &key_expr);
+  std::optional<SizedType> get_promoted_int(const SizedType &leftTy,
+                                            const SizedType &rightTy);
+  std::optional<SizedType> update_int_type(
+      const SizedType &rightTy,
+      Expression &rightExpr,
+      const SizedType &leftTy,
+      std::optional<std::reference_wrapper<Expression>> leftExpr = {});
+  std::optional<SizedType> update_tuple_type(const SizedType &storedTy,
+                                             const SizedType &assignTy,
+                                             bool can_resize);
   void resolve_struct_type(SizedType &type, Node &node);
 
   AddrSpace find_addrspace(ProbeType pt);
@@ -265,6 +267,8 @@ private:
   void binop_ptr(Binop &op);
   void binop_int(Binop &op);
   void binop_array(Binop &op);
+
+  void create_int_cast(Expression &exp, const SizedType &target_type);
 
   bool has_error() const;
   bool in_loop()
@@ -294,6 +298,7 @@ private:
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, SizedType> map_key_;
   std::map<std::string, bpf_map_type> bpf_map_type_;
+  std::map<std::string, SizedType> agg_map_val_;
 
   uint32_t loop_depth_ = 0;
   uint32_t meta_depth_ = 0; // sizeof, offsetof, etc.
@@ -309,7 +314,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .arg_types = { map_type_spec{
                          .type = std::function<SizedType(const ast::Call &)>(
                              [](const ast::Call &call) -> SizedType {
-                               return CreateAvg(
+                              return CreateAvg(
                                    call.vargs.at(2).type().IsSigned());
                              }) },
                      map_key_spec{ .map_index = 0 },
@@ -461,7 +466,9 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=3,
       .arg_types={
         map_type_spec{
-          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateMax(call.vargs.at(2).type().IsSigned()); })
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType {
+            return CreateMax(call.vargs.at(2).type().IsSigned());
+          })
         },
         map_key_spec{ .map_index=0 },
         arg_type_spec{ .type=Type::integer } } } },
@@ -470,7 +477,9 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=3,
       .arg_types={
         map_type_spec{
-          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateMin(call.vargs.at(2).type().IsSigned()); })
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType {
+            return CreateMin(call.vargs.at(2).type().IsSigned());
+          })
         },
         map_key_spec{ .map_index=0 },
         arg_type_spec{ .type=Type::integer } } } },
@@ -547,7 +556,9 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=3,
       .arg_types={
         map_type_spec{
-          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateStats(call.vargs.at(2).type().IsSigned()); })
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType {
+            return CreateStats(call.vargs.at(2).type().IsSigned());
+          })
         },
         map_key_spec{ .map_index=0 },
         arg_type_spec{ .type=Type::integer } } } },
@@ -578,7 +589,9 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=3,
       .arg_types={
         map_type_spec{
-          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType { return CreateSum(call.vargs.at(2).type().IsSigned()); })
+          .type = std::function<SizedType(const ast::Call&)>([](const ast::Call &call) -> SizedType {
+            return CreateSum(call.vargs.at(2).type().IsSigned());
+          })
         },
         map_key_spec{ .map_index=0 },
         arg_type_spec{ .type=Type::integer } } } },
@@ -659,48 +672,6 @@ static const std::map<std::string, std::tuple<size_t, bool>> &getIntcasts()
     { "int64", std::tuple<size_t, bool>{ 64, true } },
   };
   return intcasts;
-}
-
-static std::pair<uint64_t, uint64_t> getUIntTypeRange(const SizedType &ty)
-{
-  assert(ty.IsIntegerTy());
-  auto size = ty.GetSize();
-  switch (size) {
-    case 1:
-      return { 0, std::numeric_limits<uint8_t>::max() };
-    case 2:
-      return { 0, std::numeric_limits<uint16_t>::max() };
-    case 4:
-      return { 0, std::numeric_limits<uint32_t>::max() };
-    case 8:
-      return { 0, std::numeric_limits<uint64_t>::max() };
-    default:
-      LOG(BUG) << "Unrecognized int type size: " << size;
-      return { 0, 0 };
-  }
-}
-
-static std::pair<int64_t, int64_t> getIntTypeRange(const SizedType &ty)
-{
-  assert(ty.IsIntegerTy());
-  auto size = ty.GetSize();
-  switch (size) {
-    case 1:
-      return { std::numeric_limits<int8_t>::min(),
-               std::numeric_limits<int8_t>::max() };
-    case 2:
-      return { std::numeric_limits<int16_t>::min(),
-               std::numeric_limits<int16_t>::max() };
-    case 4:
-      return { std::numeric_limits<int32_t>::min(),
-               std::numeric_limits<int32_t>::max() };
-    case 8:
-      return { std::numeric_limits<int64_t>::min(),
-               std::numeric_limits<int64_t>::max() };
-    default:
-      LOG(BUG) << "Unrecognized int type size: " << size;
-      return { 0, 0 };
-  }
 }
 
 // These are types which aren't valid for scratch variables
@@ -1385,9 +1356,13 @@ void SemanticAnalyser::visit(Call &call)
     // allow symbol lookups on casts (eg, function pointers)
     auto &arg = call.vargs.at(0);
     const auto &type = arg.type();
-    if (!type.IsIntegerTy() && !type.IsPtrTy())
+    if (!type.IsIntegerTy() && !type.IsPtrTy()) {
       call.addError() << call.func
                       << "() expects an integer or pointer argument";
+    } else if (type.IsIntegerTy() && type.GetSize() != 8) {
+      create_int_cast(call.vargs.at(0), CreateInt64());
+    }
+
     if (call.func == "ksym")
       call.return_type = CreateKSym();
     else if (call.func == "usym")
@@ -1496,6 +1471,9 @@ void SemanticAnalyser::visit(Call &call)
     if (bpftrace_.btf_->get_var_type(symbol).IsNoneTy()) {
       call.addError() << "Could not resolve variable \"" << symbol
                       << "\" from BTF";
+    }
+    if (call.vargs.size() == 2 && call.vargs.at(1).type() != CreateUInt32()) {
+      create_int_cast(call.vargs.at(1), CreateUInt32());
     }
     call.return_type = CreateUInt64();
     call.return_type.SetAS(AddrSpace::kernel);
@@ -2122,23 +2100,6 @@ Probe *SemanticAnalyser::get_probe(Node &node, std::string name)
   return probe;
 }
 
-void SemanticAnalyser::validate_map_key(const SizedType &key, Node &node)
-{
-  if (key.IsPtrTy() && key.IsCtxAccess()) {
-    // map functions only accepts a pointer to a element in the stack
-    node.addError() << "context cannot be used as a map key";
-  }
-
-  if (key.IsHistTy() || key.IsLhistTy() || key.IsStatsTy() ||
-      key.IsTSeriesTy()) {
-    node.addError() << key << " cannot be used as a map key";
-  }
-
-  if (is_final_pass() && key.IsNoneTy()) {
-    node.addError() << "Invalid map key type: " << key;
-  }
-}
-
 void SemanticAnalyser::visit(MapDeclStatement &decl)
 {
   const auto bpf_type = get_bpf_map_type(decl.bpf_type);
@@ -2340,63 +2301,77 @@ void SemanticAnalyser::visit(TupleAccess &acc)
 
 void SemanticAnalyser::binop_int(Binop &binop)
 {
-  bool lsign = binop.left.type().IsSigned();
-  bool rsign = binop.right.type().IsSigned();
+  SizedType leftTy = binop.left.type();
+  SizedType rightTy = binop.right.type();
 
-  auto &left = binop.left;
-  auto &right = binop.right;
-  std::optional<int64_t> left_literal;
-  std::optional<int64_t> right_literal;
-  if (auto *integer = left.as<Integer>())
-    left_literal.emplace(static_cast<int64_t>(integer->value));
-  if (auto *integer = left.as<NegativeInteger>())
-    left_literal.emplace(integer->value);
-  if (auto *integer = right.as<Integer>())
-    right_literal.emplace(static_cast<int64_t>(integer->value));
-  if (auto *integer = right.as<NegativeInteger>())
-    right_literal.emplace(integer->value);
+  if (leftTy.IsEqual(rightTy)) {
+    return;
+  }
 
-  // First check if operand signedness is the same
-  if (lsign != rsign) {
-    // Convert operands to unsigned if it helps make (lsign == rsign)
-    //
-    // For example:
-    //
-    // unsigned int a;
-    // if (a > 10) ...;
-    //
-    // No warning should be emitted as we know that 10 can be
-    // represented as unsigned int
-    if (lsign && !rsign && left_literal && left_literal.value() >= 0) {
-      lsign = false;
-    }
-    // The reverse (10 < a) should also hold
-    else if (!lsign && rsign && right_literal && right_literal.value() >= 0) {
-      rsign = false;
+  if (leftTy.IsBoolTy()) {
+    auto *typeof = ctx_.make_node<Typeof>(Location(binop.right.loc()), leftTy);
+    binop.right = ctx_.make_node<Cast>(
+        Location(binop.right.loc()),
+        typeof,
+        clone(ctx_, binop.right.loc(), binop.right));
+    visit(binop.right);
+    return;
+  } else if (rightTy.IsBoolTy()) {
+    auto *typeof = ctx_.make_node<Typeof>(Location(binop.left.loc()), rightTy);
+    binop.left = ctx_.make_node<Cast>(
+        Location(binop.left.loc()),
+        typeof,
+        clone(ctx_, binop.left.loc(), binop.left));
+    visit(binop.left);
+    return;
+  }
+
+  bool show_warning = false;
+  bool mismatched_sign = rightTy.IsSigned() != leftTy.IsSigned();
+  // N.B. all castable map values are 64 bits
+  if (leftTy.IsCastableMapTy()) {
+    if (rightTy.IsCastableMapTy()) {
+      show_warning = mismatched_sign;
     } else {
-      switch (binop.op) {
-        case Operator::EQ:
-        case Operator::NE:
-        case Operator::LE:
-        case Operator::GE:
-        case Operator::LT:
-        case Operator::GT:
-          binop.addWarning() << "comparison of integers of different signs: '"
-                             << left.type() << "' and '" << right.type() << "'"
-                             << " can lead to undefined behavior";
-          break;
-        case Operator::PLUS:
-        case Operator::MINUS:
-        case Operator::MUL:
-        case Operator::DIV:
-        case Operator::MOD:
-          binop.addWarning() << "arithmetic on integers of different signs: '"
-                             << left.type() << "' and '" << right.type() << "'"
-                             << " can lead to undefined behavior";
-          break;
-        default:
-          break;
+      if (!update_int_type(rightTy,
+                           binop.right,
+                           CreateInteger(64, leftTy.IsSigned()))) {
+        show_warning = true;
       }
+    }
+  } else if (rightTy.IsCastableMapTy()) {
+    if (!update_int_type(leftTy,
+                         binop.left,
+                         CreateInteger(64, rightTy.IsSigned()))) {
+      show_warning = true;
+    }
+  } else if (!update_int_type(rightTy, binop.right, leftTy, binop.left)) {
+    show_warning = true;
+  }
+
+  if (show_warning) {
+    switch (binop.op) {
+      case Operator::EQ:
+      case Operator::NE:
+      case Operator::LE:
+      case Operator::GE:
+      case Operator::LT:
+      case Operator::GT:
+        binop.addWarning() << "comparison of integers of different signs: '"
+                           << leftTy << "' and '" << rightTy << "'"
+                           << " can lead to undefined behavior";
+        break;
+      case Operator::PLUS:
+      case Operator::MINUS:
+      case Operator::MUL:
+      case Operator::DIV:
+      case Operator::MOD:
+        binop.addWarning() << "arithmetic on integers of different signs: '"
+                           << leftTy << "' and '" << rightTy << "'"
+                           << " can lead to undefined behavior";
+        break;
+      default:
+        break;
     }
   }
 
@@ -2405,19 +2380,42 @@ void SemanticAnalyser::binop_int(Binop &binop)
   // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
   // in kernel sources
   if (binop.op == Operator::DIV || binop.op == Operator::MOD) {
-    // Convert operands to unsigned if possible
-    if (lsign && left_literal && left_literal.value() >= 0)
-      lsign = false;
-    if (rsign && right_literal && right_literal.value() >= 0)
-      rsign = false;
-
     // If they're still signed, we have to warn
-    if (lsign || rsign) {
+    if (leftTy.IsSigned() || rightTy.IsSigned()) {
       binop.addWarning() << "signed operands for '" << opstr(binop)
                          << "' can lead to undefined behavior "
                          << "(cast to unsigned to silence warning)";
+    } else {
+      binop.result_type = CreateUInt64();
+    }
+  } else if ((binop.op == Operator::MUL || binop.op == Operator::PLUS) &&
+             !leftTy.IsSigned() && !rightTy.IsSigned()) {
+    binop.result_type = CreateUInt64();
+  }
+}
+
+void SemanticAnalyser::create_int_cast(Expression &exp,
+                                       const SizedType &target_type)
+{
+  // We don't need a cast if it's a literal
+  if (target_type.IsIntegerTy()) {
+    if (auto *integer = exp.as<Integer>()) {
+      exp = ctx_.make_node<Integer>(
+          Location(exp.loc()), integer->value, target_type, integer->original);
+      return;
+    } else if (auto *negative_integer = exp.as<NegativeInteger>()) {
+      exp = ctx_.make_node<NegativeInteger>(Location(exp.loc()),
+                                            negative_integer->value,
+                                            target_type);
+      return;
     }
   }
+
+  auto *typeof_r = ctx_.make_node<Typeof>(Location(exp.loc()), target_type);
+  exp = ctx_.make_node<Cast>(Location(exp.loc()),
+                             typeof_r,
+                             clone(ctx_, exp.loc(), exp));
+  visit(exp);
 }
 
 void SemanticAnalyser::binop_array(Binop &binop)
@@ -2503,6 +2501,14 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
       binop.result_type = CreatePointer(*ptr.GetPointeeTy(), ptr.GetAS());
     else if (!compare && !logical)
       invalid_op();
+
+    if (compare && other.IsIntTy() && other.GetSize() != 8) {
+      if (other == rht) {
+        create_int_cast(binop.right, CreateUInt64());
+      } else {
+        create_int_cast(binop.left, CreateUInt64());
+      }
+    }
   }
   // Might need an additional pass to resolve the type
   else if (other.IsNoneTy()) {
@@ -2530,7 +2536,7 @@ void SemanticAnalyser::visit(Binop &binop)
                       (rht.IsCastableMapTy() || rht.IsIntTy() ||
                        rht.IsBoolTy());
 
-  bool is_signed = lsign && rsign;
+  bool is_signed = lsign || rsign;
   bool is_comparison = is_comparison_op(binop.op);
   switch (binop.op) {
     case Operator::LEFT:
@@ -2556,14 +2562,8 @@ void SemanticAnalyser::visit(Binop &binop)
   }
 
   if (!is_comparison) {
-    if (is_int_binop) {
-      // Implicit size promotion to larger of the two
-      auto size = std::max(lht.GetSize(), rht.GetSize());
-      binop.result_type = CreateInteger(size * 8, is_signed);
-    } else {
-      // Default type - will be overriden below as necessary
-      binop.result_type = CreateInteger(64, is_signed);
-    }
+    // Default type - will be overriden below as necessary
+    binop.result_type = CreateInteger(64, is_signed);
   }
 
   auto addr_lhs = binop.left.type().GetAS();
@@ -2624,13 +2624,10 @@ void SemanticAnalyser::visit(Unop &unop)
     // Handle ++ and -- before visiting unop.expr, because these
     // operators should be able to work with undefined maps.
     if (auto *acc = unop.expr.as<MapAccess>()) {
-      auto *maptype = get_map_type(*acc->map);
-      if (!maptype) {
-        // Doing increments or decrements on the map type implements that
-        // it is done on an integer. Maps are always coerced into larger
-        // integers, so this should not conflict with different assignments.
-        assign_map_type(*acc->map, CreateInt64(), acc->map);
-      }
+      // Doing increments or decrements on the map type implements that
+      // it is done on an integer. Maps are always coerced into larger
+      // integers, so this should not conflict with different assignments.
+      assign_map_type(*acc->map, CreateInt64(), acc->map);
     } else if (!unop.expr.is<Variable>()) {
       unop.addError() << "The " << opstr(unop)
                       << " operator must be applied to a map or variable";
@@ -2694,6 +2691,18 @@ void SemanticAnalyser::visit(Unop &unop)
   } else {
     unop.result_type = CreateInteger(64, type.IsSigned());
   }
+
+  if (unop.expr.is<Variable>() && unop.expr.type().IsIntegerTy()) {
+    auto *variable = unop.expr.as<Variable>();
+    if (auto *scope = find_variable_scope(variable->ident)) {
+      auto &foundVar = variables_[scope][variable->ident];
+      if (foundVar.can_resize) {
+        // We don't know how many times this operation will be called
+        // so just make it the largest possible int
+        foundVar.type.SetSize(8);
+      }
+    }
+  }
 }
 
 void SemanticAnalyser::visit(IfExpr &if_expr)
@@ -2745,16 +2754,31 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
     return;
   }
 
+  bool type_mismatch_error = false;
   if (lhs.IsIntegerTy()) {
-    if_expr.result_type = CreateInteger(64, lhs.IsSigned());
+    auto updatedTy = update_int_type(rhs, if_expr.right, lhs, if_expr.left);
+    if (!updatedTy) {
+      type_mismatch_error = true;
+    } else {
+      if_expr.result_type = *updatedTy;
+    }
+  } else if (lhs.IsTupleTy()) {
+    auto updatedTy = update_tuple_type(lhs, rhs, true);
+    if (!updatedTy) {
+      type_mismatch_error = true;
+    } else {
+      if_expr.result_type = *updatedTy;
+    }
   } else {
     auto lsize = lhs.GetSize();
     auto rsize = rhs.GetSize();
-    if (lhs.IsTupleTy()) {
-      if_expr.result_type = create_merged_tuple(rhs, lhs);
-    } else {
-      if_expr.result_type = lsize > rsize ? lhs : rhs;
-    }
+    if_expr.result_type = lsize > rsize ? lhs : rhs;
+  }
+
+  if (is_final_pass() && type_mismatch_error) {
+    if_expr.addError()
+        << "Branches must return the same type or compatible types: "
+        << "have '" << lhs << "' and '" << rhs << "'";
   }
 }
 
@@ -2787,6 +2811,18 @@ void SemanticAnalyser::visit(Jump &jump)
           (ty.IsVoidTy() != !jump.return_value.has_value() ||
            (jump.return_value.has_value() &&
             jump.return_value->type() != ty))) {
+        if (jump.return_value.has_value() &&
+            jump.return_value->type().IsSameType(ty)) {
+          // TODO: fix this for other types
+          if (ty.IsIntegerTy()) {
+            auto updatedTy = update_int_type(jump.return_value->type(),
+                                             *jump.return_value,
+                                             ty);
+            if (updatedTy && updatedTy->IsEqual(ty)) {
+              return;
+            }
+          }
+        }
         jump.addError() << "Function " << subprog->name << " is of type " << ty
                         << ", cannot return "
                         << (jump.return_value.has_value()
@@ -2979,7 +3015,13 @@ void SemanticAnalyser::visit(For &f)
 
     f.decl->var_type = CreateTuple(Struct::CreateTuple({ *mapkey, *mapval }));
   } else if (auto *range = f.iterable.as<Range>()) {
-    // Always use the same type as the first parameter.
+    if (range->start.type().IsIntTy() && range->end.type().IsIntTy()) {
+      if (range->start.type().GetSize() > range->end.type().GetSize()) {
+        create_int_cast(range->end, range->start.type());
+      } else if (range->start.type().GetSize() < range->end.type().GetSize()) {
+        create_int_cast(range->start, range->end.type());
+      }
+    }
     f.decl->var_type = range->start.type();
   }
 
@@ -3149,13 +3191,40 @@ void SemanticAnalyser::visit(MapAccess &acc)
   }
 }
 
-void SemanticAnalyser::reconcile_map_key(Map *map, const Expression &key_expr)
+void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
 {
   SizedType new_key_type = create_key_type(key_expr.type(), key_expr.node());
 
   if (const auto &key = map_key_.find(map->ident); key != map_key_.end()) {
-    update_current_key(key->second, new_key_type);
-    validate_new_key(key->second, new_key_type, map->ident, key_expr);
+    SizedType &storedTy = key->second;
+    bool type_mismatch_error = false;
+    if (!storedTy.IsSameType(new_key_type)) {
+      type_mismatch_error = true;
+    } else {
+      if (storedTy.IsStringTy()) {
+        storedTy.SetSize(std::max(storedTy.GetSize(), new_key_type.GetSize()));
+      } else if (storedTy.IsTupleTy()) {
+        auto updatedTy = update_tuple_type(storedTy, new_key_type, true);
+        if (!updatedTy) {
+          type_mismatch_error = true;
+        } else {
+          storedTy = *updatedTy;
+        }
+      } else if (storedTy.IsIntegerTy()) {
+        auto updatedTy = update_int_type(new_key_type, key_expr, storedTy);
+        if (!updatedTy) {
+          type_mismatch_error = true;
+        } else {
+          storedTy = *updatedTy;
+        }
+      }
+    }
+    if (type_mismatch_error) {
+      key_expr.node().addError()
+          << "Argument mismatch for " << map->ident << ": "
+          << "trying to access with arguments: '" << new_key_type
+          << "' when map expects arguments: '" << storedTy << "'";
+    }
   } else {
     if (!new_key_type.IsNoneTy()) {
       map_key_.insert({ map->ident, new_key_type });
@@ -3262,11 +3331,22 @@ void SemanticAnalyser::visit(Cast &cast)
 
   if ((ty.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() && !rhs.IsBoolTy() &&
        !rhs.IsCtxAccess() && !rhs.IsArrayTy() && !rhs.IsCastableMapTy()) ||
-      // casting from/to int arrays must respect the size
       (ty.IsArrayTy() && (!rhs.IsBoolTy() || ty.GetSize() != rhs.GetSize()) &&
-       (!rhs.IsIntTy() || ty.GetSize() != rhs.GetSize())) ||
+       !rhs.IsIntTy()) ||
       (rhs.IsArrayTy() && (!ty.IsIntTy() || ty.GetSize() != rhs.GetSize()))) {
     cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty << "\"";
+  }
+
+  if (ty.IsArrayTy() && rhs.IsIntTy() &&
+      (ty.GetElementTy()->IsIntegerTy() || ty.GetElementTy()->IsBoolTy())) {
+    if ((ty.GetSize() <= 8) && (ty.GetSize() > rhs.GetSize())) {
+      create_int_cast(cast.expr,
+                      CreateInteger(ty.GetSize() * 8,
+                                    ty.GetElementTy()->IsSigned()));
+    } else if (ty.GetSize() != rhs.GetSize()) {
+      cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty
+                      << "\"";
+    }
   }
 
   if (cast.expr.type().IsCtxAccess() && !ty.IsIntTy()) {
@@ -3317,18 +3397,12 @@ void SemanticAnalyser::visit(Expression &expr)
   if (auto *szof = expr.as<Sizeof>()) {
     const auto v = check(*szof);
     if (v) {
-      expr.value = ctx_.make_node<Integer>(szof->loc,
-                                           *v,
-
-                                           /*force_unsigned=*/true);
+      expr.value = ctx_.make_node<Integer>(Location(szof->loc), *v);
     }
   } else if (auto *offof = expr.as<Offsetof>()) {
     const auto v = check(*offof);
     if (v) {
-      expr.value = ctx_.make_node<Integer>(offof->loc,
-                                           *v,
-
-                                           /*force_unsigned=*/true);
+      expr.value = ctx_.make_node<Integer>(Location(offof->loc), *v);
     }
   } else if (auto *type_id = expr.as<Typeinfo>()) {
     const auto &ty = type_id->typeof->type();
@@ -3527,67 +3601,15 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         pass_tracker_.inc_num_unresolved();
       }
     } else if (assignTy.IsStringTy()) {
-      update_string_size(storedTy, assignTy);
+      storedTy.SetSize(std::max(storedTy.GetSize(), assignTy.GetSize()));
     } else if (storedTy.IsIntegerTy()) {
-      if (storedTy.IsEqual(assignTy)) {
-        // No checks or casts needed.
-      } else if (auto *neg_integer = assignment.expr.as<NegativeInteger>()) {
-        int64_t value = neg_integer->value;
-        if (!storedTy.IsSigned()) {
-          type_mismatch_error = true;
-        } else {
-          auto min_max = getIntTypeRange(storedTy);
-          if (value < min_max.first) {
-            assignment.addError()
-                << "Type mismatch for " << var_ident << ": "
-                << "trying to assign value '" << neg_integer->value
-                << "' which does not fit into the variable of type '"
-                << storedTy << "'";
-          } else {
-            assignTy = storedTy;
-            auto *typeof = ctx_.make_node<Typeof>(
-                assignment.loc, CreateInteger(storedTy.GetSize() * 8, true));
-            assignment.expr = ctx_.make_node<Cast>(assignment.loc,
-                                                   typeof,
-                                                   assignment.expr);
-            visit(assignment.expr);
-          }
-        }
-      } else if (auto *integer = assignment.expr.as<Integer>()) {
-        uint64_t value = integer->value;
-        bool can_fit = false;
-        if (!storedTy.IsSigned()) {
-          auto min_max = getUIntTypeRange(storedTy);
-          can_fit = value <= min_max.second;
-        } else {
-          auto min_max = getIntTypeRange(storedTy);
-          can_fit = value <= static_cast<uint64_t>(min_max.second);
-        }
-        if (can_fit) {
-          assignTy = storedTy;
-          auto *typeof = ctx_.make_node<Typeof>(
-              assignment.loc,
-              CreateInteger(storedTy.GetSize() * 8, storedTy.IsSigned()));
-          assignment.expr = ctx_.make_node<Cast>(assignment.loc,
-                                                 typeof,
-                                                 assignment.expr);
-          visit(assignment.expr);
-        } else {
-          assignment.addError()
-              << "Type mismatch for " << var_ident << ": "
-              << "trying to assign value '"
-              << static_cast<uint64_t>(integer->value)
-              << "' which does not fit into the variable of type '" << storedTy
-              << "'";
-        }
-      } else if (storedTy.IsSigned() != assignTy.IsSigned()) {
+      auto updatedTy = update_int_type(assignTy, assignment.expr, storedTy);
+      if (!updatedTy ||
+          (!updatedTy->IsEqual(storedTy) && !foundVar.can_resize)) {
         type_mismatch_error = true;
       } else {
-        if (!assignTy.FitsInto(storedTy)) {
-          assignment.addError()
-              << "Integer size mismatch. Assignment type '" << assignTy
-              << "' is larger than the variable type '" << storedTy << "'.";
-        }
+        storedTy = *updatedTy;
+        assignTy = *updatedTy;
       }
     } else if (assignTy.IsBufferTy()) {
       auto var_size = storedTy.GetSize();
@@ -3599,13 +3621,14 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                      : ". The value may contain garbage.");
       }
     } else if (assignTy.IsTupleTy()) {
-      update_string_size(storedTy, assignTy);
-      // Early passes may not have been able to deduce the full types of tuple
-      // elements yet. So wait until final pass.
-      if (is_final_pass()) {
-        if (!assignTy.FitsInto(storedTy)) {
-          type_mismatch_error = true;
-        }
+      auto updatedTy = update_tuple_type(storedTy,
+                                         assignTy,
+                                         foundVar.can_resize);
+      if (!updatedTy) {
+        type_mismatch_error = true;
+      } else {
+        storedTy = *updatedTy;
+        assignTy = *updatedTy;
       }
     }
     if (type_mismatch_error) {
@@ -3622,6 +3645,9 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         // which could come from a variable declaration. The assign type may
         // resolve builtins like `curtask` which also specifies the address
         // space.
+        if (assignTy.GetSize() < storedTy.GetSize()) {
+          assignTy.SetSize(storedTy.GetSize());
+        }
         foundVar.type = assignTy;
         foundVar.was_assigned = true;
       }
@@ -3851,7 +3877,7 @@ bool SemanticAnalyser::is_first_pass() const
   return pass_tracker_.get_num_passes() == 1;
 }
 
-bool SemanticAnalyser::check_arg(const Call &call,
+bool SemanticAnalyser::check_arg(Call &call,
                                  size_t index,
                                  const arg_type_spec &spec)
 {
@@ -3861,7 +3887,7 @@ bool SemanticAnalyser::check_arg(const Call &call,
   return check_arg(call, spec.type, index, spec.literal);
 }
 
-bool SemanticAnalyser::check_arg(const Call &call,
+bool SemanticAnalyser::check_arg(Call &call,
                                  size_t index,
                                  const map_type_spec &spec)
 {
@@ -3869,6 +3895,33 @@ bool SemanticAnalyser::check_arg(const Call &call,
     if (spec.type) {
       SizedType type = spec.type(call);
       assign_map_type(*map, type, &call);
+      if (type.IsMinTy() || type.IsMaxTy() || type.IsAvgTy() ||
+          type.IsSumTy() || type.IsStatsTy()) {
+        // N.B. this keeps track of the integers passed to these map
+        // aggregation calls to ensure they are compatible
+        // (similar to the logic in update_int_type)
+        const auto &assignTy = call.vargs.at(2).type();
+        auto found = agg_map_val_.find(map->ident);
+        if (found != agg_map_val_.end()) {
+          auto &storedTy = found->second;
+          if (assignTy.IsSigned() != storedTy.IsSigned()) {
+            auto updatedTy = get_promoted_int(storedTy, assignTy);
+            if (!updatedTy) {
+              call.addError() << "Type mismatch for " << map->ident << ": "
+                              << "trying to assign value of type '" << assignTy
+                              << "' when map already contains a value of type '"
+                              << storedTy << "'";
+            } else {
+              storedTy.SetSize(updatedTy->GetSize());
+              storedTy.SetSign(true);
+            }
+          } else {
+            storedTy.SetSize(std::max(assignTy.GetSize(), storedTy.GetSize()));
+          }
+        } else {
+          agg_map_val_[map->ident] = assignTy;
+        }
+      }
     }
     if (is_final_pass() && map->type().IsNoneTy()) {
       map->addError() << "Undefined map: " + map->ident;
@@ -3880,7 +3933,7 @@ bool SemanticAnalyser::check_arg(const Call &call,
   return false;
 }
 
-bool SemanticAnalyser::check_arg(const Call &call,
+bool SemanticAnalyser::check_arg(Call &call,
                                  size_t index,
                                  const map_key_spec &spec)
 {
@@ -3894,7 +3947,7 @@ bool SemanticAnalyser::check_arg(const Call &call,
   }
 }
 
-bool SemanticAnalyser::check_call(const Call &call)
+bool SemanticAnalyser::check_call(Call &call)
 {
   auto spec = CALL_SPEC.find(call.func);
   if (spec == CALL_SPEC.end()) {
@@ -3920,7 +3973,7 @@ bool SemanticAnalyser::check_call(const Call &call)
 
   for (size_t i = 0; i < spec->second.arg_types.size() && i < call.vargs.size();
        ++i) {
-    std::visit([&](const auto &v) { ret = ret && check_arg(call, i, v); },
+    std::visit([&](auto &v) { ret = ret && check_arg(call, i, v); },
                spec->second.arg_types.at(i));
   }
 
@@ -3997,7 +4050,7 @@ bool SemanticAnalyser::check_varargs(const Call &call,
 // This function does not check that the function has the correct number of
 // arguments. Either check_nargs() or check_varargs() should be called first
 // to validate this.
-bool SemanticAnalyser::check_arg(const Call &call,
+bool SemanticAnalyser::check_arg(Call &call,
                                  Type type,
                                  size_t index,
                                  bool want_literal)
@@ -4080,62 +4133,60 @@ void SemanticAnalyser::assign_map_type(Map &map,
 
   auto *maptype = get_map_type(map);
   if (maptype) {
-    if (maptype->IsNoneTy()) {
+    auto storedTy = *maptype;
+    bool type_mismatch_error = false;
+    if (storedTy.IsNoneTy()) {
       pass_tracker_.inc_num_unresolved();
       if (is_final_pass())
         map.addError() << "Undefined map: " + map_ident;
       else
-        *maptype = type;
-    } else if (maptype->GetTy() != type.GetTy()) {
+        storedTy = type;
+    } else if (storedTy.IsPtrTy() && type.IsIntegerTy()) {
+      // OK
+    } else if (storedTy.GetTy() != type.GetTy()) {
+      type_mismatch_error = true;
+    } else if (storedTy.IsIntegerTy()) {
+      if (!assignment) {
+        storedTy = type;
+      } else {
+        auto updatedTy = update_int_type(type, assignment->expr, storedTy);
+        if (!updatedTy) {
+          type_mismatch_error = true;
+        } else {
+          storedTy = *updatedTy;
+        }
+      }
+    } else if (storedTy.IsStringTy()) {
+      storedTy.SetSize(std::max(storedTy.GetSize(), type.GetSize()));
+    } else if (storedTy.IsTupleTy()) {
+      if (!storedTy.IsSameType(type)) {
+        type_mismatch_error = true;
+      } else {
+        auto updatedTy = update_tuple_type(storedTy, type, true);
+        if (!updatedTy) {
+          type_mismatch_error = true;
+        } else {
+          storedTy = *updatedTy;
+        }
+      }
+    } else if (type.IsMinTy() || type.IsMaxTy() || type.IsAvgTy() ||
+               type.IsSumTy() || type.IsStatsTy()) {
+      if (storedTy.IsSigned() != type.IsSigned()) {
+        storedTy.SetSign(true);
+      }
+    }
+    if (type_mismatch_error) {
       loc_node->addError() << "Type mismatch for " << map_ident << ": "
                            << "trying to assign value of type '" << type
                            << "' when map already contains a value of type '"
-                           << *maptype << "'";
-    } else if (maptype->IsSumTy() || maptype->IsMinTy() || maptype->IsMaxTy() ||
-               maptype->IsAvgTy() || maptype->IsStatsTy()) {
-      if (maptype->IsSigned() != type.IsSigned()) {
-        loc_node->addError() << "Type mismatch for " << map_ident << ": "
-                             << "trying to assign value of type '" << type
-                             << "' when map already contains a value of type '"
-                             << *maptype << "'";
-      }
-    } else if (maptype->IsIntegerTy() && !maptype->IsEqual(type)) {
-      auto *integer = assignment ? assignment->expr.as<Integer>() : nullptr;
-      if (integer) {
-        uint64_t value = integer->value;
-        bool can_fit = false;
-        if (!maptype->IsSigned()) {
-          auto min_max = getUIntTypeRange(*maptype);
-          can_fit = value <= min_max.second;
-        } else {
-          auto min_max = getIntTypeRange(*maptype);
-          can_fit = value <= static_cast<uint64_t>(min_max.second);
-        }
-        if (!can_fit) {
-          loc_node->addError() << "Type mismatch for " << map_ident << ": "
-                               << "trying to assign value '"
-                               << static_cast<uint64_t>(integer->value)
-                               << "' which does not fit into the map of type '"
-                               << *maptype << "'";
-        }
-      } else if (maptype->IsSigned() != type.IsSigned()) {
-        loc_node->addError() << "Type mismatch for " << map_ident << ": "
-                             << "trying to assign value of type '" << type
-                             << "' when map already contains a value of type '"
-                             << *maptype << "'";
-      }
-    } else if (maptype->IsStringTy() || maptype->IsTupleTy()) {
-      update_string_size(*maptype, type);
+                           << storedTy << "'";
+    } else {
+      map.value_type = storedTy;
+      *maptype = storedTy;
     }
-    map.value_type = *maptype;
   } else {
     // This map hasn't been seen before.
     map_val_.insert({ map_ident, type });
-    if (map_val_[map_ident].IsIntTy()) {
-      // Store all integer values as 64-bit in maps, so that there will
-      // be space for any integer to be assigned to the map later.
-      map_val_[map_ident].SetSize(8);
-    }
     map.value_type = map_val_[map_ident];
   }
 }
@@ -4151,141 +4202,187 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
       elements.push_back(std::move(keytype));
     }
     new_key_type = CreateTuple(Struct::CreateTuple(elements));
-  } else if (expr_type.IsIntegerTy()) {
-    // Store all integer values as 64-bit in map keys, so that there will
-    // be space for any integer in the map key later
-    // This should have a better solution.
-    new_key_type.SetSign(expr_type.IsSigned());
-    new_key_type.SetIntBitWidth(64);
   }
 
-  validate_map_key(new_key_type, node);
+  if (new_key_type.IsPtrTy() && new_key_type.IsCtxAccess()) {
+    // map functions only accepts a pointer to a element in the stack
+    node.addError() << "context cannot be part of a map key";
+  }
+
+  if (new_key_type.IsHistTy() || new_key_type.IsLhistTy() ||
+      new_key_type.IsStatsTy() || new_key_type.IsTSeriesTy()) {
+    node.addError() << new_key_type << " cannot be part of a map key";
+  }
+
+  if (is_final_pass() && new_key_type.IsNoneTy()) {
+    node.addError() << "Invalid map key type: " << new_key_type;
+  }
+
   return new_key_type;
 }
 
-void SemanticAnalyser::update_current_key(SizedType &current_key_type,
-                                          const SizedType &new_key_type)
+std::optional<SizedType> SemanticAnalyser::get_promoted_int(
+    const SizedType &leftTy,
+    const SizedType &rightTy)
 {
-  if (current_key_type.IsSameType(new_key_type) &&
-      (current_key_type.IsStringTy() || current_key_type.IsTupleTy())) {
-    update_string_size(current_key_type, new_key_type);
+  bool leftSigned = leftTy.IsSigned();
+  auto leftSize = leftTy.GetSize();
+  auto rightSize = rightTy.GetSize();
+
+  if (leftSigned && leftSize > rightSize) {
+    return leftTy;
+  } else if (!leftSigned && leftSize < rightSize) {
+    return rightTy;
+  } else {
+    size_t new_size = std::max(leftSize, rightSize) * 2;
+    if (new_size > 8) {
+      return std::nullopt;
+    } else {
+      return CreateInteger(new_size * 8, true);
+    }
   }
 }
 
-void SemanticAnalyser::validate_new_key(const SizedType &current_key_type,
-                                        const SizedType &new_key_type,
-                                        const std::string &map_ident,
-                                        const Expression &key_expr)
+// The leftExpr is optional because in cases of variable assignment,
+// and map key/value adjustment we can't modify/cast the left
+// but in cases of binops or if expressions we can modify/cast both
+// the left and the right expressions
+std::optional<SizedType> SemanticAnalyser::update_int_type(
+    const SizedType &rightTy,
+    Expression &rightExpr,
+    const SizedType &leftTy,
+    std::optional<std::reference_wrapper<Expression>> leftExpr)
 {
-  // Map keys can get resized/updated across multiple passes
-  // wait till the end to log an error if there is a key mismatch.
-  if (!is_final_pass()) {
-    return;
-  }
+  assert(leftTy.IsIntegerTy() && rightTy.IsIntegerTy());
 
-  bool valid = true;
-  if (current_key_type.IsSameType(new_key_type)) {
-    if (current_key_type.IsTupleTy() || current_key_type.IsStringTy()) {
-      // This should always be true as map integer keys default to 64 bits
-      // and strings get resized (this happens recursively into tuples as
-      // well) but keep this here just in case we add larger ints and need to
-      // update the map int logic
-      if (!new_key_type.FitsInto(current_key_type)) {
-        valid = false;
+  bool leftSigned = leftTy.IsSigned();
+  auto leftSize = leftTy.GetSize();
+  auto rightSize = rightTy.GetSize();
+
+  if (leftTy.IsEqual(rightTy)) {
+    return leftTy;
+  } else if (leftSigned != rightTy.IsSigned()) {
+    if (rightExpr.is<Integer>()) {
+      auto updatedTy = ast::get_signed_integer_type(
+          rightExpr.as<Integer>()->value);
+      if (!updatedTy) {
+        return std::nullopt;
       }
-    } else if (!current_key_type.IsEqual(new_key_type)) {
-      if (current_key_type.IsIntegerTy()) {
-        auto *integer = key_expr.as<Integer>();
-        if (integer) {
-          uint64_t value = integer->value;
-          bool can_fit = false;
-          if (current_key_type.IsSigned()) {
-            auto min_max = getIntTypeRange(current_key_type);
-            can_fit = value <= static_cast<uint64_t>(min_max.second);
-          } else {
-            auto min_max = getUIntTypeRange(current_key_type);
-            can_fit = value <= min_max.second;
-          }
-          if (!can_fit) {
-            key_expr.node().addError()
-                << "Argument mismatch for " << map_ident << ": "
-                << "trying to access with argument '"
-                << static_cast<uint64_t>(integer->value)
-                << "' which does not fit into the map of key type '"
-                << current_key_type << "'";
-          }
-        } else if (current_key_type.IsSigned() != new_key_type.IsSigned()) {
-          valid = false;
-        }
-      } else {
-        valid = false;
+
+      if (updatedTy->GetSize() <= leftSize) {
+        create_int_cast(rightExpr, leftTy);
+        return leftTy;
       }
+      create_int_cast(rightExpr, *updatedTy);
+      if (leftExpr) {
+        create_int_cast(leftExpr->get(), *updatedTy);
+      }
+      return *updatedTy;
+    } else if (leftExpr && leftExpr->get().is<Integer>()) {
+      auto updatedTy = ast::get_signed_integer_type(
+          leftExpr->get().as<Integer>()->value);
+      if (!updatedTy) {
+        return std::nullopt;
+      }
+
+      if (updatedTy->GetSize() <= rightSize) {
+        create_int_cast(leftExpr->get(), rightTy);
+        return rightTy;
+      }
+      create_int_cast(leftExpr->get(), *updatedTy);
+      create_int_cast(rightExpr, *updatedTy);
+      return *updatedTy;
+    } else {
+      auto updatedTy = get_promoted_int(leftTy, rightTy);
+      if (!updatedTy) {
+        return std::nullopt;
+      }
+      if (*updatedTy != leftTy && leftExpr) {
+        create_int_cast(leftExpr->get(), *updatedTy);
+      }
+      if (*updatedTy != rightTy) {
+        create_int_cast(rightExpr, *updatedTy);
+      }
+      return *updatedTy;
     }
   } else {
-    valid = false;
-  }
-
-  if (valid) {
-    return;
-  }
-
-  if (current_key_type.IsNoneTy()) {
-    key_expr.node().addError()
-        << "Argument mismatch for " << map_ident << ": "
-        << "trying to access with arguments: '" << new_key_type
-        << "' when map expects no arguments";
-  } else {
-    key_expr.node().addError()
-        << "Argument mismatch for " << map_ident << ": "
-        << "trying to access with arguments: '" << new_key_type
-        << "' when map expects arguments: '" << current_key_type << "'";
+    // Same sign but different size
+    if (rightSize < leftSize) {
+      create_int_cast(rightExpr, leftTy);
+      return leftTy;
+    } else {
+      if (leftExpr) {
+        create_int_cast(leftExpr->get(), rightTy);
+      }
+      return rightTy;
+    }
   }
 }
 
-bool SemanticAnalyser::update_string_size(SizedType &type,
-                                          const SizedType &new_type)
+std::optional<SizedType> SemanticAnalyser::update_tuple_type(
+    const SizedType &storedTy,
+    const SizedType &assignTy,
+    bool can_resize)
 {
-  if (type.IsStringTy() && new_type.IsStringTy() &&
-      type.GetSize() != new_type.GetSize()) {
-    type.SetSize(std::max(type.GetSize(), new_type.GetSize()));
-    return true;
-  }
-
-  if (type.IsTupleTy() && new_type.IsTupleTy() &&
-      type.GetFieldCount() == new_type.GetFieldCount()) {
-    bool updated = false;
-    std::vector<SizedType> new_elems;
-    for (ssize_t i = 0; i < type.GetFieldCount(); i++) {
-      if (update_string_size(type.GetField(i).type, new_type.GetField(i).type))
-        updated = true;
-      new_elems.push_back(type.GetField(i).type);
-    }
-    if (updated) {
-      type = CreateTuple(Struct::CreateTuple(new_elems));
-    }
-    return updated;
-  }
-
-  return false;
-}
-
-SizedType SemanticAnalyser::create_merged_tuple(const SizedType &left,
-                                                const SizedType &right)
-{
-  assert(left.IsTupleTy() && right.IsTupleTy() &&
-         (left.GetFieldCount() == right.GetFieldCount()));
+  assert(storedTy.IsTupleTy() && storedTy.IsSameType(assignTy));
 
   std::vector<SizedType> new_elems;
-  for (ssize_t i = 0; i < left.GetFieldCount(); i++) {
-    const auto &leftTy = left.GetField(i).type;
-    const auto &rightTy = right.GetField(i).type;
+  for (ssize_t i = 0; i < assignTy.GetFieldCount(); i++) {
+    auto storedElemTy = storedTy.GetField(i).type;
+    auto assignElemTy = assignTy.GetField(i).type;
+    if (storedElemTy.IsIntegerTy()) {
+      if (storedElemTy.IsEqual(assignElemTy)) {
+        new_elems.push_back(storedElemTy);
+        continue;
+      }
 
-    assert(leftTy.GetTy() == rightTy.GetTy());
-    if (leftTy.IsTupleTy()) {
-      new_elems.push_back(create_merged_tuple(leftTy, rightTy));
+      // Different sign (maybe different size)
+      if (storedElemTy.IsSigned() != assignElemTy.IsSigned()) {
+        if ((assignElemTy.GetSize() == 8 && !assignElemTy.IsSigned()) ||
+            (assignElemTy.GetSize() >= storedElemTy.GetSize() && !can_resize)) {
+          return std::nullopt;
+        }
+
+        if (!assignElemTy.IsSigned() &&
+            assignElemTy.GetSize() < storedElemTy.GetSize()) {
+          new_elems.emplace_back(storedElemTy);
+          continue;
+        }
+
+        size_t new_size = assignElemTy.GetSize() == storedElemTy.GetSize()
+                              ? (assignElemTy.GetSize() * 2)
+                              : std::max(storedElemTy.GetSize(),
+                                         assignElemTy.GetSize());
+        new_elems.emplace_back(CreateInteger(new_size * 8, true));
+        continue;
+      }
+
+      // Same sign but different size
+      if (assignElemTy.GetSize() >= storedElemTy.GetSize()) {
+        if (can_resize) {
+          new_elems.emplace_back(assignElemTy);
+          continue;
+        }
+        return std::nullopt;
+      } else {
+        new_elems.emplace_back(storedElemTy);
+        continue;
+      }
+    } else if (storedElemTy.IsTupleTy()) {
+      auto new_elem = update_tuple_type(storedElemTy, assignElemTy, can_resize);
+      if (!new_elem) {
+        return std::nullopt;
+      } else {
+        new_elems.emplace_back(*new_elem);
+        continue;
+      }
+    } else if (storedElemTy.IsStringTy() &&
+               storedElemTy.GetSize() != assignElemTy.GetSize()) {
+      storedElemTy.SetSize(
+          std::max(storedElemTy.GetSize(), assignElemTy.GetSize()));
+      new_elems.emplace_back(storedElemTy);
     } else {
-      new_elems.push_back(leftTy.GetSize() > rightTy.GetSize() ? leftTy
-                                                               : rightTy);
+      new_elems.emplace_back(storedElemTy);
     }
   }
   return CreateTuple(Struct::CreateTuple(new_elems));

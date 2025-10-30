@@ -5,8 +5,8 @@ target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
 %"struct map_internal_repr_t.163" = type { ptr, ptr }
-%"int64_string[13]__tuple_t" = type { i64, [13 x i8] }
-%"int64_string[3]__tuple_t" = type { i64, [3 x i8] }
+%"uint8_string[13]__tuple_t" = type { i8, [13 x i8] }
+%"uint8_string[3]__tuple_t" = type { i8, [3 x i8] }
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_a = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
@@ -23,36 +23,37 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @kprobe_f_1(ptr %0) #0 section "s_kprobe_f_1" !dbg !54 {
 entry:
   %"@a_key2" = alloca i64, align 8
-  %tuple1 = alloca %"int64_string[13]__tuple_t", align 8
-  %"@a_val" = alloca %"int64_string[13]__tuple_t", align 8
+  %tuple1 = alloca %"uint8_string[13]__tuple_t", align 8
+  %"@a_val" = alloca %"uint8_string[13]__tuple_t", align 8
   %"@a_key" = alloca i64, align 8
-  %tuple = alloca %"int64_string[3]__tuple_t", align 8
+  %tuple = alloca %"uint8_string[3]__tuple_t", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 16, i1 false)
-  %1 = getelementptr %"int64_string[3]__tuple_t", ptr %tuple, i32 0, i32 0
-  store i64 1, ptr %1, align 8
-  %2 = getelementptr %"int64_string[3]__tuple_t", ptr %tuple, i32 0, i32 1
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple, i8 0, i64 4, i1 false)
+  %1 = getelementptr %"uint8_string[3]__tuple_t", ptr %tuple, i32 0, i32 0
+  store i8 1, ptr %1, align 1
+  %2 = getelementptr %"uint8_string[3]__tuple_t", ptr %tuple, i32 0, i32 1
   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %2, ptr align 1 @hi, i64 3, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_key")
   store i64 0, ptr %"@a_key", align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_val")
-  call void @llvm.memset.p0.i64(ptr align 1 %"@a_val", i8 0, i64 24, i1 false)
-  %3 = getelementptr [16 x i8], ptr %tuple, i64 0, i64 0
-  %4 = getelementptr %"int64_string[13]__tuple_t", ptr %"@a_val", i32 0, i32 0
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %4, ptr align 1 %3, i64 8, i1 false)
-  %5 = getelementptr [16 x i8], ptr %tuple, i64 0, i64 8
-  %6 = getelementptr %"int64_string[13]__tuple_t", ptr %"@a_val", i32 0, i32 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %6, ptr align 1 %5, i64 3, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %"@a_val", i8 0, i64 14, i1 false)
+  %3 = getelementptr [4 x i8], ptr %tuple, i64 0, i64 0
+  %4 = getelementptr %"uint8_string[13]__tuple_t", ptr %"@a_val", i32 0, i32 0
+  %5 = load i8, ptr %3, align 1
+  store i8 %5, ptr %4, align 1
+  %6 = getelementptr [4 x i8], ptr %tuple, i64 0, i64 1
+  %7 = getelementptr %"uint8_string[13]__tuple_t", ptr %"@a_val", i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %7, ptr align 1 %6, i64 3, i1 false)
   %update_elem = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key", ptr %"@a_val", i64 0)
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_val")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@a_key")
   call void @llvm.lifetime.end.p0(i64 -1, ptr %tuple)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %tuple1)
-  call void @llvm.memset.p0.i64(ptr align 1 %tuple1, i8 0, i64 24, i1 false)
-  %7 = getelementptr %"int64_string[13]__tuple_t", ptr %tuple1, i32 0, i32 0
-  store i64 1, ptr %7, align 8
-  %8 = getelementptr %"int64_string[13]__tuple_t", ptr %tuple1, i32 0, i32 1
-  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %8, ptr align 1 @hellolongstr, i64 13, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 1 %tuple1, i8 0, i64 14, i1 false)
+  %8 = getelementptr %"uint8_string[13]__tuple_t", ptr %tuple1, i32 0, i32 0
+  store i8 1, ptr %8, align 1
+  %9 = getelementptr %"uint8_string[13]__tuple_t", ptr %tuple1, i32 0, i32 1
+  call void @llvm.memcpy.p0.p0.i64(ptr align 1 %9, ptr align 1 @hellolongstr, i64 13, i1 false)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@a_key2")
   store i64 0, ptr %"@a_key2", align 8
   %update_elem3 = call i64 inttoptr (i64 2 to ptr)(ptr @AT_a, ptr %"@a_key2", ptr %tuple1, i64 0)
@@ -104,10 +105,10 @@ attributes #3 = { nocallback nofree nounwind willreturn memory(argmem: readwrite
 !20 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
 !21 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !22, size: 64, offset: 192)
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !23, size: 64)
-!23 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 192, elements: !24)
+!23 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 112, elements: !24)
 !24 = !{!25, !26}
-!25 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !20, size: 64)
-!26 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !27, size: 104, offset: 64)
+!25 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !4, size: 8)
+!26 = !DIDerivedType(tag: DW_TAG_member, scope: !2, file: !2, baseType: !27, size: 104, offset: 8)
 !27 = !DICompositeType(tag: DW_TAG_array_type, baseType: !4, size: 104, elements: !28)
 !28 = !{!29}
 !29 = !DISubrange(count: 13, lowerBound: 0)

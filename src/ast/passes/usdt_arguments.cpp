@@ -26,8 +26,10 @@ public:
   }
   ast::AssignVarStatement *var_decl(size_t arg, Node &node)
   {
+    // The USDT arg function expects an long int type
     auto *int_arg = ast_.make_node<ast::Integer>(node.loc,
-                                                 static_cast<uint64_t>(arg));
+                                                 static_cast<uint64_t>(arg),
+                                                 CreateInt64());
     std::vector<Expression> args = { int_arg };
     Expression expr = ast_.make_node<ast::Call>(node.loc,
                                                 "usdt_arg",

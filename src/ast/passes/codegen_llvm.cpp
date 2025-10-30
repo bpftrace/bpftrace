@@ -333,6 +333,9 @@ private:
   void createRet(Value *value = nullptr);
   int getReturnValueForProbe(ProbeType probe_type);
 
+  template <typename T>
+  ScopedExpr getIntegerLiteral(size_t size, T value);
+
   // Every time we see a watchpoint that specifies a function + arg pair, we
   // generate a special "setup" probe that:
   //
@@ -514,14 +517,32 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
       debug_.createGlobalVariable(LICENSE, CreateString(license_size)));
 }
 
+template <typename T>
+ScopedExpr CodegenLLVM::getIntegerLiteral(size_t size, T value)
+{
+  switch (size) {
+    case 1:
+      return ScopedExpr(b_.getInt8(value));
+    case 2:
+      return ScopedExpr(b_.getInt16(value));
+    case 4:
+      return ScopedExpr(b_.getInt32(value));
+    case 8:
+      return ScopedExpr(b_.getInt64(value));
+    default:
+      LOG(BUG) << "Unsupported integer size: " << size;
+  }
+  __builtin_unreachable();
+}
+
 ScopedExpr CodegenLLVM::visit(Integer &integer)
 {
-  return ScopedExpr(b_.getInt64(integer.value));
+  return getIntegerLiteral(integer.type().GetSize(), integer.value);
 }
 
 ScopedExpr CodegenLLVM::visit(NegativeInteger &integer)
 {
-  return ScopedExpr(b_.getInt64(integer.value));
+  return getIntegerLiteral(integer.type().GetSize(), integer.value);
 }
 
 ScopedExpr CodegenLLVM::visit(Boolean &boolean)
@@ -838,7 +859,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     // promote int to 64-bit
     Value *cast = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.front().type().IsSigned());
+                                   map.value_type.IsSigned());
     b_.CreatePerCpuMapElemAdd(map, scoped_key.value(), cast, call.loc);
     return ScopedExpr();
 
@@ -852,7 +873,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.front().type().IsSigned());
+                                   map.value_type.IsSigned());
 
     llvm::Type *mm_struct_ty = b_.GetMapValueType(map.value_type);
 
@@ -917,7 +938,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     // promote int to 64-bit
     Value *expr = b_.CreateIntCast(scoped_expr.value(),
                                    b_.getInt64Ty(),
-                                   call.vargs.at(2).type().IsSigned());
+                                   map.value_type.IsSigned());
 
     llvm::Type *avg_struct_ty = b_.GetMapValueType(map.value_type);
 
@@ -2861,6 +2882,7 @@ void CodegenLLVM::createTupleCopy(const SizedType &expr_type,
   auto *tuple_ty = b_.GetType(var_type);
   for (size_t i = 0; i < expr_type.GetFields().size(); ++i) {
     SizedType &t_type = expr_type.GetField(i).type;
+    SizedType &v_type = var_type.GetField(i).type;
     Value *offset_val = b_.CreateGEP(
         array_ty,
         src_val,
@@ -2868,15 +2890,21 @@ void CodegenLLVM::createTupleCopy(const SizedType &expr_type,
     Value *dst = b_.CreateGEP(tuple_ty,
                               dst_val,
                               { b_.getInt32(0), b_.getInt32(i) });
-    if (t_type.IsTupleTy() && !t_type.IsSameSizeRecursive(var_type)) {
+    if (t_type.IsTupleTy() && !t_type.IsSameSizeRecursive(v_type)) {
       createTupleCopy(t_type, var_type.GetField(i).type, dst, offset_val);
-    } else if (t_type.IsIntTy() && t_type.GetSize() < 8) {
-      // Integers are always stored as 64-bit in map keys
-      b_.CreateStore(b_.CreateIntCast(b_.CreateLoad(b_.GetType(t_type),
-                                                    offset_val),
-                                      b_.getInt64Ty(),
-                                      t_type.IsSigned()),
-                     dst);
+    } else if (t_type.IsIntTy()) {
+      // TODO: tuple casting/resizing should happen in an earlier pass.
+      // However for now, it's possible ints need to be sized up
+      // when they exist inside tuples see (update_tuple_type).
+      if (t_type.GetSize() != v_type.GetSize()) {
+        b_.CreateStore(b_.CreateIntCast(b_.CreateLoad(b_.GetType(t_type),
+                                                      offset_val),
+                                        b_.GetType(v_type),
+                                        v_type.IsSigned()),
+                       dst);
+      } else {
+        b_.CreateStore(b_.CreateLoad(b_.GetType(t_type), offset_val), dst);
+      }
     } else {
       b_.CreateMemcpyBPF(dst, offset_val, t_type.GetSize());
     }
@@ -2945,10 +2973,6 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
           value, map_type, expr, assignment.loc, expr_type.GetAS());
     }
   } else {
-    if (assignment.map->type().IsIntTy()) {
-      // Integers are always stored as 64-bit in map values
-      expr = b_.CreateIntCast(expr, b_.getInt64Ty(), map_type.IsSigned());
-    }
     b_.CreateStore(expr, value);
   }
   b_.CreateMapUpdateElem(
@@ -3379,11 +3403,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
       // Call-ee freed
     }
   } else if (map.key_type.IsIntTy()) {
-    // Integers are always stored as 64-bit in map keys
-    b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
-                                    b_.getInt64Ty(),
-                                    key_type.IsSigned()),
-                   key);
+    b_.CreateStore(scoped_key_expr.value(), key);
   } else if (map.key_type.IsBoolTy()) {
     b_.CreateStore(
         b_.CreateIntCast(scoped_key_expr.value(), b_.getInt8Ty(), false), key);
@@ -3465,14 +3485,10 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
       if ((map_key_size % 8) != 0)
         aligned = false;
     } else {
-      // promote map key to 64-bit:
-      Value *key_elem = b_.CreateIntCast(scoped_expr.value(),
-                                         b_.getInt64Ty(),
-                                         key_expr.type().IsSigned());
       if (aligned)
-        b_.CreateStore(key_elem, offset_val);
+        b_.CreateStore(scoped_expr.value(), offset_val);
       else
-        b_.createAlignedStore(key_elem, offset_val, 1);
+        b_.createAlignedStore(scoped_expr.value(), offset_val, 1);
     }
   }
   offset += map_key_size;
