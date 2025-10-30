@@ -53,6 +53,8 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
+- output: prevent crash when printing overflow-only lhist
+  - [#4801](https://github.com/bpftrace/bpftrace/pull/4801)
 - join(): Fix wrong index of GEP that was causing truncation
   - [#4786](https://github.com/bpftrace/bpftrace/pull/4786)
 - Improved tuple binop comparison
