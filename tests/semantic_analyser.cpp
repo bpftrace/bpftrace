@@ -170,7 +170,6 @@ public:
                   .add(ast::CreateArgsResolverPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
-                  .add(ast::CreateArgsResolverPass({ ProbeType::tracepoint }))
                   .add(ast::CreateBuiltinsPass())
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateFoldLiteralsPass())

@@ -19,11 +19,6 @@ private:
   std::string detail_;
 };
 
-Pass CreateArgsResolverPass(std::vector<ProbeType>&& probe_types = {
-    ProbeType::fentry,
-    ProbeType::fexit,
-    ProbeType::rawtracepoint,
-    ProbeType::uprobe,
-});
+Pass CreateArgsResolverPass();
 
 } // namespace bpftrace::ast

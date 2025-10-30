@@ -54,10 +54,6 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateArgsResolverPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
-  // N.B. We need to run the clang parse pass before attempting to resolve
-  // the `args` for tracepoints but we need to resolve
-  // the `args` for other probe types before the clang parse pass
-  passes.emplace_back(CreateArgsResolverPass({ProbeType::tracepoint}));
   passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());
