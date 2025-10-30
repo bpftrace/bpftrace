@@ -264,6 +264,7 @@ private:
                               async_action::AsyncAction async_action);
 
   void createPrintMapCall(Call &call);
+  void createPrintEmptyCall(Call &call);
   void createPrintNonMapCall(Call &call);
   void createJoinCall(Call &call, int id);
 
@@ -1717,7 +1718,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr();
   } else if (call.func == "print") {
-    if (call.vargs.at(0).is<Map>()) {
+    if (call.vargs.empty()) {
+      createPrintEmptyCall(call);
+    } else if (call.vargs.at(0).is<Map>()) {
       createPrintMapCall(call);
     } else {
       createPrintNonMapCall(call);
@@ -4072,6 +4075,24 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
 
   b_.CreateBr(failure_callback);
   b_.SetInsertPoint(failure_callback);
+}
+
+void CodegenLLVM::createPrintEmptyCall(Call &call)
+{
+  auto elements = AsyncEvent::PrintEmpty().asLLVMType(b_);
+  StructType *print_struct = b_.GetStructType("print_t", elements, true);
+  Value *buf = b_.CreateGetFmtStringArgsAllocation(print_struct,
+                                                   "print_t",
+                                                   call.loc);
+
+  // Store asyncactionid:
+  b_.CreateStore(
+      b_.getInt64(static_cast<int64_t>(async_action::AsyncAction::print_empty)),
+      b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
+
+  b_.CreateOutput(buf, 0, call.loc);
+  if (dyn_cast<AllocaInst>(buf))
+    b_.CreateLifetimeEnd(buf);
 }
 
 void CodegenLLVM::createPrintNonMapCall(Call &call)

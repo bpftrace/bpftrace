@@ -13,6 +13,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
+#include "ast/passes/map_print.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/pid_filter_pass.h"
@@ -42,6 +43,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateImportExternalScriptsPass());
   passes.emplace_back(CreateUnstableFeaturePass());
   passes.emplace_back(CreateDeprecatedPass());
+  passes.emplace_back(CreateMapPrintPass());
   passes.emplace_back(CreateParseAttachpointsPass());
   passes.emplace_back(CreateCheckAttachpointsPass());
   passes.emplace_back(CreateUSDTImportPass());

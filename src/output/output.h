@@ -146,6 +146,7 @@ public:
 
   // Print an arbitrary value.
   virtual void value(const Value& value) = 0;
+  virtual void empty() = 0;
 
   // Specialized messages during execution.
   virtual void printf(const std::string& str,
@@ -155,7 +156,6 @@ public:
   virtual void cat(const std::string& cat) = 0;
   virtual void join(const std::string& join) = 0;
   virtual void syscall(const std::string& syscall) = 0;
-  virtual void end() = 0;
 
   // General events.
   virtual void lost_events(uint64_t lost) = 0;

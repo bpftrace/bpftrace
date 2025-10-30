@@ -31,6 +31,7 @@ add_library(ast STATIC
   passes/fold_literals.cpp
   passes/import_scripts.cpp
   passes/link.cpp
+  passes/map_print.cpp
   passes/map_sugar.cpp
   passes/macro_expansion.cpp
   passes/pid_filter_pass.cpp

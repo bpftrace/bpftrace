@@ -42,5 +42,5 @@ uprobe:./testprogs/struct_array:clear {
   printf("%d ", @w[0][4].t.b[1]);
 
   printf("-- ");
-  printf("%d ", @[$c->w]);
+  printf("%d\n", @[$c->w]);
 }

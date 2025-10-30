@@ -15,6 +15,7 @@ public:
   void value([[maybe_unused]] const Value &value) override
   {
   }
+  void empty() override {}
   void time([[maybe_unused]] const std::string &time) override
   {
   }
@@ -44,9 +45,6 @@ public:
       [[maybe_unused]] size_t index,
       [[maybe_unused]] std::chrono::nanoseconds average,
       [[maybe_unused]] size_t iters) override
-  {
-  }
-  void end() override
   {
   }
   void lost_events([[maybe_unused]] uint64_t lost) override

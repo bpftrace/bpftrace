@@ -17,6 +17,7 @@ public:
   {
     nested_.value(value);
   }
+  void empty() override { nested_.empty(); }
   void time(const std::string &time) override
   {
     nested_.time(time);
@@ -58,10 +59,6 @@ public:
                         size_t iters) override
   {
     nested_.benchmark_result(all_benches, index, average, iters);
-  }
-  void end() override
-  {
-    nested_.end();
   }
 
   // Increment our counters.

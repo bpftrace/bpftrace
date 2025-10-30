@@ -851,9 +851,6 @@ int BPFtrace::run(output::Output &out,
     LOG(WARNING) << "Total lost event count: " << total_lost_events;
   }
 
-  // Indicate that we are done the main loop.
-  out.end();
-
   // Print maps if needed (true by default).
   if (!err && !run_tests_ && !run_benchmarks_ && !dry_run &&
       config_->print_maps_on_exit) {
