@@ -3,6 +3,7 @@
 
 #include "ast/ast.h"
 #include "ast/context.h"
+#include "ast/tracepoint_helpers.h"
 #include "attached_probe.h"
 #include "log.h"
 #include "util/int_parser.h"
@@ -342,7 +343,10 @@ std::string AttachPoint::name() const
 
 std::string Probe::args_typename() const
 {
-  return "struct " + orig_name + "_" + attach_points.front()->func + "_args";
+  auto *ap = attach_points.front();
+  if (probetype(ap->provider) == ProbeType::tracepoint)
+    return get_tracepoint_struct_name(*ap);
+  return "struct " + orig_name + "_" + ap->func + "_args";
 }
 
 int Probe::index() const

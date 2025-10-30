@@ -76,7 +76,6 @@ static void test(BPFtrace &bpftrace,
                 .add(ast::CreateArgsResolverPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
-                .add(ast::CreateArgsResolverPass({ProbeType::tracepoint}))
                 .add(ast::CreateBuiltinsPass())
                 .add(ast::CreateCMacroExpansionPass())
                 .add(ast::CreateFoldLiteralsPass())

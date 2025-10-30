@@ -4,7 +4,6 @@
 
 #include "arch/arch.h"
 #include "ast/passes/args_resolver.h"
-#include "ast/passes/tracepoint_format_parser.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
@@ -28,12 +27,8 @@ class ArgsResolver : public Visitor<ArgsResolver> {
 public:
   explicit ArgsResolver(ASTContext &ast,
                         BPFtrace &bpftrace,
-                        ExpansionResult &ap_expansions,
-                        std::vector<ProbeType> probe_types)
-      : ast_(ast),
-        bpftrace_(bpftrace),
-        ap_expansions_(ap_expansions),
-        probe_types_(std::move(probe_types))
+                        ExpansionResult &ap_expansions)
+      : ast_(ast), bpftrace_(bpftrace), ap_expansions_(ap_expansions)
   {
   }
 
@@ -48,7 +43,6 @@ private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
   ExpansionResult &ap_expansions_;
-  std::vector<ProbeType> probe_types_;
   Probe *probe_ = nullptr;
 };
 
@@ -72,13 +66,6 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
           ap.func, probe_type == ProbeType::fexit, true, false);
     case ProbeType::rawtracepoint:
       return bpftrace_.btf_->resolve_raw_tracepoint_args(ap.func);
-    case ProbeType::tracepoint: {
-      auto struct_name = TracepointFormatParser::get_struct_name(ap);
-      auto args = bpftrace_.structs.Lookup(struct_name).lock();
-      if (!args)
-        return make_error<ast::ArgParseError>(ap.name(), "args not found");
-      return args;
-    }
     case ProbeType::uprobe: {
       Dwarf *dwarf = bpftrace_.get_dwarf(ap.target);
       if (dwarf) {
@@ -96,20 +83,14 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
                                                 ap.target);
     }
     default:
-      return make_error<ast::ArgParseError>(
-          ap.name(),
-          "args builtin is not supported for probe type \"" + ap.provider +
-              "\"");
+      return nullptr;
   }
 }
 
 void ArgsResolver::resolve_args(Probe &probe)
 {
-  auto probe_type = probe.get_probetype();
-  if (probe.attach_points.empty() ||
-      std::ranges::find(probe_types_, probe_type) == probe_types_.end()) {
+  if (probe.attach_points.empty())
     return;
-  }
 
   // Everything should be expanded by now
   assert(probe.attach_points.size() == 1);
@@ -122,7 +103,8 @@ void ArgsResolver::resolve_args(Probe &probe)
     return;
   }
 
-  bpftrace_.structs.Add(probe.args_typename(), std::move(*probe_args));
+  if (*probe_args)
+    bpftrace_.structs.Add(probe.args_typename(), std::move(*probe_args));
 }
 
 void ArgsResolver::visit(Probe &probe)
@@ -131,12 +113,10 @@ void ArgsResolver::visit(Probe &probe)
   visit(probe.block);
 }
 
-Pass CreateArgsResolverPass(std::vector<ProbeType> &&probe_types)
+Pass CreateArgsResolverPass()
 {
-  auto fn = [pt = std::move(probe_types)](ASTContext &ast,
-                                          BPFtrace &b,
-                                          ExpansionResult &ap_expansions) {
-    ArgsResolver resolver(ast, b, ap_expansions, pt);
+  auto fn = [](ASTContext &ast, BPFtrace &b, ExpansionResult &ap_expansions) {
+    ArgsResolver resolver(ast, b, ap_expansions);
     resolver.visit(ast.root);
   };
 
