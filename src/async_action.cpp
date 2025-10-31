@@ -239,7 +239,12 @@ void AsyncHandlers::syscall(const OpaqueValue &data)
     LOG(BUG) << "Error processing syscall arguments: " << vals.takeError();
   }
 
-  auto result = util::exec_system(fmt.format(*vals).c_str());
+  // Always execute via a shell, if available.
+  std::vector<std::string> system_args;
+  system_args.emplace_back("sh");
+  system_args.emplace_back("-c");
+  system_args.emplace_back(fmt.format(*vals));
+  auto result = util::exec_system(system_args);
   if (!result) {
     LOG(ERROR) << "Error executing program: " << result.takeError();
     return;

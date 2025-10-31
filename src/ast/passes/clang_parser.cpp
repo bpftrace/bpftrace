@@ -832,9 +832,14 @@ std::string ClangParser::get_arch_include_path()
 
 static void query_clang_include_dirs(std::vector<std::string> &result)
 {
-  auto clang = "clang-" + std::to_string(LLVM_VERSION_MAJOR);
-  auto cmd = clang + " -Wp,-v -x c -fsyntax-only /dev/null 2>&1";
-  auto check = util::exec_system(cmd.c_str());
+  std::vector<std::string> args;
+  args.emplace_back("clang-" + std::to_string(LLVM_VERSION_MAJOR));
+  args.emplace_back("-Wp,-v");
+  args.emplace_back("-x");
+  args.emplace_back("c");
+  args.emplace_back("-fsyntax-only");
+  args.emplace_back("/dev/null");
+  auto check = util::exec_system(args);
   if (!check) {
     // Exec failed, ignore and move on.
     return;
