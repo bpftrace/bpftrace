@@ -1,12 +1,18 @@
 # Contributing
 
-Contributions are welcome! Please see the [development section](#development) below for more information. For new bpftrace tools, please add them to the new [user-tools repository](https://github.com/bpftrace/user-tools/blob/master/CONTRIBUTING.md). The tools that exist in this repository are a small collection curated by the bpftrace maintainers.
+Contributions are welcome! Please see the [development section](#development) below for more information.
 
 * Bug reports and feature requests: [Issue Tracker](https://github.com/bpftrace/bpftrace/issues)
-
 * Development IRC: #bpftrace at irc.oftc.net
-
 * [Good first issues](https://github.com/bpftrace/bpftrace/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
+
+## Contributing Tools
+
+We encourage everyone to write and share bpftrace tools! Feel free to write your own tools and host them wherever you like.
+
+For tools that you'd like to share with the community, you may also submit them to the [user-tools repository](https://github.com/bpftrace/user-tools/blob/master/CONTRIBUTING.md). This repository serves as a community hub.
+
+The tools in this main bpftrace repository are a small collection of examples curated by the maintainers. These have been battle-tested in production and are packaged with bpftrace. They also serve for testing and validation purposes.
 
 ## Development
 
