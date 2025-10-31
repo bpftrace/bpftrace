@@ -12,7 +12,7 @@ Result<std::string> get_pid_exe(const std::string &pid);
 Result<std::string> get_proc_maps(const std::string &pid);
 Result<std::string> get_proc_maps(pid_t pid);
 
-Result<std::string> exec_system(const char *cmd);
+Result<std::string> exec_system(const std::vector<std::string> &args);
 
 Result<std::vector<std::string>> get_mapped_paths_for_pid(pid_t pid);
 Result<std::vector<std::string>> get_mapped_paths_for_running_pids();
