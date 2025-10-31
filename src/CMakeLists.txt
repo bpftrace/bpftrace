@@ -89,6 +89,7 @@ add_custom_target(version_h
     -Dbpftrace_SOURCE_DIR=${CMAKE_SOURCE_DIR}
     -P ${CMAKE_SOURCE_DIR}/cmake/Version.cmake
 )
+add_dependencies(runtime version_h)
 add_dependencies(bpftrace version_h)
 add_dependencies(libbpftrace version_h)
 
