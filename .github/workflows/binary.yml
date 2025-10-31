@@ -9,7 +9,9 @@ on:
   push:
     branches:
       - master
+      - 'release/**'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build-and-upload:
@@ -39,7 +41,7 @@ jobs:
         cp ./result bpftrace
 
     - name: Upload appimage
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.event_name != 'pull_request'
       uses: actions/upload-artifact@v4
       with:
         name: bpftrace-${{ runner.arch }}
