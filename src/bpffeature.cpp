@@ -397,6 +397,7 @@ bool BPFfeature::has_kprobe_session()
     return *has_kprobe_session_;
   }
 
+#ifdef BPF_TRACE_KPROBE_SESSION
   const char* sym = "ksys_read";
 
   DECLARE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
@@ -409,6 +410,9 @@ bool BPFfeature::has_kprobe_session()
                                         link_opts,
                                         std::nullopt);
   return *has_kprobe_session_;
+#else
+  return false;
+#endif
 }
 
 bool BPFfeature::has_uprobe_multi()
