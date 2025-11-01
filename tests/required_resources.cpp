@@ -123,7 +123,7 @@ TEST(required_resources, round_trip_probes)
     p.type = ProbeType::hardware;
     p.path = "mypath";
     p.index = 3;
-    r.special_probes["test"] = std::move(p);
+    r.begin_probes.emplace_back(std::move(p));
 
     r.save_state(serialized);
   }
@@ -133,8 +133,8 @@ TEST(required_resources, round_trip_probes)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.special_probes.size(), 1UL);
-    auto &probe = r.special_probes["test"];
+    ASSERT_EQ(r.begin_probes.size(), 1UL);
+    auto &probe = r.begin_probes.front();
     EXPECT_EQ(probe.type, ProbeType::hardware);
     EXPECT_EQ(probe.path, "mypath");
     EXPECT_EQ(probe.index, 3);

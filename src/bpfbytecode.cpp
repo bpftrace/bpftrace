@@ -197,10 +197,8 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
     bpf_program__set_log_buf(prog.bpf_prog(), log_buf.data(), log_buf.size());
   }
 
-  std::vector<Probe> special_probes;
-  for (auto probe : resources.special_probes)
-    special_probes.push_back(probe.second);
-  prepare_progs(special_probes, btf, feature, config);
+  prepare_progs(resources.begin_probes, btf, feature, config);
+  prepare_progs(resources.end_probes, btf, feature, config);
   prepare_progs(resources.test_probes, btf, feature, config);
   prepare_progs(resources.benchmark_probes, btf, feature, config);
   prepare_progs(resources.signal_probes, btf, feature, config);

@@ -39,8 +39,6 @@ private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
   bool listing_;
-  bool has_begin_probe_ = false;
-  bool has_end_probe_ = false;
   bool has_child_ = false;
   std::unordered_map<std::string, Location> test_locs_;
   std::unordered_map<std::string, Location> benchmark_locs_;
@@ -276,17 +274,8 @@ void AttachPointChecker::visit(AttachPoint &ap)
     else if (ap.freq < 0)
       ap.addError() << "hardware frequency should be a positive integer";
   } else if (ap.provider == "begin" || ap.provider == "end") {
-    if (!ap.target.empty() || !ap.func.empty())
+    if (!ap.target.empty() || !ap.func.empty()) {
       ap.addError() << "begin/end probes should not have a target";
-    if (ap.provider == "begin") {
-      if (has_begin_probe_)
-        ap.addError() << "More than one begin probe defined";
-      has_begin_probe_ = true;
-    }
-    if (ap.provider == "end") {
-      if (has_end_probe_)
-        ap.addError() << "More than one end probe defined";
-      has_end_probe_ = true;
     }
   } else if (ap.provider == "self") {
     if (ap.target == "signal") {

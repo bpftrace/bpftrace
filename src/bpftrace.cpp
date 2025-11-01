@@ -168,12 +168,10 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
   auto type = probetype(ap.provider);
   auto probe = generate_probe(ap, p, expansion, std::move(expanded_funcs));
 
-  // Add the new probe(s) to resources
-  if (ap.provider == "begin" || ap.provider == "end") {
-    // special probes
-    auto target = ap.target.empty() ? "" : "_" + ap.target;
-    auto name = ap.provider + target;
-    resources.special_probes[name] = std::move(probe);
+  if (ap.provider == "begin") {
+    resources.begin_probes.emplace_back(std::move(probe));
+  } else if (ap.provider == "end") {
+    resources.end_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "test") {
     resources.test_probes.emplace_back(std::move(probe));
   } else if (ap.provider == "bench") {
@@ -205,9 +203,7 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
 
 int BPFtrace::num_probes() const
 {
-  return resources.special_probes.size() + resources.probes.size() +
-         resources.signal_probes.size() + resources.benchmark_probes.size() +
-         resources.test_probes.size();
+  return resources.num_probes();
 }
 
 void BPFtrace::request_finalize()
@@ -541,24 +537,21 @@ int BPFtrace::run(output::Output &out,
     }
   }
 
-  int num_begin_end_attached = 0;
+  int num_begin_attached = 0;
+  int num_end_attached = 0;
   int num_signal_attached = 0;
   int num_test_attached = 0;
   int num_benchmark_attached = 0;
 
-  auto begin_probe = resources.special_probes.find("begin");
-  if (begin_probe != resources.special_probes.end()) {
-    auto &begin_prog = bytecode_.getProgramForProbe((*begin_probe).second);
+  for (const auto &begin_probe : resources.begin_probes) {
+    auto &begin_prog = bytecode_.getProgramForProbe(begin_probe);
     if (::bpf_prog_test_run_opts(begin_prog.fd(), nullptr))
       return -1;
 
     LOG(V1) << "Attaching 'begin' probe";
-    ++num_begin_end_attached;
+    ++num_begin_attached;
   }
-
-  if (resources.special_probes.contains("end")) {
-    ++num_begin_end_attached;
-  }
+  num_end_attached += resources.end_probes.size();
 
   int rval = 0; // Used for return below.
 
@@ -782,7 +775,7 @@ int BPFtrace::run(output::Output &out,
     num_attached += ap->probe_count();
   }
 
-  auto total_attached = num_attached + num_begin_end_attached +
+  auto total_attached = num_attached + num_begin_attached + num_end_attached +
                         num_signal_attached + num_test_attached +
                         num_benchmark_attached;
 
@@ -819,8 +812,8 @@ int BPFtrace::run(output::Output &out,
     if (err)
       return err;
   } else {
-    bool should_drain = (num_begin_end_attached > 0 || run_benchmarks_ ||
-                         run_tests_) &&
+    bool should_drain = (num_begin_attached > 0 || num_end_attached > 0 ||
+                         run_tests_ || run_benchmarks_) &&
                         num_signal_attached == 0 && num_attached == 0;
     poll_output(out, should_drain);
   }
@@ -838,9 +831,8 @@ int BPFtrace::run(output::Output &out,
   finalize_ = false;
   exitsig_recv = false;
 
-  auto end_probe = resources.special_probes.find("end");
-  if (end_probe != resources.special_probes.end()) {
-    auto &end_prog = bytecode_.getProgramForProbe((*end_probe).second);
+  for (const auto &end_probe : resources.end_probes) {
+    auto &end_prog = bytecode_.getProgramForProbe(end_probe);
     if (::bpf_prog_test_run_opts(end_prog.fd(), nullptr))
       return -1;
 
