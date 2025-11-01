@@ -63,11 +63,12 @@ tracepoint:writeback:writeback_start
 }
 
 tracepoint:writeback:writeback_written
+/ @start[args.sb_dev] /
 {
 	$sb_dev = args.sb_dev;
 	$s = @start[$sb_dev];
 	delete(@start, $sb_dev);
-	$lat = $s ? (nsecs - $s) / 1000 : 0;
+	$lat = (nsecs - $s) / 1000;
 
 	time("%H:%M:%S  ");
 	printf("%-8s %-8d %-16s %d.%03d\n", args.name,
