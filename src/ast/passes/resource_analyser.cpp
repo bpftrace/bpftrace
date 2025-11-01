@@ -154,8 +154,6 @@ void ResourceAnalyser::visit(Builtin &builtin)
 
 void ResourceAnalyser::visit(Call &call)
 {
-  Visitor<ResourceAnalyser>::visit(call);
-
   if (call.func == "printf" || call.func == "errorf" || call.func == "warnf" ||
       call.func == "system" || call.func == "cat" || call.func == "debugf") {
     std::vector<SizedType> args;
@@ -379,6 +377,8 @@ void ResourceAnalyser::visit(Call &call)
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
   }
+
+  Visitor<ResourceAnalyser>::visit(call);
 }
 
 void ResourceAnalyser::visit(MapDeclStatement &decl)
