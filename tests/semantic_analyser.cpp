@@ -4976,7 +4976,7 @@ begin { let $a; let $a; }
 )" });
 
   test("begin { let $a: uint16; $a = -1; }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
+stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already contains a value of type 'uint16'
 begin { let $a: uint16; $a = -1; }
                         ~~~~~~~
 )" });
@@ -4994,7 +4994,7 @@ begin { let $a: int8 = 1; $a = -10000; }
 )" });
 
   test("begin { let $a: int8; $a = 10000; }", Error{ R"(
-stdin:1:23-33: ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already has a type 'int8'
+stdin:1:23-33: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already contains a value of type 'int8'
 begin { let $a: int8; $a = 10000; }
                       ~~~~~~~~~~
 )" });
@@ -5006,7 +5006,7 @@ begin { $a = -1; let $a; }
 )" });
 
   test("begin { let $a: uint16 = -1; }", Error{ R"(
-stdin:1:9-28: ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
+stdin:1:9-28: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already contains a value of type 'uint16'
 begin { let $a: uint16 = -1; }
         ~~~~~~~~~~~~~~~~~~~
 )" });
@@ -5018,9 +5018,9 @@ begin { let $a: sum_t; }
 )" });
 
   test(R"(begin { let $a: struct bad_task; $a = *curtask; })", Error{ R"(
-stdin:1:34-47: ERROR: Type mismatch for $a: trying to assign value of type 'struct task_struct' when variable already has a type 'struct bad_task'
+stdin:1:17-32: ERROR: Cannot resolve unknown type "struct bad_task"
 begin { let $a: struct bad_task; $a = *curtask; }
-                                 ~~~~~~~~~~~~~
+                ~~~~~~~~~~~~~~~
 )" });
 
   test(R"(begin { $x = 2; if (pid) { let $x; } })", Error{ R"(
@@ -5546,6 +5546,8 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
   test("begin { let $a; $a = (int8)1; }");
   test("begin { let $a; $a = -1; }");
   test("begin { let $a: int32 = 0; }");
+  test(
+      R"(begin { @a["hi", 2] = 1; let $x: typeof(@a) = ("hello", (int16)1); @a["hello", (int32)2] = 2; })");
 
   // These types should be enforced.
   test("begin { let $a: int8 = 1; $a = (int32)1; }", Error{});
@@ -5554,6 +5556,9 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
   test("begin { let $a: uint8; $a = -1; }", Error{});
   test(R"(kprobe:f { let $x: string[3] = "helloooooo"; })", Error{});
   test(R"(kprobe:f { let $x: string[3] = "hi"; $x = "helloooooo"; })", Error{});
+  test(
+      R"(begin { @a["hi", 2] = 1; let $x: typeof(@a) = ("hello", (uint64)1); @a["hello", (int32)2] = 2; })",
+      Error{});
 
   test(R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (1, "helllooo"); })",
        Error{});
@@ -5562,12 +5567,12 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
       Error{});
   test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
        Error{ R"(
-stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already has a type 'uint8'
+stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already contains a value of type 'uint8'
 kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
                                                ~~~~~~~~~~
 )" });
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })", Error{ R"(
-stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'uint8' when variable already has a type 'string[4]'
+stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'uint32' when variable already contains a value of type 'string[4]'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
                                             ~~~~~~
 )" });
