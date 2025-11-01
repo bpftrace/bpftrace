@@ -10,3 +10,7 @@ EXPECT_REGEX SUCCESS [0-9][0-9]*
 NAME strerror
 PROG BEGIN { print(strerror(22)); }
 EXPECT Invalid argument
+
+NAME comm from pid
+PROG iter:task { @ = comm(pid); exit() }
+EXPECT @: bpftrace

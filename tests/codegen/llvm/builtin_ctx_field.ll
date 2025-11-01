@@ -4,20 +4,20 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf"
 
 %"struct map_internal_repr_t" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.163" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.164" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.165" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.166" = type { ptr, ptr, ptr, ptr }
-%"struct map_internal_repr_t.167" = type { ptr, ptr }
+%"struct map_internal_repr_t.616" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.617" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.618" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.619" = type { ptr, ptr, ptr, ptr }
+%"struct map_internal_repr_t.620" = type { ptr, ptr }
 %runtime_error_t = type <{ i64, i64, i32 }>
 
 @LICENSE = global [4 x i8] c"GPL\00", section "license", !dbg !0
 @AT_a = dso_local global %"struct map_internal_repr_t" zeroinitializer, section ".maps", !dbg !7
-@AT_b = dso_local global %"struct map_internal_repr_t.163" zeroinitializer, section ".maps", !dbg !22
-@AT_c = dso_local global %"struct map_internal_repr_t.164" zeroinitializer, section ".maps", !dbg !29
-@AT_d = dso_local global %"struct map_internal_repr_t.165" zeroinitializer, section ".maps", !dbg !35
-@AT_e = dso_local global %"struct map_internal_repr_t.166" zeroinitializer, section ".maps", !dbg !37
-@ringbuf = dso_local global %"struct map_internal_repr_t.167" zeroinitializer, section ".maps", !dbg !46
+@AT_b = dso_local global %"struct map_internal_repr_t.616" zeroinitializer, section ".maps", !dbg !22
+@AT_c = dso_local global %"struct map_internal_repr_t.617" zeroinitializer, section ".maps", !dbg !29
+@AT_d = dso_local global %"struct map_internal_repr_t.618" zeroinitializer, section ".maps", !dbg !35
+@AT_e = dso_local global %"struct map_internal_repr_t.619" zeroinitializer, section ".maps", !dbg !37
+@ringbuf = dso_local global %"struct map_internal_repr_t.620" zeroinitializer, section ".maps", !dbg !46
 @__bt__event_loss_counter = dso_local externally_initialized global [1 x [1 x i64]] zeroinitializer, section ".data.event_loss_counter", !dbg !60
 @__bt__max_cpu_id = dso_local externally_initialized constant i64 0, section ".rodata", !dbg !64
 

@@ -18,6 +18,8 @@ and this project adheres to
 - Benchmark formats changed slightly, to reflect gbenchmark
   - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
 #### Added
+- Add `comm()` support for PID parameters.
+  - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)
 - Add `syscall_name()` to convert system call numbers into names.
   - [#4746](https://github.com/bpftrace/bpftrace/pull/4746)
 - Add `pcomm` to stdlib and `ppid` can be called without arguments.
