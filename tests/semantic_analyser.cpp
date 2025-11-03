@@ -5539,8 +5539,7 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
 {
   test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = 2; }");
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bar"; })");
-  test(
-      R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "muchmuchlongerstr"; })");
+  test(R"(kprobe:f { let $y : string = "hi"; $y = "muchmuchlongerstr"; })");
   test("begin { let $a: uint32 = 1; }");
   test("begin { let $a: uint32; $a = (uint8)1; }");
   test("begin { let $a: int8; $a = 1; }");
@@ -5554,6 +5553,14 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
   test("begin { let $a: uint8; $a = (int8)1; }", Error{});
   test("begin { $y = (int8)1; let $a: uint8; $a = $y; }", Error{});
   test("begin { let $a: uint8; $a = -1; }", Error{});
+  test(R"(kprobe:f { let $x: string[3] = "helloooooo"; })", Error{});
+  test(R"(kprobe:f { let $x: string[3] = "hi"; $x = "helloooooo"; })", Error{});
+
+  test(R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (1, "helllooo"); })",
+       Error{});
+  test(
+      R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (2, "by"); $x = (1, "helllooo"); })",
+      Error{});
   test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
        Error{ R"(
 stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already has a type 'uint8'

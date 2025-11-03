@@ -3603,7 +3603,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         pass_tracker_.inc_num_unresolved();
       }
     } else if (assignTy.IsStringTy()) {
-      storedTy.SetSize(std::max(storedTy.GetSize(), assignTy.GetSize()));
+      if (foundVar.can_resize) {
+        storedTy.SetSize(std::max(storedTy.GetSize(), assignTy.GetSize()));
+      } else if (!assignTy.FitsInto(storedTy)) {
+        type_mismatch_error = true;
+      }
     } else if (storedTy.IsIntegerTy()) {
       auto updatedTy = update_int_type(assignTy, assignment.expr, storedTy);
       if (!updatedTy ||
@@ -4377,8 +4381,10 @@ std::optional<SizedType> SemanticAnalyser::update_tuple_type(
         new_elems.emplace_back(*new_elem);
         continue;
       }
-    } else if (storedElemTy.IsStringTy() &&
-               storedElemTy.GetSize() != assignElemTy.GetSize()) {
+    } else if (storedElemTy.IsStringTy()) {
+      if (storedElemTy.GetSize() < assignElemTy.GetSize() && !can_resize) {
+        return std::nullopt;
+      }
       storedElemTy.SetSize(
           std::max(storedElemTy.GetSize(), assignElemTy.GetSize()));
       new_elems.emplace_back(storedElemTy);
