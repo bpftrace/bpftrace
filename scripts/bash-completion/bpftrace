@@ -18,9 +18,9 @@ _bpftrace()
   _init_completion -- "$@" || return
 
   local all_args='-B -f -o -e -h --help -I --include -l -p -c
-                  --usdt-file-activation --unsafe -q --info -k
-                  -V --version --no-warnings -v --dry-run -d
-                  --emit-elf --emit-llvm'
+                  --no-feature --usdt-file-activation --unsafe
+                  -q --info -k -V --version --no-warnings -v
+                  --dry-run --verify-llvm-ir -d --emit-elf --emit-llvm'
 
   if [[ $cur == -* ]]; then
     argument=$cur
@@ -52,6 +52,10 @@ _bpftrace()
     COMPREPLY=( $(compgen -W "$PIDS" -- ${cur}) )
     return 0
     ;;
+  --no-feature)
+    COMPREPLY=( $(compgen -W "kprobe_multi kprobe_session uprobe_multi" -- ${cur}) )
+    return 0
+    ;;    
   -d)
     COMPREPLY=( $(compgen -W "all ast codegen codegen-opt dis libbpf verifier" -- ${cur}) )
     return 0
