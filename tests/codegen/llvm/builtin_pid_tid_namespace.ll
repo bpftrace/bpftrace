@@ -29,7 +29,7 @@ entry:
   %bpf_pidns_info = alloca %bpf_pidns_info, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr %bpf_pidns_info)
   %get_ns_pid_tgid = call i64 inttoptr (i64 120 to ptr)(i64 0, i64 4026531857, ptr %bpf_pidns_info, i32 8)
-  %1 = getelementptr %bpf_pidns_info, ptr %bpf_pidns_info, i32 0, i32 0
+  %1 = getelementptr %bpf_pidns_info, ptr %bpf_pidns_info, i32 0, i32 1
   %2 = load i32, ptr %1, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %bpf_pidns_info)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@x_key")
@@ -41,7 +41,7 @@ entry:
   call void @llvm.lifetime.end.p0(i64 -1, ptr %"@x_key")
   call void @llvm.lifetime.start.p0(i64 -1, ptr %bpf_pidns_info1)
   %get_ns_pid_tgid2 = call i64 inttoptr (i64 120 to ptr)(i64 0, i64 4026531857, ptr %bpf_pidns_info1, i32 8)
-  %3 = getelementptr %bpf_pidns_info, ptr %bpf_pidns_info1, i32 0, i32 1
+  %3 = getelementptr %bpf_pidns_info, ptr %bpf_pidns_info1, i32 0, i32 0
   %4 = load i32, ptr %3, align 4
   call void @llvm.lifetime.end.p0(i64 -1, ptr %bpf_pidns_info1)
   call void @llvm.lifetime.start.p0(i64 -1, ptr %"@y_key")

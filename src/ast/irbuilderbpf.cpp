@@ -75,7 +75,7 @@ Value *IRBuilderBPF::CreateGetPid(const Location &loc, bool force_init)
         getInt64(pidns->st_dev), getInt64(pidns->st_ino), res, loc);
     Value *pid = CreateLoad(
         getInt32Ty(),
-        CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(0) }));
+        CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(1) }));
     CreateLifetimeEnd(res);
     return pid;
   }
@@ -96,7 +96,7 @@ Value *IRBuilderBPF::CreateGetTid(const Location &loc, bool force_init)
         getInt64(pidns->st_dev), getInt64(pidns->st_ino), res, loc);
     Value *tid = CreateLoad(
         getInt32Ty(),
-        CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(1) }));
+        CreateGEP(BpfPidnsInfoType(), res, { getInt32(0), getInt32(0) }));
     CreateLifetimeEnd(res);
     return tid;
   }
@@ -1760,8 +1760,8 @@ llvm::Type *IRBuilderBPF::BpfPidnsInfoType()
 {
   return GetStructType("bpf_pidns_info",
                        {
-                           getInt32Ty(),
-                           getInt32Ty(),
+                           getInt32Ty(), // pid   (TID in userspace)
+                           getInt32Ty(), // tgid  (PID in userspace)
                        },
                        false);
 }
