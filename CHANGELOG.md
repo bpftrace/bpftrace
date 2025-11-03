@@ -67,6 +67,8 @@ and this project adheres to
   - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
 - Fix block expression handling inside print statements
   - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
+- codegen: Fix tid/pid in non-init namespaces
+  - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
 #### Security
 #### Docs
 #### Tools
