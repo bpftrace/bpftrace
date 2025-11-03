@@ -277,10 +277,6 @@ private:
       const std::vector<std::pair<llvm::Value *, Location>> &vals,
       const std::string &name,
       const Location &loc);
-  void createTupleCopy(const SizedType &expr_type,
-                       const SizedType &var_type,
-                       Value *dst_val,
-                       Value *src_val);
 
   void generate_maps(const RequiredResources &required_resources,
                      const CodegenResources &codegen_resources);
@@ -2479,10 +2475,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
   } else {
     b_.SetInsertPoint(left_block);
     auto scoped_left = visit(if_expr.left);
-    if (if_expr.result_type.IsTupleTy()) {
-      createTupleCopy(
-          if_expr.left.type(), if_expr.result_type, buf, scoped_left.value());
-    } else if (needMemcpy(if_expr.result_type)) {
+    if (needMemcpy(if_expr.result_type)) {
       b_.CreateMemcpyBPF(buf,
                          scoped_left.value(),
                          if_expr.result_type.GetSize());
@@ -2493,10 +2486,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
 
     b_.SetInsertPoint(right_block);
     auto scoped_right = visit(if_expr.right);
-    if (if_expr.result_type.IsTupleTy()) {
-      createTupleCopy(
-          if_expr.right.type(), if_expr.result_type, buf, scoped_right.value());
-    } else if (needMemcpy(if_expr.result_type)) {
+    if (needMemcpy(if_expr.result_type)) {
       b_.CreateMemcpyBPF(buf,
                          scoped_right.value(),
                          if_expr.result_type.GetSize());
@@ -2798,6 +2788,11 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
       return ScopedExpr(val);
     }
     return scoped_expr;
+  } else if (ty.IsStringTy()) {
+    auto *v = b_.CreateAllocaBPF(ty);
+    b_.CreateMemsetBPF(v, b_.getInt8(0), ty.GetSize());
+    b_.CreateMemcpyBPF(v, scoped_expr.value(), cast.expr.type().GetSize());
+    return ScopedExpr(v, [this, v] { b_.CreateLifetimeEnd(v); });
   } else {
     // FIXME(amscanne): The existing behavior is to simply pass the existing
     // expression back up when it is neither an integer nor an array.
@@ -2872,45 +2867,6 @@ Value *CodegenLLVM::createTuple(
   return buf;
 }
 
-void CodegenLLVM::createTupleCopy(const SizedType &expr_type,
-                                  const SizedType &var_type,
-                                  Value *dst_val,
-                                  Value *src_val)
-{
-  assert(expr_type.IsTupleTy() && var_type.IsTupleTy());
-  auto *array_ty = ArrayType::get(b_.getInt8Ty(), expr_type.GetSize());
-  auto *tuple_ty = b_.GetType(var_type);
-  for (size_t i = 0; i < expr_type.GetFields().size(); ++i) {
-    SizedType &t_type = expr_type.GetField(i).type;
-    SizedType &v_type = var_type.GetField(i).type;
-    Value *offset_val = b_.CreateGEP(
-        array_ty,
-        src_val,
-        { b_.getInt64(0), b_.getInt64(expr_type.GetField(i).offset) });
-    Value *dst = b_.CreateGEP(tuple_ty,
-                              dst_val,
-                              { b_.getInt32(0), b_.getInt32(i) });
-    if (t_type.IsTupleTy() && !t_type.IsSameSizeRecursive(v_type)) {
-      createTupleCopy(t_type, var_type.GetField(i).type, dst, offset_val);
-    } else if (t_type.IsIntTy()) {
-      // TODO: tuple casting/resizing should happen in an earlier pass.
-      // However for now, it's possible ints need to be sized up
-      // when they exist inside tuples see (update_tuple_type).
-      if (t_type.GetSize() != v_type.GetSize()) {
-        b_.CreateStore(b_.CreateIntCast(b_.CreateLoad(b_.GetType(t_type),
-                                                      offset_val),
-                                        b_.GetType(v_type),
-                                        v_type.IsSigned()),
-                       dst);
-      } else {
-        b_.CreateStore(b_.CreateLoad(b_.GetType(t_type), offset_val), dst);
-      }
-    } else {
-      b_.CreateMemcpyBPF(dst, offset_val, t_type.GetSize());
-    }
-  }
-}
-
 ScopedExpr CodegenLLVM::visit(Tuple &tuple)
 {
   llvm::Type *tuple_ty = b_.GetType(tuple.tuple_type);
@@ -2954,17 +2910,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
                                    assignment.loc)
                              : expr;
   if (shouldBeInBpfMemoryAlready(expr_type)) {
-    if (!expr_type.IsSameSizeRecursive(map_type)) {
-      b_.CreateMemsetBPF(value, b_.getInt8(0), map_type.GetSize());
-      if (expr_type.IsTupleTy()) {
-        createTupleCopy(expr_type, map_type, value, expr);
-      } else if (expr_type.IsStringTy()) {
-        b_.CreateMemcpyBPF(value, expr, expr_type.GetSize());
-      } else {
-        LOG(BUG) << "Type size mismatch. Map Type Size: " << map_type.GetSize()
-                 << " Expression Type Size: " << expr_type.GetSize();
-      }
-    }
+    b_.CreateMemcpyBPF(value, expr, expr_type.GetSize());
   } else if (map_type.IsRecordTy() || map_type.IsArrayTy()) {
     if (!expr_type.is_internal) {
       // expr currently contains a pointer to the struct or array
@@ -3060,16 +3006,7 @@ ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
   } else if (needMemcpy(var.var_type)) {
     auto *val = getVariable(var.ident).value;
     const auto &expr_type = assignment.expr.type();
-    if (!expr_type.IsSameSizeRecursive(var.var_type)) {
-      b_.CreateMemsetBPF(val, b_.getInt8(0), var.var_type.GetSize());
-      if (var.var_type.IsTupleTy()) {
-        createTupleCopy(expr_type, var.var_type, val, scoped_expr.value());
-      } else {
-        b_.CreateMemcpyBPF(val, scoped_expr.value(), expr_type.GetSize());
-      }
-    } else {
-      b_.CreateMemcpyBPF(val, scoped_expr.value(), expr_type.GetSize());
-    }
+    b_.CreateMemcpyBPF(val, scoped_expr.value(), expr_type.GetSize());
   } else {
     b_.CreateStore(scoped_expr.value(), getVariable(var.ident).value);
   }
@@ -3376,7 +3313,7 @@ int CodegenLLVM::getNextIndexForProbe()
 
 ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
 {
-  const auto alloca_created_here = needMapKeyAllocation(map, key_expr);
+  const auto alloca_created_here = needMapKeyAllocation(key_expr);
 
   auto scoped_key_expr = visit(key_expr);
   const auto &key_type = map.key_type;
@@ -3388,22 +3325,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
                                                map.loc)
                    : scoped_key_expr.value();
   if (inBpfMemory(key_expr.type())) {
-    if (!key_expr.type().IsSameSizeRecursive(key_type)) {
-      b_.CreateMemsetBPF(key, b_.getInt8(0), key_type.GetSize());
-      if (key_expr.type().IsTupleTy()) {
-        createTupleCopy(
-            key_expr.type(), key_type, key, scoped_key_expr.value());
-      } else if (key_expr.type().IsStringTy()) {
-        b_.CreateMemcpyBPF(key,
-                           scoped_key_expr.value(),
-                           key_expr.type().GetSize());
-      } else {
-        LOG(BUG) << "Type size mismatch. Key Type Size: " << key_type.GetSize()
-                 << " Expression Type Size: " << key_expr.type().GetSize();
-      }
-    } else {
-      // Call-ee freed
-    }
+    b_.CreateMemcpyBPF(key, scoped_key_expr.value(), key_expr.type().GetSize());
   } else if (map.key_type.IsIntTy()) {
     b_.CreateStore(scoped_key_expr.value(), key);
   } else if (map.key_type.IsBoolTy()) {
@@ -3462,21 +3384,7 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
   size_t expr_size = key_expr.type().GetSize();
 
   if (inBpfMemory(key_expr.type())) {
-    if (!key_expr.type().IsSameSizeRecursive(map.key_type)) {
-      b_.CreateMemsetBPF(offset_val, b_.getInt8(0), map_key_size);
-      if (key_expr.type().IsTupleTy()) {
-        createTupleCopy(
-            key_expr.type(), map.key_type, offset_val, scoped_expr.value());
-      } else if (key_expr.type().IsStringTy()) {
-        b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
-      } else {
-        LOG(BUG) << "Type size mismatch. Key Type Size: "
-                 << map.key_type.GetSize()
-                 << " Expression Type Size: " << expr_size;
-      }
-    } else {
-      b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
-    }
+    b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
     if ((map_key_size % 8) != 0)
       aligned = false;
   } else {

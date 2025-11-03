@@ -2584,6 +2584,15 @@ kprobe:f { $a = (bool)pton("127.0.0.1"); }
 )" });
 }
 
+TEST_F(SemanticAnalyserTest, cast_string)
+{
+  test("kprobe:f { $a = (string[10])\"hello\"; }");
+
+  test("kprobe:f { $a = (string[2])\"hello\"; }", Error{});
+  test("kprobe:f { $a = (string[2])5; }", Error{});
+  test("kprobe:f { $a = (string)5; }", Error{});
+}
+
 TEST_F(SemanticAnalyserTest, field_access)
 {
   std::string structs = "struct type1 { int field; }";
@@ -3973,6 +3982,150 @@ TEST_F(SemanticAnalyserTest, tuple_nested)
   EXPECT_EQ(ty, assignment->var()->var_type);
 }
 
+TEST_F(SemanticAnalyserTest, mixed_tuple)
+{
+  // The same resizing rules should exist for ints and strings inside tuples
+  test(R"(begin { $a = ((int16)1, "hi"); $a = ((uint16)2, "hellostr"); })");
+  test(
+      R"(begin { $a = (((int16)1, (uint32)2), "hi"); $a = (((uint16)2, (int32)3), "hellostr"); })");
+  test(R"(begin { @a[(int16)1, "hi"] = 1; @a[(uint16)2, "hellostr"] = 2; })");
+  test(
+      R"(begin { @a[((int16)1, (uint32)2), "hi"] = 1; @a[((uint16)2, (int32)3), "hellostr"] = 2; })");
+  test(R"(begin { @a = ((int16)1, "hi"); @a = ((uint16)2, "hellostr"); })");
+  test(
+      R"(begin { @a = (((int16)1, (uint32)2), "hi"); @a = (((uint16)2, (int32)3), "hellostr"); })");
+  test(
+      R"(begin { print(if (pid == 1) { ((int16)1, "hi") } else { ((uint16)2, "hellostr") }); })");
+
+  test(R"(begin { $a = ((int64)1, "hi"); $a = ((uint64)2, "hellostr"); })",
+       Error{});
+  test(R"(begin { @a[(int64)1, "hi"] = 1; @a[(uint64)2, "hellostr"] = 2; })",
+       Error{});
+  test(R"(begin { @a = ((int64)1, "hi"); @a = ((uint64)2, "hellostr"); })",
+       Error{});
+  test(
+      R"(begin { print(if (pid == 1) { ((int64)1, "hi") } else { ((uint64)2, "hellostr") }); })",
+      Error{});
+
+  // Test inserted casts
+  test(R"(begin { $a = ((int16)1, "hi"); $a = ((uint16)2, "hellostr"); })",
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "begin" },
+           { AssignVarStatement(
+                 Variable("$a"),
+                 Tuple(
+                     { Cast(Typeof(SizedType(Type::integer)
+                                       .WithSize(4)
+                                       .WithSigned(true)),
+                            Cast(Typeof(SizedType(Type::integer)), Integer(1))),
+                       Cast(Typeof(SizedType(Type::string)), String("hi")) })),
+             AssignVarStatement(
+                 Variable("$a"),
+                 Tuple(
+                     { Cast(Typeof(SizedType(Type::integer)
+                                       .WithSize(4)
+                                       .WithSigned(true)),
+                            Cast(Typeof(SizedType(Type::integer)), Integer(2))),
+                       String("hellostr") })),
+             Jump(ast::JumpType::RETURN) })) });
+  test(
+      R"(begin { $a = ((int16)1, "hi"); $b = ((uint16)2, "hellostr"); $a = $b })",
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignVarStatement(
+                Variable("$a"),
+                Tuple(
+                    { Cast(Typeof(SizedType(Type::integer)
+                                      .WithSize(4)
+                                      .WithSigned(true)),
+                           Cast(Typeof(SizedType(Type::integer)), Integer(1))),
+                      Cast(Typeof(SizedType(Type::string).WithSize(9)),
+                           String("hi")) })),
+            AssignVarStatement(Variable("$b"),
+                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
+                                            Integer(2)),
+                                       String("hellostr") })),
+            AssignVarStatement(Variable("$a"),
+                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
+                                            TupleAccess(Variable("$b"), 0)),
+                                       TupleAccess(Variable("$b"), 1) })),
+            Jump(ast::JumpType::RETURN) })) });
+  test(
+      R"(begin { $a = ((int16)1, "hi"); $b = ((uint16)2, "hellostr"); $b = $a })",
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignVarStatement(Variable("$a"),
+                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
+                                            Integer(1)),
+                                       String("hi") })),
+            AssignVarStatement(
+                Variable("$b"),
+                Tuple(
+                    { Cast(Typeof(SizedType(Type::integer)
+                                      .WithSize(4)
+                                      .WithSigned(true)),
+                           Cast(Typeof(SizedType(Type::integer)), Integer(2))),
+                      String("hellostr") })),
+            AssignVarStatement(
+                Variable("$b"),
+                Tuple({ Cast(Typeof(SizedType(Type::integer)
+                                        .WithSize(4)
+                                        .WithSigned(true)),
+                             TupleAccess(Variable("$a"), 0)),
+                        Cast(Typeof(SizedType(Type::string).WithSize(9)),
+                             TupleAccess(Variable("$a"), 1)) })),
+            Jump(ast::JumpType::RETURN) })) });
+  test(
+      R"(begin { @a = ((int16)1, "hi"); @b = ((uint16)2, "hellostr"); @a = @b })",
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignMapStatement(
+                Map("@a"),
+                Integer(0),
+                Tuple(
+                    { Cast(Typeof(SizedType(Type::integer)
+                                      .WithSize(4)
+                                      .WithSigned(true)),
+                           Cast(Typeof(SizedType(Type::integer)), Integer(1))),
+                      Cast(Typeof(SizedType(Type::string).WithSize(9)),
+                           String("hi")) })),
+            AssignMapStatement(Map("@b"),
+                               Integer(0),
+                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
+                                            Integer(2)),
+                                       String("hellostr") })),
+            AssignMapStatement(
+                Map("@a"),
+                Integer(0),
+                Tuple({ Cast(Typeof(SizedType(Type::integer)),
+                             TupleAccess(MapAccess(Map("@b"), Integer(0)), 0)),
+                        TupleAccess(MapAccess(Map("@b"), Integer(0)), 1) })),
+            Jump(ast::JumpType::RETURN) })) });
+  test(
+      R"(begin { print(if (pid == 1) { ((int16)1, "hi") } else { ((uint16)2, "hellostr") }); })",
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { ExprStatement(Block(
+              { ExprStatement(Call(
+                    "print",
+                    { If(Binop(Operator::EQ, Builtin("pid"), Integer(1)),
+                         Tuple(
+                             { Cast(Typeof(SizedType(Type::integer)
+                                               .WithSize(4)
+                                               .WithSigned(true)),
+                                    Cast(Typeof(SizedType(Type::integer)),
+                                         Integer(1))),
+                               Cast(Typeof(SizedType(Type::string).WithSize(9)),
+                                    String("hi")) }),
+                         Tuple({ Cast(Typeof(SizedType(Type::integer)
+                                                 .WithSize(4)
+                                                 .WithSigned(true)),
+                                      Cast(Typeof(SizedType(Type::integer)),
+                                           Integer(2))),
+                                 String("hellostr") })) })),
+                Jump(ast::JumpType::RETURN) })) })) });
+}
+
 TEST_F(SemanticAnalyserTest, multi_pass_type_inference_zero_size_int)
 {
   // The first pass on processing the Unop
@@ -4100,31 +4253,37 @@ TEST_F(SemanticAnalyserTest, string_size)
   auto ast = test(R"(begin { $x = "hi"; $x = "hello"; })");
   auto stmt = ast.root->probes.at(0)->block->stmts.at(0);
   auto *var_assign = stmt.as<ast::AssignVarStatement>();
+  ASSERT_TRUE(var_assign->expr.is<ast::Cast>());
   ASSERT_TRUE(var_assign->var()->var_type.IsStringTy());
   ASSERT_EQ(var_assign->var()->var_type.GetSize(), 6UL);
 
   ast = test(R"(k:f1 {@ = "hi";} k:f2 {@ = "hello";})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   auto *map_assign = stmt.as<ast::AssignMapStatement>();
+  ASSERT_TRUE(map_assign->expr.is<ast::Cast>());
   ASSERT_TRUE(map_assign->map_access->map->value_type.IsStringTy());
   ASSERT_EQ(map_assign->map_access->map->value_type.GetSize(), 6UL);
 
   ast = test(R"(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
+  ASSERT_TRUE(map_assign->map_access->key.is<ast::Cast>());
   ASSERT_TRUE(map_assign->map_access->key.type().IsStringTy());
-  ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 3UL);
+  ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 6UL);
   ASSERT_EQ(map_assign->map_access->map->key_type.GetSize(), 6UL);
 
   ast = test(R"(k:f1 {@["hi", 0] = 0;} k:f2 {@["hello", 1] = 1;})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
+  ASSERT_TRUE(map_assign->map_access->key.as<ast::Tuple>()
+                  ->elems.at(0)
+                  .is<ast::Cast>());
   ASSERT_TRUE(map_assign->map_access->key.type().IsTupleTy());
   ASSERT_TRUE(map_assign->map_access->key.type().GetField(0).type.IsStringTy());
-  ASSERT_EQ(map_assign->map_access->key.type().GetField(0).type.GetSize(), 3UL);
+  ASSERT_EQ(map_assign->map_access->key.type().GetField(0).type.GetSize(), 6UL);
   ASSERT_EQ(map_assign->map_access->map->key_type.GetField(0).type.GetSize(),
             6UL);
-  ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 4UL);
+  ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 7UL);
   ASSERT_EQ(map_assign->map_access->map->key_type.GetSize(), 7UL);
 
   ast = test(R"(k:f1 {$x = ("hello", 0);} k:f2 {$x = ("hi", 0); })");

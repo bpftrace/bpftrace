@@ -256,14 +256,13 @@ private:
       const SizedType &rightTy,
       const std::optional<Expression> &leftExpr = std::nullopt,
       const std::optional<Expression> &rightExpr = std::nullopt);
+  std::optional<SizedType> get_promoted_tuple(const SizedType &leftTy,
+                                              const SizedType &rightTy);
   std::optional<SizedType> update_int_type(
       const SizedType &rightTy,
       Expression &rightExpr,
       const SizedType &leftTy,
       std::optional<std::reference_wrapper<Expression>> leftExpr = {});
-  std::optional<SizedType> update_tuple_type(const SizedType &storedTy,
-                                             const SizedType &assignTy,
-                                             bool can_resize);
   void resolve_struct_type(SizedType &type, Node &node);
 
   AddrSpace find_addrspace(ProbeType pt);
@@ -273,6 +272,10 @@ private:
   void binop_array(Binop &op);
 
   void create_int_cast(Expression &exp, const SizedType &target_type);
+  void create_string_cast(Expression &exp, const SizedType &target_type);
+  void create_tuple_cast(Expression &exp,
+                         const SizedType &curr_type,
+                         const SizedType &target_type);
 
   bool has_error() const;
   bool in_loop()
@@ -2422,6 +2425,65 @@ void SemanticAnalyser::create_int_cast(Expression &exp,
   visit(exp);
 }
 
+void SemanticAnalyser::create_string_cast(Expression &exp,
+                                          const SizedType &target_type)
+{
+  if (exp.type().GetSize() == target_type.GetSize()) {
+    return;
+  }
+
+  auto *typeof_r = ctx_.make_node<Typeof>(Location(exp.loc()), target_type);
+  exp = ctx_.make_node<Cast>(Location(exp.loc()),
+                             typeof_r,
+                             clone(ctx_, exp.loc(), exp));
+  visit(exp);
+}
+
+void SemanticAnalyser::create_tuple_cast(Expression &exp,
+                                         const SizedType &curr_type,
+                                         const SizedType &target_type)
+{
+  if (auto *block_expr = exp.as<BlockExpr>()) {
+    create_tuple_cast(block_expr->expr, curr_type, target_type);
+    return;
+  }
+
+  if (!exp.is<Variable>() && !exp.is<TupleAccess>() && !exp.is<MapAccess>() &&
+      !exp.is<Tuple>()) {
+    LOG(BUG) << "Unexpected expression kind: create_tuple_cast";
+  }
+
+  ExpressionList expr_list = {};
+
+  for (size_t i = 0; i < target_type.GetFields().size(); ++i) {
+    auto &c_ty = curr_type.GetField(i).type;
+    auto &t_ty = target_type.GetField(i).type;
+    Expression elem;
+    if (auto *tuple_literal = exp.as<Tuple>()) {
+      elem = clone(ctx_,
+                   tuple_literal->elems.at(i).loc(),
+                   tuple_literal->elems.at(i));
+    } else {
+      elem = ctx_.make_node<TupleAccess>(Location(exp.loc()),
+                                         clone(ctx_, exp.loc(), exp),
+                                         i);
+      elem.as<TupleAccess>()->element_type = c_ty;
+    }
+    if (t_ty.IsIntTy() && c_ty != t_ty) {
+      create_int_cast(elem, t_ty);
+    } else if (t_ty.IsStringTy()) {
+      create_string_cast(elem, t_ty);
+    } else if (t_ty.IsTupleTy()) {
+      create_tuple_cast(elem, c_ty, t_ty);
+    }
+    expr_list.emplace_back(std::move(elem));
+  }
+
+  exp = ctx_.make_node<Tuple>(Location(exp.loc()), std::move(expr_list));
+  exp.as<Tuple>()->tuple_type = target_type;
+  visit(exp);
+}
+
 void SemanticAnalyser::binop_array(Binop &binop)
 {
   const auto &lht = binop.left.type();
@@ -2767,10 +2829,16 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
       if_expr.result_type = *updatedTy;
     }
   } else if (lhs.IsTupleTy()) {
-    auto updatedTy = update_tuple_type(lhs, rhs, true);
+    auto updatedTy = get_promoted_tuple(lhs, rhs);
     if (!updatedTy) {
       type_mismatch_error = true;
     } else {
+      if (*updatedTy != lhs) {
+        create_tuple_cast(if_expr.left, lhs, *updatedTy);
+      }
+      if (*updatedTy != rhs) {
+        create_tuple_cast(if_expr.right, rhs, *updatedTy);
+      }
       if_expr.result_type = *updatedTy;
     }
   } else {
@@ -3205,12 +3273,19 @@ void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
       type_mismatch_error = true;
     } else {
       if (storedTy.IsStringTy()) {
-        storedTy.SetSize(std::max(storedTy.GetSize(), new_key_type.GetSize()));
+        if (storedTy.GetSize() > new_key_type.GetSize()) {
+          create_string_cast(key_expr, storedTy);
+        } else {
+          storedTy.SetSize(new_key_type.GetSize());
+        }
       } else if (storedTy.IsTupleTy()) {
-        auto updatedTy = update_tuple_type(storedTy, new_key_type, true);
+        auto updatedTy = get_promoted_tuple(storedTy, new_key_type);
         if (!updatedTy) {
           type_mismatch_error = true;
         } else {
+          if (*updatedTy != new_key_type) {
+            create_tuple_cast(key_expr, new_key_type, *updatedTy);
+          }
           storedTy = *updatedTy;
         }
       } else if (storedTy.IsIntegerTy()) {
@@ -3276,6 +3351,14 @@ void SemanticAnalyser::visit(Cast &cast)
   cast.typeof->record = resolved_ty;
   auto &ty = std::get<SizedType>(cast.typeof->record);
 
+  if (ty.IsStringTy() && rhs.IsStringTy()) {
+    if (ty.GetSize() < rhs.GetSize()) {
+      cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty
+                      << "\"";
+    }
+    return;
+  }
+
   if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy() &&
       (!ty.IsPtrTy() || ty.GetElementTy()->IsIntTy() ||
        ty.GetElementTy()->IsRecordTy()) &&
@@ -3284,9 +3367,11 @@ void SemanticAnalyser::visit(Cast &cast)
       !(ty.IsArrayTy() && ty.GetElementTy()->IsIntTy())) {
     auto &err = cast.addError();
     err << "Cannot cast to \"" << ty << "\"";
-    if (auto it = KNOWN_TYPE_ALIASES.find(ty.GetName());
-        it != KNOWN_TYPE_ALIASES.end()) {
-      err.addHint() << "Did you mean \"" << it->second << "\"?";
+    if (ty.IsRecordTy() || ty.IsEnumTy()) {
+      if (auto it = KNOWN_TYPE_ALIASES.find(ty.GetName());
+          it != KNOWN_TYPE_ALIASES.end()) {
+        err.addHint() << "Did you mean \"" << it->second << "\"?";
+      }
     }
   }
 
@@ -3538,17 +3623,6 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   } else if (type.IsCtxAccess()) {
     // bpf_map_update_elem() only accepts a pointer to a element in the stack
     assignment.addError() << "context cannot be assigned to a map";
-  } else if (type.IsTupleTy()) {
-    // Early passes may not have been able to deduce the full types of tuple
-    // elements yet. So wait until final pass.
-    if (is_final_pass()) {
-      const auto &map_type = map_val_[map_ident];
-      const auto &expr_type = assignment.expr.type();
-      if (!expr_type.FitsInto(map_type)) {
-        assignment.addError() << "Tuple type mismatch: " << map_type
-                              << " != " << expr_type << ".";
-      }
-    }
   } else if (type.IsArrayTy()) {
     const auto &map_type = map_val_[map_ident];
     const auto &expr_type = assignment.expr.type();
@@ -3606,10 +3680,14 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         pass_tracker_.inc_num_unresolved();
       }
     } else if (assignTy.IsStringTy()) {
-      if (foundVar.can_resize) {
-        storedTy.SetSize(std::max(storedTy.GetSize(), assignTy.GetSize()));
-      } else if (!assignTy.FitsInto(storedTy)) {
-        type_mismatch_error = true;
+      if (assignTy.GetSize() > storedTy.GetSize()) {
+        if (foundVar.can_resize) {
+          storedTy.SetSize(assignTy.GetSize());
+        } else {
+          type_mismatch_error = true;
+        }
+      } else {
+        create_string_cast(assignment.expr, storedTy);
       }
     } else if (storedTy.IsIntegerTy()) {
       auto updatedTy = update_int_type(assignTy, assignment.expr, storedTy);
@@ -3630,12 +3708,13 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                      : ". The value may contain garbage.");
       }
     } else if (assignTy.IsTupleTy()) {
-      auto updatedTy = update_tuple_type(storedTy,
-                                         assignTy,
-                                         foundVar.can_resize);
-      if (!updatedTy) {
+      auto updatedTy = get_promoted_tuple(storedTy, assignTy);
+      if (!updatedTy || (*updatedTy != storedTy && !foundVar.can_resize)) {
         type_mismatch_error = true;
       } else {
+        if (*updatedTy != assignTy) {
+          create_tuple_cast(assignment.expr, assignTy, *updatedTy);
+        }
         storedTy = *updatedTy;
         assignTy = *updatedTy;
       }
@@ -4171,15 +4250,22 @@ void SemanticAnalyser::assign_map_type(Map &map,
         }
       }
     } else if (storedTy.IsStringTy()) {
-      storedTy.SetSize(std::max(storedTy.GetSize(), type.GetSize()));
+      if (storedTy.GetSize() > type.GetSize()) {
+        create_string_cast(assignment->expr, storedTy);
+      } else {
+        storedTy.SetSize(type.GetSize());
+      }
     } else if (storedTy.IsTupleTy()) {
       if (!storedTy.IsSameType(type)) {
         type_mismatch_error = true;
       } else {
-        auto updatedTy = update_tuple_type(storedTy, type, true);
+        auto updatedTy = get_promoted_tuple(storedTy, type);
         if (!updatedTy) {
           type_mismatch_error = true;
         } else {
+          if (*updatedTy != type) {
+            create_tuple_cast(assignment->expr, type, *updatedTy);
+          }
           storedTy = *updatedTy;
         }
       }
@@ -4298,6 +4384,49 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_int(
   return CreateInteger(new_size * 8, leftSigned);
 }
 
+std::optional<SizedType> SemanticAnalyser::get_promoted_tuple(
+    const SizedType &leftTy,
+    const SizedType &rightTy)
+{
+  assert(leftTy.IsTupleTy() && leftTy.IsSameType(rightTy));
+
+  std::vector<SizedType> new_elems;
+  for (ssize_t i = 0; i < rightTy.GetFieldCount(); i++) {
+    auto storedElemTy = leftTy.GetField(i).type;
+    auto assignElemTy = rightTy.GetField(i).type;
+    if (storedElemTy.IsIntegerTy()) {
+      auto updatedTy = get_promoted_int(storedElemTy, assignElemTy);
+      if (!updatedTy) {
+        return std::nullopt;
+      }
+
+      new_elems.emplace_back(*updatedTy);
+      continue;
+    } else if (storedElemTy.IsTupleTy()) {
+      auto new_elem = get_promoted_tuple(storedElemTy, assignElemTy);
+      if (!new_elem) {
+        return std::nullopt;
+      } else {
+        new_elems.emplace_back(*new_elem);
+        continue;
+      }
+    } else if (storedElemTy.IsStringTy()) {
+      storedElemTy.SetSize(
+          std::max(storedElemTy.GetSize(), assignElemTy.GetSize()));
+      new_elems.emplace_back(storedElemTy);
+      continue;
+    } else if (storedElemTy.IsArrayTy()) {
+      if ((storedElemTy.GetSize() != assignElemTy.GetSize()) ||
+          (*storedElemTy.GetElementTy() != *assignElemTy.GetElementTy())) {
+        return std::nullopt;
+      }
+    }
+
+    new_elems.emplace_back(storedElemTy);
+  }
+  return CreateTuple(Struct::CreateTuple(new_elems));
+}
+
 // The leftExpr is optional because in cases of variable assignment,
 // and map key/value adjustment we can't modify/cast the left
 // but in cases of binops or if expressions we can modify/cast both
@@ -4326,67 +4455,6 @@ std::optional<SizedType> SemanticAnalyser::update_int_type(
   }
 
   return *updatedTy;
-}
-
-std::optional<SizedType> SemanticAnalyser::update_tuple_type(
-    const SizedType &storedTy,
-    const SizedType &assignTy,
-    bool can_resize)
-{
-  assert(storedTy.IsTupleTy() && storedTy.IsSameType(assignTy));
-
-  std::vector<SizedType> new_elems;
-  for (ssize_t i = 0; i < assignTy.GetFieldCount(); i++) {
-    auto storedElemTy = storedTy.GetField(i).type;
-    auto assignElemTy = assignTy.GetField(i).type;
-    if (storedElemTy.IsIntegerTy()) {
-      if (storedElemTy.IsEqual(assignElemTy)) {
-        new_elems.push_back(storedElemTy);
-        continue;
-      }
-
-      // Different sign (maybe different size)
-      if (storedElemTy.IsSigned() != assignElemTy.IsSigned()) {
-        auto updatedTy = get_promoted_int(storedElemTy, assignElemTy);
-        if (!updatedTy || (*updatedTy != storedElemTy && !can_resize)) {
-          return std::nullopt;
-        }
-
-        new_elems.emplace_back(*updatedTy);
-        continue;
-      }
-
-      // Same sign but different size
-      if (assignElemTy.GetSize() >= storedElemTy.GetSize()) {
-        if (!can_resize) {
-          return std::nullopt;
-        }
-        new_elems.emplace_back(assignElemTy);
-        continue;
-      } else {
-        new_elems.emplace_back(storedElemTy);
-        continue;
-      }
-    } else if (storedElemTy.IsTupleTy()) {
-      auto new_elem = update_tuple_type(storedElemTy, assignElemTy, can_resize);
-      if (!new_elem) {
-        return std::nullopt;
-      } else {
-        new_elems.emplace_back(*new_elem);
-        continue;
-      }
-    } else if (storedElemTy.IsStringTy()) {
-      if (storedElemTy.GetSize() < assignElemTy.GetSize() && !can_resize) {
-        return std::nullopt;
-      }
-      storedElemTy.SetSize(
-          std::max(storedElemTy.GetSize(), assignElemTy.GetSize()));
-      new_elems.emplace_back(storedElemTy);
-    } else {
-      new_elems.emplace_back(storedElemTy);
-    }
-  }
-  return CreateTuple(Struct::CreateTuple(new_elems));
 }
 
 void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)

@@ -578,26 +578,6 @@ std::shared_ptr<const Struct> SizedType::GetStruct() const
   return inner_struct();
 }
 
-bool SizedType::IsSameSizeRecursive(const SizedType &t) const
-{
-  if (GetSize() != t.GetSize()) {
-    return false;
-  }
-
-  if (IsTupleTy() && t.IsTupleTy()) {
-    if (GetFieldCount() != t.GetFieldCount()) {
-      return false;
-    }
-
-    for (ssize_t i = 0; i < GetFieldCount(); i++) {
-      if (!GetField(i).type.IsSameSizeRecursive(t.GetField(i).type))
-        return false;
-    }
-  }
-
-  return true;
-}
-
 bool SizedType::FitsInto(const SizedType &t) const
 {
   if (!IsSameType(t))

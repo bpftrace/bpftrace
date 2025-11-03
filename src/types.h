@@ -262,9 +262,6 @@ public:
   bool operator==(const SizedType &t) const;
   std::strong_ordering operator<=>(const SizedType &t) const;
   bool IsSameType(const SizedType &t) const;
-  // This is primarily for Tuples which have equal total size (due to padding)
-  // but their individual elements have different sizes.
-  bool IsSameSizeRecursive(const SizedType &t) const;
   bool FitsInto(const SizedType &t) const;
 
   bool IsPrintableTy() const
