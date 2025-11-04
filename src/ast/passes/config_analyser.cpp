@@ -27,6 +27,7 @@ private:
 static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
   "symbol_source",
   "max_type_res_iterations",
+  "unstable_macro"
 };
 
 void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
@@ -36,6 +37,7 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   if (DEPRECATED_CONFIGS.contains(assignment.var)) {
     assignment.addWarning()
         << assignment.var << " is deprecated and has no effect";
+    return;
   }
 
   std::string var(assignment.var);

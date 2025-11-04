@@ -425,7 +425,6 @@ Pass CreateMacroExpansionPass()
       MacroExpander expander(ast, macros, stack);
       expander.visit(ast.root);
     }
-    return macros;
   };
 
   return Pass::create("MacroExpansion", fn);

@@ -13,7 +13,6 @@ void test(const std::string& input,
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
-  bpftrace.config_->unstable_macro = ConfigUnstable::enable;
 
   // The input provided here is embedded into an expression.
   ast::ASTContext ast("stdin", input);
