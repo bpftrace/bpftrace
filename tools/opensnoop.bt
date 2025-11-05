@@ -57,22 +57,46 @@ tracepoint:syscalls:sys_enter_openat2
 
 macro getcwd(@paths) {
 	$dentry = curtask->fs->pwd.dentry;
+	$vfsmnt = curtask->fs->pwd.mnt;
+	$mnt = (struct mount *)((uint64)$vfsmnt - offsetof(struct mount, mnt));
+	$mnt_root = $vfsmnt->mnt_root;
 
 	$max_path_depth = getopt("depth", 35);
 
 	for ($j : ((uint64)0)..((uint64)$max_path_depth)) {
-		$parent_dentry = $dentry->d_parent;
-		if ($dentry == $parent_dentry) {
-			break;
-		}
+
 		@paths[$j] = str($dentry->d_name.name);
+		$parent_dentry = $dentry->d_parent;
+
+		if ($dentry == $parent_dentry || $dentry == $mnt_root) {
+			$mnt_parent = (struct mount *)$mnt->mnt_parent;
+
+			/* Real root directory */
+			if ($mnt == $mnt_parent) {
+				break;
+			}
+
+			$dentry = $mnt->mnt_mountpoint;
+			$mnt = $mnt_parent;
+			$mnt_root = $mnt->mnt.mnt_root;
+			continue;
+		}
+
 		$dentry = $parent_dentry;
 	}
 }
 
 macro printcwd(@paths) {
 	for ($j : ((uint64)0)..((uint64)len(@paths))) {
-		printf("/%s", @paths[(uint64)len(@paths) - $j - 1]);
+		let $name = @paths[(uint64)len(@paths) - $j - 1];
+		/**
+		 * If it is a mount point, there will be a '/', because the '/'
+		 * will be added below, so just skip this '/'.
+		 */
+		if ($name == "/") {
+			continue;
+		}
+		printf("/%s", $name);
 	}
 	printf("/");
 	clear(@paths);
