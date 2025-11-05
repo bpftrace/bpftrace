@@ -13,6 +13,22 @@ Basically all functions or macros that don't have arguments or have default argu
 
 ## Helpers
 
+### abspath
+- `void abspath(string path, uint64 max_path_depth);`
+
+Takes a string-like variable, and converts to an absolute path.
+
+
+In fact, this function concatenates the program's current working directory and the filename to form the absolute path of the file. If an empty string is passed in, the current working directory can be obtained.
+
+For example:
+```
+let $cwd : string[256];
+abspath($cwd, 32);
+printf("%s\n", $cwd);
+```
+
+
 ### assert
 - `void assert(bool condition, string message)`
 
@@ -352,6 +368,14 @@ kprobe:dummy {
   }
 }
 ```
+
+
+### fs_root
+- `struct fs_struct *fs_root();`
+- `struct fs_struct *fs_root;`
+
+Get task filesystem root.
+
 
 
 ### func
@@ -1276,6 +1300,22 @@ The maximum string length is limited by the `BPFTRACE_MAX_STRLEN` env variable, 
 In case the string is longer than the specified length only `length - 1` bytes are copied and a NULL byte is appended at the end.
 
 bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
+
+
+### str_append
+- `void str_append(string dst, string src);`
+- `void str_append(string dst, char src[]);`
+
+Appends another string or const char* to an existing string variable.
+
+
+
+### str_prepend
+- `void str_prepend(string dst, string src);`
+- `void str_prepend(string dst, char src[]);`
+
+Prepends another string or const char* to an existing string variable.
+
 
 
 ### strcap

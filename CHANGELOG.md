@@ -10,6 +10,10 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- stdlib: add `abspath()` get file absolute path
+  - [#5231](https://github.com/bpftrace/bpftrace/pull/5231)
+- stdlib: add `str_{append,prepend}` function
+  - [#5231](https://github.com/bpftrace/bpftrace/pull/5231)
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)
