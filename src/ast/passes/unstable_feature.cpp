@@ -15,7 +15,6 @@ namespace {
 
 const auto MAP_DECL = "map declarations";
 const auto IMPORTS = "imports";
-const auto MACROS = "macros";
 const auto TSERIES = "tseries";
 const auto ADDR = "address-of operator (&)";
 const auto TYPEINFO = "typeinfo";
@@ -38,9 +37,7 @@ std::string get_error(const std::string &feature, const std::string &config)
 
 class UnstableFeature : public Visitor<UnstableFeature> {
 public:
-  explicit UnstableFeature(BPFtrace &bpftrace,
-                           std::unordered_set<std::string> macros)
-      : bpftrace_(bpftrace), macros(std::move(macros)) {};
+  explicit UnstableFeature(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<UnstableFeature>::visit;
   void visit(MapDeclStatement &decl);
@@ -54,7 +51,6 @@ private:
   BPFtrace &bpftrace_;
   // This set is so we don't warn multiple times for the same feature.
   std::unordered_set<std::string> warned_features;
-  std::unordered_set<std::string> macros;
 
   void check_unstable_addr(Node &node);
 };
@@ -95,19 +91,6 @@ void UnstableFeature::visit(Import &imp)
 
 void UnstableFeature::visit(Call &call)
 {
-  if (macros.contains(call.func)) {
-    if (bpftrace_.config_->unstable_macro == ConfigUnstable::error) {
-      call.addError() << get_error(MACROS, UNSTABLE_MACRO);
-      return;
-    }
-    if (bpftrace_.config_->unstable_macro == ConfigUnstable::warn &&
-        !warned_features.contains(UNSTABLE_MACRO)) {
-      LOG(WARNING) << get_warning(MACROS, UNSTABLE_MACRO);
-      warned_features.insert(UNSTABLE_MACRO);
-    }
-    return;
-  }
-
   if (call.func != "tseries") {
     return;
   }
@@ -161,12 +144,7 @@ void UnstableFeature::visit(VariableAddr &var_addr)
 Pass CreateUnstableFeaturePass()
 {
   return Pass::create("UnstableFeature", [](ASTContext &ast, BPFtrace &b) {
-    std::unordered_set<std::string> macros;
-    for (Macro *macro : ast.root->macros) {
-      macros.insert(macro->name);
-    }
-
-    auto configs = UnstableFeature(b, std::move(macros));
+    auto configs = UnstableFeature(b);
     configs.visit(ast.root);
   });
 };

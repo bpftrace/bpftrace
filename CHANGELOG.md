@@ -50,6 +50,8 @@ and this project adheres to
   - [#4773](https://github.com/bpftrace/bpftrace/pull/4773)
 - Remove automatic type promotion for integers, making them more flexible
   - [#4768](https://github.com/bpftrace/bpftrace/pull/4768)
+- Stabilize macros (remove 'unstable_macro' flag)
+  - [#4818](https://github.com/bpftrace/bpftrace/pull/4818)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 16

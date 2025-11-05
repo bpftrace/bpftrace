@@ -6,7 +6,7 @@
  * USAGE: opensnoop.bt -- [--depth=<N>]
  *
  * Example of usage:
- * 
+ *
  * # ./opensnoop.bt
  * Attached 8 probes
  * Tracing open syscalls... Hit Ctrl-C to end.
@@ -22,10 +22,10 @@
  * 3108   cgroupify           5   0 /Git/bpftrace/bpftrace/rongtao/17355/cgroup.procs
  * 2440   snmp-pass           4   0 /proc/cpuinfo
  * 2440   snmp-pass           4   0 /proc/stat
- * 
+ *
  * While tracing, at "ls" command was launched: the libraries it uses can be seen
  * as they were opened.
- * 
+ *
  * opensnoop can be useful for discovering configuration and log files, if used
  * during application startup.
  *
@@ -40,7 +40,6 @@
 
 config = {
 	missing_probes=warn;
-	unstable_macro=enable;
 }
 
 BEGIN

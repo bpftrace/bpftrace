@@ -8,9 +8,9 @@
  *
  * This uses dynamic tracing of user-level functions and registers, and may
  * need modifications to match your software and processor architecture.
- * 
+ *
  * Example of usage:
- * 
+ *
  * # ./gethostlatency.bt
  * Attaching 7 probes...
  * Tracing getaddr/gethost calls... Hit Ctrl-C to end.
@@ -19,10 +19,10 @@
  * 02:52:12  19111  curl                 17 www.netflix.com
  * 02:52:19  19116  curl                  9 www.facebook.com
  * 02:52:23  19118  curl                  3 www.facebook.com
- * 
+ *
  * In this example, the first call to lookup "www.netflix.com" took 81 ms, and
  * the second took 17 ms (sounds like some caching).
- * 
+ *
  * This is a bpftrace version of the bcc tool of the same name.
  * The bcc version provides options to customize the output.
  *
@@ -33,7 +33,6 @@
 
 config = {
 	missing_probes = "ignore";
-	unstable_macro = "enable";
 }
 
 BEGIN

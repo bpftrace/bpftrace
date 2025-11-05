@@ -5385,7 +5385,6 @@ let @a = percpuarray(10); begin { @a = count(); }
 TEST_F(SemanticAnalyserTest, macros)
 {
   auto bpftrace = get_mock_bpftrace();
-  bpftrace->config_->unstable_macro = ConfigUnstable::enable;
 
   test("macro set($x) { $x = 1; $x } begin { $a = \"string\"; set($a); }",
        Mock{ *bpftrace },

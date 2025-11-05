@@ -370,7 +370,6 @@ Controls whether maps are printed on exit. Set to `false` in order to change the
 ### unstable features
 
 These are the list of unstable features:
-- `unstable_macro` -  feature flag for bpftrace macros
 - `unstable_map_decl` - feature flag for map declarations
 - `unstable_tseries` - feature flag for time series map type
 - `unstable_addr` - feature flag for address of operator (&)
@@ -616,9 +615,6 @@ interval:s:1 {
 ```
 
 ## Macros
-
-***Warning*** this feature is experimental and may be subject to changes.
-Stabilization is tracked in [#4079](https://github.com/bpftrace/bpftrace/issues/4079).
 
 bpftrace macros (as opposed to C macros) provide a way for you to structure your script.
 They can be useful when you want to factor out code into smaller, more understandable parts.

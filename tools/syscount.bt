@@ -2,11 +2,11 @@
 /*
  * syscount.bt	Count system calls.
  *		For Linux, uses bpftrace, eBPF.
- * 
+ *
  * USAGE: syscount.bt -- [--sysname]
  *
  * Example of usage:
- * 
+ *
  * # ./syscount.bt
  * Attaching 3 probes...
  * Counting syscalls... Hit Ctrl-C to end.
@@ -22,7 +22,7 @@
  * @syscall[3]: 163269
  * @syscall[2]: 270801
  * @syscall[4]: 326333
- * 
+ *
  * Top 10 processes:
  * @process[rm]: 14360
  * @process[tail]: 16011
@@ -34,7 +34,7 @@
  * @process[sh]: 270515
  * @process[cc1]: 482888
  * @process[make]: 1404065
- * 
+ *
  * The above output was traced during a Linux kernel build, and the process name
  * with the most syscalls was "make" with 1,404,065 syscalls while tracing. The
  * highest syscall ID was 4, which is stat().
@@ -48,10 +48,6 @@
  *
  * 13-Sep-2018	Brendan Gregg	Created this.
  */
-
-config = {
-	unstable_macro=enable;
-}
 
 BEGIN
 {
