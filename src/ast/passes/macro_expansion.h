@@ -44,6 +44,8 @@ private:
   std::map<std::string, std::vector<Macro *>> macros_;
 };
 
+void expand_macro(ASTContext &ast, Expression &expr, const MacroRegistry &registry);
+
 // Expand all possible macros. Macros can be defined recursively, and in these
 // cases they are not expanded recursively. Instead, it is the responsibility
 // of the caller to reject these late calls or call `expand` above (to a limit).

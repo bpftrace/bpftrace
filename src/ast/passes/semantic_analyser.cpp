@@ -14,10 +14,10 @@
 #include "ast/helpers.h"
 #include "ast/integer_types.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
-#include "ast/passes/simplify_types.h"
 #include "ast/passes/type_system.h"
 #include "ast/tracepoint_helpers.h"
 #include "bpftrace.h"
@@ -150,6 +150,7 @@ public:
                             MapMetadata &map_metadata,
                             NamedParamDefaults &named_param_defaults,
                             TypeMetadata &type_metadata,
+                            MacroRegistry &macro_registry,
                             bool has_child = true)
       : ctx_(ctx),
         bpftrace_(bpftrace),
@@ -157,6 +158,7 @@ public:
         map_metadata_(map_metadata),
         named_param_defaults_(named_param_defaults),
         type_metadata_(type_metadata),
+        macro_registry_(macro_registry),
         has_child_(has_child)
   {
   }
@@ -209,6 +211,7 @@ private:
   MapMetadata &map_metadata_;
   NamedParamDefaults &named_param_defaults_;
   TypeMetadata &type_metadata_;
+  const MacroRegistry &macro_registry_;
 
   bool is_final_pass() const;
   bool is_first_pass() const;
@@ -3468,7 +3471,6 @@ void SemanticAnalyser::visit(Expression &expr)
   // Visit and fold all other values.
   Visitor<SemanticAnalyser>::visit(expr);
   fold(ctx_, expr);
-  simplify(ctx_, expr);
 
   // Inline specific constant expressions.
   if (auto *szof = expr.as<Sizeof>()) {
@@ -3492,6 +3494,40 @@ void SemanticAnalyser::visit(Expression &expr)
       auto *full_ty = ctx_.make_node<String>(type_id->loc, typestr(ty));
       expr.value = ctx_.make_node<Tuple>(
           type_id->loc, ExpressionList{ id, base_ty, full_ty });
+    }
+  } else if (auto *binop = expr.as<Binop>()) {
+    if (binop->left.type().IsTupleTy() &&
+        binop->left.type().IsSameType(binop->right.type()) &&
+        (binop->op == Operator::EQ || binop->op == Operator::NE)) {
+      const auto &lht = binop->left.type();
+      const auto &rht = binop->right.type();
+      auto updatedTy = get_promoted_tuple(lht, rht);
+      if (!updatedTy) {
+        binop->addError() << "Type mismatch for '" << opstr(*binop)
+                          << "': comparing " << lht << " with " << rht;
+      } else {
+        if (*updatedTy != lht) {
+          create_tuple_cast(binop->left, lht, *updatedTy);
+        }
+        if (*updatedTy != rht) {
+          create_tuple_cast(binop->right, rht, *updatedTy);
+        }
+        auto *size = ctx_.make_node<Integer>(binop->loc,
+                                             updatedTy->GetSize(),
+                                             CreateUInt64());
+        auto *call = ctx_.make_node<Call>(
+            binop->loc,
+            "memcmp",
+            ExpressionList{ binop->left, binop->right, size });
+        auto *typeof = ctx_.make_node<Typeof>(binop->loc, CreateBool());
+        auto *cast = ctx_.make_node<Cast>(binop->loc, typeof, call);
+        if (binop->op == Operator::NE) {
+          expr.value = cast;
+        } else {
+          expr.value = ctx_.make_node<Unop>(binop->loc, cast, Operator::LNOT);
+        }
+        expand_macro(ctx_, expr, macro_registry_);
+      }
     }
   }
 }
@@ -4476,13 +4512,15 @@ Pass CreateSemanticPass()
                CDefinitions &c_definitions,
                MapMetadata &mm,
                NamedParamDefaults &named_param_defaults,
-               TypeMetadata &types) {
+               TypeMetadata &types,
+               MacroRegistry &macro_registry) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
                                mm,
                                named_param_defaults,
                                types,
+                               macro_registry,
                                !b.cmd_.empty() || b.child_ != nullptr);
     semantics.analyse();
   };

@@ -23,6 +23,7 @@
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/parser.h"
@@ -856,6 +857,7 @@ int main(int argc, char* argv[])
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
     ast::CDefinitions no_c_defs; // No external C definitions may be used.
     ast::TypeMetadata no_types;  // No external types may be used.
+    ast::MacroRegistry macro_registry; // No macros may be used.
 
     // Parse and expand all the attachpoints. We don't need to descend into
     // the actual driver here, since we know that the program is already
@@ -865,6 +867,7 @@ int main(int argc, char* argv[])
                         .put(bpftrace)
                         .put(no_c_defs)
                         .put(no_types)
+                        .put(macro_registry)
                         .add(ast::CreateParseAttachpointsPass(args.listing))
                         .add(ast::CreateCheckAttachpointsPass(args.listing))
                         .add(CreateParseBTFPass())
@@ -952,9 +955,11 @@ int main(int argc, char* argv[])
   if (args.listing) {
     ast::CDefinitions no_c_defs; // See above.
     ast::TypeMetadata no_types;  // See above.
+    ast::MacroRegistry macro_registry; // See above.
     pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)))
         .put(no_c_defs)
         .put(no_types)
+        .put(macro_registry)
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(ast::CreateCheckAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())

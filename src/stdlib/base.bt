@@ -537,6 +537,32 @@ macro len(e) {
 //  */
 // ```
 
+// :variant int memcmp(left, right, uint64 count)
+// Compares the first 'count' bytes of two expressions.
+// 0 is returned if they are the same.
+// negative value if the first differing byte in left is less
+// than the corresponding byte in right.
+//
+macro memcmp($left, $right, count) {
+  __memcmp((void *)&$left, (void *)&$right, count)
+}
+
+macro memcmp($left, right, count) {
+   $right = right;
+   memcmp($left, $right, count)
+}
+
+macro memcmp(left, $right, count) {
+   $left = left;
+   memcmp($left, $right, count)
+}
+
+macro memcmp(left, right, count) {
+  $left = left;
+  $right = right;
+  memcmp($left, $right, count)
+}
+
 // :variant uint64 ncpus()
 // Number of CPUs
 macro ncpus() {
