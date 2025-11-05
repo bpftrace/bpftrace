@@ -36,7 +36,7 @@ else()
   # 2. For bpftrace's stdlib since libbpf headers are included in stdlib bpf.c
   #    files (and the rules to embed them are generated in configure phase).
   execute_process(
-    COMMAND make PREFIX=${LIBBPF_BUILD} install_headers
+    COMMAND make PREFIX=${LIBBPF_BUILD} install_headers install_uapi_headers
     WORKING_DIRECTORY ${LIBBPF_SOURCE}
     OUTPUT_QUIET)
 
