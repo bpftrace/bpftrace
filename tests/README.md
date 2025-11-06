@@ -8,41 +8,6 @@ Every contribution should (1) not break the existing tests and (2) introduce new
 
 Unit tests for individual components (semantic analyser, codegen, etc.) are based on the GoogleTest framework. These tests can be run with the `bpftrace_test` executable. Tests can be selected with the `--gtest_filter` flag or the `GTEST_FILTER` environment variable, see `--help` for more information. These are located in `tests/*.cpp` and are executed by `<builddir>/tests/bpftrace_test`.
 
-### Codegen tests
-
-The codegen tests verify that the optimized IR matches our expectations.
-
-The tests are defined as C++ files in the `tests/codegen` directory and look like:
-
-```
-TEST(codegen, call_avg)
-{
-  test("kprobe:f { @x = avg(pid) }", NAME);
-}
-```
-
-The `test` function does all the heavy lifting and is defined in
-`tests/codegen/common.h`. It compiles the specified program (first argument) and
-compares it (string compare) with the expected result, a file named by the
-second argument. The `NAME` macro holds the test name,  which is `call_avg` in
-this case.
-
-These tests run as part of the normal suite of unit tests if you are running LLVM 18.
-If not, you need to install 'nix' and run these tests via this script:
-`./tests/codegen-tests.sh`.
-
-#### Updating
-
-**LLVM 18**
-
-If you are running LLVM 18 or want to only update specific tests with `--gtest_filter`
-run `<builddir>/tests/bpftrace_test` with `BPFTRACE_UPDATE_TESTS=1` and the `test`
-helper will update the IR instead of running the tests.
-
-**Not LLVM 18**
-
-Run `./tests/codegen-tests.sh -u`. This updates all the codegen tests.
-
 ## Runtime tests
 
 Runtime tests will call the bpftrace executable. These are located in `tests/runtime` and are managed by a custom framework.
