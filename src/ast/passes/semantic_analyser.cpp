@@ -251,8 +251,11 @@ private:
                        AssignMapStatement *assignment = nullptr);
   SizedType create_key_type(const SizedType &expr_type, Node &node);
   void reconcile_map_key(Map *map, Expression &key_expr);
-  std::optional<SizedType> get_promoted_int(const SizedType &leftTy,
-                                            const SizedType &rightTy);
+  std::optional<SizedType> get_promoted_int(
+      const SizedType &leftTy,
+      const SizedType &rightTy,
+      const std::optional<Expression> &leftExpr = std::nullopt,
+      const std::optional<Expression> &rightExpr = std::nullopt);
   std::optional<SizedType> update_int_type(
       const SizedType &rightTy,
       Expression &rightExpr,
@@ -3637,7 +3640,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         assignTy = *updatedTy;
       }
     }
-    if (type_mismatch_error) {
+    if (type_mismatch_error && is_final_pass()) {
       const auto *err_segment =
           foundVar.was_assigned
               ? "when variable already contains a value of type"
@@ -3733,9 +3736,14 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
                "assignment. Variable: "
             << var_ident;
       } else if (is_final_pass()) {
-        // Update the declaration type if it was either not set e.g. `let $a;`
-        // or the type is ambiguous or resizable e.g. `let $a: string;`
-        decl.var->var_type = foundVar.type;
+        if (!decl.typeof || (decl.typeof->type().IsNoneTy() ||
+                             decl.typeof->type().GetSize() == 0)) {
+          // Update the declaration type if it was either not set e.g. `let $a;`
+          // or the type is ambiguous or resizable e.g. `let $a: string;`
+          decl.var->var_type = foundVar.type;
+        } else {
+          foundVar.type = decl.var->var_type;
+        }
       }
 
       if (is_final_pass() && !foundVar.was_assigned) {
@@ -3911,7 +3919,8 @@ bool SemanticAnalyser::check_arg(Call &call,
         if (found != agg_map_val_.end()) {
           auto &storedTy = found->second;
           if (assignTy.IsSigned() != storedTy.IsSigned()) {
-            auto updatedTy = get_promoted_int(storedTy, assignTy);
+            auto updatedTy = get_promoted_int(
+                storedTy, assignTy, std::nullopt, call.vargs.at(2));
             if (!updatedTy) {
               call.addError() << "Type mismatch for " << map->ident << ": "
                               << "trying to assign value of type '" << assignTy
@@ -4228,17 +4237,54 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
 
 std::optional<SizedType> SemanticAnalyser::get_promoted_int(
     const SizedType &leftTy,
-    const SizedType &rightTy)
+    const SizedType &rightTy,
+    const std::optional<Expression> &leftExpr,
+    const std::optional<Expression> &rightExpr)
 {
+  if (leftTy.IsEqual(rightTy)) {
+    return leftTy;
+  }
+
   bool leftSigned = leftTy.IsSigned();
+  bool rightSigned = rightTy.IsSigned();
   auto leftSize = leftTy.GetSize();
   auto rightSize = rightTy.GetSize();
 
-  if (leftSigned && leftSize > rightSize) {
-    return leftTy;
-  } else if (!leftSigned && leftSize < rightSize) {
-    return rightTy;
-  } else {
+  if (leftSigned != rightSigned) {
+    if (leftSigned) {
+      if (leftSize > rightSize) {
+        return leftTy;
+      }
+      if (rightExpr && (*rightExpr).is<Integer>()) {
+        auto signed_ty = ast::get_signed_integer_type(
+            (*rightExpr).as<Integer>()->value);
+        if (!signed_ty) {
+          // The value is too large and can't fit into
+          // any supported signed int types
+          return std::nullopt;
+        }
+        if (signed_ty->GetSize() <= leftSize) {
+          return leftTy;
+        }
+      }
+    } else if (rightSigned) {
+      if (rightSize > leftSize) {
+        return rightTy;
+      }
+      if (leftExpr && (*leftExpr).is<Integer>()) {
+        auto signed_ty = ast::get_signed_integer_type(
+            (*leftExpr).as<Integer>()->value);
+        if (!signed_ty) {
+          // The value is too large and can't fit into
+          // any supported signed int types
+          return std::nullopt;
+        }
+        if (signed_ty->GetSize() <= rightSize) {
+          return rightTy;
+        }
+      }
+    }
+
     size_t new_size = std::max(leftSize, rightSize) * 2;
     if (new_size > 8) {
       return std::nullopt;
@@ -4246,6 +4292,10 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_int(
       return CreateInteger(new_size * 8, true);
     }
   }
+
+  // Same sign - return the larger of the two
+  size_t new_size = std::max(leftSize, rightSize);
+  return CreateInteger(new_size * 8, leftSigned);
 }
 
 // The leftExpr is optional because in cases of variable assignment,
@@ -4260,68 +4310,22 @@ std::optional<SizedType> SemanticAnalyser::update_int_type(
 {
   assert(leftTy.IsIntegerTy() && rightTy.IsIntegerTy());
 
-  bool leftSigned = leftTy.IsSigned();
-  auto leftSize = leftTy.GetSize();
-  auto rightSize = rightTy.GetSize();
-
-  if (leftTy.IsEqual(rightTy)) {
-    return leftTy;
-  } else if (leftSigned != rightTy.IsSigned()) {
-    if (rightExpr.is<Integer>()) {
-      auto updatedTy = ast::get_signed_integer_type(
-          rightExpr.as<Integer>()->value);
-      if (!updatedTy) {
-        return std::nullopt;
-      }
-
-      if (updatedTy->GetSize() <= leftSize) {
-        create_int_cast(rightExpr, leftTy);
-        return leftTy;
-      }
-      create_int_cast(rightExpr, *updatedTy);
-      if (leftExpr) {
-        create_int_cast(leftExpr->get(), *updatedTy);
-      }
-      return *updatedTy;
-    } else if (leftExpr && leftExpr->get().is<Integer>()) {
-      auto updatedTy = ast::get_signed_integer_type(
-          leftExpr->get().as<Integer>()->value);
-      if (!updatedTy) {
-        return std::nullopt;
-      }
-
-      if (updatedTy->GetSize() <= rightSize) {
-        create_int_cast(leftExpr->get(), rightTy);
-        return rightTy;
-      }
-      create_int_cast(leftExpr->get(), *updatedTy);
-      create_int_cast(rightExpr, *updatedTy);
-      return *updatedTy;
-    } else {
-      auto updatedTy = get_promoted_int(leftTy, rightTy);
-      if (!updatedTy) {
-        return std::nullopt;
-      }
-      if (*updatedTy != leftTy && leftExpr) {
-        create_int_cast(leftExpr->get(), *updatedTy);
-      }
-      if (*updatedTy != rightTy) {
-        create_int_cast(rightExpr, *updatedTy);
-      }
-      return *updatedTy;
-    }
-  } else {
-    // Same sign but different size
-    if (rightSize < leftSize) {
-      create_int_cast(rightExpr, leftTy);
-      return leftTy;
-    } else {
-      if (leftExpr) {
-        create_int_cast(leftExpr->get(), rightTy);
-      }
-      return rightTy;
-    }
+  auto updatedTy =
+      leftExpr ? get_promoted_int(leftTy, rightTy, leftExpr->get(), rightExpr)
+               : get_promoted_int(leftTy, rightTy, std::nullopt, rightExpr);
+  if (!updatedTy) {
+    return std::nullopt;
   }
+
+  if (*updatedTy != leftTy && leftExpr) {
+    create_int_cast(leftExpr->get(), *updatedTy);
+  }
+
+  if (*updatedTy != rightTy) {
+    create_int_cast(rightExpr, *updatedTy);
+  }
+
+  return *updatedTy;
 }
 
 std::optional<SizedType> SemanticAnalyser::update_tuple_type(
@@ -4343,32 +4347,22 @@ std::optional<SizedType> SemanticAnalyser::update_tuple_type(
 
       // Different sign (maybe different size)
       if (storedElemTy.IsSigned() != assignElemTy.IsSigned()) {
-        if ((assignElemTy.GetSize() == 8 && !assignElemTy.IsSigned()) ||
-            (assignElemTy.GetSize() >= storedElemTy.GetSize() && !can_resize)) {
+        auto updatedTy = get_promoted_int(storedElemTy, assignElemTy);
+        if (!updatedTy || (*updatedTy != storedElemTy && !can_resize)) {
           return std::nullopt;
         }
 
-        if (!assignElemTy.IsSigned() &&
-            assignElemTy.GetSize() < storedElemTy.GetSize()) {
-          new_elems.emplace_back(storedElemTy);
-          continue;
-        }
-
-        size_t new_size = assignElemTy.GetSize() == storedElemTy.GetSize()
-                              ? (assignElemTy.GetSize() * 2)
-                              : std::max(storedElemTy.GetSize(),
-                                         assignElemTy.GetSize());
-        new_elems.emplace_back(CreateInteger(new_size * 8, true));
+        new_elems.emplace_back(*updatedTy);
         continue;
       }
 
       // Same sign but different size
       if (assignElemTy.GetSize() >= storedElemTy.GetSize()) {
-        if (can_resize) {
-          new_elems.emplace_back(assignElemTy);
-          continue;
+        if (!can_resize) {
+          return std::nullopt;
         }
-        return std::nullopt;
+        new_elems.emplace_back(assignElemTy);
+        continue;
       } else {
         new_elems.emplace_back(storedElemTy);
         continue;
