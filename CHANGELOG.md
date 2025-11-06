@@ -74,6 +74,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- opensnoop.bt: support mount points
+  - [#4822](https://github.com/bpftrace/bpftrace/pull/4822)
 - opensnoop.bt: support full file path
   - [#4601](https://github.com/bpftrace/bpftrace/pull/4601)
 - gethostlatency.bt: add more APIs support
