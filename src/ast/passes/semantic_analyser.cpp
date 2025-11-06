@@ -1298,10 +1298,16 @@ void SemanticAnalyser::visit(Call &call)
         } else {
           strlen = integer->value + 1; // Storage for NUL byte.
         }
-      } else if (auto *integer = dynamic_cast<NegativeInteger *>(
-                     call.vargs.at(1).as<NegativeInteger>())) {
+      }
+
+      if (auto *integer = dynamic_cast<NegativeInteger *>(
+              call.vargs.at(1).as<NegativeInteger>())) {
         call.addError() << call.func << "cannot use negative length ("
                         << integer->value << ")";
+      } else {
+        // In codegen we compare against the BPFTRACE_MAX_STRLEN
+        // which is set as a 64 bit int
+        create_int_cast(call.vargs.at(1), CreateUInt64());
       }
     }
     call.return_type = CreateString(strlen);
