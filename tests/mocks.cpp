@@ -158,10 +158,6 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   bpftrace.structs.Lookup("struct _tracepoint_btf_tag")
       .lock()
       ->AddField("real_parent", ptr_type_w_bad_tag, 16, std::nullopt, false);
-
-  // Even though this is set to 1 by default, make it 0 here
-  // to reduce the amount of repeated generated IR in the codegen tests
-  bpftrace.helper_check_level_ = 0;
 }
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace()

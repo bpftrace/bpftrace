@@ -95,6 +95,14 @@ PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(func); exit();
 EXPECT test
 AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
 
+NAME func_wildcard
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction* { print(func); }
+EXPECT uprobeFunction1
+EXPECT uprobeFunction2
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
 NAME username
 PROG i:ms:1 { printf("SUCCESS %s\n", username); exit(); }
 EXPECT_REGEX SUCCESS .*
@@ -108,6 +116,14 @@ NAME begin probe
 PROG begin { printf("%s", probe); } end{printf("-%s\n", probe); }
 EXPECT_REGEX ^begin-end$
 AFTER ./testprogs/syscall nanosleep 1e8
+
+NAME probe_wildcard
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction* { print(probe); }
+EXPECT uprobe:./testprogs/uprobe_test:uprobeFunction1
+EXPECT uprobe:./testprogs/uprobe_test:uprobeFunction2
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
 
 NAME curtask
 PROG i:ms:1 { printf("SUCCESS %p\n", curtask); exit(); }

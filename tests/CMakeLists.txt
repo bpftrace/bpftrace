@@ -1,30 +1,5 @@
 add_compile_options("-Werror=undef")
 
-# Regenerate codegen_includes.cpp whenever anything in the tests/codegen
-# directory changes
-file(GLOB_RECURSE CODEGEN_SOURCES CONFIGURE_DEPENDS codegen/*.cpp codegen/*.h)
-set(CODEGEN_INCLUDES_CPP codegen_includes.cpp)
-add_custom_command(
-  OUTPUT
-    ${CODEGEN_INCLUDES_CPP}
-  COMMAND
-    ${CMAKE_COMMAND}
-    -DCODEGEN_INCLUDES_CPP="${CODEGEN_INCLUDES_CPP}"
-    -DCODEGEN_SOURCES="${CODEGEN_SOURCES}"
-    -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
-  DEPENDS
-    ${CODEGEN_SOURCES})
-
-# Codegen tests are based on the IR produced by LLVM 18. The compiler used to
-# build bpftrace is also important, as decisions on order of evaluation can
-# influence the order of the generated IR.
-if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18 AND ${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU")
-  set(CODEGEN_SRC ${CODEGEN_INCLUDES_CPP})
-else()
-  set(CODEGEN_SRC "")
-  message(STATUS "Disabled codegen tests. Requires GNU/GCC and LLVM 18 (found ${CMAKE_CXX_COMPILER_ID}, LLVM ${LLVM_VERSION_MAJOR})")
-endif()
-
 add_executable(bpftrace_test
   arch.cpp
   async_action.cpp
@@ -71,8 +46,6 @@ add_executable(bpftrace_test
   type_system.cpp
   unstable_feature.cpp
   utils.cpp
-
-  ${CODEGEN_SRC}
 )
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
@@ -154,15 +127,3 @@ configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/
 
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
-
-if(ENABLE_TEST_VALIDATE_CODEGEN)
-  if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 18)
-    message(STATUS "Adding codegen-validator test")
-    configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
-    add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
-  else()
-    message(STATUS "Not building with LLVM 18, skipping codegen-validator test")
-  endif()
-else()
-  message(STATUS "codegen-validator test disabled")
-endif()
