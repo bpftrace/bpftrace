@@ -151,3 +151,8 @@ EXPECT h e
 NAME variable address with builtin
 PROG begin { $a = username; $b = &$a; printf("SUCCESS %s\n", *$b); }
 EXPECT_REGEX SUCCESS .*
+
+NAME variable map key lifetime
+PROG begin { $key = "test"; @map[$key] = 1; $key = "other"; @map[$key] = 2; }
+EXPECT @map[test]: 1
+EXPECT @map[other]: 2

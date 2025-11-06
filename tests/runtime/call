@@ -461,6 +461,10 @@ NAME usym
 PROG i:ms:100 { @=usym(1); @a=@; exit(); }
 EXPECT @a: 0x1
 
+NAME usym as map key
+PROG begin { @[usym(1)] = count(); }
+EXPECT @[0x1]: 1
+
 NAME print_non_map
 PROG begin { $x = 5; print($x); exit() }
 EXPECT 5

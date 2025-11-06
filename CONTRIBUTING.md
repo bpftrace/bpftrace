@@ -34,7 +34,7 @@ This is for "substantial" or breaking changes. Bug fixes, doc updates, small fea
 1. If the POC is approved by two or more maintainers, please follow the current pull request checklist:
  - add it to the CHANGELOG
  - update the adoc
- - ensure there are unit tests, runtime tests, and codegen tests
+ - ensure there are unit test and runtime tests
 
 **Note**:
 

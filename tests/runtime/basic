@@ -313,6 +313,11 @@ PROG begin { $a = 0; while ($a <= 100) { @=avg($a++) }  }
 EXPECT @: 50
 REQUIRES_FEATURE loop
 
+NAME nested while loop
+PROG begin { $i = 0; while ($i < 3) { $j = 0; while ($j < 2) { @count = count(); $j++; } $i++; } }
+EXPECT @count: 6
+REQUIRES_FEATURE loop
+
 NAME disable warnings
 RUN {{BPFTRACE}} --no-warnings -e 'begin { @x = stats(10); print(@x, 2); clear(@x); }' 2>&1| grep -c -E "WARNING|invalid option"
 EXPECT_REGEX ^0$
@@ -377,3 +382,28 @@ NAME print block expression with print
 PROG begin { print({ $x = 1; print ("bob"); $x > 1 }); }
 EXPECT bob
 EXPECT false
+
+NAME block expression with condition
+PROG begin { if ({ let $a = true; $a }) { print ("bob"); } }
+EXPECT bob
+
+NAME block expression complex
+PROG begin { $x = { $y = { $z = 10; $z + 5 }; $y * 2 }; print($x); }
+EXPECT 30
+
+NAME logical and with different types
+PROG begin { $x = 5; $y = true; if ($x && $y) { print("ok"); } }
+EXPECT ok
+
+NAME logical or with different types
+PROG begin { $x = 0; $y = true; if ($x || $y) { print("ok"); } }
+EXPECT ok
+
+NAME bitshift
+PROG begin { @x = 1 << 10; @y = 1024 >> 9; }
+EXPECT @x: 1024
+EXPECT @y: 2
+
+NAME bitwise_not
+PROG begin { @x = ~10; }
+EXPECT @x: 18446744073709551605
