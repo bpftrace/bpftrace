@@ -35,6 +35,34 @@
  * @process[cc1]: 482888
  * @process[make]: 1404065
  *
+ * # ./syscount.bt -- --sysname
+ * Attached 3 probes
+ * Counting syscalls... Hit Ctrl-C to end.
+ * ^C
+ * Top 10 syscalls NAMEs:
+ * @syscallname[mprotect]: 110
+ * @syscallname[epoll_pwait]: 120
+ * @syscallname[recvmsg]: 135
+ * @syscallname[ioctl]: 167
+ * @syscallname[write]: 216
+ * @syscallname[gettid]: 243
+ * @syscallname[ppoll]: 339
+ * @syscallname[epoll_wait]: 420
+ * @syscallname[read]: 667
+ * @syscallname[futex]: 762
+ *
+ * Top 10 processes:
+ * @process[chrome]: 65
+ * @process[terminator]: 85
+ * @process[systemd-oomd]: 164
+ * @process[KMS thread]: 168
+ * @process[gdbus]: 184
+ * @process[containerd]: 242
+ * @process[Mutter Input Th]: 484
+ * @process[VizCompositorTh]: 558
+ * @process[gnome-shell]: 684
+ * @process[systemd-logind]: 714
+ *
  * The above output was traced during a Linux kernel build, and the process name
  * with the most syscalls was "make" with 1,404,065 syscalls while tracing. The
  * highest syscall ID was 4, which is stat().
@@ -78,9 +106,9 @@ END
 	$sysname = getopt("sysname");
 
 	if ($sysname) {
-		display_map("\nTop 10 syscalls IDs:\n", @syscall);
-	} else {
 		display_map("\nTop 10 syscalls NAMEs:\n", @syscallname);
+	} else {
+		display_map("\nTop 10 syscalls IDs:\n", @syscall);
 	}
 
 	display_map("\nTop 10 processes:\n", @process);
