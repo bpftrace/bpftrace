@@ -137,6 +137,11 @@ PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/tr
 AFTER ./testprogs/true zztest
 EXPECT zzte
 
+NAME explicit string truncation with expression
+PROG tracepoint:syscalls:sys_enter_execve / str(args.argv[0]) == "./testprogs/true" / { $a = 1; print(str(args.argv[1], $a + 4)); exit(); }
+AFTER ./testprogs/true zztest
+EXPECT zzte
+
 NAME str_truncated_custom
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_MAX_STRLEN=5 BPFTRACE_STR_TRUNC_TRAILER=_xxx
