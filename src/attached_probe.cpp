@@ -1036,6 +1036,7 @@ Result<std::unique_ptr<AttachedProfileProbe>> AttachedProfileProbe::make(
 
     auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
     if (!link) {
+      close(perf_event_fd);
       has_error = true;
       break;
     }
@@ -1123,6 +1124,7 @@ Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
 
   auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
   if (!link) {
+    close(perf_event_fd);
     return make_error<AttachError>();
   }
 
@@ -1201,6 +1203,7 @@ Result<std::unique_ptr<AttachedSoftwareProbe>> AttachedSoftwareProbe::make(
 
     auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
     if (!link) {
+      close(perf_event_fd);
       has_error = true;
       break;
     }
@@ -1292,6 +1295,7 @@ Result<std::unique_ptr<AttachedHardwareProbe>> AttachedHardwareProbe::make(
 
     auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
     if (!link) {
+      close(perf_event_fd);
       has_error = true;
       break;
     }

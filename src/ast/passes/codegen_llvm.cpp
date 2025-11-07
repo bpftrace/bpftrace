@@ -4369,7 +4369,7 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
 
   for (unsigned int i = 0; i < bpftrace_.join_argnum_; i++) {
     if (i > 0) {
-      value = b_.CreateGEP(b_.GetType(elem_type), value, b_.getInt32(i));
+      value = b_.CreateGEP(b_.GetType(elem_type), value, b_.getInt32(1));
     }
 
     b_.CreateProbeRead(arr, elem_type, value, call.loc);

@@ -48,9 +48,13 @@ void AsyncHandlers::join(const OpaqueValue &data)
   size_t arg_count = arg.count<char>() / bpftrace.join_argsize_;
   std::stringstream joined;
   for (unsigned int i = 0; i < arg_count; i++) {
+    const char *current_str = arg.data() + (i * bpftrace.join_argsize_);
+    if (current_str == nullptr || current_str[0] == '\0') {
+      break;
+    }
     if (i)
       joined << delim;
-    joined << (arg.data() + (i * bpftrace.join_argsize_));
+    joined << current_str;
   }
   out.join(joined.str());
 }
@@ -235,7 +239,12 @@ void AsyncHandlers::syscall(const OpaqueValue &data)
     LOG(BUG) << "Error processing syscall arguments: " << vals.takeError();
   }
 
-  auto result = util::exec_system(fmt.format(*vals).c_str());
+  // Always execute via a shell, if available.
+  std::vector<std::string> system_args;
+  system_args.emplace_back("sh");
+  system_args.emplace_back("-c");
+  system_args.emplace_back(fmt.format(*vals));
+  auto result = util::exec_system(system_args);
   if (!result) {
     LOG(ERROR) << "Error executing program: " << result.takeError();
     return;

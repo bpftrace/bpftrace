@@ -1,14 +1,16 @@
 #include <algorithm>
-#include <array>
 #include <climits>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <linux/limits.h>
 #include <map>
+#include <sstream>
+#include <sys/prctl.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <unordered_set>
 
-#include "log.h"
-#include "util/exceptions.h"
 #include "util/system.h"
 
 namespace bpftrace::util {
@@ -103,19 +105,81 @@ Result<std::vector<int>> get_all_running_pids()
   return pids;
 }
 
-Result<std::string> exec_system(const char *cmd)
+Result<std::string> exec_system(const std::vector<std::string> &args)
 {
-  std::array<char, 128> buffer;
-  std::string result;
-  std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-  if (!pipe) {
-    return make_error<SystemError>("popen() failed");
+  // Prepare arguments for execvp.
+  std::vector<char *> exec_args;
+  exec_args.reserve(args.size() + 1);
+  for (const auto &arg : args) {
+    exec_args.push_back(const_cast<char *>(arg.c_str()));
   }
-  while (!feof(pipe.get())) {
-    if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
-      result += buffer.data();
+  exec_args.push_back(nullptr);
+
+  int pipe_fds[2];
+  if (pipe(pipe_fds) < 0) {
+    return make_error<SystemError>("pipe() failed");
   }
-  return result;
+
+  pid_t expected_parent = getpid();
+  pid_t pid = fork();
+  if (pid < 0) {
+    close(pipe_fds[0]);
+    close(pipe_fds[1]);
+    return make_error<SystemError>("fork() failed");
+  }
+
+  if (pid == 0) {
+    // Ensure that if our parent dies, we die too. This
+    // catches the race where bpftrace has already died.
+    //
+    // Note that headers are broken in some build targets
+    // (specifically Alpine), so we just define this here
+    // in order to avoid problems. It has ABI stability.
+    constexpr int __PR_SET_PDEATHSIG = 1;
+    int rc = prctl(__PR_SET_PDEATHSIG, SIGKILL);
+    assert(rc == 0);
+    if (getppid() != expected_parent) {
+      exit(127);
+    }
+    // Child: redirect stdout and stderr to pipe write end.
+    rc = close(pipe_fds[0]);
+    assert(rc == 0);
+    if (dup2(pipe_fds[1], STDOUT_FILENO) < 0 ||
+        dup2(pipe_fds[1], STDERR_FILENO) < 0) {
+      _exit(127);
+    }
+    close(pipe_fds[1]); // Already dupped.
+    execvp(exec_args[0], exec_args.data());
+    _exit(127);
+  }
+
+  // Parent: read from pipe.
+  close(pipe_fds[1]);
+  std::ostringstream output;
+  char buffer[4096];
+  ssize_t bytes_read;
+  while ((bytes_read = read(pipe_fds[0], buffer, sizeof(buffer))) > 0) {
+    output.write(buffer, bytes_read);
+  }
+  close(pipe_fds[0]);
+
+  // Wait for the child to exit.
+  int status;
+  if (waitpid(pid, &status, 0) < 0) {
+    return make_error<SystemError>("waitpid() failed");
+  }
+  if (!WIFEXITED(status)) {
+    return make_error<SystemError>("child process did not exit normally");
+  }
+
+  // This should be SystemError with ESUCCESS.
+  int exit_code = WEXITSTATUS(status);
+  if (exit_code != 0) {
+    return make_error<SystemError>("command exited with code " +
+                                   std::to_string(exit_code));
+  }
+
+  return output.str();
 }
 
 Result<std::vector<std::string>> get_mapped_paths_for_pid(pid_t pid)

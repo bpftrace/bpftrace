@@ -15,7 +15,12 @@ and this project adheres to
   - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
 - Fix block expression handling inside print statements
   - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
-
+- join(): Fix wrong index of GEP that was causing truncation
+  - [#4786](https://github.com/bpftrace/bpftrace/pull/4786)
+- output: prevent crash when printing overflow-only lhist
+  - [#4801](https://github.com/bpftrace/bpftrace/pull/4801)
+- codegen: Fix tid/pid in non-init namespaces
+  - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
 ## [0.24.1] 2025-10-03
 
 #### Fixed
