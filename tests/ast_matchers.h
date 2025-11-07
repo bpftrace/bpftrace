@@ -350,6 +350,17 @@ public:
         });
   }
 
+  SizedTypeMatcher& WithSigned(bool is_signed)
+  {
+    return Where(
+        [is_signed](const SizedType& type_obj, MatchResultListener* listener) {
+          return type_obj.IsSigned() == is_signed ||
+             (*listener << "has signed " << type_obj.IsSigned() << " instead of "
+                        << is_signed,
+              false);
+        });
+  }
+
   SizedTypeMatcher& WithName(const std::string& name)
   {
     return Where(

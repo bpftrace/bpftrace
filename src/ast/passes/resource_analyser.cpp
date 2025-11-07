@@ -568,8 +568,7 @@ void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map,
                                                      const Expression &key_expr)
 {
   const auto map_key_size = map.key_type.GetSize();
-  if (needMapKeyAllocation(map, key_expr) &&
-      exceeds_stack_limit(map_key_size)) {
+  if (needMapKeyAllocation(key_expr) && exceeds_stack_limit(map_key_size)) {
     resources_.map_key_buffers++;
     resources_.max_map_key_size = std::max(resources_.max_map_key_size,
                                            map_key_size);
