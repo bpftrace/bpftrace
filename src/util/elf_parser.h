@@ -32,13 +32,13 @@ private:
   std::string msg_;
 };
 
-struct elf_seg {
+struct elf_segment {
   long start;
   long end;
   long offset;
   bool is_exec;
 
-  elf_seg(long s, long e, long o, bool exec)
+  elf_segment(long s, long e, long o, bool exec)
       : start(s), end(e), offset(o), is_exec(exec)
   {
   }
@@ -72,11 +72,6 @@ struct usdt_probe_entry {
 using usdt_probe_list = std::vector<usdt_probe_entry>;
 
 class USDTProbeEnumerator {
-private:
-  const std::string elf_path;
-  int fd;
-  Elf* elf;
-
 public:
   USDTProbeEnumerator(std::string path, int fd, Elf* elf)
       : elf_path(std::move(path)), fd(fd), elf(elf)
@@ -106,6 +101,11 @@ public:
     }
   }
   Result<std::vector<usdt_probe_entry>> enumerate_probes();
+
+private:
+  const std::string elf_path;
+  int fd;
+  Elf* elf;
 };
 
 Result<USDTProbeEnumerator> make_usdt_probe_enumerator(const std::string& path);

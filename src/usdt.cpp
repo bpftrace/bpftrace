@@ -1,6 +1,4 @@
 #include <algorithm>
-#include <bcc/bcc_elf.h>
-#include <bcc/bcc_usdt.h>
 #include <csignal>
 #include <unordered_map>
 #include <unordered_set>

@@ -20,6 +20,8 @@
 
 namespace bpftrace::util {
 
+using namespace std::string_literals;
+
 char ELFParseError::ID;
 
 void ELFParseError::log(llvm::raw_ostream& OS) const
@@ -37,16 +39,15 @@ struct PairHash {
   }
 };
 
-static Result<std::vector<struct elf_seg>> parse_elf_segs(
+static Result<std::vector<struct elf_segment>> parse_elf_segments(
     Elf* elf,
     const std::string& path)
 {
-  std::vector<struct elf_seg> segs;
+  std::vector<struct elf_segment> segs;
   GElf_Phdr phdr;
   size_t n;
 
   if (elf_getphdrnum(elf, &n)) {
-    using namespace std::string_literals;
     return make_error<ELFParseError>(
         "usdt: failed to process ELF program segments for '"s + path +
         "': " + strerror(-errno));
@@ -72,13 +73,13 @@ static Result<std::vector<struct elf_seg>> parse_elf_segs(
     LOG(WARNING) << "failed to find PT_LOAD program headers in '" << path;
   }
 
-  std::ranges::sort(segs, [](const elf_seg& a, const elf_seg& b) {
+  std::ranges::sort(segs, [](const elf_segment& a, const elf_segment& b) {
     return a.start < b.start;
   });
   return segs;
 }
 
-static Result<std::pair<Elf_Scn*, GElf_Shdr>> find_elf_sec_by_name(
+static Result<std::pair<Elf_Scn*, GElf_Shdr>> find_elf_section_by_name(
     const std::string& path,
     Elf* elf,
     const std::string_view sec_name)
@@ -221,9 +222,9 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
   GElf_Nhdr nhdr;
   Elf_Data* data;
 
-  auto notes_scn_res = find_elf_sec_by_name(std::string(elf_path),
-                                            elf,
-                                            USDT_NOTE_SEC);
+  auto notes_scn_res = find_elf_section_by_name(std::string(elf_path),
+                                                elf,
+                                                USDT_NOTE_SEC);
   if (!notes_scn_res) {
     return notes_scn_res.takeError();
   }
@@ -235,7 +236,7 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
                                      std::string(elf_path) + "'");
   }
 
-  auto segs_res = parse_elf_segs(elf, std::string(elf_path));
+  auto segs_res = parse_elf_segments(elf, std::string(elf_path));
   if (!segs_res) {
     return segs_res.takeError();
   }
@@ -260,7 +261,7 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
        * given virtual address (absolute for executables, relative for
        * libraries) which should match address range of [seg_start, seg_end)
        */
-      auto seg = std::ranges::find_if(segs, [note](const elf_seg& seg) {
+      auto seg = std::ranges::find_if(segs, [note](const elf_segment& seg) {
         return seg.start <= note.sema_addr && note.sema_addr < seg.end;
       });
       if (seg == segs.end()) {
