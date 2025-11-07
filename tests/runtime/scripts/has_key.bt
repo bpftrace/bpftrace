@@ -31,7 +31,13 @@ begin {
         ++$count;
     }
 
-    if (!has_key(@c, (1, ("bye", (int8)5)))) {
+    if (!has_key(@c, (1, ("bye", (uint16)5)))) {
+        ++$count;
+    }
+
+    @c[2, ("evenlongerstr", 10)] = 0;
+    $a = (2, ("evenlongerstr", 10));
+    if (has_key(@c, $a)) {
         ++$count;
     }
 

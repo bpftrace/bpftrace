@@ -283,7 +283,6 @@ TEST_F(SemanticAnalyserTest, builtin_functions)
   test("kprobe:f { @x = 1; print(@x) }");
   test("kprobe:f { @x = 1; clear(@x) }");
   test("kprobe:f { @x = 1; zero(@x) }");
-  test("kprobe:f { @x[1] = 1; if (has_key(@x, 1)) {} }");
   test("kprobe:f { @x = 1; @y[1] = 1; $a = is_scalar(@x); $b = is_scalar(@y); "
        "}");
   test("kprobe:f { time() }");
@@ -1218,73 +1217,95 @@ TEST_F(SemanticAnalyserTest, call_zero)
 
 TEST_F(SemanticAnalyserTest, call_has_key)
 {
+  ast::TypeMetadata types;
+
+  auto vd_ty = types.global.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(vd_ty));
+  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  ASSERT_TRUE(bool(vd_ptr));
+
+  auto bool_ty = types.global.add<btf::Integer>("int8", 1, 0);
+  ASSERT_TRUE(bool(bool_ty));
+
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
+  };
+
+  auto has_key_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*bool_ty), args);
+  ASSERT_TRUE(bool(has_key_proto));
+
+  auto has_key_func = types.global.add<btf::Function>(
+      "__has_key", btf::Function::Linkage::Global, *has_key_proto);
+  ASSERT_TRUE(bool(has_key_func));
+
   test("kprobe:f { @x[1] = 0; if "
-       "(has_key(@x, 1)) {} }");
+       "(has_key(@x, 1)) {} }",
+       Types{ types });
   test("kprobe:f { @x[1, 2] = 0; if "
-       "(has_key(@x, (3, 4))) {} }");
+       "(has_key(@x, (3, 4))) {} }",
+       Types{ types });
   test("kprobe:f { @x[1, (int8)2] = 0; if "
-       "(has_key(@x, (3, 4))) {} }");
-  test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, "bye"))) {} })");
-  test(
-      R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, "longerstr"))) {} })");
-  test(
-      R"(kprobe:f { @x[1, "longerstr"] = 0; if (has_key(@x, (2, "hi"))) {} })");
+       "(has_key(@x, (3, 4))) {} }",
+       Types{ types });
+  test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, "bye"))) {} })",
+       Types{ types });
+  test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, "longerstr"))) {} })",
+       Types{ types });
+  test(R"(kprobe:f { @x[1, "longerstr"] = 0; if (has_key(@x, (2, "hi"))) {} })",
+       Types{ types });
   test("kprobe:f { @x[1, 2] = 0; $a = (3, "
-       "4); if (has_key(@x, $a)) {} }");
+       "4); if (has_key(@x, $a)) {} }",
+       Types{ types });
   test("kprobe:f { @x[1, 2] = 0; @a = (3, "
-       "4); if (has_key(@x, @a)) {} }");
+       "4); if (has_key(@x, @a)) {} }",
+       Types{ types });
   test("kprobe:f { @x[1, 2] = 0; @a[1] = "
        "(3, 4); if (has_key(@x, @a[1])) {} "
-       "}");
+       "}",
+       Types{ types });
   test("kprobe:f { @x[1] = 0; @a = "
-       "has_key(@x, 1); }");
+       "has_key(@x, 1); }",
+       Types{ types });
   test("kprobe:f { @x[1] = 0; $a = "
-       "has_key(@x, 1); }");
+       "has_key(@x, 1); }",
+       Types{ types });
   test("kprobe:f { @x[1] = 0; "
-       "@a[has_key(@x, 1)] = 1; }");
+       "@a[has_key(@x, 1)] = 1; }",
+       Types{ types });
 
-  test("kprobe:f { @x[1] = 1;  if (has_key(@x)) {} }", Error{ R"(
-stdin:1:28-39: ERROR: has_key() requires 2 arguments (1 provided)
-kprobe:f { @x[1] = 1;  if (has_key(@x)) {} }
-                           ~~~~~~~~~~~
-)" });
+  test("kprobe:f { @x[1] = 1;  if (has_key(@x)) {} }", Error{}, Types{ types });
+  test("kprobe:f { @x[1] = 1;  if (has_key(@x[1], 1)) {} }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x = 1;  if (has_key(@x, 1)) {} }", Error{}, Types{ types });
+  test("kprobe:f { @x[1] = 1; $a = 1; if (has_key($a, 1)) {} }",
+       Error{},
+       Types{ types });
 
-  test("kprobe:f { @x[1] = 1;  if (has_key(@x[1], 1)) {} }", Error{ R"(
-stdin:1:36-41: ERROR: has_key() expects a map argument
-kprobe:f { @x[1] = 1;  if (has_key(@x[1], 1)) {} }
-                                   ~~~~~
-)" });
-
-  test("kprobe:f { @x = 1;  if (has_key(@x, 1)) {} }", Error{ R"(
-stdin:1:33-35: ERROR: call to has_key() expects a map with explicit keys (non-scalar map)
-kprobe:f { @x = 1;  if (has_key(@x, 1)) {} }
-                                ~~
-)" });
-
-  test("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }", Error{ R"(
+  test("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
+       Error{ R"(
 stdin:1:43-44: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
 kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }
                                           ~
-)" });
+)" },
+       Types{ types });
 
   test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
        Error{ R"(
 stdin:1:45-51: ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,string[3])'
 kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} }
                                             ~~~~~~
-)" });
+)" },
+       Types{ types });
 
-  test("kprobe:f { @x[1] = 1; $a = 1; if (has_key($a, 1)) {} }", Error{ R"(
-stdin:1:43-45: ERROR: has_key() expects a map argument
-kprobe:f { @x[1] = 1; $a = 1; if (has_key($a, 1)) {} }
-                                          ~~
-)" });
-
-  test("kprobe:f { @a[1] = 1; has_key(@a, @a); }", Error{ R"(
+  test("kprobe:f { @a[1] = 1; has_key(@a, @a); }",
+       Error{ R"(
 stdin:1:35-37: ERROR: @a used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
 kprobe:f { @a[1] = 1; has_key(@a, @a); }
                                   ~~
-)" });
+)" },
+       Types{ types });
 }
 
 TEST_F(SemanticAnalyserTest, call_time)
@@ -5021,7 +5042,6 @@ TEST_F(SemanticAnalyserTest, castable_map_missing_feature)
   test("k:f {  @a = count(); clear(@a) }", NoFeatures::Enable);
   test("k:f {  @a = count(); zero(@a) }", NoFeatures::Enable);
   test("k:f {  @a[1] = count(); delete(@a, 1) }", NoFeatures::Enable);
-  test("k:f { @a[1] = count(); has_key(@a, 1) }", NoFeatures::Enable);
 
   test("begin { @a = count(); print((uint64)@a) }",
        NoFeatures::Enable,
@@ -5602,9 +5622,6 @@ TEST_F(SemanticAnalyserTest, warning_for_discared_return_value)
                 "should be used" });
   test("k:f { ustack(raw); }",
        Warning{ "Return value discarded for ustack. "
-                "It should be used" });
-  test("k:f { @x[1] = 0; has_key(@x, 1); }",
-       Warning{ "Return value discarded for has_key. "
                 "It should be used" });
 }
 
