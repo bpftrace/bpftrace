@@ -168,15 +168,14 @@ Result<USDTProbeEnumerator> make_usdt_probe_enumerator(const std::string& path)
 
   std::error_code ec;
   auto canonical_path = std::filesystem::canonical(file_path, ec);
-  if (ec) {
-    return make_error<ELFParseError>("Invalid file path: " + path);
-  }
+  // If canonical fails (e.g., for /proc/PID/root paths), use the original path
+  auto resolved_path = ec ? file_path : canonical_path;
 
-  if (!std::filesystem::is_regular_file(canonical_path, ec) || ec) {
+  if (!std::filesystem::is_regular_file(resolved_path, ec) || ec) {
     return make_error<ELFParseError>("Not a regular file: " + path);
   }
 
-  int fd = open(canonical_path.c_str(), O_RDONLY);
+  int fd = open(resolved_path.string().c_str(), O_RDONLY);
   if (fd < 0) {
     return make_error<ELFParseError>("Cannot open ELF file: " + path);
   }
