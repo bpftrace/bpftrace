@@ -31,12 +31,12 @@ COMM
 Source process name
 .TP
 SIG
-Signal number. See signal(7).
+Signal number or name. See signal(7).
 .TP
 TPID
 Target process ID
 .TP
-RES
+RESULT
 Result. 0 == success, a negative value (of the error code) for failure.
 .SH OVERHEAD
 This traces the kernel kill function and prints output for each event. As the
@@ -61,6 +61,6 @@ Linux
 .SH STABILITY
 Unstable - in development.
 .SH AUTHOR
-Brendan Gregg
+Brendan Gregg, Rong Tao
 .SH SEE ALSO
 opensnoop.bt(8)

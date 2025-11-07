@@ -25,6 +25,9 @@ Triggered by ...
 The process ID and process name of the task that was running when another task was OOM
 killed.
 .TP
+CGROUP ...
+If the OOM occurs in the memory cgroup, display the memory cgroup information.
+.TP
 OOM kill of ...
 The process ID and name of the target process that was OOM killed.
 .TP
@@ -53,6 +56,6 @@ Linux
 .SH STABILITY
 Unstable - in development.
 .SH AUTHOR
-Brendan Gregg
+Brendan Gregg, Rong Tao
 .SH SEE ALSO
 dmesg(1)

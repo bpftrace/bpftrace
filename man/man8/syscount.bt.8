@@ -2,7 +2,7 @@
 .SH NAME
 syscount.bt \- Count system calls. Uses bpftrace/eBPF.
 .SH SYNOPSIS
-.B syscount.bt
+.B syscount.bt -- [--sysname]
 .SH DESCRIPTION
 This counts system calls (syscalls), printing a summary of the top ten
 syscall IDs, and the top ten process names making syscalls. This can be
@@ -12,6 +12,9 @@ applications who are using syscalls inefficiently.
 This works by using the tracepoint:raw_syscalls:sys_enter tracepoint.
 
 Since this uses BPF, only the root user can use this tool.
+.SH OPTIONS
+--sysname
+Show the syscall name instead of syscall number.
 .SH REQUIREMENTS
 CONFIG_BPF and bpftrace.
 .SH EXAMPLES
@@ -23,8 +26,12 @@ Count system calls until Ctrl-C is hit:
 .TP
 Top 10 syscalls IDs:
 This shows the syscall ID number (in @syscall[]) followed by a count for this
-syscall during tracing. To see the syscall name for that ID, you can use
-"ausyscall --dump", or the bcc version of this tool that does translations.
+syscall during tracing. syscount.bt defaults to outputting the syscall number.
+.TP
+Top 10 syscalls NAMEs:
+This shows the syscall ID name (in @syscallname[]) followed by a count for this
+syscall during tracing. Use the --sysname parameter to output the system call
+name.
 .TP
 Top 10 processes:
 This shows the process name (in @process[]) followed by a count of syscalls
