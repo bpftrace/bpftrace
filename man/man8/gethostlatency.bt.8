@@ -4,9 +4,10 @@ gethostlatency.bt \- Show latency for getaddrinfo/gethostbyname[2] calls. Uses b
 .SH SYNOPSIS
 .B gethostlatency.bt
 .SH DESCRIPTION
-This traces and prints when getaddrinfo(), gethostbyname(), and gethostbyname2()
-are called, system wide, and shows the responsible PID and command name,
-latency of the call (duration) in milliseconds, and the host string.
+This traces and prints when gethostbyaddr(), getaddrinfo(), gethostbyname(),
+and gethostbyname2() are called, system wide, and shows the responsible PID and
+command name, latency of the call (duration) in milliseconds, and the host
+string.
 
 This tool can be useful for identifying DNS latency, by identifying which
 remote host name lookups were slow, and by how much.
@@ -60,4 +61,4 @@ Unstable - in development.
 .SH AUTHOR
 Brendan Gregg
 .SH SEE ALSO
-tcpdump(8)
+tcpdump(8), gethostbyname(3), getaddrinfo(3)
