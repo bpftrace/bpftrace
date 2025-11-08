@@ -74,6 +74,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- syscount.bt: Fix incorrect map printing
+  - [#4831](https://github.com/bpftrace/bpftrace/pull/4831)
 - opensnoop.bt: support mount points
   - [#4822](https://github.com/bpftrace/bpftrace/pull/4822)
 - opensnoop.bt: support full file path
