@@ -578,6 +578,16 @@ interval:s:1 {
 }
 ```
 
+**Important**: The BPF verifier cannot prove that loops are bounded when the condition depends on map variables (`@var`). Use local variables (`$var`) instead for loop counters:
+
+```
+// This will be rejected by the verifier:
+begin { @a = 0; while (@a < 10) { @a++; } }
+
+// Use this instead:
+begin { $a = 0; while ($a < 10) { $a++; } }
+```
+
 The `while` loop supports the following control flow statements:
 
 |     |     |
