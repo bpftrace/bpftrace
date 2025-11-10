@@ -29,7 +29,8 @@ jobs:
     - uses: DeterminateSystems/nix-installer-action@v17
       with:
         determinate: true
-    - uses: DeterminateSystems/flakehub-cache-action@v2
+    # Temporarily disabled FlakeHub cache due to authentication issues
+    # - uses: DeterminateSystems/flakehub-cache-action@v2
     - name: clang-format
       run: nix develop --command git clang-format --diff origin/master --extensions cpp,h
 
@@ -96,7 +97,8 @@ jobs:
     - uses: DeterminateSystems/nix-installer-action@v17
       with:
         determinate: true
-    - uses: DeterminateSystems/flakehub-cache-action@v2
+    # Temporarily disabled FlakeHub cache due to authentication issues  
+    # - uses: DeterminateSystems/flakehub-cache-action@v2
     - uses: ./.github/actions/configure_kvm
     - name: Load kernel modules
       # nf_tables and xfs are necessary for testing kernel modules BTF support
