@@ -820,6 +820,20 @@ let $a = {
 
 This can be used anywhere an expression can be used.
 
+**Note:** There will be a warning for discarded expressions, e.g.,
+
+```
+{ 1 } // Warning
+$a = { 1 } // No Warning
+has_key(@a, 1); // Warning
+$b = has_key(@a, 1); // No Warning
+```
+The warning can also be silenced by utilizing the Discard Expression:
+
+```
+_ = has_key(@a, 1); // No Warning
+```
+
 ## Preamble
 
 The preamble consists of multiple optional pieces:

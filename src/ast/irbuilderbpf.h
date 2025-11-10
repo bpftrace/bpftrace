@@ -56,9 +56,7 @@ public:
                            const Location &loc,
                            int64_t flags = 0);
   CallInst *CreateMapDeleteElem(Map &map,
-                                Value *key,
-                                bool ret_val_discarded,
-                                const Location &loc);
+                                Value *key);
   Value *CreateForRange(Value *iters,
                         Value *callback,
                         Value *callback_ctx,
@@ -186,8 +184,7 @@ public:
                           const Location &loc);
   void CreateHelperErrorCond(Value *return_value,
                              bpf_func_id func_id,
-                             const Location &loc,
-                             bool suppress_error = false);
+                             const Location &loc);
   StructType *GetStackStructType(bool is_ustack);
   StructType *GetStructType(const std::string &name,
                             const std::vector<llvm::Type *> &elements,

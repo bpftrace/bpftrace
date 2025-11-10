@@ -227,6 +227,7 @@ class VarDeclStatement;
 class AssignScalarMapStatement;
 class AssignMapStatement;
 class AssignVarStatement;
+class DiscardExpr;
 class Unroll;
 class Jump;
 class While;
@@ -237,6 +238,7 @@ class Statement : public VariantNode<ExprStatement,
                                      AssignScalarMapStatement,
                                      AssignMapStatement,
                                      AssignVarStatement,
+                                     DiscardExpr,
                                      Unroll,
                                      Jump,
                                      While,
@@ -625,7 +627,6 @@ public:
   // happens, this number is increased so that later error reporting can
   // correctly account for this.
   size_t injected_args = 0;
-  bool ret_val_discarded = false;
 };
 
 class Sizeof : public Node {
@@ -1512,6 +1513,30 @@ public:
   }
 
   StatementList stmts;
+  Expression expr;
+};
+
+class DiscardExpr : public Node {
+public:
+  explicit DiscardExpr(ASTContext &ctx,
+                              Location &&loc,
+                              Expression expr)
+      : Node(ctx, std::move(loc)), expr(std::move(expr)) {};
+  explicit DiscardExpr(ASTContext &ctx,
+                              const Location &loc,
+                              const DiscardExpr &other)
+      : Node(ctx, loc + other.loc),
+        expr(clone(ctx, loc, other.expr)) {};
+
+  bool operator==(const DiscardExpr &other) const
+  {
+    return expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const DiscardExpr &other) const
+  {
+    return expr <=> other.expr;
+  }
+
   Expression expr;
 };
 

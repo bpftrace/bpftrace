@@ -184,6 +184,10 @@ public:
     visitImpl(decl.typeof);
     return default_value();
   }
+  R visit(DiscardExpr &discard_expr)
+  {
+    return visitImpl(discard_expr.expr);
+  }
   R visit(Jump &jump)
   {
     return visitImpl(jump.return_value);
