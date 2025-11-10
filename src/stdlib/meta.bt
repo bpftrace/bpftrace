@@ -29,3 +29,19 @@ macro static_assert(cond, msg) {
     fail(msg);
   }
 }
+
+macro check_key(@map, key, func) {
+  if comptime is_scalar(@map) {
+    fail("call to %s expects a map with explicit keys (non-scalar map)", func);
+  } else {
+    // The typeinfo(@map[key]) is a bit of a hack as it both checks if the passed key is compatible
+    // with the map key and it also possibly changes the key type to make them
+    // compatible if possible, e.g.
+    // @c[1, ("hello", (int8)5)] = 0;
+    // has_key(@c, (1, ("hello", (uint8)5))) - now the key type is (uint8, (string, int16))
+    // Other than that this has no side effects and shouldn't fail
+    if comptime (typeinfo(@map[key]).1 == "__dummy_key_type") {
+      fail("__dummy_key_type shouldn't exist")
+    }
+  }
+}

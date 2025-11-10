@@ -1141,26 +1141,6 @@ void IRBuilderBPF::CreateMapUpdateElem(const std::string &map_ident,
   CreateHelperErrorCond(call, BPF_FUNC_map_update_elem, loc);
 }
 
-CallInst *IRBuilderBPF::CreateMapDeleteElem(Map &map, Value *key)
-{
-  assert(key->getType()->isPointerTy());
-  Value *map_ptr = GetMapVar(map.ident);
-
-  // long map_delete_elem(&map, &key)
-  // Return: 0 on success or negative error
-  FunctionType *delete_func_type = FunctionType::get(
-      getInt64Ty(), { map_ptr->getType(), key->getType() }, false);
-  PointerType *delete_func_ptr_type = PointerType::get(getContext(), 0);
-  Constant *delete_func = ConstantExpr::getCast(Instruction::IntToPtr,
-                                                getInt64(
-                                                    BPF_FUNC_map_delete_elem),
-                                                delete_func_ptr_type);
-  CallInst *call = createCall(
-      delete_func_type, delete_func, { map_ptr, key }, "delete_elem");
-
-  return call;
-}
-
 Value *IRBuilderBPF::CreateForRange(Value *iters,
                                     Value *callback,
                                     Value *callback_ctx,

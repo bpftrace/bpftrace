@@ -188,7 +188,6 @@ macro curtask() {
   __builtin_curtask
 }
 
-// :function delete
 // :variant bool delete(map m, mapkey k)
 // :deprecated_variant bool delete(mapkey k)
 //
@@ -232,6 +231,32 @@ macro curtask() {
 //     delete(@associative[1, 2]);
 // }
 // ```
+macro delete(@map, $key) {
+  check_key(@map, $key, "delete() with two arguments");
+  __delete((void *)&@map, (void *)&$key) == 0
+}
+
+macro delete(@map, key) {
+  check_key(@map, key, "delete() with two arguments");
+  let $key: typeof(@map) = key;
+  __delete((void *)&@map, (void *)&$key) == 0
+}
+
+macro delete(@map) {
+  if comptime !is_scalar(@map) {
+    fail("call to delete() with a single argument expects a map without explicit keys (scalar map)");
+    false
+  } else {
+    let $key: int64 = 0;
+    __delete((void *)&@map, (void *)&$key) == 0
+  }
+}
+
+macro delete(map_access) {
+  // This supports the deprecated delete API, e.g. `delete(@a[1])`
+  // which is handled in the map_sugar pass
+  __deprecated_delete(map_access)
+}
 
 // :variant uint64 elapsed()
 // ktime_get_ns - ktime_get_boot_ns
@@ -345,22 +370,9 @@ macro gid() {
 // }
 // ```
 macro has_key(@map, key) {
-  if comptime is_scalar(@map) {
-    fail("call to has_key() expects a map with explicit keys (non-scalar map)");
-    false
-  } else {
-    // The typeinfo(@map[key]) is a bit of a hack as it both checks if the passed key is compatible
-    // with the map key and it also possibly changes the key type to make them
-    // compatible if possible, e.g.
-    // @c[1, ("hello", (int8)5)] = 0;
-    // has_key(@c, (1, ("hello", (uint8)5))) - now the key type is (uint8, (string, int16))
-    // Other than that this has no side effects and shouldn't fail
-    if comptime (typeinfo(@map[key]).1 == "__dummy_key_type") {
-      fail("__dummy_key_type shouldn't exist")
-    }
-    let $key: typeof(@map) = key;
-    __has_key((void *)&@map, (void *)&$key)
-  }
+  check_key(@map, key, "has_key()");
+  let $key: typeof(@map) = key;
+  __has_key((void *)&@map, (void *)&$key)
 }
 
 // :variant uint64 jiffies()

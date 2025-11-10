@@ -55,8 +55,6 @@ public:
                            Value *val,
                            const Location &loc,
                            int64_t flags = 0);
-  CallInst *CreateMapDeleteElem(Map &map,
-                                Value *key);
   Value *CreateForRange(Value *iters,
                         Value *callback,
                         Value *callback_ctx,

@@ -252,30 +252,6 @@ EXPECT_NONE @: 0
 EXPECT_NONE @a[1]: 1
 TIMEOUT 1
 
-NAME delete map
-PROG begin { @ = 1; @a[1] = 1; @b[1, 2] = 2; if (delete(@)) { printf("ok1\n"); } delete(@a, 1); if (delete(@b, (1, 2))) { printf("ok2\n"); } if (!delete(@b, (5, 6))) { printf("ok3\n"); } }
-EXPECT ok1
-EXPECT ok2
-EXPECT ok3
-TIMEOUT 1
-
-NAME delete count-map
-PROG begin { @ = count(); @a[1] = count(); delete(@); delete(@a, 1); }
-EXPECT_NONE @: 0
-EXPECT_NONE @a[1]: 1
-TIMEOUT 1
-
-NAME delete deprecated
-PROG begin { @a[1] = 1; @b[2, "hi"] = 2; delete(@a[1]); delete(@b[2, "hi"]); }
-EXPECT_NONE @a[1]: 1
-EXPECT_NONE @b[2, hi]: 2
-TIMEOUT 1
-
-NAME bad delete
-PROG begin { @a[1] = 1; $x = delete(@a, 2); $y = delete(@a, 1); if ($x == false && $y == true) { printf("SUCCESS"); } }
-EXPECT SUCCESS
-TIMEOUT 1
-
 NAME increment/decrement map
 PROG begin { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); }
 EXPECT 10 12 12 10

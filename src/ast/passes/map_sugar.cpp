@@ -1,6 +1,7 @@
 #include <unordered_map>
 
 #include "ast/ast.h"
+#include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
 
@@ -46,8 +47,15 @@ private:
 
 class MapFunctionAliases : public Visitor<MapFunctionAliases> {
 public:
+  explicit MapFunctionAliases(ASTContext &ast, MacroRegistry &macro_registry)
+      : ast_(ast), macro_registry_(macro_registry) {};
+
   using Visitor<MapFunctionAliases>::visit;
-  void visit(Call &call);
+  void visit(Expression &expr);
+
+private:
+  ASTContext &ast_;
+  const MacroRegistry &macro_registry_;
 };
 
 class MapAssignmentCall : public Visitor<MapAssignmentCall> {
@@ -90,7 +98,7 @@ private:
 // specific function being called, and potentially respecting annotations on
 // these arguments.
 static std::unordered_set<std::string> RAW_MAP_ARG = {
-  "print", "clear", "zero", "len", "delete", "is_scalar",
+  "print", "clear", "zero", "len", "is_scalar",
 };
 
 void MapDefaultKey::visit(Map &map)
@@ -140,7 +148,6 @@ void MapDefaultKey::visit(AssignMapStatement &assign)
 void MapDefaultKey::visit(Expression &expr)
 {
   Visitor<MapDefaultKey>::visit(expr);
-
   // Replace with an indexed map. Note that we don't visit for calls that
   // are exempt from this. This applies to all expressions in the tree,
   // including `lhist` and `hist`, which are treated in a special way
@@ -207,22 +214,7 @@ void MapDefaultKey::visit(Call &call)
     if (auto *map = call.vargs.at(0).as<Map>()) {
       // Check our functions for consistency. These are effectively builtins
       // that require that map to have keys (conditionally for delete).
-      if (call.func == "delete") {
-        if (call.vargs.size() == 1) {
-          // Inject the default key.
-          checkCall(*map, false);
-          auto *index = ast_.make_node<Integer>(map->loc, 0);
-          call.vargs.emplace_back(index);
-        } else if (call.vargs.size() == 2) {
-          checkCall(*map, true);
-        } else {
-          // Unfortunately there's no good way to handle this after desugaring.
-          // The actual `delete` function requires two arguments (fixed), but
-          // we accept this weird form (and also the alias).
-          call.addError() << "delete() requires 1 or 2 arguments ("
-                          << call.vargs.size() << " provided)";
-        }
-      } else if (call.func == "len") {
+      if (call.func == "len") {
         checkCall(*map, true);
       } else if (call.func == "is_scalar") {
         if (call.vargs.size() != 1) {
@@ -231,12 +223,6 @@ void MapDefaultKey::visit(Call &call)
         }
       }
     } else {
-      if (call.func == "delete") {
-        // See above; always report this error. We don't allow the semantic
-        // analyser to capture this, because it not be happy about the number
-        // of arguments and we don't want to mislead users with that.
-        call.vargs.at(0).node().addError() << "delete() expects a map argument";
-      }
       visit(call.vargs.at(0));
     }
     for (size_t i = 1; i < call.vargs.size(); i++) {
@@ -261,17 +247,21 @@ void MapDefaultKey::visit(For &for_loop)
   visit(for_loop.block);
 }
 
-void MapFunctionAliases::visit(Call &call)
+void MapFunctionAliases::visit(Expression &expr)
 {
   // We expect semantics for delete that are `delete(@, key)`. We support an
   // old `delete(@[key])` syntax but rewrite this under the hood.
-  if (call.func == "delete") {
-    if (call.vargs.size() == 1) {
-      if (auto *access = call.vargs.at(0).as<MapAccess>()) {
-        call.vargs.clear();
-        call.vargs.emplace_back(access->map);
-        call.vargs.emplace_back(access->key);
-        call.injected_args += 1;
+  // This is expanded to the `__deprecated_delete` in macro stdlib.
+  Visitor<MapFunctionAliases>::visit(expr);
+
+  if (auto *call = expr.as<Call>()) {
+    if (call->func == "__deprecated_delete") {
+      if (auto *access = call->vargs.at(0).as<MapAccess>()) {
+        call->vargs.clear();
+        call->vargs.emplace_back(access->map);
+        call->vargs.emplace_back(access->key);
+        call->func = "delete";
+        expand_macro(ast_, expr, macro_registry_);
       }
     }
   }
@@ -346,8 +336,8 @@ void MapScalarCheck::visit(Expression &expr)
 
 Pass CreateMapSugarPass()
 {
-  auto fn = [](ASTContext &ast) -> MapMetadata {
-    MapFunctionAliases aliases;
+  auto fn = [](ASTContext &ast, MacroRegistry &macro_registry) -> MapMetadata {
+    MapFunctionAliases aliases(ast, macro_registry);
     aliases.visit(ast.root);
     MapDefaultKey defaults(ast);
     defaults.visit(ast.root);
