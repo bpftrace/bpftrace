@@ -342,11 +342,6 @@ DIType *DIBuilderBPF::GetMapKeyType(const SizedType &key_type,
                                     const SizedType &value_type,
                                     bpf_map_type map_type)
 {
-  // BPF requires 4-byte keys for array maps.
-  if (map_type == BPF_MAP_TYPE_PERCPU_ARRAY || map_type == BPF_MAP_TYPE_ARRAY) {
-    assert(key_type.IsIntTy());
-    return getInt32Ty();
-  }
   if (map_type == BPF_MAP_TYPE_RINGBUF) {
     assert(key_type.IsNoneTy());
     return getInt64Ty();

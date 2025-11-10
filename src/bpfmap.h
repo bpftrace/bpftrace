@@ -80,7 +80,7 @@ public:
   virtual Result<TSeriesMap> collect_tseries_data(const MapInfo &map_info,
                                                   int nvalues) const;
   Result<> zero_out(int nvalues) const;
-  Result<> clear(int nvalues) const;
+  Result<> clear() const;
   Result<> update_elem(const void *key, const void *value) const;
   Result<> lookup_elem(const void *key, void *value) const;
 
@@ -124,19 +124,11 @@ inline std::string bpftrace_map_name(std::string_view bpf_map_name)
   return name;
 }
 
-inline bool is_bpf_map_clearable(bpf_map_type map_type)
-{
-  return map_type != BPF_MAP_TYPE_ARRAY &&
-         map_type != BPF_MAP_TYPE_PERCPU_ARRAY;
-}
-
-bpf_map_type get_bpf_map_type(const SizedType &val_type, bool scalar);
+bpf_map_type get_bpf_map_type(const SizedType &val_type);
 std::optional<bpf_map_type> get_bpf_map_type(const std::string &name);
 std::string get_bpf_map_type_str(bpf_map_type map_type);
 void add_bpf_map_types_hint(std::stringstream &hint);
-bool is_array_map(const SizedType &val_type, bool scalar);
 bool bpf_map_types_compatible(const SizedType &val_type,
-                              bool scalar,
                               bpf_map_type kind);
 
 } // namespace bpftrace

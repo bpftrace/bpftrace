@@ -1795,7 +1795,6 @@ Currently these are available in bpftrace:
 - lruhash (BPF_MAP_TYPE_LRU_HASH)
 - percpuhash (BPF_MAP_TYPE_PERCPU_HASH)
 - percpulruhash (BPF_MAP_TYPE_LRU_PERCPU_HASH)
-- percpuarray (BPF_MAP_TYPE_PERCPU_ARRAY)
 
 Additionally, map declarations must supply a single argument: ***max entries*** e.g. `let @a = lruhash(100);`
 All maps that are not declared in the global scope utilize the default set in the config variable "max_map_keys".
