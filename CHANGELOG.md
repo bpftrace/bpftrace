@@ -21,6 +21,8 @@ and this project adheres to
   - [#4801](https://github.com/bpftrace/bpftrace/pull/4801)
 - codegen: Fix tid/pid in non-init namespaces
   - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
+- Fix segfault in printf ordering
+  - [#4838](https://github.com/bpftrace/bpftrace/pull/4838)
 ## [0.24.1] 2025-10-03
 
 #### Fixed
