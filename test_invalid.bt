@@ -1,0 +1,1 @@
+BEGIN { @map = 0; while (@map < 5) { print(@map); @map++; } }

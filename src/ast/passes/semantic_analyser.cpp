@@ -2937,9 +2937,10 @@ void SemanticAnalyser::visit(While &while_block)
   detector.visit(while_block.cond);
 
   if (detector.hasMapVariable()) {
-    while_block.addError()
-        << "While loops with map variables in the condition may be rejected by the BPF verifier."
-        << "Use a scratch variable instead of a map value";
+    ctx_.diagnostics().addError(while_block.loc)
+        << "While loops with map variables in the condition may be rejected by "
+           "the BPF verifier. "
+        << "Use a scratch variable instead of a map value.";
   }
 
   loop_depth_++;
