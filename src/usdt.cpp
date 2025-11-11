@@ -37,8 +37,7 @@ static void usdt_probe_each(struct util::usdt_probe_entry &usdt_probe)
       usdt_probe.provider,
       usdt_probe.name,
       usdt_probe.sema_addr,
-      usdt_probe.sema_offset,
-      usdt_probe.num_locations);
+      usdt_probe.sema_offset);
   current_pid_paths.emplace(usdt_probe.path);
 }
 

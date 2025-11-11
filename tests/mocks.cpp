@@ -195,18 +195,17 @@ std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace()
   return bpftrace;
 }
 
-std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper(int num_locations)
+std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper()
 {
   auto usdt_helper = std::make_unique<NiceMock<MockUSDTHelper>>();
 
   ON_CALL(*usdt_helper, find(_, _, _, _, _))
-      .WillByDefault([num_locations](std::optional<int>,
-                                     const std::string &,
-                                     const std::string &,
-                                     const std::string &,
-                                     bool) {
-        return util::usdt_probe_entry{ "", "", "", 0, 0, num_locations };
-      });
+      .WillByDefault(
+          [](std::optional<int>,
+             const std::string &,
+             const std::string &,
+             const std::string &,
+             bool) { return util::usdt_probe_entry{ "", "", "", 0, 0 }; });
 
   return usdt_helper;
 }

@@ -284,10 +284,6 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
     auto target = unique_probes.find(key);
     if (target == unique_probes.end()) {
       unique_probes.emplace(key, note);
-    } else {
-#ifndef HAVE_LIBBPF_UPROBE_MULTI
-      ++target->second.num_locations;
-#endif
     }
   }
   std::ranges::transform(unique_probes,

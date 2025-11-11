@@ -50,21 +50,18 @@ struct usdt_probe_entry {
   std::string name;
   long sema_addr;
   uint64_t sema_offset;
-  int num_locations;
 
   usdt_probe_entry() = default;
   usdt_probe_entry(std::string path,
                    std::string provider,
                    std::string name,
                    long sema_addr = 0,
-                   uint64_t sema_offset = 0,
-                   int num_locations = 1)
+                   uint64_t sema_offset = 0)
       : path(std::move(path)),
         provider(std::move(provider)),
         name(std::move(name)),
         sema_addr(sema_addr),
-        sema_offset(sema_offset),
-        num_locations(num_locations)
+        sema_offset(sema_offset)
   {
   }
 };
