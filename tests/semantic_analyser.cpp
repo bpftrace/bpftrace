@@ -1224,20 +1224,17 @@ TEST_F(SemanticAnalyserTest, call_has_key)
   auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
   ASSERT_TRUE(bool(vd_ptr));
 
-  auto bool_ty = types.global.add<btf::Integer>("int8", 1, 0);
-  ASSERT_TRUE(bool(bool_ty));
-
   std::vector<std::pair<std::string, btf::ValueType>> args = {
     { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
   };
 
-  auto has_key_proto = types.global.add<btf::FunctionProto>(
-      btf::ValueType(*bool_ty), args);
-  ASSERT_TRUE(bool(has_key_proto));
+  auto lookup_elem_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*vd_ptr), args);
+  ASSERT_TRUE(bool(lookup_elem_proto));
 
-  auto has_key_func = types.global.add<btf::Function>(
-      "__has_key", btf::Function::Linkage::Global, *has_key_proto);
-  ASSERT_TRUE(bool(has_key_func));
+  auto lookup_elem_func = types.global.add<btf::Function>(
+      "__lookup_elem", btf::Function::Linkage::Global, *lookup_elem_proto);
+  ASSERT_TRUE(bool(lookup_elem_func));
 
   test("kprobe:f { @x[1] = 0; if "
        "(has_key(@x, 1)) {} }",
@@ -1283,17 +1280,17 @@ TEST_F(SemanticAnalyserTest, call_has_key)
        Error{},
        Types{ types });
 
-  test("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
-       Error{ R"(
-stdlib/base.bt:403:3-32: ERROR: Type mismatch for $$has_key_$key: trying to assign value of type 'uint8' when variable already has a type '(uint8,uint8)'
-)" },
-       Types{ types });
+  test(
+      "kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
+      Error{
+          R"(ERROR: Type mismatch for $$has_key_$key: trying to assign value of type 'uint8' when variable already has a type '(uint8,uint8)')" },
+      Types{ types });
 
-  test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
-       Error{ R"(
-stdlib/base.bt:403:3-32: ERROR: Type mismatch for $$has_key_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,string[3])'
-)" },
-       Types{ types });
+  test(
+      R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
+      Error{
+          R"(ERROR: Type mismatch for $$has_key_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,string[3])')" },
+      Types{ types });
 
   test("kprobe:f { @a[1] = 1; has_key(@a, @a); }",
        Error{ R"(
@@ -1301,6 +1298,92 @@ stdin:1:35-37: ERROR: @a used as a map without an explicit key (scalar map), pre
 kprobe:f { @a[1] = 1; has_key(@a, @a); }
                                   ~~
 )" },
+       Types{ types });
+}
+
+// N.B. find uses mostly the same implementation as has_key
+TEST_F(SemanticAnalyserTest, call_find)
+{
+  ast::TypeMetadata types;
+
+  auto vd_ty = types.global.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(vd_ty));
+  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  ASSERT_TRUE(bool(vd_ptr));
+
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
+  };
+
+  auto lookup_elem_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*vd_ptr), args);
+  ASSERT_TRUE(bool(lookup_elem_proto));
+
+  auto lookup_elem_func = types.global.add<btf::Function>(
+      "__lookup_elem", btf::Function::Linkage::Global, *lookup_elem_proto);
+  ASSERT_TRUE(bool(lookup_elem_func));
+
+  test("kprobe:f { @x[1] = 0; let $y; if "
+       "(find(@x, 1, $y)) {} }",
+       Types{ types });
+  test("kprobe:f { @x[1, 2] = 0; let $y; if "
+       "(find(@x, (3, 4), $y)) {} }",
+       Types{ types });
+  test("kprobe:f { @x[1, (int8)2] = 0; let $y; if "
+       "(find(@x, (3, 4), $y)) {} }",
+       Types{ types });
+  test("kprobe:f { @x[1] = (uint16)1; $y = (int16)2; if "
+       "(find(@x, 1, $y)) {} }",
+       Types{ types });
+  test(
+      R"(kprobe:f { @x[1, "hi"] = 0; let $y; if (find(@x, (2, "bye"), $y)) {} })",
+      Types{ types });
+  test(
+      R"(kprobe:f { @x[1, "hi"] = 0; let $y; if (find(@x, (2, "longerstr"), $y)) {} })",
+      Types{ types });
+  test(
+      R"(kprobe:f { @x[1, "longerstr"] = 0; let $y; if (find(@x, (2, "hi"), $y)) {} })",
+      Types{ types });
+  test(
+      R"(kprobe:f { @x[1, "hi"] = "reallylongstr"; $y = "hi"; if (find(@x, (2, "longerstr"), $y)) {} })",
+      Types{ types });
+  test("kprobe:f { @x[1, 2] = 0; $a = (3, "
+       "4); let $y; if (find(@x, $a, $y)) {} }",
+       Types{ types });
+  test("kprobe:f { @x[1, 2] = 0; @a = (3, "
+       "4); let $y; if (find(@x, @a, $y)) {} }",
+       Types{ types });
+  test("kprobe:f { @x[1, 2] = 0; @a[1] = "
+       "(3, 4); let $y; if (find(@x, @a[1], $y)) {} "
+       "}",
+       Types{ types });
+
+  test(
+      R"(kprobe:f { @x[1, "hi"] = 0; $y = "hello"; if (find(@x, (2, "longerstr"), $y)) {} })",
+      Error{},
+      Types{ types });
+  test("kprobe:f { @x[1] = 1; let $y; if (find(@x)) {} }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x[1] = 1; let $y; if (find(@x, 1)) {} }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x[1] = 1; let $y; if (find(@x[1], 1, $y)) {} }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x = 1; let $y; if (find(@x, 1, $y)) {} }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x[1] = 1; $a = 1; let $y; if (find($a, 1, $y)) {} }",
+       Error{},
+       Types{ types });
+
+  test("kprobe:f { @x[1, 2] = 1; let $y; if (find(@x, 1, $y)) {} }",
+       Error{},
+       Types{ types });
+
+  test(R"(kprobe:f { @x[1, "hi"] = 0; let $y; if (find(@x, (2, 1), $y)) {} })",
+       Error{},
        Types{ types });
 }
 

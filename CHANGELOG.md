@@ -53,6 +53,8 @@ and this project adheres to
   - [#4912](https://github.com/bpftrace/bpftrace/pull/4912)
 - Add new Record primitive
   - [#4947](https://github.com/bpftrace/bpftrace/pull/4947)
+- Add `find` to get map value if it exists
+  - [#4845](https://github.com/bpftrace/bpftrace/pull/4845)
 #### Changed
 - Add helpers to check if a kfunc exists and is supported for particular probe types.
   - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)

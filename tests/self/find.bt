@@ -1,0 +1,66 @@
+test:find_basic {
+    let $val;
+    @a[1] = 10;
+
+    // key exists
+    if (!find(@a, 1, $val)) {
+        return 1;
+    } else {
+        if ($val != 10) {
+            return 1;
+        }
+    }
+
+    // key doesn't exist
+    if (find(@a, 2, $val)) {
+        return 1;
+    }
+
+    // variable as key
+    @a[2] = 20;
+    $b = 2;
+    if (!find(@a, $b, $val)) {
+        return 1;
+    } else {
+        if ($val != 20) {
+            return 1;
+        }
+    }
+
+    // string as key
+    $val_str = "hello";
+    @b["longerstr"] = "bye";
+    if (find(@b, "byeasdfasdfasdfasdfasdfasdf", $val_str)) {
+        return 1;
+    }
+
+    if (!find(@b, "longerstr", $val_str)) {
+        return 1;
+    } else {
+        if ($val_str != "bye") {
+            return 1;
+        }
+    }
+}
+
+test:find_complex_key {
+    let $val_tpl;
+    @c[1, ("hello", (int8)5)] = (1, "bye");
+    if (!find(@c, (1, ("hello", 5)), $val_tpl)) {
+        return 1;
+    } else {
+        if ($val_tpl != (1, "bye")) {
+            return 1;
+        }
+    }
+
+    if (find(@c, (1, ("bye", (uint16)5)), $val_tpl)) {
+       return 1;
+    }
+
+    @c[2, ("evenlongerstr", 10)] = (2, "hello");
+    $a = (2, ("evenlongerstr", 10));
+    if (!find(@c, $a, $val_tpl)) {
+        return 1;
+    }
+}

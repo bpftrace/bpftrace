@@ -2349,8 +2349,13 @@ ScopedExpr CodegenLLVM::unop_ptr(Unop &unop)
           unop.result_type.IsKsymTy()) {
         const auto *et = type.GetPointeeTy();
         AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
-        b_.CreateProbeRead(
-            dst, *et, scoped_expr.value(), unop.loc, type.GetAS());
+        if (type.GetAS() != AddrSpace::none) {
+          b_.CreateProbeRead(
+              dst, *et, scoped_expr.value(), unop.loc, type.GetAS());
+        } else {
+          b_.CreateStore(b_.CreateLoad(b_.GetType(*et), scoped_expr.value()),
+                         dst);
+        }
         Value *value = b_.CreateLoad(b_.GetType(*et), dst);
         b_.CreateLifetimeEnd(dst);
         return ScopedExpr(value);
