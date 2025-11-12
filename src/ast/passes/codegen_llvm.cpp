@@ -1310,22 +1310,10 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &map = *call.vargs.at(0).as<Map>();
     auto scoped_key = getMapKey(map, call.vargs.at(1));
 
-    if (!is_bpf_map_clearable(map_types_[map.ident])) {
-      // store zero instead of calling bpf_map_delete_elem()
-      auto *val = b_.CreateWriteMapValueAllocation(map.value_type,
-                                                   map.ident + "_zero",
-                                                   call.loc);
-      b_.CreateStore(Constant::getNullValue(b_.GetType(map.value_type)), val);
-      b_.CreateMapUpdateElem(map.ident, scoped_key.value(), val, call.loc);
-      // Assume delete for these kinds of maps always succeeds.
-      Value *expr = b_.getInt8(1);
-      return ScopedExpr(expr);
-    } else {
-      Value *ret = b_.CreateMapDeleteElem(
-          map, scoped_key.value(), call.ret_val_discarded, call.loc);
-      Value *expr = b_.CreateICmpEQ(ret, b_.getInt64(0), "delete_ret");
-      return ScopedExpr(expr);
-    }
+    Value *ret = b_.CreateMapDeleteElem(
+        map, scoped_key.value(), call.ret_val_discarded, call.loc);
+    Value *expr = b_.CreateICmpEQ(ret, b_.getInt64(0), "delete_ret");
+    return ScopedExpr(expr);
   } else if (call.func == "str") {
     const auto max_strlen = bpftrace_.config_->max_strlen;
     // Largest read we'll allow = our global string buffer size
@@ -4860,8 +4848,7 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
 bool CodegenLLVM::canAggPerCpuMapElems(const bpf_map_type map_type,
                                        const SizedType &val_type)
 {
-  return val_type.IsCastableMapTy() && (map_type == BPF_MAP_TYPE_PERCPU_ARRAY ||
-                                        map_type == BPF_MAP_TYPE_PERCPU_HASH);
+  return val_type.IsCastableMapTy() && map_type == BPF_MAP_TYPE_PERCPU_HASH;
 }
 
 // BPF helpers that use fmt strings (bpf_trace_printk, bpf_seq_printf) expect

@@ -12,7 +12,6 @@ const std::unordered_map<std::string, bpf_map_type> BPF_MAP_TYPES = {
   { "hash", BPF_MAP_TYPE_HASH },
   { "lruhash", BPF_MAP_TYPE_LRU_HASH },
   { "percpuhash", BPF_MAP_TYPE_PERCPU_HASH },
-  { "percpuarray", BPF_MAP_TYPE_PERCPU_ARRAY },
   { "percpulruhash", BPF_MAP_TYPE_LRU_PERCPU_HASH }
 };
 
@@ -49,7 +48,6 @@ bool BpfMap::is_stack_map() const
 bool BpfMap::is_per_cpu_type() const
 {
   return type() == BPF_MAP_TYPE_PERCPU_HASH ||
-         type() == BPF_MAP_TYPE_PERCPU_ARRAY ||
          type() == BPF_MAP_TYPE_LRU_PERCPU_HASH;
 }
 
@@ -93,11 +91,8 @@ Result<> BpfMap::zero_out(int nvalues) const
   return OK();
 }
 
-Result<> BpfMap::clear(int nvalues) const
+Result<> BpfMap::clear() const
 {
-  if (!is_bpf_map_clearable(type())) {
-    return zero_out(nvalues);
-  }
   auto keys = collect_keys();
   for (auto &k : keys) {
     int err = bpf_map_delete_elem(fd(), k.data());
@@ -234,11 +229,9 @@ std::string to_string(MapType t)
   return {}; // unreached
 }
 
-bpf_map_type get_bpf_map_type(const SizedType &val_type, bool scalar)
+bpf_map_type get_bpf_map_type(const SizedType &val_type)
 {
-  if (val_type.IsCountTy() && scalar) {
-    return BPF_MAP_TYPE_PERCPU_ARRAY;
-  } else if (val_type.NeedsPercpuMap()) {
+  if (val_type.NeedsPercpuMap()) {
     return BPF_MAP_TYPE_PERCPU_HASH;
   } else {
     return BPF_MAP_TYPE_HASH;
@@ -277,18 +270,9 @@ void add_bpf_map_types_hint(std::stringstream &hint)
   }
 }
 
-bool is_array_map(const SizedType &val_type, bool scalar)
+bool bpf_map_types_compatible(const SizedType &val_type, bpf_map_type kind)
 {
-  auto map_type = get_bpf_map_type(val_type, scalar);
-  return map_type == BPF_MAP_TYPE_ARRAY ||
-         map_type == BPF_MAP_TYPE_PERCPU_ARRAY;
-}
-
-bool bpf_map_types_compatible(const SizedType &val_type,
-                              bool scalar,
-                              bpf_map_type kind)
-{
-  auto kind_from_stype = get_bpf_map_type(val_type, scalar);
+  auto kind_from_stype = get_bpf_map_type(val_type);
   if (kind_from_stype == kind) {
     return true;
   }
@@ -302,12 +286,6 @@ bool bpf_map_types_compatible(const SizedType &val_type,
        kind_from_stype == BPF_MAP_TYPE_LRU_PERCPU_HASH) &&
       (kind == BPF_MAP_TYPE_PERCPU_HASH ||
        kind == BPF_MAP_TYPE_LRU_PERCPU_HASH)) {
-    return true;
-  }
-
-  // This doesn't work the opposite way
-  if (kind == BPF_MAP_TYPE_PERCPU_HASH &&
-      kind_from_stype == BPF_MAP_TYPE_PERCPU_ARRAY) {
     return true;
   }
 

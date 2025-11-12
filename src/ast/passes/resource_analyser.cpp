@@ -567,8 +567,7 @@ void ResourceAnalyser::update_map_info(Map &map)
     map_info.bpf_type = decl->second.first;
     map_info.max_entries = decl->second.second;
   } else {
-    map_info.bpf_type = get_bpf_map_type(map_info.value_type,
-                                         map_info.is_scalar);
+    map_info.bpf_type = get_bpf_map_type(map_info.value_type);
     // hist() and lhist() transparently create additional elements in whatever
     // map they are assigned to. So even if the map looks like it has no keys,
     // multiple keys are necessary.
