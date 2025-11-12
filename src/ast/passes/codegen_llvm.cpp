@@ -2437,6 +2437,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     const auto max_strlen = bpftrace_.config_->max_strlen;
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   } else if (!if_expr.result_type.IsIntTy() &&
+             !if_expr.result_type.IsBoolTy() &&
              !if_expr.result_type.IsNoneTy()) {
     buf = b_.CreateAllocaBPF(if_expr.result_type);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), if_expr.result_type.GetSize());
@@ -2449,21 +2450,17 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
                   left_block,
                   right_block);
 
-  if (if_expr.result_type.IsIntTy()) {
+  if (if_expr.result_type.IsIntTy() || if_expr.result_type.IsBoolTy()) {
     // fetch selected integer via CreateStore
     b_.SetInsertPoint(left_block);
     auto scoped_left = visit(if_expr.left);
-    auto *left_expr = b_.CreateIntCast(scoped_left.value(),
-                                       b_.GetType(if_expr.result_type),
-                                       if_expr.result_type.IsSigned());
+    auto *left_expr = scoped_left.value();
     b_.CreateBr(lazy_done());
     BasicBlock *left_end_block = b_.GetInsertBlock();
 
     b_.SetInsertPoint(right_block);
     auto scoped_right = visit(if_expr.right);
-    auto *right_expr = b_.CreateIntCast(scoped_right.value(),
-                                        b_.GetType(if_expr.result_type),
-                                        if_expr.result_type.IsSigned());
+    auto *right_expr = scoped_right.value();
     b_.CreateBr(lazy_done());
     BasicBlock *right_end_block = b_.GetInsertBlock();
 
@@ -2501,6 +2498,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     } else {
       b_.CreateStore(scoped_left.value(), buf);
     }
+
     b_.CreateBr(lazy_done());
 
     b_.SetInsertPoint(right_block);
@@ -2512,6 +2510,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     } else {
       b_.CreateStore(scoped_right.value(), buf);
     }
+
     b_.CreateBr(lazy_done());
 
     b_.SetInsertPoint(lazy_done());
@@ -2725,7 +2724,7 @@ ScopedExpr CodegenLLVM::visit(MapAccess &acc)
     }
 
     return ScopedExpr(b_.CreateLoad(acc.map->value_type.IsBoolTy()
-                                        ? b_.getInt8Ty()
+                                        ? b_.getInt1Ty()
                                         : b_.getInt64Ty(),
                                     module_->getGlobalVariable(acc.map->ident),
                                     acc.map->ident));
@@ -2775,12 +2774,14 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
       return ScopedExpr(b_.CreateLoad(int_ty, array, true /*volatile*/));
     } else if (cast.expr.type().IsPtrTy()) {
       return ScopedExpr(b_.CreatePtrToInt(scoped_expr.value(), int_ty));
-    } else {
+    } else if (cast.expr.type().IsBoolTy()) {
       return ScopedExpr(
-          b_.CreateIntCast(scoped_expr.value(),
-                           b_.getIntNTy(ty.GetIntBitWidth()),
-                           cast.expr.type().IsBoolTy() ? false : ty.IsSigned(),
-                           "cast"));
+          b_.CreateIntCast(scoped_expr.value(), b_.getInt1Ty(), false, "cast"));
+    } else {
+      return ScopedExpr(b_.CreateIntCast(scoped_expr.value(),
+                                         b_.getIntNTy(ty.GetIntBitWidth()),
+                                         ty.IsSigned(),
+                                         "cast"));
     }
   } else if (ty.IsArrayTy() && cast.expr.type().IsIntTy()) {
     // We need to store the cast integer on stack and reinterpret the pointer to
@@ -3349,7 +3350,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
     b_.CreateStore(scoped_key_expr.value(), key);
   } else if (map.key_type.IsBoolTy()) {
     b_.CreateStore(
-        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt8Ty(), false), key);
+        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt1Ty(), false), key);
   } else {
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
       // We need to read the entire array/struct and save it
