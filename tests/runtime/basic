@@ -360,6 +360,10 @@ PROG begin { @g[1, "hi"] = 2; if (has_key(@g, (1, 2))) { printf("ok\n"); }  }
 EXPECT_REGEX .* ERROR: Argument mismatch for @g: trying to access with arguments: '\(uint8,uint8\)' when map expects arguments: '\(uint8,string\[3\]\)'.*
 WILL_FAIL
 
+NAME find
+RUN {{BPFTRACE}} runtime/scripts/find.bt
+EXPECT 8
+
 NAME exit code
 PROG begin { exit(69); }
 RETURN_CODE 69

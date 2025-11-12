@@ -289,6 +289,34 @@ macro elapsed() {
 // ```
 //
 
+// :variant boolean find(map m, mapkey k, mapvalue var)
+//
+// Return `true` if the key exists in this map and sets the passed scratch variable (var) to the value of that map key.
+// Otherwise return `false` and don't mutate var.
+// Use this instead of `has_key` + a map access to avoid an additional map lookup.
+// Error if called with a map that has no keys (aka scalar map).
+//
+// ```
+// kprobe:dummy {
+//   @map[2] = (1, "hello");
+//   let $val;
+//   if (find(@map, 2, $val)) {
+//     print($val); // prints (1, "hello")
+//   }
+// }
+// ```
+macro find(@map, key, $var) {
+  check_key(@map, key, "find");
+  let $key: typeof(@map) = key;
+  $result = __lookup_elem((void *)&@map, (void *)&$key);
+  if ((bool)$result) {
+    $var = *((typeof({ $a = @map[$key]; &$a }))$result);
+    true
+  } else {
+    false
+  }
+}
+
 // :variant string func()
 // Name of the current function being traced (kprobes,uprobes,fentry)
 macro func() {
@@ -345,22 +373,9 @@ macro gid() {
 // }
 // ```
 macro has_key(@map, key) {
-  if comptime is_scalar(@map) {
-    fail("call to has_key() expects a map with explicit keys (non-scalar map)");
-    false
-  } else {
-    // The typeinfo(@map[key]) is a bit of a hack as it both checks if the passed key is compatible
-    // with the map key and it also possibly changes the key type to make them
-    // compatible if possible, e.g.
-    // @c[1, ("hello", (int8)5)] = 0;
-    // has_key(@c, (1, ("hello", (uint8)5))) - now the key type is (uint8, (string, int16))
-    // Other than that this has no side effects and shouldn't fail
-    if comptime (typeinfo(@map[key]).1 == "__dummy_key_type") {
-      fail("__dummy_key_type shouldn't exist")
-    }
-    let $key: typeof(@map) = key;
-    __has_key((void *)&@map, (void *)&$key)
-  }
+  check_key(@map, key, "has_key()");
+  let $key: typeof(@map) = key;
+  (bool)__lookup_elem((void *)&@map, (void *)&$key)
 }
 
 // :variant uint64 jiffies()

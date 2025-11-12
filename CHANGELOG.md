@@ -36,6 +36,8 @@ and this project adheres to
   - [#4715](https://github.com/bpftrace/bpftrace/pull/4715)
 - Add `test` probes as means to improve runtime test latency
   - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
+- Add `find` to get map value if it exists
+  - [#4845](https://github.com/bpftrace/bpftrace/pull/4845)
 #### Changed
 - `uaddr` support PIE and dynamic library symbols.
   - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)

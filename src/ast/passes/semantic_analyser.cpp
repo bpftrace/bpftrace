@@ -2430,7 +2430,7 @@ void SemanticAnalyser::create_tuple_cast(Expression &exp,
   }
 
   if (!exp.is<Variable>() && !exp.is<TupleAccess>() && !exp.is<MapAccess>() &&
-      !exp.is<Tuple>()) {
+      !exp.is<Tuple>() && !exp.is<Unop>()) {
     LOG(BUG) << "Unexpected expression kind: create_tuple_cast";
   }
 
