@@ -2587,6 +2587,7 @@ ScopedExpr CodegenLLVM::visit(Ternary &ternary)
     const auto max_strlen = bpftrace_.config_->max_strlen;
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   } else if (!ternary.result_type.IsIntTy() &&
+             !ternary.result_type.IsBoolTy() &&
              !ternary.result_type.IsNoneTy()) {
     buf = b_.CreateAllocaBPF(ternary.result_type);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), ternary.result_type.GetSize());
@@ -2599,7 +2600,7 @@ ScopedExpr CodegenLLVM::visit(Ternary &ternary)
                   left_block,
                   right_block);
 
-  if (ternary.result_type.IsIntTy()) {
+  if (ternary.result_type.IsIntTy() || ternary.result_type.IsBoolTy()) {
     // fetch selected integer via CreateStore
     b_.SetInsertPoint(left_block);
     auto scoped_left = visit(ternary.left);
@@ -2892,7 +2893,7 @@ ScopedExpr CodegenLLVM::visit(MapAccess &acc)
     }
 
     return ScopedExpr(b_.CreateLoad(acc.map->value_type.IsBoolTy()
-                                        ? b_.getInt8Ty()
+                                        ? b_.getInt1Ty()
                                         : b_.getInt64Ty(),
                                     module_->getGlobalVariable(acc.map->ident),
                                     acc.map->ident));
@@ -2942,6 +2943,9 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
       return ScopedExpr(b_.CreateLoad(int_ty, array, true /*volatile*/));
     } else if (cast.expr.type().IsPtrTy()) {
       return ScopedExpr(b_.CreatePtrToInt(scoped_expr.value(), int_ty));
+    } else if (cast.expr.type().IsBoolTy()) {
+      return ScopedExpr(
+          b_.CreateIntCast(scoped_expr.value(), b_.getInt1Ty(), false, "cast"));
     } else {
       return ScopedExpr(b_.CreateIntCast(
           scoped_expr.value(),
@@ -3746,7 +3750,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
                    key);
   } else if (map.key_type.IsBoolTy()) {
     b_.CreateStore(
-        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt8Ty(), false), key);
+        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt1Ty(), false), key);
   } else {
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
       // We need to read the entire array/struct and save it
