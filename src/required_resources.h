@@ -148,19 +148,33 @@ public:
   void load_state(const uint8_t *ptr, size_t len);
 
   // Async argument metadata
+  // There is both a vector and a map of AST pointers to vector index.
+  // We only need the latter for a later passes that want to accurately
+  // access the id for a specific node so it can be passed into userspace
+  // when the script is executing.
   std::vector<
       std::tuple<FormatString, std::vector<Field>, PrintfSeverity, SourceInfo>>
       printf_args;
+  std::unordered_map<ast::Call* , size_t> printf_args_id_map;
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
+  std::unordered_map<ast::Call* , size_t> system_args_id_map;
   // fmt strings for BPF helpers (bpf_seq_printf, bpf_trace_printk)
   std::vector<FormatString> bpf_print_fmts;
+  std::unordered_map<ast::Call* , size_t> bpf_print_fmts_id_map;
   std::vector<std::tuple<FormatString, std::vector<Field>>> cat_args;
+  std::unordered_map<ast::Call* , size_t> cat_args_id_map;
   std::vector<std::string> join_args;
+  std::unordered_map<ast::Call* , size_t> join_args_id_map;
   std::vector<std::string> time_args;
+  std::unordered_map<ast::Call* , size_t> time_args_id_map;
   std::vector<std::string> strftime_args;
+  std::unordered_map<ast::Call* , size_t> strftime_args_id_map;
   std::vector<std::string> cgroup_path_args;
+  std::unordered_map<ast::Call* , size_t> cgroup_path_args_id_map;
   std::vector<SizedType> non_map_print_args;
+  std::unordered_map<ast::Call* , size_t> non_map_print_args_id_map;
   std::vector<std::tuple<std::string, long>> skboutput_args_;
+  std::unordered_map<ast::Call* , size_t> skboutput_args_id_map;
   // While max fmtstring args size is not used at runtime, the size
   // calculation requires taking into account struct alignment semantics,
   // and that is tricky enough that we want to minimize repetition of
