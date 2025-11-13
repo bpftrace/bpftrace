@@ -5,6 +5,7 @@
 #include "output/output.h"
 #include "struct.h"
 #include "util/exceptions.h"
+#include "util/gfp_flags.h"
 #include "util/strings.h"
 
 namespace bpftrace {
@@ -22,8 +23,9 @@ void FormatError::log(llvm::raw_ostream& OS) const
 // modifiers that *follow* the primary specifier. This means that they need
 // special cases, and the ordering matters to ensure that we capture the
 // modifiers if they are present (so `r` is the final match in the list).
+// The %Gg specifier is also non-standard for GFP flag formatting.
 const std::regex FormatSpec::regex(
-    R"(%(-?)(\+?)( ?)(#?)(0?)(\*|\d+)?(?:\.(\*|\d+))?([hlLjzt]*)([diouxXeEfFgGaAcspn%]|rh|rx|r))");
+    R"(%(-?)(\+?)( ?)(#?)(0?)(\*|\d+)?(?:\.(\*|\d+))?([hlLjzt]*)([diouxXeEfFgGaAcspn%]|Gg|rh|rx|r))");
 
 FormatSpec::FormatSpec(const std::smatch& match)
 {
@@ -111,6 +113,7 @@ Result<> FormatString::check(const std::vector<SizedType>& args) const
     { "rh", { Type::buffer } },
     { "s", {} },
     { "p", any_integer },
+    { "Gg", any_integer },
   };
   for (size_t i = 0; i < specs.size(); i++) {
     if (args[i].IsNoneTy()) {
@@ -254,6 +257,33 @@ static Result<> as_buffer(std::stringstream& ss,
   }
 }
 
+static Result<> as_gfp_flags(
+    std::stringstream& ss,
+    const Primitive& p,
+    [[maybe_unused]] const std::string& length_modifier)
+{
+  return std::visit(
+      [&](const auto& v) -> Result<> {
+        if constexpr (std::is_same_v<std::decay_t<decltype(v)>,
+                                     output::Primitive::Symbolic>) {
+          return as_gfp_flags(ss,
+                              output::Primitive(v.numeric),
+                              length_modifier);
+        } else if constexpr (std::is_same_v<std::decay_t<decltype(v)>,
+                                            int64_t> ||
+                             std::is_same_v<std::decay_t<decltype(v)>,
+                                            uint64_t>) {
+          ss << util::GFPFlags::format(static_cast<uint64_t>(v));
+          return OK();
+        } else {
+          std::stringstream msg;
+          msg << "invalid GFP flags conversion: " << p;
+          return make_error<FormatError>(msg.str());
+        }
+      },
+      p.variant);
+}
+
 Result<std::string> FormatSpec::apply(const Primitive& p) const
 {
   std::stringstream ss;
@@ -316,6 +346,7 @@ Result<std::string> FormatSpec::apply(const Primitive& p) const
     { "rh", as_buffer<false, false> },
     { "s", as_string },
     { "p", as_unsigned_integer<void*> },
+    { "Gg", as_gfp_flags },
   };
 
   auto* dispatcher = as_string; // Default.

@@ -18,6 +18,8 @@ and this project adheres to
 - Benchmark formats changed slightly, to reflect gbenchmark
   - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
 #### Added
+- Add printf specifier `%Gg` to print GFP flags in human readable format
+  - [#4832](https://github.com/bpftrace/bpftrace/issues/4832)
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)
 - Add `syscall_name()` to convert system call numbers into names.

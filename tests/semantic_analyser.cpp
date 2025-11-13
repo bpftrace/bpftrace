@@ -2274,6 +2274,18 @@ TEST_F(SemanticAnalyserTest, printf_format_multi)
   test(R"(kprobe:f { printf("%d %s %d", 1, 2, "mystr") })", Error{});
 }
 
+TEST_F(SemanticAnalyserTest, printf_format_gfp_flags)
+{
+  test("kprobe:f { printf(\"%Gg\", arg0) }");
+  test("kprobe:f { printf(\"%Gg\", 1234) }");
+}
+
+TEST_F(SemanticAnalyserTest, printf_bad_format_gfp_flags)
+{
+  test(R"(kprobe:f { printf("%Gg", "mystr") })", Error{});
+  test(R"(kprobe:f { printf("%Gg", buf("test", 4)) })", Error{});
+}
+
 TEST_F(SemanticAnalyserTest, join)
 {
   test("kprobe:f { join(arg0) }");

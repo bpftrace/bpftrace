@@ -862,6 +862,7 @@ The non-standard ones can be found in the table below:
 | --- | --- | --- |
 | r | buffer | Hex-formatted string to print arbitrary binary content returned by the [buf](#buf) function. |
 | rh | buffer | Prints in hex-formatted string without `\x` and with spaces between bytes (e.g. `0a fe`) |
+| Gg | integer | Formats GFP (Get Free Pages) flags into human-readable strings, similar to Linux kernel's `%pGg` format. |
 
 `printf()` can also symbolize enums as strings. User defined enums as well as enums
 defined in the kernel are supported. For example:
@@ -882,6 +883,22 @@ yields:
 
 ```
 6, SKB_DROP_REASON_SOCKET_FILTER, CUSTOM_ENUM
+```
+
+The `%Gg` specifier can be used to format GFP (Get Free Pages) flags into human-readable strings:
+
+```
+kprobe:__alloc_pages {
+  printf("GFP flags: %Gg\n", arg1);
+}
+```
+
+This would output something like:
+
+```
+GFP flags: GFP_KERNEL
+GFP flags: GFP_ATOMIC|__GFP_HIGHMEM
+GFP flags: __GFP_IO|__GFP_FS|__GFP_DIRECT_RECLAIM
 ```
 
 Colors are supported too, using standard terminal escape sequences:

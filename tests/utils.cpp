@@ -10,6 +10,7 @@
 
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
+#include "util/gfp_flags.h"
 #include "util/io.h"
 #include "util/kernel.h"
 #include "util/math.h"
@@ -553,6 +554,38 @@ TEST(utils, similar)
   EXPECT_TRUE(is_similar("foo", "foofoo"));
   EXPECT_TRUE(is_similar("fo", "foo"));
   EXPECT_TRUE(is_similar("foobar", "fobar"));
+}
+
+TEST(utils, gfp_flags_format)
+{
+  // Test zero value
+  EXPECT_EQ(GFPFlags::format(0), "0");
+
+  // Test individual flags
+  EXPECT_EQ(GFPFlags::format(0x01), "__GFP_DMA");
+  EXPECT_EQ(GFPFlags::format(0x02), "__GFP_HIGHMEM");
+  EXPECT_EQ(GFPFlags::format(0x04), "__GFP_DMA32");
+  EXPECT_EQ(GFPFlags::format(0x40), "__GFP_IO");
+  EXPECT_EQ(GFPFlags::format(0x80), "__GFP_FS");
+
+  // Test combined individual flags
+  EXPECT_EQ(GFPFlags::format(0x41), "__GFP_DMA|__GFP_IO");
+  EXPECT_EQ(GFPFlags::format(0xC0), "__GFP_IO|__GFP_FS");
+
+  // Test compound flags (GFP_KERNEL = __GFP_DIRECT_RECLAIM | __GFP_IO |
+  // __GFP_FS | __GFP_KSWAPD_RECLAIM) GFP_KERNEL = 0x40000 | 0x40 | 0x80 |
+  // 0x100000 = 0x1400C0
+  EXPECT_EQ(GFPFlags::format(0x1400C0), "GFP_KERNEL");
+
+  // Test GFP_ATOMIC (__GFP_HIGH | __GFP_ATOMIC | __GFP_KSWAPD_RECLAIM)
+  // GFP_ATOMIC = 0x20 | 0x10000 | 0x100000 = 0x110020
+  EXPECT_EQ(GFPFlags::format(0x110020), "GFP_ATOMIC");
+
+  // Test unrecognized bits
+  EXPECT_EQ(GFPFlags::format(0x80000000), "0x80000000");
+
+  // Test combination of known and unknown flags
+  EXPECT_EQ(GFPFlags::format(0x80000001), "__GFP_DMA|0x80000000");
 }
 
 } // namespace bpftrace::test::utils
