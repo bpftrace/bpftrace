@@ -2165,6 +2165,8 @@ void SemanticAnalyser::visit(MapAddr &map_addr)
     pass_tracker_.inc_num_unresolved();
   } else {
     visit(map_addr.map);
+    map_addr.map_addr_type = CreatePointer(map_addr.map->type(),
+                                           map_addr.map->type().GetAS());
   }
 }
 
