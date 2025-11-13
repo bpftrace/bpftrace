@@ -3308,12 +3308,10 @@ void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
 // We can't hint for unsigned types. It is a syntax error,
 // because the word "unsigned" is not allowed in a type name.
 static std::unordered_map<std::string_view, std::string_view>
-    KNOWN_TYPE_ALIASES{
-      { "char", "int8" },   /* { "unsigned char", "uint8" }, */
-      { "short", "int16" }, /* { "unsigned short", "uint16" }, */
-      { "int", "int32" },   /* { "unsigned int", "uint32" }, */
-      { "long", "int64" },  /* { "unsigned long", "uint64" }, */
-    };
+    KNOWN_TYPE_ALIASES{ { "char", "int8" },
+                        { "short", "int16" },
+                        { "int", "int32" },
+                        { "size_t", "ulong" } };
 
 void SemanticAnalyser::visit(Cast &cast)
 {
@@ -3516,7 +3514,7 @@ void SemanticAnalyser::visit(Expression &expr)
         }
         auto *size = ctx_.make_node<Integer>(binop->loc,
                                              updatedTy->GetSize(),
-                                             CreateUInt64());
+                                             CreateULong());
         auto *call = ctx_.make_node<Call>(
             binop->loc,
             "memcmp",

@@ -2587,14 +2587,14 @@ begin { (int)cpu }
         ~~~~~
 HINT: Did you mean "int32"?
 )" });
-  test("begin { (long)cpu }", Error{ R"(
-stdin:1:10-14: ERROR: Cannot resolve unknown type "long"
-begin { (long)cpu }
-         ~~~~
-stdin:1:9-15: ERROR: Cannot cast to "long"
-begin { (long)cpu }
-        ~~~~~~
-HINT: Did you mean "int64"?
+  test("begin { (size_t)cpu }", Error{ R"(
+stdin:1:10-16: ERROR: Cannot resolve unknown type "size_t"
+begin { (size_t)cpu }
+         ~~~~~~
+stdin:1:9-17: ERROR: Cannot cast to "size_t"
+begin { (size_t)cpu }
+        ~~~~~~~~
+HINT: Did you mean "ulong"?
 )" });
 }
 

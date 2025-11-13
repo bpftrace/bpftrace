@@ -530,6 +530,9 @@ SizedType CreateUInt8();
 SizedType CreateUInt16();
 SizedType CreateUInt32();
 SizedType CreateUInt64();
+// The size of these are based on the architecture
+SizedType CreateLong();
+SizedType CreateULong();
 SizedType CreateEnum(size_t bits, const std::string &name);
 
 // Create a string of `size` bytes, inclusive of NUL terminator.

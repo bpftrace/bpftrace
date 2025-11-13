@@ -825,3 +825,7 @@ AFTER ./testprogs/syscall nanosleep  1e8
 NAME block expression with map assignment
 PROG begin { @ = { let $a = 100; avg($a) };  }
 EXPECT @: 100
+
+NAME strlen
+PROG begin { $a = "hello"; print(strlen($a)); }
+EXPECT 5

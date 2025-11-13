@@ -343,6 +343,8 @@ int_type:
                         {"int16", CreateInt(16)},
                         {"int32", CreateInt(32)},
                         {"int64", CreateInt(64)},
+                        {"long", CreateLong()},
+                        {"ulong", CreateULong()},
                     };
                     $$ = type_map[$1];
                 }
