@@ -23,7 +23,7 @@ PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } 
 EXPECT a=asdf
 
 NAME if_cast
-PROG i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}
+PROG i:ms:1 { if ((int32)nsecs) { printf("done\n"); } exit(); }
 EXPECT done
 
 NAME ternary
@@ -37,6 +37,14 @@ EXPECT 1
 NAME ternary_int8
 PROG i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}
 EXPECT 1
+
+NAME ternary_mixed_int
+PROG i:ms:1 { $a = nsecs ? (uint8)1 : (int32)-1; printf("%d\n", $a); exit();}
+EXPECT 1
+
+NAME ternary_bool
+PROG i:ms:1 { $a = nsecs ? true : false; print($a); exit(); }
+EXPECT true
 
 NAME ternary_none_type
 PROG i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }
