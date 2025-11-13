@@ -1,14 +1,12 @@
 // Check arg0 to make sure these are the nanosleeps we issued
 
-kprobe:hrtimer_nanosleep
-{
+kprobe:hrtimer_nanosleep {
   if (arg0 == 1001) {
-     printf("first");
+    printf("first");
   }
 }
 
-kprobe:hrtimer_nanosleep
-{
+kprobe:hrtimer_nanosleep {
   if (arg0 == 1001) {
     printf(" second\n");
     exit();
