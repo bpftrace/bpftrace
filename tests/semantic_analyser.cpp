@@ -1977,33 +1977,69 @@ TEST_F(SemanticAnalyserTest, map_integer_sizes)
 
 TEST_F(SemanticAnalyserTest, binop_tuple)
 {
+  ast::TypeMetadata types;
+
+  auto vd_ty = types.global.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(vd_ty));
+  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  ASSERT_TRUE(bool(vd_ptr));
+  auto uint64 = types.global.add<btf::Integer>("uint64", 8, 0);
+  ASSERT_TRUE(bool(uint64));
+  auto int32 = types.global.add<btf::Integer>("int", 4, 1);
+  ASSERT_TRUE(bool(int32));
+
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "mem_left", btf::ValueType(*vd_ptr) },
+    { "mem_right", btf::ValueType(*vd_ptr) },
+    { "count", btf::ValueType(*uint64) }
+  };
+  auto memcmp_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*int32), args);
+  ASSERT_TRUE(bool(memcmp_proto));
+
+  auto memcmp_func = types.global.add<btf::Function>(
+      "__memcmp", btf::Function::Linkage::Global, *memcmp_proto);
+  ASSERT_TRUE(bool(memcmp_func));
+
   // These are all variables so they don't get folded
   test(
-      R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int8[2])(int16)2); $a == $b })");
-  test(R"(kprobe:f { $a = ((int16)1, 3); $b = ((int64)2, 4); $a == $b })");
+      R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int8[2])(int16)2); $a == $b })",
+      Types{ types });
+  test(R"(kprobe:f { $a = ((int16)1, 3); $b = ((int64)2, 4); $a == $b })",
+       Types{ types });
   test(
-      R"(kprobe:f { $a = (1, "reallyreallyreallylongstr", true); $b = (2, "bye", false); $a == $b })");
+      R"(kprobe:f { $a = (1, "reallyreallyreallylongstr", true); $b = (2, "bye", false); $a == $b })",
+      Types{ types });
   test(
-      R"(kprobe:f { $a = (1, "reallyreallyreallylongstr", ((int8)1, "bye")); $b = (2, "bye", (2, "reallyreallyreallylongstr")); $a == $b })");
+      R"(kprobe:f { $a = (1, "reallyreallyreallylongstr", ((int8)1, "bye")); $b = (2, "bye", (2, "reallyreallyreallylongstr")); $a == $b })",
+      Types{ types });
   test(
-      R"(kprobe:f { $a = ((int16)1, (int16)3); $b = ((int64)2, 4); $a == $b })");
+      R"(kprobe:f { $a = ((int16)1, (int16)3); $b = ((int64)2, 4); $a == $b })",
+      Types{ types });
 
-  test(R"(kprobe:f { $a = (1, true); $b = (2, false, 3); $a == $b })", Error{});
+  test(R"(kprobe:f { $a = (1, true); $b = (2, false, 3); $a == $b })",
+       Error{},
+       Types{ types });
   test(
       R"(kprobe:f { $a = (1, true, "bye"); $b = (2, "bye", false); $a == $b })",
-      Error{});
+      Error{},
+      Types{ types });
   test(
       R"(kprobe:f { $a = (2, (int8[2])(int16)1); $b = (2, (int8[8])1); $a == $b })",
-      Error{});
+      Error{},
+      Types{ types });
   test(
       R"(kprobe:f { $a = (2, (1, (int8[2])(int16)1)); $b = (2, (1, (int16[2])(int32)1)); $a == $b })",
-      Error{});
+      Error{},
+      Types{ types });
   test(
       R"(kprobe:f { $a = (1, "hello", true); $b = (2, "bye", false); $a < $b })",
-      Error{});
+      Error{},
+      Types{ types });
   test(
       R"(kprobe:f { $a = (1, "hello", true); $b = (2, "bye", false); $a > $b })",
-      Error{});
+      Error{},
+      Types{ types });
 }
 
 TEST_F(SemanticAnalyserTest, binop_array)

@@ -552,6 +552,16 @@ kprobe:arp_create {
 ```
 
 
+### memcmp
+- `int memcmp(left, right, uint64 count)`
+
+Compares the first 'count' bytes of two expressions.
+0 is returned if they are the same.
+negative value if the first differing byte in left is less
+than the corresponding byte in right.
+
+
+
 ### ncpus
 - `uint64 ncpus()`
 - `uint64 ncpus`

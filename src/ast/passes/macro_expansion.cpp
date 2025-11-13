@@ -416,15 +416,23 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro,
   return cloned_block;
 }
 
+void expand_macro(ASTContext &ast,
+                  Expression &expr,
+                  const MacroRegistry &registry)
+{
+  std::vector<const Macro *> stack;
+  MacroExpander expander(ast, registry, stack);
+  expander.visit(expr);
+}
+
 Pass CreateMacroExpansionPass()
 {
-  auto fn = [](ASTContext &ast) {
+  auto fn = [](ASTContext &ast) -> MacroRegistry {
     auto macros = MacroRegistry::create(ast);
-    if (ast.diagnostics().ok()) {
-      std::vector<const Macro *> stack;
-      MacroExpander expander(ast, macros, stack);
-      expander.visit(ast.root);
-    }
+    std::vector<const Macro *> stack;
+    MacroExpander expander(ast, macros, stack);
+    expander.visit(ast.root);
+    return macros;
   };
 
   return Pass::create("MacroExpansion", fn);
