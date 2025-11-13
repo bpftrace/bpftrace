@@ -323,6 +323,12 @@ EXPECT_REGEX size: [0-9]+
 AFTER ./testprogs/uprobe_library
 REQUIRES_FEATURE libpath_resolv
 
+NAME uprobe_library_soname
+PROG uprobe:libc.so.6:fread { printf("size: %d\n", arg1); exit(); }
+EXPECT_REGEX size: [0-9]+
+AFTER ./testprogs/uprobe_library
+REQUIRES_FEATURE libpath_resolv
+
 NAME uprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uprobe_order.bt
 EXPECT_REGEX (first)+ second
