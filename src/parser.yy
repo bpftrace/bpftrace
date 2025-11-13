@@ -102,6 +102,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   PTR        "->"
   STRUCT     "struct"
   UNION      "union"
+  UNDERSCORE "_"
 
   // Pseudo token; see below.
   LOW "low-precedence"
@@ -587,6 +588,7 @@ assign_stmt:
         |       map_expr ASSIGN expr      { $$ = driver.ctx.make_node<ast::AssignMapStatement>(@$, $1, $3); }
         |       var_decl_stmt ASSIGN expr { $$ = driver.ctx.make_node<ast::AssignVarStatement>(@$, $1, $3); }
         |       var ASSIGN expr           { $$ = driver.ctx.make_node<ast::AssignVarStatement>(@$, $1, $3); }
+        |       UNDERSCORE ASSIGN expr    { $$ = driver.ctx.make_node<ast::DiscardExpr>(@$, $3); }
         |       map compound_op expr
                 {
                   auto b = driver.ctx.make_node<ast::Binop>(@2, $1, $2, $3);

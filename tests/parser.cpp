@@ -2253,7 +2253,7 @@ k:f { print(1_1e100); }
 )");
 
   test_parse_failure("k:f { print(1e1_1_); }", R"(
-stdin:1:18-19: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:18-19: ERROR: syntax error, unexpected _, expecting ) or ","
 k:f { print(1e1_1_); }
                  ~
 )");
@@ -2265,7 +2265,7 @@ k:f { print(1_1_e100); }
 )");
 
   test_parse_failure("k:f { print(1_1_); }", R"(
-stdin:1:16-17: ERROR: syntax error, unexpected identifier, expecting ) or ","
+stdin:1:16-17: ERROR: syntax error, unexpected _, expecting ) or ","
 k:f { print(1_1_); }
                ~
 )");

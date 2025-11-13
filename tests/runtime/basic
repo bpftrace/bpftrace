@@ -271,14 +271,9 @@ EXPECT_NONE @a[1]: 1
 EXPECT_NONE @b[2, hi]: 2
 TIMEOUT 1
 
-NAME bad delete warning
-PROG begin { @a[1] = 1; delete(@a, 2); }
-EXPECT stdin:1:20-33: WARNING: Can't delete map element because it does not exist.
-TIMEOUT 1
-
-NAME bad delete no warning
-PROG begin { @a[1] = 1; $x = delete(@a, 2); if (1 && !delete(@a, 3)) {} }
-EXPECT_NONE stdin:1:20-33: WARNING: Can't delete map element because it does not exist.
+NAME bad delete
+PROG begin { @a[1] = 1; $x = delete(@a, 2); $y = delete(@a, 1); if ($x == false && $y == true) { printf("SUCCESS"); } }
+EXPECT SUCCESS
 TIMEOUT 1
 
 NAME increment/decrement map
@@ -403,3 +398,8 @@ EXPECT @y: 2
 NAME bitwise_not
 PROG begin { @x = ~10; }
 EXPECT @x: 18446744073709551605
+
+NAME discard expression
+PROG begin { _ = { print(1); 1 } }
+EXPECT 1
+EXPECT_REGEX_NONE .*WARNING: Return value discarded..*

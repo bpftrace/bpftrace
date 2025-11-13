@@ -5628,21 +5628,19 @@ TEST_F(SemanticAnalyserTest, warning_for_empty_positional_parameters)
        Mock{ *bpftrace });
 }
 
-TEST_F(SemanticAnalyserTest, warning_for_discared_return_value)
+TEST_F(SemanticAnalyserTest, warning_for_discared_expression_statement_value)
 {
   // Non exhaustive testing, just a few examples
-  test("k:f { bswap(arg0); }",
-       Warning{ "Return value discarded for bswap. "
-                "It should be used" });
-  test("k:f { cgroup_path(1); }",
-       Warning{ "Return value discarded for "
-                "cgroup_path. It should be used" });
-  test("k:f { uptr((int8*) arg0); }",
-       Warning{ "Return value discarded for uptr. It "
-                "should be used" });
-  test("k:f { ustack(raw); }",
-       Warning{ "Return value discarded for ustack. "
-                "It should be used" });
+  test("k:f { bswap(arg0); }", Warning{ "Return value discarded" });
+  test("k:f { cgroup_path(1); }", Warning{ "Return value discarded" });
+  test("k:f { uptr((int8*) arg0); }", Warning{ "Return value discarded" });
+  test("k:f { ustack(raw); }", Warning{ "Return value discarded" });
+  test("k:f { { 1 } }", Warning{ "Return value discarded" });
+
+  test("k:f { _ = { 1 } }", NoWarning{ "Return value discarded" });
+  test("k:f { print(1); }", NoWarning{ "Return value discarded" });
+  test("k:f { $a = 1; }", NoWarning{ "Return value discarded" });
+  test("k:f { @a[1] = count(); }", NoWarning{ "Return value discarded" });
 }
 
 TEST_F(SemanticAnalyserTest, external_function)

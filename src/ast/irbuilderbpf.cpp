@@ -1141,10 +1141,7 @@ void IRBuilderBPF::CreateMapUpdateElem(const std::string &map_ident,
   CreateHelperErrorCond(call, BPF_FUNC_map_update_elem, loc);
 }
 
-CallInst *IRBuilderBPF::CreateMapDeleteElem(Map &map,
-                                            Value *key,
-                                            bool ret_val_discarded,
-                                            const Location &loc)
+CallInst *IRBuilderBPF::CreateMapDeleteElem(Map &map, Value *key)
 {
   assert(key->getType()->isPointerTy());
   Value *map_ptr = GetMapVar(map.ident);
@@ -1160,8 +1157,6 @@ CallInst *IRBuilderBPF::CreateMapDeleteElem(Map &map,
                                                 delete_func_ptr_type);
   CallInst *call = createCall(
       delete_func_type, delete_func, { map_ptr, key }, "delete_elem");
-  CreateHelperErrorCond(
-      call, BPF_FUNC_map_delete_elem, loc, !ret_val_discarded);
 
   return call;
 }
@@ -2330,10 +2325,9 @@ void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
 
 void IRBuilderBPF::CreateHelperErrorCond(Value *return_value,
                                          bpf_func_id func_id,
-                                         const Location &loc,
-                                         bool suppress_error)
+                                         const Location &loc)
 {
-  if (bpftrace_.warning_level_ == 0 || suppress_error ||
+  if (bpftrace_.warning_level_ == 0 ||
       (bpftrace_.warning_level_ == 1 && return_zero_if_err(func_id)))
     return;
 

@@ -52,6 +52,8 @@ and this project adheres to
   - [#4768](https://github.com/bpftrace/bpftrace/pull/4768)
 - Stabilize macros (remove 'unstable_macro' flag)
   - [#4818](https://github.com/bpftrace/bpftrace/pull/4818)
+- Warn on all discarded expressions
+  - [#4836](https://github.com/bpftrace/bpftrace/pull/4836)
 #### Deprecated
 #### Removed
 - Drop support for LLVM 16

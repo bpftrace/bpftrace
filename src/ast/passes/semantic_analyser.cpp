@@ -135,7 +135,6 @@ struct map_key_spec {
 struct call_spec {
   size_t min_args = 0;
   size_t max_args = 0;
-  bool discard_ret_warn = false;
   // NOLINTBEGIN(readability-redundant-member-init)
   std::vector<std::variant<arg_type_spec, map_type_spec, map_key_spec>>
       arg_types = {};
@@ -329,11 +328,11 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
                              }) },
                      map_key_spec{ .map_index = 0 },
                      arg_type_spec{ .type = Type::integer } } } },
-  { "bswap", { .min_args = 1, .max_args = 1, .discard_ret_warn = true } },
+  { "bswap", { .min_args = 1, .max_args = 1 } },
   { "buf",
     { .min_args=1,
       .max_args=2,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .skip_check=true },
         arg_type_spec{ .type=Type::integer } } } },
@@ -345,13 +344,13 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "cgroupid",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "cgroup_path",
     { .min_args=1,
       .max_args=2,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::integer },
         arg_type_spec{ .type=Type::string } } } },
@@ -414,25 +413,25 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "kaddr",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "kptr",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true, } },
+       } },
   { "kstack",
     { .min_args=0,
       .max_args=2,
-      .discard_ret_warn = true, } },
+       } },
   { "ksym",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true, } },
+       } },
   { "stack_len",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true,
+
     } },
   { "lhist",
     { .min_args=6,
@@ -461,7 +460,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "macaddr",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true, } },
+       } },
   { "max",
     { .min_args=3,
       .max_args=3,
@@ -487,28 +486,28 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "nsecs",
     { .min_args=0,
       .max_args=1,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::timestamp_mode } } } },
   { "ntop",
     { .min_args=1,
       .max_args=2,
-      .discard_ret_warn = true, } },
+       } },
   { "offsetof",
     { .min_args=2,
       .max_args=2,
-      .discard_ret_warn = true, } },
+       } },
   { "path",
     { .min_args=1,
       .max_args=2,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .skip_check=true },
         arg_type_spec{ .type=Type::integer, .literal=true } } } },
   { "percpu_kaddr",
     { .min_args=1,
       .max_args=2,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true },
         arg_type_spec{ .type=Type::integer } } } },
@@ -529,21 +528,21 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "pton",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true, } },
+       } },
   { "reg",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "sizeof",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true, } },
+       } },
   { "skboutput",
     { .min_args=4,
       .max_args=4,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true }, // pcap file name
         arg_type_spec{ .type=Type::pointer },      // *skb
@@ -566,21 +565,21 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "str",
     { .min_args=1,
       .max_args=2,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .skip_check=true },
         arg_type_spec{ .type=Type::integer } } } },
   { "strftime",
     { .min_args=2,
       .max_args=2,
-      .discard_ret_warn = true,
+
       .arg_types={
           arg_type_spec{ .type=Type::string, .literal=true },
           arg_type_spec{ .type=Type::integer } } } },
   { "strncmp",
     { .min_args=3,
       .max_args=3,
-      .discard_ret_warn = true,
+
       .arg_types={
           arg_type_spec{ .type=Type::string },
           arg_type_spec{ .type=Type::string },
@@ -609,7 +608,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "__builtin_uaddr",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true,
+
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
   { "unwatch",
@@ -620,15 +619,15 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
   { "uptr",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true, } },
+       } },
   { "ustack",
     { .min_args=0,
       .max_args=2,
-      .discard_ret_warn = true, } },
+       } },
   { "usym",
     { .min_args=1,
       .max_args=1,
-      .discard_ret_warn = true, } },
+       } },
   { "warnf",
     { .min_args=1,
       .max_args=128,
@@ -642,8 +641,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       } } },
   { "pid",
     { .min_args=0,
-      .max_args=1,
-      .discard_ret_warn = true },
+      .max_args=1 },
   },
   { "socket_cookie",
     { .min_args=1,
@@ -1256,19 +1254,10 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
 
-    call.return_type = CreateTSeries();
-  } else if (call.func == "count") {
-    call.return_type = CreateCount();
-  } else if (call.func == "sum") {
-    call.return_type = CreateSum(call.vargs.at(0).type().IsSigned());
-  } else if (call.func == "min") {
-    call.return_type = CreateMin(call.vargs.at(0).type().IsSigned());
-  } else if (call.func == "max") {
-    call.return_type = CreateMax(call.vargs.at(0).type().IsSigned());
-  } else if (call.func == "avg") {
-    call.return_type = CreateAvg(true);
-  } else if (call.func == "stats") {
-    call.return_type = CreateStats(true);
+    call.return_type = CreateVoid();
+  } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
+             call.func == "max" || call.func == "avg" || call.func == "stats") {
+    call.return_type = CreateVoid();
   } else if (call.func == "delete") {
     call.return_type = CreateUInt8();
   } else if (call.func == "str") {
@@ -3534,17 +3523,12 @@ void SemanticAnalyser::visit(Expression &expr)
 
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
-  if (auto *call = expr.expr.as<Call>()) {
-    // Calls from expression statements are bare, meaning they're not
-    // handling the return value e.g.
-    // delete(@a, 1); <- ExprStatement
-    // vs
-    // $x = delete(@a, 1) <- AssignVarStatement
-    // if (delete(@a, 1)) { <- If
-    call->ret_val_discarded = true;
-  }
-
   visit(expr.expr);
+
+  if (is_final_pass() &&
+      !(expr.expr.type().IsNoneTy() || expr.expr.type().IsVoidTy())) {
+    expr.addWarning() << "Return value discarded.";
+  }
 }
 
 static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
@@ -4071,12 +4055,6 @@ bool SemanticAnalyser::check_call(Call &call)
   auto spec = CALL_SPEC.find(call.func);
   if (spec == CALL_SPEC.end()) {
     return true;
-  }
-
-  if (is_final_pass() && call.ret_val_discarded &&
-      spec->second.discard_ret_warn) {
-    call.addWarning() << "Return value discarded for " << call.func
-                      << ". It should be used.";
   }
 
   auto ret = true;
