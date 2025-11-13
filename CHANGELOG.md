@@ -74,6 +74,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- undump.bt: Support dgram packet capture
+  - [#4846](https://github.com/bpftrace/bpftrace/pull/4846)
 - opensnoop.bt: Fix multi-thread race condition of @paths
   - [#4837](https://github.com/bpftrace/bpftrace/pull/4837)
 - syscount.bt: Fix incorrect map printing
