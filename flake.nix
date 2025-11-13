@@ -42,7 +42,11 @@
           # Override to specify the bcc build we want.
           # We need a specific patch in BCC which resolves a build failure with
           # LLVM 21 and is not a part of any official release, yet.
-          bccVersion = "8c5c96ad3beeed2fa827017f451a952306826974";
+          # commit: "8c5c96ad3beeed2fa827017f451a952306826974"
+          #
+          # Updated to BCC commit enabling versioned SONAME support in uprobes
+          # (supports attachpoints like uprobe:libssl.so.3:SSL_write)
+          bccVersion = "beb1fe40e1183a9068c93640e4687342d822c4e3";
           bcc = (pkgs.bcc.override {
             llvmPackages = pkgs."llvmPackages_${toString defaultLlvmVersion}";
           }).overridePythonAttrs {
@@ -52,7 +56,7 @@
               repo = "bcc";
               rev = "${bccVersion}";
               # See above
-              sha256 = "sha256-XcTqcsbyUBe83vsjUC70GoffCXaxk32QddBKFEP6LD8=";
+              sha256 = "sha256-9BapcFFVn+4zCDBlt15Wmiwnaj0RAqCOfuByu2n6GAs=";
             };
           };
 
