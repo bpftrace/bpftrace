@@ -1310,22 +1310,10 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &map = *call.vargs.at(0).as<Map>();
     auto scoped_key = getMapKey(map, call.vargs.at(1));
 
-    if (!is_bpf_map_clearable(map_types_[map.ident])) {
-      // store zero instead of calling bpf_map_delete_elem()
-      auto *val = b_.CreateWriteMapValueAllocation(map.value_type,
-                                                   map.ident + "_zero",
-                                                   call.loc);
-      b_.CreateStore(Constant::getNullValue(b_.GetType(map.value_type)), val);
-      b_.CreateMapUpdateElem(map.ident, scoped_key.value(), val, call.loc);
-      // Assume delete for these kinds of maps always succeeds.
-      Value *expr = b_.getInt8(1);
-      return ScopedExpr(expr);
-    } else {
-      Value *ret = b_.CreateMapDeleteElem(
-          map, scoped_key.value(), call.ret_val_discarded, call.loc);
-      Value *expr = b_.CreateICmpEQ(ret, b_.getInt64(0), "delete_ret");
-      return ScopedExpr(expr);
-    }
+    Value *ret = b_.CreateMapDeleteElem(
+        map, scoped_key.value(), call.ret_val_discarded, call.loc);
+    Value *expr = b_.CreateICmpEQ(ret, b_.getInt64(0), "delete_ret");
+    return ScopedExpr(expr);
   } else if (call.func == "str") {
     const auto max_strlen = bpftrace_.config_->max_strlen;
     // Largest read we'll allow = our global string buffer size
@@ -1490,7 +1478,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     cgroupid = util::resolve_cgroupid(path);
     return ScopedExpr(b_.getInt64(cgroupid));
   } else if (call.func == "join") {
-    createJoinCall(call, async_ids_.join());
+    auto found_id = bpftrace_.resources.join_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.join_args_id_map.end()) {
+      LOG(BUG) << "No id found for join call";
+    }
+    createJoinCall(call, found_id->second);
     return ScopedExpr();
   } else if (call.func == "ksym") {
     // We want to just pass through from the child node.
@@ -1631,9 +1623,13 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       }
 
       // pick the current format string
-      auto print_id = async_ids_.bpf_print();
-      auto *fmt = createFmtString(print_id);
-      const auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
+      auto found_id = bpftrace_.resources.bpf_print_fmts_id_map.find(&call);
+      if (found_id == bpftrace_.resources.bpf_print_fmts_id_map.end()) {
+        LOG(BUG) << "No id found for printf call";
+      }
+      auto *fmt = createFmtString(found_id->second);
+      const auto &s =
+          bpftrace_.resources.bpf_print_fmts.at(found_id->second).str();
 
       // and finally the seq_printf call
       b_.CreateSeqPrintf(ctx_,
@@ -1645,28 +1641,38 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       return ScopedExpr();
 
     } else {
-      auto async_id = async_ids_.printf();
-      createFormatStringCall(call,
-                             async_id,
-                             std::get<1>(
-                                 bpftrace_.resources.printf_args[async_id]),
-                             "printf",
-                             async_action::AsyncAction::printf);
+      auto found_id = bpftrace_.resources.printf_args_id_map.find(&call);
+      if (found_id == bpftrace_.resources.printf_args_id_map.end()) {
+        LOG(BUG) << "No id found for printf call";
+      }
+      createFormatStringCall(
+          call,
+          found_id->second,
+          std::get<1>(bpftrace_.resources.printf_args[found_id->second]),
+          "printf",
+          async_action::AsyncAction::printf);
       return ScopedExpr();
     }
   } else if (call.func == "errorf" || call.func == "warnf") {
-    auto async_id = async_ids_.printf();
-    createFormatStringCall(call,
-                           async_id,
-                           std::get<1>(
-                               bpftrace_.resources.printf_args[async_id]),
-                           call.func,
-                           async_action::AsyncAction::printf);
+    auto found_id = bpftrace_.resources.printf_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.printf_args_id_map.end()) {
+      LOG(BUG) << "No id found for errorf/warnf call";
+    }
+    createFormatStringCall(
+        call,
+        found_id->second,
+        std::get<1>(bpftrace_.resources.printf_args[found_id->second]),
+        call.func,
+        async_action::AsyncAction::printf);
     return ScopedExpr();
   } else if (call.func == "debugf") {
-    auto print_id = async_ids_.bpf_print();
-    auto *fmt = createFmtString(print_id);
-    const auto &s = bpftrace_.resources.bpf_print_fmts.at(print_id).str();
+    auto found_id = bpftrace_.resources.bpf_print_fmts_id_map.find(&call);
+    if (found_id == bpftrace_.resources.bpf_print_fmts_id_map.end()) {
+      LOG(BUG) << "No id found for printf call";
+    }
+    auto *fmt = createFmtString(found_id->second);
+    const auto &s =
+        bpftrace_.resources.bpf_print_fmts.at(found_id->second).str();
 
     std::vector<Value *> values;
     std::vector<ScopedExpr> exprs;
@@ -1683,19 +1689,26 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                          call.loc);
     return ScopedExpr();
   } else if (call.func == "system") {
-    auto async_id = async_ids_.system();
-    createFormatStringCall(call,
-                           async_id,
-                           std::get<1>(
-                               bpftrace_.resources.system_args[async_id]),
-                           "system",
-                           async_action::AsyncAction::syscall);
+    auto found_id = bpftrace_.resources.system_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.system_args_id_map.end()) {
+      LOG(BUG) << "No id found for system call";
+    }
+    createFormatStringCall(
+        call,
+        found_id->second,
+        std::get<1>(bpftrace_.resources.system_args[found_id->second]),
+        "system",
+        async_action::AsyncAction::syscall);
     return ScopedExpr();
   } else if (call.func == "cat") {
-    auto async_id = async_ids_.cat();
+    auto found_id = bpftrace_.resources.cat_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.cat_args_id_map.end()) {
+      LOG(BUG) << "No id found for cat call";
+    }
     createFormatStringCall(call,
-                           async_id,
-                           std::get<1>(bpftrace_.resources.cat_args[async_id]),
+                           found_id->second,
+                           std::get<1>(
+                               bpftrace_.resources.cat_args[found_id->second]),
                            "cat",
                            async_action::AsyncAction::cat);
     return ScopedExpr();
@@ -1739,7 +1752,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                          call.func + "_args");
 
     // Store cgroup path event id
-    b_.CreateStore(b_.GetIntSameSize(async_ids_.cgroup_path(), elements.at(0)),
+    auto found_id = bpftrace_.resources.cgroup_path_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.cgroup_path_args_id_map.end()) {
+      LOG(BUG) << "No id found for cgroup_path call";
+    }
+    b_.CreateStore(b_.GetIntSameSize(found_id->second, elements.at(0)),
                    b_.CreateGEP(cgroup_path_struct,
                                 buf,
                                 { b_.getInt64(0), b_.getInt32(0) }));
@@ -1815,8 +1832,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                           elements.at(0)),
         b_.CreateGEP(time_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
+    auto found_id = bpftrace_.resources.time_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.time_args_id_map.end()) {
+      LOG(BUG) << "No id found for time call";
+    }
     b_.CreateStore(
-        b_.GetIntSameSize(async_ids_.time(), elements.at(1)),
+        b_.GetIntSameSize(found_id->second, elements.at(1)),
         b_.CreateGEP(time_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
     b_.CreateOutput(buf, getStructSize(time_struct), call.loc);
@@ -1828,8 +1849,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                                    true);
 
     AllocaInst *buf = b_.CreateAllocaBPF(strftime_struct, call.func + "_args");
+    auto found_id = bpftrace_.resources.strftime_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.strftime_args_id_map.end()) {
+      LOG(BUG) << "No id found for strftime call";
+    }
     b_.CreateStore(
-        b_.GetIntSameSize(async_ids_.strftime(), elements.at(0)),
+        b_.GetIntSameSize(found_id->second, elements.at(0)),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     b_.CreateStore(
         b_.GetIntSameSize(static_cast<std::underlying_type_t<TimestampMode>>(
@@ -1928,7 +1953,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateStore(b_.getInt64(static_cast<int64_t>(
                        async_action::AsyncAction::skboutput)),
                    aid_addr);
-    b_.CreateStore(b_.getInt64(async_ids_.skb_output()), id_addr);
+    auto found_id = bpftrace_.resources.skboutput_args_id_map.find(&call);
+    if (found_id == bpftrace_.resources.skboutput_args_id_map.end()) {
+      LOG(BUG) << "No id found for skboutput call";
+    }
+    b_.CreateStore(b_.getInt64(found_id->second), id_addr);
     b_.CreateStore(b_.CreateGetNs(TimestampMode::boot, call.loc), time_addr);
 
     auto scoped_skb = visit(call.vargs.at(1));
@@ -2408,6 +2437,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     const auto max_strlen = bpftrace_.config_->max_strlen;
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   } else if (!if_expr.result_type.IsIntTy() &&
+             !if_expr.result_type.IsBoolTy() &&
              !if_expr.result_type.IsNoneTy()) {
     buf = b_.CreateAllocaBPF(if_expr.result_type);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), if_expr.result_type.GetSize());
@@ -2420,21 +2450,17 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
                   left_block,
                   right_block);
 
-  if (if_expr.result_type.IsIntTy()) {
+  if (if_expr.result_type.IsIntTy() || if_expr.result_type.IsBoolTy()) {
     // fetch selected integer via CreateStore
     b_.SetInsertPoint(left_block);
     auto scoped_left = visit(if_expr.left);
-    auto *left_expr = b_.CreateIntCast(scoped_left.value(),
-                                       b_.GetType(if_expr.result_type),
-                                       if_expr.result_type.IsSigned());
+    auto *left_expr = scoped_left.value();
     b_.CreateBr(lazy_done());
     BasicBlock *left_end_block = b_.GetInsertBlock();
 
     b_.SetInsertPoint(right_block);
     auto scoped_right = visit(if_expr.right);
-    auto *right_expr = b_.CreateIntCast(scoped_right.value(),
-                                        b_.GetType(if_expr.result_type),
-                                        if_expr.result_type.IsSigned());
+    auto *right_expr = scoped_right.value();
     b_.CreateBr(lazy_done());
     BasicBlock *right_end_block = b_.GetInsertBlock();
 
@@ -2472,6 +2498,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     } else {
       b_.CreateStore(scoped_left.value(), buf);
     }
+
     b_.CreateBr(lazy_done());
 
     b_.SetInsertPoint(right_block);
@@ -2483,6 +2510,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     } else {
       b_.CreateStore(scoped_right.value(), buf);
     }
+
     b_.CreateBr(lazy_done());
 
     b_.SetInsertPoint(lazy_done());
@@ -2696,7 +2724,7 @@ ScopedExpr CodegenLLVM::visit(MapAccess &acc)
     }
 
     return ScopedExpr(b_.CreateLoad(acc.map->value_type.IsBoolTy()
-                                        ? b_.getInt8Ty()
+                                        ? b_.getInt1Ty()
                                         : b_.getInt64Ty(),
                                     module_->getGlobalVariable(acc.map->ident),
                                     acc.map->ident));
@@ -2746,12 +2774,14 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
       return ScopedExpr(b_.CreateLoad(int_ty, array, true /*volatile*/));
     } else if (cast.expr.type().IsPtrTy()) {
       return ScopedExpr(b_.CreatePtrToInt(scoped_expr.value(), int_ty));
-    } else {
+    } else if (cast.expr.type().IsBoolTy()) {
       return ScopedExpr(
-          b_.CreateIntCast(scoped_expr.value(),
-                           b_.getIntNTy(ty.GetIntBitWidth()),
-                           cast.expr.type().IsBoolTy() ? false : ty.IsSigned(),
-                           "cast"));
+          b_.CreateIntCast(scoped_expr.value(), b_.getInt1Ty(), false, "cast"));
+    } else {
+      return ScopedExpr(b_.CreateIntCast(scoped_expr.value(),
+                                         b_.getIntNTy(ty.GetIntBitWidth()),
+                                         ty.IsSigned(),
+                                         "cast"));
     }
   } else if (ty.IsArrayTy() && cast.expr.type().IsIntTy()) {
     // We need to store the cast integer on stack and reinterpret the pointer to
@@ -3320,7 +3350,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
     b_.CreateStore(scoped_key_expr.value(), key);
   } else if (map.key_type.IsBoolTy()) {
     b_.CreateStore(
-        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt8Ty(), false), key);
+        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt1Ty(), false), key);
   } else {
     if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
       // We need to read the entire array/struct and save it
@@ -4016,8 +4046,12 @@ void CodegenLLVM::createPrintNonMapCall(Call &call)
       b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
   // Store print id
+  auto found_id = bpftrace_.resources.non_map_print_args_id_map.find(&call);
+  if (found_id == bpftrace_.resources.non_map_print_args_id_map.end()) {
+    LOG(BUG) << "No id found for non_map_print call";
+  }
   b_.CreateStore(
-      b_.getInt64(async_ids_.non_map_print()),
+      b_.getInt64(found_id->second),
       b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
   // Store content
@@ -4815,8 +4849,7 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
 bool CodegenLLVM::canAggPerCpuMapElems(const bpf_map_type map_type,
                                        const SizedType &val_type)
 {
-  return val_type.IsCastableMapTy() && (map_type == BPF_MAP_TYPE_PERCPU_ARRAY ||
-                                        map_type == BPF_MAP_TYPE_PERCPU_HASH);
+  return val_type.IsCastableMapTy() && map_type == BPF_MAP_TYPE_PERCPU_HASH;
 }
 
 // BPF helpers that use fmt strings (bpf_trace_printk, bpf_seq_printf) expect

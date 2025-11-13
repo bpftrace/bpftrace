@@ -959,8 +959,7 @@ public:
 
   const SizedType &type() const
   {
-    static SizedType voidptr = CreatePointer(CreateVoid());
-    return voidptr;
+    return map_addr_type;
   }
 
   bool operator==(const MapAddr &other) const
@@ -973,6 +972,7 @@ public:
   }
 
   Map *map = nullptr;
+  SizedType map_addr_type;
 };
 
 class Binop : public Node {

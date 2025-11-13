@@ -1473,6 +1473,14 @@ a full path. The path will be then automatically resolved using `/etc/ld.so.cach
 uprobe:libc:malloc { printf("Allocated %d bytes\n", arg0); }
 ```
 
+If multiple versions of the same shared library exist (e.g. `libssl.so.3` and
+`libssl.so.59`), bpftrace may resolve the wrong one. To fix this, you can specify
+a versioned SONAME to ensure the correct library is traced:
+
+```
+uprobe:libssl.so.3:SSL_write { ... }
+```
+
 If the traced binary has DWARF included, function arguments are available in the `args` struct which can be inspected with verbose listing, see the [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes) section for more details.
 
 ```
@@ -1805,7 +1813,6 @@ Currently these are available in bpftrace:
 - lruhash (BPF_MAP_TYPE_LRU_HASH)
 - percpuhash (BPF_MAP_TYPE_PERCPU_HASH)
 - percpulruhash (BPF_MAP_TYPE_LRU_PERCPU_HASH)
-- percpuarray (BPF_MAP_TYPE_PERCPU_ARRAY)
 
 Additionally, map declarations must supply a single argument: ***max entries*** e.g. `let @a = lruhash(100);`
 All maps that are not declared in the global scope utilize the default set in the config variable "max_map_keys".

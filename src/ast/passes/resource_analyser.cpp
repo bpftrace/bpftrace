@@ -191,27 +191,37 @@ void ResourceAnalyser::visit(Call &call)
     auto fmtstr = call.vargs.at(0).as<String>()->value;
     if (call.func == "printf") {
       if (probe_ != nullptr && probe_->get_probetype() == ProbeType::iter) {
+        resources_.bpf_print_fmts_id_map[&call] =
+            resources_.bpf_print_fmts.size();
         resources_.bpf_print_fmts.emplace_back(fmtstr);
       } else {
+        resources_.printf_args_id_map[&call] = resources_.printf_args.size();
         resources_.printf_args.emplace_back(
             fmtstr, tuple->fields, PrintfSeverity::NONE, SourceInfo(call.loc));
       }
     } else if (call.func == "errorf") {
+      resources_.printf_args_id_map[&call] = resources_.printf_args.size();
       resources_.printf_args.emplace_back(
           fmtstr, tuple->fields, PrintfSeverity::ERROR, SourceInfo(call.loc));
     } else if (call.func == "warnf") {
+      resources_.printf_args_id_map[&call] = resources_.printf_args.size();
       resources_.printf_args.emplace_back(
           fmtstr, tuple->fields, PrintfSeverity::WARNING, SourceInfo(call.loc));
     } else if (call.func == "debugf") {
+      resources_.bpf_print_fmts_id_map[&call] =
+          resources_.bpf_print_fmts.size();
       resources_.bpf_print_fmts.emplace_back(fmtstr);
     } else if (call.func == "system") {
+      resources_.system_args_id_map[&call] = resources_.system_args.size();
       resources_.system_args.emplace_back(fmtstr, tuple->fields);
     } else {
+      resources_.cat_args_id_map[&call] = resources_.cat_args.size();
       resources_.cat_args.emplace_back(fmtstr, tuple->fields);
     }
   } else if (call.func == "join") {
     auto delim = call.vargs.size() > 1 ? call.vargs.at(1).as<String>()->value
                                        : " ";
+    resources_.join_args_id_map[&call] = resources_.join_args.size();
     resources_.join_args.push_back(delim);
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
              call.func == "max" || call.func == "avg") {
@@ -295,16 +305,20 @@ void ResourceAnalyser::visit(Call &call)
       call.addError() << "Different tseries bounds in a single map unsupported";
     }
   } else if (call.func == "time") {
+    resources_.time_args_id_map[&call] = resources_.time_args.size();
     if (!call.vargs.empty())
       resources_.time_args.push_back(call.vargs.at(0).as<String>()->value);
     else
       resources_.time_args.emplace_back("%H:%M:%S\n");
   } else if (call.func == "strftime") {
+    resources_.strftime_args_id_map[&call] = resources_.strftime_args.size();
     resources_.strftime_args.push_back(call.vargs.at(0).as<String>()->value);
   } else if (call.func == "print") {
     constexpr auto nonmap_headroom = sizeof(AsyncEvent::PrintNonMap);
     auto &arg = call.vargs.at(0);
     if (!arg.is<Map>()) {
+      resources_.non_map_print_args_id_map[&call] =
+          resources_.non_map_print_args.size();
       resources_.non_map_print_args.push_back(arg.type());
       const size_t fmtstring_args_size = nonmap_headroom + arg.type().GetSize();
       if (exceeds_stack_limit(fmtstring_args_size)) {
@@ -313,12 +327,15 @@ void ResourceAnalyser::visit(Call &call)
       }
     }
   } else if (call.func == "cgroup_path") {
+    resources_.cgroup_path_args_id_map[&call] =
+        resources_.cgroup_path_args.size();
     if (call.vargs.size() > 1)
       resources_.cgroup_path_args.push_back(
           call.vargs.at(1).as<String>()->value);
     else
       resources_.cgroup_path_args.emplace_back("*");
   } else if (call.func == "skboutput") {
+    resources_.skboutput_args_id_map[&call] = resources_.skboutput_args_.size();
     const auto &file = call.vargs.at(0).as<String>()->value;
     const auto &offset = call.vargs.at(3).as<Integer>()->value;
 
@@ -550,8 +567,7 @@ void ResourceAnalyser::update_map_info(Map &map)
     map_info.bpf_type = decl->second.first;
     map_info.max_entries = decl->second.second;
   } else {
-    map_info.bpf_type = get_bpf_map_type(map_info.value_type,
-                                         map_info.is_scalar);
+    map_info.bpf_type = get_bpf_map_type(map_info.value_type);
     // hist() and lhist() transparently create additional elements in whatever
     // map they are assigned to. So even if the map looks like it has no keys,
     // multiple keys are necessary.

@@ -2112,11 +2112,6 @@ void SemanticAnalyser::visit(MapDeclStatement &decl)
     add_bpf_map_types_hint(hint);
   } else {
     bpf_map_type_.insert({ decl.ident, *bpf_type });
-
-    if (decl.max_entries != 1 && *bpf_type == BPF_MAP_TYPE_PERCPU_ARRAY) {
-      decl.addError() << "Max entries can only be 1 for map type "
-                      << decl.bpf_type;
-    }
   }
 
   if (is_final_pass()) {
@@ -2151,11 +2146,8 @@ void SemanticAnalyser::visit(Map &map)
   if (is_final_pass()) {
     auto found_kind = bpf_map_type_.find(map.ident);
     if (found_kind != bpf_map_type_.end()) {
-      if (!bpf_map_types_compatible(map.value_type,
-                                    map_metadata_.scalar[map.ident],
-                                    found_kind->second)) {
-        auto map_type = get_bpf_map_type(map.value_type,
-                                         map_metadata_.scalar[map.ident]);
+      if (!bpf_map_types_compatible(map.value_type, found_kind->second)) {
+        auto map_type = get_bpf_map_type(map.value_type);
         map.addError() << "Incompatible map types. Type from declaration: "
                        << get_bpf_map_type_str(found_kind->second)
                        << ". Type from value/key type: "
@@ -2173,6 +2165,8 @@ void SemanticAnalyser::visit(MapAddr &map_addr)
     pass_tracker_.inc_num_unresolved();
   } else {
     visit(map_addr.map);
+    map_addr.map_addr_type = CreatePointer(map_addr.map->type(),
+                                           map_addr.map->type().GetAS());
   }
 }
 

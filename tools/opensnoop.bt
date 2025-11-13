@@ -65,7 +65,7 @@ macro getcwd(@paths) {
 
 	for ($j : ((uint64)0)..((uint64)$max_path_depth)) {
 
-		@paths[$j] = str($dentry->d_name.name);
+		@paths[tid, $j] = str($dentry->d_name.name);
 		$parent_dentry = $dentry->d_parent;
 
 		if ($dentry == $parent_dentry || $dentry == $mnt_root) {
@@ -87,19 +87,25 @@ macro getcwd(@paths) {
 }
 
 macro printcwd(@paths) {
-	for ($j : ((uint64)0)..((uint64)len(@paths))) {
-		let $name = @paths[(uint64)len(@paths) - $j - 1];
+	$max_path_depth = getopt("depth", 35);
+
+	for ($j : ((uint64)0)..((uint64)$max_path_depth)) {
+		let $key = (tid, (uint64)$max_path_depth - $j - 1);
+		let $name = @paths[$key];
 		/**
-		 * If it is a mount point, there will be a '/', because the '/'
-		 * will be added below, so just skip this '/'.
+		 * If it is a mount point, there will be a '/', because
+		 * the '/' will be added below, so just skip this '/'.
+		 *
+		 * And, if @paths don't have the $key, just skip the
+		 * empty string.
 		 */
-		if ($name == "/") {
+		if ($name == "/" || $name == "") {
 			continue;
 		}
 		printf("/%s", $name);
+		delete(@paths, $key);
 	}
 	printf("/");
-	clear(@paths);
 }
 
 macro sys_exit(ret, @filename, @paths) {
@@ -123,28 +129,16 @@ macro sys_exit(ret, @filename, @paths) {
 	delete(@filename, tid);
 }
 
-tracepoint:syscalls:sys_exit_open
-/@filename[tid]/
-{
-	sys_exit(args.ret, @filename, @open_paths);
-}
-
-tracepoint:syscalls:sys_exit_openat
-/@filename[tid]/
-{
-	sys_exit(args.ret, @filename, @openat_paths);
-}
-
+tracepoint:syscalls:sys_exit_open,
+tracepoint:syscalls:sys_exit_openat,
 tracepoint:syscalls:sys_exit_openat2
 /@filename[tid]/
 {
-	sys_exit(args.ret, @filename, @openat2_paths);
+	sys_exit(args.ret, @filename, @paths);
 }
 
 END
 {
 	clear(@filename);
-	clear(@open_paths);
-	clear(@openat_paths);
-	clear(@openat2_paths);
+	clear(@paths);
 }

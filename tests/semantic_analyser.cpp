@@ -5524,7 +5524,6 @@ TEST_F(SemanticAnalyserTest, map_declarations)
        Mock{ *bpftrace });
   test("let @a = percpulruhash(2); begin { @a[1] = count(); }",
        Mock{ *bpftrace });
-  test("let @a = percpuarray(1); begin { @a = count(); }", Mock{ *bpftrace });
 
   test("let @a = hash(2); begin { print(1); }",
        Mock{ *bpftrace },
@@ -5547,23 +5546,16 @@ let @a = percpulruhash(2); begin { @a = 1; }
   test("let @a = hash(2); begin { @a = count(); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:27-29: ERROR: Incompatible map types. Type from declaration: hash. Type from value/key type: percpuarray
+stdin:1:27-29: ERROR: Incompatible map types. Type from declaration: hash. Type from value/key type: percpuhash
 let @a = hash(2); begin { @a = count(); }
                           ~~
 )" });
   test("let @a = lruhash(2); begin { @a = count(); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:30-32: ERROR: Incompatible map types. Type from declaration: lruhash. Type from value/key type: percpuarray
+stdin:1:30-32: ERROR: Incompatible map types. Type from declaration: lruhash. Type from value/key type: percpuhash
 let @a = lruhash(2); begin { @a = count(); }
                              ~~
-)" });
-  test("let @a = percpuarray(1); begin { @a[1] = count(); }",
-       Mock{ *bpftrace },
-       Error{ R"(
-stdin:1:34-36: ERROR: Incompatible map types. Type from declaration: percpuarray. Type from value/key type: percpuhash
-let @a = percpuarray(1); begin { @a[1] = count(); }
-                                 ~~
 )" });
   test("let @a = potato(2); begin { @a[1] = count(); }",
        Mock{ *bpftrace },
@@ -5571,15 +5563,7 @@ let @a = percpuarray(1); begin { @a[1] = count(); }
 stdin:1:1-20: ERROR: Invalid bpf map type: potato
 let @a = potato(2); begin { @a[1] = count(); }
 ~~~~~~~~~~~~~~~~~~~
-HINT: Valid map types: percpulruhash, percpuarray, percpuhash, lruhash, hash
-)" });
-
-  test("let @a = percpuarray(10); begin { @a = count(); }",
-       Mock{ *bpftrace },
-       Error{ R"(
-stdin:1:1-26: ERROR: Max entries can only be 1 for map type percpuarray
-let @a = percpuarray(10); begin { @a = count(); }
-~~~~~~~~~~~~~~~~~~~~~~~~~
+HINT: Valid map types: percpulruhash, percpuhash, lruhash, hash
 )" });
 }
 

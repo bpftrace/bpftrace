@@ -248,7 +248,8 @@ TIMEOUT 1
 
 NAME clear count-map
 PROG begin { @ = count(); @a[1] = count(); clear(@); clear(@a); }
-EXPECT @: 0
+EXPECT_NONE @: 0
+EXPECT_NONE @a[1]: 1
 TIMEOUT 1
 
 NAME delete map
@@ -260,7 +261,8 @@ TIMEOUT 1
 
 NAME delete count-map
 PROG begin { @ = count(); @a[1] = count(); delete(@); delete(@a, 1); }
-EXPECT @: 0
+EXPECT_NONE @: 0
+EXPECT_NONE @a[1]: 1
 TIMEOUT 1
 
 NAME delete deprecated

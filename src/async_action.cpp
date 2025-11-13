@@ -133,8 +133,7 @@ void AsyncHandlers::clear_map(const OpaqueValue &data)
 {
   auto mapevent = data.bitcast<AsyncEvent::MapEvent>();
   const auto &map = bpftrace.bytecode_.getMap(mapevent.mapid);
-  uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
-  auto ok = map.clear(nvalues);
+  auto ok = map.clear();
   if (!ok) {
     LOG(BUG) << "Could not clear map with ident \"" << map.name()
              << "\", err=" << ok.takeError();
