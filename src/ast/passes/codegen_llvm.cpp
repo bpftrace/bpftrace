@@ -619,7 +619,13 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   b_.SetInsertPoint(get_stack_success);
 
   Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt64(uint64_size));
-  b_.CreateStore(num_frames,
+  // When a user specifies a limit, we should use that limit consistently
+  // for the map key to ensure stacks with the same limited frames are
+  // treated as identical, regardless of the actual stack depth.
+  Value *limit_val = b_.getInt64(stack_type.limit);
+  Value *key_nr_frames = b_.CreateSelect(
+      b_.CreateICmpULE(num_frames, limit_val), num_frames, limit_val);
+  b_.CreateStore(key_nr_frames,
                  b_.CreateGEP(stack_key_struct,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(1) }));
@@ -631,7 +637,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   // LLVM-12 produces code that fails the BPF verifier because it
   // can't determine the bounds of nr_stack_frames. The only thing that seems
   // to work is truncating the type, which is fine because 255 is long enough.
-  Value *trunc_nr_stack_frames = b_.CreateTrunc(num_frames, b_.getInt8Ty());
+  Value *trunc_nr_stack_frames = b_.CreateTrunc(key_nr_frames, b_.getInt8Ty());
 
   // Here we use the murmur2 hash function to create the stack ids because
   // bpf_get_stackid() is kind of broken by design and can suffer from hash
