@@ -401,6 +401,8 @@ the type upon declaration.
 | int32 | Signed 32 bit integer |
 | uint64 | Unsigned 64 bit integer |
 | int64 | Signed 64 bit integer |
+| ulong | Unsigned 32 or 64 bit integer (arch dependent) |
+| long | Signed 32 or 64 bit integer (arch dependent) |
 
 ```
 begin { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }

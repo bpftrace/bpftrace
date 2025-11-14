@@ -308,6 +308,23 @@ SizedType CreateUInt64()
   return CreateUInt(64);
 }
 
+SizedType CreateLong()
+{
+  if (sizeof(long) == 4) {
+    return CreateInt32();
+  } else {
+    return CreateInt64();
+  }
+}
+SizedType CreateULong()
+{
+  if (sizeof(long) == 4) {
+    return CreateUInt32();
+  } else {
+    return CreateUInt64();
+  }
+}
+
 SizedType CreateEnum(size_t bits, const std::string &name)
 {
   auto ty = CreateUInt(bits);

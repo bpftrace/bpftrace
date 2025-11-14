@@ -553,7 +553,7 @@ kprobe:arp_create {
 
 
 ### memcmp
-- `int memcmp(left, right, uint64 count)`
+- `int memcmp(left, right, ulong count)`
 
 Compares the first 'count' bytes of two expressions.
 0 is returned if they are the same.
@@ -1169,9 +1169,9 @@ bpftrace also supports the following format string extensions:
 
 
 ### strlen
-- `int64 strlen(string exp)`
-- `int64 strlen(int8 exp[])`
-- `int64 strlen(int8 *exp)`
+- `uint64 strlen(string exp)`
+- `uint64 strlen(int8 exp[])`
+- `uint64 strlen(int8 *exp)`
 
 Returns the length of a string-like object.
 

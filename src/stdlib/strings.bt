@@ -34,9 +34,9 @@ macro default_str_length() {
 }
 
 // Returns the length of a string-like object.
-// :variant int64 strlen(string exp)
-// :variant int64 strlen(int8 exp[])
-// :variant int64 strlen(int8 *exp)
+// :variant uint64 strlen(string exp)
+// :variant uint64 strlen(int8 exp[])
+// :variant uint64 strlen(int8 *exp)
 macro strlen($var) {
   assert_str($var);
   let $sz = (int64)0;
@@ -62,7 +62,7 @@ macro strlen(exp) {
 }
 
 macro __strnlen(ptr, max_size) {
-  __bpf_strnlen(ptr, (int64)max_size)
+  __bpf_strnlen(ptr, (ulong)max_size)
 }
 
 // Returns the "capacity" of a string-like object.
