@@ -4623,6 +4623,7 @@ llvm::Function *CodegenLLVM::createForCallback(
     std::function<llvm::Value *(llvm::Function *)> decl)
 {
   auto saved_ip = b_.saveIP();
+  auto *saved_scope = scope_;
 
   // All callbacks in BPF will be generated with a standard integer return.
   FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
@@ -4637,7 +4638,7 @@ llvm::Function *CodegenLLVM::createForCallback(
   callback->addFnAttr(Attribute::NoUnwind);
 
   // Add the debug information.
-  debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
+  scope_ = debug_.createFunctionDebugInfo(*callback, CreateInt64(), debug_args);
 
   // Start our basic function block.
   auto *for_body = BasicBlock::Create(module_->getContext(),
@@ -4726,6 +4727,7 @@ llvm::Function *CodegenLLVM::createForCallback(
   variables_[scope_stack_.back()].erase(f.decl->ident);
 
   b_.restoreIP(saved_ip);
+  scope_ = saved_scope;
   return callback;
 }
 
