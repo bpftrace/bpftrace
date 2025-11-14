@@ -1,0 +1,64 @@
+begin {
+    $count = 0;
+    // Test basic functionality
+    let $val;
+    @a[1] = 10;
+    if (find(@a, 1, $val)) {
+        if ($val == 10) {
+            ++$count;
+        }
+    }
+
+    if (!find(@a, 2, $val)) {
+        if ($val == 10) {
+            ++$count;
+        }
+    }
+
+    @a[2] = 20;
+    $b = 2;
+    if (find(@a, $b, $val)) {
+        if ($val == 20) {
+            ++$count;
+        }
+    }
+
+    $val_str = "hello";
+    @b["longerstr"] = "bye";
+    if (!find(@b, "byeasdfasdfasdfasdfasdfasdf", $val_str)) {
+        if ($val_str == "hello") {
+            ++$count;
+        }
+    }
+
+    if (find(@b, "longerstr", $val_str)) {
+        if ($val_str == "bye") {
+            ++$count;
+        }
+    }
+
+    // Test a more complex key
+    let $val_tpl;
+    @c[1, ("hello", (int8)5)] = (1, "bye");
+    if (find(@c, (1, ("hello", 5)), $val_tpl)) {
+        if ($val_tpl == (1, "bye")) {
+            ++$count;
+        }
+    }
+
+    if (!find(@c, (1, ("bye", (uint16)5)), $val_tpl)) {
+        if ($val_tpl == (1, "bye")) {
+            ++$count;
+        }
+    }
+
+    @c[2, ("evenlongerstr", 10)] = (2, "hello");
+    $a = (2, ("evenlongerstr", 10));
+    if (find(@c, $a, $val_tpl)) {
+        if ($val_tpl == (2, "hello")) {
+            ++$count;
+        }
+    }
+
+    print($count)
+}
