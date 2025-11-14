@@ -40,6 +40,7 @@
  * Copyright 2022 CESTC, Inc.
  *
  * 22-May-2022	Rong Tao	Created this.
+ * 13-Nov-2025	Rong Tao	Support dgram packet capture.
  */
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/skbuff.h>
@@ -51,13 +52,39 @@ BEGIN
 	printf("%-8s %-16s %-8s %-8s %-s\n", "TIME", "COMM", "PID", "SIZE", "DATA");
 }
 
-kprobe:unix_stream_read_actor
+kprobe:unix_dgram_recvmsg,
+kprobe:unix_stream_recvmsg
 {
-	$skb = (struct sk_buff *)arg0;
-	time("%H:%M:%S ");
-	printf("%-16s %-8d %-8d %r\n", comm, pid, $skb->len, buf($skb->data, $skb->len));
+	@start_recv[tid] = nsecs;
+}
+
+kretprobe:unix_dgram_recvmsg,
+kretprobe:unix_stream_recvmsg
+{
+	delete(@start_recv, tid);
+}
+
+/* Both unix_{dgram,stream}_recvmsg() call skb_copy_datagram_iter */
+kprobe:skb_copy_datagram_iter
+/ has_key(@start_recv, tid) /
+{
+	@skbs[tid] = (struct sk_buff *)arg0;
+}
+
+kretprobe:skb_copy_datagram_iter
+/ has_key(@skbs, tid) /
+{
+	if (retval == 0) {
+		$skb = @skbs[tid];
+		time("%H:%M:%S ");
+		printf("%-16s %-8d %-8d %r\n", comm, pid, $skb->len,
+			buf($skb->data, $skb->len));
+	}
+	delete(@skbs, tid);
 }
 
 END
 {
+	clear(@start_recv);
+	clear(@skbs);
 }
