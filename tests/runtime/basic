@@ -403,3 +403,7 @@ NAME discard expression
 PROG begin { _ = { print(1); 1 } }
 EXPECT 1
 EXPECT_REGEX_NONE .*WARNING: Return value discarded..*
+
+NAME probe return
+PROG begin { $a = 1; print($a); return $a; }
+EXPECT 1

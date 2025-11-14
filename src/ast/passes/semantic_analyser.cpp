@@ -2858,7 +2858,20 @@ void SemanticAnalyser::visit(Jump &jump)
 {
   if (jump.ident == JumpType::RETURN) {
     visit(jump.return_value);
-    if (auto *subprog = dynamic_cast<Subprog *>(top_level_node_)) {
+    if (dynamic_cast<Probe *>(top_level_node_)) {
+      if (jump.return_value.has_value()) {
+        const auto &ty = jump.return_value->type();
+        if (ty.IsIntegerTy()) {
+          // Probes always return 64 bit ints
+          update_int_type(jump.return_value->type(),
+                          *jump.return_value,
+                          CreateInt64());
+        } else if (is_final_pass()) {
+          jump.addError() << "Probe return values can only be integers. Found "
+                          << ty;
+        }
+      }
+    } else if (auto *subprog = dynamic_cast<Subprog *>(top_level_node_)) {
       const auto &ty = subprog->return_type->type();
       if (is_final_pass() && !ty.IsNoneTy() &&
           (ty.IsVoidTy() != !jump.return_value.has_value() ||

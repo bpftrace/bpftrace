@@ -5868,4 +5868,22 @@ TEST_F(SemanticAnalyserTest, no_meta_used_warnings)
        NoWarning{ "Variable used" });
 }
 
+TEST_F(SemanticAnalyserTest, probe_return)
+{
+  test("begin { return 1; }");
+  test("begin { $a = 1; return $a; }");
+  test("begin { $a = 1; return 0 + 1; }");
+
+  test("begin { $a = 1; return $a; }",
+       ExpectedAST{ Program().WithProbe(
+           Probe({ "begin" },
+                 { AssignVarStatement(Variable("$a"), Integer(1)),
+                   Jump(ast::JumpType::RETURN)
+                       .WithReturnValue(
+                           Cast(Typeof(SizedType(Type::integer).WithSize(8)),
+                                Variable("$a"))) })) });
+
+  test("begin { return \"tomato\"; }", Error{});
+}
+
 } // namespace bpftrace::test::semantic_analyser
