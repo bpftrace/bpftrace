@@ -23,7 +23,7 @@ def main(test_filter, allowlist_file, run_aot_tests):
 
     try:
         test_suite = sorted(TestParser.read_all(run_aot_tests))
-        test_suite = [ (n, sorted(t)) for n, t in test_suite ]
+        test_suite = [ (n, sorted(t, key=lambda test: test.name)) for n, t in test_suite ]
     except (UnknownFieldError, RequiredFieldError) as error:
         print(fail(f"[  FAILED  ] {str(error)}"))
         exit(1)
