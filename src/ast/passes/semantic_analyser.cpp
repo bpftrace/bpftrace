@@ -376,14 +376,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
       .max_args=128,
       .arg_types={
         arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "delete",
-    { .min_args=2,
-      .max_args=2,
-      .arg_types={
-        map_type_spec{},
-        map_key_spec{ .map_index=0 },
-      }
-       } },
   { "errorf",
     { .min_args=1,
       .max_args=128,
@@ -1114,23 +1106,6 @@ void SemanticAnalyser::visit(Call &call)
     return;
   }
 
-  if (call.func == "len" || call.func == "delete" || call.func == "has_key") {
-    // N.B. this should always be true at this point
-    if (auto *map = call.vargs.at(0).as<Map>()) {
-      if (map_metadata_.bad_scalar_call.contains(map)) {
-        map->addError()
-            << "call to " << call.func
-            << "() expects a map with explicit keys (non-scalar map)";
-        return;
-      } else if (map_metadata_.bad_indexed_call.contains(map)) {
-        map->addError()
-            << "call to " << call.func
-            << "() expects a map without explicit keys (scalar map)";
-        return;
-      }
-    }
-  }
-
   if (call.func == "hist") {
     if (call.vargs.size() == 3) {
       call.vargs.emplace_back(ctx_.make_node<Integer>(call.loc, 0)); // default
@@ -1258,8 +1233,6 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
              call.func == "max" || call.func == "avg" || call.func == "stats") {
     call.return_type = CreateVoid();
-  } else if (call.func == "delete") {
-    call.return_type = CreateUInt8();
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
     const auto &t = arg.type();

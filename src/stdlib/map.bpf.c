@@ -14,6 +14,10 @@ _Bool __has_key(void *map, void *key) {
     return 1;
 }
 
+long __delete(void *map, void *key) {
+    return bpf_map_delete_elem(map, key);
+}
+
 static long __empty_map_elem_cb(void *map, const void *key, void *value, void *ctx)
 {
     return 0;

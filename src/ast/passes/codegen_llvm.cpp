@@ -1306,13 +1306,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(key_exists);
 
     return ScopedExpr();
-  } else if (call.func == "delete") {
-    auto &map = *call.vargs.at(0).as<Map>();
-    auto scoped_key = getMapKey(map, call.vargs.at(1));
-
-    Value *ret = b_.CreateMapDeleteElem(map, scoped_key.value());
-    Value *expr = b_.CreateICmpEQ(ret, b_.getInt64(0), "delete_ret");
-    return ScopedExpr(expr);
   } else if (call.func == "str") {
     const auto max_strlen = bpftrace_.config_->max_strlen;
     // Largest read we'll allow = our global string buffer size

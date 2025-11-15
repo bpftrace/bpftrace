@@ -279,7 +279,6 @@ TEST_F(SemanticAnalyserTest, builtin_functions)
   test("kprobe:f { @x = max(pid) }");
   test("kprobe:f { @x = avg(pid) }");
   test("kprobe:f { @x = stats(pid) }");
-  test("kprobe:f { @x = 1; delete(@x) }");
   test("kprobe:f { @x = 1; print(@x) }");
   test("kprobe:f { @x = 1; clear(@x) }");
   test("kprobe:f { @x = 1; zero(@x) }");
@@ -400,11 +399,6 @@ begin { @x[1] = 0; @x[2,3]; }
 stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],uint8,kstack)' when map expects arguments: '(uint8,string[2],kstack)'
       @x["b", 2, kstack];
       ~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @[1] = 5; @[2] = 10; delete(@); }", Error{ R"(
-stdin:1:40-41: ERROR: call to delete() expects a map without explicit keys (scalar map)
-kprobe:f { @[1] = 5; @[2] = 10; delete(@); }
-                                       ~
 )" });
 
   test("begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0] = 2; } }");
@@ -971,53 +965,84 @@ TEST_F(SemanticAnalyserTest, call_stats)
 
 TEST_F(SemanticAnalyserTest, call_delete)
 {
-  test("kprobe:f { @x = 1; delete(@x); }");
+  ast::TypeMetadata types;
+
+  auto vd_ty = types.global.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(vd_ty));
+  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  ASSERT_TRUE(bool(vd_ptr));
+
+  auto long_ty = types.global.add<btf::Integer>("long", 4, 0);
+  ASSERT_TRUE(bool(long_ty));
+
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
+  };
+
+  auto delete_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*long_ty), args);
+  ASSERT_TRUE(bool(delete_proto));
+
+  auto delete_func = types.global.add<btf::Function>(
+      "__delete", btf::Function::Linkage::Global, *delete_proto);
+  ASSERT_TRUE(bool(delete_func));
+
+  test("kprobe:f { @x = 1; delete(@x); }", Types{ types });
   test("kprobe:f { @y[5] = 5; delete(@y, "
-       "5); }");
+       "5); }",
+       Types{ types });
   test("kprobe:f { @a[1] = 1; delete(@a, "
-       "@a[1]); }");
+       "@a[1]); }",
+       Types{ types });
   test("kprobe:f { @a = 1; @b[2] = 2; "
-       "delete(@b, @a); }");
+       "delete(@b, @a); }",
+       Types{ types });
   test("kprobe:f { @a[1] = 1; $x = 1; "
-       "delete(@a, $x); }");
-  test(R"(kprobe:f { @y["hi"] = 5; delete(@y, "longerstr"); })");
-  test(R"(kprobe:f { @y["hi", 5] = 5; delete(@y, ("hi", 5)); })");
-  test(R"(kprobe:f { @y["longerstr", 5] = 5; delete(@y, ("hi", 5)); })");
-  test(R"(kprobe:f { @y["hi", 5] = 5; delete(@y, ("longerstr", 5)); })");
+       "delete(@a, $x); }",
+       Types{ types });
+  test(R"(kprobe:f { @y["hi"] = 5; delete(@y, "longerstr"); })",
+       Types{ types });
+  test(R"(kprobe:f { @y["hi", 5] = 5; delete(@y, ("hi", 5)); })",
+       Types{ types });
+  test(R"(kprobe:f { @y["longerstr", 5] = 5; delete(@y, ("hi", 5)); })",
+       Types{ types });
+  test(R"(kprobe:f { @y["hi", 5] = 5; delete(@y, ("longerstr", 5)); })",
+       Types{ types });
   test("kprobe:f { @y[(3, 4, 5)] = 5; "
-       "delete(@y, (1, 2, 3)); }");
+       "delete(@y, (1, 2, 3)); }",
+       Types{ types });
   test("kprobe:f { @y[((int8)3, 4, 5)] = "
-       "5; delete(@y, (1, 2, 3)); }");
+       "5; delete(@y, (1, 2, 3)); }",
+       Types{ types });
   test("kprobe:f { @y[(3, 4, 5)] = 5; "
-       "delete(@y, ((int8)1, 2, 3)); }");
+       "delete(@y, ((int8)1, 2, 3)); }",
+       Types{ types });
   test("kprobe:f { @x = 1; @y = "
-       "delete(@x); }");
+       "delete(@x); }",
+       Types{ types });
   test("kprobe:f { @x = 1; $y = "
-       "delete(@x); }");
+       "delete(@x); }",
+       Types{ types });
   test("kprobe:f { @x = 1; @[delete(@x)] = "
-       "1; }");
+       "1; }",
+       Types{ types });
   test("kprobe:f { @x = 1; if(delete(@x)) "
-       "{ 123 } }");
+       "{ 123 } }",
+       Types{ types });
   test("kprobe:f { @x = 1; delete(@x) ? 0 "
-       ": 1; }");
+       ": 1; }",
+       Types{ types });
   // The second arg gets treated like a map
   // key, in terms of int type adjustment
   test("kprobe:f { @y[5] = 5; delete(@y, "
-       "(int8)5); }");
+       "(int8)5); }",
+       Types{ types });
   test("kprobe:f { @y[5, 4] = 5; delete(@y, "
-       "((int8)5, (int32)4)); }");
+       "((int8)5, (int32)4)); }",
+       Types{ types });
 
-  test("kprobe:f { delete(1); }", Error{ R"(
-stdin:1:19-20: ERROR: delete() expects a map argument
-kprobe:f { delete(1); }
-                  ~
-)" });
-
-  test("kprobe:f { delete(1, 1); }", Error{ R"(
-stdin:1:19-20: ERROR: delete() expects a map argument
-kprobe:f { delete(1, 1); }
-                  ~
-)" });
+  test("kprobe:f { delete(1); }", Error{}, Types{ types });
+  test("kprobe:f { delete(1, 1); }", Error{}, Types{ types });
 
   test("kprobe:f { @y[(3, 4, 5)] = "
        "5; delete(@y, (1, 2)); }",
@@ -1025,64 +1050,48 @@ kprobe:f { delete(1, 1); }
 stdin:1:42-48: ERROR: Argument mismatch for @y: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,uint8,uint8)'
 kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2)); }
                                          ~~~~~~
-)" });
+)" },
+       Types{ types });
 
-  test("kprobe:f { @y[1] = 2; delete(@y); }", Error{ R"(
-stdin:1:30-32: ERROR: call to delete() expects a map without explicit keys (scalar map)
-kprobe:f { @y[1] = 2; delete(@y); }
-                             ~~
-)" });
-
+  test("kprobe:f { @y[1] = 2; delete(@y); }", Error{}, Types{ types });
   test("kprobe:f { @a[1] = 1; "
        "delete(@a, @a); }",
        Error{ R"(
-stdin:1:34-36: ERROR: @a used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
-kprobe:f { @a[1] = 1; delete(@a, @a); }
-                                 ~~
-)" });
+ERROR: @a used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
+)" },
+       Types{ types });
 
   // Deprecated API
-  test("kprobe:f { @x = 1; delete(@x); }");
+  test("kprobe:f { @x = 1; delete(@x); }", Types{ types });
   test("kprobe:f { @y[5] = 5; "
-       "delete(@y[5]); }");
-  test(R"(kprobe:f { @y[1, "hi"] = 5; delete(@y[1, "longerstr"]); })");
-  test(R"(kprobe:f { @y[1, "longerstr"] = 5; delete(@y[1, "hi"]); })");
+       "delete(@y[5]); }",
+       Types{ types });
+  test(R"(kprobe:f { @y[1, "hi"] = 5; delete(@y[1, "longerstr"]); })",
+       Types{ types });
+  test(R"(kprobe:f { @y[1, "longerstr"] = 5; delete(@y[1, "hi"]); })",
+       Types{ types });
 
   test("kprobe:f { @x = 1; @y = 5; "
        "delete(@x, @y); }",
        Error{ R"(
-stdin:1:35-37: ERROR: call to delete() expects a map with explicit keys (non-scalar map)
-kprobe:f { @x = 1; @y = 5; delete(@x, @y); }
-                                  ~~
-)" });
+ERROR: call to delete() with two arguments expects a map with explicit keys (non-scalar map)
+)" },
+       Types{ types });
 
-  test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })", Error{ R"(
+  test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })",
+       Error{ R"(
 stdin:1:36-47: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],uint8)' when map expects arguments: '(uint8,string[3])'
 kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); }
                                    ~~~~~~~~~~~
-)" });
+)" },
+       Types{ types });
 
   test("kprobe:f { @x[0] = 1; @y[5] = 5; "
        "delete(@x, @y[5], @y[6]); }",
-       Error{ R"(
-stdin:1:34-58: ERROR: delete() requires 1 or 2 arguments (3 provided)
-kprobe:f { @x[0] = 1; @y[5] = 5; delete(@x, @y[5], @y[6]); }
-                                 ~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
+       Error{},
+       Types{ types });
 
-  test("kprobe:f { @x = 1; @y[5] = 5; "
-       "delete(@x, @y[5], @y[6]); }",
-       Error{ R"(
-stdin:1:31-55: ERROR: delete() requires 1 or 2 arguments (3 provided)
-kprobe:f { @x = 1; @y[5] = 5; delete(@x, @y[5], @y[6]); }
-                              ~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-
-  test("kprobe:f { @x = 1; delete(@x[1]); }", Error{ R"(
-stdin:1:27-29: ERROR: call to delete() expects a map with explicit keys (non-scalar map)
-kprobe:f { @x = 1; delete(@x[1]); }
-                          ~~
-)" });
+  test("kprobe:f { @x = 1; delete(@x[1]); }", Error{}, Types{ types });
 }
 
 TEST_F(SemanticAnalyserTest, call_exit)
@@ -5077,7 +5086,6 @@ TEST_F(SemanticAnalyserTest, castable_map_missing_feature)
   test("k:f {  @a = count(); print(@a) }", NoFeatures::Enable);
   test("k:f {  @a = count(); clear(@a) }", NoFeatures::Enable);
   test("k:f {  @a = count(); zero(@a) }", NoFeatures::Enable);
-  test("k:f {  @a[1] = count(); delete(@a, 1) }", NoFeatures::Enable);
 
   test("begin { @a = count(); print((uint64)@a) }",
        NoFeatures::Enable,

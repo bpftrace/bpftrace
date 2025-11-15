@@ -1,9 +1,6 @@
 aot.basic.basic while loop
 aot.basic.clear count-map
 aot.basic.clear map
-aot.basic.delete count-map
-aot.basic.delete deprecated
-aot.basic.delete map
 aot.basic.exit code
 aot.basic.has_key exists
 aot.basic.has_key map keys and values
@@ -208,6 +205,9 @@ aot.signed_ints.negative map value
 aot.signed_ints.stats with negative values
 aot.signed_ints.sum negative maps
 aot.signed_ints.sum with negative value
+aot.stdlib.delete count-map
+aot.stdlib.delete deprecated
+aot.stdlib.delete map
 aot.tuples.basic tuple
 aot.uprobe.uprobes - probe function in non-executable library
 aot.variable.32-bit tracepoint arg
