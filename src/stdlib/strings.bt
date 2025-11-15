@@ -14,17 +14,14 @@
 
 // Checks that this value is string-like.
 macro assert_str(exp) {
-  if comptime is_str(exp) {
-    true
-  } else if comptime is_array(exp) {
-    static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like arrays must contain a char-like type");
-    true
-  } else if comptime is_ptr(exp) {
-    static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like pointers must point to a char-like type");
-    true
-  } else {
-    static_assert(false, "string-like values must be either strings, arrays or pointers");
-    false
+  if comptime !is_str(exp) {
+    if comptime is_array(exp) {
+      static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like arrays must contain a char-like type");
+    } else if comptime is_ptr(exp) {
+      static_assert(typeinfo(exp[0]) == typeinfo(int8), "string-like pointers must point to a char-like type");
+    } else {
+      fail("string-like values must be either strings, arrays or pointers");
+    }
   }
 }
 
@@ -34,9 +31,9 @@ macro default_str_length() {
 }
 
 // Returns the length of a string-like object.
-// :variant int64 strlen(string exp)
-// :variant int64 strlen(int8 exp[])
-// :variant int64 strlen(int8 *exp)
+// :variant uint64 strlen(string exp)
+// :variant uint64 strlen(int8 exp[])
+// :variant uint64 strlen(int8 *exp)
 macro strlen($var) {
   assert_str($var);
   let $sz = (int64)0;
@@ -62,7 +59,7 @@ macro strlen(exp) {
 }
 
 macro __strnlen(ptr, max_size) {
-  __bpf_strnlen(ptr, (int64)max_size)
+  __bpf_strnlen(ptr, (size_t)max_size)
 }
 
 // Returns the "capacity" of a string-like object.

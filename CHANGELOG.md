@@ -38,6 +38,8 @@ and this project adheres to
   - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
 - Multiple `begin` & `end` probes are now permitted
   - [#4789](https://github.com/bpftrace/bpftrace/pull/4789)
+- Add support for casting to common c integer types
+  - [#4852](https://github.com/bpftrace/bpftrace/pull/4852)
 #### Changed
 - `uaddr` support PIE and dynamic library symbols.
   - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)

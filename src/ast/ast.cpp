@@ -3,6 +3,7 @@
 
 #include "ast/ast.h"
 #include "ast/context.h"
+#include "ast/integer_types.h"
 #include "ast/tracepoint_helpers.h"
 #include "attached_probe.h"
 #include "log.h"
@@ -387,7 +388,8 @@ void Program::clear_empty_probes()
 
 SizedType ident_to_record(const std::string &ident, int pointer_level)
 {
-  SizedType result = CreateRecord(ident);
+  auto c_res = sized_type_from_c_type(ident);
+  SizedType result = c_res ? *c_res : CreateRecord(ident);
   for (int i = 0; i < pointer_level; i++)
     result = CreatePointer(result);
   return result;
