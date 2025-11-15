@@ -1,5 +1,6 @@
 #include "mocks.h"
 #include "tracefs/tracefs.h"
+#include "util/elf_parser.h"
 #include "gmock/gmock-nice-strict.h"
 
 namespace bpftrace::test {
@@ -188,6 +189,21 @@ std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace()
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
 
   return bpftrace;
+}
+
+std::unique_ptr<MockUSDTHelper> get_mock_usdt_helper()
+{
+  auto usdt_helper = std::make_unique<NiceMock<MockUSDTHelper>>();
+
+  ON_CALL(*usdt_helper, find(_, _, _, _, _))
+      .WillByDefault(
+          [](std::optional<int>,
+             const std::string &,
+             const std::string &,
+             const std::string &,
+             bool) { return util::usdt_probe_entry{ "", "", "", 0, 0 }; });
+
+  return usdt_helper;
 }
 
 } // namespace bpftrace::test

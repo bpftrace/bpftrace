@@ -4,6 +4,7 @@ add_library(util STATIC
   bpf_progs.cpp
   cgroup.cpp
   cpus.cpp
+  elf_parser.cpp
   env.cpp
   exceptions.cpp
   int_parser.cpp
