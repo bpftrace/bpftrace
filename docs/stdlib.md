@@ -1169,9 +1169,9 @@ bpftrace also supports the following format string extensions:
 
 
 ### strlen
-- `int64 strlen(string exp)`
-- `int64 strlen(int8 exp[])`
-- `int64 strlen(int8 *exp)`
+- `uint64 strlen(string exp)`
+- `uint64 strlen(int8 exp[])`
+- `uint64 strlen(int8 *exp)`
 
 Returns the length of a string-like object.
 

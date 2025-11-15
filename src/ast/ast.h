@@ -765,7 +765,16 @@ public:
   explicit Typeof(ASTContext &ctx, Location &&loc, SizedType record)
       : Node(ctx, std::move(loc)), record(record) {};
   explicit Typeof(ASTContext &ctx, Location &&loc, Expression expr)
-      : Node(ctx, std::move(loc)), record(expr) {};
+      : Node(ctx, std::move(loc)) {
+        if (auto *ident = expr.as<Identifier>()) {
+          auto res = sized_type_from_c_type(ident->ident);
+          if (res) {
+            record = *res;
+            return;
+          }
+        }
+        record = expr;
+      };
   explicit Typeof(ASTContext &ctx, const Location &loc, const Typeof &other)
       : Node(ctx, loc + other.loc),
         record(clone(ctx, loc + other.loc, other.record)) {};

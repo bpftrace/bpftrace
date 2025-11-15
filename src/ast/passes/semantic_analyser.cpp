@@ -3278,16 +3278,6 @@ void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
   }
 }
 
-// We can't hint for unsigned types. It is a syntax error,
-// because the word "unsigned" is not allowed in a type name.
-static std::unordered_map<std::string_view, std::string_view>
-    KNOWN_TYPE_ALIASES{
-      { "char", "int8" },   /* { "unsigned char", "uint8" }, */
-      { "short", "int16" }, /* { "unsigned short", "uint16" }, */
-      { "int", "int32" },   /* { "unsigned int", "uint32" }, */
-      { "long", "int64" },  /* { "unsigned long", "uint64" }, */
-    };
-
 void SemanticAnalyser::visit(Cast &cast)
 {
   visit(cast.expr);
@@ -3334,12 +3324,6 @@ void SemanticAnalyser::visit(Cast &cast)
       !(ty.IsArrayTy() && ty.GetElementTy()->IsIntTy())) {
     auto &err = cast.addError();
     err << "Cannot cast to \"" << ty << "\"";
-    if (ty.IsRecordTy() || ty.IsEnumTy()) {
-      if (auto it = KNOWN_TYPE_ALIASES.find(ty.GetName());
-          it != KNOWN_TYPE_ALIASES.end()) {
-        err.addHint() << "Did you mean \"" << it->second << "\"?";
-      }
-    }
   }
 
   if (ty.IsArrayTy()) {
