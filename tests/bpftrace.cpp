@@ -20,7 +20,6 @@
 #include "driver.h"
 #include "mocks.h"
 #include "output/text.h"
-#include "tracefs/tracefs.h"
 #include "types.h"
 #include "types_format.h"
 #include "gmock/gmock-matchers.h"
@@ -83,13 +82,11 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
 
 void check_kprobe(Probe &p,
                   const std::string &attach_point,
-                  const std::string &orig_name,
                   uint64_t func_offset = 0,
                   const std::string &target = "")
 {
   EXPECT_EQ(ProbeType::kprobe, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ(kprobe_name(attach_point, target, func_offset), p.name);
   EXPECT_EQ(func_offset, p.func_offset);
   EXPECT_TRUE(p.funcs.empty());
@@ -98,17 +95,15 @@ void check_kprobe(Probe &p,
 void check_uprobe(Probe &p,
                   const std::string &path,
                   const std::string &attach_point,
-                  const std::string &orig_name,
                   const std::string &name,
                   uint64_t address = 0,
                   uint64_t func_offset = 0)
 {
-  bool retprobe = orig_name.starts_with("uretprobe:") ||
-                  orig_name.starts_with("ur:");
+  bool retprobe = attach_point.starts_with("uretprobe:") ||
+                  attach_point.starts_with("ur:");
   EXPECT_EQ(retprobe ? ProbeType::uretprobe : ProbeType::uprobe, p.type);
   EXPECT_EQ(path, p.path);
   EXPECT_EQ(attach_point, p.attach_point);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ(name, p.name);
   EXPECT_EQ(address, p.address);
   EXPECT_EQ(func_offset, p.func_offset);
@@ -118,101 +113,69 @@ void check_uprobe(Probe &p,
 void check_usdt(Probe &p,
                 const std::string &path,
                 const std::string &provider,
-                const std::string &attach_point,
-                const std::string &orig_name)
+                const std::string &attach_point)
 {
   EXPECT_EQ(ProbeType::usdt, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ("usdt:" + path + ":" + provider + ":" + attach_point, p.name);
 }
 
 void check_tracepoint(Probe &p,
                       const std::string &target,
-                      const std::string &func,
-                      const std::string &orig_name)
+                      const std::string &func)
 {
   EXPECT_EQ(ProbeType::tracepoint, p.type);
   EXPECT_EQ(func, p.attach_point);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ("tracepoint:" + target + ":" + func, p.name);
 }
 
-void check_profile(Probe &p,
-                   const std::string &unit,
-                   int freq,
-                   const std::string &orig_name)
+void check_profile(Probe &p, const std::string &unit, int freq)
 {
   EXPECT_EQ(ProbeType::profile, p.type);
   EXPECT_EQ(freq, p.freq);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ("profile:" + unit + ":" + std::to_string(freq), p.name);
 }
 
-void check_interval(Probe &p,
-                    const std::string &unit,
-                    int freq,
-                    const std::string &orig_name)
+void check_interval(Probe &p, const std::string &unit, int freq)
 {
   EXPECT_EQ(ProbeType::interval, p.type);
   EXPECT_EQ(freq, p.freq);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ("interval:" + unit + ":" + std::to_string(freq), p.name);
 }
 
-void check_software(Probe &p,
-                    const std::string &unit,
-                    int freq,
-                    const std::string &orig_name)
+void check_software(Probe &p, const std::string &unit, int freq)
 {
   EXPECT_EQ(ProbeType::software, p.type);
   EXPECT_EQ(freq, p.freq);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ("software:" + unit + ":" + std::to_string(freq), p.name);
 }
 
-void check_hardware(Probe &p,
-                    const std::string &unit,
-                    int freq,
-                    const std::string &orig_name)
+void check_hardware(Probe &p, const std::string &unit, int freq)
 {
   EXPECT_EQ(ProbeType::hardware, p.type);
   EXPECT_EQ(freq, p.freq);
-  EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ("hardware:" + unit + ":" + std::to_string(freq), p.name);
 }
 
-void check_begin_probe(Probe &p, const std::string &orig_name)
+void check_begin_probe(Probe &p)
 {
   EXPECT_EQ(ProbeType::special, p.type);
-  EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(orig_name, p.name);
 }
 
-void check_end_probe(Probe &p, const std::string &orig_name)
+void check_end_probe(Probe &p)
 {
   EXPECT_EQ(ProbeType::special, p.type);
-  EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(orig_name, p.name);
 }
 
-void check_test_probe(Probe &p,
-                      const std::string &orig_name,
-                      const std::string &test_name)
+void check_test_probe(Probe &p, const std::string &test_name)
 {
   EXPECT_EQ(ProbeType::test, p.type);
-  EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(orig_name, p.name);
   EXPECT_EQ(test_name, p.path);
 }
 
-void check_benchmark_probe(Probe &p,
-                           const std::string &orig_name,
-                           const std::string &bench_name)
+void check_benchmark_probe(Probe &p, const std::string &bench_name)
 {
   EXPECT_EQ(ProbeType::benchmark, p.type);
-  EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(orig_name, p.name);
   EXPECT_EQ(bench_name, p.path);
 }
 
@@ -224,7 +187,7 @@ TEST(bpftrace, add_begin_probe)
   ASSERT_EQ(0U, bpftrace->get_probes().size());
   ASSERT_EQ(1U, bpftrace->get_begin_probes().size());
 
-  check_begin_probe(bpftrace->get_begin_probes().front(), "begin");
+  check_begin_probe(bpftrace->get_begin_probes().front());
 }
 
 TEST(bpftrace, add_end_probe)
@@ -235,7 +198,7 @@ TEST(bpftrace, add_end_probe)
   ASSERT_EQ(0U, bpftrace->get_probes().size());
   ASSERT_EQ(1U, bpftrace->get_end_probes().size());
 
-  check_end_probe(bpftrace->get_end_probes().front(), "end");
+  check_end_probe(bpftrace->get_end_probes().front());
 }
 
 TEST(bpftrace, add_test_probes)
@@ -248,9 +211,9 @@ TEST(bpftrace, add_test_probes)
   ASSERT_EQ(0U, bpftrace->get_end_probes().size());
   ASSERT_EQ(3U, bpftrace->get_test_probes().size());
 
-  check_test_probe(bpftrace->get_test_probes().at(0), "test:a", "a");
-  check_test_probe(bpftrace->get_test_probes().at(1), "test:b", "b");
-  check_test_probe(bpftrace->get_test_probes().at(2), "test:c", "c");
+  check_test_probe(bpftrace->get_test_probes().at(0), "a");
+  check_test_probe(bpftrace->get_test_probes().at(1), "b");
+  check_test_probe(bpftrace->get_test_probes().at(2), "c");
 }
 
 TEST(bpftrace, add_bench_probes)
@@ -263,9 +226,9 @@ TEST(bpftrace, add_bench_probes)
   ASSERT_EQ(0U, bpftrace->get_end_probes().size());
   ASSERT_EQ(3U, bpftrace->get_benchmark_probes().size());
 
-  check_benchmark_probe(bpftrace->get_benchmark_probes().at(0), "bench:a", "a");
-  check_benchmark_probe(bpftrace->get_benchmark_probes().at(1), "bench:b", "b");
-  check_benchmark_probe(bpftrace->get_benchmark_probes().at(2), "bench:c", "c");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(0), "a");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(1), "b");
+  check_benchmark_probe(bpftrace->get_benchmark_probes().at(2), "c");
 }
 
 TEST(bpftrace, add_probes_single)
@@ -275,7 +238,7 @@ TEST(bpftrace, add_probes_single)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  check_kprobe(bpftrace->get_probes().at(0), "sys_read", "kprobe:sys_read");
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read");
 }
 
 TEST(bpftrace, add_probes_multiple)
@@ -285,9 +248,8 @@ TEST(bpftrace, add_probes_multiple)
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "kprobe:sys_read,kprobe:sys_write";
-  check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
-  check_kprobe(bpftrace->get_probes().at(1), "sys_write", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read");
+  check_kprobe(bpftrace->get_probes().at(1), "sys_write");
 }
 
 TEST(bpftrace, add_probes_kernel_module)
@@ -298,8 +260,7 @@ TEST(bpftrace, add_probes_kernel_module)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "kprobe:func_in_mod";
-  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod");
 }
 
 TEST(bpftrace, add_probes_specify_kernel_module)
@@ -310,12 +271,7 @@ TEST(bpftrace, add_probes_specify_kernel_module)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "kprobe:kernel_mod:func_in_mod";
-  check_kprobe(bpftrace->get_probes().at(0),
-               "func_in_mod",
-               probe_orig_name,
-               0,
-               "kernel_mod");
+  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", 0, "kernel_mod");
 }
 
 TEST(bpftrace, add_probes_offset)
@@ -326,9 +282,7 @@ TEST(bpftrace, add_probes_offset)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "kprobe:sys_read+" + std::to_string(offset);
-  check_kprobe(
-      bpftrace->get_probes().at(0), "sys_read", probe_orig_name, offset);
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read", offset);
 }
 
 TEST(bpftrace, add_probes_uprobe)
@@ -338,11 +292,8 @@ TEST(bpftrace, add_probes_uprobe)
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
-  check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh",
-               "foo",
-               "uprobe:/bin/sh:foo",
-               "uprobe:/bin/sh:foo");
+  check_uprobe(
+      bpftrace->get_probes().at(0), "/bin/sh", "foo", "uprobe:/bin/sh:foo");
 }
 
 TEST(bpftrace, add_probes_uprobe_address)
@@ -352,12 +303,8 @@ TEST(bpftrace, add_probes_uprobe_address)
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
-  check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh",
-               "",
-               "uprobe:/bin/sh:1024",
-               "uprobe:/bin/sh:1024",
-               1024);
+  check_uprobe(
+      bpftrace->get_probes().at(0), "/bin/sh", "", "uprobe:/bin/sh:1024", 1024);
 }
 
 TEST(bpftrace, add_probes_uprobe_string_offset)
@@ -371,7 +318,6 @@ TEST(bpftrace, add_probes_uprobe_string_offset)
                "/bin/sh",
                "foo",
                "uprobe:/bin/sh:foo+10",
-               "uprobe:/bin/sh:foo+10",
                0,
                10);
 }
@@ -383,11 +329,7 @@ TEST(bpftrace, add_probes_usdt)
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
-  check_usdt(bpftrace->get_probes().at(0),
-             "/bin/sh",
-             "prov1",
-             "mytp",
-             "usdt:/bin/sh:prov1:mytp");
+  check_usdt(bpftrace->get_probes().at(0), "/bin/sh", "prov1", "mytp");
 }
 
 TEST(bpftrace, add_probes_usdt_empty_namespace_conflict)
@@ -408,11 +350,7 @@ TEST(bpftrace, add_probes_usdt_duplicate_markers)
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
-  check_usdt(bpftrace->get_probes().at(0),
-             "/bin/sh",
-             "prov1",
-             "mytp",
-             "usdt:/bin/sh:prov1:mytp");
+  check_usdt(bpftrace->get_probes().at(0), "/bin/sh", "prov1", "mytp");
 }
 
 TEST(bpftrace, add_probes_tracepoint)
@@ -423,9 +361,7 @@ TEST(bpftrace, add_probes_tracepoint)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "tracepoint:sched:sched_switch";
-  check_tracepoint(
-      bpftrace->get_probes().at(0), "sched", "sched_switch", probe_orig_name);
+  check_tracepoint(bpftrace->get_probes().at(0), "sched", "sched_switch");
 }
 
 TEST(bpftrace, add_probes_profile)
@@ -436,8 +372,7 @@ TEST(bpftrace, add_probes_profile)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "profile:ms:997";
-  check_profile(bpftrace->get_probes().at(0), "ms", 997, probe_orig_name);
+  check_profile(bpftrace->get_probes().at(0), "ms", 997);
 }
 
 TEST(bpftrace, add_probes_interval)
@@ -448,8 +383,7 @@ TEST(bpftrace, add_probes_interval)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "i:s:1";
-  check_interval(bpftrace->get_probes().at(0), "s", 1, probe_orig_name);
+  check_interval(bpftrace->get_probes().at(0), "s", 1);
 }
 
 TEST(bpftrace, add_probes_software)
@@ -460,8 +394,7 @@ TEST(bpftrace, add_probes_software)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "software:faults:1000";
-  check_software(bpftrace->get_probes().at(0), "faults", 1000, probe_orig_name);
+  check_software(bpftrace->get_probes().at(0), "faults", 1000);
 }
 
 TEST(bpftrace, add_probes_hardware)
@@ -472,11 +405,7 @@ TEST(bpftrace, add_probes_hardware)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  std::string probe_orig_name = "hardware:cache-references:1000000";
-  check_hardware(bpftrace->get_probes().at(0),
-                 "cache-references",
-                 1000000,
-                 probe_orig_name);
+  check_hardware(bpftrace->get_probes().at(0), "cache-references", 1000000);
 }
 
 TEST(bpftrace, trailing_comma)
@@ -829,7 +758,6 @@ TEST_F(bpftrace_btf, add_probes_rawtracepoint)
   auto probe = bpftrace->get_probes().at(0);
   EXPECT_EQ(ProbeType::rawtracepoint, probe.type);
   EXPECT_EQ("event_rt", probe.attach_point);
-  EXPECT_EQ("rawtracepoint:event_rt", probe.orig_name);
   EXPECT_EQ("rawtracepoint:vmlinux:event_rt", probe.name);
 }
 

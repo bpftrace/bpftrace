@@ -323,16 +323,9 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 
   if (sym.size == 0 && func_offset == 0) {
     if (safe_mode) {
-      std::stringstream msg;
-      msg << "Could not determine boundary for " << sym.name
-          << " (symbol has size 0).";
-      if (probe.orig_name == probe.name) {
-        msg << hint_unsafe;
-        return make_error<AttachError>(msg.str());
-      } else {
-        LOG(WARNING) << msg.str() << " Skipping attachment." << hint_unsafe;
-      }
-      return make_error<AttachError>();
+      return make_error<AttachError>("Could not determine boundary for " +
+                                     sym.name + " (symbol has size 0)." +
+                                     std::string{ hint_unsafe });
     }
   } else if (func_offset >= sym.size) {
     return make_error<AttachError>("Offset outside the function bounds ('" +

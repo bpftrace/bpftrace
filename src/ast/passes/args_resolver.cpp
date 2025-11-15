@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <bpf/bpf.h>
 #include <cassert>
 
@@ -7,7 +6,6 @@
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
-#include "log.h"
 #include "probe_matcher.h"
 #include "probe_types.h"
 #include "util/result.h"
@@ -25,12 +23,7 @@ namespace {
 
 class ArgsResolver : public Visitor<ArgsResolver> {
 public:
-  explicit ArgsResolver(ASTContext &ast,
-                        BPFtrace &bpftrace,
-                        ExpansionResult &ap_expansions)
-      : ast_(ast), bpftrace_(bpftrace), ap_expansions_(ap_expansions)
-  {
-  }
+  explicit ArgsResolver(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<ArgsResolver>::visit;
   void visit(Builtin &builtin);
@@ -40,9 +33,7 @@ private:
   void resolve_args(Probe &probe);
   Result<std::shared_ptr<Struct>> resolve_args(const AttachPoint &ap);
 
-  ASTContext &ast_;
   BPFtrace &bpftrace_;
-  ExpansionResult &ap_expansions_;
   Probe *probe_ = nullptr;
 };
 
@@ -103,8 +94,12 @@ void ArgsResolver::resolve_args(Probe &probe)
     return;
   }
 
-  if (*probe_args)
-    bpftrace_.structs.Add(probe.args_typename(), std::move(*probe_args));
+  auto type_name = probe.args_typename();
+  if (!type_name) {
+    ap->addError() << "Cannot resolve ambiguous types.";
+    return;
+  }
+  bpftrace_.structs.Add(*type_name, std::move(*probe_args));
 }
 
 void ArgsResolver::visit(Probe &probe)
@@ -115,8 +110,8 @@ void ArgsResolver::visit(Probe &probe)
 
 Pass CreateArgsResolverPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b, ExpansionResult &ap_expansions) {
-    ArgsResolver resolver(ast, b, ap_expansions);
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    ArgsResolver resolver(b);
     resolver.visit(ast.root);
   };
 

@@ -1,8 +1,6 @@
 #include "ast/passes/probe_prune.h"
 #include "ast/ast.h"
-#include "ast/visitor.h"
 #include "bpftrace.h"
-#include "log.h"
 
 namespace bpftrace::ast {
 
@@ -18,9 +16,10 @@ Pass CreateProbePrunePass()
                             << " If this is expected, set the 'missing_probes' "
                                "config variable to 'warn'.";
         } else if (missing_config == ConfigMissingProbes::warn) {
-          LOG(WARNING) << probe->orig_name << missing_msg
-                       << " It is being removed which may cause issues with "
-                          "program behavior.";
+          probe->addWarning()
+              << "Probe " << missing_msg
+              << " It is being removed which may cause issues with "
+                 "program behavior.";
         }
       }
     };

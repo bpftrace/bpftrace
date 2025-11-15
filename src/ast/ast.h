@@ -1844,6 +1844,11 @@ public:
   // Raw, unparsed input from user, eg. kprobe:vfs_read
   std::string raw_input;
 
+  // The unique, user-provided name for this specific attachpoint. This is
+  // the string the comes before the probe itself, e.g. foo=kprobe:xyz. If
+  // this is not provided, then the attachpoint string is the unique name.
+  std::optional<std::string> user_provided_name;
+
   std::string provider;
   std::string target;
   std::string lang; // for userspace probes, enable language-specific features
@@ -1871,15 +1876,6 @@ public:
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
-inline std::string probe_orig_name(AttachPointList &aps)
-{
-  std::vector<std::string> ap_names;
-  std::ranges::transform(aps,
-                         std::back_inserter(ap_names),
-                         [](const AttachPoint *ap) { return ap->raw_input; });
-  return util::str_join(ap_names, ",");
-}
-
 class Probe : public Node {
 public:
   explicit Probe(ASTContext &ctx,
@@ -1888,43 +1884,32 @@ public:
                  BlockExpr *block)
       : Node(ctx, std::move(loc)),
         attach_points(std::move(attach_points)),
-        block(block),
-        orig_name(probe_orig_name(this->attach_points)) {};
-  explicit Probe(ASTContext &ctx,
-                 Location &&loc,
-                 AttachPointList &&attach_points,
-                 BlockExpr *block,
-                 std::string orig_name)
-      : Node(ctx, std::move(loc)),
-        attach_points(std::move(attach_points)),
-        block(block),
-        orig_name(std::move(orig_name)) {};
+        block(block) {};
   explicit Probe(ASTContext &ctx, const Location &loc, const Probe &other)
       : Node(ctx, loc + other.loc),
         attach_points(clone(ctx, loc, other.attach_points)),
         block(clone(ctx, loc, other.block)),
-        orig_name(other.orig_name),
         index_(other.index_) {};
 
   bool operator==(const Probe &other) const
   {
-    return attach_points == other.attach_points && *block == *other.block &&
-           orig_name == other.orig_name;
+    return attach_points == other.attach_points && *block == *other.block;
   }
   std::strong_ordering operator<=>(const Probe &other) const
   {
     if (auto cmp = attach_points <=> other.attach_points; cmp != 0)
       return cmp;
-    if (auto cmp = *block <=> *other.block; cmp != 0)
-      return cmp;
-    return orig_name <=> other.orig_name;
+    return *block <=> *other.block;
   }
 
   AttachPointList attach_points;
   BlockExpr *block = nullptr;
-  std::string orig_name;
 
-  std::string args_typename() const;
+  // If the probes have multiple attachpoints, then neither attachpoint_name
+  // nor args_typename will return a value; this must be handled by the
+  // caller (although it will typically be a failure).
+  std::optional<std::string> attachpoint_name() const;
+  std::optional<std::string> args_typename() const;
 
   int index() const;
   void set_index(int index);

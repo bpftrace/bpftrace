@@ -38,6 +38,8 @@ and this project adheres to
   - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
 - Multiple `begin` & `end` probes are now permitted
   - [#4789](https://github.com/bpftrace/bpftrace/pull/4789)
+- Probes may now be named (reserved for future use)
+  - [#4752](https://github.com/bpftrace/bpftrace/pull/4752)
 #### Changed
 - `uaddr` support PIE and dynamic library symbols.
   - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)

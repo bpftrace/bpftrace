@@ -125,8 +125,6 @@ Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
   setup_probe.type = ProbeType::uprobe;
   setup_probe.path = ap.target;
   setup_probe.attach_point = ap.func;
-  setup_probe.orig_name = util::get_watchpoint_setup_probe_name(
-      probe.orig_name);
   setup_probe.index = probe.index();
 
   return setup_probe;
@@ -142,7 +140,6 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.attach_point = ap.func;
   probe.type = probetype(ap.provider);
   probe.log_size = config_->log_size;
-  probe.orig_name = p.orig_name;
   probe.ns = ap.ns;
   probe.name = ap.name();
   probe.freq = ap.freq;

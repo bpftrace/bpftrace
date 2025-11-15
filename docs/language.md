@@ -15,14 +15,14 @@ actionblock2
 Each action block consists of three parts:
 
 ```
-probe[,probe]
+[name=]probe[,probe]
 /predicate/ {
   action
 }
 ```
 
 * **Probes**\
-  A probe specifies the event and event type to attach to. [Probes list](#probes).
+  A probe specifies the event and event type to attach to. See [the probes section](#probes) for more detail.
 * **Predicate**\
   The predicate is an optional condition that must be met for the action to be executed.
 * **Action**\
@@ -864,6 +864,7 @@ let @a = lruhash(100);
 
 bpftrace supports various probe types which allow the user to attach BPF programs to different types of events.
 Each probe starts with a provider (e.g. `kprobe`) followed by a colon (`:`) separated list of options.
+An optional name may precede the provider with an equals sign (e.g. `name=`), which is reserved for internal use and future features.
 The amount of options and their meaning depend on the provider and are detailed below.
 The valid values for options can depend on the system or binary being traced, e.g. for uprobes it depends on the binary.
 Also see [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes).

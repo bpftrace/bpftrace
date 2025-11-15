@@ -471,6 +471,7 @@ attach_point_elem:
         |       MUL          { $$ = "*"; }
         |       LBRACKET     { $$ = "["; }
         |       RBRACKET     { $$ = "]"; }
+        |       EQ           { $$ = "="; }
         |       param
                 {
                   // "Un-parse" the positional parameter back into text so
