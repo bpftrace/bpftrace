@@ -545,7 +545,7 @@ bool ResourceAnalyser::exceeds_stack_limit(size_t size)
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 {
-  return fun == "usym" || fun == "__builtin_func" || fun == "ustack";
+  return fun == "usym" || fun == "__builtin_func" || fun == "__builtin_ustack";
 }
 
 void ResourceAnalyser::update_map_info(Map &map)

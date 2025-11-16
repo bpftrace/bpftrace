@@ -391,7 +391,6 @@ private:
   llvm::Function *createForEachMapCallback(const For &f,
                                            const Map &map,
                                            llvm::Type *ctx_t);
-  llvm::Function *createMurmurHash2Func();
 
   Value *createFmtString(int print_id);
 
@@ -404,6 +403,12 @@ private:
   VariableLLVM &getVariable(const std::string &var_ident);
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
+
+  ScopedExpr createExternFuncCall(const std::string &name,
+                                  llvm::Type *return_type,
+                                  llvm::ArrayRef<llvm::Type *> arg_types,
+                                  llvm::ArrayRef<llvm::Value *> arg_values,
+                                  const Location &loc);
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
@@ -437,7 +442,6 @@ private:
 
   llvm::Function *linear_func_ = nullptr;
   llvm::Function *log2_func_ = nullptr;
-  llvm::Function *murmur_hash_2_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)
@@ -571,10 +575,7 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
                                       StackType stack_type,
                                       const Location &loc)
 {
-  if (!murmur_hash_2_func_)
-    murmur_hash_2_func_ = createMurmurHash2Func();
-
-  const bool is_ustack = ident == "ustack";
+  const bool is_ustack = ident == "__builtin_ustack";
   const auto uint64_size = sizeof(uint64_t);
 
   StructType *stack_key_struct = b_.GetStackStructType(is_ustack);
@@ -635,12 +636,16 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   // bpf_get_stackid() is kind of broken by design and can suffer from hash
   // collisions.
   // More details here: https://github.com/bpftrace/bpftrace/issues/2962
-  Value *murmur_hash_2 = b_.CreateCall(
-      murmur_hash_2_func_,
-      { stack_trace, trunc_nr_stack_frames, seed },
-      "murmur_hash_2");
+  std::array<llvm::Type *, 3> arg_types = { b_.getPtrTy(),
+                                            b_.getInt8Ty(),
+                                            b_.getInt64Ty() };
+  std::array<llvm::Value *, 3> arg_values = { stack_trace,
+                                              trunc_nr_stack_frames,
+                                              seed };
+  auto murmur_hash_2 = createExternFuncCall(
+      "__murmur_hash_2", b_.getInt64Ty(), arg_types, arg_values, loc);
 
-  b_.CreateStore(murmur_hash_2,
+  b_.CreateStore(murmur_hash_2.value(),
                  b_.CreateGEP(stack_key_struct,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(0) }));
@@ -701,7 +706,8 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
     return ScopedExpr(ns_delta);
-  } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
+  } else if (builtin.ident == "__builtin_kstack" ||
+             builtin.ident == "__builtin_ustack") {
     return kstack_ustack(builtin.ident,
                          builtin.builtin_type.stack_type,
                          builtin.loc);
@@ -1857,7 +1863,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         scoped_expr.value(),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "kstack" || call.func == "ustack") {
+  } else if (call.func == "__builtin_kstack" ||
+             call.func == "__builtin_ustack") {
     return kstack_ustack(call.func, call.return_type.stack_type, call.loc);
   } else if (call.func == "strncmp") {
     auto &left_arg = call.vargs.at(0);
@@ -1973,50 +1980,23 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateGetSocketCookie(scoped_arg.value(), call.loc));
   } else {
-    auto *func = extern_funcs_[call.func];
-    if (!func) {
-      // If we don't know about this function for codegen, then it is very
-      // likely something that will be linked in from the standard library.
-      // Assume that the semantic analyser has provided the types correctly,
-      // and set everything up for success.
-      llvm::Type *result_type = b_.GetType(call.return_type);
-      SmallVector<llvm::Type *> arg_types;
-      for (const auto &expr : call.vargs) {
-        arg_types.push_back(b_.GetType(expr.type()));
-      }
-      FunctionType *function_type = FunctionType::get(result_type,
-                                                      arg_types,
-                                                      false);
-      func = llvm::Function::Create(function_type,
-                                    llvm::Function::ExternalLinkage,
-                                    call.func,
-                                    module_.get());
-      func->addFnAttr(Attribute::AlwaysInline);
-      func->addFnAttr(Attribute::NoUnwind);
-      func->setDSOLocal(true);
-
-      // Add noundef attribute to each argument.
-      for (auto &arg : func->args()) {
-        arg.addAttr(Attribute::NoUndef);
-      }
-      extern_funcs_[call.func] = func;
-    }
-
-    std::vector<ScopedExpr> args;
+    // If we don't know about this function for codegen, then it is very
+    // likely something that will be linked in from the standard library.
+    // Assume that the semantic analyser has provided the types correctly,
+    // and set everything up for success.
+    llvm::Type *result_type = b_.GetType(call.return_type);
+    SmallVector<llvm::Type *> arg_types;
     SmallVector<llvm::Value *> arg_values;
+    std::vector<ScopedExpr> args;
+
     for (auto &expr : call.vargs) {
+      arg_types.push_back(b_.GetType(expr.type()));
       args.emplace_back(visit(expr));
       arg_values.push_back(args.back().value());
     }
 
-    auto *inst = b_.CreateCall(func, arg_values, call.func);
-    return ScopedExpr(inst, [this, inst, &call] {
-      // We set the debug location on the call instructions only after the
-      // scoped expression is not longer used. Otherwise the instruction emitter
-      // seems to use this location for everything, which results in problems.
-      inst->setDebugLoc(
-          debug_.createDebugLocation(llvm_ctx_, scope_, call.loc));
-    });
+    return createExternFuncCall(
+        call.func, result_type, arg_types, arg_values, call.loc);
   }
 }
 
@@ -4412,169 +4392,6 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
   }
 }
 
-llvm::Function *CodegenLLVM::createMurmurHash2Func()
-{
-  // The goal is to produce the following code:
-  //
-  // uint64_t murmur_hash_2(void *stack, uint8_t nr_stack_frames, uint64_t
-  // seed)
-  // {
-  //   const uint64_t m = 0xc6a4a7935bd1e995LLU;
-  //   const int r = 47;
-  //   uint64_t id = seed ^ (nr_stack_frames * m);
-  //   int i = 0;
-
-  //   while(i < nr_stack_frames) {
-  //     uint64_t k = stack[i];
-  //     k *= m;
-  //     k ^= k >> r;
-  //     k *= m;
-  //     id ^= k;
-  //     id *= m;
-  //     ++i;
-  //   }
-  //   return id;
-  // }
-  //
-  // https://github.com/aappleby/smhasher/blob/92cf3702fcfaadc84eb7bef59825a23e0cd84f56/src/MurmurHash2.cpp
-  auto saved_ip = b_.saveIP();
-
-  std::array<llvm::Type *, 3> args = { b_.getPtrTy(),
-                                       b_.getInt8Ty(),
-                                       b_.getInt64Ty() };
-  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
-
-  auto *callback = llvm::Function::Create(
-      callback_type,
-      llvm::Function::LinkageTypes::InternalLinkage,
-      "murmur_hash_2",
-      module_.get());
-  callback->addFnAttr(Attribute::AlwaysInline);
-  callback->setSection("helpers");
-  callback->addFnAttr(Attribute::NoUnwind);
-
-  auto *bb = BasicBlock::Create(module_->getContext(), "entry", callback);
-  b_.SetInsertPoint(bb);
-
-  AllocaInst *nr_stack_frames = b_.CreateAllocaBPF(b_.getInt8Ty(),
-                                                   "nr_stack_frames_addr");
-  AllocaInst *seed_addr = b_.CreateAllocaBPF(b_.getInt64Ty(), "seed_addr");
-
-  AllocaInst *id = b_.CreateAllocaBPF(b_.getInt64Ty(), "id");
-  AllocaInst *i = b_.CreateAllocaBPF(b_.getInt8Ty(), "i");
-  AllocaInst *k = b_.CreateAllocaBPF(b_.getInt64Ty(), "k");
-
-  Value *m = b_.getInt64(0xc6a4a7935bd1e995LLU);
-  Value *r = b_.getInt64(47);
-
-  Value *stack_addr = callback->getArg(0);
-
-  b_.CreateStore(callback->getArg(1), nr_stack_frames);
-  b_.CreateStore(callback->getArg(2), seed_addr);
-
-  // uint64_t id = seed ^ (len * m);
-  b_.CreateStore(
-      b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), seed_addr),
-                   b_.CreateMul(b_.CreateIntCast(b_.CreateLoad(b_.getInt8Ty(),
-                                                               nr_stack_frames),
-                                                 b_.getInt64Ty(),
-                                                 false),
-                                m)),
-      id);
-
-  // int i = 0;
-  b_.CreateStore(b_.getInt8(0), i);
-
-  llvm::Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *while_cond = BasicBlock::Create(module_->getContext(),
-                                              "while_cond",
-                                              parent);
-  BasicBlock *while_body = BasicBlock::Create(module_->getContext(),
-                                              "while_body",
-                                              parent);
-  BasicBlock *while_end = BasicBlock::Create(module_->getContext(),
-                                             "while_end",
-                                             parent);
-  b_.CreateBr(while_cond);
-  b_.SetInsertPoint(while_cond);
-  auto *cond = b_.CreateICmp(CmpInst::ICMP_ULT,
-                             b_.CreateLoad(b_.getInt8Ty(), i),
-                             b_.CreateLoad(b_.getInt8Ty(), nr_stack_frames),
-                             "length.cmp");
-  b_.CreateCondBr(cond, while_body, while_end);
-
-  b_.SetInsertPoint(while_body);
-
-  // uint64_t k = stack[i];
-  Value *stack_ptr = b_.CreateGEP(b_.getInt64Ty(),
-                                  stack_addr,
-                                  b_.CreateLoad(b_.getInt8Ty(), i));
-  b_.CreateStore(b_.CreateLoad(b_.getInt64Ty(), stack_ptr), k);
-
-  // k *= m;
-  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), k), m), k);
-
-  // // k ^= k >> r
-  b_.CreateStore(b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), k),
-                              b_.CreateLShr(b_.CreateLoad(b_.getInt64Ty(), k),
-                                            r)),
-                 k);
-
-  // // k *= m
-  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), k), m), k);
-
-  // id ^= k
-  b_.CreateStore(b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), id),
-                              b_.CreateLoad(b_.getInt64Ty(), k)),
-                 id);
-
-  // id *= m
-  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), id), m), id);
-
-  // ++i
-  b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt8Ty(), i), b_.getInt8(1)),
-                 i);
-
-  b_.CreateBr(while_cond);
-  b_.SetInsertPoint(while_end);
-
-  b_.CreateLifetimeEnd(nr_stack_frames);
-  b_.CreateLifetimeEnd(seed_addr);
-  b_.CreateLifetimeEnd(i);
-  b_.CreateLifetimeEnd(k);
-
-  // We reserve 0 for errors so if we happen to hash to 0 just set to 1.
-  // This should reduce hash collisions as we now have to come across two
-  // stacks that naturally hash to 1 AND 0.
-  BasicBlock *if_zero = BasicBlock::Create(module_->getContext(),
-                                           "if_zero",
-                                           parent);
-  BasicBlock *if_end = BasicBlock::Create(module_->getContext(),
-                                          "if_end",
-                                          parent);
-
-  Value *zero_cond = b_.CreateICmpEQ(b_.CreateLoad(b_.getInt64Ty(), id),
-                                     b_.getInt64(0),
-                                     "zero_cond");
-
-  b_.CreateCondBr(zero_cond, if_zero, if_end);
-  b_.SetInsertPoint(if_zero);
-  b_.CreateStore(b_.getInt64(1), id);
-
-  b_.CreateBr(if_end);
-  b_.SetInsertPoint(if_end);
-
-  Value *ret = b_.CreateLoad(b_.getInt64Ty(), id);
-
-  b_.CreateLifetimeEnd(id);
-
-  b_.CreateRet(ret);
-
-  b_.restoreIP(saved_ip);
-
-  return callback;
-}
-
 std::pair<llvm::Type *, llvm::Value *> CodegenLLVM::createForContext(
     const For &f,
     std::vector<llvm::Type *> &&extra_fields)
@@ -4860,6 +4677,40 @@ Value *CodegenLLVM::createFmtString(int print_id)
   res->setAlignment(MaybeAlign(1));
   res->setLinkage(llvm::GlobalValue::InternalLinkage);
   return res;
+}
+
+ScopedExpr CodegenLLVM::createExternFuncCall(
+    const std::string &name,
+    llvm::Type *return_type,
+    llvm::ArrayRef<llvm::Type *> arg_types,
+    llvm::ArrayRef<llvm::Value *> arg_values,
+    const Location &loc)
+{
+  auto *func = extern_funcs_[name];
+  if (!func) {
+    FunctionType *function_type = FunctionType::get(return_type,
+                                                    arg_types,
+                                                    false);
+    func = llvm::Function::Create(
+        function_type, llvm::Function::ExternalLinkage, name, module_.get());
+    func->addFnAttr(Attribute::AlwaysInline);
+    func->addFnAttr(Attribute::NoUnwind);
+    func->setDSOLocal(true);
+
+    // Add noundef attribute to each argument.
+    for (auto &arg : func->args()) {
+      arg.addAttr(Attribute::NoUndef);
+    }
+    extern_funcs_[name] = func;
+  }
+
+  auto *inst = b_.CreateCall(func, arg_values, name);
+  return ScopedExpr(inst, [this, inst, loc] {
+    // We set the debug location on the call instructions only after the
+    // scoped expression is not longer used. Otherwise the instruction emitter
+    // seems to use this location for everything, which results in problems.
+    inst->setDebugLoc(debug_.createDebugLocation(llvm_ctx_, scope_, loc));
+  });
 }
 
 /// This should emit
