@@ -432,6 +432,18 @@ interval:s:1 {
 You can find all kernel symbols at `/proc/kallsyms`.
 
 
+### kfunc_allowed
+- `boolean kfunc_allowed(const string kfunc)`
+
+Determine if a kfunc is supported for particular probe types.
+
+
+### kfunc_exist
+- `boolean kfunc_exist(const string kfunc)`
+
+Determine if a kfunc exists using BTF.
+
+
 ### kptr
 - `T * kptr(T * ptr)`
 

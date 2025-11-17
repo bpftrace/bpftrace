@@ -72,6 +72,9 @@ public:
   DEFINE_HELPER_TEST(map_lookup_percpu_elem, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(loop, BPF_PROG_TYPE_KPROBE); // Added in 5.17.
 
+  bool has_kfunc(std::string kfunc);
+  bool kfunc_allowed(const char* kfunc, enum bpf_prog_type prog_type);
+
 protected:
   std::optional<bool> has_d_path_;
   std::optional<int> insns_limit_;

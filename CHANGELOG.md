@@ -43,6 +43,8 @@ and this project adheres to
 - Add support for more vmlinux BTF types as identifiers
   - [#4853](https://github.com/bpftrace/bpftrace/pull/4853)
 #### Changed
+- Add helpers to check if a kfunc exists and is supported for particular probe types.
+  - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)
 - `uaddr` support PIE and dynamic library symbols.
   - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)
 - Apply `-B` buffering semantics to file outputs.
