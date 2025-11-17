@@ -5,17 +5,20 @@
 #include "mocks.h"
 #include "gtest/gtest.h"
 
+#ifdef HAVE_LIBDW
+#include "dwarf_common.h"
+#endif // HAVE_LIBDW
+
 namespace bpftrace::test {
 
 namespace attachpoint_parser {
 
 using ::testing::HasSubstr;
 
-void test(const std::string& input, const std::string& error = "")
+void test(BPFtrace& bpftrace,
+          const std::string& input,
+          const std::string& error = "")
 {
-  auto mock_bpftrace = get_mock_bpftrace();
-  BPFtrace& bpftrace = *mock_bpftrace;
-
   // The input provided here is embedded into an expression.
   ast::ASTContext ast("stdin", input);
   std::stringstream msg;
@@ -48,9 +51,25 @@ void test(const std::string& input, const std::string& error = "")
   }
 }
 
+void test(const std::string& input)
+{
+  auto mock_bpftrace = get_mock_bpftrace();
+  BPFtrace& bpftrace = *mock_bpftrace;
+  test(bpftrace, input);
+}
+
 void test_error(const std::string& input, const std::string& error)
 {
-  test(input, error);
+  auto mock_bpftrace = get_mock_bpftrace();
+  BPFtrace& bpftrace = *mock_bpftrace;
+  test(bpftrace, input, error);
+}
+
+void test_error(BPFtrace& bpftrace,
+                const std::string& input,
+                const std::string& error)
+{
+  test(bpftrace, input, error);
 }
 
 void test_uprobe_lang(const std::string& input, const std::string& lang = "")
@@ -99,6 +118,102 @@ TEST(attachpoint_parser, uprobe_lang)
   test_uprobe_lang("uprobe:main { 1 }");
   test_uprobe_lang("uprobe:cpp:main { 1 }", "cpp");
 }
+
+#ifdef HAVE_LIBDW
+
+class attachpoint_parser_dwarf : public test_dwarf {};
+
+TEST_F(attachpoint_parser_dwarf, uprobe)
+{
+  BPFtrace bpftrace;
+  // Valid test executable to ensure DWARF function proceeds.
+  // The line numbers used must be mappable to a present, valid statement within
+  // the target executable. If the test executable/source-file is subject to
+  // change, be sure to update these tests. Tests might also fail, if the file
+  // 'data_source.c' is to be compiled elsewhere than in the 'data/' dir.
+  std::string bin = std::string(bin_);
+  std::string ap = "uprobe:" + bin;
+
+  test(bpftrace, ap + "@data_source.c:195 { 1 }");
+  test(bpftrace, ap + "@data_source.c:195:1 { 1 }");
+  test(bpftrace, ap + "@data/data_source.c:195 { 1 }");
+  test(bpftrace, ap + "@data/data_source.c:195:1 { 1 }");
+  test(bpftrace, ap + "@data_source.c:195 / 1 / { 1 }");
+  test(bpftrace, ap + "@data/data_source.c:195 / 1 / { 1 }");
+  test(bpftrace,
+       "begin { @x = 1; } " + ap + "@data/data_source.c:195 / @x / { @x/1; }");
+  test(bpftrace,
+       "begin { @x = 1; } " + ap + "@data/data_source.c:195 /@x/ { @x/1; }");
+  test(bpftrace,
+       "begin { @data_source = 1; } " + ap +
+           "@data_source.c:195 /@data_source/ { @data_source/1; }");
+  test(bpftrace,
+       "begin { @data = 1; } " + ap +
+           "@data/data_source.c:195 /@data/ { @data/1; }");
+
+  // Quoted arguments
+  test(bpftrace, ap + R"(@"data_source.c":195 { 1 })");
+  test(bpftrace, ap + R"(@data_source.c:"195" { 1 })");
+  test(bpftrace, ap + R"(@"data_source.c":"195" { 1 })");
+  test(bpftrace, ap + R"(@"data_source.c":"195":"1" { 1 })");
+  test(bpftrace, ap + R"(@data/"data_source.c":195 { 1 })");
+  test(bpftrace, ap + R"(@"data/data_source.c":195 { 1 })");
+  test(bpftrace, R"(uprobe:")" + bin + R"("@data_source.c:195 { 1 })");
+  test(bpftrace, R"(uprobe:")" + bin + R"("@"data_source.c":195 { 1 })");
+  test(bpftrace, R"(uprobe:")" + bin + R"("@"data/data_source.c":195 { 1 })");
+
+  test_error(bpftrace,
+             "uretprobe:" + bin + "@data_source.c:195 { 1 }",
+             R"(Source code location not allowed)");
+  test_error(bpftrace,
+             "uprobe:*@data_source.c:195 { 1 }",
+             R"(Cannot use wildcards with source code location)");
+  test_error(bpftrace,
+             ap + "@ { 1 }",
+             R"(stdin:1:47-48: ERROR: syntax error, unexpected {
+)" + ap +
+                 R"(@ { 1 }
+                                              ~
+)");
+  test_error(
+      bpftrace,
+      ap + "@: { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(
+      bpftrace,
+      ap + "@data_source.c: { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(
+      bpftrace,
+      ap + "@:195 { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(
+      bpftrace,
+      ap + "@data_source.c:195:1:2:3 { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(bpftrace,
+             ap + "@data_source.c:invalid { 1 }",
+             R"(Invalid line number: )");
+  test_error(bpftrace,
+             ap + "@data_source.c:195:invalid { 1 }",
+             R"(Invalid column number: )");
+  test_error(bpftrace,
+             ap + "@data_source.c:195: { 1 }",
+             R"(Invalid column number: )");
+  test_error(bpftrace,
+             ap + "@invalid.c:195 { 1 }",
+             R"(No compilation unit matches invalid.c)");
+  test_error(
+      bpftrace,
+      "uprobe:no_dwarf@main.c:123 { 1 }",
+      R"(No DWARF debug info found for 'no_dwarf', cannot attach by source code location.)");
+  test_error(
+      bpftrace,
+      "uprobe:@main.c:123 { 1 }",
+      R"(No DWARF debug info found for '', cannot attach by source code location.)");
+}
+
+#endif // HAVE_LIBDW
 
 } // namespace attachpoint_parser
 

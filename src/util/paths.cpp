@@ -328,4 +328,39 @@ std::string path_for_pid_mountns(int pid, const std::string &path)
   return pid_relative_path.str();
 }
 
+// Returns true if the given pattern (e.g. file name, relative/absolute path)
+// matches the tail of the path. Comparison order is done from the file name
+// towards the root dir.
+bool path_ends_with(const std::filesystem::path &path,
+                    const std::filesystem::path &pattern)
+{
+  // Early exit on empty paths
+  if (path.empty() && pattern.empty()) {
+    return true;
+  }
+  if (path.empty() || pattern.empty()) {
+    return false;
+  }
+
+  // Iterate backwards, i.e. from file name
+  auto path_it = path.end();
+  auto pattern_it = pattern.end();
+
+  // According to the standard, end() returns an iterator one
+  // past the last element of the path. Dereferencing it is undefined
+  // behavior, so we decrement first.
+  // https://en.cppreference.com/w/cpp/filesystem/path/begin.html
+  --path_it;
+  --pattern_it;
+
+  for (; pattern_it != pattern.begin(); pattern_it--, path_it--) {
+    // Path can't have less elements than pattern
+    if (path_it == path.begin() || *pattern_it != *path_it) {
+      return false;
+    }
+  }
+
+  return *pattern_it == *path_it;
+}
+
 } // namespace bpftrace::util
