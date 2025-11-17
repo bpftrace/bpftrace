@@ -26,6 +26,7 @@ namespace bpftrace {
 struct FuncInfo {
   std::string name;
   Dwarf_Die die;
+  bool prefer_abstract_die;
 };
 
 Dwarf::Dwarf(BPFtrace *bpftrace,
@@ -141,17 +142,46 @@ static std::string get_die_name(Dwarf_Die *die)
 static int get_func_die_cb(Dwarf_Die *func_die, void *arg)
 {
   auto *func_info = static_cast<struct FuncInfo *>(arg);
-  if (dwarf_hasattr_integrate(func_die, DW_AT_name) &&
-      get_die_name(func_die) == func_info->name) {
-    func_info->die = *func_die;
+  if (!dwarf_hasattr_integrate(func_die, DW_AT_name) ||
+      get_die_name(func_die) != func_info->name)
+    return DWARF_CB_OK;
+
+  // Only concrete function definition DIEs have PC range, abstract definitions
+  // and stubs do not.
+  bool has_addr = dwarf_hasattr(func_die, DW_AT_low_pc) ||
+                  dwarf_hasattr(func_die, DW_AT_ranges);
+
+  // Skip callsite stub DIEs; these don't have the attributes of a function die
+  // and lead to wrong results.
+  if (!has_addr && dwarf_hasattr(func_die, DW_AT_abstract_origin))
+    return DWARF_CB_OK;
+
+  // Lookup referenced abstract-origin die; preferred for param type info.
+  if (func_info->prefer_abstract_die &&
+      dwarf_hasattr(func_die, DW_AT_abstract_origin)) {
+    Dwarf_Attribute attr;
+    Dwarf_Die origin_die;
+    dwarf_formref_die(dwarf_attr(func_die, DW_AT_abstract_origin, &attr),
+                      &origin_die);
+    func_info->die = origin_die;
     return DWARF_CB_ABORT;
   }
-  return DWARF_CB_OK;
+
+  // Keep looking for a concrete function DIE with present PC range; preferred
+  // for address/line info.
+  if (!func_info->prefer_abstract_die && !has_addr)
+    return DWARF_CB_OK;
+
+  func_info->die = *func_die;
+  return DWARF_CB_ABORT;
 }
 
-std::optional<Dwarf_Die> Dwarf::get_func_die(const std::string &function) const
+std::optional<Dwarf_Die> Dwarf::get_func_die(const std::string &function,
+                                             bool prefer_abstract_die) const
 {
-  struct FuncInfo func_info = { .name = function, .die = {} };
+  struct FuncInfo func_info = { .name = function,
+                                .die = {},
+                                .prefer_abstract_die = prefer_abstract_die };
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
@@ -173,7 +203,7 @@ static Dwarf_Die type_of(Dwarf_Die &die)
 std::vector<Dwarf_Die> Dwarf::function_param_dies(
     const std::string &function) const
 {
-  auto func_die = get_func_die(function);
+  auto func_die = get_func_die(function, true);
   if (!func_die)
     return {};
 
@@ -374,7 +404,7 @@ std::vector<std::string> Dwarf::get_function_params(
   for (auto &param_die : function_param_dies(function)) {
     Dwarf_Die type_die = type_of(param_die);
     const std::string type_name = get_type_name(type_die);
-    if (dwarf_hasattr(&param_die, DW_AT_name))
+    if (dwarf_hasattr_integrate(&param_die, DW_AT_name))
       result.push_back(type_name + " " + get_die_name(&param_die));
     else
       result.push_back(type_name);
@@ -446,6 +476,62 @@ std::vector<Dwarf_Die> Dwarf::get_all_children_with_tag(Dwarf_Die *die, int tag)
   return children;
 }
 
+template <typename VisitCallback>
+void Dwarf::visit_die_subtree(Dwarf_Die *die, VisitCallback &&callback)
+{
+  callback(die);
+
+  Dwarf_Die child_die;
+  Dwarf_Die *child_iter = &child_die;
+  if (dwarf_child(die, &child_die) != 0)
+    return;
+
+  do {
+    visit_die_subtree(&child_die, callback);
+  } while (dwarf_siblingof(child_iter, &child_die) == 0);
+}
+
+std::vector<std::pair<Dwarf_Addr, Dwarf_Addr>> Dwarf::get_inlined_func_ranges(
+    Dwarf_Die *func_die)
+{
+  std::vector<std::pair<Dwarf_Addr, Dwarf_Addr>> ranges;
+  if (dwarf_tag(func_die) != DW_TAG_subprogram) {
+    return {};
+  }
+
+  auto get_inlined_ranges_cb = [&ranges](Dwarf_Die *die) {
+    if (dwarf_tag(die) != DW_TAG_inlined_subroutine)
+      return;
+    Dwarf_Addr base = 0, begin = 0, end = 0;
+    ptrdiff_t offset = 0;
+    while ((offset = dwarf_ranges(die, offset, &base, &begin, &end)) > 0)
+      ranges.emplace_back(begin, end);
+  };
+
+  visit_die_subtree(func_die, get_inlined_ranges_cb);
+
+  return ranges;
+}
+
+static bool is_inlined_addr(Dwarf_Die *cudie, Dwarf_Addr addr)
+{
+  Dwarf_Die *scopes = nullptr;
+  int num_scopes = dwarf_getscopes(cudie, addr, &scopes);
+  if (num_scopes <= 0)
+    return false;
+
+  bool inlined = false;
+  for (int i = 0; i < num_scopes; i++) {
+    if (dwarf_tag(&scopes[i]) == DW_TAG_inlined_subroutine) {
+      inlined = true;
+      break;
+    }
+  }
+
+  free(scopes);
+  return inlined;
+}
+
 ssize_t Dwarf::get_array_size(Dwarf_Die &subrange_die)
 {
   Dwarf_Attribute size_attr;
@@ -509,110 +595,177 @@ ssize_t Dwarf::get_bitfield_size(Dwarf_Die &field_die)
   return 0;
 }
 
-std::optional<std::filesystem::path> Dwarf::get_cu_src_path(Dwarf_Die *cudie)
+std::vector<std::pair<Dwarf::CuInfo, std::string>> Dwarf::get_cus_with_srcfile(
+    const std::string &source_file) const
 {
-  Dwarf_Files *files;
-  size_t nfiles;
-  if (dwarf_getsrcfiles(cudie, &files, &nfiles) == 0 && nfiles > 0) {
-    // The returned source file path may either be absolute or relative.
-    // According to the DWARF standard, source file paths should be locatable by
-    // combining DW_AT_comp_dir with the CU's file name. However, DW_AT_comp_dir
-    // may be missing or empty, therefore callers should not assume the path is
-    // always absolute. https://wiki.dwarfstd.org/Best_Practices.md
-    const char *src = dwarf_filesrc(files, 0, nullptr, nullptr);
-    if (src) {
-      return std::filesystem::path(src);
-    }
-  }
-
-  return std::nullopt;
-}
-
-Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(const std::string &source_file) const
-{
-  std::optional<CuInfo> matched_cu;
-  std::filesystem::path matched_src_path;
+  std::vector<std::pair<Dwarf::CuInfo, std::string>> cu_list;
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
-    auto src_path = get_cu_src_path(cu_info.cu_die());
-    if (!src_path)
-      continue;
-
-    if (util::path_ends_with(*src_path, source_file)) {
-      if (!matched_cu) {
-        matched_cu = cu_info;
-        matched_src_path = *src_path;
-      } else {
-        return make_error<DwarfParseError>(
-            "Ambiguous source path, matches multiple files: " +
-            matched_src_path.string() + ", " + src_path->string());
+    Dwarf_Files *files = nullptr;
+    size_t nfiles = 0;
+    if (dwarf_getsrcfiles(cu_info.cu_die(), &files, &nfiles) == 0) {
+      for (size_t i = 0; i < nfiles; ++i) {
+        const char *src = dwarf_filesrc(files, i, nullptr, nullptr);
+        if (src && util::path_ends_with(src, source_file)) {
+          cu_list.emplace_back(cu_info, src);
+          break;
+        }
       }
     }
   }
 
-  if (!matched_cu)
-    return make_error<DwarfParseError>("No compilation unit matches " +
-                                       source_file);
+  return cu_list;
+}
 
-  return std::move(*matched_cu);
+Result<> Dwarf::foreach_src_line(Dwarf_Die *cudie, LineCallback auto &&callback)
+{
+  Dwarf_Lines *lines = nullptr;
+  size_t num_lines = 0;
+  if (dwarf_getsrclines(cudie, &lines, &num_lines) != 0)
+    return make_error<DwarfParseError>(
+        "Failed to get compilation unit source lines");
+
+  for (size_t i = 0; i < num_lines; i++) {
+    Dwarf_Line *line = dwarf_onesrcline(lines, i);
+    if (!line)
+      continue;
+
+    int lineno, linecol;
+    if (dwarf_lineno(line, &lineno) != 0 || dwarf_linecol(line, &linecol) != 0)
+      continue;
+
+    const char *linesrc = dwarf_linesrc(line, nullptr, nullptr);
+    if (!linesrc)
+      continue;
+
+    if (!callback(line, linesrc, lineno, linecol))
+      break;
+  }
+
+  return OK();
 }
 
 Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
                                      size_t line_num,
                                      size_t col_num) const
 {
-  auto cu = get_cu_by_src(source_file);
-  if (!cu) {
-    return cu.takeError();
+  // Get all compilation units that reference the given source file in their
+  // source file table, as (CU, resolved source file) pairs. Direct 1:1 matching
+  // via DW_AT_name is unreliable due to LTO, DWZ, and other compiler settings.
+  auto matched_cus = get_cus_with_srcfile(source_file);
+  if (matched_cus.empty()) {
+    return make_error<DwarfParseError>("No compilation unit matches " +
+                                       source_file);
   }
 
-  auto src_path = get_cu_src_path(cu->cu_die());
-  if (!src_path) {
-    return make_error<DwarfParseError>(
-        "Failed to get compilation unit source path");
-  }
-
-  Dwarf_Lines *lines = nullptr;
-  size_t num_lines = 0;
-
-  if (dwarf_getsrclines(cu->cu_die(), &lines, &num_lines) != 0) {
-    return make_error<DwarfParseError>(
-        "Failed to get compilation unit source lines");
-  }
-
-  for (size_t i = 0; i < num_lines; i++) {
-    Dwarf_Line *line = dwarf_onesrcline(lines, i);
-    if (!line) {
-      continue;
-    }
-
-    int lineno, linecol;
-    if (dwarf_lineno(line, &lineno) != 0 ||
-        dwarf_linecol(line, &linecol) != 0) {
-      continue;
-    }
-
-    const char *linesrc = dwarf_linesrc(line, nullptr, nullptr);
-    if (!linesrc) {
-      continue;
-    }
-
-    // Check if the line source matches the CU's source path, to avoid
-    // unintentionally accessing statements from included files.
-    if (util::path_ends_with(linesrc, *src_path) &&
-        line_num == static_cast<size_t>(lineno) &&
-        (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
-      Dwarf_Addr addr;
-      if (dwarf_lineaddr(line, &addr) == 0) {
-        return addr;
+  std::optional<uint64_t> address;
+  std::string matched_src;
+  bool ambiguity = false;
+  for (auto &pair : matched_cus) {
+    auto &cu = pair.first;
+    auto &source = pair.second;
+    auto find_address =
+        [&cu, &source, &line_num, &col_num, &address, &matched_src, &ambiguity](
+            Dwarf_Line *line,
+            const char *linesrc,
+            int lineno,
+            int linecol) -> bool {
+      // Check if the line source matches the CU's source
+      // file, to avoid unintentionally accessing
+      // statements from included files (e.g. inlined or template code) with
+      // matching line number (and column).
+      if (util::path_ends_with(linesrc, source) &&
+          line_num == static_cast<size_t>(lineno) &&
+          (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
+        Dwarf_Addr addr;
+        if (dwarf_lineaddr(line, &addr) == 0) {
+          // Skip inlined entries
+          if (is_inlined_addr(cu.cu_die(), addr))
+            return true;
+          // Since partial source path matching is used for better UX, multiple
+          // matches with different resolved source paths can occur, leading to
+          // ambiguity. For example, @file.c:1 may match both src/file.c and
+          // lib/file.c.
+          if (address && matched_src != source) {
+            ambiguity = true;
+          } else {
+            address = addr;
+            matched_src = source;
+          }
+          // Stop iterating this CU once a match is found.
+          return false;
+        }
       }
-    }
+      return true;
+    };
+
+    auto err = foreach_src_line(cu.cu_die(), find_address);
+    if (!err)
+      return err.takeError();
+
+    if (ambiguity)
+      return make_error<DwarfParseError>(
+          "Ambiguous source path, matches multiple files: " + matched_src +
+          ", " + source);
   }
+
+  if (address)
+    return address.value();
 
   return make_error<DwarfParseError>(
       "Unable to map '" + source_file + ":" + std::to_string(line_num) +
       (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address");
+}
+
+Result<std::vector<std::string>> Dwarf::get_function_src_lines(
+    const std::string &function) const
+{
+  std::vector<std::string> src_lines;
+  std::unordered_set<std::string> seen;
+
+  // Non-abstract func die with present PC range.
+  auto func_die = get_func_die(function, false);
+  if (!func_die)
+    return src_lines;
+
+  Dwarf_Die cudie;
+  dwarf_diecu(&func_die.value(), &cudie, nullptr, nullptr);
+
+  // Precompute PC ranges of inlined functions in the given function DIE's
+  // subtree. This serves as an optimised alternative to dwarf_getscopes.
+  auto inlined_ranges = get_inlined_func_ranges(&func_die.value());
+  auto is_inlined = [&inlined_ranges](Dwarf_Addr addr) -> bool {
+    return std::ranges::any_of(inlined_ranges, [addr](const auto &range) {
+      return addr >= range.first && addr < range.second;
+    });
+  };
+
+  // Get the source-line info for each line whose address falls within
+  // the given function's PC range. Inlined functions are filtered out
+  // on a best-effort basis due to possible overlapping PC ranges.
+  auto get_src_line =
+      [&src_lines, &seen, &func_die, &is_inlined](Dwarf_Line *line,
+                                                  const char *linesrc,
+                                                  int lineno,
+                                                  int linecol) -> bool {
+    Dwarf_Addr addr = 0;
+    if (dwarf_lineaddr(line, &addr) == 0 &&
+        dwarf_haspc(&func_die.value(), addr) == 1) {
+      auto entry = std::string(linesrc) + ":" + std::to_string(lineno);
+      if (linecol > 0)
+        entry += ":" + std::to_string(linecol);
+      if (seen.insert(entry).second && !is_inlined(addr))
+        src_lines.push_back(std::move(entry));
+    }
+    return true;
+  };
+
+  auto err = foreach_src_line(&cudie, get_src_line);
+  if (!err)
+    return err.takeError();
+
+  return src_lines;
 }
 
 } // namespace bpftrace

@@ -1510,6 +1510,21 @@ uprobe:/bin/bash@readline.c:362 { ... }
 
 `file` path may be absolute or relative, and `line:col` must refer to a valid statement in that file. Only statements originating from the specified file are considered; statements from included files are ignored.
 
+To get a full list of attachable source locations, use the extra verbose listing option `-lvv`, see [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes).
+
+```
+# bpftrace -lvv 'uprobe:./foo:main'
+uprobe:./foo:main
+    args:
+      int argc
+      char** argv
+    source lines:
+      @src/main.c:30:1
+      @src/main.c:31:12
+      @src/main.c:32:3
+      ...
+```
+
 When tracing C++ programs, it’s possible to turn on automatic symbol demangling by using the `:cpp` prefix:
 
 ```

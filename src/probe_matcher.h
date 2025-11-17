@@ -50,6 +50,8 @@ const std::unordered_set<std::string> TIME_UNITS = { "s", "ms", "us", "hz" };
 
 const std::unordered_set<std::string> SIGNALS = { "SIGUSR1" };
 
+using SourceLineLists = std::map<std::string, std::vector<std::string>>;
+
 class BPFtrace;
 
 class ProbeMatcher {
@@ -101,7 +103,8 @@ private:
                                            const std::set<std::string> &set);
 
   virtual std::unique_ptr<std::istream> get_symbols_from_traceable_funcs(
-      bool with_modules = false, std::optional<std::string> module = std::nullopt) const;
+      bool with_modules = false,
+      std::optional<std::string> module = std::nullopt) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_list(
       const std::vector<ProbeListItem> &probes_list) const;
   virtual std::unique_ptr<std::istream> get_fentry_symbols(
@@ -121,9 +124,15 @@ private:
   FuncParamLists get_uprobe_params(const std::set<std::string> &uprobes);
   FuncParamLists get_params_for_matches(ProbeType probe_type,
                                         const std::set<std::string> &matches);
+
+  SourceLineLists get_source_lines_for_matches(
+      ProbeType probe_type,
+      const std::set<std::string> &matches);
+
   void format_matches_for_listing(ProbeType probe_type,
                                   const std::set<std::string> &matches,
                                   const FuncParamLists &param_lists,
+                                  const SourceLineLists &src_lists,
                                   std::vector<std::string> &results,
                                   const std::string &lang = "");
 };

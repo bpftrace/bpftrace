@@ -63,6 +63,7 @@ namespace bpftrace {
 std::set<DebugStage> bt_debug = {};
 bool bt_quiet = false;
 bool bt_verbose = false;
+bool bt_verbose_extra = false;
 bool dry_run = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
