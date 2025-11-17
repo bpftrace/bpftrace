@@ -40,7 +40,6 @@ hex      0[xX][0-9a-fA-F]+
 exponent {int}[eE]{int}
 
 ident    [_a-zA-Z][_a-zA-Z0-9]*
-map      @{ident}|@
 var      ${ident}
 hspace   [ \t]
 vspace   \n
@@ -200,7 +199,7 @@ oct_esc  [0-7]{1,3}
                             return Parser::make_BOOL(false, driver.loc);
                           }
   {path}                  { return Parser::make_PATH(yytext, driver.loc); }
-  {map}                   { return Parser::make_MAP(yytext, driver.loc); }
+  "@"                     { return Parser::make_AT(driver.loc); }
   {var}                   { return Parser::make_VAR(yytext, driver.loc); }
   ":"                     {
                             /* For handling "struct x" in "fn name(...): struct x {  }" as a type rather than

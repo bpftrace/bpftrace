@@ -1456,6 +1456,7 @@ After the "common" members listed first, the members are specific to the tracepo
 * `uprobe:binary:func+offset`
 * `uprobe:binary:offset`
 * `uretprobe:binary:func`
+* `uprobe:binary@file:line[:col]`
 
 **short names**
 
@@ -1498,6 +1499,14 @@ If the traced binary has DWARF included, function arguments are available in the
 uprobe:/bin/bash:rl_set_prompt
     const char* prompt
 ```
+
+Using DWARF source code location info, bpftrace can also attach uprobes directly to source file statements, similar to setting a breakpoint at a `file:line[:col]` location in a debugger. This avoids manually locating instruction offsets in the ELF when probes are needed inside a function body.
+
+```
+uprobe:/bin/bash@readline.c:362 { ... }
+```
+
+`file` path may be absolute or relative, and `line:col` must refer to a valid statement in that file. Only statements originating from the specified file are considered; statements from included files are ignored.
 
 When tracing C++ programs, it’s possible to turn on automatic symbol demangling by using the `:cpp` prefix:
 

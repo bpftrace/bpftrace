@@ -72,3 +72,29 @@ EXPECT foo1.b = 123
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
+
+# Attaching probes using source code location
+NAME uprobe source location - attach probe to source line
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:16 { printf("0x%lx\n", reg("ip")); exit(); }
+EXPECT_REGEX ^0x[0-9A-Fa-f]+$
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME uprobe source location - source line to address validation
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:16 { @a = reg("ip"); }
+     uprobe:./testprogs/uprobe_test:uprobeFunction1 { @b = reg("ip"); if (@b == @a) { printf("0x%lx == 0x%lx\n", @a, @b); exit(); } }
+EXPECT_REGEX ^0x[0-9A-Fa-f]+ == 0x[0-9A-Fa-f]+$
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME uprobe source location - attach multiple probes
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:28 { @a=1; }
+     uprobe:./testprogs/uprobe_test@uprobe_test.c:30 { @b=1; }
+     uprobe:./testprogs/uprobe_test@uprobe_test.c:33 { if (@a == 1 && @b == 1) { print("success"); exit(); } }
+EXPECT success
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
