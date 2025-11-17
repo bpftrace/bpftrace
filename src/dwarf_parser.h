@@ -2,6 +2,7 @@
 
 #include "struct.h"
 #include "types.h"
+#include "util/result.h"
 
 #include <memory>
 #include <string>
@@ -16,6 +17,23 @@ namespace bpftrace {
 
 class BPFtrace;
 
+class DwarfParseError : public ErrorInfo<DwarfParseError> {
+public:
+  static char ID;
+  void log(llvm::raw_ostream& OS) const override;
+
+  DwarfParseError(std::string&& msg) : msg_(std::move(msg)){};
+  DwarfParseError() = default;
+
+  const std::string& msg() const
+  {
+    return msg_;
+  }
+
+private:
+  std::string msg_;
+};
+
 class Dwarf {
 public:
   virtual ~Dwarf();
@@ -29,6 +47,9 @@ public:
 
   SizedType get_stype(const std::string &type_name) const;
   void resolve_fields(const SizedType &type) const;
+
+  Result<uint64_t> line_to_addr(
+      const std::string &source_file, size_t line_num, size_t col_num = 0) const;
 
 private:
   Dwarf(BPFtrace *bpftrace, const std::string &file_path);
@@ -52,6 +73,9 @@ private:
       const std::string &name);
   static std::vector<Dwarf_Die> get_all_children_with_tag(Dwarf_Die *die,
                                                           int tag);
+
+  static std::optional<std::string> resolve_cu_path(const char *cu_name,
+                                           const char *cu_comp_dir);
 
   Dwfl *dwfl = nullptr;
   Dwfl_Callbacks callbacks;
@@ -100,6 +124,16 @@ public:
 
   void resolve_fields(const SizedType &type __attribute__((unused))) const
   {
+  }
+
+  Result<uint64_t> line_to_addr(const std::string &source_file
+                                __attribute__((unused)),
+                                size_t line_num
+                                __attribute__((unused)),
+                                size_t col_num
+                                __attribute__((unused))) const
+  {
+    return make_error<DwarfParseError>();
   }
 };
 

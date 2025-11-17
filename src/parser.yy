@@ -60,6 +60,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   LPAREN     "("
   RPAREN     ")"
   QUES       "?"
+  AT         "@"
   ENDPRED    "end predicate"
   COMMA      ","
   PARAMCOUNT "$#"
@@ -120,7 +121,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> STRUCT_DEFN "struct definition"
 %token <std::string> ENUM "enum"
 %token <std::string> STRING "string"
-%token <std::string> MAP "map"
 %token <std::string> VAR "variable"
 %token <std::string> PARAM "positional parameter"
 %token <std::string> UNSIGNED_INT "integer"
@@ -472,6 +472,7 @@ attach_point_elem:
         |       LBRACKET     { $$ = "["; }
         |       RBRACKET     { $$ = "]"; }
         |       EQ           { $$ = "="; }
+        |       AT           { $$ = "@"; }
         |       param
                 {
                   // "Un-parse" the positional parameter back into text so
@@ -608,7 +609,8 @@ assign_stmt:
         ;
 
 map_decl_stmt:
-                LET MAP ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, $2, $4, $6->value); }
+                LET AT ident ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, "@" + $3, $5, $7->value); }
+        |       LET AT ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, "@", $4, $6->value); }        
         ;
 
 var_decl_stmt:
@@ -888,7 +890,8 @@ call_expr:
                 ;
 
 map:
-                MAP { $$ = driver.ctx.make_node<ast::Map>(@$, $1); }
+                AT ident { $$ = driver.ctx.make_node<ast::Map>(@$, "@" + $2); }
+        |       AT       { $$ = driver.ctx.make_node<ast::Map>(@$, "@"); }
                 ;
 
 map_expr:

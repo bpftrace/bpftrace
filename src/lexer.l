@@ -39,14 +39,14 @@ hex      0[xX][0-9a-fA-F]+
 /* scientific notation, e.g. 2e4 or 1e6 */
 exponent {int}[eE]{int}
 
-ident    [_a-zA-Z][_a-zA-Z0-9]*
-map      @{ident}|@
-var      ${ident}
-hspace   [ \t]
-vspace   \n
-path     :(\\.|[_\-\./a-zA-Z0-9#$+\*])+
+ident     [_a-zA-Z][_a-zA-Z0-9]*
+var       ${ident}
+hspace    [ \t]
+vspace    \n
+path_char (\\.|[_\-\./a-zA-Z0-9#$+\*])
+path      :{path_char}+
 /* Most of the builtins are prefixed with __builtin_ as they are exposed to users via macros e.g. macro cpu() { __builtin_cpu } */
-builtin  arg[0-9]+|args|ctx|kstack|nsecs|pid|sarg[0-9]|tid|ustack|__builtin_cgroup|__builtin_comm|__builtin_cpid|__builtin_cpu|__builtin_curtask|__builtin_elapsed|__builtin_func|__builtin_gid|__builtin_jiffies|__builtin_ncpus|__builtin_probe|__builtin_rand|__builtin_retval|__builtin_uid|__builtin_usermode|__builtin_username
+builtin   arg[0-9]+|args|ctx|kstack|nsecs|pid|sarg[0-9]|tid|ustack|__builtin_cgroup|__builtin_comm|__builtin_cpid|__builtin_cpu|__builtin_curtask|__builtin_elapsed|__builtin_func|__builtin_gid|__builtin_jiffies|__builtin_ncpus|__builtin_probe|__builtin_rand|__builtin_retval|__builtin_uid|__builtin_usermode|__builtin_username
 
 int_type        bool|(u)?int(8|16|32|64)
 builtin_type    void|(u)?(min|max|sum|avg|stats)_t|count_t|probe_t|username_t|lhist_t|hist_t|usym_t|ksym_t|timestamp|macaddr_t|cgroup_path_t|kstack_t|ustack_t|tseries_t
@@ -70,6 +70,7 @@ oct_esc  [0-7]{1,3}
 %x AFTER_DIV
 %x AFTER_COLON
 %x STRUCT_AFTER_COLON
+%x AFTER_AT
 
 %%
 
@@ -198,7 +199,10 @@ oct_esc  [0-7]{1,3}
                             return Parser::make_BOOL(false, driver.loc);
                           }
   {path}                  { return Parser::make_PATH(yytext, driver.loc); }
-  {map}                   { return Parser::make_MAP(yytext, driver.loc); }
+  "@"                     {
+                            yy_push_state(AFTER_AT, yyscanner);
+                            return Parser::make_AT(driver.loc); 
+                          }
   {var}                   { return Parser::make_VAR(yytext, driver.loc); }
   ":"                     {
                             /* For handling "struct x" in "fn name(...): struct x {  }" as a type rather than
@@ -398,6 +402,16 @@ oct_esc  [0-7]{1,3}
                         }
   .                     driver.buffer += yytext[0];
   \n                    driver.buffer += '\n'; driver.loc.advance_lines(1);
+}
+
+<AFTER_AT>{
+  {hspace}+             { }
+  {vspace}+             { driver.loc.advance_lines(yyleng); }
+  {path_char}*\/{path_char}* { 
+                          yy_pop_state(yyscanner);
+                          return Parser::make_PATH(yytext, driver.loc);
+                        }
+  .                     { driver.loc.rewind_columns(); unput(yytext[0]); yy_pop_state(yyscanner); }
 }
 %%
 
