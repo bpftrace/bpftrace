@@ -54,9 +54,12 @@ void AttachPointChecker::visit(AttachPoint &ap)
     if (ap.target.empty())
       ap.addError() << ap.provider << " should have a target";
     // --unsafe allows attaching to arbitrary files, and 0 is a valid offset
-    if (ap.func.empty() && ap.address == 0 && bpftrace_.safe_mode_)
-      ap.addError() << ap.provider
-                    << " should be attached to a function and/or address";
+    if (ap.func.empty() && ap.address == 0 && bpftrace_.safe_mode_ &&
+        (ap.source_file.empty() || ap.line_num == 0))
+      ap.addError() << ap.provider << " should be attached to a function"
+                    << (bpftrace_.get_dwarf(ap)
+                            ? ", address, or source file and line (using DWARF)"
+                            : " and/or address");
     if (!ap.lang.empty() && !is_supported_lang(ap.lang))
       ap.addError() << "unsupported language type: " << ap.lang;
 
@@ -525,11 +528,15 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
   std::string argument;
 
   for (size_t idx = 0; idx < raw.size(); ++idx) {
-    if (raw[idx] == ':' && !in_quotes) {
+    if ((raw[idx] == ':' || raw[idx] == '@') && !in_quotes) {
       parts_.emplace_back(std::move(argument));
       // The standard says an std::string in moved-from state is in
       // valid but unspecified state, so clear() to be safe
       argument.clear();
+
+      if (raw[idx] == '@') {
+        parts_.emplace_back("@");
+      }
     } else if (raw[idx] == '"')
       in_quotes = !in_quotes;
     // Handle escaped characters in a string
@@ -704,7 +711,7 @@ AttachPointParser::State AttachPointParser::kretprobe_parser()
 }
 
 AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
-                                                          bool allow_abs_addr)
+                                                          bool allow_src_loc)
 {
   const auto pid = bpftrace_.pid();
   if (pid.has_value() &&
@@ -717,7 +724,10 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     parts_[1] = target ? util::path_for_pid_mountns(*pid, *target) : "";
   }
 
-  if (parts_.size() != 3 && parts_.size() != 4) {
+  // uprobe attached by source code location (@source_file:line[:col])
+  const bool source_location = parts_.size() > 2 && parts_[2] == "@";
+
+  if (!source_location && parts_.size() != 3 && parts_.size() != 4) {
     if (ap_->ignore_invalid)
       return SKIP;
 
@@ -744,6 +754,63 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
 
   if (ap_->target.empty()) {
     ap_->target = parts_[1];
+  }
+
+  // Handle uprobe:libc@malloc.c:3538 case
+  if (source_location) {
+    if (!allow_src_loc) {
+      errs_ << "Source code location not allowed" << std::endl;
+      return INVALID;
+    }
+
+    if (util::has_wildcard(ap_->target)) {
+      errs_ << "Cannot use wildcards with source code location" << std::endl;
+      return INVALID;
+    }
+
+    if ((parts_.size() != 5 && parts_.size() != 6) || parts_[3].empty() ||
+        parts_[4].empty()) {
+      errs_ << "Invalid uprobe arguments, "
+            << "expected format: uprobe:TARGET@FILE:LINE[:COL]" << std::endl;
+      return INVALID;
+    }
+
+    ap_->source_file = parts_[3];
+
+    auto line = util::to_uint(parts_[4]);
+    if (!line) {
+      errs_ << "Invalid line number: " << line.takeError() << std::endl;
+      return INVALID;
+    }
+    ap_->line_num = *line;
+
+    if (parts_.size() == 6) {
+      auto col = util::to_uint(parts_[5]);
+      if (!col) {
+        errs_ << "Invalid column number: " << col.takeError() << std::endl;
+        return INVALID;
+      }
+      ap_->col_num = *col;
+    }
+
+    Dwarf *dwarf = bpftrace_.get_dwarf(ap_->target);
+    if (dwarf) {
+      auto address = dwarf->line_to_addr(ap_->source_file,
+                                         ap_->line_num,
+                                         ap_->col_num);
+      if (!address) {
+        errs_ << address.takeError() << std::endl;
+        return INVALID;
+      }
+      ap_->address = *address;
+      return OK;
+    }
+
+    errs_ << (ap_->target.empty()
+                  ? "Unspecified target binary"
+                  : "No DWARF debug info found for '" + ap_->target + "'")
+          << ", cannot attach by source code location." << std::endl;
+    return INVALID;
   }
 
   const std::string &func = parts_.back();
@@ -776,20 +843,17 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
   }
   // Default case (eg uprobe:[addr][func])
   else {
-    if (allow_abs_addr) {
-      auto res = util::to_uint(func);
-      if (res) {
-        if (util::has_wildcard(ap_->target)) {
-          errs_ << "Cannot use wildcards with absolute address" << std::endl;
-          return INVALID;
-        }
-        ap_->address = *res;
-      } else {
-        ap_->address = 0;
-        ap_->func = func;
+    auto res = util::to_uint(func);
+    if (res) {
+      if (util::has_wildcard(ap_->target)) {
+        errs_ << "Cannot use wildcards with absolute address" << std::endl;
+        return INVALID;
       }
-    } else
+      ap_->address = *res;
+    } else {
+      ap_->address = 0;
       ap_->func = func;
+    }
   }
 
   return OK;
@@ -797,7 +861,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
 
 AttachPointParser::State AttachPointParser::uretprobe_parser()
 {
-  return uprobe_parser(false);
+  return uprobe_parser(false, false);
 }
 
 AttachPointParser::State AttachPointParser::usdt_parser()

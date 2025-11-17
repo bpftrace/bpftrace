@@ -60,6 +60,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   LPAREN     "("
   RPAREN     ")"
   QUES       "?"
+  AT         "@"
   ENDPRED    "end predicate"
   COMMA      ","
   PARAMCOUNT "$#"
@@ -120,7 +121,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> STRUCT_DEFN "struct definition"
 %token <std::string> ENUM "enum"
 %token <std::string> STRING "string"
-%token <std::string> MAP "map"
+%token <std::string> AT_IDENT "map"
 %token <std::string> VAR "variable"
 %token <std::string> PARAM "positional parameter"
 %token <std::string> UNSIGNED_INT "integer"
@@ -144,7 +145,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <bool> BOOL "bool"
 
 %type <ast::Operator> unary_op compound_op
-%type <std::string> attach_point_def attach_point_elem ident keyword external_name
+%type <std::string> attach_point_def attach_point_elem source_path_prefix source_path source_path_def source_path_elem source_path_suffix ident keyword external_name
 %type <std::vector<std::string>> struct_field
 
 %type <ast::ArrayAccess *> array_access_expr
@@ -469,6 +470,7 @@ attach_point_elem:
         |       STRING       { $$ = "\"" + std::regex_replace($1, std::regex("\""), "\\\"") + "\""; }
         |       UNSIGNED_INT { $$ = $1; }
         |       PATH         { $$ = $1; }
+        |       source_path  { $$ = $1; }
         |       COLON        { $$ = ":"; }
         |       DOT          { $$ = "."; }
         |       PLUS         { $$ = "+"; }
@@ -483,6 +485,39 @@ attach_point_elem:
                   // a hack but there doesn't look to be any other way.
                   $$ = "$" + std::to_string($1->n);
                 }
+                ;
+
+source_path_prefix:
+                AT DIV       { $$ = "@/"; }
+        |       AT           { $$ = "@"; }
+        |       AT_IDENT DIV { $$ = $1 + "/"; }
+        |       AT_IDENT     { $$ = $1; }
+                ;
+
+source_path:
+                source_path_prefix source_path_def source_path_suffix %prec LOW { $$ = $1 + $2 + $3; }
+                ;
+
+source_path_def:
+                source_path_elem                           { $$ = $1; }
+        |       source_path_def DIV source_path_elem       { $$ = $1 + "/" + $3; }
+        |       source_path_def source_path_elem %prec LOW { $$ = $1 + $2; }
+                ;
+
+source_path_elem:
+                ident        { $$ = $1; }
+        |       STRING       { $$ = "\"" + std::regex_replace($1, std::regex("\""), "\\\"") + "\""; }
+        |       UNSIGNED_INT { $$ = $1; }
+        |       DOT          { $$ = "."; }
+        |       param
+                {
+                        $$ = "$" + std::to_string($1->n);
+                }
+                ;
+
+source_path_suffix:
+                PATH         { $$ = $1; }
+        |       COLON        { $$ = ":"; }
                 ;
 
 pred:
@@ -617,7 +652,8 @@ assign_stmt:
         ;
 
 map_decl_stmt:
-                LET MAP ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, $2, $4, $6->value); }
+                LET AT_IDENT ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, $2, $4, $6->value); }
+        |       LET AT ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, "@", $4, $6->value); }        
         ;
 
 var_decl_stmt:
@@ -927,7 +963,8 @@ call_expr:
                 ;
 
 map:
-                MAP { $$ = driver.ctx.make_node<ast::Map>(@$, $1); }
+                AT_IDENT { $$ = driver.ctx.make_node<ast::Map>(@$, $1); }
+        |       AT       { $$ = driver.ctx.make_node<ast::Map>(@$, "@"); }
                 ;
 
 map_expr:
