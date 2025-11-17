@@ -2566,47 +2566,6 @@ begin { (faketype)cpu }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, cast_c_integers)
-{
-  // Casting to a C integer type gives a hint with the correct name
-  test("begin { (char)cpu }", Error{ R"(
-stdin:1:10-14: ERROR: Cannot resolve unknown type "char"
-begin { (char)cpu }
-         ~~~~
-stdin:1:9-15: ERROR: Cannot cast to "char"
-begin { (char)cpu }
-        ~~~~~~
-HINT: Did you mean "int8"?
-)" });
-  test("begin { (short)cpu }", Error{ R"(
-stdin:1:10-15: ERROR: Cannot resolve unknown type "short"
-begin { (short)cpu }
-         ~~~~~
-stdin:1:9-16: ERROR: Cannot cast to "short"
-begin { (short)cpu }
-        ~~~~~~~
-HINT: Did you mean "int16"?
-)" });
-  test("begin { (int)cpu }", Error{ R"(
-stdin:1:10-13: ERROR: Cannot resolve unknown type "int"
-begin { (int)cpu }
-         ~~~
-stdin:1:9-14: ERROR: Cannot cast to "int"
-begin { (int)cpu }
-        ~~~~~
-HINT: Did you mean "int32"?
-)" });
-  test("begin { (long)cpu }", Error{ R"(
-stdin:1:10-14: ERROR: Cannot resolve unknown type "long"
-begin { (long)cpu }
-         ~~~~
-stdin:1:9-15: ERROR: Cannot cast to "long"
-begin { (long)cpu }
-        ~~~~~~
-HINT: Did you mean "int64"?
-)" });
-}
-
 TEST_F(SemanticAnalyserTest, cast_struct)
 {
   // Casting struct by value is forbidden

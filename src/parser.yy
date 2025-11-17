@@ -825,6 +825,8 @@ offsetof_expr:
 
 typeof_expr:
                 TYPEOF "(" type ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, $3); }
+        |       TYPEOF "(" IDENT "*" ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, ast::ident_to_record($3, 1)); }
+        |       TYPEOF "(" IDENT "*" "*" ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, ast::ident_to_record($3, 2)); }
         |       TYPEOF "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, $3); }
                 ;
 
