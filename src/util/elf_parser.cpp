@@ -39,25 +39,30 @@ struct PairHash {
   }
 };
 
-static Result<std::vector<struct elf_segment>> parse_elf_segments(
-    Elf* elf,
-    const std::string& path)
+// ELFParser implementation
+
+ELFParser::ELFParser(std::string path, Elf* elf)
+    : path_(std::move(path)), elf_(elf)
+{
+}
+
+Result<std::vector<struct elf_segment>> ELFParser::parse_segments()
 {
   std::vector<struct elf_segment> segs;
   GElf_Phdr phdr;
   size_t n;
 
-  if (elf_getphdrnum(elf, &n)) {
+  if (elf_getphdrnum(elf_, &n)) {
     return make_error<ELFParseError>(
-        "usdt: failed to process ELF program segments for '"s + path +
+        "usdt: failed to process ELF program segments for '"s + path_ +
         "': " + strerror(-errno));
   }
 
   for (size_t i = 0; i < n; i++) {
-    if (!gelf_getphdr(elf, i, &phdr)) {
+    if (!gelf_getphdr(elf_, i, &phdr)) {
       using namespace std::string_literals;
       return make_error<ELFParseError>(
-          "usdt: failed to process ELF program segments for '"s + path +
+          "usdt: failed to process ELF program segments for '"s + path_ +
           "': " + strerror(-errno));
     }
 
@@ -70,7 +75,7 @@ static Result<std::vector<struct elf_segment>> parse_elf_segments(
   }
 
   if (segs.empty()) {
-    LOG(WARNING) << "failed to find PT_LOAD program headers in '" << path;
+    LOG(WARNING) << "failed to find PT_LOAD program headers in '" << path_;
   }
 
   std::ranges::sort(segs, [](const elf_segment& a, const elf_segment& b) {
@@ -79,31 +84,29 @@ static Result<std::vector<struct elf_segment>> parse_elf_segments(
   return segs;
 }
 
-static Result<std::pair<Elf_Scn*, GElf_Shdr>> find_elf_section_by_name(
-    const std::string& path,
-    Elf* elf,
-    const std::string_view sec_name)
+Result<std::pair<Elf_Scn*, GElf_Shdr>> ELFParser::find_section_by_name(
+    std::string_view sec_name)
 {
   Elf_Scn* sec = nullptr;
   size_t shstrndx;
   GElf_Shdr shdr;
 
   // get elf string table index
-  if (elf_getshdrstrndx(elf, &shstrndx)) {
+  if (elf_getshdrstrndx(elf_, &shstrndx)) {
     return make_error<ELFParseError>("failed to get string table index from " +
-                                     path + ": " + elf_errmsg(-1));
+                                     path_ + ": " + elf_errmsg(-1));
   }
 
-  /* check if ELF is corrupted and avoid calling elf_strptr if yes */
-  if (!elf_rawdata(elf_getscn(elf, shstrndx), nullptr))
-    return make_error<ELFParseError>("ELF is corrupted : " + path);
+  // check if ELF is corrupted and avoid calling elf_strptr if yes
+  if (!elf_rawdata(elf_getscn(elf_, shstrndx), nullptr))
+    return make_error<ELFParseError>("ELF is corrupted : " + path_);
 
-  while ((sec = elf_nextscn(elf, sec)) != nullptr) {
+  while ((sec = elf_nextscn(elf_, sec)) != nullptr) {
     if (!gelf_getshdr(sec, &shdr))
       return make_error<ELFParseError>("failed to get ELF section header" +
-                                       path);
+                                       path_);
 
-    auto* name = elf_strptr(elf, shstrndx, shdr.sh_name);
+    auto* name = elf_strptr(elf_, shstrndx, shdr.sh_name);
     if (name && sec_name == name) {
       return std::make_pair(sec, shdr);
     }
@@ -111,7 +114,7 @@ static Result<std::pair<Elf_Scn*, GElf_Shdr>> find_elf_section_by_name(
 
   return make_error<ELFParseError>("usdt: no notes section (" +
                                    std::string(sec_name) + ") found in " +
-                                   path);
+                                   path_);
 }
 
 static Result<struct usdt_probe_entry> parse_usdt_probe_entry(
@@ -125,7 +128,7 @@ static Result<struct usdt_probe_entry> parse_usdt_probe_entry(
   long addrs[3];
   size_t len;
 
-  /* sanity check USDT note name and type first */
+  // sanity check USDT note name and type first
   if (nhdr->n_namesz != USDT_NOTE_NAME.size() + 1 || // +1 for null terminator
       std::string_view(data + name_off, USDT_NOTE_NAME.size()) !=
           USDT_NOTE_NAME)
@@ -133,26 +136,26 @@ static Result<struct usdt_probe_entry> parse_usdt_probe_entry(
   if (nhdr->n_type != USDT_NOTE_TYPE)
     return make_error<ELFParseError>("usdt: invalid USDT note type");
 
-  /* sanity check USDT note contents ("description" in ELF terminology) */
+  // sanity check USDT note contents ("description" in ELF terminology)
   len = nhdr->n_descsz;
   data = data + desc_off;
 
-  /* +3 is the very minimum required to store three empty strings */
+  // +3 is the very minimum required to store three empty strings
   if (len < sizeof(addrs) + 3)
     return make_error<ELFParseError>("usdt: invalid USDT note contents");
 
-  /* get location, base, and semaphore addrs */
+  // get location, base, and semaphore addrs
   memcpy(&addrs, data, sizeof(addrs));
 
-  /* parse string fields: provider, name, args */
+  // parse string fields: provider, name, args
   provider = data + sizeof(addrs);
 
   name = static_cast<const char*>(
       memchr(provider, '\0', data + len - provider));
-  if (!name) /* non-zero-terminated provider */
+  if (!name) // non-zero-terminated provider
     return make_error<ELFParseError>("usdt: invalid USDT note contents");
   name++;
-  if (name >= data + len || *name == '\0') /* missing or empty name */
+  if (name >= data + len || *name == '\0') // missing or empty name
     return make_error<ELFParseError>("usdt: invalid USDT note contents");
 
   struct usdt_probe_entry note(elf_path, provider, name, addrs[2]);
@@ -222,9 +225,10 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
   GElf_Nhdr nhdr;
   Elf_Data* data;
 
-  auto notes_scn_res = find_elf_section_by_name(std::string(elf_path),
-                                                elf,
-                                                USDT_NOTE_SEC);
+  // Create ELF parser to avoid passing elf and path parameters around
+  ELFParser parser(elf_path, elf);
+
+  auto notes_scn_res = parser.find_section_by_name(USDT_NOTE_SEC);
   if (!notes_scn_res) {
     return notes_scn_res.takeError();
   }
@@ -236,7 +240,7 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
                                      std::string(elf_path) + "'");
   }
 
-  auto segs_res = parse_elf_segments(elf, std::string(elf_path));
+  auto segs_res = parser.parse_segments();
   if (!segs_res) {
     return segs_res.takeError();
   }
@@ -255,12 +259,10 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
       continue;
     }
     auto note = *note_res;
-    note.path = elf_path;
     if (note.sema_addr) {
-      /* for ELF binaries (both executables and shared libraries), we are
-       * given virtual address (absolute for executables, relative for
-       * libraries) which should match address range of [seg_start, seg_end)
-       */
+      // for ELF binaries (both executables and shared libraries), we are
+      // given virtual address (absolute for executables, relative for
+      // libraries) which should match address range of [seg_start, seg_end)
       auto seg = std::ranges::find_if(segs, [note](const elf_segment& seg) {
         return seg.start <= note.sema_addr && note.sema_addr < seg.end;
       });

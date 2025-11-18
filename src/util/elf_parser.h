@@ -68,6 +68,35 @@ struct usdt_probe_entry {
 
 using usdt_probe_list = std::vector<usdt_probe_entry>;
 
+// ELFParser encapsulates low-level ELF parsing operations.
+// It stores the ELF descriptor and file path as members, eliminating
+// the need to pass them as parameters to parsing functions.
+class ELFParser {
+public:
+  ELFParser(std::string path, Elf* elf);
+
+  // Accessor methods
+  const std::string& path() const
+  {
+    return path_;
+  }
+  Elf* elf() const
+  {
+    return elf_;
+  }
+
+  // Parse ELF program headers to extract PT_LOAD segments
+  Result<std::vector<struct elf_segment>> parse_segments();
+
+  // Find ELF section by name
+  Result<std::pair<Elf_Scn*, GElf_Shdr>> find_section_by_name(
+      std::string_view sec_name);
+
+private:
+  std::string path_;
+  Elf* elf_;
+};
+
 class USDTProbeEnumerator {
 public:
   USDTProbeEnumerator(std::string path, int fd, Elf* elf)
