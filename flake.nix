@@ -1,4 +1,6 @@
 {
+  inputs.self.submodules = true;
+
   description = "High-level tracing language for Linux";
 
   inputs = {
