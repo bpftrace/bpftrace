@@ -30,8 +30,12 @@ $ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 
 ### Build bpftrace
 
+When invoking `nix build`, flakes reconstruct the source tree from Git metadata
+but skip submodules, so append `.?submodules=1` (as below) to ensure libbpf is
+present.
+
 ```
-$ nix build
+$ nix build .?submodules=1#
 $ sudo ./result/bin/bpftrace -e 'BEGIN { print("hello world!") }'
 Attached 1 probe
 hello world!
@@ -41,7 +45,7 @@ hello world!
 ### Build bpftrace with a different LLVM version
 
 ```
-$ nix build .#bpftrace-llvm13
+$ nix build .?submodules=1#bpftrace-llvm13
 $ sudo ./result/bin/bpftrace --info 2>&1 | grep LLVM
   LLVM: 13.0.1
 ```
@@ -49,7 +53,7 @@ $ sudo ./result/bin/bpftrace --info 2>&1 | grep LLVM
 ### Build bpftrace as a statically linked binary
 
 ```
-$ nix build .#appimage
+$ nix build .?submodules=1#appimage
 $ ldd ./result
         not a dynamic executable
 $ sudo ./result -e 'BEGIN { print("static!"); exit() }'
