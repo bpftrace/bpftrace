@@ -695,8 +695,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
       (parts_.size() == 2 ||
        (parts_.size() == 3 && is_supported_lang(parts_[1])))) {
     // For PID, the target may be skipped
-    if (parts_.size() == 2)
-      parts_.insert(parts_.begin() + 1, "");
+    parts_.insert(parts_.begin() + 1, "");
 
     auto target = util::get_pid_exe(*pid);
     parts_[1] = target ? util::path_for_pid_mountns(*pid, *target) : "";
