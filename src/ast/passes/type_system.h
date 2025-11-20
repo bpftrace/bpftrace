@@ -4,6 +4,7 @@
 
 #include "ast/ast.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/clang_build.h"
 #include "btf/btf.h"
 
 namespace bpftrace::ast {
@@ -19,8 +20,10 @@ namespace bpftrace::ast {
 class TypeMetadata : public ast::State<"type-metadata"> {
 public:
   btf::Types global;
+  std::set<std::string> parsed_modules;
 };
 
+Result<OK> build_types(ASTContext &ast, BitcodeModules &bm, TypeMetadata& type_metadata);
 Pass CreateTypeSystemPass();
 Pass CreateDumpTypesPass(std::ostream &out);
 

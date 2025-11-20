@@ -140,6 +140,7 @@ macro comm() {
 }
 
 macro comm($pid) {
+    import "stdlib/task/task.bpf.c";
     if comptime !is_integer($pid) {
         fail("Only integer supported for comm()'s pid");
     }
@@ -232,17 +233,20 @@ macro curtask() {
 // }
 // ```
 macro delete(@map, $key) {
+  import "stdlib/map/map.bpf.c";
   check_key(@map, $key, "delete() with two arguments");
   __delete((void *)&@map, (void *)&$key) == 0
 }
 
 macro delete(@map, key) {
+  import "stdlib/map/map.bpf.c";
   check_key(@map, key, "delete() with two arguments");
   let $key: typeof(@map) = key;
   __delete((void *)&@map, (void *)&$key) == 0
 }
 
 macro delete(@map) {
+  import "stdlib/map/map.bpf.c";
   if comptime !is_scalar(@map) {
     fail("call to delete() with a single argument expects a map without explicit keys (scalar map)");
     false
@@ -370,6 +374,7 @@ macro gid() {
 // }
 // ```
 macro has_key(@map, key) {
+  import "stdlib/map/map.bpf.c";
   check_key(@map, key, "has_key()");
   let $key: typeof(@map) = key;
   __has_key((void *)&@map, (void *)&$key)
@@ -514,6 +519,7 @@ macro jiffies() {
 // For kstack/ustack, return the depth (measured in # of frames) of the call stack.
 
 macro len(@map) {
+  import "stdlib/map/map.bpf.c";
   if (comptime is_scalar(@map)) {
     fail("call to len() expects a map with explicit keys (non-scalar map)")
   } else {
@@ -556,6 +562,7 @@ macro len(e) {
 // than the corresponding byte in right.
 //
 macro memcmp($left, $right, count) {
+  import "stdlib/system/system.bpf.c";
   __memcmp((void *)&$left, (void *)&$right, count)
 }
 
@@ -625,6 +632,7 @@ macro ncpus() {
 //
 // This utilizes the BPF helper `numa_node_id`
 macro numaid() {
+  import "stdlib/system/system.bpf.c";
   (uint64)__get_numa_node_id()
 }
 
@@ -690,6 +698,7 @@ macro numaid() {
 // Error attaching probe: 'kprobe:vfs_read'
 // ```
 macro override(expr) {
+  import "stdlib/system/system.bpf.c";
   if comptime (probetype != "kprobe") {
     fail("override() can only be used inside kprobes");
   } else if comptime (__builtin_safe_mode) {
@@ -1262,6 +1271,7 @@ macro signal_thread(expr) {
 // }
 // ```
 macro uaddr(sym) {
+  import "stdlib/task/vma.bpf.c";
   let $addr = (uint64)__builtin_uaddr(sym);
 
   // There are three types of ELF that use uprobe: PIE, EXEC, and dynamic

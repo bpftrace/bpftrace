@@ -5,6 +5,7 @@
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
+#include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/control_flow_analyser.h"
@@ -12,6 +13,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "bpfmap.h"
@@ -55,13 +57,17 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
 {
   ast::ASTContext ast("stdin", str);
 
-  ast::TypeMetadata no_types; // No external types defined.
+  ast::TypeMetadata no_types;
+  ast::BitcodeModules no_bitcode_modules;
+  ast::Imports no_imports;
 
   // N.B. Don't use tracepoint format parser here.
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
                 .put(no_types)
+                .put(no_imports)
+                .put(no_bitcode_modules)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateCheckAttachpointsPass())
@@ -73,8 +79,8 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateNamedParamsPass())
-                .add(ast::CreateSemanticPass())
                 .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateSemanticPass())
                 .add(ast::CreateCompilePass())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());

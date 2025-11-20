@@ -1,4 +1,5 @@
 macro __signal(expr, is_tid) {
+  import "stdlib/process/process.bpf.c";
   let $sig: int32 = 0;
 
   if comptime (

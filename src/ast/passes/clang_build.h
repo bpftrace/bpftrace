@@ -5,6 +5,9 @@
 
 #include "ast/location.h"
 #include "ast/pass_manager.h"
+#include "ast/passes/codegen_llvm.h"
+#include "ast/passes/resolve_imports.h"
+#include "bpftrace.h"
 
 namespace bpftrace::ast {
 
@@ -14,8 +17,10 @@ public:
     std::unique_ptr<llvm::Module> module;
     std::string object;
     Location loc;
+    std::string name;
   };
   std::vector<Result> modules;
+  std::set<std::string_view> built_imports;
 };
 
 class ClangBuildError : public ErrorInfo<ClangBuildError> {
@@ -28,6 +33,7 @@ private:
   std::string msg_;
 };
 
+void build_imports(BPFtrace &bpftrace, CompileContext &ctx, ast::Imports &imports, BitcodeModules& bm);
 ast::Pass CreateClangBuildPass();
 
 } // namespace bpftrace::ast

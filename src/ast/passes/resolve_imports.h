@@ -78,7 +78,7 @@ public:
   std::map<std::string, ScriptObject> scripts;
 
   // Public import call.
-  Result<OK> import_any(Node &node,
+  Result<bool> import_any(Node &node,
                         const std::string &name,
                         const std::vector<std::filesystem::path> &paths = {});
 
@@ -102,6 +102,6 @@ private:
 };
 
 // This pass resolves imports from the AST itself.
-Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths = {});
+Pass CreateResolveRootImportsPass(std::vector<std::string> &&import_paths = {});
 
 } // namespace bpftrace::ast

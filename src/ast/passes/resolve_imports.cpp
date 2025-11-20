@@ -14,14 +14,14 @@ namespace bpftrace::ast {
 
 using bpftrace::stdlib::Stdlib;
 
-class ResolveImports : public Visitor<ResolveImports> {
+class ResolveRootImports : public Visitor<ResolveRootImports> {
 public:
-  ResolveImports(Imports &imports,
-                 const std::vector<std::filesystem::path> &paths = {})
+  ResolveRootImports(Imports &imports,
+                     const std::vector<std::filesystem::path> &paths = {})
       : imports_(imports), paths_(paths) {};
 
-  using Visitor<ResolveImports>::visit;
-  void visit(Import &imp);
+  using Visitor<ResolveRootImports>::visit;
+  void visit(Program &program);
 
 private:
   Imports &imports_;
@@ -83,7 +83,7 @@ static Result<OK> import_script(Node &node,
   }
 
   // Recursively visit the parsed tree.
-  ResolveImports resolver(imports, paths);
+  ResolveRootImports resolver(imports, paths);
   resolver.visit(ast.root);
 
   return OK();
@@ -233,15 +233,16 @@ Result<OK> Imports::import_any(Node &node,
   return OK();
 }
 
-Result<OK> Imports::import_any(Node &node,
-                               const std::string &name,
-                               const std::vector<std::filesystem::path> &paths)
+Result<bool> Imports::import_any(
+    Node &node,
+    const std::string &name,
+    const std::vector<std::filesystem::path> &paths)
 {
   // Prevent direct re-importation of the same top-level name. This is used
   // because the name may match against directories or internal packages which
   // contain different files.
   if (packages_.contains(name)) {
-    return OK();
+    return false;
   }
   packages_.emplace(name);
 
@@ -265,7 +266,12 @@ Result<OK> Imports::import_any(Node &node,
     }
 
     // Attempt the import.
-    return import_any(node, name, path, paths, false, true);
+    auto ok = import_any(node, name, path, paths, false, true);
+    if (!ok) {
+      return ok.takeError();
+    } else {
+      return true;
+    }
   }
 
   // See if this matches a set of builtins. Note that we do the "directory"
@@ -275,7 +281,12 @@ Result<OK> Imports::import_any(Node &node,
   for (const auto &[internal_path, s] : Stdlib::files) {
     auto path = std::filesystem::path(internal_path);
     if (path.string() == name) {
-      return import_any(node, name, s, paths, false);
+      auto ok = import_any(node, name, s, paths, false);
+      if (!ok) {
+        return ok.takeError();
+      } else {
+        return true;
+      }
     } else if (path.parent_path().string() == name) {
       auto ok = import_any(node, path.string(), s, paths, true);
       if (!ok) {
@@ -290,7 +301,7 @@ Result<OK> Imports::import_any(Node &node,
     }
   }
   if (found) {
-    return OK();
+    return true;
   }
 
   // Unable to find a suitable import.
@@ -302,23 +313,24 @@ Result<OK> Imports::import_any(Node &node,
   if (!similar.empty()) {
     err.addHint() << "similar to builtins: " << util::str_join(similar, ",");
   }
-  return OK();
+  return false;
 }
 
-void ResolveImports::visit(Import &imp)
+void ResolveRootImports::visit(Program &program)
 {
-  auto ok = imports_.import_any(imp, imp.name, paths_);
-  if (!ok) {
-    imp.addError() << "import error: " << ok.takeError();
+  for (auto *imp : program.imports) {
+    auto ok = imports_.import_any(*imp, imp->name, paths_);
+    if (!ok) {
+      imp->addError() << "import error: " << ok.takeError();
+    }
   }
 }
 
-Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths)
+Pass CreateResolveRootImportsPass(std::vector<std::string> &&import_paths)
 {
-  return Pass::create("ResolveImports",
+  return Pass::create("ResolveRootImports",
                       [import_paths](ASTContext &ast) -> Result<Imports> {
                         Imports imports;
-
                         // Add the source location as a primary path.
                         const auto &filename = ast.source()->filename;
                         std::vector<std::filesystem::path> updated_paths;
@@ -330,20 +342,20 @@ Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths)
                           updated_paths.emplace_back(path);
                         }
 
-                        // Resolve all imports.
-                        ResolveImports analyser(imports, updated_paths);
+                        ResolveRootImports analyser(imports, updated_paths);
                         analyser.visit(ast.root);
 
-                        // Ensure that the standard library is imported. The
-                        // implicit import is only permitted from the embedded
-                        // standard library.  Overriding this is possible, but
-                        // it must be explicitly imported.
+                        // Ensure that the essential part of the standard
+                        // library is imported. All other parts of the standard
+                        // library are conditionally imported based on inlined
+                        // import statements. The implicit import is only
+                        // permitted from the embedded standard library.
+                        // Overriding this is possible, but it must be
+                        // explicitly imported.
                         auto ok = imports.import_any(*ast.root, "stdlib");
                         if (!ok) {
                           return ok.takeError();
                         }
-
-                        // Return all calculated imports.
                         return imports;
                       });
 }
