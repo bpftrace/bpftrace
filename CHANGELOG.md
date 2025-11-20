@@ -65,6 +65,8 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
+- Fix language part being overwritten in uprobe attachpoint parser
+  - [#4856](https://github.com/bpftrace/bpftrace/pull/4856)
 - output: prevent crash when printing overflow-only lhist
   - [#4801](https://github.com/bpftrace/bpftrace/pull/4801)
 - join(): Fix wrong index of GEP that was causing truncation

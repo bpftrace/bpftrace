@@ -54,6 +54,33 @@ void test_error(const std::string& input, const std::string& error)
   test(input, false, error);
 }
 
+void test_uprobe_lang(const std::string& input, const std::string& lang = "")
+{
+  auto mock_bpftrace = get_mock_bpftrace();
+  BPFtrace& bpftrace = *mock_bpftrace;
+
+  // Valid PID to ensure util function proceeds.
+  bpftrace.procmon_ = std::make_unique<MockProcMon>(getpid());
+  ast::ASTContext ast("stdin", input);
+
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass(false))
+                .run();
+
+  ASSERT_TRUE(ok && ast.diagnostics().ok());
+
+  auto* ap = ast.root->probes.at(0)->attach_points.at(0);
+
+  if (!lang.empty()) {
+    ASSERT_EQ(ap->lang, lang);
+  } else {
+    ASSERT_TRUE(ap->lang.empty());
+  }
+}
+
 TEST(attachpoint_parser, iter)
 {
   test("iter:task { 1 }");
@@ -69,6 +96,12 @@ TEST(attachpoint_parser, iter)
   test("iter:task* { 1 }", true);
   test("iter:task:* { 1 }", true);
   test("iter:task, iter:task_file { 1 }", true);
+}
+
+TEST(attachpoint_parser, uprobe_lang)
+{
+  test_uprobe_lang("uprobe:main { 1 }");
+  test_uprobe_lang("uprobe:cpp:main { 1 }", "cpp");
 }
 
 } // namespace attachpoint_parser
