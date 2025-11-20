@@ -245,7 +245,11 @@ public:
     visitImpl(subprog.return_type);
     return visitImpl(subprog.block);
   }
-  R visit([[maybe_unused]] Import &imp)
+  R visit([[maybe_unused]] RootImport &imp)
+  {
+    return default_value();
+  }
+  R visit([[maybe_unused]] StatementImport &imp)
   {
     return default_value();
   }

@@ -58,7 +58,8 @@ public:
   void visit(Probe &probe);
   void visit(SubprogArg &arg);
   void visit(Subprog &subprog);
-  void visit(Import &imp);
+  void visit(RootImport &imp);
+  void visit(StatementImport &imp);
   void visit(Program &program);
 
 private:

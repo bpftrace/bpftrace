@@ -15,6 +15,7 @@ namespace {
 
 const auto MAP_DECL = "map declarations";
 const auto IMPORTS = "imports";
+const auto IMPORT_STATEMENTS = "import statements";
 const auto TSERIES = "tseries";
 const auto ADDR = "address-of operator (&)";
 const auto TYPEINFO = "typeinfo";
@@ -43,7 +44,8 @@ public:
   void visit(MapDeclStatement &decl);
   void visit(MapAddr &map_addr);
   void visit(VariableAddr &var_addr);
-  void visit(Import &imp);
+  void visit(RootImport &imp);
+  void visit(StatementImport &imp);
   void visit(Call &call);
   void visit(Typeinfo &typeinfo);
 
@@ -75,7 +77,24 @@ void UnstableFeature::visit(MapDeclStatement &decl)
   }
 }
 
-void UnstableFeature::visit(Import &imp)
+void UnstableFeature::visit(StatementImport &imp)
+{
+  if (bpftrace_.config_->unstable_import_statement == ConfigUnstable::error) {
+    imp.addError()
+        << "Import statements that are not at the top level are primarily for "
+           "the standard library. If this is functionality you need, please "
+           "file an issue to explain why.";
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_import_statement == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_IMPORT_STATEMENT)) {
+    LOG(WARNING) << get_warning(IMPORT_STATEMENTS, UNSTABLE_IMPORT_STATEMENT);
+    warned_features.insert(UNSTABLE_IMPORT_STATEMENT);
+  }
+}
+
+void UnstableFeature::visit(RootImport &imp)
 {
   if (bpftrace_.config_->unstable_import == ConfigUnstable::error) {
     imp.addError() << get_error(IMPORTS, UNSTABLE_IMPORT);

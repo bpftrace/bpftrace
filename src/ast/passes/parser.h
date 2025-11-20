@@ -35,7 +35,7 @@ inline std::vector<Pass> AllParsePasses(
   std::vector<Pass> passes;
   passes.emplace_back(CreateParsePass(debug));
   passes.emplace_back(CreateConfigPass());
-  passes.emplace_back(CreateResolveImportsPass(std::move(import_paths)));
+  passes.emplace_back(CreateResolveRootImportsPass(std::move(import_paths)));
   // N.B. We expand the AST with all externally imported scripts, then check
   // against unstable features, *then* import all internal scripts. This means
   // that internal scripts are except from the unstable feature warning.
@@ -59,6 +59,9 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateMapSugarPass());
   passes.emplace_back(CreateNamedParamsPass());
   passes.emplace_back(CreatePidFilterPass());
+  // This comes after the MacroExpansion pass to conditionally
+  // import standard library C files
+  passes.emplace_back(CreateResolveStatementImportsPass());
   return passes;
 }
 

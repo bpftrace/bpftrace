@@ -2984,12 +2984,12 @@ TEST(Parser, imports)
 {
   test(R"(import "foo"; begin { })",
        Program()
-           .WithImports({ Import("foo") })
+           .WithRootImports({ RootImport("foo") })
            .WithProbe(Probe({ "begin" }, {})));
 
   test(R"(import "foo"; import "bar"; begin { })",
        Program()
-           .WithImports({ Import("foo"), Import("bar") })
+           .WithRootImports({ RootImport("foo"), RootImport("bar") })
            .WithProbe(Probe({ "begin" }, {})));
 
   test_parse_failure(R"(begin { }; import "foo";)", R"(

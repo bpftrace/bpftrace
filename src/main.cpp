@@ -756,7 +756,7 @@ static ast::ASTContext buildListProgram(const std::string& search)
   ast.root = ast.make_node<ast::Program>(ast::SourceLocation(),
                                          ast::CStatementList(),
                                          nullptr,
-                                         ast::ImportList(),
+                                         ast::RootImportList(),
                                          ast::RootStatements({ probe }));
   return ast;
 }

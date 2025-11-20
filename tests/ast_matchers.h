@@ -502,8 +502,8 @@ public:
     });
   }
 
-  ProgramMatcher& WithImports(
-      const std::vector<Matcher<const ast::Import&>>& import_matchers)
+  ProgramMatcher& WithRootImports(
+      const std::vector<Matcher<const ast::RootImport&>>& import_matchers)
   {
     return Where([import_matchers](const ast::Program& prog) {
       return CheckList(prog, prog.imports, import_matchers, "imports");
@@ -1231,17 +1231,30 @@ inline ConfigMatcher Config(
   return ConfigMatcher().WithStatements(statements);
 }
 
-class ImportMatcher : public NodeMatcher<ImportMatcher, ast::Import> {
+class RootImportMatcher : public NodeMatcher<RootImportMatcher, ast::RootImport> {
 public:
-  ImportMatcher& WithName(const std::string& name)
+  RootImportMatcher& WithName(const std::string& name)
   {
-    return Where(CheckField(&ast::Import::name, name, "name"));
+    return Where(CheckField(&ast::RootImport::name, name, "name"));
   }
 };
 
-inline ImportMatcher Import(const std::string& name)
+inline RootImportMatcher RootImport(const std::string& name)
 {
-  return ImportMatcher().WithName(name);
+  return RootImportMatcher().WithName(name);
+}
+
+class StatementImportMatcher : public NodeMatcher<StatementImportMatcher, ast::StatementImport> {
+public:
+  StatementImportMatcher& WithName(const std::string& name)
+  {
+    return Where(CheckField(&ast::StatementImport::name, name, "name"));
+  }
+};
+
+inline StatementImportMatcher StatementImport(const std::string& name)
+{
+  return StatementImportMatcher().WithName(name);
 }
 
 class MapDeclStatementMatcher

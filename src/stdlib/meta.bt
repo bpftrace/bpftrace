@@ -51,3 +51,7 @@ macro check_key(@map, key, func) {
 macro is_literal(expr) {
   __builtin_is_literal(expr)
 }
+
+macro usdt_arg(x) {
+   __usdt_arg((void *)ctx, x)
+}

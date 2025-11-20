@@ -161,7 +161,7 @@ public:
                   .put(mock->bpftrace)
                   .put(types->types)
                   .add(CreateParsePass())
-                  .add(ast::CreateResolveImportsPass())
+                  .add(ast::CreateResolveRootImportsPass())
                   .add(ast::CreateControlFlowPass())
                   .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())

@@ -232,6 +232,7 @@ class Unroll;
 class Jump;
 class While;
 class For;
+class StatementImport;
 
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
@@ -242,7 +243,8 @@ class Statement : public VariantNode<ExprStatement,
                                      Unroll,
                                      Jump,
                                      While,
-                                     For> {
+                                     For,
+                                     StatementImport> {
 public:
   using VariantNode::VariantNode;
   Statement() : Statement(static_cast<ExprStatement *>(nullptr)) {};
@@ -250,15 +252,15 @@ public:
 using StatementList = std::vector<Statement>;
 
 class Config;
-class Import;
 class CStatement;
 class Macro;
 class MapDeclStatement;
 class Probe;
 class Subprog;
+class RootImport;
 
 class RootStatement : public VariantNode<Config,
-                                         Import,
+                                         RootImport,
                                          CStatement,
                                          Probe,
                                          Subprog,
@@ -1995,25 +1997,50 @@ public:
 };
 using SubprogList = std::vector<Subprog *>;
 
-class Import : public Node {
+// N.B. These two import nodes are effectively the same
+// except there are restrictions on the StatementImport
+// which can exist in probe bodies, macros, and sub-progs.
+// Having a separate AST node reduces needing stateful logic
+// in the pass visitors if they were the same.
+class RootImport : public Node {
 public:
-  explicit Import(ASTContext &ctx, Location &&loc, std::string name)
+  explicit RootImport(ASTContext &ctx, Location &&loc, std::string name)
       : Node(ctx, std::move(loc)), name(std::move(name)) {};
-  explicit Import(ASTContext &ctx, const Location &loc, const Import &other)
+  explicit RootImport(ASTContext &ctx, const Location &loc, const RootImport &other)
       : Node(ctx, loc + other.loc), name(other.name) {};
 
-  bool operator==(const Import &other) const
+  bool operator==(const RootImport &other) const
   {
     return name == other.name;
   }
-  std::strong_ordering operator<=>(const Import &other) const
+  std::strong_ordering operator<=>(const RootImport &other) const
   {
     return name <=> other.name;
   }
 
   const std::string name;
 };
-using ImportList = std::vector<Import *>;
+
+class StatementImport : public Node {
+public:
+  explicit StatementImport(ASTContext &ctx, Location &&loc, std::string name)
+      : Node(ctx, std::move(loc)), name(std::move(name)) {};
+  explicit StatementImport(ASTContext &ctx, const Location &loc, const StatementImport &other)
+      : Node(ctx, loc + other.loc), name(other.name) {};
+
+  bool operator==(const StatementImport &other) const
+  {
+    return name == other.name;
+  }
+  std::strong_ordering operator<=>(const StatementImport &other) const
+  {
+    return name <=> other.name;
+  }
+
+  const std::string name;
+};
+
+using RootImportList = std::vector<RootImport *>;
 
 class Macro : public Node {
 public:
@@ -2087,7 +2114,7 @@ public:
                    Location &&loc,
                    CStatementList &&c_statements,
                    Config *config,
-                   ImportList &&imports,
+                   RootImportList &&imports,
                    RootStatements &&root_statements,
                    std::optional<std::string> &&header = std::nullopt)
       : Node(ctx, std::move(loc)),
@@ -2145,7 +2172,7 @@ public:
 
   CStatementList c_statements;
   Config *config = nullptr;
-  ImportList imports;
+  RootImportList imports;
   MapDeclList map_decls;
   MacroList macros;
   SubprogList functions;
