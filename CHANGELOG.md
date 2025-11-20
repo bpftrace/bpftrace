@@ -23,6 +23,8 @@ and this project adheres to
   - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
 - Fix segfault in printf ordering
   - [#4838](https://github.com/bpftrace/bpftrace/pull/4838)
+- Fix language part being overwritten in uprobe attachpoint parser
+  - [#4856](https://github.com/bpftrace/bpftrace/pull/4856)
 ## [0.24.1] 2025-10-03
 
 #### Fixed
