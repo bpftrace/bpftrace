@@ -40,6 +40,8 @@ and this project adheres to
   - [#4789](https://github.com/bpftrace/bpftrace/pull/4789)
 - Probes may now be named (reserved for future use)
   - [#4752](https://github.com/bpftrace/bpftrace/pull/4752)
+- Add support for more vmlinux BTF types as identifiers
+  - [#4853](https://github.com/bpftrace/bpftrace/pull/4853)
 #### Changed
 - `uaddr` support PIE and dynamic library symbols.
   - [#4727](https://github.com/bpftrace/bpftrace/pull/4727)

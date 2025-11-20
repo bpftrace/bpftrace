@@ -88,3 +88,8 @@ NAME btf_type_tag_access
 PROG begin { printf("SUCCESS %d\n", curtask.parent.pid); exit() }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE btf
+
+NAME vmlinux integer types
+PROG begin { let $a: typeof(size_t) = 1; let $b: typeof(size_t*) = &$a; $c = (uint64_t)1; $d = (char)1; $e = (char *)&$d }
+EXPECT Attached 1 probe
+REQUIRES_FEATURE btf

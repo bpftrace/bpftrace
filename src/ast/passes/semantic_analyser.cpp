@@ -1983,13 +1983,21 @@ void SemanticAnalyser::visit(Offsetof &offof)
 
 void SemanticAnalyser::visit(Typeof &typeof)
 {
+  if (std::holds_alternative<SizedType>(typeof.record)) {
+    resolve_struct_type(std::get<SizedType>(typeof.record), typeof);
+  } else {
+    const auto &expr = std::get<Expression>(typeof.record);
+    if (auto *ident = expr.as<Identifier>()) {
+      auto stype = bpftrace_.btf_->get_stype(ident->ident);
+      if (!stype.IsNoneTy()) {
+        typeof.record = stype;
+      }
+    }
+  }
+
   meta_depth_++;
   Visitor<SemanticAnalyser>::visit(typeof);
   meta_depth_--;
-
-  if (std::holds_alternative<SizedType>(typeof.record)) {
-    resolve_struct_type(std::get<SizedType>(typeof.record), typeof);
-  }
 }
 
 void SemanticAnalyser::visit(Typeinfo &typeinfo)
@@ -3282,16 +3290,6 @@ void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
   }
 }
 
-// We can't hint for unsigned types. It is a syntax error,
-// because the word "unsigned" is not allowed in a type name.
-static std::unordered_map<std::string_view, std::string_view>
-    KNOWN_TYPE_ALIASES{
-      { "char", "int8" },   /* { "unsigned char", "uint8" }, */
-      { "short", "int16" }, /* { "unsigned short", "uint16" }, */
-      { "int", "int32" },   /* { "unsigned int", "uint32" }, */
-      { "long", "int64" },  /* { "unsigned long", "uint64" }, */
-    };
-
 void SemanticAnalyser::visit(Cast &cast)
 {
   visit(cast.expr);
@@ -3338,12 +3336,6 @@ void SemanticAnalyser::visit(Cast &cast)
       !(ty.IsArrayTy() && ty.GetElementTy()->IsIntTy())) {
     auto &err = cast.addError();
     err << "Cannot cast to \"" << ty << "\"";
-    if (ty.IsRecordTy() || ty.IsEnumTy()) {
-      if (auto it = KNOWN_TYPE_ALIASES.find(ty.GetName());
-          it != KNOWN_TYPE_ALIASES.end()) {
-        err.addHint() << "Did you mean \"" << it->second << "\"?";
-      }
-    }
   }
 
   if (ty.IsArrayTy()) {
@@ -4461,8 +4453,19 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
   if (inner_type->IsRecordTy() && !inner_type->GetStruct()) {
     auto struct_type = bpftrace_.structs.Lookup(inner_type->GetName()).lock();
     if (!struct_type) {
-      node.addError() << "Cannot resolve unknown type \""
-                      << inner_type->GetName() << "\"\n";
+      // Try to find the type as something other than a struct, e.g. 'char' or
+      // 'uint64_t'
+      auto stype = bpftrace_.btf_->get_stype(inner_type->GetName());
+      if (stype.IsNoneTy()) {
+        node.addError() << "Cannot resolve unknown type \""
+                        << inner_type->GetName() << "\"\n";
+      } else {
+        type = stype;
+        while (pointer_level > 0) {
+          type = CreatePointer(type);
+          pointer_level--;
+        }
+      }
     } else {
       type = CreateRecord(inner_type->GetName(), struct_type);
       while (pointer_level > 0) {

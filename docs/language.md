@@ -385,9 +385,6 @@ Default: warn
 ## Data Types
 
 The following fundamental types are provided by the language.
-Note: Integers are by default represented as 64 bit signed but that can be
-changed by either casting them or, for scratch variables, explicitly specifying
-the type upon declaration.
 
 |     |     |
 | --- | --- |
@@ -409,6 +406,29 @@ begin { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }
  * Output:
  * 0 65536
  */
+```
+
+Integers are by default represented as the smallest possible
+type, e.g. `1` is a `uint8` and `-1` is an `int8`. However integers,
+scratch variables, and map keys/values will be automatically upcast
+when necessary, e.g.
+
+```
+$a = 1; // starts as uint8
+$b = -1000; // starts as int16
+$a = $b; // $a now becomes an int16
+
+$c = (uint64)1;
+$d = (int64)-1;
+
+$c = $d; // ERROR: type mismatch because there isn't a larger type
+         // that fits both.
+```
+
+Additionally, when vmlinux BTF is available, bpftrace supports
+casting to some of the kernel's fixed integer types:
+```
+$a = (uint64_t)1; // $a is a uint64
 ```
 
 ## Filters/Predicates
