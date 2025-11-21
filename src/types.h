@@ -132,6 +132,12 @@ struct StackType {
     return scratch_name;
   }
 
+  static const std::string &stack_id_name()
+  {
+    static const std::string stack_id = "stack_id";
+    return stack_id;
+  }
+
 private:
   friend class cereal::access;
   template <typename Archive>
