@@ -1855,7 +1855,7 @@ public:
   std::string ns;
   std::string func;
   std::string pin;
-  usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with
+  util::usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with
                          // wildcard matches
   int64_t freq = 0;
   uint64_t len = 0;   // for watchpoint probes, the width of watched addr

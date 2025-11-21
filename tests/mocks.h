@@ -7,6 +7,7 @@
 #include "child.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "util/elf_parser.h"
 #include "util/result.h"
 #include "util/strings.h"
 #include "gmock/gmock-function-mocker.h"
@@ -15,7 +16,7 @@ namespace bpftrace::test {
 
 class MockProbeMatcher : public ::bpftrace::ProbeMatcher {
 public:
-  MockProbeMatcher(BPFtrace *bpftrace) : ::bpftrace::ProbeMatcher(bpftrace) {};
+  MockProbeMatcher(BPFtrace *bpftrace) : ::bpftrace::ProbeMatcher(bpftrace){};
 #pragma GCC diagnostic push
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
@@ -227,12 +228,13 @@ public:
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
-  MOCK_METHOD5(find,
-               std::optional<usdt_probe_entry>(std::optional<int> pid,
-                                               const std::string &target,
-                                               const std::string &provider,
-                                               const std::string &name,
-                                               bool has_uprobe_multi));
+  MOCK_METHOD5(
+      find,
+      std::optional<util::usdt_probe_entry>(std::optional<int> pid,
+                                            const std::string &target,
+                                            const std::string &provider,
+                                            const std::string &name,
+                                            bool has_uprobe_multi));
 #pragma GCC diagnostic pop
 };
 
