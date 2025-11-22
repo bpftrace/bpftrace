@@ -188,6 +188,12 @@ bool SizedType::IsStack() const
   return type_ == Type::ustack_t || type_ == Type::kstack_t;
 }
 
+bool SizedType::IsCString() const
+{
+  return IsArrayTy() && GetElementTy()->IsIntegerTy() &&
+         GetElementTy()->GetSize() == 1;
+}
+
 std::string addrspacestr(AddrSpace as)
 {
   switch (as) {

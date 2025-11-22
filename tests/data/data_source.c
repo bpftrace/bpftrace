@@ -68,6 +68,7 @@ struct FirstFieldsAreAnonUnion first_fields_anon_union;
 struct Arrays {
   int int_arr[4];
   char char_arr[8];
+  char char_arr2[16];
   void *ptr_arr[2];
   int multi_dim[3][2];
   int zero[0];

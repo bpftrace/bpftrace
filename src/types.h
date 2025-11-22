@@ -257,6 +257,7 @@ public:
   bool IsByteArray() const;
   bool IsAggregate() const;
   bool IsStack() const;
+  bool IsCString() const;
 
   bool IsEqual(const SizedType &t) const;
   bool operator==(const SizedType &t) const;

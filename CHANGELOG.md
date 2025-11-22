@@ -81,6 +81,8 @@ and this project adheres to
   - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
 - codegen: Fix tid/pid in non-init namespaces
   - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
+- Fix automatic conversion of BTF char arrays to bpftrace strings
+  - [#4861](https://github.com/bpftrace/bpftrace/pull/4861)
 #### Security
 #### Docs
 #### Tools

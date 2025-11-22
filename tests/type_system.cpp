@@ -58,6 +58,7 @@ TEST(TypeSystemTest, basic)
     "int[4]",
     "long unsigned int",
     "char[8]",
+    "char[16]",
     "void*[2]",
     "void*",
     "int[6]",

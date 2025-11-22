@@ -1228,7 +1228,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
     const auto &t = arg.type();
-    if (!t.IsStringTy() && !t.IsIntegerTy() && !t.IsPtrTy()) {
+    if (!t.IsStringTy() && !t.IsIntegerTy() && !t.IsPtrTy() && !t.IsCString()) {
       call.addError()
           << call.func
           << "() expects a string, integer or a pointer type as first "
@@ -1485,7 +1485,21 @@ void SemanticAnalyser::visit(Call &call)
       const auto &fmt = call.vargs.at(0).as<String>()->value;
       std::vector<SizedType> args;
       for (size_t i = 1; i < call.vargs.size(); i++) {
-        args.push_back(call.vargs[i].type());
+        const auto &arg_type = call.vargs[i].type();
+        // Wrap char arrays in a `str` call so they are printed properly
+        if (arg_type.IsCString()) {
+          call.vargs[i] = ctx_.make_node<Call>(
+              call.vargs[i].loc(),
+              "str",
+              ExpressionList{
+                  clone(ctx_, call.vargs[i].loc(), call.vargs[i]),
+                  ctx_.make_node<Integer>(call.vargs[i].loc(),
+                                          arg_type.GetNumElements()) });
+          Visitor<SemanticAnalyser>::visit(call.vargs[i]);
+          args.push_back(call.vargs[i].type());
+        } else {
+          args.push_back(arg_type);
+        }
       }
       FormatString fs(fmt);
       auto ok = fs.check(args);
