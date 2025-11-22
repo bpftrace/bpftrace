@@ -30,6 +30,35 @@ ProbeType probetype(const std::string &probeName)
   return retType;
 }
 
+enum bpf_prog_type get_bpf_prog_type(ProbeType type)
+{
+  switch (type) {
+    case ProbeType::kprobe:
+    case ProbeType::kretprobe:
+      return BPF_PROG_TYPE_KPROBE;
+    case ProbeType::tracepoint:
+      return BPF_PROG_TYPE_TRACEPOINT;
+    case ProbeType::rawtracepoint:
+      return BPF_PROG_TYPE_RAW_TRACEPOINT;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+    case ProbeType::usdt:
+    case ProbeType::fentry:
+    case ProbeType::fexit:
+    case ProbeType::iter:
+    case ProbeType::interval:
+    case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
+      return BPF_PROG_TYPE_TRACING;
+    case ProbeType::profile:
+    case ProbeType::software:
+    case ProbeType::hardware:
+      return BPF_PROG_TYPE_PERF_EVENT;
+    default:
+      return BPF_PROG_TYPE_UNSPEC;
+  }
+}
+
 std::string expand_probe_name(const std::string &orig_name)
 {
   std::string expanded_name = util::to_lower(orig_name);

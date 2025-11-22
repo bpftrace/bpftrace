@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cereal/access.hpp>
+#include <linux/bpf.h>
 #include <ostream>
 #include <set>
 #include <string>
@@ -102,6 +103,7 @@ const std::vector<ProbeItem> PROBE_LIST = {
     .show_in_kernel_list = true },
 };
 
+enum bpf_prog_type get_bpf_prog_type(ProbeType type);
 ProbeType probetype(const std::string &probeName);
 std::string expand_probe_name(const std::string &orig_name);
 std::string probetypeName(ProbeType t);

@@ -23,6 +23,25 @@
 
 namespace bpftrace {
 
+struct kfunc_insns_spec {
+  // NOLINTBEGIN(readability-redundant-member-init)
+  // Because of the BPF Verifier, we have to ensure that pointers are valid
+  // and free them. acquire and release must appear in pairs for the check
+  // to pass.
+  std::string release_kfunc;
+  // NOLINTEND(readability-redundant-member-init)
+};
+
+// We only need to focus on the kfuncs that bpftrace is already using.
+// Note: not all kfuncs require a spec structure, because most kfuncs do not
+// need special input parameter settings or return value checks and releases.
+static const std::map<std::string, kfunc_insns_spec> KFUNC_INSNS_SPEC = {
+  { "bpf_task_from_pid",
+    {
+        .release_kfunc = "bpf_task_release",
+    } },
+};
+
 using util::KernelVersionMethod;
 
 int BPFnofeature::parse(const char* str)
@@ -182,6 +201,86 @@ bool BPFfeature::detect_helper(enum bpf_func_id func_id,
   return (strstr(buf, "invalid func ") == nullptr) &&
          (strstr(buf, "unknown func ") == nullptr) &&
          (strstr(buf, "program of this type cannot use helper ") == nullptr);
+}
+
+// Used to test whether kfuncs are supported in a certain type of BPF program.
+bool BPFfeature::detect_kfunc(const char* kfunc, enum bpf_prog_type prog_type)
+{
+  char logbuf[4096] = {};
+  struct bpf_insn insn_buf[512];
+  size_t insn_cnt = 0;
+
+  if (get_kfunc_test_insns(insn_buf, &insn_cnt, kfunc) == nullptr)
+    return false;
+
+  if (try_load_(nullptr,
+                prog_type,
+                std::nullopt,
+                std::nullopt,
+                insn_buf,
+                insn_cnt,
+                1,
+                logbuf,
+                4096)) {
+    return true;
+  }
+
+  return false;
+}
+
+struct bpf_insn* BPFfeature::get_kfunc_test_insns(struct bpf_insn* insn_buf,
+                                                  size_t* cnt,
+                                                  const char* kfunc)
+{
+  struct bpf_insn* insn = insn_buf;
+  const char* release_kfunc = nullptr;
+  int kfunc_btf_id, release_btf_id;
+
+  auto spec = KFUNC_INSNS_SPEC.find(kfunc);
+  if (spec != KFUNC_INSNS_SPEC.end()) {
+    release_kfunc = spec->second.release_kfunc.c_str();
+  }
+
+  kfunc_btf_id = release_btf_id = -1;
+
+  if (has_btf()) {
+    kfunc_btf_id = btf_.get_btf_id(kfunc, "vmlinux");
+    release_btf_id = release_kfunc ? btf_.get_btf_id(release_kfunc, "vmlinux")
+                                   : -1;
+  }
+
+  if (kfunc_btf_id <= 0 || (release_kfunc && release_btf_id <= 0)) {
+    return nullptr;
+  }
+
+  // Set kfunc args 1-5, all default 0
+  *insn++ = BPF_MOV64_IMM(BPF_REG_1, 0);
+  *insn++ = BPF_MOV64_IMM(BPF_REG_2, 0);
+  *insn++ = BPF_MOV64_IMM(BPF_REG_3, 0);
+  *insn++ = BPF_MOV64_IMM(BPF_REG_4, 0);
+  *insn++ = BPF_MOV64_IMM(BPF_REG_5, 0);
+  *insn++ = BPF_CALL_KFUNC(0, kfunc_btf_id);
+  if (release_btf_id > 0) {
+    *insn++ = BPF_JMP_IMM(BPF_JNE, BPF_REG_0, 0, 1);
+    *insn++ = BPF_JMP_IMM(BPF_JA, 0, 0, 2);
+    *insn++ = BPF_MOV64_REG(BPF_REG_1, BPF_REG_0);
+    *insn++ = BPF_CALL_KFUNC(0, release_btf_id);
+  }
+  // Set return value to zero
+  *insn++ = BPF_MOV64_IMM(BPF_REG_0, 0);
+  *insn++ = BPF_EXIT_INSN();
+
+  *cnt = insn - insn_buf;
+  return insn_buf;
+}
+
+bool BPFfeature::has_kfunc(std::string kfunc)
+{
+  int btf_id = 0;
+  if (has_btf()) {
+    btf_id = btf_.get_btf_id(kfunc, "vmlinux");
+  }
+  return btf_id <= 0 ? false : true;
 }
 
 bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type,

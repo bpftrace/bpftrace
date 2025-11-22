@@ -72,6 +72,9 @@ public:
   DEFINE_HELPER_TEST(map_lookup_percpu_elem, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(loop, BPF_PROG_TYPE_KPROBE); // Added in 5.17.
 
+  bool has_kfunc(std::string kfunc);
+  bool detect_kfunc(const char* kfunc, enum bpf_prog_type prog_type);
+
 protected:
   std::optional<bool> has_d_path_;
   std::optional<int> insns_limit_;
@@ -97,6 +100,10 @@ private:
                 std::optional<bpf_attach_type> attach_type = std::nullopt,
                 int* outfd = nullptr);
   bool try_load_btf(const void* btf_data, size_t btf_size);
+
+  struct bpf_insn* get_kfunc_test_insns(struct bpf_insn* insn_buf,
+                                        size_t* cnt,
+                                        const char* kfunc);
 
   BPFnofeature no_feature_;
   BTF& btf_;
