@@ -429,7 +429,6 @@ macro jiffies() {
 // See the address-spaces section for more information on address-spaces.
 // The pointer type is left unchanged.
 
-// :function kstack
 // :variant kstack_t kstack([StackMode mode, ][int limit])
 //
 // These are implemented using BPF stack maps.
@@ -472,7 +471,7 @@ macro jiffies() {
 // ```
 //
 // You can also choose a different output format.
-// Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
+// Available formats are `bpftrace` (default), `perf`, and `raw` (no symbolication):
 //
 // ```
 // kprobe:ip_output { @[kstack(perf, 3)] = count(); }
@@ -486,6 +485,20 @@ macro jiffies() {
 //  * ]: 1708
 //  */
 // ```
+macro kstack(mode, limit) {
+  import "stdlib/hash/murmur2.bpf.c";
+  __builtin_kstack(mode, limit)
+}
+
+macro kstack(mode) {
+  import "stdlib/hash/murmur2.bpf.c";
+  __builtin_kstack(mode)
+}
+
+macro kstack() {
+  import "stdlib/hash/murmur2.bpf.c";
+  __builtin_kstack
+}
 
 // :function ksym
 // :variant ksym_t ksym(uint64 addr)
@@ -1315,7 +1328,6 @@ macro username() {
   __builtin_username
 }
 
-// :function ustack
 // :variant ustack_t ustack([StackMode mode, ][int limit])
 //
 // These are implemented using BPF stack maps.
@@ -1373,7 +1385,7 @@ macro username() {
 // ```
 //
 // You can also choose a different output format.
-// Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
+// Available formats are `bpftrace` (default), `perf`, and `raw` (no symbolication):
 //
 // ```
 // kprobe:ip_output { @[ustack(perf, 3)] = count(); }
@@ -1389,6 +1401,20 @@ macro username() {
 // ```
 //
 // Note that for these examples to work, bash had to be recompiled with frame pointers.
+macro ustack(mode, limit) {
+  import "stdlib/hash/murmur2.bpf.c";
+  __builtin_ustack(mode, limit)
+}
+
+macro ustack(mode) {
+  import "stdlib/hash/murmur2.bpf.c";
+  __builtin_ustack(mode)
+}
+
+macro ustack() {
+  import "stdlib/hash/murmur2.bpf.c";
+  __builtin_ustack
+}
 
 // :function usym
 // :variant usym_t usym(uint64 * addr)

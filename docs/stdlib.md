@@ -483,7 +483,7 @@ kprobe:ip_output { @[kstack(3)] = count(); }
 ```
 
 You can also choose a different output format.
-Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
+Available formats are `bpftrace` (default), `perf`, and `raw` (no symbolication):
 
 ```
 kprobe:ip_output { @[kstack(perf, 3)] = count(); }
@@ -1411,7 +1411,7 @@ kprobe:ip_output { @[ustack(3)] = count(); }
 ```
 
 You can also choose a different output format.
-Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
+Available formats are `bpftrace` (default), `perf`, and `raw` (no symbolication):
 
 ```
 kprobe:ip_output { @[ustack(perf, 3)] = count(); }
