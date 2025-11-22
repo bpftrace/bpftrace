@@ -45,3 +45,7 @@ macro check_key(@map, key, func) {
     }
   }
 }
+
+macro usdt_arg(x) {
+   __usdt_arg((void *)ctx, x)
+}

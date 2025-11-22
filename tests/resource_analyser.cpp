@@ -1,4 +1,6 @@
 #include "ast/passes/resource_analyser.h"
+#include "ast/passes/clang_build.h"
+#include "ast/passes/codegen_llvm.h"
 #include "ast/passes/parser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -21,11 +23,15 @@ void test(BPFtrace &bpftrace,
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   ast::TypeMetadata no_types; // No external types defined.
+  ast::BitcodeModules no_bitcode_modules;
+  ast::CompileContext no_compile_ctx;
 
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
                 .put(no_types)
+                .put(no_bitcode_modules)
+                .put(no_compile_ctx)
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())
                 .add(ast::CreateResourcePass())

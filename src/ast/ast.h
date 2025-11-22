@@ -232,6 +232,7 @@ class Unroll;
 class Jump;
 class While;
 class For;
+class Import;
 
 class Statement : public VariantNode<ExprStatement,
                                      VarDeclStatement,
@@ -242,7 +243,8 @@ class Statement : public VariantNode<ExprStatement,
                                      Unroll,
                                      Jump,
                                      While,
-                                     For> {
+                                     For,
+                                     Import> {
 public:
   using VariantNode::VariantNode;
   Statement() : Statement(static_cast<ExprStatement *>(nullptr)) {};
@@ -250,7 +252,6 @@ public:
 using StatementList = std::vector<Statement>;
 
 class Config;
-class Import;
 class CStatement;
 class Macro;
 class MapDeclStatement;

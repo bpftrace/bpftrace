@@ -509,6 +509,7 @@ stmt_list:
                 stmt_list expr_stmt ";"     { $$ = std::move($1); $$.push_back($2); }
         |       stmt_list nonexpr_stmt ";"  { $$ = std::move($1); $$.push_back($2); }
         |       stmt_list block_stmt        { $$ = std::move($1); $$.push_back($2); }
+        |       stmt_list import_stmt       { $$ = std::move($1); $$.push_back($2); }
         |       %empty                      { $$ = ast::StatementList{}; }
                 ;
 

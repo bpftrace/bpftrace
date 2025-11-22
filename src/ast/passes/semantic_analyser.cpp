@@ -13,10 +13,12 @@
 #include "ast/context.h"
 #include "ast/helpers.h"
 #include "ast/integer_types.h"
+#include "ast/passes/clang_build.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "ast/tracepoint_helpers.h"
@@ -27,6 +29,7 @@
 #include "log.h"
 #include "probe_matcher.h"
 #include "probe_types.h"
+#include "stdlib/stdlib.h"
 #include "types.h"
 #include "usdt.h"
 #include "util/paths.h"
@@ -35,6 +38,8 @@
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
+
+using bpftrace::stdlib::Stdlib;
 
 namespace {
 
@@ -150,6 +155,9 @@ public:
                             NamedParamDefaults &named_param_defaults,
                             TypeMetadata &type_metadata,
                             MacroRegistry &macro_registry,
+                            Imports &imports,
+                            CompileContext &compile_ctx,
+                            BitcodeModules &bitcode_modules,
                             bool has_child = true)
       : ctx_(ctx),
         bpftrace_(bpftrace),
@@ -158,6 +166,9 @@ public:
         named_param_defaults_(named_param_defaults),
         type_metadata_(type_metadata),
         macro_registry_(macro_registry),
+        imports_(imports),
+        compile_ctx_(compile_ctx),
+        bitcode_modules_(bitcode_modules),
         has_child_(has_child)
   {
   }
@@ -185,6 +196,7 @@ public:
   void visit(For &f);
   void visit(Jump &jump);
   void visit(IfExpr &if_expr);
+  void visit(Import &imp);
   void visit(FieldAccess &acc);
   void visit(ArrayAccess &arr);
   void visit(TupleAccess &acc);
@@ -211,6 +223,9 @@ private:
   NamedParamDefaults &named_param_defaults_;
   TypeMetadata &type_metadata_;
   const MacroRegistry &macro_registry_;
+  Imports &imports_;
+  CompileContext &compile_ctx_;
+  BitcodeModules &bitcode_modules_;
 
   bool is_final_pass() const;
   bool is_first_pass() const;
@@ -1793,7 +1808,9 @@ void SemanticAnalyser::visit(Call &call)
     // check that they are exactly equal.
     auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
     if (!maybe_func) {
-      call.addError() << "Unknown function: '" << call.func << "'";
+      if (is_final_pass()) {
+        call.addError() << "Unknown function: '" << call.func << "'";
+      }
       return;
     }
 
@@ -3498,6 +3515,7 @@ void SemanticAnalyser::visit(Expression &expr)
           expr.value = ctx_.make_node<Unop>(binop->loc, cast, Operator::LNOT);
         }
         expand_macro(ctx_, expr, macro_registry_);
+        Visitor<SemanticAnalyser>::visit(expr);
       }
     }
   }
@@ -3846,6 +3864,7 @@ void SemanticAnalyser::visit(Probe &probe)
   top_level_node_ = &probe;
   visit(probe.attach_points);
   visit(probe.block);
+  top_level_node_ = nullptr;
 }
 
 void SemanticAnalyser::visit(Subprog &subprog)
@@ -3891,6 +3910,47 @@ void SemanticAnalyser::visit(Subprog &subprog)
     }
   }
   scope_stack_.pop_back();
+  top_level_node_ = nullptr;
+}
+
+void SemanticAnalyser::visit(Import &imp)
+{
+  if (!top_level_node_) {
+    // Top level import statements have already been resolved
+    return;
+  }
+  static std::string import_error =
+      "Import statements that are not at the root are limited to specific "
+      "object (.o), header (.h), or C source (.c or bpf.c) files";
+  std::filesystem::path path(imp.name);
+  if (std::filesystem::is_directory(path)) {
+    imp.addError() << import_error;
+  } else if (path.extension() == ".bt") {
+    imp.addError() << import_error;
+  } else {
+    // This is really just to make sure new additions to the standard library
+    // don't try to import files they don't explicitly need
+    for (const auto &[internal_path, s] : Stdlib::files) {
+      auto path = std::filesystem::path(internal_path);
+      if (path.parent_path().string() == imp.name) {
+        imp.addError() << import_error;
+        break;
+      }
+    }
+  }
+  std::vector<std::filesystem::path> empty_paths;
+  auto did_import = imports_.import_any(imp, imp.name, empty_paths);
+  if (!did_import) {
+    imp.addError() << "import error: " << did_import.takeError();
+  } else {
+    if (*did_import) {
+      build_imports(bpftrace_, compile_ctx_, imports_, bitcode_modules_);
+      auto types_ok = build_types(ctx_, bitcode_modules_, type_metadata_);
+      if (!types_ok) {
+        LOG(ERROR) << types_ok.takeError();
+      }
+    }
+  }
 }
 
 void SemanticAnalyser::visit(Comptime &comptime)
@@ -4484,7 +4544,10 @@ Pass CreateSemanticPass()
                MapMetadata &mm,
                NamedParamDefaults &named_param_defaults,
                TypeMetadata &types,
-               MacroRegistry &macro_registry) {
+               MacroRegistry &macro_registry,
+               Imports &imports,
+               CompileContext &compile_ctx,
+               BitcodeModules &bm) {
     SemanticAnalyser semantics(ast,
                                b,
                                c_definitions,
@@ -4492,6 +4555,9 @@ Pass CreateSemanticPass()
                                named_param_defaults,
                                types,
                                macro_registry,
+                               imports,
+                               compile_ctx,
+                               bm,
                                !b.cmd_.empty() || b.child_ != nullptr);
     semantics.analyse();
   };

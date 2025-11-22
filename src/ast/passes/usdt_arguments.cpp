@@ -108,7 +108,12 @@ Pass CreateUSDTImportPass()
                         if (has_usdt) {
                           auto usdt_arguments = USDTArgumentLift(ast);
                           usdt_arguments.visit(ast.root);
-                          return imports.import_any(*ast.root, "stdlib/usdt");
+                          auto ok = imports.import_any(*ast.root,
+                                                       "stdlib/usdt");
+                          if (!ok) {
+                            return ok.takeError();
+                          }
+                          return OK();
                         }
 
                         return OK();
