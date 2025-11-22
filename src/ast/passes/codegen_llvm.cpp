@@ -622,36 +622,23 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
                  b_.CreateGEP(stack_key_struct,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(1) }));
-  // A random seed (or using pid) is probably unnecessary in this situation
-  // and might hurt storage as the same pids may have the same stack and
-  // we don't need to store it twice
-  Value *seed = b_.getInt64(1);
 
-  // LLVM-12 produces code that fails the BPF verifier because it
-  // can't determine the bounds of nr_stack_frames. The only thing that seems
-  // to work is truncating the type, which is fine because 255 is long enough.
-  Value *trunc_nr_stack_frames = b_.CreateTrunc(num_frames, b_.getInt8Ty());
+  std::array<llvm::Type *, 2> arg_types = { b_.getPtrTy(), b_.getPtrTy() };
+  std::array<llvm::Value *, 2> arg_values = {
+    b_.GetMapVar(StackType::stack_id_name()), stack_trace
+  };
+  auto stack_id = createExternFuncCall(
+      "__get_stack_id", b_.getInt64Ty(), arg_types, arg_values, loc);
 
-  // Here we use the murmur2 hash function to create the stack ids because
-  // bpf_get_stackid() is kind of broken by design and can suffer from hash
-  // collisions.
-  // More details here: https://github.com/bpftrace/bpftrace/issues/2962
-  std::array<llvm::Type *, 3> arg_types = { b_.getPtrTy(),
-                                            b_.getInt8Ty(),
-                                            b_.getInt64Ty() };
-  std::array<llvm::Value *, 3> arg_values = { stack_trace,
-                                              trunc_nr_stack_frames,
-                                              seed };
-  auto murmur_hash_2 = createExternFuncCall(
-      "__murmur_hash_2", b_.getInt64Ty(), arg_types, arg_values, loc);
-
-  b_.CreateStore(murmur_hash_2.value(),
+  b_.CreateStore(stack_id.value(),
                  b_.CreateGEP(stack_key_struct,
                               stack_key,
                               { b_.getInt64(0), b_.getInt32(0) }));
   // Add the stack and id to the stack map
+  AllocaInst *stack_id_key = b_.CreateAllocaBPF(b_.getInt64Ty(), "stack_id");
+  b_.CreateStore(stack_id.value(), stack_id_key);
   b_.CreateMapUpdateElem(
-      stack_type.name(), stack_key, stack_trace, loc, BPF_ANY);
+      stack_type.name(), stack_id_key, stack_trace, loc, BPF_ANY);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(stack_scratch_failure);
@@ -4116,7 +4103,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
     createMapDefinition(stack_type.name(),
                         BPF_MAP_TYPE_LRU_HASH,
                         128 << 10,
-                        CreateArray(16, CreateInt8()),
+                        CreateUInt64(),
                         CreateArray(stack_type.limit, CreateUInt64()));
     max_stack_limit = std::max(stack_type.limit, max_stack_limit);
   }
@@ -4127,6 +4114,11 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
                         1,
                         CreateUInt32(),
                         CreateArray(max_stack_limit, CreateUInt64()));
+    createMapDefinition(StackType::stack_id_name(),
+                        BPF_MAP_TYPE_HASH,
+                        128 << 10,
+                        CreateArray(max_stack_limit, CreateUInt64()),
+                        CreateUInt64());
   }
 
   if (codegen_resources.needs_join_map) {

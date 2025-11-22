@@ -486,17 +486,17 @@ macro jiffies() {
 //  */
 // ```
 macro kstack(mode, limit) {
-  import "stdlib/hash/murmur2.bpf.c";
+  import "stdlib/stack/stackid.bpf.c";
   __builtin_kstack(mode, limit)
 }
 
 macro kstack(mode) {
-  import "stdlib/hash/murmur2.bpf.c";
+  import "stdlib/stack/stackid.bpf.c";
   __builtin_kstack(mode)
 }
 
 macro kstack() {
-  import "stdlib/hash/murmur2.bpf.c";
+  import "stdlib/stack/stackid.bpf.c";
   __builtin_kstack
 }
 
@@ -1402,17 +1402,17 @@ macro username() {
 //
 // Note that for these examples to work, bash had to be recompiled with frame pointers.
 macro ustack(mode, limit) {
-  import "stdlib/hash/murmur2.bpf.c";
+  import "stdlib/stack/stackid.bpf.c";
   __builtin_ustack(mode, limit)
 }
 
 macro ustack(mode) {
-  import "stdlib/hash/murmur2.bpf.c";
+  import "stdlib/stack/stackid.bpf.c";
   __builtin_ustack(mode)
 }
 
 macro ustack() {
-  import "stdlib/hash/murmur2.bpf.c";
+  import "stdlib/stack/stackid.bpf.c";
   __builtin_ustack
 }
 
