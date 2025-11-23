@@ -2404,7 +2404,8 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   } else if (!if_expr.result_type.IsIntTy() &&
              !if_expr.result_type.IsBoolTy() &&
-             !if_expr.result_type.IsNoneTy()) {
+             !if_expr.result_type.IsNoneTy() &&
+             !if_expr.result_type.IsVoidTy()) {
     buf = b_.CreateAllocaBPF(if_expr.result_type);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), if_expr.result_type.GetSize());
   }
@@ -2435,7 +2436,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     phi->addIncoming(left_expr, left_end_block);
     phi->addIncoming(right_expr, right_end_block);
     return ScopedExpr(phi);
-  } else if (if_expr.result_type.IsNoneTy()) {
+  } else if (if_expr.result_type.IsNoneTy() || if_expr.result_type.IsVoidTy()) {
     // Type::none
     b_.SetInsertPoint(left_block);
     visit(if_expr.left);

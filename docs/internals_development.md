@@ -388,7 +388,7 @@ index 6d72e2a..9cf4d8b 100644
  - `retval` - Return value from function being traced
  - `func` - Name of the function currently being traced
 +- `curtask` - Current task_struct as a u64.
- 
+
  Functions:
  - `hist(int n)` - Produce a log2 histogram of values of `n`
 diff --git a/src/ast/codegen_llvm.cpp b/src/ast/codegen_llvm.cpp
@@ -413,7 +413,7 @@ index ccae94c..3ccf1e6 100644
 @@ -307,6 +307,19 @@ CallInst *IRBuilderBPF::CreateGetCpuId()
    return CreateCall(getcpuid_func, {}, "get_cpu_id");
  }
- 
+
 +CallInst *IRBuilderBPF::CreateGetCurrentTask()
 +{
 +  // u64 bpf_get_current_task(void)
@@ -446,7 +446,7 @@ diff --git a/src/ast/semantic_analyser.cpp b/src/ast/semantic_analyser.cpp
 index 8eb5744..64c9411 100644
 --- a/src/ast/semantic_analyser.cpp
 +++ b/src/ast/semantic_analyser.cpp
-@@ -32,6 +32,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
+@@ -32,6 +32,7 @@ void TypeChecker::visit(Builtin &builtin)
        builtin.ident == "uid" ||
        builtin.ident == "gid" ||
        builtin.ident == "cpu" ||
@@ -461,7 +461,7 @@ index c5996b6..3bec616 100644
 @@ -38,7 +38,7 @@ header <(\\.|[_\-\./a-zA-Z0-9])*>
  {vspace}+               { loc.lines(yyleng); loc.step(); }
  "//".*$  // Comments
- 
+
 -pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name {
 +pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|curtask {
                            return Parser::make_BUILTIN(yytext, loc); }
@@ -474,7 +474,7 @@ index 38918ca..c00d25f 100644
 @@ -489,6 +489,42 @@ attributes #1 = { argmemonly nounwind }
  )EXPECTED");
  }
- 
+
 +TEST(codegen, builtin_curtask)
 +{
 +  test("kprobe:f { @x = curtask }",
@@ -574,20 +574,20 @@ index b73a6d1..4654f65 100644
 --- a/README.md
 +++ b/README.md
 @@ -157,8 +157,8 @@ Attach script to a statically defined tracepoint in the kernel:
- 
+
  Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes.
- 
+
 -### timers
 -Run the script at specified time intervals:
 +### profile
 +Run the script on all CPUs at specified time intervals:
- 
+
  `profile:hz:99 { ... }`
- 
+
 @@ -168,6 +168,13 @@ Run the script at specified time intervals:
- 
+
  `profile:us:1500 { ... }`
- 
+
 +### interval
 +Run the script once per interval, for printing interval output:
 +
@@ -597,12 +597,12 @@ index b73a6d1..4654f65 100644
 +
  ### Multiple attachment points
  A single probe can be attached to multiple events:
- 
+
 diff --git a/src/ast/semantic_analyser.cpp b/src/ast/semantic_analyser.cpp
 index a08eaf7..2a79553 100644
 --- a/src/ast/semantic_analyser.cpp
 +++ b/src/ast/semantic_analyser.cpp
-@@ -478,6 +478,15 @@ void SemanticAnalyser::visit(AttachPoint &ap)
+@@ -478,6 +478,15 @@ void TypeChecker::visit(AttachPoint &ap)
      else if (ap.freq <= 0)
        err_ << "profile frequency should be a positive integer" << std::endl;
    }
@@ -651,7 +651,7 @@ index 598ecdc..991111b 100644
 @@ -279,4 +284,35 @@ void AttachedProbe::attach_profile()
    }
  }
- 
+
 +void AttachedProbe::attach_interval()
 +{
 +  int pid = -1;
@@ -693,7 +693,7 @@ index 86b610c..97036e3 100644
    void attach_tracepoint();
    void attach_profile();
 +  void attach_interval();
- 
+
    Probe &probe_;
    std::tuple<uint8_t *, uintptr_t> &func_;
 diff --git a/src/types.cpp b/src/types.cpp
@@ -708,7 +708,7 @@ index 6813c72..2abaad6 100644
 +    return ProbeType::interval;
    abort();
  }
- 
+
 diff --git a/src/types.h b/src/types.h
 index 4c4524a..6c94eac 100644
 --- a/src/types.h
@@ -719,7 +719,7 @@ index 4c4524a..6c94eac 100644
    profile,
 +  interval,
  };
- 
+
  std::string typestr(Type t);
 diff --git a/tests/bpftrace.cpp b/tests/bpftrace.cpp
 index 3c3b036..50b6538 100644
@@ -728,7 +728,7 @@ index 3c3b036..50b6538 100644
 @@ -59,6 +59,14 @@ void check_profile(Probe &p, const std::string &unit, int freq, const std::strin
    EXPECT_EQ("profile:" + unit + ":" + std::to_string(freq), p.name);
  }
- 
+
 +void check_interval(Probe &p, const std::string &unit, int freq, const std::string &prog_name)
 +{
 +  EXPECT_EQ(ProbeType::interval, p.type);
@@ -743,7 +743,7 @@ index 3c3b036..50b6538 100644
 @@ -309,6 +317,22 @@ TEST(bpftrace, add_probes_profile)
    check_profile(bpftrace.get_probes().at(0), "ms", 997, probe_prog_name);
  }
- 
+
 +TEST(bpftrace, add_probes_interval)
 +{
 +  ast::AttachPoint a("interval", "s", 1);
@@ -770,7 +770,7 @@ index 786f3d0..d2db79b 100644
 @@ -260,6 +260,14 @@ TEST(Parser, profile_probe)
        "  int: 1\n");
  }
- 
+
 +TEST(Parser, interval_probe)
 +{
 +  test("interval:s:1 { 1 }",
