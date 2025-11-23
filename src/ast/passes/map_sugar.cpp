@@ -17,6 +17,21 @@ const std::unordered_set<std::string> &getAssignRewriteFuncs()
   return ASSIGN_REWRITE;
 }
 
+// These are special functions which are part of the map API, and operate
+// independently of any key. We allow the first argument to be a pure map, and
+// therefore don't expand a default key in these cases.
+//
+// In the future, this could be generalized by extracting information about the
+// specific function being called, and potentially respecting annotations on
+// these arguments.
+const std::unordered_set<std::string> &getRawMapArgFuncs()
+{
+  static std::unordered_set<std::string> RAW_MAP_ARG = {
+    "print", "clear", "zero", "len", "is_scalar",
+  };
+  return RAW_MAP_ARG;
+}
+
 namespace {
 
 class MapDefaultKey : public Visitor<MapDefaultKey> {
@@ -89,17 +104,6 @@ private:
 };
 
 } // namespace
-
-// These are special functions which are part of the map API, and operate
-// independently of any key. We allow the first argument to be a pure map, and
-// therefore don't expand a default key in these cases.
-//
-// In the future, this could be generalized by extracting information about the
-// specific function being called, and potentially respecting annotations on
-// these arguments.
-static std::unordered_set<std::string> RAW_MAP_ARG = {
-  "print", "clear", "zero", "len", "is_scalar",
-};
 
 void MapDefaultKey::visit(Map &map)
 {
@@ -210,7 +214,7 @@ void MapDefaultKey::visit(Call &call)
   // Skip the first argument in these cases. This allows the argument to be
   // *either* a pure map, or a map access. Later passes will figure out what to
   // do with this, as they may have parametric behavior (as with print).
-  if (RAW_MAP_ARG.contains(call.func) && !call.vargs.empty()) {
+  if (getRawMapArgFuncs().contains(call.func) && !call.vargs.empty()) {
     if (auto *map = call.vargs.at(0).as<Map>()) {
       // Check our functions for consistency. These are effectively builtins
       // that require that map to have keys (conditionally for delete).

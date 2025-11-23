@@ -144,7 +144,7 @@ TEST(macro_expansion, maps)
 
 TEST(macro_expansion, misc)
 {
-  // semantic_analyser will catch this undefined call/macro
+  // type_checker will catch this undefined call/macro
   test("macro add3(x) { x + add5(x) } begin { print(add3(1)); }");
 }
 
