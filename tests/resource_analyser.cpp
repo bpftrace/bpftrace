@@ -1,6 +1,7 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/parser.h"
-#include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_checker.h"
+#include "ast/passes/type_resolver.h"
 #include "ast/passes/type_system.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -28,7 +29,8 @@ void test(BPFtrace &bpftrace,
                 .put(get_mock_function_info())
                 .put(no_types)
                 .add(ast::AllParsePasses())
-                .add(ast::CreateSemanticPass())
+                .add(ast::CreateTypeResolverPass())
+                .add(ast::CreateTypeCheckerPass())
                 .add(ast::CreateResourcePass())
                 .run();
   ASSERT_TRUE(bool(ok)) << msg.str();

@@ -499,7 +499,7 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
     auto *rs = other.as<String>();
     if (!rs) {
       // This is a mix of a string and something else. This may be a runtime
-      // type, and we need to leave it up to the semantic analysis.
+      // type, and we need to leave it up to later type checking.
       return std::nullopt;
     }
 

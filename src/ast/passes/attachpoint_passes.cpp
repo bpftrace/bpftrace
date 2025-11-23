@@ -964,7 +964,7 @@ AttachPointParser::State AttachPointParser::watchpoint_parser()
   }
   ap_->len = *len_parsed;
 
-  // Semantic analyser will ensure a cmd/pid was provided
+  // An earlier pass will ensure a cmd/pid was provided
   ap_->target = bpftrace_.get_watchpoint_binary_path().value_or("");
 
   ap_->mode = parts_[3];

@@ -31,7 +31,8 @@
 #include "ast/passes/printer.h"
 #include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
-#include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_checker.h"
+#include "ast/passes/type_resolver.h"
 #include "ast/passes/type_system.h"
 #include "ast/passes/variable_precheck.h"
 #include "benchmark.h"
@@ -346,7 +347,8 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateVariablePreCheckPass());
-  add(ast::CreateSemanticPass());
+  add(ast::CreateTypeResolverPass());
+  add(ast::CreateTypeCheckerPass());
   add(ast::CreateResourcePass());
 }
 
@@ -356,7 +358,8 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateVariablePreCheckPass());
-  add(ast::CreateSemanticPass());
+  add(ast::CreateTypeResolverPass());
+  add(ast::CreateTypeCheckerPass());
   add(ast::CreateResourcePass());
 }
 
@@ -897,7 +900,7 @@ int main(int argc, char* argv[])
                         .add(CreateParseBTFPass())
                         .add(ast::CreateMapSugarPass())
                         .add(ast::CreateNamedParamsPass())
-                        .add(ast::CreateSemanticPass())
+                        .add(ast::CreateTypeCheckerPass())
                         .run();
 
     if (!pmresult) {
@@ -1034,7 +1037,7 @@ int main(int argc, char* argv[])
         .add(CreateParseBTFPass())
         .add(ast::CreateMapSugarPass())
         .add(ast::CreateNamedParamsPass())
-        .add(ast::CreateSemanticPass());
+        .add(ast::CreateTypeCheckerPass());
 
     auto pmresult = pm.run();
     if (!pmresult) {
