@@ -27,6 +27,7 @@ public:
 };
 
 const std::unordered_set<std::string>& getAssignRewriteFuncs();
+const std::unordered_set<std::string>& getRawMapArgFuncs();
 
 Pass CreateMapSugarPass();
 
