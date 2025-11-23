@@ -192,9 +192,19 @@ PROG begin { printf("size=%d\n", sizeof(struct task_struct));  }
 EXPECT_REGEX ^size=
 REQUIRES_FEATURE btf
 
+NAME sizeof_btf_int
+PROG begin { print(sizeof(uint64_t));  }
+EXPECT 8
+REQUIRES_FEATURE btf
+
 NAME offsetof
 PROG struct Foo { int x; struct Bar { int x; } bar; } begin { printf("%ld %ld\n", offsetof(struct Foo, x), offsetof(struct Foo, bar.x));  }
 EXPECT_REGEX ^0 4$
+
+NAME offsetof_btf
+PROG begin { print(offsetof(qspinlock, tail)); }
+EXPECT_REGEX ^[0-9]+
+REQUIRES_FEATURE btf
 
 NAME print args in fentry
 PROG fentry:vfs_open { print(args); exit(); }

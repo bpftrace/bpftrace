@@ -4,6 +4,7 @@ build-*/
 tests/runtime/*.pyc
 .direnv
 .vagrant
+.vmtest.log
 tests/**/*.bc
 *~
 \#*\#
