@@ -236,7 +236,7 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
 
   if (notes_shdr.sh_type != SHT_NOTE || !gelf_getehdr(elf, &ehdr)) {
     return make_error<ELFParseError>("invalid USDT notes section (" +
-                                     USDT_NOTE_SEC + ") in '" +
+                                     std::string(USDT_NOTE_SEC) + ") in '" +
                                      std::string(elf_path) + "'");
   }
 

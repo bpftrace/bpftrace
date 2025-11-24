@@ -14,8 +14,8 @@
 namespace bpftrace::util {
 
 constexpr short USDT_NOTE_TYPE = 3;
-constexpr std::string USDT_NOTE_SEC = ".note.stapsdt";
-constexpr std::string USDT_NOTE_NAME = "stapsdt";
+constexpr std::string_view USDT_NOTE_SEC = ".note.stapsdt";
+constexpr std::string_view USDT_NOTE_NAME = "stapsdt";
 
 class ELFParseError : public ErrorInfo<ELFParseError> {
 public:
