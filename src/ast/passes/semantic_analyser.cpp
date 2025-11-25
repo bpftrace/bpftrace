@@ -296,6 +296,11 @@ private:
   // Holds the function argument index currently being
   // visited by this SemanticAnalyser.
   int func_arg_idx_ = -1;
+  // This is specifically for visiting Identifiers
+  // in typeof, sizeof, cast, and offsetof expressions
+  // as the ident is treated like a type name, e.g.
+  // `print(sizeof(uint64_t));`
+  bool is_type_name_ = false;
 
   variable *find_variable(const std::string &var_ident);
   void check_variable(Variable &var, bool check_assigned);
@@ -650,21 +655,6 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
 };
 // clang-format on
 
-static const std::map<std::string, std::tuple<size_t, bool>> &getIntcasts()
-{
-  static const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
-    { "uint8", std::tuple<size_t, bool>{ 8, false } },
-    { "int8", std::tuple<size_t, bool>{ 8, true } },
-    { "uint16", std::tuple<size_t, bool>{ 16, false } },
-    { "int16", std::tuple<size_t, bool>{ 16, true } },
-    { "uint32", std::tuple<size_t, bool>{ 32, false } },
-    { "int32", std::tuple<size_t, bool>{ 32, true } },
-    { "uint64", std::tuple<size_t, bool>{ 64, false } },
-    { "int64", std::tuple<size_t, bool>{ 64, true } },
-  };
-  return intcasts;
-}
-
 // These are types which aren't valid for scratch variables
 // e.g. this is not valid `let $x: sum_t;`
 static bool IsValidVarDeclType(const SizedType &ty)
@@ -755,9 +745,6 @@ void SemanticAnalyser::visit(Identifier &identifier)
   } else if (bpftrace_.structs.Has(identifier.ident)) {
     identifier.ident_type = CreateRecord(
         identifier.ident, bpftrace_.structs.Lookup(identifier.ident));
-  } else if (func_ == "sizeof" && getIntcasts().contains(identifier.ident)) {
-    identifier.ident_type = CreateInt(
-        std::get<0>(getIntcasts().at(identifier.ident)));
   } else if (func_ == "nsecs") {
     identifier.ident_type = CreateTimestampMode();
     if (identifier.ident == "monotonic") {
@@ -784,12 +771,13 @@ void SemanticAnalyser::visit(Identifier &identifier)
                             << " (expects: current_pid or current_tid)";
     }
   } else {
-    // Final attempt: try to parse as a stack mode.
     ConfigParser<StackMode> parser;
     StackMode mode;
     auto ok = parser.parse(func_, &mode, identifier.ident);
     if (ok) {
       identifier.ident_type = CreateStack(true, StackType{ .mode = mode });
+    } else if (is_type_name_) {
+      identifier.ident_type = bpftrace_.btf_->get_stype(identifier.ident);
     } else {
       identifier.addError() << "Unknown identifier: '" + identifier.ident + "'";
     }
@@ -1900,7 +1888,9 @@ void SemanticAnalyser::visit(Call &call)
 std::optional<size_t> SemanticAnalyser::check(Sizeof &szof)
 {
   meta_depth_++;
+  is_type_name_ = true;
   Visitor<SemanticAnalyser>::visit(szof);
+  is_type_name_ = false;
   meta_depth_--;
 
   if (std::holds_alternative<SizedType>(szof.record)) {
@@ -1930,7 +1920,9 @@ void SemanticAnalyser::visit(Sizeof &szof)
 std::optional<size_t> SemanticAnalyser::check(Offsetof &offof)
 {
   meta_depth_++;
+  is_type_name_ = true;
   Visitor<SemanticAnalyser>::visit(offof);
+  is_type_name_ = false;
   meta_depth_--;
 
   auto check_type = [&](SizedType record) -> std::optional<size_t> {
@@ -1983,21 +1975,15 @@ void SemanticAnalyser::visit(Offsetof &offof)
 
 void SemanticAnalyser::visit(Typeof &typeof)
 {
+  meta_depth_++;
+  is_type_name_ = true;
+  Visitor<SemanticAnalyser>::visit(typeof);
+  is_type_name_ = false;
+  meta_depth_--;
+
   if (std::holds_alternative<SizedType>(typeof.record)) {
     resolve_struct_type(std::get<SizedType>(typeof.record), typeof);
-  } else {
-    const auto &expr = std::get<Expression>(typeof.record);
-    if (auto *ident = expr.as<Identifier>()) {
-      auto stype = bpftrace_.btf_->get_stype(ident->ident);
-      if (!stype.IsNoneTy()) {
-        typeof.record = stype;
-      }
-    }
   }
-
-  meta_depth_++;
-  Visitor<SemanticAnalyser>::visit(typeof);
-  meta_depth_--;
 }
 
 void SemanticAnalyser::visit(Typeinfo &typeinfo)
