@@ -168,7 +168,46 @@ static Result<BitcodeModules::Result> build(
     .module = std::move(mod),
     .object = std::move(*data),
     .loc = obj.node.loc,
+    .name = name,
   };
+}
+
+void build_imports(BPFtrace &bpftrace,
+                   CompileContext &ctx,
+                   ast::Imports &imports,
+                   BitcodeModules &bm)
+{
+  // Nothing to do? Return directly.
+  if (imports.c_sources.empty()) {
+    return;
+  }
+
+  // Construct our kernel headers. This is a rather expensive operation,
+  // so we ensure that we do this only once for all files.
+  std::string vmlinux_h = bpftrace.btf_->c_def();
+
+  // For each of the source files in the imports, we
+  // build it and turn it into a bitcode file.
+  for (auto &[name, obj] : imports.c_sources) {
+    if (bm.built_imports.contains(obj.data())) {
+      continue;
+    }
+    auto result = build(ctx,
+                        name,
+                        obj,
+                        llvm::MemoryBufferRef(llvm::StringRef(vmlinux_h),
+                                              "vmlinux.h"),
+                        imports);
+
+    if (!result) {
+      auto &e = obj.node.addError();
+      e << "failed to build";
+      e.addHint() << result.takeError();
+      continue;
+    }
+    bm.built_imports.insert(obj.data());
+    bm.modules.push_back(std::move(*result));
+  }
 }
 
 ast::Pass CreateClangBuildPass()
@@ -179,35 +218,7 @@ ast::Pass CreateClangBuildPass()
          CompileContext &ctx,
          ast::Imports &imports) -> Result<BitcodeModules> {
         BitcodeModules bm;
-
-        // Nothing to do? Return directly.
-        if (imports.c_sources.empty()) {
-          return bm;
-        }
-
-        // Construct our kernel headers. This is a rather expensive operation,
-        // so we ensure that we do this only once for all files.
-        std::string vmlinux_h = bpftrace.btf_->c_def();
-
-        // For each of the source files in the imports, we
-        // build it and turn it into a bitcode file.
-        for (auto &[name, obj] : imports.c_sources) {
-          auto result = build(ctx,
-                              name,
-                              obj,
-                              llvm::MemoryBufferRef(llvm::StringRef(vmlinux_h),
-                                                    "vmlinux.h"),
-                              imports);
-
-          if (!result) {
-            auto &e = obj.node.addError();
-            e << "failed to build";
-            e.addHint() << result.takeError();
-            continue;
-          }
-          bm.modules.push_back(std::move(*result));
-        }
-
+        build_imports(bpftrace, ctx, imports, bm);
         return bm;
       });
 }

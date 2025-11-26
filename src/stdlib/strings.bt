@@ -59,6 +59,7 @@ macro strlen(exp) {
 }
 
 macro __strnlen(ptr, max_size) {
+  import "stdlib/strings/strings.bpf.c";
   __bpf_strnlen(ptr, (size_t)max_size)
 }
 
@@ -84,6 +85,7 @@ macro strcap(exp) {
 // Returns the index of the first occurrence of the string needle in the string haystack. If needle is not in haystack then -1 is returned.
 // :variant int64 strstr(string haystack, string needle)
 macro strstr($haystack, $needle) {
+  import "stdlib/strings/strings.bpf.c";
   assert_str($haystack);
   assert_str($needle);
   let $haystack_size = strcap($haystack);
@@ -130,6 +132,7 @@ macro strcontains(haystack, needle) {
 // }
 // ```
 macro strerror(errno) {
+  import "stdlib/strings/strings.bpf.c";
   let $v : string[64];
   // Ensure that the size of the string is equal to the size of the returned
   // buffer. On the C side, it will be a compilation error if any of the
@@ -150,6 +153,7 @@ macro strerror(errno) {
 // }
 // ```
 macro syscall_name(n) {
+  import "stdlib/strings/strings.bpf.c";
   let $v : string[64];
   // Ensure that the size of the string is equal to the size of the returned
   // buffer. On the C side, it will be a compilation error if any of the

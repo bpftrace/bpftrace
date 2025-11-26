@@ -8,7 +8,9 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
+#include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
+#include "ast/passes/codegen_llvm.h"
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
@@ -156,12 +158,17 @@ public:
       types.emplace(*types_);
     }
 
+    ast::CompileContext no_compile_ctx;
+    ast::BitcodeModules no_bitcode_modules;
+
     auto ok = ast::PassManager()
                   .put(ast)
                   .put(mock->bpftrace)
                   .put(types->types)
+                  .put(no_compile_ctx)
+                  .put(no_bitcode_modules)
                   .add(CreateParsePass())
-                  .add(ast::CreateResolveImportsPass())
+                  .add(ast::CreateResolveRootImportsPass())
                   .add(ast::CreateControlFlowPass())
                   .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())

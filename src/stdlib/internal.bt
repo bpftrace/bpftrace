@@ -1,3 +1,0 @@
-macro usdt_arg(x) {
-   __usdt_arg((void *)ctx, x)
-}

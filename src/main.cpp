@@ -32,6 +32,7 @@
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_prune.h"
 #include "ast/passes/recursion_check.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -855,9 +856,12 @@ int main(int argc, char* argv[])
     // To list tracepoints, we construct a synthetic AST and then expand the
     // probe. The raw contents of the program are the initial search provided.
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
-    ast::CDefinitions no_c_defs; // No external C definitions may be used.
-    ast::TypeMetadata no_types;  // No external types may be used.
-    ast::MacroRegistry macro_registry; // No macros may be used.
+    ast::CDefinitions no_c_defs;            // No external C definitions.
+    ast::TypeMetadata no_types;             // No external types.
+    ast::MacroRegistry no_macros;           // No macros.
+    ast::Imports no_imports;                // No imports.
+    ast::CompileContext no_compile_ctx;     // No compiled C files
+    ast::BitcodeModules no_bitcode_modules; // No bitcode modules from C files
 
     // Parse and expand all the attachpoints. We don't need to descend into
     // the actual driver here, since we know that the program is already
@@ -867,7 +871,10 @@ int main(int argc, char* argv[])
                         .put(bpftrace)
                         .put(no_c_defs)
                         .put(no_types)
-                        .put(macro_registry)
+                        .put(no_macros)
+                        .put(no_imports)
+                        .put(no_compile_ctx)
+                        .put(no_bitcode_modules)
                         .add(ast::CreateParseAttachpointsPass(args.listing))
                         .add(ast::CreateCheckAttachpointsPass(args.listing))
                         .add(CreateParseBTFPass())
@@ -953,13 +960,20 @@ int main(int argc, char* argv[])
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
-    ast::CDefinitions no_c_defs; // See above.
-    ast::TypeMetadata no_types;  // See above.
-    ast::MacroRegistry macro_registry; // See above.
+    // See above.
+    ast::CDefinitions no_c_defs;
+    ast::TypeMetadata no_types;
+    ast::MacroRegistry no_macros;
+    ast::Imports no_imports;
+    ast::CompileContext no_compile_ctx;
+    ast::BitcodeModules no_bitcode_modules;
     pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)))
         .put(no_c_defs)
         .put(no_types)
-        .put(macro_registry)
+        .put(no_macros)
+        .put(no_imports)
+        .put(no_compile_ctx)
+        .put(no_bitcode_modules)
         .add(ast::CreateParseAttachpointsPass(args.listing))
         .add(ast::CreateCheckAttachpointsPass(args.listing))
         .add(CreateParseBTFPass())

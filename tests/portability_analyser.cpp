@@ -2,10 +2,13 @@
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
+#include "ast/passes/clang_build.h"
+#include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
 #include "btf_common.h"
@@ -25,6 +28,9 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 
   ast::CDefinitions no_c_defs; // Output from clang parser.
   ast::TypeMetadata no_types;  // No external types defined.
+  ast::Imports no_imports;
+  ast::BitcodeModules no_bitcode_modules;
+  ast::CompileContext no_compile_ctx;
 
   // N.B. No macro expansion.
   auto ok = ast::PassManager()
@@ -32,6 +38,9 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .put(bpftrace)
                 .put(no_c_defs)
                 .put(no_types)
+                .put(no_imports)
+                .put(no_compile_ctx)
+                .put(no_bitcode_modules)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateCheckAttachpointsPass())
