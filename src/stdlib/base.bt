@@ -145,17 +145,20 @@ macro comm($pid) {
     }
 
     let $name : string[64];
-    let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
-    // EOPNOTSUPP: Operation not supported
-    if ($ret == (int32)-95) {
-      warnf("'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system.");
-      $name = "[unknown]";
-    // ESRCH: No such process
-    } else if ($ret == (int32)-3) {
-      warnf("No such process (pid=%d)", $pid);
-      $name = "N/A";
+    if comptime kfunc_allowed("bpf_task_from_pid") {
+      let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
+      // EOPNOTSUPP: Operation not supported
+      if ($ret == (int32)-95) {
+        warnf("'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system.");
+        $name = "[unknown]";
+      // ESRCH: No such process
+      } else if ($ret == (int32)-3) {
+        warnf("No such process (pid=%d)", $pid);
+        $name = "N/A";
+      }
+    } else {
+      fail("Syntax comm(PID) is not supported in this probe type yet. Type: %s", probetype);
     }
-
     $name
 }
 

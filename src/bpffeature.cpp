@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <fcntl.h>
 #include <filesystem>
 #include <fstream>
@@ -182,6 +183,56 @@ bool BPFfeature::detect_helper(enum bpf_func_id func_id,
   return (strstr(buf, "invalid func ") == nullptr) &&
          (strstr(buf, "unknown func ") == nullptr) &&
          (strstr(buf, "program of this type cannot use helper ") == nullptr);
+}
+
+// Used to test whether kfuncs are supported in a certain type of BPF program.
+//
+// The kernel function check_kfunc_call() will check metadata before the BPF
+// Verifier. If the check fails, it will populate the log_buf with the
+// corresponding error log. We can determine the support status of the kfunc
+// in a BPF_PROG by matching specific logs.
+bool BPFfeature::kfunc_allowed(const char* kfunc, enum bpf_prog_type prog_type)
+{
+  char logbuf[4096] = {};
+  struct bpf_insn insn_buf[512];
+  struct bpf_insn* insn = insn_buf;
+
+  if (has_btf()) {
+    int kfunc_btf_id = btf_.get_btf_id(kfunc, "vmlinux");
+    size_t insn_cnt = 0;
+
+    *insn++ = BPF_CALL_KFUNC(0, kfunc_btf_id);
+    *insn++ = BPF_EXIT_INSN();
+
+    insn_cnt = insn - insn_buf;
+
+    if (try_load_(nullptr,
+                  prog_type,
+                  std::nullopt,
+                  std::nullopt,
+                  insn_buf,
+                  insn_cnt,
+                  1,
+                  logbuf,
+                  4096)) {
+      return true;
+    } else {
+      std::string errmsg = std::string("calling kernel function ") + kfunc +
+                           " is not allowed";
+      return strstr(logbuf, errmsg.c_str()) == nullptr;
+    }
+  }
+
+  return false;
+}
+
+bool BPFfeature::has_kfunc(std::string kfunc)
+{
+  int btf_id = 0;
+  if (has_btf()) {
+    btf_id = btf_.get_btf_id(kfunc, "vmlinux");
+  }
+  return btf_id > 0;
 }
 
 bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type,
