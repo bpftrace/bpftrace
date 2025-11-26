@@ -97,7 +97,7 @@ std::optional<Expression> Builtins::visit(Call &call)
   Visitor<Builtins, std::optional<Expression>>::visit(call);
   if (call.func == "__builtin_signal_num") {
     if (call.vargs.size() != 1) {
-      call.addError() << "__builtin_signal_num expects 1 argument";
+      call.addError() << call.func << " expects 1 argument";
     } else {
       if (auto *str = call.vargs.at(0).as<String>()) {
         auto signal_num = signal_name_to_num(str->value);
@@ -108,18 +108,18 @@ std::optional<Expression> Builtins::visit(Call &call)
       }
     }
   } else if (call.func == "__builtin_kfunc_exist") {
-    if (call.vargs.size() != 1 || !call.vargs.at(0).is<String>()) {
-      call.addError() << call.func << " expects 1 string literal argument";
+    if (call.vargs.size() != 1) {
+      call.addError() << call.func << " expects 1 argument";
     } else {
-      auto *kfunc = call.vargs.at(0).as<String>();
-      return ast_.make_node<Boolean>(
-          kfunc->loc, bpftrace_.feature_->has_kfunc(kfunc->value));
+      if (auto *kfunc = call.vargs.at(0).as<String>()) {
+        return ast_.make_node<Boolean>(
+            kfunc->loc, bpftrace_.feature_->has_kfunc(kfunc->value));
+      }
     }
   } else if (call.func == "__builtin_kfunc_allowed") {
-    if (call.vargs.size() != 1 || !call.vargs.at(0).is<String>()) {
-      call.addError() << call.func << " expects 1 string literal argument";
+    if (call.vargs.size() != 1) {
+      call.addError() << call.func << " expects 1 argument";
     } else {
-      auto *kfunc = call.vargs.at(0).as<String>();
       auto *probe = dynamic_cast<Probe *>(top_level_node_);
       if (!probe) {
         LOG(BUG) << "Inner error: can't get probe for " << call.func;
@@ -127,9 +127,11 @@ std::optional<Expression> Builtins::visit(Call &call)
       }
       ProbeType type = probetype(probe->attach_points.front()->provider);
       bpf_prog_type prog_type = progtype(type);
-      return ast_.make_node<Boolean>(
-          kfunc->loc,
-          bpftrace_.feature_->kfunc_allowed(kfunc->value.c_str(), prog_type));
+      if (auto *kfunc = call.vargs.at(0).as<String>()) {
+        return ast_.make_node<Boolean>(
+            kfunc->loc,
+            bpftrace_.feature_->kfunc_allowed(kfunc->value.c_str(), prog_type));
+      }
     }
   } else if (call.func == "__builtin_is_literal") {
     if (call.vargs.size() != 1) {
