@@ -4606,6 +4606,11 @@ kretfunc:func_1 { reg("ip") }
   test("kfunc:func_1 { $x = args->a; }");
 }
 
+TEST_F(SemanticAnalyserBTFTest, ntop)
+{
+  test(R"(fentry:func_arrays { printf("%s\n", ntop(args.arr.char_arr2)); })");
+}
+
 TEST_F(SemanticAnalyserTest, btf_type_tags)
 {
   test("t:btf:tag { args.parent }");

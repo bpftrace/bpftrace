@@ -125,10 +125,11 @@ TEST_F(field_analyser_btf, btf_arrays)
   ASSERT_TRUE(bpftrace->structs.Has("struct Arrays"));
   auto arrs = bpftrace->structs.Lookup("struct Arrays").lock();
 
-  EXPECT_EQ(arrs->size, 64);
-  ASSERT_EQ(arrs->fields.size(), 6U);
+  EXPECT_EQ(arrs->size, 80);
+  ASSERT_EQ(arrs->fields.size(), 7U);
   ASSERT_TRUE(arrs->HasField("int_arr"));
   ASSERT_TRUE(arrs->HasField("char_arr"));
+  ASSERT_TRUE(arrs->HasField("char_arr2"));
   ASSERT_TRUE(arrs->HasField("ptr_arr"));
   ASSERT_TRUE(arrs->HasField("multi_dim"));
   ASSERT_TRUE(arrs->HasField("zero"));
@@ -140,19 +141,22 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_EQ(arrs->GetField("int_arr").type.GetSize(), 16U);
   EXPECT_EQ(arrs->GetField("int_arr").offset, 0);
 
-  // See type construction in btf.cpp; for fixed sized fields our string type
-  // has an extra character because we need to be able to signal that it is
-  // well-formed (including the NUL), even if the field itself contains no NUL
-  // character, because the field has a known fixed size.
-  EXPECT_TRUE(arrs->GetField("char_arr").type.IsStringTy());
-  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U + 1U);
+  EXPECT_TRUE(arrs->GetField("char_arr").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("char_arr").type.GetNumElements(), 8);
+  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8);
   EXPECT_EQ(arrs->GetField("char_arr").offset, 16);
 
+  EXPECT_TRUE(arrs->GetField("char_arr2").type.IsArrayTy());
+  EXPECT_EQ(arrs->GetField("char_arr2").type.GetNumElements(), 16);
+  EXPECT_EQ(arrs->GetField("char_arr2").type.GetSize(), 16);
+  EXPECT_EQ(arrs->GetField("char_arr2").offset, 24);
+
+  EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());
   EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetNumElements(), 2);
   EXPECT_TRUE(arrs->GetField("ptr_arr").type.GetElementTy()->IsPtrTy());
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetSize(), 2 * sizeof(uintptr_t));
-  EXPECT_EQ(arrs->GetField("ptr_arr").offset, 24);
+  EXPECT_EQ(arrs->GetField("ptr_arr").offset, 40);
 
   // BTF flattens multi-dimensional arrays, so this test doesn't
   // check the correct number of elements. The correct values are
@@ -161,19 +165,19 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 6);
   EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
-  EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
+  EXPECT_EQ(arrs->GetField("multi_dim").offset, 56);
 
   EXPECT_TRUE(arrs->GetField("zero").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("zero").type.GetNumElements(), 0);
   EXPECT_TRUE(arrs->GetField("zero").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("zero").type.GetSize(), 0U);
-  EXPECT_EQ(arrs->GetField("zero").offset, 64);
+  EXPECT_EQ(arrs->GetField("zero").offset, 80);
 
   EXPECT_TRUE(arrs->GetField("flexible").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetNumElements(), 0);
   EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
-  EXPECT_EQ(arrs->GetField("flexible").offset, 64);
+  EXPECT_EQ(arrs->GetField("flexible").offset, 80);
 }
 
 // Disabled because BTF flattens multi-dimensional arrays #3082.
