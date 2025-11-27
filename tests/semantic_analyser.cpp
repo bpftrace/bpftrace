@@ -170,9 +170,9 @@ public:
                   .add(ast::CreateArgsResolverPass())
                   .add(ast::CreateFieldAnalyserPass())
                   .add(ast::CreateClangParsePass())
+                  .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateBuiltinsPass())
                   .add(ast::CreateCMacroExpansionPass())
-                  .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateMapSugarPass())
                   .add(ast::CreateNamedParamsPass())
                   .add(ast::CreateSemanticPass())
@@ -3473,6 +3473,9 @@ TEST_F(SemanticAnalyserTest, signal)
     test("k:f {" + signal + "(\"SIGKILL\"); }",
          UnsafeMode::Enable,
          Types{ types });
+    test("k:f {" + signal + "({ \"SIGKILL\" }); }",
+         UnsafeMode::Enable,
+         Types{ types });
 
     // Not allowed for:
     test("hardware:pcm:1000 {" + signal + "(1); }",
@@ -3514,6 +3517,14 @@ TEST_F(SemanticAnalyserTest, signal)
          Types{ types },
          Error{});
     test("k:f {" + signal + "(\"ABC\"); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("k:f { $a = \"SIGKILL\"" + signal + "($a); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("k:f { $a = \"SIGKILL\"" + signal + "({ $a }); }",
          UnsafeMode::Enable,
          Types{ types },
          Error{});

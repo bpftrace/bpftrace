@@ -131,6 +131,13 @@ std::optional<Expression> Builtins::visit(Call &call)
           kfunc->loc,
           bpftrace_.feature_->kfunc_allowed(kfunc->value.c_str(), prog_type));
     }
+  } else if (call.func == "__builtin_is_literal") {
+    if (call.vargs.size() != 1) {
+      call.addError() << call.func << " expects 1 argument";
+    } else {
+      return ast_.make_node<Boolean>(call.vargs.at(0).loc(),
+                                     call.vargs.at(0).is_literal());
+    }
   }
   return std::nullopt;
 }

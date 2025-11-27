@@ -22,7 +22,6 @@
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/control_flow_analyser.h"
-#include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
@@ -341,7 +340,6 @@ struct Args {
 
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
-  add(ast::CreateFoldLiteralsPass());
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
@@ -352,7 +350,6 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreatePortabilityPass());
-  add(ast::CreateFoldLiteralsPass());
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
   add(ast::CreateSemanticPass());
