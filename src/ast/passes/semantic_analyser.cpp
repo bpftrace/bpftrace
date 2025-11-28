@@ -2884,9 +2884,48 @@ void SemanticAnalyser::visit(Jump &jump)
   }
 }
 
+// Helper class to detect if an expression contains map variables
+class MapVariableDetector : public Visitor<MapVariableDetector> {
+public:
+  explicit MapVariableDetector() : has_map_variable_(false)
+  {
+  }
+
+  using Visitor<MapVariableDetector>::visit;
+
+  void visit(Map &)
+  {
+    has_map_variable_ = true;
+  }
+
+  void visit(MapAccess &)
+  {
+    has_map_variable_ = true;
+  }
+
+  bool hasMapVariable() const
+  {
+    return has_map_variable_;
+  }
+
+private:
+  bool has_map_variable_;
+};
+
 void SemanticAnalyser::visit(While &while_block)
 {
   visit(while_block.cond);
+
+  // Check if the while condition uses map variables
+  MapVariableDetector detector;
+  detector.visit(while_block.cond);
+
+  if (detector.hasMapVariable()) {
+    ctx_.diagnostics().addError(while_block.loc)
+        << "While loops with map variables in the condition may be rejected by "
+           "the BPF verifier. "
+        << "Use a scratch variable instead of a map value.";
+  }
 
   loop_depth_++;
   visit(while_block.block);
