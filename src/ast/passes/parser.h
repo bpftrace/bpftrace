@@ -11,6 +11,7 @@
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/deprecated.h"
 #include "ast/passes/field_analyser.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -54,6 +55,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateArgsResolverPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
+  passes.emplace_back(CreateFoldLiteralsPass());
   passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateCMacroExpansionPass());
   passes.emplace_back(CreateMapSugarPass());

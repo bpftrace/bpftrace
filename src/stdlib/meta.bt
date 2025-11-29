@@ -45,3 +45,9 @@ macro check_key(@map, key, func) {
     }
   }
 }
+
+// :variant bool is_literal(Expression expr)
+// Returns true if the passed expression is a literal, e.g. 1, true, "hello"
+macro is_literal(expr) {
+  __builtin_is_literal(expr)
+}

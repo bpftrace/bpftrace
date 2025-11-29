@@ -1001,13 +1001,6 @@ macro retval() {
 // $ ls
 // Trace/breakpoint trap (core dumped)
 // ```
-macro signal($var) {
-  if comptime (is_str($var)) {
-    fail("this first argument to signal() must be a string literal or a positive integer");
-  }
-  __signal($var, false);
-}
-
 macro signal(expr) {
   __signal(expr, false);
 }
@@ -1024,13 +1017,6 @@ macro signal(expr) {
 // Send a signal to the thread being traced.
 // Use `signal` to send to the process being traced (any thread).
 // The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
-macro signal_thread($var) {
-  if comptime (is_str($var)) {
-    fail("this first argument to signal_thread() must be a string literal or a positive integer");
-  }
-  __signal($var, true);
-}
-
 macro signal_thread(expr) {
   __signal(expr, true);
 }

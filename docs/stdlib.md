@@ -375,6 +375,12 @@ Determine whether the given expression is an array.
 Determine whether the given expression is an integer.
 
 
+### is_literal
+- `bool is_literal(Expression expr)`
+
+Returns true if the passed expression is a literal, e.g. 1, true, "hello"
+
+
 ### is_ptr
 - `bool is_ptr(any expression)`
 

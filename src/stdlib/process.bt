@@ -19,7 +19,7 @@ macro __signal(expr, is_tid) {
   if comptime (__builtin_safe_mode) {
     fail("%s is unsafe. To use you need the --unsafe flag",
       is_tid ? "signal_thread()" : "signal()");
-  } else if comptime (is_str(expr)) {
+  } else if comptime ((is_str(expr) && is_literal(expr))) {
     $sig = __builtin_signal_num(expr);
   } else if comptime (typeinfo(expr).1 != typeinfo(0).1) {
     fail("%s accepts a string literal or a positive integer",
