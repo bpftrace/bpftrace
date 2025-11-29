@@ -24,15 +24,17 @@ macro __signal(expr, is_tid) {
   } else if comptime (typeinfo(expr).1 != typeinfo(0).1) {
     fail("%s accepts a string literal or a positive integer",
       is_tid ? "signal_thread()" : "signal()");
-  } else if comptime (expr < 1 || expr > 64) {
-    fail("%s accepts a string literal or a positive integer",
+  } else if comptime (is_literal(expr)) {
+    if comptime (expr < 1 || expr > 64) {
+      fail("%s accepts a string literal or an integer between 1 and 64 (inclusive)",
       is_tid ? "signal_thread()" : "signal()");
+    }
   } else {
     $sig = (int32)expr;
   }
 
-  if ($sig < 1) {
-    errorf("%s expects a positive integer. Got %d",
+  if ($sig < 1 || $sig > 64) {
+    errorf("%s expects an integer between 1 and 64 (inclusive). Got %d",
       is_tid ? "signal_thread()" : "signal()", $sig);
   } else {
     $ret = comptime is_tid ? __signal_thread((uint32)$sig) : __signal_process((uint32)$sig);
