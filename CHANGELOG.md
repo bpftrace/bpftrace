@@ -85,6 +85,8 @@ and this project adheres to
   - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
 - Fix automatic conversion of BTF char arrays to bpftrace strings
   - [#4861](https://github.com/bpftrace/bpftrace/pull/4861)
+- Fix anonymous struct/unions not resolving correctly from BTF
+  - [#4732](https://github.com/bpftrace/bpftrace/pull/4732)
 #### Security
 #### Docs
 #### Tools

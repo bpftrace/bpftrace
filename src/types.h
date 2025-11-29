@@ -182,6 +182,7 @@ private:
                      // owned by the `StructManager`.
   AddrSpace as_ = AddrSpace::none;
   bool is_signed_ = false;
+  bool is_anon_ = false;
   bool ctx_ = false;                              // Is bpf program context
   std::unordered_set<std::string> btf_type_tags_; // Only populated for
                                                   // Type::pointer
@@ -197,6 +198,7 @@ private:
             stack_type,
             is_internal,
             is_funcarg,
+            is_anon_,
             funcarg_idx,
             is_signed_,
             element_type_,
@@ -326,6 +328,18 @@ public:
   {
     assert(IsRecordTy() || IsEnumTy());
     return name_;
+  }
+
+  bool IsAnonTy() const
+  {
+    assert(IsRecordTy());
+    return is_anon_;
+  }
+
+  void SetAnon()
+  {
+    assert(IsRecordTy());
+    is_anon_ = true;
   }
 
   Type GetTy() const

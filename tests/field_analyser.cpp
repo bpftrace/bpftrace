@@ -307,6 +307,45 @@ TEST_F(field_analyser_btf, btf_types_arr_access)
   ASSERT_EQ(foo3->fields.size(), 2U); // fields are resolved
 }
 
+TEST_F(field_analyser_btf, btf_types_anon_structs)
+{
+  auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace,
+       "fentry:func_anon_struct {\n"
+       "  @ = args.AnonStruct->AnonArray[0];\n"
+       "}");
+
+  ASSERT_TRUE(bpftrace->structs.Has("struct anon_structs"));
+  auto anonstruct = bpftrace->structs.Lookup("struct anon_structs").lock();
+
+  ASSERT_TRUE(anonstruct->HasField("AnonTypedefArray"));
+  auto typedefarray = anonstruct->GetField("AnonTypedefArray").type;
+  EXPECT_TRUE(typedefarray.IsArrayTy());
+  EXPECT_EQ(typedefarray.GetNumElements(), 8);
+  EXPECT_EQ(typedefarray.GetSize(), 32);
+  EXPECT_TRUE(typedefarray.GetElementTy()->IsRecordTy());
+  EXPECT_TRUE(typedefarray.GetElementTy()->IsAnonTy());
+  EXPECT_TRUE(typedefarray.GetElementTy()->HasField("a"));
+
+  ASSERT_TRUE(anonstruct->HasField("AnonArray"));
+  auto structarray = anonstruct->GetField("AnonArray").type;
+  EXPECT_TRUE(typedefarray.IsArrayTy());
+  EXPECT_EQ(structarray.GetSize(), 96);
+  EXPECT_EQ(structarray.GetNumElements(), 4);
+  EXPECT_TRUE(structarray.GetElementTy()->IsRecordTy());
+  EXPECT_TRUE(structarray.GetElementTy()->IsAnonTy());
+  EXPECT_TRUE(structarray.GetElementTy()->HasField("a"));
+  EXPECT_TRUE(structarray.GetElementTy()->HasField("b"));
+
+  ASSERT_TRUE(structarray.GetElementTy()->HasField("AnonSubArray"));
+  auto subarray = structarray.GetElementTy()->GetField("AnonSubArray").type;
+  EXPECT_EQ(subarray.GetNumElements(), 2);
+  EXPECT_TRUE(subarray.GetElementTy()->IsRecordTy());
+  EXPECT_TRUE(subarray.GetElementTy()->IsAnonTy());
+  EXPECT_TRUE(subarray.GetElementTy()->HasField("c"));
+  EXPECT_TRUE(subarray.GetElementTy()->HasField("d"));
+}
+
 TEST_F(field_analyser_btf, btf_types_bitfields)
 {
   auto bpftrace = get_mock_bpftrace();
