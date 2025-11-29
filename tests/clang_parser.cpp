@@ -876,35 +876,4 @@ TEST(clang_parser, redefined_types)
   parse("struct a {int a;}; struct a {int a; short b;};", bpftrace, false);
 }
 
-TEST(clang_parser, data_loc_annotation)
-{
-  BPFtrace bpftrace;
-  std::string input = R"_(
-struct _tracepoint_irq_irq_handler_entry
-{
-  int common_pid;
-  int irq;
-  __attribute__((annotate("tp_data_loc"))) char * name;
-};
-  )_";
-  parse(input, bpftrace);
-
-  ASSERT_TRUE(bpftrace.structs.Has("struct _tracepoint_irq_irq_handler_entry"));
-
-  auto s = bpftrace.structs.Lookup("struct _tracepoint_irq_irq_handler_entry")
-               .lock();
-  EXPECT_EQ(s->size, 16);
-  EXPECT_EQ(s->fields.size(), 3U);
-
-  EXPECT_TRUE(s->GetField("common_pid").type.IsIntTy());
-  EXPECT_TRUE(s->GetField("irq").type.IsIntTy());
-
-  // The parser needs to rewrite __data_loc fields to be u64 so it can hold
-  // a pointer to the actual data. The kernel tracepoint infra exports an
-  // encoded u32 which codegen will know how to decode.
-  EXPECT_TRUE(s->GetField("name").is_data_loc);
-  ASSERT_TRUE(s->GetField("name").type.IsIntTy());
-  EXPECT_EQ(s->GetField("name").type.GetIntBitWidth(), 64ULL);
-}
-
 } // namespace bpftrace::test::clang_parser

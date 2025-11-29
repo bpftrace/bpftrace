@@ -3,6 +3,7 @@
 
 #include "arch/arch.h"
 #include "ast/passes/args_resolver.h"
+#include "ast/passes/tracepoint_format_parser.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
@@ -16,7 +17,12 @@ char ArgParseError::ID;
 
 void ArgParseError::log(llvm::raw_ostream &OS) const
 {
-  OS << "Could not parse arguments of \"" << probe_name_ << "\": " << detail_;
+  if (arg_name_.empty()) {
+    OS << "Could not parse arguments of \"" << probe_name_ << "\": " << detail_;
+  } else {
+    OS << "Could not parse argument \"" << arg_name_ << "\" of \""
+       << probe_name_ << "\": " << detail_;
+  }
 }
 
 namespace {
@@ -57,6 +63,13 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
           ap.func, probe_type == ProbeType::fexit, true, false);
     case ProbeType::rawtracepoint:
       return bpftrace_.btf_->resolve_raw_tracepoint_args(ap.func);
+    case ProbeType::tracepoint: {
+      TracepointFormatParser parser(ap.target, ap.func, bpftrace_);
+      auto ok = parser.parse_format_file();
+      if (!ok)
+        return ok.takeError();
+      return parser.get_tracepoint_struct();
+    }
     case ProbeType::uprobe: {
       Dwarf *dwarf = bpftrace_.get_dwarf(ap.target);
       if (dwarf) {

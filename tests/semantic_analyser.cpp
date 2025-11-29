@@ -243,7 +243,6 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("kprobe:f { func }");
   test("uprobe:/bin/sh:f { func }");
   test("kprobe:f { probe }");
-  test("tracepoint:sched:sched_one { args }");
   test("kprobe:f { jiffies }");
 
   test("kprobe:f { fake }", Error{ R"(
@@ -1471,10 +1470,6 @@ TEST_F(SemanticAnalyserTest, call_ntop)
   test("kprobe:f { @x = ntop(0xFFFF); }");
   test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv4); }");
   test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv6); }");
-
-  // Regression test that ntop can use
-  // arguments from the prog context
-  test("tracepoint:tcp:some_tcp_tp { ntop(args.saddr_v6); }");
 
   test("kprobe:f { ntop(); }", Error{});
   test("kprobe:f { ntop(2, \"hello\"); }", Error{});
@@ -2765,7 +2760,7 @@ begin { @x = stats(10); @y[@x] = 1; }
 
 TEST_F(SemanticAnalyserTest, probe_short_name)
 {
-  test("t:sched:sched_one { args }");
+  test("t:sched:sched_one { 1 }");
   test("k:f { pid }");
   test("kr:f { pid }");
   test("u:sh:f { 1 }");
@@ -3674,19 +3669,6 @@ i:s:1 {
        Warning{ "Unreachable" });
 }
 
-TEST_F(SemanticAnalyserTest, builtin_args)
-{
-  auto bpftrace = get_mock_bpftrace();
-  test("t:sched:sched_one { args.common_field }", Mock{ *bpftrace });
-  test("t:sched:sched_two { args.common_field }", Mock{ *bpftrace });
-  test("t:sched:sched_one,t:sched:sched_two { args.common_field }",
-       Mock{ *bpftrace });
-  test("t:sched:sched_* { args.common_field }", Mock{ *bpftrace });
-  test("t:sched:sched_one { args.not_a_field }", Mock{ *bpftrace }, Error{});
-  // Backwards compatibility
-  test("t:sched:sched_one { args->common_field }", Mock{ *bpftrace });
-}
-
 TEST_F(SemanticAnalyserTest, type_ctx)
 {
   std::string structs = "struct c {char c} struct x { long a; short b[4]; "
@@ -4277,12 +4259,6 @@ TEST_F(SemanticAnalyserTest, int_ident)
   test("begin { sizeof(int32) }");
 }
 
-TEST_F(SemanticAnalyserTest, tracepoint_common_field)
-{
-  test("tracepoint:file:filename { args.filename }");
-  test("tracepoint:file:filename { args.common_field }", Error{});
-}
-
 TEST_F(SemanticAnalyserTest, string_size)
 {
   // Size of the variable should be the size of the larger string (incl. null)
@@ -4624,11 +4600,24 @@ TEST_F(SemanticAnalyserBTFTest, ntop)
 
 TEST_F(SemanticAnalyserTest, btf_type_tags)
 {
-  test("t:btf:tag { args.parent }");
-  test("t:btf:tag { args.real_parent }", Error{ R"(
-stdin:1:17-18: ERROR: Attempting to access pointer field 'real_parent' with unsupported tag attribute: percpu
-t:btf:tag { args.real_parent }
-                ~
+  auto bpftrace = get_mock_bpftrace();
+  auto type = bpftrace->structs.Add("struct Foo", 16);
+
+  auto ptr_type_w_tag = CreatePointer(CreateInt8());
+  ptr_type_w_tag.SetBtfTypeTags({ "rcu" });
+  auto ptr_type_w_bad_tag = CreatePointer(CreateInt8());
+  ptr_type_w_bad_tag.SetBtfTypeTags({ "rcu", "percpu" });
+
+  type.lock()->AddField("field_with_tag", ptr_type_w_tag, 8);
+  type.lock()->AddField("field_with_bad_tag", ptr_type_w_bad_tag, 16);
+
+  test("kprobe:f { ((struct Foo *)arg0)->field_with_tag }", Mock{ *bpftrace });
+  test("kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }",
+       Mock{ *bpftrace },
+       Error{ R"(
+stdin:1:32-34: ERROR: Attempting to access pointer field 'field_with_bad_tag' with unsupported tag attribute: percpu
+kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }
+                               ~~
 )" });
 }
 
@@ -5108,7 +5097,7 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
 
 TEST_F(SemanticAnalyserBTFTest, args_builtin_mixed_probes)
 {
-  test("fentry:func_1,tracepoint:sched:sched_one { args }");
+  test("fentry:func_1,rawtracepoint:event_rt { args }");
 }
 
 TEST_F(SemanticAnalyserBTFTest, binop_late_ptr_resolution)

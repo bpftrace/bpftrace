@@ -4,7 +4,6 @@ add_library(ast_defs STATIC
   helpers.cpp
   integer_types.cpp
   location.cpp
-  tracepoint_helpers.cpp
 )
 add_dependencies(ast_defs parser)
 target_link_libraries(ast_defs util)

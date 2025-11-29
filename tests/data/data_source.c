@@ -1,3 +1,14 @@
+unsigned char uchar_;
+short short_;
+unsigned short ushort_;
+long long_;
+unsigned long ulong_;
+long long llong_;
+unsigned long long ullong_;
+
+typedef unsigned long size_t;
+size_t sizet_;
+
 struct Foo1 {
   int a;
   char b;

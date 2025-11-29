@@ -59,15 +59,6 @@ TEST(portability_analyser, generic_field_access_disabled)
   test("struct Foo { int x;} begin { $f = (struct Foo *)0; $f->x; }", 1);
 }
 
-TEST(portability_analyser, tracepoint_field_access)
-{
-  test("tracepoint:sched:sched_one { args }", 0);
-  test("tracepoint:sched:sched_one { args.common_field }", 0);
-  test("tracepoint:sched:sched_* { args.common_field }", 0);
-  // Backwards compatibility
-  test("tracepoint:sched:sched_one { args->common_field }", 0);
-}
-
 class portability_analyser_btf : public test_btf {};
 
 TEST_F(portability_analyser_btf, fentry_field_access)

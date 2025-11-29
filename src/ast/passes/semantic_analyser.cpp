@@ -19,7 +19,6 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
-#include "ast/tracepoint_helpers.h"
 #include "bpftrace.h"
 #include "btf/compat.h"
 #include "collect_nodes.h"
@@ -995,23 +994,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType type = probetype(attach_point->provider);
-
-      if (type == ProbeType::tracepoint) {
-        std::string tracepoint_struct = get_tracepoint_struct_name(
-            *attach_point);
-        builtin.builtin_type = CreateRecord(
-            tracepoint_struct, bpftrace_.structs.Lookup(tracepoint_struct));
-        builtin.builtin_type.SetAS(attach_point->target == "syscalls"
-                                       ? AddrSpace::user
-                                       : AddrSpace::kernel);
-        builtin.builtin_type.MarkCtxAccess();
-        break;
-      }
-    }
 
     ProbeType type = probe->get_probetype();
+    auto type_name = probe->args_typename();
+    if (!type_name) {
+      builtin.addError() << "Unable to resolve unique type name.";
+      return;
+    }
 
     if (type == ProbeType::fentry || type == ProbeType::fexit ||
         type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
@@ -1021,11 +1010,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                 "'fentry/fexit:bpf' probes";
           return;
         }
-      }
-      auto type_name = probe->args_typename();
-      if (!type_name) {
-        builtin.addError() << "Unable to resolve unique type name.";
-        return;
       }
       builtin.builtin_type = CreateRecord(*type_name,
                                           bpftrace_.structs.Lookup(*type_name));
@@ -1039,9 +1023,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
       // We'll build uprobe args struct on stack
       if (type == ProbeType::uprobe)
         builtin.builtin_type.is_internal = true;
-    } else if (type != ProbeType::tracepoint) // no special action for
-                                              // tracepoint
-    {
+    } else if (type == ProbeType::tracepoint) {
+      builtin.builtin_type = CreateRecord(*type_name,
+                                          bpftrace_.structs.Lookup(*type_name));
+      builtin.builtin_type.SetAS(probe->attach_points.front()->target ==
+                                         "syscalls"
+                                     ? AddrSpace::user
+                                     : AddrSpace::kernel);
+      builtin.builtin_type.MarkCtxAccess();
+    } else {
       builtin.addError() << "The args builtin can only be used with "
                             "tracepoint/fentry/uprobe probes ("
                          << type << " used here)";
@@ -3203,7 +3193,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
     // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
     // access to the first 8 bytes results in verifier error.
-    if (is_tracepoint_struct(type.GetName()) && field.offset < 8)
+    if (record->is_tracepoint_args && field.offset < 8)
       acc.addError()
           << "BPF does not support accessing common tracepoint fields";
   }
@@ -4205,7 +4195,8 @@ void SemanticAnalyser::assign_map_type(Map &map,
 {
   const std::string &map_ident = map.ident;
 
-  if (type.IsRecordTy() && is_tracepoint_struct(type.GetName())) {
+  if (type.IsRecordTy() && type.GetStruct() &&
+      type.GetStruct()->is_tracepoint_args) {
     loc_node->addError() << "Storing tracepoint args in maps is not supported";
   }
 

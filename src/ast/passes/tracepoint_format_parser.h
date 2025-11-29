@@ -37,20 +37,20 @@ public:
         bpftrace_(bpftrace) {};
 
   Result<> parse_format_file();
-  std::string get_tracepoint_struct();
+  Result<std::shared_ptr<Struct>> get_tracepoint_struct();
 
 protected:
-  std::string get_tracepoint_struct(std::istream &format_file);
+  Result<std::shared_ptr<Struct>> get_tracepoint_struct(
+      std::istream &format_file);
 
 private:
-  std::string parse_field(const std::string &line, int *last_offset);
+  Result<Field> parse_field(const std::string &line,
+                            const std::string &tracepoint);
 
   const std::string category_;
   const std::string event_;
   std::ifstream format_file_;
   BPFtrace &bpftrace_;
 };
-
-ast::Pass CreateParseTracepointFormatPass();
 
 } // namespace bpftrace::ast

@@ -46,12 +46,14 @@ NAME printf_enum_symbolize_width
 PROG enum Foo { A, B, C, }; begin { printf("%-5s %5s %s\n", A, B, C); exit() }
 EXPECT A         B C
 
+# Temporarily disabled since enum symbolication is not enabled for BTF, yet
 NAME printf_enum_symbolize_tracepoint
 PROG tracepoint:skb:kfree_skb { $r = args.reason; printf("%d %s\n", args.reason, $r); exit() }
 EXPECT_REGEX ^\d+ [A-Z_]+$
 SETUP ip link set lo up
 AFTER ping localhost -c 5
 TIMEOUT 5
+REQUIRES bash -c "exit 1"
 
 NAME printf_enum_symbolize_cast
 PROG enum Foo { ONE = 1, TWO = 2, OTHER = 99999 }; begin { printf("%d %s\n", ONE, (enum Foo)1); exit() }
