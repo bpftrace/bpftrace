@@ -4,6 +4,7 @@
 #include <linux/capability.h>
 #include <linux/version.h>
 #include <optional>
+#include <sys/syscall.h>
 #include <sys/utsname.h>
 
 #include "log.h"

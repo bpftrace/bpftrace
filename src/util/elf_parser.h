@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include <unistd.h>
+
 #include <elf.h>
 #include <gelf.h>
 #include <libelf.h>
