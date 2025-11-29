@@ -2740,7 +2740,11 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
   // them for semantic analysis.
   if (auto *comptime = if_expr.cond.as<Comptime>()) {
     visit(comptime->expr);
-    pass_tracker_.add_unresolved_branch(if_expr);
+    if (is_final_pass()) {
+      comptime->addError() << "Unable to resolve comptime expression";
+    } else {
+      pass_tracker_.add_unresolved_branch(if_expr);
+    }
     return; // Skip visiting this `if` for now.
   }
 
@@ -3885,14 +3889,13 @@ void SemanticAnalyser::visit(Subprog &subprog)
 
 void SemanticAnalyser::visit(Comptime &comptime)
 {
-  // If something has not been resolved here, then we fail. Calls, variables,
-  // maps and other stateful things should be trapped by the fold pass itself,
-  // but there may just be statements that are not yet supported there, e.g.
-  // `comptime { unroll(5) { } }`. We can refine these and support more
-  // compile-time evaluation as needed. Note that we shouldn't hit this for
-  // `if` cases (that may depend on some type information), as these are
-  // handled above.
-  comptime.addError() << "Unable to resolve comptime expression.";
+  visit(comptime.expr);
+  // If something has not been resolved by the last pass, then we fail.
+  if (is_final_pass()) {
+    comptime.addError() << "Unable to resolve comptime expression.";
+  } else {
+    pass_tracker_.inc_num_unresolved();
+  }
 }
 
 int SemanticAnalyser::analyse()
