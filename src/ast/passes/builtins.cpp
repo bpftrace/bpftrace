@@ -96,8 +96,8 @@ std::optional<Expression> Builtins::visit(Call &call)
 {
   Visitor<Builtins, std::optional<Expression>>::visit(call);
   if (call.func == "__builtin_signal_num") {
-    if (call.vargs.size() != 1) {
-      call.addError() << "__builtin_signal_num expects 1 argument";
+    if (call.vargs.size() != 1 || !call.vargs.at(0).is<String>()) {
+      call.addError() << call.func << " expects 1 string literal argument";
     } else {
       if (auto *str = call.vargs.at(0).as<String>()) {
         auto signal_num = signal_name_to_num(str->value);
