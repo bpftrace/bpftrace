@@ -53,8 +53,25 @@ std::string typestr(const SizedType &type, bool debug)
     case Type::array:
       return typestr(*type.GetElementTy(), debug) + "[" +
              std::to_string(type.GetNumElements()) + "]";
-    case Type::record:
-      return type.GetName();
+    case Type::record: {
+      if (!type.IsAnonTy())
+        return type.GetName();
+
+      // For anonymous structs/unions, return a string of the
+      // format "struct { field1type,... }"
+      const std::string &type_name = type.GetName();
+      std::string res = type_name.substr(0, type_name.find(" "));
+      size_t n = type.GetFieldCount();
+
+      res += " {";
+      for (size_t i = 0; i < n; ++i) {
+        res += typestr(type.GetField(i).type);
+        if (i != n - 1)
+          res += ",";
+      }
+      res += "}";
+      return res;
+    }
     case Type::tuple: {
       std::string res = "(";
       size_t n = type.GetFieldCount();
