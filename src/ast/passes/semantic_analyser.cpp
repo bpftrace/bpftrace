@@ -2749,8 +2749,12 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
   // and is a constant, then we prune the dead code paths and will never use
   // them for semantic analysis.
   if (auto *comptime = if_expr.cond.as<Comptime>()) {
-    visit(comptime->expr);
-    pass_tracker_.add_unresolved_branch(if_expr);
+    if (is_final_pass()) {
+      comptime->addError() << "Unable to resolve comptime expression";
+    } else {
+      visit(comptime->expr);
+      pass_tracker_.add_unresolved_branch(if_expr);
+    }
     return; // Skip visiting this `if` for now.
   }
 
