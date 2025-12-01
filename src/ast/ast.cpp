@@ -3,7 +3,6 @@
 
 #include "ast/ast.h"
 #include "ast/context.h"
-#include "ast/tracepoint_helpers.h"
 #include "attached_probe.h"
 #include "log.h"
 #include "util/int_parser.h"

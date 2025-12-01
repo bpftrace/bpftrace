@@ -4,10 +4,11 @@
 #include <unordered_set>
 
 #include "ast/ast.h"
-#include "ast/tracepoint_helpers.h"
+#include "ast/passes/args_resolver.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "config.h"
+#include "log.h"
 #include "tracefs/tracefs.h"
 #include "tracepoint_format_parser.h"
 
@@ -35,67 +36,6 @@ std::string TracepointFormatFileError::hint() const
   if (category_ == "syscall")
     return "Did you mean syscalls:" + event_ + "?";
   return "";
-}
-
-namespace {
-
-class TracepointArgsResolver : public Visitor<TracepointArgsResolver> {
-public:
-  explicit TracepointArgsResolver(ASTContext &ast, BPFtrace &bpftrace)
-      : ast_(ast), bpftrace_(bpftrace) {};
-
-  using Visitor<TracepointArgsResolver>::visit;
-  void visit(AttachPoint &ap);
-
-private:
-  ASTContext &ast_;
-  BPFtrace &bpftrace_;
-  std::unordered_set<std::string> visited_tps_;
-};
-
-} // namespace
-
-void TracepointArgsResolver::visit(AttachPoint &ap)
-{
-  if (probetype(ap.provider) != ProbeType::tracepoint)
-    return;
-
-  if (visited_tps_.empty() && !bpftrace_.has_btf_data()) {
-    ast_.root->c_statements.emplace_back(
-        ast_.make_node<ast::CStatement>(ast::Location(),
-                                        "#include <linux/types.h>"));
-  }
-
-  if (!visited_tps_.insert(ap.target + ":" + ap.func).second)
-    return;
-
-  TracepointFormatParser parser(ap.target, ap.func, bpftrace_);
-  auto ok = parser.parse_format_file();
-  if (!ok) {
-    auto missing_config = bpftrace_.config_->missing_probes;
-    auto ok_err = handleErrors(
-        std::move(ok), [&](const TracepointFormatFileError &e) {
-          auto err_msg = e.err();
-          auto hint_msg = e.hint();
-          if (missing_config == ConfigMissingProbes::error) {
-            auto &err = ap.addError();
-            err << err_msg;
-            hint_msg += "If this is expected, set the 'missing_probes' config "
-                        "variable to 'warn' or 'ignore'.";
-            err.addHint() << hint_msg;
-          } else if (missing_config == ConfigMissingProbes::warn) {
-            auto &warn = ap.addWarning();
-            warn << err_msg;
-            if (!hint_msg.empty())
-              warn.addHint() << hint_msg;
-          }
-        });
-    return;
-  }
-
-  ast_.root->c_statements.emplace_back(
-      ast_.make_node<ast::CStatement>(ast::Location(),
-                                      parser.get_tracepoint_struct()));
 }
 
 Result<> TracepointFormatParser::parse_format_file()
@@ -128,112 +68,133 @@ std::string adjust_integer_types(const std::string &field_type, int size)
   return new_type;
 }
 
-std::string TracepointFormatParser::parse_field(const std::string &line,
-                                                int *last_offset)
+Result<std::string> parse_section(const std::string &line,
+                                  const std::string &title,
+                                  const std::string &tracepoint,
+                                  const std::string &field_name)
 {
-  std::string extra;
+  auto start = line.find(title);
+  if (start == std::string::npos) {
+    return make_error<ArgParseError>(tracepoint,
+                                     field_name,
+                                     "could not parse \"" + title + "\"");
+  }
 
-  auto field_pos = line.find("field:");
-  if (field_pos == std::string::npos)
-    return "";
+  auto end = line.find(';', start);
+  if (end == std::string::npos) {
+    return make_error<ArgParseError>(tracepoint,
+                                     field_name,
+                                     "could not parse \"" + title + "\"");
+  }
 
-  auto field_semi_pos = line.find(';', field_pos);
-  if (field_semi_pos == std::string::npos)
-    return "";
+  return line.substr(start + title.length(), end - start - title.length());
+}
 
-  auto offset_pos = line.find("offset:", field_semi_pos);
-  if (offset_pos == std::string::npos)
-    return "";
+// Parse one line from the tracepoint format file which has the format:
+//     field:unsigned short common_type; offset:0; size:2; signed:0;
+Result<Field> TracepointFormatParser::parse_field(const std::string &line,
+                                                  const std::string &tracepoint)
+{
+  auto field_str = parse_section(line, "field:", tracepoint, "");
+  if (!field_str)
+    return field_str.takeError();
 
-  auto offset_semi_pos = line.find(';', offset_pos);
-  if (offset_semi_pos == std::string::npos)
-    return "";
+  // Split field type from the name
+  auto field_type_end_pos = field_str->find_last_of("\t ");
+  if (field_type_end_pos == std::string::npos) {
+    return make_error<ArgParseError>(*field_str, "could not parse type");
+  }
+  std::string field_type = field_str->substr(0, field_type_end_pos);
+  std::string field_name = field_str->substr(field_type_end_pos + 1);
 
-  auto size_pos = line.find("size:", offset_semi_pos);
-  if (size_pos == std::string::npos)
-    return "";
+  // Check if the field is an array
+  auto arr_size_pos = field_name.find('[');
+  bool is_array = arr_size_pos != std::string::npos;
+  std::optional<int> array_size = std::nullopt;
+  if (is_array) {
+    auto arr_size_end_pos = field_name.find(']');
+    auto array_size_str = field_name.substr(arr_size_pos + 1,
+                                            arr_size_end_pos - arr_size_pos -
+                                                1);
+    if (array_size_str.empty()) {
+      array_size = 0;
+    } else {
+      try {
+        array_size = std::stoi(array_size_str);
+      } catch (std::exception &) {
+        return make_error<ArgParseError>(tracepoint,
+                                         field_name,
+                                         "could not parse array size");
+      }
+    }
+    field_name = field_name.substr(0, arr_size_pos);
+  }
 
-  auto size_semi_pos = line.find(';', size_pos);
-  if (size_semi_pos == std::string::npos)
-    return "";
+  auto offset_str = parse_section(line, "offset:", tracepoint, field_name);
+  if (!offset_str)
+    return offset_str.takeError();
 
-  int size = std::stoi(line.substr(size_pos + 5, size_semi_pos - size_pos - 5));
-  int offset = std::stoi(
-      line.substr(offset_pos + 7, offset_semi_pos - offset_pos - 7));
+  auto size_str = parse_section(line, "size:", tracepoint, field_name);
+  if (!size_str)
+    return size_str.takeError();
 
-  // If there'a gap between last field and this one,
-  // generate padding fields
-  if (offset && *last_offset) {
-    int i, gap = offset - *last_offset;
+  auto signed_str = parse_section(line, "signed:", tracepoint, field_name);
+  if (!signed_str)
+    return signed_str.takeError();
+  bool is_signed = *signed_str == "1";
 
-    for (i = 0; i < gap; i++) {
-      extra += "  char __pad_" + std::to_string(offset - gap + i) + ";\n";
+  Field field;
+  field.name = field_name;
+  field.offset = std::stoi(*offset_str);
+  field.is_data_loc = field_type.find("__data_loc") != std::string::npos;
+
+  if (field.is_data_loc) {
+    field.type = CreateInt64();
+  } else {
+    auto type = bpftrace_.btf_->get_stype(field_type);
+    if (is_array) {
+      field.type = CreateArray(*array_size, type);
+    } else {
+      field.type = type;
+      field.type.SetSize(std::stoi(*size_str));
+      field.type.SetSign(is_signed);
     }
   }
 
-  *last_offset = offset + size;
-
-  std::string field = line.substr(field_pos + 6,
-                                  field_semi_pos - field_pos - 6);
-  auto field_type_end_pos = field.find_last_of("\t ");
-  if (field_type_end_pos == std::string::npos)
-    return "";
-  std::string field_type = field.substr(0, field_type_end_pos);
-  std::string field_name = field.substr(field_type_end_pos + 1);
-
-  if (field_type.find("__data_loc") != std::string::npos) {
-    // Note that the type here (ie `int`) does not matter. Later during parse
-    // time the parser will rewrite this field type to a u64 so that it can
-    // hold the pointer to the actual location of the data.
-    field_type = R"_(__attribute__((annotate("tp_data_loc"))) int)_";
-  }
-
-  auto arr_size_pos = field_name.find('[');
-  auto arr_size_end_pos = field_name.find(']');
-  // Only adjust field types for non-arrays
-  if (arr_size_pos == std::string::npos)
-    field_type = adjust_integer_types(field_type, size);
-
-  // If BTF is available, we try not to use any header files, including
-  // <linux/types.h> and request all the types we need from BTF.
-  bpftrace_.btf_set_.emplace(field_type);
-
-  if (arr_size_pos != std::string::npos) {
-    auto arr_size = field_name.substr(arr_size_pos + 1,
-                                      arr_size_end_pos - arr_size_pos - 1);
-    if (arr_size.find_first_not_of("0123456789") != std::string::npos)
-      bpftrace_.btf_set_.emplace(arr_size);
-  }
-
-  return extra + "  " + field_type + " " + field_name + ";\n";
+  return field;
 }
 
-std::string TracepointFormatParser::get_tracepoint_struct(
+Result<std::shared_ptr<Struct>> TracepointFormatParser::get_tracepoint_struct(
     std::istream &format_file)
 {
-  std::string format_struct = get_tracepoint_struct_name(category_, event_) +
-                              "\n{\n";
-  int last_offset = 0;
-
-  for (std::string line; getline(format_file, line);) {
-    format_struct += parse_field(line, &last_offset);
+  if (!bpftrace_.has_btf_data()) {
+    return make_error<ArgParseError>(
+        category_ + ":" + event_,
+        "BTF is required for parsing tracepoint arguments");
   }
 
-  format_struct += "};\n";
-  return format_struct;
+  auto result = std::make_shared<Struct>(0, false);
+
+  for (std::string line; getline(format_file, line);) {
+    if (line.find("field:") == std::string::npos)
+      continue;
+
+    auto field = parse_field(line, category_ + ":" + event_);
+    if (!field)
+      return field.takeError();
+
+    result->fields.push_back(std::move(*field));
+  }
+  result->is_tracepoint_args = true;
+  result->size = result->fields.back().offset +
+                 result->fields.back().type.GetSize();
+
+  return result;
 }
 
-std::string TracepointFormatParser::get_tracepoint_struct()
+Result<std::shared_ptr<Struct>> TracepointFormatParser::get_tracepoint_struct()
 {
   return get_tracepoint_struct(format_file_);
-}
-
-ast::Pass CreateParseTracepointFormatPass()
-{
-  return ast::Pass::create("tracepoint", [](ast::ASTContext &ast, BPFtrace &b) {
-    TracepointArgsResolver resolver(ast, b);
-    resolver.visit(ast.root);
-  });
 }
 
 } // namespace bpftrace::ast

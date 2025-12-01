@@ -17,6 +17,9 @@ and this project adheres to
   - [#4686](https://github.com/bpftrace/bpftrace/pull/4686)
 - Benchmark formats changed slightly, to reflect gbenchmark
   - [#4753](https://github.com/bpftrace/bpftrace/pull/4753)
+- `args` in tracepoints now requires BTF
+  - [#4864](https://github.com/bpftrace/bpftrace/pull/4864)
+  - [Migration guide](docs/migration_guide.md##args-in-tracepoints-now-requires-btf)
 #### Added
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)

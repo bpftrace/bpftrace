@@ -500,22 +500,6 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
       auto type = clang_getCanonicalType(clang_getCursorType(c));
       auto sized_type = get_sized_type(type, structs);
       auto bitfield = getBitfield(c);
-      bool is_data_loc = false;
-
-      // Process field annotations
-      auto annotation = get_field_decl_annotation(c);
-      if (annotation) {
-        if (*annotation == "tp_data_loc") {
-          // If the field is a tracepoint __data_loc, we need to rewrite the
-          // type as a u64. The reason is that the tracepoint infrastructure
-          // exports an encoded 32bit integer that tells us where to find
-          // the actual data and how wide it is. However, LLVM freaks out if
-          // you try to cast a pointer to a u32 (rightfully so) so we need
-          // this field to actually be 64 bits wide.
-          sized_type = CreateInt64();
-          is_data_loc = true;
-        }
-      }
 
       // Initialize a new record type if needed
       if (!structs.Has(ptypestr))
@@ -530,7 +514,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
       // No need to worry about redefined types b/c we should have already
       // checked clang diagnostics. The diagnostics will tell us if we have
       // duplicated types.
-      str->AddField(ident, sized_type, offset, bitfield, is_data_loc);
+      str->AddField(ident, sized_type, offset, bitfield);
     }
 
     return CXChildVisit_Recurse;

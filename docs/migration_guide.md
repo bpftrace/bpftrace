@@ -7,6 +7,15 @@ compatibility in some way. Each entry should contain:
 - an example of an error message
 - a simple guide to fix existing scripts
 
+## Versions 0.24.x (or earlier) to 0.25.x (or later)
+
+### `args` in tracepoints now requires BTF
+
+After https://github.com/bpftrace/bpftrace/pull/4864, using the `args` builtin
+in tracepoint requires BTF for parsing the tracepoint argument types. For
+systems which do not provide BTF, it is possible to pass a custom BTF file via
+the `BPFTRACE_BTF` environment variable.
+
 ## Versions 0.23.x (or earlier) to 0.24.x (or later)
 
 ### Probe Attachment Failure Exits the Program
