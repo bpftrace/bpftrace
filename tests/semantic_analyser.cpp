@@ -3674,6 +3674,28 @@ i:s:1 {
        Warning{ "Unreachable" });
 }
 
+TEST_F(SemanticAnalyserTest, while_loop_map_variables)
+{
+  // Test case for the original issue - using map variable in while condition
+  // should error
+  test("begin { @a = 0; while (@a < 1024) { print(1); ++@a; } }",
+       Error{ "While loops with map variables in condition may be rejected by "
+              "the BPF verifier" });
+
+  // Test with Map access in condition should also error
+  test("begin { @[\"key\"] = 0; while (@[\"key\"] < 10) { @[\"key\"]++; } }",
+       Error{ "While loops with map variables in condition may be rejected by "
+              "the BPF verifier" });
+
+  // Test with local variable should pass
+  test("begin { $a = 0; while ($a < 10) { $a++; } }");
+
+  // Test with complex expression containing map variables should error
+  test("begin { @a = 0; $b = 5; while (@a + $b < 20) { @a++; } }",
+       Error{ "While loops with map variables in condition may be rejected by "
+              "the BPF verifier" });
+}
+
 TEST_F(SemanticAnalyserTest, builtin_args)
 {
   auto bpftrace = get_mock_bpftrace();
