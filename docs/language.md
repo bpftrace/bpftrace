@@ -398,6 +398,7 @@ The following fundamental types are provided by the language.
 | int32 | Signed 32 bit integer |
 | uint64 | Unsigned 64 bit integer |
 | int64 | Signed 64 bit integer |
+| string | See below |
 
 ```
 begin { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }
@@ -430,6 +431,13 @@ casting to some of the kernel's fixed integer types:
 ```
 $a = (uint64_t)1; // $a is a uint64
 ```
+
+### String
+
+bpftrace also supports a `string` data type, which it uses for string literals, e.g. `"hello"`.
+Similar to C this is represented as a well formed char array (NULL terminated).
+Additionally, all BTF char arrays (`char[]` or `int8[]`) are automatically converted to a bpftrace string but can be casted back to an int array if needed, e.g. `$a = (int8[])"mystring"`;
+It also may be necessary to utilize the [`str()`](stdlib.md#str) function if bpftrace can't determine the correct address space (user or kernel).
 
 ## Filters/Predicates
 

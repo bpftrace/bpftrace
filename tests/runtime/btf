@@ -94,7 +94,8 @@ PROG begin { let $a: typeof(size_t) = 1; let $b: typeof(size_t*) = &$a; $c = (ui
 EXPECT Attached 1 probe
 REQUIRES_FEATURE btf
 
-NAME printf_btf_char_array
-PROG begin { printf("comm %s\n", curtask.comm); }
+NAME btf_char_array_to_string
+PROG begin { if (curtask.comm == "bpftrace") { print(curtask.comm); printf("comm %s\n", curtask.comm); } }
+EXPECT bpftrace
 EXPECT comm bpftrace
 REQUIRES_FEATURE btf

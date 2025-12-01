@@ -141,13 +141,11 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_EQ(arrs->GetField("int_arr").type.GetSize(), 16U);
   EXPECT_EQ(arrs->GetField("int_arr").offset, 0);
 
-  EXPECT_TRUE(arrs->GetField("char_arr").type.IsArrayTy());
-  EXPECT_EQ(arrs->GetField("char_arr").type.GetNumElements(), 8);
+  EXPECT_TRUE(arrs->GetField("char_arr").type.IsStringTy());
   EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8);
   EXPECT_EQ(arrs->GetField("char_arr").offset, 16);
 
-  EXPECT_TRUE(arrs->GetField("char_arr2").type.IsArrayTy());
-  EXPECT_EQ(arrs->GetField("char_arr2").type.GetNumElements(), 16);
+  EXPECT_TRUE(arrs->GetField("char_arr2").type.IsStringTy());
   EXPECT_EQ(arrs->GetField("char_arr2").type.GetSize(), 16);
   EXPECT_EQ(arrs->GetField("char_arr2").offset, 24);
 

@@ -170,3 +170,8 @@ NAME cast int array to int proberead
 RUN {{BPFTRACE}} --include "stdint.h" -e 'struct A { int x[4]; uint8_t y[4]; } uprobe:./testprogs/array_access:test_arrays { $y = (int32)((struct A *)arg0).y; printf("y: %x\n", $y); exit()}'
 EXPECT y: ddccbbaa
 AFTER ./testprogs/array_access
+
+NAME cast string to int array
+PROG begin { print((int8[])"hello"); }
+EXPECT [104,101,108,108,111,0]
+TIMEOUT 1
