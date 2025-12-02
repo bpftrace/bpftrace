@@ -5817,6 +5817,31 @@ stdin:1:44-46: ERROR: @a used as a map without an explicit key (scalar map), pre
 kprobe:f { @a[1] = 1; if (comptime true) { @a = 1; } }
                                            ~~
 )" });
+  test(R"(kprobe:f { @a = 1; if comptime (@a > 1) { print(1); } })", Error{ R"(
+stdin:1:23-40: ERROR: Unable to resolve comptime expression
+kprobe:f { @a = 1; if comptime (@a > 1) { print(1); } }
+                      ~~~~~~~~~~~~~~~~~
+)" });
+}
+
+TEST_F(SemanticAnalyserTest, comptime)
+{
+  test(R"(begin { comptime (1 + 1) })");
+  test(R"(begin { $x = 1; comptime (sizeof($x)) })");
+  test(R"(begin { $x = 1; comptime (typeinfo($x)) })");
+  test(R"(begin { @x = 1; comptime (typeinfo(@x)) })");
+
+  test(R"(begin { $x = 0; comptime ($x + 1) })", Error{ R"(
+stdin:1:17-34: ERROR: Unable to resolve comptime expression.
+begin { $x = 0; comptime ($x + 1) }
+                ~~~~~~~~~~~~~~~~~
+)" });
+  test(R"(begin { @x = 0; comptime (@x + 1) })", Error{ R"(
+stdin:1:17-34: ERROR: Unable to resolve comptime expression.
+begin { @x = 0; comptime (@x + 1) }
+                ~~~~~~~~~~~~~~~~~
+)" });
+  test(R"(begin { @x[1] = 1; comptime (@x[1] + 1) })", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, typeinfo_if_comptime)

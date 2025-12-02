@@ -530,7 +530,7 @@ TEST(fold_literals, tuple_access)
   test_not("comptime (1,0).0", ComptimeMatcher());
   test_not("comptime (1, 1 + 1).1", ComptimeMatcher());
   // This cannot be evaluated.
-  test_error("comptime ($x, 1 + 1).0", "comptime");
+  test("comptime ($x, 1 + 1).0", ComptimeMatcher());
   // This should be left as is.
   test("{ $x = (1,0); $x.0 };", Block({ _ }, TupleAccess(Variable("$x"), 0)));
   // Left as is, since it is an error.
@@ -546,10 +546,9 @@ TEST(fold_literals, array_access)
 
 TEST(fold_literals, comptime)
 {
-  // This are temporary restrictions, but enough that we error when we hit a
-  // variable or map as part of a comptime expression.
-  test_error("$x = 0; comptime ($x + 1)", "Unable to evaluate at compile time");
-  test_error("@x = 0; comptime (@x + 1)", "Unable to evaluate at compile time");
+  // These can't be evaluated at compile time
+  test("{ $x = 0; comptime ($x + 1) };", Block({ _ }, ComptimeMatcher()));
+  test("{ @x = 0; comptime (@x + 1) };", Block({ _ }, ComptimeMatcher()));
 }
 
 } // namespace bpftrace::test::fold_literals

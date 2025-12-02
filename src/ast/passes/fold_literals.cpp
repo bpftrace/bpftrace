@@ -35,8 +35,6 @@ public:
   std::optional<Expression> visit(ArrayAccess &acc);
   std::optional<Expression> visit(TupleAccess &acc);
   std::optional<Expression> visit(Comptime &comptime);
-  std::optional<Expression> visit(Variable &var);
-  std::optional<Expression> visit(Map &map);
 
 private:
   // Return nullopt if we can't compare the tuples now
@@ -46,7 +44,6 @@ private:
   ASTContext &ast_;
   std::optional<std::reference_wrapper<BPFtrace>> bpftrace_;
 
-  bool comptime = false; // Set recursively.
   Node *top_level_node_ = nullptr;
 };
 
@@ -719,13 +716,7 @@ std::optional<Expression> LiteralFolder::visit(Call &call)
     }
     return ast_.make_node<String>(call.loc, s);
   } else {
-    if (!comptime) {
-      // Visit normally; we are just simplifying literals.
-      Visitor<LiteralFolder, std::optional<Expression>>::visit(call);
-    } else {
-      // We can't evalute the call here; ensure the error is recorded.
-      call.addError() << "Unable to evaluate call at compilation time.";
-    }
+    Visitor<LiteralFolder, std::optional<Expression>>::visit(call);
   }
 
   return std::nullopt;
@@ -803,8 +794,6 @@ std::optional<Expression> LiteralFolder::visit(ArrayAccess &acc)
       acc.addError()
           << "Array-style access for tuples only valid for integer literals";
     }
-  } else if (comptime) {
-    acc.addError() << "Unable to evaluate at compile time.";
   }
 
   return std::nullopt;
@@ -814,9 +803,7 @@ std::optional<Expression> LiteralFolder::visit(TupleAccess &acc)
 {
   visit(acc.expr);
 
-  // Other elements may contain blocks or statements that are evaluated. We
-  // only toss these if we are in a comptime block.
-  if (acc.expr.is<Tuple>() && (comptime || acc.expr.is_literal())) {
+  if (acc.expr.is<Tuple>() && acc.expr.is_literal()) {
     auto *tuple = acc.expr.as<Tuple>();
     if (acc.index >= tuple->elems.size()) {
       // This access error happens in a later pass.
@@ -833,31 +820,12 @@ std::optional<Expression> LiteralFolder::visit(Comptime &comptime)
   // This will fold into an expression directly. If this should not be used for
   // cases where folding needs to happen above the comptime, e.g. `IfExpr`,
   // which handles this in a special way.
-  bool old_comptime = this->comptime;
-  this->comptime = true;
   visit(comptime.expr);
-  this->comptime = old_comptime;
   if (comptime.expr.is_literal()) {
     return comptime.expr;
   }
   if (auto *nested = comptime.expr.as<Comptime>()) {
     return nested->expr; // Prune redundant comptime.
-  }
-  return std::nullopt;
-}
-
-std::optional<Expression> LiteralFolder::visit(Variable &var)
-{
-  if (comptime) {
-    var.addError() << "Unable to evaluate at compile time.";
-  }
-  return std::nullopt;
-}
-
-std::optional<Expression> LiteralFolder::visit(Map &map)
-{
-  if (comptime) {
-    map.addError() << "Unable to evaluate at compile time.";
   }
   return std::nullopt;
 }
