@@ -121,7 +121,8 @@ TEST_F(tracepoint_format_parser, array)
 {
   std::string input =
       "	field:char char_array[8];	offset:0;	size:8;	signed:1;\n"
-      "	field:int int_array[2];	offset:8;	size:8;	signed:1;\n";
+      "	field:char uchar_array[8];	offset:8;	size:8;	signed:0;\n"
+      "	field:int int_array[2];	offset:16;	size:8;	signed:1;\n";
 
   std::istringstream format_file(input);
 
@@ -132,22 +133,23 @@ TEST_F(tracepoint_format_parser, array)
   EXPECT_TRUE(bool(result));
 
   Struct *type = result->get();
-  EXPECT_EQ(type->size, 16);
+  EXPECT_EQ(type->size, 24);
 
   EXPECT_TRUE(type->HasField("char_array"));
   auto char_array = type->GetField("char_array");
-  EXPECT_TRUE(char_array.type.IsArrayTy());
-  EXPECT_EQ(char_array.type.GetNumElements(), 8);
+  EXPECT_TRUE(char_array.type.IsStringTy());
   EXPECT_EQ(char_array.offset, 0);
-  const auto *char_array_elem = char_array.type.GetElementTy();
-  EXPECT_TRUE(char_array_elem->IsIntTy());
-  EXPECT_EQ(char_array_elem->GetSize(), 1);
+
+  EXPECT_TRUE(type->HasField("uchar_array"));
+  auto uchar_array = type->GetField("uchar_array");
+  EXPECT_TRUE(uchar_array.type.IsStringTy());
+  EXPECT_EQ(uchar_array.offset, 8);
 
   EXPECT_TRUE(type->HasField("int_array"));
   auto int_array = type->GetField("int_array");
   EXPECT_TRUE(int_array.type.IsArrayTy());
   EXPECT_EQ(int_array.type.GetNumElements(), 2);
-  EXPECT_EQ(int_array.offset, 8);
+  EXPECT_EQ(int_array.offset, 16);
   const auto *int_array_elem = int_array.type.GetElementTy();
   EXPECT_TRUE(int_array_elem->IsIntTy());
   EXPECT_EQ(int_array_elem->GetSize(), 4);

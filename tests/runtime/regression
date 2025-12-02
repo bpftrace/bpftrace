@@ -89,11 +89,8 @@ TIMEOUT 3
 
 # The issue this test catches is the verifier doesn't allow multiple ALU ops on ctx pointer.
 # ctx+const is ok, but ctx+const+const is not ok.
-#
-# TODO once we add automatic conversion of `char []` to `SizedType::string`, we
-# should drop the `str` calls here
 NAME access ctx struct field twice
-PROG tracepoint:sched:sched_wakeup { if (str(args.comm) == "asdf") { print(str(args.comm)) } exit(); }
+PROG tracepoint:sched:sched_wakeup { if (args.comm == "asdf") { print(args.comm) } exit(); }
 EXPECT Attached 1 probe
 TIMEOUT 1
 

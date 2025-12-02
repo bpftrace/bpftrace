@@ -153,7 +153,12 @@ Result<Field> TracepointFormatParser::parse_field(const std::string &line,
   } else {
     auto type = bpftrace_.btf_->get_stype(field_type);
     if (is_array) {
-      field.type = CreateArray(*array_size, type);
+      if (field_type == "char") {
+        // See src/btf.cpp for why this is converted to a string
+        field.type = CreateString(*array_size);
+      } else {
+        field.type = CreateArray(*array_size, type);
+      }
     } else {
       field.type = type;
       field.type.SetSize(std::stoi(*size_str));

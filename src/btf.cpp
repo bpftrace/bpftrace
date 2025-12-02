@@ -511,7 +511,24 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     auto *array = btf_array(t);
     const auto &elem_type = get_stype(
         BTFId{ .btf = btf_id.btf, .id = array->type });
-    stype = CreateArray(array->nelems, elem_type);
+    // Auto convert char arrays to strings.
+    // This is the least worse option since users have come to expect
+    // strings when they call `print`, `printf` or do string literal
+    // comparison to this BTF type but note that we don't add 1
+    // to the length to ensure it's well formed because
+    // string.GetSize() will return len + 1, which is a mismatch with the actual
+    // type. So this is making the assumption that the string
+    // IS well formed (NULL terminated), which is not guaranteed.
+    // A string that is missing the NULL terminator at the end
+    // will appear as a truncated string, e.g. `...` as a trailing suffix.
+    // If this conversion is incorrect, because it's not an actual string, users
+    // have the option to cast all strings to int8 arrays, e.g.
+    // `(int8[])"mystring"`.
+    if (elem_type.IsIntTy() && elem_type.GetSize() == 1) {
+      stype = CreateString(array->nelems);
+    } else {
+      stype = CreateArray(array->nelems, elem_type);
+    }
   }
 
   return stype;

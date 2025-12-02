@@ -2555,7 +2555,7 @@ begin { (struct faketype *)cpu }
 stdin:1:10-18: ERROR: Cannot resolve unknown type "faketype"
 begin { (faketype)cpu }
          ~~~~~~~~
-stdin:1:9-19: ERROR: Cannot cast to "faketype"
+stdin:1:9-19: ERROR: Cannot cast from "uint64" to "faketype"
 begin { (faketype)cpu }
         ~~~~~~~~~~
 )" });
@@ -2570,14 +2570,11 @@ TEST_F(SemanticAnalyserTest, cast_struct)
 stdin:2:36-44: ERROR: Cannot cast from struct type "struct mytype"
 begin { $s = (struct mytype *)cpu; (uint32)*$s; }
                                    ~~~~~~~~
-stdin:2:36-44: ERROR: Cannot cast from "struct mytype" to "uint32"
-begin { $s = (struct mytype *)cpu; (uint32)*$s; }
-                                   ~~~~~~~~
 )" });
   test("struct mytype { int field; } "
        "begin { (struct mytype)cpu }",
        Error{ R"(
-stdin:1:38-53: ERROR: Cannot cast to "struct mytype"
+stdin:1:38-53: ERROR: Cannot cast from "uint64" to "struct mytype"
 struct mytype { int field; } begin { (struct mytype)cpu }
                                      ~~~~~~~~~~~~~~~
 )" });
@@ -3159,9 +3156,11 @@ TEST_F(SemanticAnalyserTest, intarray_cast_types)
   test("kprobe:f { @ = (int8[])1 }");
   test("kprobe:f { @ = (uint8[8])1 }");
   test("kretprobe:f { @ = (int8[8])retval }");
+  test("kprobe:f { @ = (int8[6])\"hello\" }");
+  test("kprobe:f { @ = (int8[])\"hello\" }");
 
   test("kprobe:f { @ = (int32[])(int16)1 }", Error{});
-  test("kprobe:f { @ = (int8[6])\"hello\" }", Error{});
+  test("kprobe:f { @ = (int8[2])\"hello\" }", Error{});
 
   test("struct Foo { int x; } kprobe:f { @ = (struct Foo [2])1 }", Error{});
 }
@@ -5799,7 +5798,7 @@ TEST_F(SemanticAnalyserTest, typeof_casts)
   test(
       R"(struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; })",
       Error{ R"(
-stdin:1:60-73: ERROR: Cannot cast to "struct foo"
+stdin:1:60-73: ERROR: Cannot cast from "uint8" to "struct foo"
 struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
                                                            ~~~~~~~~~~~~~
 )" });

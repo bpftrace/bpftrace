@@ -1218,7 +1218,7 @@ void SemanticAnalyser::visit(Call &call)
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
     const auto &t = arg.type();
-    if (!t.IsStringTy() && !t.IsIntegerTy() && !t.IsPtrTy() && !t.IsCString()) {
+    if (!t.IsStringTy() && !t.IsIntegerTy() && !t.IsPtrTy()) {
       call.addError()
           << call.func
           << "() expects a string, integer or a pointer type as first "
@@ -1476,20 +1476,7 @@ void SemanticAnalyser::visit(Call &call)
       std::vector<SizedType> args;
       for (size_t i = 1; i < call.vargs.size(); i++) {
         const auto &arg_type = call.vargs[i].type();
-        // Wrap char arrays in a `str` call so they are printed properly
-        if (arg_type.IsCString()) {
-          call.vargs[i] = ctx_.make_node<Call>(
-              call.vargs[i].loc(),
-              "str",
-              ExpressionList{
-                  clone(ctx_, call.vargs[i].loc(), call.vargs[i]),
-                  ctx_.make_node<Integer>(call.vargs[i].loc(),
-                                          arg_type.GetNumElements()) });
-          Visitor<SemanticAnalyser>::visit(call.vargs[i]);
-          args.push_back(call.vargs[i].type());
-        } else {
-          args.push_back(arg_type);
-        }
+        args.push_back(arg_type);
       }
       FormatString fs(fmt);
       auto ok = fs.check(args);
@@ -3314,10 +3301,13 @@ void SemanticAnalyser::visit(Cast &cast)
   cast.typeof->record = resolved_ty;
   auto &ty = std::get<SizedType>(cast.typeof->record);
 
+  auto logError = [&]() {
+    cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty << "\"";
+  };
+
   if (ty.IsStringTy() && rhs.IsStringTy()) {
     if (ty.GetSize() < rhs.GetSize()) {
-      cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty
-                      << "\"";
+      logError();
     }
     return;
   }
@@ -3328,8 +3318,7 @@ void SemanticAnalyser::visit(Cast &cast)
       // we support casting integers to int arrays
       !(ty.IsArrayTy() && ty.GetElementTy()->IsBoolTy()) &&
       !(ty.IsArrayTy() && ty.GetElementTy()->IsIntTy())) {
-    auto &err = cast.addError();
-    err << "Cannot cast to \"" << ty << "\"";
+    logError();
   }
 
   if (ty.IsArrayTy()) {
@@ -3350,6 +3339,23 @@ void SemanticAnalyser::visit(Cast &cast)
 
     if (rhs.IsIntTy() || rhs.IsBoolTy())
       ty.is_internal = true;
+
+    if (rhs.IsIntTy()) {
+      if ((ty.GetElementTy()->IsIntegerTy() || ty.GetElementTy()->IsBoolTy())) {
+        if ((ty.GetSize() <= 8) && (ty.GetSize() > rhs.GetSize())) {
+          create_int_cast(cast.expr,
+                          CreateInteger(ty.GetSize() * 8,
+                                        ty.GetElementTy()->IsSigned()));
+        } else if (ty.GetSize() != rhs.GetSize()) {
+          logError();
+        }
+      }
+    } else {
+      if ((!rhs.IsBoolTy() && !rhs.IsStringTy()) ||
+          ty.GetSize() != rhs.GetSize()) {
+        logError();
+      }
+    }
   }
 
   if (ty.IsEnumTy()) {
@@ -3366,32 +3372,20 @@ void SemanticAnalyser::visit(Cast &cast)
     }
   }
 
-  if (ty.IsBoolTy() && !rhs.IsIntTy() && !rhs.IsStringTy() && !rhs.IsPtrTy() &&
-      !rhs.IsCastableMapTy()) {
-    if (is_final_pass()) {
-      cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty
-                      << "\"";
+  if (!rhs.IsPtrTy() && !rhs.IsCastableMapTy() && !rhs.IsIntTy() &&
+      is_final_pass()) {
+    if (ty.IsBoolTy() && !rhs.IsStringTy()) {
+      logError();
+    }
+
+    if (ty.IsIntTy() && !rhs.IsBoolTy() && !rhs.IsCtxAccess() &&
+        !rhs.IsArrayTy()) {
+      logError();
     }
   }
 
-  if ((ty.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() && !rhs.IsBoolTy() &&
-       !rhs.IsCtxAccess() && !rhs.IsArrayTy() && !rhs.IsCastableMapTy()) ||
-      (ty.IsArrayTy() && (!rhs.IsBoolTy() || ty.GetSize() != rhs.GetSize()) &&
-       !rhs.IsIntTy()) ||
-      (rhs.IsArrayTy() && (!ty.IsIntTy() || ty.GetSize() != rhs.GetSize()))) {
-    cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty << "\"";
-  }
-
-  if (ty.IsArrayTy() && rhs.IsIntTy() &&
-      (ty.GetElementTy()->IsIntegerTy() || ty.GetElementTy()->IsBoolTy())) {
-    if ((ty.GetSize() <= 8) && (ty.GetSize() > rhs.GetSize())) {
-      create_int_cast(cast.expr,
-                      CreateInteger(ty.GetSize() * 8,
-                                    ty.GetElementTy()->IsSigned()));
-    } else if (ty.GetSize() != rhs.GetSize()) {
-      cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty
-                      << "\"";
-    }
+  if ((rhs.IsArrayTy() && (!ty.IsIntTy() || ty.GetSize() != rhs.GetSize()))) {
+    logError();
   }
 
   if (cast.expr.type().IsCtxAccess() && !ty.IsIntTy()) {
