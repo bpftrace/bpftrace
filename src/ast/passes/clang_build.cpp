@@ -129,10 +129,13 @@ static Result<BitcodeModules::Result> build(
   // (works across modern Clang majors, including 21)
   ci.getInvocation() = *inv;
   ci.setDiagnostics(diags.release());
-  ci.setFileManager(new clang::FileManager(clang::FileSystemOptions(), vfs));
+
 #if LLVM_VERSION_MAJOR >= 22
+  ci.setVirtualFileSystem(vfs);
+  ci.createFileManager();
   ci.createSourceManager();
 #else
+  ci.setFileManager(new clang::FileManager(clang::FileSystemOptions(), vfs));
   ci.createSourceManager(ci.getFileManager());
 #endif
 
