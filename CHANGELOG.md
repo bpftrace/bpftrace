@@ -46,6 +46,8 @@ and this project adheres to
 - Add support for more vmlinux BTF types as identifiers
   - [#4853](https://github.com/bpftrace/bpftrace/pull/4853)
 #### Changed
+- Disallow builtin and type idents as macro parameter names
+  - [#4873](https://github.com/bpftrace/bpftrace/pull/4873)
 - Add helpers to check if a kfunc exists and is supported for particular probe types.
   - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)
 - `uaddr` support PIE and dynamic library symbols.
