@@ -3456,7 +3456,7 @@ TEST_F(SemanticAnalyserTest, signal)
 
     // vars
     test("k:f { @=1;" + signal + "(@); }", UnsafeMode::Enable, Types{ types });
-    test("k:f { @=1;" + signal + "((int32)arg0); }",
+    test("k:f { " + signal + "((uint64)arg0); }",
          UnsafeMode::Enable,
          Types{ types });
 
@@ -3503,6 +3503,10 @@ TEST_F(SemanticAnalyserTest, signal)
          Types{ types },
          Error{});
     test("k:f {" + signal + "(100); }",
+         UnsafeMode::Enable,
+         Types{ types },
+         Error{});
+    test("k:f { $a = -1" + signal + "($a); }",
          UnsafeMode::Enable,
          Types{ types },
          Error{});
