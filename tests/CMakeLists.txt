@@ -1,5 +1,3 @@
-add_compile_options("-Werror=undef")
-
 add_executable(bpftrace_test
   arch.cpp
   async_action.cpp

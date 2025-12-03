@@ -402,9 +402,8 @@ bool ClangParser::ClangParserHandler::has_unknown_type_error()
   });
 }
 
-namespace {
 using visitFn = std::function<CXChildVisitResult(CXCursor, CXCursor)>;
-int visitChildren(CXCursor cursor, visitFn fn)
+static int visitChildren(CXCursor cursor, visitFn fn)
 {
   return clang_visitChildren(
       cursor,
@@ -414,33 +413,6 @@ int visitChildren(CXCursor cursor, visitFn fn)
       },
       static_cast<void *>(&fn));
 }
-
-// Get annotation associated with field declaration `c`
-std::optional<std::string> get_field_decl_annotation(CXCursor c)
-{
-  assert(clang_getCursorKind(c) == CXCursor_FieldDecl);
-
-  std::optional<std::string> annotation;
-  visitChildren(c, [&](CXCursor c, CXCursor __attribute__((unused)) parent) {
-    // The header generation code can annotate some struct
-    // fields with additional information for us to parse
-    // here. The annotation looks like:
-    //
-    //    struct Foo {
-    //      __attribute__((annotate("tp_data_loc"))) int
-    //      name;
-    //    };
-    //
-    // Currently only the TracepointFormatParser does this.
-    if (clang_getCursorKind(c) == CXCursor_AnnotateAttr) {
-      annotation = get_clang_string(clang_getCursorSpelling(c));
-    }
-
-    return CXChildVisit_Recurse;
-  });
-  return annotation;
-}
-} // namespace
 
 bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 {
