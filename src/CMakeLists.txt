@@ -33,6 +33,7 @@ add_library(runtime STATIC
   dwarf_parser.cpp
   format_string.cpp
   globalvars.cpp
+  kernel_types.cpp
   log.cpp
   probe_matcher.cpp
   probe_types.cpp
