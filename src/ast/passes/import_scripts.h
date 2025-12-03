@@ -4,7 +4,7 @@
 
 namespace bpftrace::ast {
 
-// Requires the `Imports` from the `CreateResolveImports` pass.
+// Requires the `Imports` from the `CreateResolveRootImports` pass.
 Pass CreateImportInternalScriptsPass();
 Pass CreateImportExternalScriptsPass();
 

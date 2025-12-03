@@ -31,6 +31,7 @@ enum CompatibleBPFLicense {
 };
 
 static const auto UNSTABLE_IMPORT = "unstable_import";
+static const auto UNSTABLE_IMPORT_STATEMENT = "unstable_import_statement";
 static const auto UNSTABLE_MAP_DECL = "unstable_map_decl";
 static const auto UNSTABLE_TSERIES = "unstable_tseries";
 static const auto UNSTABLE_ADDR = "unstable_addr";
@@ -58,6 +59,7 @@ public:
   bool print_maps_on_exit = true;
   ConfigUnstable unstable_map_decl = ConfigUnstable::warn;
   ConfigUnstable unstable_import = ConfigUnstable::warn;
+  ConfigUnstable unstable_import_statement = ConfigUnstable::error;
   ConfigUnstable unstable_tseries = ConfigUnstable::warn;
   ConfigUnstable unstable_addr = ConfigUnstable::warn;
   ConfigUnstable unstable_typeinfo = ConfigUnstable::error;

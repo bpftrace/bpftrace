@@ -551,7 +551,13 @@ void Printer::visit(Subprog &subprog)
   --depth_;
 }
 
-void Printer::visit(Import &imp)
+void Printer::visit(RootImport &imp)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "import " << imp.name << std::endl;
+}
+
+void Printer::visit(StatementImport &imp)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "import " << imp.name << std::endl;

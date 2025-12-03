@@ -171,8 +171,9 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <std::optional<ast::Expression>> pred
 %type <ast::Config *> config
 %type <ast::Integer *> integer
-%type <ast::Import *> import_stmt
-%type <ast::ImportList> imports
+%type <ast::RootImport *> import_root_stmt
+%type <ast::StatementImport *> import_stmt
+%type <ast::RootImportList> imports
 %type <ast::Statement> assign_stmt block_stmt expr_stmt nonexpr_stmt jump_stmt while_stmt for_stmt
 %type <ast::StatementList> stmt_list
 %type <ast::IfExpr *> if_stmt if_expr
@@ -270,12 +271,12 @@ c_definitions:
                 ;
 
 imports:
-                imports import_stmt { $$ = std::move($1); $$.push_back($2); }
-        |       %empty              { $$ = ast::ImportList{}; }
+                imports import_root_stmt { $$ = std::move($1); $$.push_back($2); }
+        |       %empty              { $$ = ast::RootImportList{}; }
                 ;
 
-import_stmt:
-                IMPORT STRING ";" { $$ = driver.ctx.make_node<ast::Import>(@$, $2); }
+import_root_stmt:
+                IMPORT STRING ";" { $$ = driver.ctx.make_node<ast::RootImport>(@$, $2); }
                 ;
 
 type:
@@ -509,6 +510,7 @@ stmt_list:
                 stmt_list expr_stmt ";"     { $$ = std::move($1); $$.push_back($2); }
         |       stmt_list nonexpr_stmt ";"  { $$ = std::move($1); $$.push_back($2); }
         |       stmt_list block_stmt        { $$ = std::move($1); $$.push_back($2); }
+        |       stmt_list import_stmt       { $$ = std::move($1); $$.push_back($2); }
         |       %empty                      { $$ = ast::StatementList{}; }
                 ;
 
@@ -537,6 +539,10 @@ jump_stmt:
         |       CONTINUE    { $$ = driver.ctx.make_node<ast::Jump>(@$, ast::JumpType::CONTINUE); }
         |       RETURN      { $$ = driver.ctx.make_node<ast::Jump>(@$, ast::JumpType::RETURN); }
         |       RETURN expr { $$ = driver.ctx.make_node<ast::Jump>(@$, ast::JumpType::RETURN, $2); }
+                ;
+
+import_stmt:
+                IMPORT STRING ";" { $$ = driver.ctx.make_node<ast::StatementImport>(@$, $2); }
                 ;
 
 cond_expr:

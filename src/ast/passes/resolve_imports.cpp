@@ -14,14 +14,28 @@ namespace bpftrace::ast {
 
 using bpftrace::stdlib::Stdlib;
 
-class ResolveImports : public Visitor<ResolveImports> {
+class ResolveRootImports : public Visitor<ResolveRootImports> {
 public:
-  ResolveImports(Imports &imports,
-                 const std::vector<std::filesystem::path> &paths = {})
+  ResolveRootImports(Imports &imports,
+                     const std::vector<std::filesystem::path> &paths = {})
       : imports_(imports), paths_(paths) {};
 
-  using Visitor<ResolveImports>::visit;
-  void visit(Import &imp);
+  using Visitor<ResolveRootImports>::visit;
+  void visit(RootImport &imp);
+
+private:
+  Imports &imports_;
+  const std::vector<std::filesystem::path> &paths_;
+};
+
+class ResolveStatementImports : public Visitor<ResolveStatementImports> {
+public:
+  ResolveStatementImports(Imports &imports,
+                          const std::vector<std::filesystem::path> &paths = {})
+      : imports_(imports), paths_(paths) {};
+
+  using Visitor<ResolveStatementImports>::visit;
+  void visit(StatementImport &imp);
 
 private:
   Imports &imports_;
@@ -83,7 +97,7 @@ static Result<OK> import_script(Node &node,
   }
 
   // Recursively visit the parsed tree.
-  ResolveImports resolver(imports, paths);
+  ResolveRootImports resolver(imports, paths);
   resolver.visit(ast.root);
 
   return OK();
@@ -305,7 +319,31 @@ Result<OK> Imports::import_any(Node &node,
   return OK();
 }
 
-void ResolveImports::visit(Import &imp)
+void ResolveStatementImports::visit(StatementImport &imp)
+{
+  static std::string import_error =
+      "Import statements that are not at the root are limited to specific "
+      "object (.o), header (.h), or C source (.c or bpf.c) files";
+  std::filesystem::path path(imp.name);
+  if (std::filesystem::is_directory(path)) {
+    imp.addError() << import_error;
+  } else if (path.extension() == ".bt") {
+    imp.addError() << import_error;
+  } else {
+    for (const auto &[internal_path, s] : Stdlib::files) {
+      auto path = std::filesystem::path(internal_path);
+      if (path.parent_path().string() == imp.name) {
+        imp.addError() << import_error;
+      }
+    }
+  }
+  auto ok = imports_.import_any(imp, imp.name, paths_);
+  if (!ok) {
+    imp.addError() << "import error: " << ok.takeError();
+  }
+}
+
+void ResolveRootImports::visit(RootImport &imp)
 {
   auto ok = imports_.import_any(imp, imp.name, paths_);
   if (!ok) {
@@ -313,12 +351,11 @@ void ResolveImports::visit(Import &imp)
   }
 }
 
-Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths)
+Pass CreateResolveRootImportsPass(std::vector<std::string> &&import_paths)
 {
-  return Pass::create("ResolveImports",
+  return Pass::create("ResolveRootImports",
                       [import_paths](ASTContext &ast) -> Result<Imports> {
                         Imports imports;
-
                         // Add the source location as a primary path.
                         const auto &filename = ast.source()->filename;
                         std::vector<std::filesystem::path> updated_paths;
@@ -330,21 +367,40 @@ Pass CreateResolveImportsPass(std::vector<std::string> &&import_paths)
                           updated_paths.emplace_back(path);
                         }
 
-                        // Resolve all imports.
-                        ResolveImports analyser(imports, updated_paths);
+                        ResolveRootImports analyser(imports, updated_paths);
                         analyser.visit(ast.root);
 
-                        // Ensure that the standard library is imported. The
-                        // implicit import is only permitted from the embedded
-                        // standard library.  Overriding this is possible, but
-                        // it must be explicitly imported.
+                        // Ensure that the essential part of the standard
+                        // library is imported. All other parts of the standard
+                        // library are conditionally imported based on inlined
+                        // import statements. The implicit import is only
+                        // permitted from the embedded standard library.
+                        // Overriding this is possible, but it must be
+                        // explicitly imported.
                         auto ok = imports.import_any(*ast.root, "stdlib");
                         if (!ok) {
                           return ok.takeError();
                         }
-
-                        // Return all calculated imports.
                         return imports;
+                      });
+}
+
+// This is primarily for the standard library so we can conditionally
+// import specific bpf.c files instead of importing, compiling, and type
+// processing all of the stdlib bpf.c files which increase start up latency
+// and also possibly create/allocate unused maps
+Pass CreateResolveStatementImportsPass()
+{
+  return Pass::create("ResolveStatementImports",
+                      [](ASTContext &ast, Imports &imports) {
+                        // Add the source location as a primary path.
+                        const auto &filename = ast.source()->filename;
+                        std::vector<std::filesystem::path> updated_paths;
+                        updated_paths.emplace_back(
+                            std::filesystem::path(filename).parent_path());
+                        ResolveStatementImports analyser(imports,
+                                                         updated_paths);
+                        analyser.visit(ast.root);
                       });
 }
 
