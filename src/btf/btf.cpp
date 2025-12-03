@@ -21,6 +21,11 @@ Handle::Handle(std::shared_ptr<Handle> base)
 {
 }
 
+HandleRef Handle::create(struct btf *btf)
+{
+  return std::make_shared<Handle>(btf);
+}
+
 Result<HandleRef> Handle::parse(const void *data, size_t sz)
 {
   auto f = util::TempFile::create();
@@ -714,6 +719,11 @@ std::string TypeTag::value() const
 Result<AnyType> TypeTag::element_type() const
 {
   return AnyType::lookup(handle(), btf_type()->type);
+}
+
+Types Types::create(struct btf *btf)
+{
+  return { detail::Handle::create(btf) };
 }
 
 Result<Types> Types::parse(const void *data, size_t sz)

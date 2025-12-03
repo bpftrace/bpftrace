@@ -1,0 +1,20 @@
+add_library(providers
+  benchmark.cpp
+  fentry.cpp
+  interval.cpp
+  iter.cpp
+  kprobe.cpp
+  perf.cpp
+  profile.cpp
+  provider.cpp
+  rawtracepoint.cpp
+  special.cpp
+  tracepoint.cpp
+  uprobe.cpp
+  usdt.cpp
+  watchpoint.cpp
+)
+
+target_link_libraries(providers
+  util
+)
