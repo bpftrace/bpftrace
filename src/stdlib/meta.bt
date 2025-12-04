@@ -22,6 +22,12 @@ macro is_integer(expr) {
   typeinfo(expr).1 == "int"
 }
 
+// :variant bool is_unsigned_integer(any expression)
+// Determine whether the given expression is an unsigned integer.
+macro is_unsigned_integer(expr) {
+  typeinfo(expr).1 == typeinfo(0).1 && (typeinfo(expr).2)[0] == "u"[0]
+}
+
 // :variant void static_assert(bool condition, string msg)
 // Assert something is true or fail the build.
 macro static_assert(cond, msg) {

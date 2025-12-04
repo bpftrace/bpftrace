@@ -393,6 +393,12 @@ Determine whether the given expression is a pointer.
 Determine whether the given expression is a string.
 
 
+### is_unsigned_integer
+- `bool is_unsigned_integer(any expression)`
+
+Determine whether the given expression is an unsigned integer.
+
+
 ### jiffies
 - `uint64 jiffies()`
 - `uint64 jiffies`
