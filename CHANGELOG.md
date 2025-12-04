@@ -29,6 +29,8 @@ and this project adheres to
   - [#4861](https://github.com/bpftrace/bpftrace/pull/4861)
 - Fix anonymous struct/unions not resolving correctly from BTF
   - [#4732](https://github.com/bpftrace/bpftrace/pull/4732)
+- Disallow builtin and type idents as macro parameter names
+  - [#4873](https://github.com/bpftrace/bpftrace/pull/4873)
 
 ## [0.24.1] 2025-10-03
 

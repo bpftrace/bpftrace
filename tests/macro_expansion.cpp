@@ -139,4 +139,16 @@ TEST(macro_expansion, misc)
   test("macro add3(x) { x + add5(x) } begin { print(add3(1)); }");
 }
 
+TEST(macro_expansion, idents_only)
+{
+  test_error("macro test(pid) { } begin { }",
+             R"(ERROR: syntax error, unexpected builtin, expecting ) or ",")");
+  test_error(
+      "macro test(usym_t) { } begin { }",
+      R"(ERROR: syntax error, unexpected builtin type, expecting ) or ",")");
+  test_error(
+      "macro test(inet) { } begin { }",
+      R"(ERROR: syntax error, unexpected sized type, expecting ) or ",")");
+}
+
 } // namespace bpftrace::test::macro_expansion
