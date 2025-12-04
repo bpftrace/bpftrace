@@ -241,7 +241,7 @@ void IRBuilderBPF::CreateAllocationInit(const SizedType &stype, Value *alloc)
   if (needMemcpy(stype)) {
     CreateMemsetBPF(alloc, getInt8(0), stype.GetSize());
   } else {
-    CreateStore(ConstantInt::get(GetType(stype), 0), alloc);
+    CreateStore(Constant::getNullValue(GetType(stype)), alloc);
   }
 }
 
