@@ -2,7 +2,6 @@
 
 #include "ast/pass_manager.h"
 #include "globalvars.h"
-#include "types.h"
 
 namespace bpftrace::ast {
 

@@ -66,11 +66,11 @@ void NamedParamPass::visit(Expression &expr)
     map_node->value_type = CreateString(bpftrace_.config_->max_strlen);
     np_default = default_value->value;
   } else if (auto *default_value = call->vargs.at(1).as<Integer>()) {
-    // integer
-    map_node->value_type = CreateInt64();
-    np_default = static_cast<int64_t>(default_value->value);
+    // unsigned integer
+    map_node->value_type = CreateUInt64();
+    np_default = default_value->value;
   } else if (auto *default_value = call->vargs.at(1).as<NegativeInteger>()) {
-    // integer
+    // signed integer
     map_node->value_type = CreateInt64();
     np_default = default_value->value;
   }
@@ -83,6 +83,10 @@ void NamedParamPass::visit(Expression &expr)
     } else if (std::holds_alternative<int64_t>(used_args.at(arg_name->value))) {
       pre_value = std::to_string(
           std::get<int64_t>(used_args.at(arg_name->value)));
+    } else if (std::holds_alternative<uint64_t>(
+                   used_args.at(arg_name->value))) {
+      pre_value = std::to_string(
+          std::get<uint64_t>(used_args.at(arg_name->value)));
     } else {
       pre_value = std::get<bool>(used_args.at(arg_name->value)) ? "true"
                                                                 : "false";
