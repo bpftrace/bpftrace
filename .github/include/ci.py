@@ -246,10 +246,7 @@ def tests_finish(results: List[TestResult]):
         print(output.getvalue())
 
 
-def run_runtime_tests():
-    """Runs runtime tests, under a controlled kernel if requested"""
-    script = "./tests/runtime-tests.sh"
-
+def run_with_kernel(script):
     if NIX_TARGET_KERNEL:
         # Bring kernel into nix store then grab the path
         subprocess.run([nix(), "build", NIX_TARGET_KERNEL], check=True)
@@ -281,6 +278,16 @@ def run_runtime_tests():
             "VMTEST_NO_UI": "1",
         },
     )
+
+
+def run_self_tests():
+    """Runs self tests, under a controlled kernel if requested"""
+    run_with_kernel("./tests/self-tests.sh")
+
+
+def run_runtime_tests():
+    """Runs runtime tests, under a controlled kernel if requested"""
+    run_with_kernel("./tests/runtime-tests.sh")
 
 
 def fuzz():
@@ -356,6 +363,13 @@ def test():
                 cwd=Path(BUILD_DIR),
                 env={"GTEST_COLOR": "yes"},
             ),
+        )
+    )
+    results.append(
+        test_one(
+            "self-tests.sh",
+            lambda: truthy(RUN_TESTS),
+            run_self_tests,
         )
     )
     results.append(

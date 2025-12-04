@@ -88,9 +88,8 @@ target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 add_subdirectory(testprogs)
 add_subdirectory(testlibs)
 
-
 #
-# Runtime Tests
+# Runtime tests
 #
 configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
 
@@ -123,6 +122,38 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine)
 configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine/ @ONLY)
 
 
+#
+# Self tests
+#
+configure_file(self-tests.sh self-tests.sh COPYONLY)
 
+file(GLOB_RECURSE self_test_src_files
+  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+  CONFIGURE_DEPENDS
+  self/*
+)
+
+set(self_test_files)
+foreach(self_test_src_file ${self_test_src_files})
+  add_custom_command(
+    OUTPUT
+      ${CMAKE_CURRENT_BINARY_DIR}/${self_test_src_file}
+    COMMAND ${CMAKE_COMMAND} -E copy
+      ${CMAKE_CURRENT_SOURCE_DIR}/${self_test_src_file}
+      ${CMAKE_CURRENT_BINARY_DIR}/${self_test_src_file}
+    DEPENDS
+      ${CMAKE_CURRENT_SOURCE_DIR}/${self_test_src_file}
+  )
+  list(APPEND
+    self_test_files
+    ${CMAKE_CURRENT_BINARY_DIR}/${self_test_src_file}
+  )
+endforeach()
+add_custom_target(self_test_files ALL DEPENDS ${self_test_files})
+
+
+#
+# Tools tests
+#
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
