@@ -24,15 +24,138 @@ public:
   std::optional<Expression> visit(Identifier &identifier);
   std::optional<Expression> visit(Expression &expression);
   std::optional<Expression> visit(Probe &probe);
+  std::optional<Expression> visit(Subprog &subprog);
   std::optional<Expression> check(const std::string &ident, Node &node);
 
 private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
-  Node *top_level_node_ = nullptr;
+  std::optional<ProbeType> probe_type_;
+  std::optional<bpf_prog_type> prog_type_;
+  std::optional<std::string> probe_target_;
 };
 
 } // namespace
+
+static std::string probe_type_name(ProbeType t)
+{
+  switch (t) {
+    case ProbeType::invalid:
+      return "invalid";
+    case ProbeType::special:
+      return "special";
+    case ProbeType::benchmark:
+      return "benchmark";
+    case ProbeType::kprobe:
+      return "kprobe";
+    case ProbeType::kretprobe:
+      return "kretprobe";
+    case ProbeType::uprobe:
+      return "uprobe";
+    case ProbeType::uretprobe:
+      return "uretprobe";
+    case ProbeType::usdt:
+      return "usdt";
+    case ProbeType::tracepoint:
+      return "tracepoint";
+    case ProbeType::profile:
+      return "profile";
+    case ProbeType::interval:
+      return "interval";
+    case ProbeType::software:
+      return "software";
+    case ProbeType::hardware:
+      return "hardware";
+    case ProbeType::watchpoint:
+      return "watchpoint";
+    case ProbeType::asyncwatchpoint:
+      return "asyncwatchpoint";
+    case ProbeType::fentry:
+      return "fentry";
+    case ProbeType::fexit:
+      return "fexit";
+    case ProbeType::iter:
+      return "iter";
+    case ProbeType::rawtracepoint:
+      return "rawtracepoint";
+    default:
+      return "unknown";
+  }
+}
+
+static std::string prog_type_name(bpf_prog_type t)
+{
+  switch (t) {
+    case BPF_PROG_TYPE_UNSPEC:
+      return "unspec";
+    case BPF_PROG_TYPE_SOCKET_FILTER:
+      return "socket_filter";
+    case BPF_PROG_TYPE_KPROBE:
+      return "kprobe";
+    case BPF_PROG_TYPE_SCHED_CLS:
+      return "sched_cls";
+    case BPF_PROG_TYPE_SCHED_ACT:
+      return "sched_act";
+    case BPF_PROG_TYPE_TRACEPOINT:
+      return "tracepoint";
+    case BPF_PROG_TYPE_XDP:
+      return "xdp";
+    case BPF_PROG_TYPE_PERF_EVENT:
+      return "perf_event";
+    case BPF_PROG_TYPE_CGROUP_SKB:
+      return "cgroup_skb";
+    case BPF_PROG_TYPE_CGROUP_SOCK:
+      return "cgroup_sock";
+    case BPF_PROG_TYPE_LWT_IN:
+      return "lwt_in";
+    case BPF_PROG_TYPE_LWT_OUT:
+      return "lwt_out";
+    case BPF_PROG_TYPE_LWT_XMIT:
+      return "lwt_xmit";
+    case BPF_PROG_TYPE_SOCK_OPS:
+      return "sock_ops";
+    case BPF_PROG_TYPE_SK_SKB:
+      return "sk_skb";
+    case BPF_PROG_TYPE_CGROUP_DEVICE:
+      return "cgroup_device";
+    case BPF_PROG_TYPE_SK_MSG:
+      return "sk_msg";
+    case BPF_PROG_TYPE_RAW_TRACEPOINT:
+      return "raw_tracepoint";
+    case BPF_PROG_TYPE_CGROUP_SOCK_ADDR:
+      return "cgroup_sock_addr";
+    case BPF_PROG_TYPE_LWT_SEG6LOCAL:
+      return "lwt_seg6local";
+    case BPF_PROG_TYPE_LIRC_MODE2:
+      return "lirc_mode2";
+    case BPF_PROG_TYPE_SK_REUSEPORT:
+      return "sk_reuseport";
+    case BPF_PROG_TYPE_FLOW_DISSECTOR:
+      return "flow_dissector";
+    case BPF_PROG_TYPE_CGROUP_SYSCTL:
+      return "cgroup_sysctl";
+    case BPF_PROG_TYPE_RAW_TRACEPOINT_WRITABLE:
+      return "raw_tracepoint_writable";
+    case BPF_PROG_TYPE_CGROUP_SOCKOPT:
+      return "cgroup_sockopt";
+    case BPF_PROG_TYPE_TRACING:
+      return "tracing";
+    case BPF_PROG_TYPE_STRUCT_OPS:
+      return "struct_ops";
+    case BPF_PROG_TYPE_EXT:
+      return "ext";
+    case BPF_PROG_TYPE_LSM:
+      return "lsm";
+    case BPF_PROG_TYPE_SK_LOOKUP:
+      return "sk_lookup";
+    case BPF_PROG_TYPE_SYSCALL:
+      return "syscall";
+    case BPF_PROG_TYPE_NETFILTER:
+      return "netfilter";
+    default:
+      return "unknown";
+  }
+}
 
 std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
 {
@@ -52,41 +175,45 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
     return ast_.make_node<Boolean>(node.loc, bpftrace_.safe_mode_);
   }
   if (ident == "__builtin_probe") {
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+    if (probe_type_ && probe_target_) {
       return ast_.make_node<String>(node.loc,
-                                    probe->attach_points.empty()
-                                        ? "none"
-                                        : probe->attach_points.front()->name());
+                                    probe_type_name(*probe_type_) + ":" +
+                                        *probe_target_);
+    } else {
+      node.addError() << "probe type not available";
     }
   }
-  if (ident == "__builtin_probetype") {
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      return ast_.make_node<String>(
-          node.loc,
-          probe->attach_points.empty()
-              ? "none"
-              : probetypeName(
-                    probetype(probe->attach_points.front()->provider)));
+  if (ident == "__builtin_probe_type") {
+    if (probe_type_) {
+      return ast_.make_node<String>(node.loc,
+                                    probe_type_name(probe_type_.value()));
+    } else {
+      node.addError() << "probe type not available";
+    }
+  }
+  if (ident == "__builtin_prog_type") {
+    if (prog_type_) {
+      return ast_.make_node<String>(node.loc,
+                                    prog_type_name(prog_type_.value()));
+    } else {
+      node.addError() << "program type not available";
     }
   }
   if (ident == "__builtin_elf_is_exe" || ident == "__builtin_elf_ino") {
-    auto *probe = dynamic_cast<Probe *>(top_level_node_);
-    if (!probe) {
+    if (!probe_type_) {
       return std::nullopt;
     }
-    ProbeType type = probetype(probe->attach_points.front()->provider);
     // Only for uprobe,uretprobe,USDT.
-    if (type != ProbeType::uprobe && type != ProbeType::uretprobe &&
-        type != ProbeType::usdt) {
-      LOG(BUG) << "The " << ident << " can not be used with '"
-               << probe->attach_points.front()->provider << "' probes";
+    if (*probe_type_ != ProbeType::uprobe &&
+        *probe_type_ != ProbeType::uretprobe &&
+        *probe_type_ != ProbeType::usdt) {
+      LOG(BUG) << "The " << ident << " can not be used with '" << *probe_type_
+               << "' probes";
     }
     if (ident == "__builtin_elf_is_exe") {
-      return ast_.make_node<Boolean>(
-          node.loc, util::is_exe(probe->attach_points.front()->target));
+      return ast_.make_node<Boolean>(node.loc, util::is_exe(*probe_target_));
     } else {
-      return ast_.make_node<Integer>(
-          node.loc, util::file_ino(probe->attach_points.front()->target));
+      return ast_.make_node<Integer>(node.loc, util::file_ino(*probe_target_));
     }
   }
   return std::nullopt;
@@ -120,16 +247,12 @@ std::optional<Expression> Builtins::visit(Call &call)
       call.addError() << call.func << " expects 1 string literal argument";
     } else {
       auto *kfunc = call.vargs.at(0).as<String>();
-      auto *probe = dynamic_cast<Probe *>(top_level_node_);
-      if (!probe) {
-        LOG(BUG) << "Inner error: can't get probe for " << call.func;
-        return std::nullopt;
+      if (!prog_type_) {
+        return ast_.make_node<Boolean>(kfunc->loc, false);
       }
-      ProbeType type = probetype(probe->attach_points.front()->provider);
-      bpf_prog_type prog_type = progtype(type);
       return ast_.make_node<Boolean>(
           kfunc->loc,
-          bpftrace_.feature_->kfunc_allowed(kfunc->value.c_str(), prog_type));
+          bpftrace_.feature_->kfunc_allowed(kfunc->value.c_str(), *prog_type_));
     }
   } else if (call.func == "__builtin_is_literal") {
     if (call.vargs.size() != 1) {
@@ -163,8 +286,26 @@ std::optional<Expression> Builtins::visit(Expression &expression)
 
 std::optional<Expression> Builtins::visit(Probe &probe)
 {
-  top_level_node_ = &probe;
+  if (!probe.attach_points.empty()) {
+    auto &ap = probe.attach_points[0];
+    probe_type_ = probetype(ap->provider);
+    prog_type_ = progtype(probe_type_.value());
+    probe_target_ = ap->target;
+  } else {
+    probe_type_.reset();
+    prog_type_.reset();
+    probe_target_.reset();
+  }
+
   return Visitor<Builtins, std::optional<Expression>>::visit(probe);
+}
+
+std::optional<Expression> Builtins::visit(Subprog &subprog)
+{
+  probe_type_.reset();
+  prog_type_.reset();
+
+  return Visitor<Builtins, std::optional<Expression>>::visit(subprog);
 }
 
 Pass CreateBuiltinsPass()

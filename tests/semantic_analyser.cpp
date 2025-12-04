@@ -242,7 +242,7 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("kretprobe:f { retval }");
   test("kprobe:f { func }");
   test("uprobe:/bin/sh:f { func }");
-  test("kprobe:f { probe }");
+  test("kprobe:sys_read { probe }");
   test("kprobe:f { jiffies }");
 
   test("kprobe:f { fake }", Error{ R"(
@@ -1623,8 +1623,10 @@ ERROR: The 'func' builtin is not available for uretprobes on kernels without the
 
 TEST_F(SemanticAnalyserTest, call_probe)
 {
-  test("kprobe:f { @[probe] = count(); }");
-  test("kprobe:f { printf(\"%s\", probe); }");
+  // N.B. This requires a mocked endpoint, since it will fail if
+  // the probe is not successfully expanded to anything.
+  test("kprobe:sys_read { @[probe] = count(); }");
+  test("kprobe:sys_read { printf(\"%s\", probe); }");
 }
 
 TEST_F(SemanticAnalyserTest, call_cat)
