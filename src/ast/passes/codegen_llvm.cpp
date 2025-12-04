@@ -3187,9 +3187,6 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 {
   scope_stack_.push_back(&subprog);
   std::vector<llvm::Type *> arg_types;
-  // First argument is for passing ctx pointer for output, rest are proper
-  // arguments to the function
-  arg_types.push_back(b_.getPtrTy());
   std::ranges::transform(subprog.args,
                          std::back_inserter(arg_types),
                          [this](SubprogArg *arg) {
@@ -3199,19 +3196,20 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
       b_.GetType(subprog.return_type->type()), arg_types, false);
 
   auto *func = llvm::Function::Create(
-      func_type, llvm::Function::InternalLinkage, subprog.name, module_.get());
+      func_type, llvm::Function::ExternalLinkage, subprog.name, module_.get());
+  extern_funcs_.emplace(subprog.name, func);
+
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
   variables_.clear();
-  ctx_ = func->arg_begin();
   inside_subprog_ = true;
 
   int arg_index = 0;
   for (SubprogArg *arg : subprog.args) {
     auto *alloca = b_.CreateAllocaBPF(b_.GetType(arg->typeof->type()),
                                       arg->var->ident);
-    b_.CreateStore(func->getArg(arg_index + 1), alloca);
+    b_.CreateStore(func->getArg(arg_index), alloca);
     variables_[scope_stack_.back()][arg->var->ident] = VariableLLVM{
       .value = alloca, .type = alloca->getAllocatedType()
     };

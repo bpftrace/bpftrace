@@ -1,6 +1,8 @@
 #include "ast/passes/type_system.h"
+#include "ast/ast.h"
 #include "ast/context.h"
 #include "ast/passes/clang_build.h"
+#include "btf/compat.h"
 
 namespace bpftrace::ast {
 
@@ -47,6 +49,46 @@ Pass CreateTypeSystemPass()
     }
     if (aggregate) {
       result.global = std::move(*aggregate);
+    }
+
+    // After importing all external objects, do a pass of any internal
+    // functions and incorpate them into the type system.
+    if (ast.root != nullptr) {
+      for (const auto *fn : ast.root->functions) {
+        std::vector<std::pair<std::string, btf::ValueType>> args;
+        for (const auto *arg : fn->args) {
+          auto value_type = btf::convertType(result.global,
+                                             arg->typeof->type());
+          if (!value_type) {
+            fn->addWarning() << "Unable to convert argument " << arg->var->ident
+                             << ": " << value_type.takeError();
+            break;
+          }
+          args.emplace_back(arg->var->ident, *value_type);
+        }
+        if (args.size() != fn->args.size()) {
+          continue;
+        }
+        auto return_value_type = btf::convertType(result.global,
+                                                  fn->return_type->type());
+        if (!return_value_type) {
+          fn->addWarning() << "Unable to convert return value: "
+                           << return_value_type.takeError();
+          continue;
+        }
+        auto proto = result.global.add<btf::FunctionProto>(*return_value_type,
+                                                           args);
+        if (!proto) {
+          fn->addWarning() << "Unable to add prototype: " << proto.takeError();
+          continue;
+        }
+        auto fn_entry = result.global.add<btf::Function>(
+            fn->name, btf::Function::Linkage::Global, *proto);
+        if (!fn_entry) {
+          fn->addWarning() << "Unable to add function: "
+                           << fn_entry.takeError();
+        }
+      }
     }
 
     return result;
