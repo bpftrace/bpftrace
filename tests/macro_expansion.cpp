@@ -205,6 +205,24 @@ stdin:1:24-33: ERROR: The closest definition of add() has a different number of 
 macro add(x) { x + 1 } macro add(x, y) { x + y } begin { add(1, 1, 1); }
                        ~~~~~~~~~
 )");
+  test_error("macro test(pid) { } begin { }",
+             R"(
+stdin:1:12-15: ERROR: syntax error, unexpected builtin, expecting ) or ","
+macro test(pid) { } begin { }
+           ~~~
+)");
+  test_error("macro test(usym_t) { } begin { }",
+             R"(
+stdin:1:12-18: ERROR: syntax error, unexpected builtin type, expecting ) or ","
+macro test(usym_t) { } begin { }
+           ~~~~~~
+)");
+  test_error("macro test(inet) { } begin { }",
+             R"(
+stdin:1:12-16: ERROR: syntax error, unexpected sized type, expecting ) or ","
+macro test(inet) { } begin { }
+           ~~~~
+)");
 }
 
 } // namespace bpftrace::test::macro_expansion

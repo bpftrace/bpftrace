@@ -406,10 +406,10 @@ macro:
 macro_args:
                 macro_args "," map   { $$ = std::move($1); $$.push_back($3); }
         |       macro_args "," var   { $$ = std::move($1); $$.push_back($3); }
-        |       macro_args "," ident { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::Identifier>(@$, $3)); }
+        |       macro_args "," IDENT { $$ = std::move($1); $$.push_back(driver.ctx.make_node<ast::Identifier>(@$, $3)); }
         |       map                  { $$ = ast::ExpressionList{$1}; }
         |       var                  { $$ = ast::ExpressionList{$1}; }
-        |       ident                { $$ = ast::ExpressionList{driver.ctx.make_node<ast::Identifier>(@$, $1)}; }
+        |       IDENT                { $$ = ast::ExpressionList{driver.ctx.make_node<ast::Identifier>(@$, $1)}; }
         |       %empty               { $$ = ast::ExpressionList{}; }
                 ;
 
