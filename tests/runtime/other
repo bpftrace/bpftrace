@@ -369,13 +369,13 @@ EXPECT_REGEX .*ERROR: Invalid value for license. Found: Potato. Valid values: Du
 WILL_FAIL
 
 NAME named command line params
-RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' -- --dd --aa=20 --cc=False
-EXPECT (20, false, true, hello)
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 20), getopt("bb", -1), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' -- --dd --aa=0xffffffffffffffff --bb=-10 --cc=False
+EXPECT (18446744073709551615, -10, false, true, hello)
 TIMEOUT 1
 
 NAME named and positional params
-RUN {{BPFTRACE}} -e 'begin { print(($1, getopt("aa", 10), $2, getopt("bb", "hello"), getopt("cc")));  }' pos1 -- --aa=20 --bb=bye pos2 --cc
-EXPECT (pos1, 20, pos2, bye, true)
+RUN {{BPFTRACE}} -e 'begin { print(($1, getopt("aa", 10), getopt("bb", -1), $2, getopt("cc", "hello"), getopt("dd")));  }' pos1 -- --aa=20 --bb=5 --cc=bye pos2 --dd
+EXPECT (pos1, 20, 5, pos2, bye, true)
 TIMEOUT 1
 
 # Can't run through the standard AOT path because we need to pass CLI args

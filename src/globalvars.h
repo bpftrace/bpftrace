@@ -79,7 +79,7 @@ private:
   std::vector<std::string> expected_;
 };
 
-using GlobalVarValue = std::variant<std::string, int64_t, bool>;
+using GlobalVarValue = std::variant<std::string, int64_t, uint64_t, bool>;
 
 using GlobalVarMap = std::unordered_map<std::string, GlobalVarValue>;
 
@@ -112,7 +112,13 @@ constexpr std::string_view EVENT_LOSS_COUNTER_SECTION_NAME =
 
 struct GlobalVarConfig {
   std::string section;
-  Type type = Type::none;
+  enum Type {
+    opt_bool,
+    opt_string,
+    opt_signed,
+    opt_unsigned,
+  };
+  std::optional<Type> type = std::nullopt;
 
 private:
   friend class cereal::access;
@@ -126,12 +132,12 @@ private:
 const std::unordered_map<std::string_view, GlobalVarConfig>
     GLOBAL_VAR_CONFIGS = {
       { NUM_CPUS,
-        { .section = std::string(RO_SECTION_NAME), .type = Type::integer } },
+        { .section = std::string(RO_SECTION_NAME), .type = GlobalVarConfig::opt_unsigned } },
       { MAX_CPU_ID,
-        { .section = std::string(RO_SECTION_NAME), .type = Type::integer } },
+        { .section = std::string(RO_SECTION_NAME), .type = GlobalVarConfig::opt_unsigned } },
       { EVENT_LOSS_COUNTER,
         { .section = std::string(EVENT_LOSS_COUNTER_SECTION_NAME),
-          .type = Type::integer } },
+          .type = GlobalVarConfig::opt_unsigned } },
       { FMT_STRINGS_BUFFER,
         { .section = std::string(FMT_STRINGS_BUFFER_SECTION_NAME) } },
       { TUPLE_BUFFER, { .section = std::string(TUPLE_BUFFER_SECTION_NAME) } },
@@ -177,8 +183,8 @@ public:
       const struct bpf_object *bpf_object,
       const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
       GlobalVarMap &&global_var_vals,
-      int ncpus,
-      int max_cpu_id);
+      uint64_t ncpus,
+      uint64_t max_cpu_id);
 
   std::unordered_set<std::string> get_global_vars_for_section(
       std::string_view target_section);

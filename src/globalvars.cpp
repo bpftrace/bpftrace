@@ -28,17 +28,18 @@ void UnknownParamError::log(llvm::raw_ostream &OS) const
   OS << err();
 }
 
-static Type get_global_var_type(const GlobalVarValue &value)
+static GlobalVarConfig::Type get_global_var_type(const GlobalVarValue &value)
 {
   if (std::holds_alternative<int64_t>(value)) {
-    return Type::integer;
+    return GlobalVarConfig::opt_signed;
+  } else if (std::holds_alternative<uint64_t>(value)) {
+    return GlobalVarConfig::opt_unsigned;
   } else if (std::holds_alternative<bool>(value)) {
-    return Type::boolean;
+    return GlobalVarConfig::opt_bool;
   } else if (std::holds_alternative<std::string>(value)) {
-    return Type::string;
+    return GlobalVarConfig::opt_string;
   } else {
     LOG(BUG) << "Unknown global variable type";
-    return Type::none;
   }
 }
 
@@ -124,18 +125,31 @@ void update_global_vars_rodata(
     auto it = global_var_vals.find(global_var);
     if (it != global_var_vals.end()) {
       const auto &config = added_global_vars.at(global_var);
-      if (config.type == Type::integer) {
-        auto *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
-        *var = std::get<int64_t>(it->second);
-      } else if (config.type == Type::boolean) {
-        auto *var = reinterpret_cast<int8_t *>(global_vars_buf + offset);
-        *var = std::get<bool>(it->second) ? 1 : 0;
-      } else if (config.type == Type::string) {
-        auto *var = reinterpret_cast<char *>(global_vars_buf + offset);
-        const auto &val = std::get<std::string>(it->second);
-        strncpy(var, val.c_str(), val.size() + 1);
-      } else {
-        LOG(BUG) << "Unsupported global variable type " << config.type;
+      if (!config.type) {
+        LOG(BUG) << "Global variable " << global_var << " has no type";
+      }
+      switch (*config.type) {
+        case GlobalVarConfig::opt_signed: {
+          auto *var = reinterpret_cast<int64_t *>(global_vars_buf + offset);
+          *var = std::get<int64_t>(it->second);
+          break;
+        }
+        case GlobalVarConfig::opt_unsigned: {
+          auto *var = reinterpret_cast<uint64_t *>(global_vars_buf + offset);
+          *var = std::get<uint64_t>(it->second);
+          break;
+        }
+        case GlobalVarConfig::opt_bool: {
+          auto *var = reinterpret_cast<int8_t *>(global_vars_buf + offset);
+          *var = std::get<bool>(it->second) ? 1 : 0;
+          break;
+        }
+        case GlobalVarConfig::opt_string: {
+          auto *var = reinterpret_cast<char *>(global_vars_buf + offset);
+          const auto &val = std::get<std::string>(it->second);
+          strncpy(var, val.c_str(), val.size() + 1);
+          break;
+        }
       }
     }
   }
@@ -259,21 +273,24 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
     return make_rw_type(1, CreateUInt64());
   }
 
-  if (config.type == Type::integer) {
-    return CreateInt64();
+  if (!config.type) {
+    LOG(BUG) << "Unknown global variable " << global_var_name;
   }
 
-  if (config.type == Type::boolean) {
-    return CreateInt8();
+  switch (*config.type) {
+    case GlobalVarConfig::opt_signed:
+      return CreateInt64();
+    case GlobalVarConfig::opt_unsigned:
+      return CreateUInt64();
+    case GlobalVarConfig::opt_bool:
+      return CreateInt8();
+    case GlobalVarConfig::opt_string: {
+      const auto max_strlen = bpftrace_config.max_strlen;
+      return make_rw_type(1, CreateArray(max_strlen, CreateInt8()));
+    }
   }
 
-  if (config.type == Type::string) {
-    const auto max_strlen = bpftrace_config.max_strlen;
-    return make_rw_type(1, CreateArray(max_strlen, CreateInt8()));
-  }
-
-  LOG(BUG) << "Unknown global variable " << global_var_name;
-  return CreateInt64();
+  return CreateNone(); // Unreachable.
 }
 
 void GlobalVars::check_index(const std::string &global_var_name,
@@ -387,60 +404,93 @@ Result<GlobalVarMap> GlobalVars::get_named_param_vals(
 
   for (const auto &[name, default_val] : named_param_defaults_) {
     const auto &config = added_global_vars_.at(name);
-    auto it = named_params.find(name);
+    if (!config.type) {
+      LOG(BUG) << "No type set for global variable.";
+    }
 
-    // Use the default
+    // Use the default.
+    auto it = named_params.find(name);
     if (it == named_params.end()) {
-      if (config.type == Type::integer) {
-        named_param_vals[name] = std::get<int64_t>(default_val);
-      } else if (config.type == Type::boolean) {
-        named_param_vals[name] = std::get<bool>(default_val);
-      } else if (config.type == Type::string) {
-        named_param_vals[name] = std::get<std::string>(default_val);
+      switch (*config.type) {
+        case GlobalVarConfig::opt_signed:
+          named_param_vals[name] = std::get<int64_t>(default_val);
+          break;
+        case GlobalVarConfig::opt_unsigned:
+          named_param_vals[name] = std::get<uint64_t>(default_val);
+          break;
+        case GlobalVarConfig::opt_bool:
+          named_param_vals[name] = std::get<bool>(default_val);
+          break;
+        case GlobalVarConfig::opt_string:
+          named_param_vals[name] = std::get<std::string>(default_val);
+          break;
       }
       continue;
     }
 
-    // No value means it's a boolean
+    // No value means it's a boolean.
     if (!it->second.has_value()) {
-      if (config.type == Type::integer) {
-        return make_error<NamedParamError>(name, "true", "expects an integer");
-      } else if (config.type == Type::string) {
-        return make_error<NamedParamError>(name, "true", "expects a string");
-      } else if (config.type == Type::boolean) {
-        named_param_vals[name] = true;
+      switch (*config.type) {
+        case GlobalVarConfig::opt_signed:
+        case GlobalVarConfig::opt_unsigned:
+          return make_error<NamedParamError>(name,
+                                             "true",
+                                             "expects an integer");
+        case GlobalVarConfig::opt_string:
+          return make_error<NamedParamError>(name, "true", "expects a string");
+        case GlobalVarConfig::opt_bool:
+          named_param_vals[name] = true;
+          break;
       }
       continue;
     }
 
     const std::string &val = *it->second;
-
-    if (config.type == Type::integer) {
-      auto int_val = util::to_int(val);
-      if (!int_val) {
-        std::string err_msg;
-        auto ok = handleErrors(
-            std::move(int_val),
-            [&](const util::OverflowError &) {
-              err_msg = "value is out of range";
-            },
-            [&](const util::NumberFormatError &err) { err_msg = err.msg(); });
-        return make_error<NamedParamError>(name, val, err_msg);
+    switch (*config.type) {
+      case GlobalVarConfig::opt_signed: {
+        auto int_val = util::to_int(val);
+        if (!int_val) {
+          std::string err_msg;
+          auto ok = handleErrors(
+              std::move(int_val),
+              [&](const util::OverflowError &) {
+                err_msg = "value is out of range";
+              },
+              [&](const util::NumberFormatError &err) { err_msg = err.msg(); });
+          return make_error<NamedParamError>(name, val, err_msg);
+        }
+        named_param_vals[name] = *int_val;
+        break;
       }
-
-      named_param_vals[name] = *int_val;
-    } else if (config.type == Type::boolean) {
-      if (util::is_str_bool_truthy(val)) {
-        named_param_vals[name] = true;
-      } else if (util::is_str_bool_falsy(val)) {
-        named_param_vals[name] = false;
-      } else {
-        return make_error<NamedParamError>(name,
-                                           val,
-                                           "expects a boolean (e.g. 'true')");
+      case GlobalVarConfig::opt_unsigned: {
+        auto uint_val = util::to_uint(val);
+        if (!uint_val) {
+          std::string err_msg;
+          auto ok = handleErrors(
+              std::move(uint_val),
+              [&](const util::OverflowError &) {
+                err_msg = "value is out of range";
+              },
+              [&](const util::NumberFormatError &err) { err_msg = err.msg(); });
+          return make_error<NamedParamError>(name, val, err_msg);
+        }
+        named_param_vals[name] = *uint_val;
+        break;
       }
-    } else if (config.type == Type::string) {
-      named_param_vals[name] = val;
+      case GlobalVarConfig::opt_bool:
+        if (util::is_str_bool_truthy(val)) {
+          named_param_vals[name] = true;
+        } else if (util::is_str_bool_falsy(val)) {
+          named_param_vals[name] = false;
+        } else {
+          return make_error<NamedParamError>(name,
+                                             val,
+                                             "expects a boolean (e.g. 'true')");
+        }
+        break;
+      case GlobalVarConfig::opt_string:
+        named_param_vals[name] = val;
+        break;
     }
   }
 
@@ -464,8 +514,8 @@ void GlobalVars::update_global_vars(
     const std::unordered_map<std::string, struct bpf_map *>
         &section_name_to_global_vars_map,
     GlobalVarMap &&global_var_vals,
-    int ncpus,
-    int max_cpu_id)
+    uint64_t ncpus,
+    uint64_t max_cpu_id)
 {
   global_var_vals[std::string(globalvars::NUM_CPUS)] = ncpus;
   global_var_vals[std::string(globalvars::MAX_CPU_ID)] = max_cpu_id;
