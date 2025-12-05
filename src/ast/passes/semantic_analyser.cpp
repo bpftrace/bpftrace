@@ -3069,18 +3069,6 @@ void SemanticAnalyser::visit(For &f)
 
   scope_stack_.pop_back();
 
-  // Currently, we do not pass BPF context to the callback so disable builtins
-  // which require ctx access.
-  CollectNodes<Builtin> builtins;
-  builtins.visit(f.block);
-  for (const Builtin &builtin : builtins.nodes()) {
-    if (builtin.builtin_type.IsCtxAccess() || builtin.is_argx() ||
-        builtin.ident == "__builtin_retval") {
-      builtin.addError() << "'" << builtin.ident
-                         << "' builtin is not allowed in a for-loop";
-    }
-  }
-
   // Finally, create the context tuple now that all variables inside the loop
   // have been visited.
   std::vector<SizedType> ctx_types;
