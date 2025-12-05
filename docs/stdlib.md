@@ -838,8 +838,8 @@ The printing of maps supports the optional `top` and `div` arguments.
 ```
 BEGIN {
   $i = 11;
-  while($i) {
-    @[$i] = --$i;
+  for $elem : 1..$i {
+    @[$elem] = $elem-1;
   }
   print(@, 2);
   clear(@);
@@ -848,8 +848,8 @@ BEGIN {
 
 /*
  * Sample output:
- * @[9]: 9
- * @[10]: 10
+ * @[9]: 8
+ * @[10]: 9
  */
 ```
 

@@ -464,7 +464,7 @@ Identifiers must match the following regular expression: `[_a-zA-Z][_a-zA-Z0-9]*
 
 ## Keywords
 
-`break`, `config`, `continue`, `else`, `for`, `if`, `import`, `let`, `macro`, `offsetof`, `return`, `sizeof`, `unroll`, `while`.
+`break`, `config`, `continue`, `else`, `for`, `if`, `import`, `let`, `macro`, `offsetof`, `return`, `sizeof`, `unroll`, `while` (deprecated).
 
 * `return` - The return keyword is used to exit the current probe. This differs from `exit()` in that it doesn’t exit bpftrace.
 
@@ -584,34 +584,7 @@ Both `for` loops support the following control flow statements:
 
 ### While
 
-BPF supports `while` loops as long as the verifier can prove they’re bounded and fit within the instruction limit.
-
-```
-while (condition) {
-  block;
-}
-```
-
-```
-interval:s:1 {
-  $i = 0;
-  while ($i <= 100) {
-    printf("%d ", $i);
-    if ($i > 5) {
-      break;
-    }
-    $i++
-  }
-  printf("\n");
-}
-```
-
-The `while` loop supports the following control flow statements:
-
-|     |     |
-| --- | --- |
-| continue | skip processing of the rest of the block and return to the conditional |
-| break | terminate the loop |
+While loops are deprecated and may be removed in the future; please use `For` loops instead as these are more easily verified to be bounded.
 
 ### Unroll
 

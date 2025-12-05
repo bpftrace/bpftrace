@@ -13,6 +13,7 @@ public:
   using Visitor<DeprecatedAnalyser>::visit;
   void visit(Builtin &builtin);
   void visit(Call &call);
+  void visit(While &while_loop);
 };
 
 struct DeprecatedName {
@@ -82,6 +83,16 @@ static std::vector<DeprecatedName> DEPRECATED_CALLS = {};
 void DeprecatedAnalyser::visit(Call &call)
 {
   check(DEPRECATED_CALLS, call.func, call);
+}
+
+void DeprecatedAnalyser::visit(While &while_loop)
+{
+  auto &warn = while_loop.addWarning();
+  warn << "While loops are deprecated and may be removed in the future.";
+  auto &hint = warn.addHint();
+  hint << "For loops support ranges (e.g. `for ($x : $start..$end) { ... }`), "
+          "and can be used in place of while. These are more easily proven to "
+          "be bounded by the verifier.";
 }
 
 Pass CreateDeprecatedPass()
