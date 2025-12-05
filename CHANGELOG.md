@@ -20,6 +20,8 @@ and this project adheres to
 - `args` in tracepoints now requires BTF
   - [#4864](https://github.com/bpftrace/bpftrace/pull/4864)
   - [Migration guide](docs/migration_guide.md##args-in-tracepoints-now-requires-btf)
+- `while` is now deprecated in favor of range-based for loops
+  - [#4886](https://github.com/bpftrace/bpftrace/pull/4886)
 #### Added
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)
