@@ -68,6 +68,8 @@ and this project adheres to
 - Warn on all discarded expressions
   - [#4836](https://github.com/bpftrace/bpftrace/pull/4836)
 #### Deprecated
+- `while` is now deprecated in favor of range-based for loops
+  - [#4886](https://github.com/bpftrace/bpftrace/pull/4886)
 #### Removed
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
