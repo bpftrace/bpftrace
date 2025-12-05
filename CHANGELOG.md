@@ -21,6 +21,8 @@ and this project adheres to
   - [#4864](https://github.com/bpftrace/bpftrace/pull/4864)
   - [Migration guide](docs/migration_guide.md##args-in-tracepoints-now-requires-btf)
 #### Added
+- Add `uprobe` support for statement attach points.
+  - [#4867](https://github.com/bpftrace/bpftrace/pull/4867)
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)
 - Add `syscall_name()` to convert system call numbers into names.
