@@ -21,16 +21,13 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
-#include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/parser.h"
-#include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/probe_prune.h"
-#include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
@@ -48,6 +45,7 @@
 #include "probe_matcher.h"
 #include "procmon.h"
 #include "run_bpftrace.h"
+#include "util/cgroup.h"
 #include "util/env.h"
 #include "util/int_parser.h"
 #include "util/kernel.h"
@@ -90,6 +88,7 @@ enum Options {
   NO_WARNING,
   OUTPUT,
   PID,
+  CGROUP,
   QUIET,
   TEST, // Alias for --test-mode=test.
   TEST_MODE,
@@ -125,6 +124,7 @@ void usage(std::ostream& out)
   out << "    -l, --list [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
   out << "    -p, --pid PID  filter actions and enable USDT probes on PID" << std::endl;
+  out << "    --cgroup ROOT  filter for processes in within cgroup" << std::endl;
   out << "    -c, --cmd CMD  run CMD and enable USDT probes on resulting process" << std::endl;
   out << "    --no-feature FEATURE[,FEATURE]" << std::endl;
   out << "                   disable use of detected features" << std::endl;
@@ -313,6 +313,7 @@ std::vector<std::string> extra_flags(
 
 struct Args {
   std::string pid_str;
+  std::string cgroup_str;
   std::string cmd_str;
   bool listing = false;
   bool safe_mode = true;
@@ -457,6 +458,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::PID },
+    option{ .name = "cgroup",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::CGROUP },
     option{ .name = "quiet",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -606,6 +611,9 @@ Args parse_args(int argc, char* argv[])
       case 'p':
       case Options::PID:
         args.pid_str = optarg;
+        break;
+      case Options::CGROUP:
+        args.cgroup_str = optarg;
         break;
       case 'I':
         args.include_dirs.emplace_back(optarg);
@@ -798,6 +806,7 @@ int main(int argc, char* argv[])
   bpftrace.run_tests_ = args.test_mode == TestMode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.test_mode == TestMode::BPF_BENCHMARK;
 
+  std::optional<pid_t> pid;
   if (!args.pid_str.empty()) {
     auto maybe_pid = util::to_uint(args.pid_str);
     if (!maybe_pid) {
@@ -812,12 +821,18 @@ int main(int argc, char* argv[])
       LOG(ERROR) << "Pid out of range: " << *maybe_pid;
       exit(1);
     }
+    pid = *maybe_pid;
     try {
       bpftrace.procmon_ = std::make_unique<ProcMon>(*maybe_pid);
     } catch (const std::exception& e) {
       LOG(ERROR) << e.what();
       exit(1);
     }
+  }
+
+  std::optional<uint64_t> cgroup_id;
+  if (!args.cgroup_str.empty()) {
+    cgroup_id = util::resolve_cgroupid(args.cgroup_str);
   }
 
   if (!args.cmd_str.empty()) {
@@ -852,8 +867,8 @@ int main(int argc, char* argv[])
     // To list tracepoints, we construct a synthetic AST and then expand the
     // probe. The raw contents of the program are the initial search provided.
     ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
-    ast::CDefinitions no_c_defs; // No external C definitions may be used.
-    ast::TypeMetadata no_types;  // No external types may be used.
+    ast::CDefinitions no_c_defs;       // No external C definitions may be used.
+    ast::TypeMetadata no_types;        // No external types may be used.
     ast::MacroRegistry macro_registry; // No macros may be used.
 
     // Parse and expand all the attachpoints. We don't need to descend into
@@ -950,8 +965,8 @@ int main(int argc, char* argv[])
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
-    ast::CDefinitions no_c_defs; // See above.
-    ast::TypeMetadata no_types;  // See above.
+    ast::CDefinitions no_c_defs;       // See above.
+    ast::TypeMetadata no_types;        // See above.
     ast::MacroRegistry macro_registry; // See above.
     pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)))
         .put(no_c_defs)
@@ -989,11 +1004,16 @@ int main(int argc, char* argv[])
   // Start with all the basic parsing steps.
   for (auto& pass : ast::AllParsePasses(std::move(flags),
                                         {},
+                                        ast::FilterInputs{
+                                            .pid = pid,
+                                            .cgroup_id = cgroup_id,
+                                        },
                                         bt_debug.contains(DebugStage::Parse))) {
     addPass(std::move(pass));
   }
   pm.add(ast::CreateLLVMInitPass());
 
+  // Add all standard passes.
   switch (args.build_mode) {
     case BuildMode::DYNAMIC:
       CreateDynamicPasses(addPass);
