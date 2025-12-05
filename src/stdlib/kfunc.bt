@@ -1,11 +1,23 @@
 // :variant boolean kfunc_exist(const string kfunc)
 // Determine if a kfunc exists using BTF.
 macro kfunc_exist(kfunc) {
-  __builtin_kfunc_exist(kfunc)
+  let $ret: bool = false;
+  if comptime ((is_literal(kfunc)) && (is_str(kfunc))) {
+    $ret = __builtin_kfunc_exist(kfunc);
+  } else {
+    fail("kfunc_exist() accepts a string literal only");
+  }
+  $ret
 }
 
 // :variant boolean kfunc_allowed(const string kfunc)
 // Determine if a kfunc is supported for particular probe types.
 macro kfunc_allowed(kfunc) {
-  __builtin_kfunc_allowed(kfunc)
+  let $ret: bool = false;
+  if comptime ((is_literal(kfunc)) && (is_str(kfunc))) {
+    $ret = __builtin_kfunc_allowed(kfunc);
+  } else {
+    fail("kfunc_allowed() accepts a string literal only");
+  }
+  $ret
 }
