@@ -1,47 +1,46 @@
 #!/usr/bin/env bpftrace
-/*
- * threadsnoop - List new thread creation.
- *
- * See BPF Performance Tools, Chapter 13, for an explanation of this tool.
- * 
- * Example of usage:
- * 
- * # ./threadsnoop.bt
- * Attaching 2 probes...
- * TIME                PID COMM             FUNC
- * 10:20:31.938572   28549 dockerd          threadentry
- * 10:20:31.939213   28549 dockerd          threadentry
- * 10:20:31.939405   28549 dockerd          threadentry
- * 10:20:32.013269   28579 docker-containe  0x562f30f2e710
- * 10:20:32.036764   28549 dockerd          threadentry
- * 10:20:32.083780   28579 docker-containe  0x562f30f2e710
- * 10:20:32.116738     629 systemd-journal  0x7fb7114955c0
- * 10:20:32.116844     629 systemd-journal  0x7fb7114955c0
- * [...]
- * 
- * The output shows a dockerd process creating several threads with the start
- * routine threadentry(), and docker-containe (truncated) and systemd-journal
- * also starting threads: in their cases, the function had no symbol information
- * available, so their addresses are printed in hex.
- *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
- * 15-Feb-2019  Brendan Gregg   Created this.
- */
+// threadsnoop - List new thread creation.
+//
+// See BPF Performance Tools, Chapter 13, for an explanation of this tool.
+//
+// Example of usage:
+//
+// # ./threadsnoop.bt
+// Attaching 2 probes...
+// TIME                PID COMM             FUNC
+// 10:20:31.938572   28549 dockerd          threadentry
+// 10:20:31.939213   28549 dockerd          threadentry
+// 10:20:31.939405   28549 dockerd          threadentry
+// 10:20:32.013269   28579 docker-containe  0x562f30f2e710
+// 10:20:32.036764   28549 dockerd          threadentry
+// 10:20:32.083780   28579 docker-containe  0x562f30f2e710
+// 10:20:32.116738     629 systemd-journal  0x7fb7114955c0
+// 10:20:32.116844     629 systemd-journal  0x7fb7114955c0
+// [...]
+//
+// The output shows a dockerd process creating several threads with the start
+// routine threadentry(), and docker-containe (truncated) and systemd-journal
+// also starting threads: in their cases, the function had no symbol information
+// available, so their addresses are printed in hex.
+//
+// Copyright (c) 2019 Brendan Gregg.
+// This was originally created for the BPF Performance Tools book
+// published by Addison Wesley. ISBN-13: 9780136554820
+// When copying or porting, include this comment.
+//
+// 15-Feb-2019  Brendan Gregg   Created this.
 
-config = { missing_probes = "ignore" }
+config = {
+  missing_probes = ignore;
+}
 
 BEGIN
 {
-	printf("%-15s %7s %-16s %s\n", "TIME", "PID", "COMM", "FUNC");
+  printf("%-15s %7s %-16s %s\n", "TIME", "PID", "COMM", "FUNC");
 }
 
 uprobe:libpthread:pthread_create,
 uprobe:libc:pthread_create
 {
-	printf("%15s %7d %-16s %s\n", strftime("%H:%M:%S.%f", nsecs), pid, comm,
-	    usym(arg2));
+  printf("%15s %7d %-16s %s\n", strftime("%H:%M:%S.%f", nsecs), pid, comm, usym(arg2));
 }

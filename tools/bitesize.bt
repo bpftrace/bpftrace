@@ -1,59 +1,57 @@
 #!/usr/bin/env bpftrace
-/*
- * bitesize	Show disk I/O size as a histogram.
- *		For Linux, uses bpftrace and eBPF.
- * 
- * Example of usage:
- * 
- * # ./bitesize.bt
- * Attaching 3 probes...
- * Tracing block device I/O... Hit Ctrl-C to end.
- * ^C
- * I/O size (bytes) histograms by process name:
- * 
- * @[cleanup]:
- * [4K, 8K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
- * 
- * @[postdrop]:
- * [4K, 8K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
- * 
- * @[jps]:
- * [4K, 8K)               1 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
- * [8K, 16K)              0 |                                                    |
- * [16K, 32K)             0 |                                                    |
- * [32K, 64K)             2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
- * 
- * @[jbd2/nvme0n1-8]:
- * [4K, 8K)               3 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
- * [8K, 16K)              0 |                                                    |
- * [16K, 32K)             0 |                                                    |
- * [32K, 64K)             2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                  |
- * [64K, 128K)            1 |@@@@@@@@@@@@@@@@@                                   |
- * 
- * @[dd]:
- * [16K, 32K)           921 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
- * 
- * The most active process while tracing was "dd", which issues 921 I/O between
- * 16 Kbytes and 32 Kbytes in size.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Sep-2018	Brendan Gregg	Created this.
- */
+// bitesize	Show disk I/O size as a histogram.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// Example of usage:
+//
+// # ./bitesize.bt
+// Attaching 3 probes...
+// Tracing block device I/O... Hit Ctrl-C to end.
+// ^C
+// I/O size (bytes) histograms by process name:
+//
+// @[cleanup]:
+// [4K, 8K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+//
+// @[postdrop]:
+// [4K, 8K)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+//
+// @[jps]:
+// [4K, 8K)               1 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+// [8K, 16K)              0 |                                                    |
+// [16K, 32K)             0 |                                                    |
+// [32K, 64K)             2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+//
+// @[jbd2/nvme0n1-8]:
+// [4K, 8K)               3 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+// [8K, 16K)              0 |                                                    |
+// [16K, 32K)             0 |                                                    |
+// [32K, 64K)             2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                  |
+// [64K, 128K)            1 |@@@@@@@@@@@@@@@@@                                   |
+//
+// @[dd]:
+// [16K, 32K)           921 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+//
+// The most active process while tracing was "dd", which issues 921 I/O between
+// 16 Kbytes and 32 Kbytes in size.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 07-Sep-2018	Brendan Gregg	Created this.
 
 BEGIN
 {
-	printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
+  printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
 }
 
 tracepoint:block:block_rq_issue
 {
-	@[args.comm] = hist(args.bytes);
+  @[args.comm] = hist(args.bytes);
 }
 
 END
 {
-	printf("\nI/O size (bytes) histograms by process name:");
+  printf("\nI/O size (bytes) histograms by process name:");
 }

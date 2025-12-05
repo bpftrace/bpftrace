@@ -1,52 +1,49 @@
 #!/usr/bin/env bpftrace
-/*
- * gethostlatency	Trace getaddrinfo/gethostbyname[2] calls.
- *			For Linux, uses bpftrace and eBPF.
- *
- * This can be useful for identifying DNS latency, by identifying which
- * remote host name lookups were slow, and by how much.
- *
- * This uses dynamic tracing of user-level functions and registers, and may
- * need modifications to match your software and processor architecture.
- *
- * Example of usage:
- *
- * # ./gethostlatency.bt
- * Attaching 7 probes...
- * Tracing getaddr/gethost calls... Hit Ctrl-C to end.
- * TIME      PID    COMM              LATms HOST
- * 02:52:05  19105  curl                 81 www.netflix.com
- * 02:52:12  19111  curl                 17 www.netflix.com
- * 02:52:19  19116  curl                  9 www.facebook.com
- * 02:52:23  19118  curl                  3 www.facebook.com
- *
- * In this example, the first call to lookup "www.netflix.com" took 81 ms, and
- * the second took 17 ms (sounds like some caching).
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides options to customize the output.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 08-Sep-2018	Brendan Gregg	Created this.
- */
+// gethostlatency	Trace getaddrinfo/gethostbyname[2] calls.
+// 			For Linux, uses bpftrace and eBPF.
+//
+// This can be useful for identifying DNS latency, by identifying which
+// remote host name lookups were slow, and by how much.
+//
+// This uses dynamic tracing of user-level functions and registers, and may
+// need modifications to match your software and processor architecture.
+//
+// Example of usage:
+//
+// # ./gethostlatency.bt
+// Attaching 7 probes...
+// Tracing getaddr/gethost calls... Hit Ctrl-C to end.
+// TIME      PID    COMM              LATms HOST
+// 02:52:05  19105  curl                 81 www.netflix.com
+// 02:52:12  19111  curl                 17 www.netflix.com
+// 02:52:19  19116  curl                  9 www.facebook.com
+// 02:52:23  19118  curl                  3 www.facebook.com
+//
+// In this example, the first call to lookup "www.netflix.com" took 81 ms, and
+// the second took 17 ms (sounds like some caching).
+//
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides options to customize the output.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 08-Sep-2018	Brendan Gregg	Created this.
 
 config = {
-	missing_probes = "ignore";
+  missing_probes = ignore;
 }
 
 BEGIN
 {
-	printf("Tracing getaddr/gethost calls... Hit Ctrl-C to end.\n");
-	printf("%-9s %-6s %-16s %6s %s\n", "TIME", "PID", "COMM", "LATms",
-	    "HOST");
+  printf("Tracing getaddr/gethost calls... Hit Ctrl-C to end.\n");
+  printf("%-9s %-6s %-16s %6s %s\n", "TIME", "PID", "COMM", "LATms", "HOST");
 }
 
 uprobe:libc:gethostbyaddr,
 uprobe:libc:gethostbyaddr_r
 {
-	@start[tid] = nsecs;
-	@inet[tid] = ntop(arg0);
+  @start[tid] = nsecs;
+  @inet[tid] = ntop(arg0);
 }
 
 uprobe:libc:getaddrinfo,
@@ -55,15 +52,15 @@ uprobe:libc:gethostbyname_r,
 uprobe:libc:gethostbyname2,
 uprobe:libc:gethostbyname2_r
 {
-	@start[tid] = nsecs;
-	@name[tid] = arg0;
+  @start[tid] = nsecs;
+  @name[tid] = arg0;
 }
 
 macro print_result(start, name)
 {
-	$latms = (nsecs - start) / 1e6;
-	time("%H:%M:%S  ");
-	printf("%-6d %-16s %6d %s\n", pid, comm, $latms, name);
+  $latms = (nsecs - start) / 1e6;
+  time("%H:%M:%S  ");
+  printf("%-6d %-16s %6d %s\n", pid, comm, $latms, name);
 }
 
 uretprobe:libc:getaddrinfo,
@@ -73,22 +70,22 @@ uretprobe:libc:gethostbyname2,
 uretprobe:libc:gethostbyname2_r
 /@start[tid]/
 {
-	print_result(@start[tid], str(@name[tid]));
-	delete(@start, tid);
-	delete(@name, tid);
+  print_result(@start[tid], str(@name[tid]));
+  delete(@start, tid);
+  delete(@name, tid);
 }
 
 uretprobe:libc:gethostbyaddr,
 uretprobe:libc:gethostbyaddr_r
 /@start[tid]/
 {
-	print_result(@start[tid], @inet[tid]);
-	delete(@start, tid);
-	delete(@inet, tid);
+  print_result(@start[tid], @inet[tid]);
+  delete(@start, tid);
+  delete(@inet, tid);
 }
 
 END
 {
-	clear(@name);
-	clear(@inet);
+  clear(@name);
+  clear(@inet);
 }

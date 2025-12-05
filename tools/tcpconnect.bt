@@ -1,47 +1,43 @@
 #!/usr/bin/env bpftrace
-/*
- * tcpconnect.bt  Trace TCP connect()s.
- *                For Linux, uses bpftrace and eBPF.
- *
- * All connection attempts are traced, even if they ultimately fail.
- *
- * This uses dynamic tracing of kernel functions, and will need to be updated
- * to match kernel changes.
- * 
- * Example of usage:
- * 
- * # ./tcpconnect.bt
- * TIME     PID      COMM             SADDR          SPORT  DADDR          DPORT
- * 00:36:45 1798396  agent            127.0.0.1      5001   10.229.20.82   56114
- * 00:36:45 1798396  curl             127.0.0.1      10255  10.229.20.82   56606
- * 00:36:45 3949059  nginx            127.0.0.1      8000   127.0.0.1      37780
- * 
- * 
- * This output shows three connections, one from a "agent" process, one from
- * "curl", and one from "nginx". The output details shows the IP version, source
- * address, source socket port, destination address, and destination port. This traces attempted
- * connections: these may have failed.
- * 
- * The overhead of this tool should be negligible, since it is only tracing the
- * kernel functions performing connect. It is not tracing every packet and then
- * filtering.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * 
- * Copyright (c) 2018 Dale Hamel.
- *
- * 23-Nov-2018	Dale Hamel	created this. 
- */
+// tcpconnect.bt  Trace TCP connect()s.
+//                For Linux, uses bpftrace and eBPF.
+//
+// All connection attempts are traced, even if they ultimately fail.
+//
+// This uses dynamic tracing of kernel functions, and will need to be updated
+// to match kernel changes.
+//
+// Example of usage:
+//
+// # ./tcpconnect.bt
+// TIME     PID      COMM             SADDR          SPORT  DADDR          DPORT
+// 00:36:45 1798396  agent            127.0.0.1      5001   10.229.20.82   56114
+// 00:36:45 1798396  curl             127.0.0.1      10255  10.229.20.82   56606
+// 00:36:45 3949059  nginx            127.0.0.1      8000   127.0.0.1      37780
+//
+//
+// This output shows three connections, one from a "agent" process, one from
+// "curl", and one from "nginx". The output details shows the IP version, source
+// address, source socket port, destination address, and destination port. This traces attempted
+// connections: these may have failed.
+//
+// The overhead of this tool should be negligible, since it is only tracing the
+// kernel functions performing connect. It is not tracing every packet and then
+// filtering.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// Copyright (c) 2018 Dale Hamel.
+//
+// 23-Nov-2018	Dale Hamel	created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/socket.h>
 #include <net/sock.h>
 #else
-/*
- * BTF provides the types, we just need to define AF_INET and AF_INET6.
- * These are Linux ABI defines, and are not architecture-specific.
- * With BTF, this allows tcpconnect.bt to work without glibc headers:
- */
+// BTF provides the types, we just need to define AF_INET and AF_INET6.
+// These are Linux ABI defines, and are not architecture-specific.
+// With BTF, this allows tcpconnect.bt to work without glibc headers:
 #define AF_INET   2 /* IPv4 */
 #define AF_INET6 10 /* IPv6 */
 #endif
@@ -57,19 +53,19 @@ kprobe:tcp_connect
 {
   let $daddr;
   let $saddr;
-  $sk = ((struct sock *) arg0);
-  $inet_family = $sk->__sk_common.skc_family;
+  $sk = (struct sock *)arg0;
+  $inet_family = $sk.__sk_common.skc_family;
 
   if ($inet_family == AF_INET || $inet_family == AF_INET6) {
     if ($inet_family == AF_INET) {
-      $daddr = ntop($sk->__sk_common.skc_daddr);
-      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+      $daddr = ntop($sk.__sk_common.skc_daddr);
+      $saddr = ntop($sk.__sk_common.skc_rcv_saddr);
     } else {
-      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
-      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+      $daddr = ntop($sk.__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+      $saddr = ntop($sk.__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
     }
-    $lport = $sk->__sk_common.skc_num;
-    $dport = $sk->__sk_common.skc_dport;
+    $lport = $sk.__sk_common.skc_num;
+    $dport = $sk.__sk_common.skc_dport;
 
     // Destination port is big endian, it must be flipped
     $dport = bswap($dport);

@@ -1,63 +1,61 @@
 #!/usr/bin/env bpftrace
-/*
- * swapin - Show swapins by process.
- *
- * See BPF Performance Tools, Chapter 7, for an explanation of this tool.
- *
- * Example of usage:
- *
- * # ./swapin.bt
- * Attaching 2 probes...
- * 13:36:59
- *
- * 13:37:00
- * @[chrome, 4536]: 10809
- * @[gnome-shell, 2239]: 12410
- *
- * 13:37:01
- * @[chrome, 4536]: 3826
- *
- * 13:37:02
- * @[cron, 1180]: 23
- * @[gnome-shell, 2239]: 2462
- *
- * 13:37:03
- * @[gnome-shell, 1444]: 4
- * @[gnome-shell, 2239]: 3420
- *
- * 13:37:04
- *
- * 13:37:05
- * [...]
- *
- * While tracing, this showed that PID 2239 (gnome-shell) and PID 4536 (chrome)
- * suffered over ten thousand swapins.
- *
- * Copyright (c) 2019 Brendan Gregg.
- * This was originally created for the BPF Performance Tools book
- * published by Addison Wesley. ISBN-13: 9780136554820
- * When copying or porting, include this comment.
- *
- * 26-Jan-2019  Brendan Gregg   Created this.
- * 31-May-2024  Rong Tao        Add folio support.
- */
+// swapin - Show swapins by process.
+//
+// See BPF Performance Tools, Chapter 7, for an explanation of this tool.
+//
+// Example of usage:
+//
+// # ./swapin.bt
+// Attaching 2 probes...
+// 13:36:59
+//
+// 13:37:00
+// @[chrome, 4536]: 10809
+// @[gnome-shell, 2239]: 12410
+//
+// 13:37:01
+// @[chrome, 4536]: 3826
+//
+// 13:37:02
+// @[cron, 1180]: 23
+// @[gnome-shell, 2239]: 2462
+//
+// 13:37:03
+// @[gnome-shell, 1444]: 4
+// @[gnome-shell, 2239]: 3420
+//
+// 13:37:04
+//
+// 13:37:05
+// [...]
+//
+// While tracing, this showed that PID 2239 (gnome-shell) and PID 4536 (chrome)
+// suffered over ten thousand swapins.
+//
+// Copyright (c) 2019 Brendan Gregg.
+// This was originally created for the BPF Performance Tools book
+// published by Addison Wesley. ISBN-13: 9780136554820
+// When copying or porting, include this comment.
+//
+// 26-Jan-2019  Brendan Gregg   Created this.
+// 31-May-2024  Rong Tao        Add folio support.
 
-config = { missing_probes = "ignore" }
+config = {
+  missing_probes = ignore;
+}
 
-/**
- * kernel commit c9bdf768dd93("mm: convert swap_readpage() to swap_read_folio()")
- * convert swap_readpage() to swap_read_folio(), try attaching two kprobes,
- * only one will succeed and the other will be silently ignored.
- */
+// kernel commit c9bdf768dd93("mm: convert swap_readpage() to swap_read_folio()")
+// convert swap_readpage() to swap_read_folio(), try attaching two kprobes,
+// only one will succeed and the other will be silently ignored.
 kprobe:swap_readpage,
 kprobe:swap_read_folio
 {
-        @[comm, pid] = count();
+  @[comm,pid] = count();
 }
 
 interval:1s
 {
-        time();
-        print(@);
-        clear(@);
+  time();
+  print(@);
+  clear(@);
 }

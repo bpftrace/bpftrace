@@ -1,87 +1,82 @@
 #!/usr/bin/env bpftrace
-/*
- * killsnoop	Trace signals issued by the kill(),tkill(),tgkill() syscall.
- *		For Linux, uses bpftrace and eBPF.
- * 
- * Example of usage:
- *
- * # ./killsnoop.bt
- * Attached 8 probes
- * Tracing kill(),tkill(),tgkill() signals... Hit Ctrl-C to end.
- * TIME                 PID COMM                    SIG     TPID RESULT
- * 16:51:52.961181   589458 bash                 SIGINT   589458      0
- * 16:51:55.177019   589458 bash                 SIGINT   234567     -3
- * 16:51:57.061029   589458 bash                SIGTERM    23456     -3
- * 16:52:02.717378   589458 bash                SIGTERM        1     -1
- *
- * The first line showed a SIGINT sent from PID 589458 (a bash shell) to
- * PID 589458. The result, 0, means success. The next line shows the same signal
- * sent, which resulted in -3, a failure (likely because the target process
- * no longer existed).
- *
- * This is a bpftrace version of the bcc tool of the same name.
- * The bcc version provides command line options to customize the output.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Sep-2018	Brendan Gregg	Created this.
- * 27-May-2025	Rong Tao	Support tkill(), tgkill()
- */
+// killsnoop	Trace signals issued by the kill(),tkill(),tgkill() syscall.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// Example of usage:
+//
+// # ./killsnoop.bt
+// Attached 8 probes
+// Tracing kill(),tkill(),tgkill() signals... Hit Ctrl-C to end.
+// TIME                 PID COMM                    SIG     TPID RESULT
+// 16:51:52.961181   589458 bash                 SIGINT   589458      0
+// 16:51:55.177019   589458 bash                 SIGINT   234567     -3
+// 16:51:57.061029   589458 bash                SIGTERM    23456     -3
+// 16:52:02.717378   589458 bash                SIGTERM        1     -1
+//
+// The first line showed a SIGINT sent from PID 589458 (a bash shell) to
+// PID 589458. The result, 0, means success. The next line shows the same signal
+// sent, which resulted in -3, a failure (likely because the target process
+// no longer existed).
+//
+// This is a bpftrace version of the bcc tool of the same name.
+// The bcc version provides command line options to customize the output.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 07-Sep-2018	Brendan Gregg	Created this.
+// 27-May-2025	Rong Tao	Support tkill(), tgkill()
 
 BEGIN
 {
-	@SIG_STR[0] = "N/A";
-	@SIG_STR[1] = "SIGHUP";
-	@SIG_STR[2] = "SIGINT";
-	@SIG_STR[3] = "SIGQUIT";
-	@SIG_STR[4] = "SIGILL";
-	@SIG_STR[5] = "SIGTRAP";
-	@SIG_STR[6] = "SIGABRT";
-	@SIG_STR[7] = "SIGBUS";
-	@SIG_STR[8] = "SIGFPE";
-	@SIG_STR[9] = "SIGKILL";
-	@SIG_STR[10] = "SIGUSR1";
-	@SIG_STR[11] = "SIGSEGV";
-	@SIG_STR[12] = "SIGUSR2";
-	@SIG_STR[13] = "SIGPIPE";
-	@SIG_STR[14] = "SIGALRM";
-	@SIG_STR[15] = "SIGTERM";
-	@SIG_STR[16] = "SIGSTKFLT";
-	@SIG_STR[17] = "SIGCHLD";
-	@SIG_STR[18] = "SIGCONT";
-	@SIG_STR[19] = "SIGSTOP";
-	@SIG_STR[20] = "SIGTSTP";
-	@SIG_STR[21] = "SIGTTIN";
-	@SIG_STR[22] = "SIGTTOU";
-	@SIG_STR[23] = "SIGURG";
-	@SIG_STR[24] = "SIGXCPU";
-	@SIG_STR[25] = "SIGXFSZ";
-	@SIG_STR[26] = "SIGVTALRM";
-	@SIG_STR[27] = "SIGPROF";
-	@SIG_STR[28] = "SIGWINCH";
-	@SIG_STR[29] = "SIGIO";
-	@SIG_STR[30] = "SIGPWR";
-	@SIG_STR[31] = "SIGSYS";
+  @SIG_STR[0] = "N/A";
+  @SIG_STR[1] = "SIGHUP";
+  @SIG_STR[2] = "SIGINT";
+  @SIG_STR[3] = "SIGQUIT";
+  @SIG_STR[4] = "SIGILL";
+  @SIG_STR[5] = "SIGTRAP";
+  @SIG_STR[6] = "SIGABRT";
+  @SIG_STR[7] = "SIGBUS";
+  @SIG_STR[8] = "SIGFPE";
+  @SIG_STR[9] = "SIGKILL";
+  @SIG_STR[10] = "SIGUSR1";
+  @SIG_STR[11] = "SIGSEGV";
+  @SIG_STR[12] = "SIGUSR2";
+  @SIG_STR[13] = "SIGPIPE";
+  @SIG_STR[14] = "SIGALRM";
+  @SIG_STR[15] = "SIGTERM";
+  @SIG_STR[16] = "SIGSTKFLT";
+  @SIG_STR[17] = "SIGCHLD";
+  @SIG_STR[18] = "SIGCONT";
+  @SIG_STR[19] = "SIGSTOP";
+  @SIG_STR[20] = "SIGTSTP";
+  @SIG_STR[21] = "SIGTTIN";
+  @SIG_STR[22] = "SIGTTOU";
+  @SIG_STR[23] = "SIGURG";
+  @SIG_STR[24] = "SIGXCPU";
+  @SIG_STR[25] = "SIGXFSZ";
+  @SIG_STR[26] = "SIGVTALRM";
+  @SIG_STR[27] = "SIGPROF";
+  @SIG_STR[28] = "SIGWINCH";
+  @SIG_STR[29] = "SIGIO";
+  @SIG_STR[30] = "SIGPWR";
+  @SIG_STR[31] = "SIGSYS";
 
-	/**
-	 * The real-time signal is relatively complex, so it is omitted and the
-	 * signal value is printed directly.
-	 *
-	 * POSIX SIGRTMIN is 34 or 35, see signal(7)
-	 * 32 in linux kernel, 34 in glibc, 35 in musl-libc
-	 */
+  // The real-time signal is relatively complex, so it is omitted and the
+  // signal value is printed directly.
+  //
+  // POSIX SIGRTMIN is 34 or 35, see signal(7)
+  // 32 in linux kernel, 34 in glibc, 35 in musl-libc
 
-	printf("Tracing kill(),tkill(),tgkill() signals... Hit Ctrl-C to end.\n");
-	printf("%-15s %8s %-16s %10s %8s %s\n",
-		"TIME", "PID", "COMM", "SIG", "TPID", "RESULT");
+  printf("Tracing kill(),tkill(),tgkill() signals... Hit Ctrl-C to end.\n");
+  printf("%-15s %8s %-16s %10s %8s %s\n", "TIME", "PID", "COMM", "SIG", "TPID", "RESULT");
 }
 
 tracepoint:syscalls:sys_enter_kill,
 tracepoint:syscalls:sys_enter_tkill,
 tracepoint:syscalls:sys_enter_tgkill
 {
-	@tpid[tid] = args.pid;
-	@tsig[tid] = args.sig;
+  @tpid[tid] = args.pid;
+  @tsig[tid] = args.sig;
 }
 
 tracepoint:syscalls:sys_exit_kill,
@@ -89,20 +84,20 @@ tracepoint:syscalls:sys_exit_tkill,
 tracepoint:syscalls:sys_exit_tgkill
 /@tpid[tid]/
 {
-	printf("%-15s %8d %-16s", strftime("%H:%M:%S.%f", nsecs), pid, comm);
-	if (!has_key(@SIG_STR, @tsig[tid])) {
-		printf(" %10d", @tsig[tid]);
-	} else {
-		printf(" %10s", @SIG_STR[@tsig[tid]]);
-	}
-	printf(" %8d %6d\n", @tpid[tid], args.ret);
-	delete(@tpid, tid);
-	delete(@tsig, tid);
+  printf("%-15s %8d %-16s", strftime("%H:%M:%S.%f", nsecs), pid, comm);
+  if (!has_key(@SIG_STR, @tsig[tid])) {
+    printf(" %10d", @tsig[tid]);
+  } else {
+    printf(" %10s", @SIG_STR[@tsig[tid]]);
+  }
+  printf(" %8d %6d\n", @tpid[tid], args.ret);
+  delete(@tpid, tid);
+  delete(@tsig, tid);
 }
 
 END
 {
-	clear(@tpid);
-	clear(@tsig);
-	clear(@SIG_STR);
+  clear(@tpid);
+  clear(@tsig);
+  clear(@SIG_STR);
 }

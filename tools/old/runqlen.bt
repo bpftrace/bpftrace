@@ -1,16 +1,14 @@
 #!/usr/bin/env bpftrace
-/*
- * runqlen.bt	CPU scheduler run queue length as a histogram.
- *		For Linux, uses bpftrace, eBPF.
- *
- * This is a bpftrace version of the bcc tool of the same name.
- *
- * For Linux < 6.14.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 07-Oct-2018	Brendan Gregg	Created this.
- */
+// runqlen.bt	CPU scheduler run queue length as a histogram.
+// 		For Linux, uses bpftrace, eBPF.
+//
+// This is a bpftrace version of the bcc tool of the same name.
+//
+// For Linux < 6.14.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 07-Oct-2018	Brendan Gregg	Created this.
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/sched.h>
@@ -27,14 +25,15 @@ struct cfs_rq {
 
 BEGIN
 {
-	printf("Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.\n");
+  printf("Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.\n");
 }
 
 profile:hz:99
 {
-	$task = (struct task_struct *)curtask;
-	$my_q = (struct cfs_rq *)$task->se.cfs_rq;
-	$len = (uint64)$my_q->nr_running;
-	$len = $len > 0 ? $len - 1 : 0;	// subtract currently running task
-	@runqlen = lhist($len, 0, 100, 1);
+  $task = (struct task_struct *)curtask;
+  $my_q = (struct cfs_rq *)$task.se.cfs_rq;
+  $len = (uint64)$my_q.nr_running;
+  $len = ($len > 0) ? ($len - 1) : 0;
+  // subtract currently running task
+  @runqlen = lhist($len, 0, 100, 1);
 }

@@ -1,58 +1,53 @@
 #!/usr/bin/env bpftrace
-/*
- * loads	Prints load averages.
- *		For Linux, uses bpftrace and eBPF.
- *
- * These are the same load averages printed by "uptime", but to three decimal
- * places instead of two (not that it really matters). This is really a
- * demonstration of fetching and processing a kernel structure from bpftrace.
- *
- * Example of usage:
- *
- * # ./loads.bt
- * Attaching 2 probes...
- * Reading load averages... Hit Ctrl-C to end.
- * 21:29:17 load averages: 2.091 2.048 1.947
- * 21:29:18 load averages: 2.091 2.048 1.947
- * 21:29:19 load averages: 2.091 2.048 1.947
- * 21:29:20 load averages: 2.091 2.048 1.947
- * ^C
- *
- * These are the same load averages printed by uptime:
- *
- * # uptime
- *  21:29:24 up 2 days, 18:57,  3 users,  load average: 2.16, 2.06, 1.95
- *
- *
- * For more on load averages, see the post:
- * http://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html
- *
- * This is a bpftrace version of a DTraceToolkit tool.
- *
- * Copyright 2018 Netflix, Inc.
- *
- * 10-Sep-2018	Brendan Gregg	Created this.
- */
+// loads	Prints load averages.
+// 		For Linux, uses bpftrace and eBPF.
+//
+// These are the same load averages printed by "uptime", but to three decimal
+// places instead of two (not that it really matters). This is really a
+// demonstration of fetching and processing a kernel structure from bpftrace.
+//
+// Example of usage:
+//
+// # ./loads.bt
+// Attaching 2 probes...
+// Reading load averages... Hit Ctrl-C to end.
+// 21:29:17 load averages: 2.091 2.048 1.947
+// 21:29:18 load averages: 2.091 2.048 1.947
+// 21:29:19 load averages: 2.091 2.048 1.947
+// 21:29:20 load averages: 2.091 2.048 1.947
+// ^C
+//
+// These are the same load averages printed by uptime:
+//
+// # uptime
+//  21:29:24 up 2 days, 18:57,  3 users,  load average: 2.16, 2.06, 1.95
+//
+//
+// For more on load averages, see the post:
+// http://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html
+//
+// This is a bpftrace version of a DTraceToolkit tool.
+//
+// Copyright 2018 Netflix, Inc.
+//
+// 10-Sep-2018	Brendan Gregg	Created this.
 
 BEGIN
 {
-	printf("Reading load averages... Hit Ctrl-C to end.\n");
+  printf("Reading load averages... Hit Ctrl-C to end.\n");
 }
 
 interval:1s
 {
-	/*
-	 * See fs/proc/loadavg.c and include/linux/sched/loadavg.h for the
-	 * following calculations.
-	 */
-	$avenrun = kaddr("avenrun");
-	$load1 = *$avenrun;
-	$load5 = *($avenrun + 8);
-	$load15 = *($avenrun + 16);
-	time("%H:%M:%S ");
-	printf("load averages: %d.%03d %d.%03d %d.%03d\n",
-	    ($load1 >> 11), (($load1 & ((1 << 11) - 1)) * 1000) >> 11,
-	    ($load5 >> 11), (($load5 & ((1 << 11) - 1)) * 1000) >> 11,
-	    ($load15 >> 11), (($load15 & ((1 << 11) - 1)) * 1000) >> 11
-	);
+  // See fs/proc/loadavg.c and include/linux/sched/loadavg.h for the
+  // following calculations.
+  $avenrun = kaddr("avenrun");
+  $load1 = *$avenrun;
+  $load5 = *($avenrun + 8);
+  $load15 = *($avenrun + 16);
+  time("%H:%M:%S ");
+  printf("load averages: %d.%03d %d.%03d %d.%03d\n",
+         $load1 >> 11, (($load1 & ((1 << 11) - 1)) * 1000) >> 11,
+         $load5 >> 11, (($load5 & ((1 << 11) - 1)) * 1000) >> 11,
+         $load15 >> 11, (($load15 & ((1 << 11) - 1)) * 1000) >> 11);
 }

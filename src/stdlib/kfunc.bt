@@ -1,11 +1,13 @@
 // :variant boolean kfunc_exist(const string kfunc)
 // Determine if a kfunc exists using BTF.
-macro kfunc_exist(kfunc) {
+macro kfunc_exist(kfunc)
+{
   __builtin_kfunc_exist(kfunc)
 }
 
 // :variant boolean kfunc_allowed(const string kfunc)
 // Determine if a kfunc is supported for particular probe types.
-macro kfunc_allowed(kfunc) {
+macro kfunc_allowed(kfunc)
+{
   __builtin_kfunc_allowed(kfunc)
 }
