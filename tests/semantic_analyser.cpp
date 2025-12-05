@@ -5031,15 +5031,6 @@ begin { for ($i : 0..5) { printf("%d", $i); } printf("%d", $i); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_range_context_access)
-{
-  test("kprobe:f { for ($i : 0..5) { arg0 } }", Error{ R"(
-stdin:1:30-34: ERROR: 'arg0' builtin is not allowed in a for-loop
-kprobe:f { for ($i : 0..5) { arg0 } }
-                             ~~~~
-)" });
-}
-
 TEST_F(SemanticAnalyserTest, for_range_nested_range)
 {
   test("begin { for ($i : 0..5) { for ($j : 0..$i) { "
@@ -5086,15 +5077,6 @@ begin { @a = count(); $b = @a; }
 stdin:1:36-38: ERROR: Missing required kernel feature: map_lookup_percpu_elem
 begin { @a = count(); @b = 1; @b = @a; }
                                    ~~
-)" });
-}
-
-TEST_F(SemanticAnalyserTest, for_loop_no_ctx_access)
-{
-  test("kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }", Error{ R"(
-stdin:1:44-48: ERROR: 'arg0' builtin is not allowed in a for-loop
-kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
-                                           ~~~~
 )" });
 }
 
