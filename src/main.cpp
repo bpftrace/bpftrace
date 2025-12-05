@@ -52,18 +52,20 @@
 #include "util/int_parser.h"
 #include "util/kernel.h"
 #include "util/strings.h"
+#include "util/temp.h"
 #include "version.h"
 
 using namespace bpftrace;
 
 namespace {
 
-enum class TestMode {
+enum class Mode {
   NONE = 0,
   CODEGEN,
   COMPILER_BENCHMARK,
   BPF_BENCHMARK,
   BPF_TEST,
+  FORMAT,
 };
 
 enum class BuildMode {
@@ -75,24 +77,25 @@ enum class BuildMode {
 
 enum Options {
   AOT = 2000,
-  BENCH, // Alias for --test-mode=bench.
+  BENCH, // Alias for --mode=bench.
   BTF,
   CMD,
   DEBUG,
   DRY_RUN,
   EMIT_ELF,
   EMIT_LLVM,
+  FMT, // Alias for --mode=format.
   HELP,
   INCLUDE,
   INFO,
   LIST,
   NO_FEATURE,
   NO_WARNING,
+  MODE,
   OUTPUT,
   PID,
   QUIET,
-  TEST, // Alias for --test-mode=test.
-  TEST_MODE,
+  TEST, // Alias for --mode=test.
   UNSAFE,
   USDT_SEMAPHORE,
   VERBOSE,
@@ -136,11 +139,10 @@ void usage(std::ostream& out)
   out << "    -k, --warnings emit a warning when probe read helpers return an error" << std::endl;
   out << "    -V, --version  bpftrace version" << std::endl;
   out << "    --no-warnings  disable all warning messages" << std::endl;
-  out << "    --test-mode MODE" << std::endl;
-  out << "                   used for benchmarking and testing; run bpftrace in MODE" << std::endl;
-  out << "                   ('codegen', 'compiler-bench', 'bench', 'test')" << std::endl;
-  out << "    --test         run all test: probes (same as --test-mode test)" << std::endl;
-  out << "    --bench        run all bench: probes (same as --test-mode bench)" << std::endl;
+  out << "    --mode MODE    used for benchmarking and testing" << std::endl;
+  out << "                   ('codegen', 'compiler-bench', 'bench', 'test', 'format')" << std::endl;
+  out << "    --test         run all test: probes (same as --mode test)" << std::endl;
+  out << "    --bench        run all bench: probes (same as --mode bench)" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    -v, --verbose           verbose messages" << std::endl;
@@ -319,7 +321,7 @@ struct Args {
   bool usdt_file_activation = false;
   int warning_level = 1;
   bool verify_llvm_ir = false;
-  TestMode test_mode = TestMode::NONE;
+  Mode mode = Mode::NONE;
   std::string script;
   std::string search;
   std::string filename;
@@ -425,6 +427,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::EMIT_LLVM },
+    option{ .name = "fmt",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::FMT },
     option{ .name = "help",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -465,10 +471,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::TEST },
-    option{ .name = "test-mode",
+    option{ .name = "mode",
             .has_arg = required_argument,
             .flag = nullptr,
-            .val = Options::TEST_MODE },
+            .val = Options::MODE },
     option{ .name = "unsafe",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -521,34 +527,43 @@ Args parse_args(int argc, char* argv[])
         DISABLE_LOG(WARNING);
         args.warning_level = 0;
         break;
-      case Options::TEST_MODE: // --test-mode
+      case Options::MODE: // --mode
         if (std::strcmp(optarg, "codegen") == 0) {
-          args.test_mode = TestMode::CODEGEN;
+          args.mode = Mode::CODEGEN;
         } else if (std::strcmp(optarg, "compiler-bench") == 0) {
-          args.test_mode = TestMode::COMPILER_BENCHMARK;
+          args.mode = Mode::COMPILER_BENCHMARK;
         } else if (std::strcmp(optarg, "bench") == 0) {
-          args.test_mode = TestMode::BPF_BENCHMARK;
+          args.mode = Mode::BPF_BENCHMARK;
         } else if (std::strcmp(optarg, "test") == 0) {
-          args.test_mode = TestMode::BPF_TEST;
+          args.mode = Mode::BPF_TEST;
+        } else if (std::strcmp(optarg, "format") == 0) {
+          args.mode = Mode::FORMAT;
         } else {
-          LOG(ERROR) << "USAGE: --test-mode can only be 'codegen', "
-                        "'compiler-bench', 'bench' or 'test'.";
+          LOG(ERROR) << "USAGE: --mode can only be 'codegen', "
+                        "'compiler-bench', 'bench', 'test' or 'format'.";
           exit(1);
         }
         break;
       case Options::TEST: // --test
-        if (args.test_mode != TestMode::NONE) {
-          LOG(ERROR) << "USAGE: --test conflicts with existing --test-mode";
+        if (args.mode != Mode::NONE) {
+          LOG(ERROR) << "USAGE: --test conflicts with existing --mode";
           exit(1);
         }
-        args.test_mode = TestMode::BPF_TEST;
+        args.mode = Mode::BPF_TEST;
         break;
       case Options::BENCH: // --bench
-        if (args.test_mode != TestMode::NONE) {
-          LOG(ERROR) << "USAGE: --bench conflicts with existing --test-mode";
+        if (args.mode != Mode::NONE) {
+          LOG(ERROR) << "USAGE: --bench conflicts with existing --mode";
           exit(1);
         }
-        args.test_mode = TestMode::BPF_BENCHMARK;
+        args.mode = Mode::BPF_BENCHMARK;
+        break;
+      case Options::FMT: // --fmt
+        if (args.mode != Mode::NONE) {
+          LOG(ERROR) << "USAGE: --fmt conflicts with existing --mode";
+          exit(1);
+        }
+        args.mode = Mode::FORMAT;
         break;
       case Options::AOT: // --aot
         args.aot = optarg;
@@ -795,8 +810,8 @@ int main(int argc, char* argv[])
   bpftrace.warning_level_ = args.warning_level;
   bpftrace.boottime_ = get_boottime();
   bpftrace.delta_taitime_ = get_delta_taitime();
-  bpftrace.run_tests_ = args.test_mode == TestMode::BPF_TEST;
-  bpftrace.run_benchmarks_ = args.test_mode == TestMode::BPF_BENCHMARK;
+  bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
+  bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
 
   if (!args.pid_str.empty()) {
     auto maybe_pid = util::to_uint(args.pid_str);
@@ -919,12 +934,55 @@ int main(int argc, char* argv[])
     ast = ast::ASTContext("stdin", args.script);
   }
 
+  if (args.mode == Mode::FORMAT) {
+    // For formatting, we parse the full file, but don't apply any other passes
+    // or use any other diagnostics. It only matters whether the parse itself
+    // was successful, and then we emit the formatted source code.
+    ast::PassManager pm;
+    pm.put(ast);
+    pm.put(bpftrace);
+    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)));
+    auto ok = pm.run();
+    if (!ok) {
+      std::cerr << ok.takeError() << "\n";
+      return 2;
+    }
+    if (!ast.diagnostics().ok()) {
+      // We didn't successfully parse the file, so can't format it.
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+    if (!args.output_file.empty()) {
+      // To make this operation safe, we open a temporary file next to the
+      // intented output file, and atomically rename when completed.
+      auto file = util::TempFile::create(args.output_file + ".XXXXXX");
+      if (!file) {
+        LOG(ERROR) << "unable to create temporary file: " << file.takeError();
+        return 1;
+      }
+      std::ofstream out(file->path());
+      if (out.fail()) {
+        LOG(ERROR) << "failed to open file '" << file->path()
+                   << "': " << std::strerror(errno);
+        return 1;
+      }
+      ast::Printer printer(ast, out, ast::FormatMode::Full);
+      printer.visit(ast.root);
+      std::filesystem::rename(file->path(), args.output_file);
+    } else {
+      ast::Printer printer(ast, std::cout, ast::FormatMode::Full);
+      printer.visit(ast.root);
+    }
+    return 0; // All done.
+  }
+
   for (const auto& param : args.params) {
     bpftrace.add_param(param);
   }
 
   // If we are not running anything, then we don't require privileges.
-  if (args.test_mode == TestMode::NONE) {
+  if (args.mode == Mode::NONE || args.mode == Mode::BPF_TEST ||
+      args.mode == Mode::BPF_BENCHMARK) {
     check_privileges();
 
     auto lockdown_state = lockdown::detect();
@@ -1053,7 +1111,7 @@ int main(int argc, char* argv[])
   pm.add(ast::CreateExternObjectPass());
   pm.add(ast::CreateLinkPass());
 
-  if (args.test_mode == TestMode::COMPILER_BENCHMARK) {
+  if (args.mode == Mode::COMPILER_BENCHMARK) {
     info(args.no_feature);
     auto ok = benchmark(std::cout, pm);
     if (!ok) {
@@ -1083,7 +1141,7 @@ int main(int argc, char* argv[])
         bpftrace.resources, args.aot, out.data.data(), out.data.size());
   }
 
-  if (args.test_mode == TestMode::CODEGEN)
+  if (args.mode == Mode::CODEGEN)
     return 0;
 
   auto c_definitions = pmresult->get<ast::CDefinitions>();
