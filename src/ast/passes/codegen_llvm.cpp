@@ -330,22 +330,6 @@ private:
   template <typename T>
   ScopedExpr getIntegerLiteral(size_t size, T value);
 
-  // Every time we see a watchpoint that specifies a function + arg pair, we
-  // generate a special "setup" probe that:
-  //
-  // * sends SIGSTOP to the tracee
-  // * pulls out the function arg
-  // * sends an asyncaction to the bpftrace runtime and specifies the arg value
-  //   and which of the "real" probes to attach to the addr in the arg
-  //
-  // We need a separate "setup" probe per probe because we hard code the index
-  // of the "real" probe the setup probe is to be replaced by.
-  Result<> generateWatchpointSetupProbe(FunctionType *func_type,
-                                        const std::string &expanded_probe_name,
-                                        int arg_num,
-                                        int index,
-                                        const Location &loc);
-
   ScopedExpr readDatastructElemFromStack(ScopedExpr &&scoped_src,
                                          Value *index,
                                          const SizedType &data_type,
@@ -1885,25 +1869,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       b_.CreateProbeRead(buf, macaddr.type(), scoped_arg.value(), call.loc);
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "unwatch") {
-    auto scoped_addr = visit(call.vargs.at(0));
-
-    auto elements = AsyncEvent::WatchpointUnwatch().asLLVMType(b_);
-    StructType *unwatch_struct = b_.GetStructType("unwatch_t", elements, true);
-    AllocaInst *buf = b_.CreateAllocaBPF(unwatch_struct, "unwatch");
-    size_t struct_size = datalayout().getTypeAllocSize(unwatch_struct);
-
-    b_.CreateStore(
-        b_.getInt64(
-            static_cast<int64_t>(async_action::AsyncAction::watchpoint_detach)),
-        b_.CreateGEP(unwatch_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
-    b_.CreateStore(
-        b_.CreateIntCast(scoped_addr.value(),
-                         b_.getInt64Ty(),
-                         false /* unsigned */),
-        b_.CreateGEP(unwatch_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
-    b_.CreateOutput(buf, struct_size, call.loc);
-    return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "bswap") {
     auto &arg = call.vargs.at(0);
     auto scoped_arg = visit(arg);
@@ -3156,17 +3121,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   }
 
   variables_.clear();
-  auto scoped_block = visit(*probe.block);
-
-  auto pt = probetype(current_attach_point_->provider);
-  if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
-      !current_attach_point_->func.empty()) {
-    auto ok = generateWatchpointSetupProbe(
-        func_type, name, current_attach_point_->address, index, probe.loc);
-    if (!ok) {
-      probe.addError() << "unable to setup watchpoint: " << ok.takeError();
-    }
-  }
+  visit(*probe.block);
 }
 
 void CodegenLLVM::add_probe(AttachPoint &ap,
@@ -3277,7 +3232,6 @@ int CodegenLLVM::getReturnValueForProbe(ProbeType probe_type)
     case ProbeType::software:
     case ProbeType::hardware:
     case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
     case ProbeType::fentry:
     case ProbeType::fexit:
     case ProbeType::iter:
@@ -3833,69 +3787,6 @@ void CodegenLLVM::createFormatStringCall(Call &call,
   b_.CreateOutput(fmt_args, struct_size, call.loc);
   if (dyn_cast<AllocaInst>(fmt_args))
     b_.CreateLifetimeEnd(fmt_args);
-}
-
-Result<> CodegenLLVM::generateWatchpointSetupProbe(
-    FunctionType *func_type,
-    const std::string &expanded_probe_name,
-    int arg_num,
-    int index,
-    const Location &loc)
-{
-  const auto &arguments = arch::Host::arguments();
-  if (static_cast<size_t>(arg_num) >= arguments.size()) {
-    return make_error<InternalError>("argument out of range");
-  }
-  auto offset = arch::Host::register_to_pt_regs_offset(arguments[arg_num]);
-  if (!offset) {
-    return make_error<InternalError>("invalid register");
-  }
-
-  auto func_name = util::get_function_name_for_watchpoint_setup(
-      expanded_probe_name, index);
-  auto *func = llvm::Function::Create(
-      func_type, llvm::Function::ExternalLinkage, func_name, module_.get());
-  func->setSection(util::get_section_name(func_name));
-  func->addFnAttr(Attribute::NoUnwind);
-  debug_.createProbeDebugInfo(*func);
-
-  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
-  b_.SetInsertPoint(entry);
-
-  // Send SIGSTOP to curtask
-  if (!current_attach_point_->async)
-    b_.CreateSignal(b_.getInt32(SIGSTOP), current_attach_point_->loc, false);
-
-  // Pull out function argument
-  Value *ctx = func->arg_begin();
-  Value *addr = b_.CreateRegisterRead(ctx,
-                                      offset.value(),
-                                      "arg" + std::to_string(arg_num));
-
-  // Tell userspace to setup the real watchpoint
-  auto elements = AsyncEvent::Watchpoint().asLLVMType(b_);
-  StructType *watchpoint_struct = b_.GetStructType("watchpoint_t",
-                                                   elements,
-                                                   true);
-  AllocaInst *buf = b_.CreateAllocaBPF(watchpoint_struct, "watchpoint");
-  size_t struct_size = datalayout().getTypeAllocSize(watchpoint_struct);
-
-  // Fill in perf event struct
-  b_.CreateStore(
-      b_.getInt64(
-          static_cast<int64_t>(async_action::AsyncAction::watchpoint_attach)),
-      b_.CreateGEP(watchpoint_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
-  b_.CreateStore(
-      b_.getInt64(async_ids_.watchpoint()),
-      b_.CreateGEP(watchpoint_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
-  b_.CreateStore(
-      addr,
-      b_.CreateGEP(watchpoint_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
-  b_.CreateOutput(buf, struct_size, loc);
-  b_.CreateLifetimeEnd(buf);
-
-  createRet();
-  return OK();
 }
 
 void CodegenLLVM::createPrintMapCall(Call &call)

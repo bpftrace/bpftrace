@@ -43,7 +43,6 @@ bool probe_needs_pid_filter(AttachPoint *ap)
     case ProbeType::uretprobe:
     case ProbeType::usdt:
     case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
     case ProbeType::invalid:
     case ProbeType::iter:
     case ProbeType::profile:

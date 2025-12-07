@@ -182,7 +182,6 @@ AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
   ap->freq = freq;
   ap->len = len;
   ap->mode = mode;
-  ap->async = async;
   ap->address = address;
   ap->func_offset = func_offset;
 
@@ -227,12 +226,6 @@ AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
       ap->ns = util::erase_prefix(ap->func);
       break;
     case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
-      // Watchpoint probes come with target prefix. Strip the target to get the
-      // function
-      ap->func = match;
-      util::erase_prefix(ap->func);
-      break;
     case ProbeType::software:
     case ProbeType::hardware:
     case ProbeType::interval:
@@ -265,7 +258,6 @@ bool AttachPoint::check_available(const std::string &identifier) const
       case ProbeType::software:
       case ProbeType::hardware:
       case ProbeType::watchpoint:
-      case ProbeType::asyncwatchpoint:
         return true;
       case ProbeType::invalid:
       case ProbeType::special:
@@ -296,7 +288,6 @@ bool AttachPoint::check_available(const std::string &identifier) const
       case ProbeType::software:
       case ProbeType::hardware:
       case ProbeType::watchpoint:
-      case ProbeType::asyncwatchpoint:
       case ProbeType::fentry:
       case ProbeType::fexit:
       case ProbeType::iter:

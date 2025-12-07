@@ -810,7 +810,6 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     case ProbeType::software:
     case ProbeType::hardware:
     case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
       // Will trigger a warning in selectProbeReadHelper.
       return AddrSpace::none;
   }

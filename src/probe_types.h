@@ -28,7 +28,6 @@ enum class ProbeType {
   software,
   hardware,
   watchpoint,
-  asyncwatchpoint,
   fentry,
   fexit,
   iter,
@@ -82,9 +81,6 @@ const std::vector<ProbeItem> PROBE_LIST = {
     .type = ProbeType::hardware,
     .show_in_kernel_list = true },
   { .name = "watchpoint", .aliases = { "w" }, .type = ProbeType::watchpoint },
-  { .name = "asyncwatchpoint",
-    .aliases = { "aw" },
-    .type = ProbeType::asyncwatchpoint },
   { .name = "fentry",
     .aliases = { "f", "kfunc" },
     .type = ProbeType::fentry,
@@ -120,7 +116,6 @@ struct Probe {
   int freq = 0;
   uint64_t len = 0;   // for watchpoint probes, size of region
   std::string mode;   // for watchpoint probes, watch mode (rwx)
-  bool async = false; // for watchpoint probes, if it's an async watchpoint
   uint64_t address = 0;
   uint64_t func_offset = 0;
   uint64_t bpf_prog_id = 0;
@@ -144,7 +139,6 @@ private:
             freq,
             len,
             mode,
-            async,
             address,
             func_offset,
             funcs);

@@ -1316,55 +1316,6 @@ stdin:1:1-19: ERROR: Invalid function/address argument: invalid trailing bytes: 
 watchpoint:1b:8a:w { 1 }
 ~~~~~~~~~~~~~~~~~~
 )");
-
-  test_parse_failure("watchpoint:+arg0:8:rw { 1 }", R"(
-stdin:1:1-22: ERROR: Invalid function/address argument: +arg0
-watchpoint:+arg0:8:rw { 1 }
-~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_parse_failure("watchpoint:func1:8:rw { 1 }", R"(
-stdin:1:1-22: ERROR: Invalid function/address argument: invalid integer: func1
-watchpoint:func1:8:rw { 1 }
-~~~~~~~~~~~~~~~~~~~~~
-)");
-}
-
-TEST(Parser, asyncwatchpoint_probe)
-{
-  test("asyncwatchpoint:1234:8:w { 1 }",
-       Program().WithProbe(Probe({ "asyncwatchpoint:1234:8:w" },
-                                 { ExprStatement(Integer(1)) })));
-
-  test_parse_failure("asyncwatchpoint:1b:8:w { 1 }", R"(
-stdin:1:1-23: ERROR: Invalid function/address argument: invalid trailing bytes: 1b
-asyncwatchpoint:1b:8:w { 1 }
-~~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_parse_failure("asyncwatchpoint:1:8a:w { 1 }", R"(
-stdin:1:1-23: ERROR: Invalid length argument: invalid trailing bytes: 8a
-asyncwatchpoint:1:8a:w { 1 }
-~~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_parse_failure("asyncwatchpoint:1b:8a:w { 1 }", R"(
-stdin:1:1-24: ERROR: Invalid function/address argument: invalid trailing bytes: 1b
-asyncwatchpoint:1b:8a:w { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_parse_failure("asyncwatchpoint:+arg0:8:rw { 1 }", R"(
-stdin:1:1-27: ERROR: Invalid function/address argument: +arg0
-asyncwatchpoint:+arg0:8:rw { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-)");
-
-  test_parse_failure("asyncwatchpoint:func1:8:rw { 1 }", R"(
-stdin:1:1-27: ERROR: Invalid function/address argument: invalid integer: func1
-asyncwatchpoint:func1:8:rw { 1 }
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-)");
 }
 
 TEST(Parser, multiple_attach_points_kprobe)

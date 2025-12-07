@@ -87,17 +87,4 @@ TEST(portability_analyser, curtask_disabled)
   test("struct task_struct { char comm[16]; } begin { curtask->comm }", 1);
 }
 
-TEST(portability_analyser, selective_probes_disabled)
-{
-  test("usdt:/bin/sh:tp1 { 1 }", 1);
-  test("usdt:/bin/sh:prov1:tp1 { 1 }", 1);
-
-  auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, "watchpoint:0x10000000:8:rw { 1 }", 1);
-  bpftrace->procmon_ = std::make_unique<MockProcMon>(123);
-  test(*bpftrace, "watchpoint:0x10000000:8:rw { 1 }", 1);
-  test(*bpftrace, "watchpoint:increment+arg1:4:w { 1 }", 1);
-  test(*bpftrace, "asyncwatchpoint:increment+arg1:4:w { 1 }", 1);
-}
-
 } // namespace bpftrace::test::portability_analyser

@@ -92,7 +92,6 @@ TEST(pid_filter_pass, no_add_filter)
     "uretprobe:/bin/sh:f",
     "usdt:sh:probe",
     "watchpoint:0x0:8:rw",
-    "asyncwatchpoint:func1+arg2:8:rw",
     "profile:ms:1",
     "interval:s:1",
     "software:faults:1000",

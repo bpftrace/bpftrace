@@ -303,49 +303,6 @@ TEST(attachpoint_checker, watchpoint_absolute)
   test_error(bpftrace, "watchpoint:0x0:8:rw { 1 }");
 }
 
-TEST(attachpoint_checker, watchpoint_function)
-{
-  if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
-  }
-
-  auto mock_bpftrace = get_mock_bpftrace();
-  BPFtrace& bpftrace = *mock_bpftrace;
-  bpftrace.procmon_ = std::make_unique<MockProcMon>(123);
-
-  test(bpftrace, "watchpoint:func1+arg2:8:rw { 1 }");
-  test(bpftrace, "w:func1+arg2:8:rw { 1 }");
-  test(bpftrace, "w:func1.one_two+arg2:8:rw { 1 }");
-  test_error(bpftrace, "watchpoint:func1+arg99999:8:rw { 1 }");
-
-  bpftrace.procmon_ = nullptr;
-  test_error(bpftrace, "watchpoint:func1+arg2:8:rw { 1 }");
-}
-
-TEST(attachpoint_checker, asyncwatchpoint)
-{
-  if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
-  }
-
-  auto mock_bpftrace = get_mock_bpftrace();
-  BPFtrace& bpftrace = *mock_bpftrace;
-  bpftrace.procmon_ = std::make_unique<MockProcMon>(123);
-
-  test(bpftrace, "asyncwatchpoint:func1+arg2:8:rw { 1 }");
-  test(bpftrace, "aw:func1+arg2:8:rw { 1 }");
-  test(bpftrace, "aw:func1.one_two+arg2:8:rw { 1 }");
-  test_error(bpftrace, "asyncwatchpoint:func1+arg99999:8:rw { 1 }");
-
-  // asyncwatchpoint's may not use absolute addresses
-  test_error(bpftrace, "asyncwatchpoint:0x1234:8:rw { 1 }");
-
-  bpftrace.procmon_ = nullptr;
-  test_error(bpftrace, "watchpoint:func1+arg2:8:rw { 1 }");
-}
-
 TEST(attachpoint_checker, profile)
 {
   test("profile:hz:997 { 1 }");

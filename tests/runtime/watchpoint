@@ -13,49 +13,6 @@ EXPECT hit
 ARCH aarch64|ppc64|ppc64le|x86_64
 REQUIRES awk '$3 == "jiffies" {got=1} end {exit !got}' /proc/kallsyms
 
-NAME function_arg_addr
-RUN {{BPFTRACE}} -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_func
-EXPECT hit!
-ARCH aarch64|x86_64
-
-NAME async_function_arg_addr
-RUN {{BPFTRACE}} -e 'asyncwatchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_func
-EXPECT hit!
-ARCH aarch64|x86_64
-
-NAME function_arg_addr_process_flag
-RUN {{BPFTRACE}} -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -p $(pidof watchpoint_func)
-BEFORE ./testprogs/watchpoint_func
-EXPECT hit!
-ARCH aarch64|x86_64
-
-NAME many_function_probes
-RUN {{BPFTRACE}} -e 'config = { missing_probes = "warn" } watchpoint:increment+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_many_probes
-EXPECT WARNING: No more HW registers left
-EXPECT WARNING: Unable to attach probe: watchpoint:./testprogs/watchpoint_func_many_probes:increment:4:w. Skipping.
-ARCH aarch64|x86_64
-
-NAME unwatch
-RUN {{BPFTRACE}} runtime/scripts/watchpoint_unwatch.bt -c ./testprogs/watchpoint_unwatch
-EXPECT count=1
-ARCH aarch64|x86_64
-
-NAME function_multiattach
-RUN {{BPFTRACE}} runtime/scripts/watchpoint_multiattach.bt -c ./testprogs/watchpoint_func_wildcard
-EXPECT count=3
-ARCH aarch64|x86_64
-
-NAME wildcarded_function
-RUN {{BPFTRACE}} -e 'config = { missing_probes = "warn" } watchpoint:increment_*+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_wildcard
-EXPECT WARNING: No more HW registers left
-EXPECT WARNING: Unable to attach probe: watchpoint:./testprogs/watchpoint_func_wildcard:increment_4:4:w. Skipping.
-ARCH aarch64|x86_64
-
-NAME unique_probe_bodies
-RUN {{BPFTRACE}} -e 'config = { missing_probes = "warn" } watchpoint:increment_*+arg0:4:w { printf("%s!\n", probe) }' -c ./testprogs/watchpoint_func_wildcard
-EXPECT_REGEX .*increment_0:4:w!
-ARCH aarch64|x86_64
-
 NAME execution breakpoint
 RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:1:x { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_exec
 EXPECT hit!

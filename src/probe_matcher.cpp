@@ -123,8 +123,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
-    case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint: {
+    case ProbeType::watchpoint: {
       symbol_stream = get_func_symbols_from_file(bpftrace_->pid(), target);
       break;
     }
@@ -584,8 +583,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::benchmark:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
-    case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
     case ProbeType::tracepoint: {
       // Do not expand "target:" as that would match all functions in
       // target. This may occur when an absolute address is given instead of
@@ -599,7 +596,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::hardware:
     case ProbeType::software:
     case ProbeType::profile:
-    case ProbeType::interval: {
+    case ProbeType::interval:
+    case ProbeType::watchpoint: {
       search_input = attach_point.target + ":";
       break;
     }

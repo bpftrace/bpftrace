@@ -68,23 +68,6 @@ std::vector<llvm::Type*> RuntimeError::asLLVMType(ast::IRBuilderBPF& b)
   };
 }
 
-std::vector<llvm::Type*> Watchpoint::asLLVMType(ast::IRBuilderBPF& b)
-{
-  return {
-    b.getInt64Ty(), // asyncid
-    b.getInt64Ty(), // watchpoint_idx
-    b.getInt64Ty(), // addr
-  };
-}
-
-std::vector<llvm::Type*> WatchpointUnwatch::asLLVMType(ast::IRBuilderBPF& b)
-{
-  return {
-    b.getInt64Ty(), // asyncid
-    b.getInt64Ty(), // addr
-  };
-}
-
 std::vector<llvm::Type*> CgroupPath::asLLVMType(ast::IRBuilderBPF& b)
 {
   return {

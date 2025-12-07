@@ -916,7 +916,7 @@ Most providers also support a short name which can be used instead of the full n
 | [`tracepoint`](#tracepoint) | `t` | Kernel static tracepoints |
 | [`uprobe/uretprobe`](#uprobe-uretprobe) | `u`/`ur` | User-level function start/return |
 | [`usdt`](#usdt) | `U` | User-level static tracepoints |
-| [`watchpoint/asyncwatchpoint`](#watchpoint-and-asyncwatchpoint) | `w`/`aw` | Memory watchpoints |
+| [`watchpoint`](#watchpoint) | `w` | Memory watchpoints |
 
 ### begin/end
 
@@ -1579,17 +1579,15 @@ Also note that --usdt-file-activation matches based on file path.
 This means that if bpftrace runs from the root host, things may not work as expected if there are processes execved from private mount namespaces or bind mounted directories.
 One workaround is to run bpftrace inside the appropriate namespaces (i.e. the container).
 
-### watchpoint and asyncwatchpoint
+### watchpoint
 
 **variants**
 
 * `watchpoint:absolute_address:length:mode`
-* `watchpoint:function+argN:length:mode`
 
 **short names**
 
 * `w`
-* `aw`
 
 This feature is experimental and may be subject to interface changes.
 Memory watchpoints are also architecture dependent.
@@ -1598,19 +1596,7 @@ These are memory watchpoints provided by the kernel.
 Whenever a memory address is written to (`w`), read
 from (`r`), or executed (`x`), the kernel can generate an event.
 
-In the first form, an absolute address is monitored.
-If a pid (`-p`) or a command (`-c`) is provided, bpftrace takes the address as a userspace address and monitors the appropriate process.
-If not, bpftrace takes the address as a kernel space address.
-
-In the second form, the address present in `argN` when `function` is entered is
-monitored.
-A pid or command must be provided for this form.
-If synchronous (`watchpoint`), a `SIGSTOP` is sent to the tracee upon function entry.
-The tracee will be ``SIGCONT``ed after the watchpoint is attached.
-This is to ensure events are not missed.
-If you want to avoid the `SIGSTOP` + `SIGCONT` use `asyncwatchpoint`.
-
-Note that on most architectures you may not monitor for execution while monitoring read or write.
+Once the watchpoint is attached, an absolute address is monitored.
 
 ```
 # bpftrace -e 'watchpoint:0x10000000:8:rw { printf("hit!\n"); }' -c ./testprogs/watchpoint
@@ -1623,40 +1609,6 @@ watchpoint:0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):8:w {
   @[kstack] = count();
 }
 ```
-
-"hit" and exit when the memory pointed to by `arg1` of `increment` is written to:
-
-```C
-# cat wpfunc.c
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
-__attribute__((noinline))
-void increment(__attribute__((unused)) int _, int *i)
-{
-  (*i)++;
-}
-
-int main()
-{
-  int *i = malloc(sizeof(int));
-  while (1)
-  {
-    increment(0, i);
-    (*i)++;
-    usleep(1000);
-  }
-}
-```
-
-```
-# bpftrace -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./wpfunc
-```
-
-Note that threads are monitored, but only for threads created after watchpoint attachment.
-The is a limitation from the kernel.
-Additionally, because of how watchpoints are implemented in bpftrace the specified function must be called at least once in the main thread in order to observe future calls to this function in child threads.
 
 ## Pointers
 

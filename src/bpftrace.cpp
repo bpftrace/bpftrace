@@ -117,19 +117,6 @@ BPFtrace::~BPFtrace()
   close_pcaps();
 }
 
-Probe BPFtrace::generateWatchpointSetupProbe(const ast::AttachPoint &ap,
-                                             const ast::Probe &probe)
-{
-  Probe setup_probe;
-  setup_probe.name = util::get_watchpoint_setup_probe_name(ap.name());
-  setup_probe.type = ProbeType::uprobe;
-  setup_probe.path = ap.target;
-  setup_probe.attach_point = ap.func;
-  setup_probe.index = probe.index();
-
-  return setup_probe;
-}
-
 Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
                                const ast::Probe &p,
                                ast::ExpansionType expansion,
@@ -149,7 +136,6 @@ Probe BPFtrace::generate_probe(const ast::AttachPoint &ap,
   probe.index = p.index();
   probe.len = ap.len;
   probe.mode = ap.mode;
-  probe.async = ap.async;
   probe.pin = ap.pin;
   probe.is_session = expansion == ast::ExpansionType::SESSION;
   probe.funcs = std::move(expanded_funcs);
@@ -177,12 +163,6 @@ int BPFtrace::add_probe(const ast::AttachPoint &ap,
     if (ap.target == "signal") {
       resources.signal_probes.emplace_back(std::move(probe));
     }
-  } else if ((type == ProbeType::watchpoint ||
-              type == ProbeType::asyncwatchpoint) &&
-             !ap.func.empty()) {
-    // (async)watchpoint - generate also the setup probe
-    resources.probes.emplace_back(generateWatchpointSetupProbe(ap, p));
-    resources.watchpoint_probes.emplace_back(std::move(probe));
   } else {
     resources.probes.emplace_back(std::move(probe));
   }
@@ -268,12 +248,6 @@ void event_printer(void *cb_cookie, void *raw_data, int size)
     return;
   } else if (printf_id == async_action::AsyncAction::runtime_error) {
     ctx->handlers.runtime_error(data);
-    return;
-  } else if (printf_id == async_action::AsyncAction::watchpoint_attach) {
-    ctx->handlers.watchpoint_attach(data);
-    return;
-  } else if (printf_id == async_action::AsyncAction::watchpoint_detach) {
-    ctx->handlers.watchpoint_detach(data);
     return;
   } else if (printf_id == async_action::AsyncAction::skboutput) {
     ctx->handlers.skboutput(data);
@@ -372,7 +346,6 @@ bool attach_reverse(const Probe &p)
     case ProbeType::profile:
     case ProbeType::interval:
     case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
     case ProbeType::hardware:
     case ProbeType::rawtracepoint:
     case ProbeType::software:
