@@ -763,8 +763,18 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
   // We fold this only if the statement list is empty, and we find a literal
   // as the expression value. We should have recorded an error if there was an
   // attempt to access variables, calls, or generally do anything non-hermetic.
-  if (expr.stmts.empty() && (expr.expr.is_literal() || expr.expr.is<Tuple>())) {
+  if (expr.stmts.empty() && (expr.expr.is_literal() || expr.expr.is<Tuple>() ||
+                             expr.expr.is<BlockExpr>())) {
     return expr.expr;
+  }
+
+  // Since the expression at the end of this BlockExpr is None, nothing is
+  // consuming it (or if it is, it's an error) so it's safe to reach into the
+  // only ExprStatement and replace the entire BlockExpr with the expresson
+  // statement's expression.
+  if (expr.stmts.size() == 1 && expr.stmts.back().is<ExprStatement>() &&
+      expr.expr.is<None>()) {
+    return expr.stmts.back().as<ExprStatement>()->expr;
   }
 
   return std::nullopt;
