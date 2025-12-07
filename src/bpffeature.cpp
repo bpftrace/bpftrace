@@ -201,6 +201,10 @@ bool BPFfeature::kfunc_allowed(const char* kfunc, enum bpf_prog_type prog_type)
     int kfunc_btf_id = btf_.get_btf_id(kfunc, "vmlinux");
     size_t insn_cnt = 0;
 
+    if (kfunc_btf_id <= 0) {
+      return false;
+    }
+
     *insn++ = BPF_CALL_KFUNC(0, kfunc_btf_id);
     *insn++ = BPF_EXIT_INSN();
 
