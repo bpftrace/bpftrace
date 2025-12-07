@@ -23,8 +23,6 @@ enum class AsyncAction {
   runtime_error,
   print_non_map,
   strftime,
-  watchpoint_attach,
-  watchpoint_detach,
   skboutput,
   // clang-format on
 };
@@ -46,8 +44,6 @@ public:
   void print_map(const OpaqueValue &data);
   void zero_map(const OpaqueValue &data);
   void clear_map(const OpaqueValue &data);
-  void watchpoint_attach(const OpaqueValue &data);
-  void watchpoint_detach(const OpaqueValue &data);
   void skboutput(const OpaqueValue &data);
   void syscall(const OpaqueValue &data);
   void cat(const OpaqueValue &data);

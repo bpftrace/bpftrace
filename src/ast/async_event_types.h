@@ -77,21 +77,6 @@ struct RuntimeError {
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct Watchpoint {
-  uint64_t action_id;
-  uint64_t watchpoint_idx;
-  uint64_t addr;
-
-  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
-} __attribute__((packed));
-
-struct WatchpointUnwatch {
-  uint64_t action_id;
-  uint64_t addr;
-
-  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
-} __attribute__((packed));
-
 struct CgroupPath {
   uint64_t cgroup_path_id;
   uint64_t cgroup_id;

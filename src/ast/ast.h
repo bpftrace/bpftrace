@@ -1788,7 +1788,6 @@ public:
         freq(other.freq),
         len(other.len),
         mode(other.mode),
-        async(other.async),
         address(other.address),
         func_offset(other.func_offset),
         ignore_invalid(other.ignore_invalid) {};
@@ -1798,9 +1797,8 @@ public:
     return raw_input == other.raw_input && provider == other.provider &&
            target == other.target && lang == other.lang && ns == other.ns &&
            func == other.func && pin == other.pin && freq == other.freq &&
-           len == other.len && mode == other.mode && async == other.async &&
-           address == other.address && func_offset == other.func_offset &&
-           ignore_invalid == other.ignore_invalid;
+           len == other.len && mode == other.mode && address == other.address &&
+           func_offset == other.func_offset && ignore_invalid == other.ignore_invalid;
   }
   std::strong_ordering operator<=>(const AttachPoint &other) const
   {
@@ -1823,8 +1821,6 @@ public:
     if (auto cmp = len <=> other.len; cmp != 0)
       return cmp;
     if (auto cmp = mode <=> other.mode; cmp != 0)
-      return cmp;
-    if (auto cmp = async <=> other.async; cmp != 0)
       return cmp;
     if (auto cmp = address <=> other.address; cmp != 0)
       return cmp;
@@ -1862,7 +1858,6 @@ public:
   int64_t freq = 0;
   uint64_t len = 0;   // for watchpoint probes, the width of watched addr
   std::string mode;   // for watchpoint probes, the watch mode
-  bool async = false; // for watchpoint probes, if it's an async watchpoint
 
   uint64_t address = 0;
   uint64_t func_offset = 0;

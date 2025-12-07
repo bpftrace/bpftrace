@@ -20,7 +20,6 @@ public:
   void visit(Builtin &builtin);
   void visit(Call &call);
   void visit(Cast &cast);
-  void visit(AttachPoint &ap);
 };
 
 void PortabilityAnalyser::visit(PositionalParameter &param)
@@ -78,30 +77,6 @@ void PortabilityAnalyser::visit(Cast &cast)
   // also be considered stable. For AOT to fully support field accesses, we
   // need to relocate field access at runtime.
   cast.addError() << "AOT does not yet support struct casts";
-}
-
-void PortabilityAnalyser::visit(AttachPoint &ap)
-{
-  auto type = probetype(ap.provider);
-
-  // USDT probes require analyzing a USDT enabled binary for precise offsets
-  // and argument information. This analyzing is currently done during codegen
-  // and offsets and type information is embedded into the bytecode. For AOT
-  // support, this analyzing must be done during runtime and fixed up during
-  // load time.
-  if (type == ProbeType::usdt) {
-    ap.addError() << "AOT does not yet support USDT probes";
-  }
-  // While userspace watchpoint probes are technically portable from codegen
-  // point of view, they require a PID or path via cmdline to resolve address.
-  // watchpoint probes are also API-unstable and need a further change
-  // (see https://github.com/bpftrace/bpftrace/issues/1683).
-  //
-  // So disable for now and re-evalulate at another point.
-  else if (type == ProbeType::watchpoint ||
-           type == ProbeType::asyncwatchpoint) {
-    ap.addError() << "AOT does not yet support watchpoint probes";
-  }
 }
 
 } // namespace

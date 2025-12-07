@@ -203,17 +203,8 @@ void AttachPointChecker::visit(AttachPoint &ap)
       ap.addError() << "software probe can only have an integer count";
     else if (ap.freq < 0)
       ap.addError() << "software count should be a positive integer";
-  } else if (ap.provider == "watchpoint" || ap.provider == "asyncwatchpoint") {
-    if (!ap.func.empty()) {
-      if (!bpftrace_.pid().has_value() && !has_child_)
-        ap.addError() << "-p PID or -c CMD required for watchpoint";
-
-      if (ap.address >= static_cast<uint64_t>(arch::Host::arguments().size()))
-        ap.addError() << arch::Host::Machine << " doesn't support arg"
-                      << ap.address;
-    } else if (ap.provider == "asyncwatchpoint")
-      ap.addError() << ap.provider << " requires a function name";
-    else if (!ap.address)
+  } else if (ap.provider == "watchpoint") {
+    if (!ap.address)
       ap.addError() << "watchpoint must be attached to a non-zero address";
     if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8)
       ap.addError() << "watchpoint length must be one of (1,2,4,8)";
@@ -495,8 +486,6 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return hardware_parser();
     case ProbeType::watchpoint:
       return watchpoint_parser();
-    case ProbeType::asyncwatchpoint:
-      return watchpoint_parser(true);
     case ProbeType::fentry:
     case ProbeType::fexit:
       return fentry_parser();
@@ -936,43 +925,19 @@ AttachPointParser::State AttachPointParser::hardware_parser()
   return OK;
 }
 
-AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
+AttachPointParser::State AttachPointParser::watchpoint_parser()
 {
   if (parts_.size() != 4) {
     return argument_count_error(3);
   }
 
-  if (parts_[1].find('+') == std::string::npos) {
-    auto parsed = util::to_uint(parts_[1]);
-    if (!parsed) {
-      errs_ << "Invalid function/address argument: " << parsed.takeError()
-            << std::endl;
-      return INVALID;
-    }
-    ap_->address = *parsed;
-  } else {
-    auto func_arg_parts = util::split_string(parts_[1], '+', true);
-    if (func_arg_parts.size() != 2) {
-      errs_ << "Invalid function/address argument: " << parts_[1] << std::endl;
-      return INVALID;
-    }
-
-    ap_->func = func_arg_parts[0];
-
-    if (func_arg_parts[1].size() <= 3 ||
-        !func_arg_parts[1].starts_with("arg")) {
-      errs_ << "Invalid function/address argument: " << func_arg_parts[1]
-            << std::endl;
-      return INVALID;
-    }
-
-    auto parsed = util::to_uint(func_arg_parts[1].substr(3));
-    if (!parsed) {
-      errs_ << "Invalid function argument: " << parsed.takeError() << std::endl;
-      return INVALID;
-    }
-    ap_->address = *parsed;
+  auto parsed = util::to_uint(parts_[1]);
+  if (!parsed) {
+    errs_ << "Invalid function/address argument: " << parsed.takeError()
+          << std::endl;
+    return INVALID;
   }
+  ap_->address = *parsed;
 
   auto len_parsed = util::to_uint(parts_[2]);
   if (!len_parsed) {
@@ -985,8 +950,6 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
   ap_->target = bpftrace_.get_watchpoint_binary_path().value_or("");
 
   ap_->mode = parts_[3];
-
-  ap_->async = async;
 
   return OK;
 }

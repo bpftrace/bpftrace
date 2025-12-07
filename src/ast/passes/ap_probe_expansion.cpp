@@ -99,17 +99,12 @@ void ExpansionAnalyser::visit(AttachPoint &ap)
       }
       break;
 
-    case ProbeType::watchpoint:
-      if (util::has_wildcard(ap.func))
-        expansion = ExpansionType::FULL;
-      break;
-
     case ProbeType::iter:
       if (util::has_wildcard(ap.func))
         expansion = ExpansionType::FULL;
 
     default:
-      // No expansion support for the rest of the probe types
+      // No expansion support for the rest of the probe types.
       break;
   }
 

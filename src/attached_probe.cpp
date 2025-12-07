@@ -76,7 +76,6 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::interval:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::watchpoint: return BPF_PROG_TYPE_PERF_EVENT; break;
-    case ProbeType::asyncwatchpoint: return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::fentry:     return BPF_PROG_TYPE_TRACING; break;
     case ProbeType::fexit:      return BPF_PROG_TYPE_TRACING; break;
@@ -1499,51 +1498,38 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
   LOG(V1) << "Trying to attach probe: " << probe.name;
   switch (probe.type) {
     case ProbeType::kprobe:
-    case ProbeType::kretprobe: {
+    case ProbeType::kretprobe:
       if (!probe.funcs.empty()) {
         return AttachedMultiKprobeProbe::make(probe, prog);
       }
       return AttachedKprobeProbe::make(probe, prog, bpftrace);
-    }
-    case ProbeType::tracepoint: {
+    case ProbeType::tracepoint:
       return AttachedTracepointProbe::make(probe, prog);
-    }
-    case ProbeType::profile: {
+    case ProbeType::profile:
       return AttachedProfileProbe::make(probe, prog, pid);
-    }
-    case ProbeType::interval: {
+    case ProbeType::interval:
       return AttachedIntervalProbe::make(probe, prog);
-    }
-    case ProbeType::software: {
+    case ProbeType::software:
       return AttachedSoftwareProbe::make(probe, prog, pid);
-    }
-    case ProbeType::hardware: {
+    case ProbeType::hardware:
       return AttachedHardwareProbe::make(probe, prog, pid);
-    }
     case ProbeType::fentry:
-    case ProbeType::fexit: {
+    case ProbeType::fexit:
       return AttachedFentryProbe::make(probe, prog);
-    }
-    case ProbeType::iter: {
+    case ProbeType::iter:
       return AttachedIterProbe::make(probe, prog, pid);
-    }
-    case ProbeType::rawtracepoint: {
+    case ProbeType::rawtracepoint:
       return AttachedRawtracepointProbe::make(probe, prog);
-    }
-    case ProbeType::usdt: {
+    case ProbeType::usdt:
       return AttachedUSDTProbe::make(probe, prog, pid);
-    }
     case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint: {
       return AttachedWatchpointProbe::make(probe, prog, pid, probe.mode);
-    }
     case ProbeType::uprobe:
-    case ProbeType::uretprobe: {
+    case ProbeType::uretprobe:
       if (!probe.funcs.empty()) {
         return AttachedMultiUprobeProbe::make(probe, prog, pid);
       }
       return AttachedUprobeProbe::make(probe, prog, pid, safe_mode);
-    }
     case ProbeType::invalid:
     case ProbeType::special:
     case ProbeType::test:

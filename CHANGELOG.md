@@ -20,6 +20,8 @@ and this project adheres to
 - `args` in tracepoints now requires BTF
   - [#4864](https://github.com/bpftrace/bpftrace/pull/4864)
   - [Migration guide](docs/migration_guide.md##args-in-tracepoints-now-requires-btf)
+- Experimental `watchpoint:func+arg` and `asyncwatchpoint:func+arg` attach points are not supported anymore (for now, at least)
+  - [#4890](https://github.com/bpftrace/bpftrace/pull/4890)
 #### Added
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)

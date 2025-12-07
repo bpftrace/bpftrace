@@ -45,7 +45,7 @@ private:
   State interval_parser();
   State software_parser();
   State hardware_parser();
-  State watchpoint_parser(bool async = false);
+  State watchpoint_parser();
   State fentry_parser();
   State iter_parser();
   State raw_tracepoint_parser();
