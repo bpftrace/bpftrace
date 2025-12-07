@@ -2636,8 +2636,7 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     if (cast.expr.type().IsArrayTy()) {
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
-      if (cast.expr.type().is_internal ||
-          cast.expr.type().GetAS() == AddrSpace::none) {
+      if (cast.expr.type().GetAS() == AddrSpace::none) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
           array = b_.CreateIntToPtr(array, b_.getPtrTy());
@@ -4171,7 +4170,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(src, std::move(scoped_src));
   } else if (elem_type.IsStringTy() || elem_type.IsBufferTy()) {
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    if (elem_type.IsStringTy() && data_type.is_internal) {
+    if (elem_type.IsStringTy() && elem_type.GetAS() == AddrSpace::none) {
       if (src->getType()->isIntegerTy())
         src = b_.CreateIntToPtr(src, dst->getType());
       b_.CreateMemcpyBPF(dst, src, elem_type.GetSize());
