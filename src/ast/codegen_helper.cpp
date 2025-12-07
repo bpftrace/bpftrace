@@ -25,7 +25,7 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
     return false;
   } else if (map.map->value_type.IsRecordTy() ||
              map.map->value_type.IsArrayTy()) {
-    return !expr_type.is_internal;
+    return expr_type.GetAS() != AddrSpace::none;
   }
   return true;
 }
