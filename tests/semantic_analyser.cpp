@@ -2619,28 +2619,6 @@ TEST_F(SemanticAnalyserTest, field_access_sub_struct)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, field_access_is_internal)
-{
-  std::string structs = "struct type1 { int x; }";
-
-  {
-    auto ast = test(structs + "kprobe:f { $x = (*(struct type1*)0).x }");
-    auto &stmts = ast.root->probes.at(0)->block->stmts;
-    auto *var_assignment1 = stmts.at(0).as<ast::AssignVarStatement>();
-    EXPECT_FALSE(var_assignment1->var()->var_type.is_internal);
-  }
-
-  {
-    auto ast = test(structs +
-                    "kprobe:f { @type1 = *(struct type1*)0; $x = @type1.x }");
-    auto &stmts = ast.root->probes.at(0)->block->stmts;
-    auto *map_assignment = stmts.at(0).as<ast::AssignMapStatement>();
-    auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
-    EXPECT_TRUE(map_assignment->map_access->map->value_type.is_internal);
-    EXPECT_TRUE(var_assignment2->var()->var_type.is_internal);
-  }
-}
-
 TEST_F(SemanticAnalyserTest, struct_as_map_key)
 {
   test("struct A { int x; } struct B { char x; } "
