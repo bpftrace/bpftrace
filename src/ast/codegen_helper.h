@@ -24,7 +24,7 @@ inline bool shouldBeInBpfMemoryAlready(const SizedType &type)
 
 inline bool inBpfMemory(const SizedType &type)
 {
-  return type.is_internal || shouldBeInBpfMemoryAlready(type);
+  return type.GetAS() == AddrSpace::none || shouldBeInBpfMemoryAlready(type);
 }
 
 inline AddrSpace find_addrspace_stack(const SizedType &ty)
