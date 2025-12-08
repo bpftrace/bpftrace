@@ -5165,6 +5165,10 @@ TEST_F(SemanticAnalyserTest, variable_declarations)
   test("begin { let $a; print($a); $a = 1; }",
        Warning{ "Variable used before it was assigned:" });
 
+  test("begin { let $a; if comptime (probetype == \"special\") { $a = 1; } "
+       "print($a); }",
+       NoWarning{ "Variable used before it was assigned:" });
+
   test("begin { let $a; let $a; }",
        Error{ R"(
 stdin:1:17-23: ERROR: Variable $a was already declared. Variable shadowing is not allowed.
@@ -5178,7 +5182,7 @@ begin { let $a; let $a; }
 )" });
 
   test("begin { let $a: uint16; $a = -1; }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already contains a value of type 'uint16'
+stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already has a type 'uint16'
 begin { let $a: uint16; $a = -1; }
                         ~~~~~~~
 )" });
@@ -5196,7 +5200,7 @@ begin { let $a: int8 = 1; $a = -10000; }
 )" });
 
   test("begin { let $a: int8; $a = 10000; }", Error{ R"(
-stdin:1:23-33: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already contains a value of type 'int8'
+stdin:1:23-33: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already has a type 'int8'
 begin { let $a: int8; $a = 10000; }
                       ~~~~~~~~~~
 )" });
@@ -5208,7 +5212,7 @@ begin { $a = -1; let $a; }
 )" });
 
   test("begin { let $a: uint16 = -1; }", Error{ R"(
-stdin:1:9-28: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already contains a value of type 'uint16'
+stdin:1:9-28: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already has a type 'uint16'
 begin { let $a: uint16 = -1; }
         ~~~~~~~~~~~~~~~~~~~
 )" });
@@ -5748,12 +5752,12 @@ TEST_F(SemanticAnalyserTest, typeof_decls)
       Error{});
   test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
        Error{ R"(
-stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already contains a value of type 'uint8'
+stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already has a type 'uint8'
 kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
                                                ~~~~~~~~~~
 )" });
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })", Error{ R"(
-stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'uint32' when variable already contains a value of type 'string[4]'
+stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'uint8' when variable already has a type 'string[4]'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
                                             ~~~~~~
 )" });
