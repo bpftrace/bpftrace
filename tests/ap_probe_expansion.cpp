@@ -26,7 +26,8 @@ static void test(const std::string &prog,
                  bool features)
 {
   auto mock_bpftrace = get_mock_bpftrace();
-  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(features);
+  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(
+      *mock_bpftrace->btf_, features);
 
   BPFtrace &bpftrace = *mock_bpftrace;
   ast::ASTContext ast("stdin", prog);
@@ -320,7 +321,7 @@ TEST(ap_probe_expansion, tracepoint_wildcard_no_matches)
 
 class ap_probe_expansion_btf : public test_btf {};
 
-TEST(ap_probe_expansion_btf, fentry_wildcard)
+TEST_F(ap_probe_expansion_btf, fentry_wildcard)
 {
   test("fentry:func_* {}",
        { "fentry:vmlinux:func_1",
@@ -334,7 +335,7 @@ TEST(ap_probe_expansion_btf, fentry_wildcard)
        true);
 }
 
-TEST(ap_probe_expansion_btf, fentry_wildcard_no_matches)
+TEST_F(ap_probe_expansion_btf, fentry_wildcard_no_matches)
 {
   test("fentry:foo*,fentry:vmlinux:func_1 {}",
        { "fentry:vmlinux:func_1" },
@@ -343,12 +344,12 @@ TEST(ap_probe_expansion_btf, fentry_wildcard_no_matches)
        true);
 }
 
-TEST(ap_probe_expansion_btf, fentry_module_wildcard)
+TEST_F(ap_probe_expansion_btf, fentry_module_wildcard)
 {
   test("fentry:*:func_1 {}", { "fentry:vmlinux:func_1" }, {}, _, true);
 }
 
-TEST(ap_probe_expansion_btf, fentry_bpf_id_wildcard)
+TEST_F(ap_probe_expansion_btf, fentry_bpf_id_wildcard)
 {
   test("fentry:bpf:123:func_* {}",
        { "fentry:bpf:123:func_1", "fentry:bpf:123:func_2" },
@@ -357,7 +358,7 @@ TEST(ap_probe_expansion_btf, fentry_bpf_id_wildcard)
        true);
 }
 
-TEST(ap_probe_expansion_btf, rawtracepoint_wildcard)
+TEST_F(ap_probe_expansion_btf, rawtracepoint_wildcard)
 {
   test("rawtracepoint:event* {}",
        { "rawtracepoint:module:event", "rawtracepoint:vmlinux:event_rt" },
@@ -366,7 +367,7 @@ TEST(ap_probe_expansion_btf, rawtracepoint_wildcard)
        true);
 }
 
-TEST(ap_probe_expansion_btf, rawtracepoint_wildcard_no_matches)
+TEST_F(ap_probe_expansion_btf, rawtracepoint_wildcard_no_matches)
 {
   test("rawtracepoint:foo*,rawtracepoint:event_rt {}",
        { "rawtracepoint:vmlinux:event_rt" },
@@ -375,7 +376,7 @@ TEST(ap_probe_expansion_btf, rawtracepoint_wildcard_no_matches)
        true);
 }
 
-TEST(ap_probe_expansion_btf, kprobe_session)
+TEST_F(ap_probe_expansion_btf, kprobe_session)
 {
   test("kprobe:func_* {} kretprobe:func_* {}",
        { "kprobe:func_*" },

@@ -32,7 +32,6 @@
 #include "log.h"
 #include "probe_matcher.h"
 #include "symbols/kernel.h"
-#include "tracefs/tracefs.h"
 #include "types.h"
 #include "util/strings.h"
 
@@ -51,12 +50,18 @@ __u32 BTF::start_id(const struct btf *btf) const
   return btf == vmlinux_btf ? 1 : vmlinux_btf_size + 1;
 }
 
-BTF::BTF() : BTF(nullptr)
+BTF::BTF(StructManager &structs) : structs_(structs)
 {
 }
 
-BTF::BTF(BPFtrace *bpftrace) : bpftrace_(bpftrace)
+Result<std::unique_ptr<BTF>> BTF::load(StructManager &structs)
 {
+  auto btf = std::unique_ptr<BTF>(new BTF(structs));
+  auto err = btf->load_vmlinux_btf();
+  if (!err) {
+    return err.takeError();
+  }
+  return btf;
 }
 
 BTF::~BTF()
@@ -65,40 +70,28 @@ BTF::~BTF()
     btf__free(btf_obj.btf);
 }
 
-void BTF::load_vmlinux_btf()
+Result<> BTF::load_vmlinux_btf()
 {
-  if (state != INIT) {
-    // Don't attempt to reload vmlinux even if it fails below
-    return;
-  }
-  state = ERROR;
-  // Try to get BTF file from BPFTRACE_BTF env
+  // Try to get BTF file from BPFTRACE_BTF env.
   char *path = std::getenv("BPFTRACE_BTF");
   if (path) {
-    btf_objects.push_back(BTFObj{ .btf = btf__parse_raw(path), .name = "" });
+    btf_objects.push_back(
+        BTFObj{ .btf = btf__parse_raw(path), .name = "vmlinux" });
     vmlinux_btf = btf_objects.back().btf;
     if (!vmlinux_btf) {
-      LOG(WARNING) << "BTF: failed to parse BTF from " << path;
-      return;
+      return make_error<SystemError>("failed to parse BTF from " +
+                                     std::string(path));
     }
   } else {
     vmlinux_btf = btf__load_vmlinux_btf();
     if (libbpf_get_error(vmlinux_btf)) {
-      LOG(V1) << "BTF: failed to find BTF data for vmlinux: "
-              << strerror(errno);
-      return;
+      return make_error<SystemError>("failed to load BTF for vmlinux");
     }
     btf_objects.push_back(BTFObj{ .btf = vmlinux_btf, .name = "vmlinux" });
   }
 
-  if (btf_objects.empty()) {
-    LOG(V1) << "BTF: failed to find BTF data";
-    return;
-  }
-
   vmlinux_btf_size = type_cnt(vmlinux_btf);
-
-  state = VMLINUX_LOADED;
+  return OK();
 }
 
 bool BTF::has_module_btf()
@@ -134,14 +127,22 @@ not_support:
   return *has_module_btf_;
 }
 
-void BTF::load_module_btfs(const std::set<std::string> &modules)
+Result<> BTF::load_modules(const std::set<std::string> &modules)
 {
-  load_vmlinux_btf();
-  if ((bpftrace_ && !has_module_btf()) || state != VMLINUX_LOADED)
-    return;
+  // Return early if we've already loaded all of these modules.
+  if (std::ranges::all_of(modules, [&](const auto &mod) {
+        return loaded_modules_.contains(mod);
+      })) {
+    return OK();
+  }
 
-  // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object
-  // IDs, so the only way is to iterate through all loaded BTF objects
+  if (!has_module_btf()) {
+    // No module BTF support, but that's not an error.
+    return OK();
+  }
+
+  // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF
+  // object IDs, so the only way is to iterate through all loaded BTF objects.
   __u32 id = 0;
   while (true) {
     if (bpf_btf_get_next_id(id, &id)) {
@@ -151,14 +152,15 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
       break;
     }
 
-    // Get BTF object FD
+    // Get BTF object FD.
     int fd = bpf_btf_get_fd_by_id(id);
     if (fd < 0) {
       LOG(V1) << "BTF: failed to get FD for object with id " << id;
       continue;
     }
 
-    // Get BTF object info - needed to determine if this is a kernel module BTF
+    // Get BTF object info - needed to determine if this is a kernel module
+    // BTF.
     char name[64] = {};
     struct bpf_btf_info info = {};
     info.name = reinterpret_cast<uintptr_t>(name);
@@ -166,7 +168,7 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
 
     uint32_t info_len = sizeof(info);
     auto err = bpf_obj_get_info_by_fd(fd, &info, &info_len);
-    close(fd); // close the FD not to leave too many files open
+    close(fd); // Close the FD not to leave too many files open.
     if (err) {
       LOG(V1) << "BTF: failed to get info for object with id " << id;
       continue;
@@ -175,14 +177,15 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
     if (!info.kernel_btf)
       continue;
 
-    if (modules.contains(name)) {
+    if (modules.contains(name) && !loaded_modules_.contains(name)) {
       btf_objects.push_back(
           BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf),
                   .name = name });
+      loaded_modules_.insert(name);
     }
   }
 
-  state = VMLINUX_AND_MODULES_LOADED;
+  return OK();
 }
 
 static void dump_printf(void *ctx, const char *fmt, va_list args)
@@ -266,7 +269,8 @@ std::string BTF::dump_defs_from_btf(
     if (!t)
       continue;
 
-    // Allow users to reference enum values by name to pull in entire enum defs
+    // Allow users to reference enum values by name to pull in entire enum
+    // defs
     if (btf_is_enum(t)) {
       const auto *p = btf_enum(t);
       for (__u16 e = 0, vlen = btf_vlen(t); e < vlen; ++e, ++p) {
@@ -287,9 +291,6 @@ std::string BTF::dump_defs_from_btf(
 
 std::string BTF::c_def(const std::unordered_set<std::string> &set)
 {
-  if (!has_data())
-    return {};
-
   // Definition dumping from multiple modules would require to resolve type
   // conflicts, so we allow dumping from a single module or from vmlinux only.
   std::unordered_set<std::string> to_dump(set);
@@ -304,9 +305,6 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set)
 
 std::string BTF::type_of(std::string_view name, std::string_view field)
 {
-  if (!has_data())
-    return {};
-
   auto btf_name = btf_type_str(name);
 
   auto type_id = find_id(btf_name);
@@ -318,9 +316,6 @@ std::string BTF::type_of(std::string_view name, std::string_view field)
 
 std::string BTF::type_of(const BTFId &type_id, std::string_view field)
 {
-  if (!has_data())
-    return {};
-
   const struct btf_type *type = btf__type_by_id(type_id.btf, type_id.id);
 
   if (!type || (BTF_INFO_KIND(type->info) != BTF_KIND_STRUCT &&
@@ -353,7 +348,8 @@ std::string BTF::type_of(const BTFId &type_id, std::string_view field)
     if (!f)
       break;
 
-    // Get rid of all the pointers and qualifiers on the way to the actual type.
+    // Get rid of all the pointers and qualifiers on the way to the actual
+    // type.
     while (BTF_INFO_KIND(f->info) == BTF_KIND_PTR ||
            BTF_INFO_KIND(f->info) == BTF_KIND_CONST ||
            BTF_INFO_KIND(f->info) == BTF_KIND_VOLATILE ||
@@ -496,7 +492,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     }
     auto name = recprefix + rname;
 
-    auto record = bpftrace_->structs.LookupOrAdd(name, t->size).lock();
+    auto record = structs_.LookupOrAdd(name, t->size).lock();
     stype = CreateCStruct(name, record);
     if (is_anon)
       stype.SetAnon();
@@ -518,13 +514,13 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     // strings when they call `print`, `printf` or do string literal
     // comparison to this BTF type but note that we don't add 1
     // to the length to ensure it's well formed because
-    // string.GetSize() will return len + 1, which is a mismatch with the actual
-    // type. So this is making the assumption that the string
-    // IS well formed (NULL terminated), which is not guaranteed.
-    // A string that is missing the NULL terminator at the end
-    // will appear as a truncated string, e.g. `...` as a trailing suffix.
-    // If this conversion is incorrect, because it's not an actual string, users
-    // have the option to cast all strings to int8 arrays, e.g.
+    // string.GetSize() will return len + 1, which is a mismatch with the
+    // actual type. So this is making the assumption that the string IS well
+    // formed (NULL terminated), which is not guaranteed. A string that is
+    // missing the NULL terminator at the end will appear as a truncated
+    // string, e.g. `...` as a trailing suffix. If this conversion is
+    // incorrect, because it's not an actual string, users have the option to
+    // cast all strings to int8 arrays, e.g.
     // `(int8[])"mystring"`.
     if (elem_type.IsIntTy() && elem_type.GetSize() == 1) {
       stype = CreateString(array->nelems);
@@ -543,10 +539,6 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
     bool skip_first_arg,
     const symbols::KernelInfo &func_info)
 {
-  if (!has_data()) {
-    return make_error<ast::ArgParseError>(func, "BTF data not available");
-  }
-
   auto func_id = find_id(func, BTF_KIND_FUNC);
   if (!func_id.btf) {
     return make_error<ast::ArgParseError>(
@@ -559,6 +551,7 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
     return make_error<ast::ArgParseError>(func, "not a function");
   }
 
+  // Check if function is traceable if requested.
   if (check_traceable) {
     if (!func_info.is_traceable(std::string(func))) {
       return make_error<ast::ArgParseError>(
@@ -620,7 +613,7 @@ Result<std::shared_ptr<Struct>> BTF::resolve_raw_tracepoint_args(
 {
   for (const auto &prefix : RT_BTF_PREFIXES) {
     auto args = resolve_args(
-        std::string(prefix) + std::string(func), false, true, true, func_info);
+        std::string(prefix) + std::string(func), false, false, true, func_info);
     if (args) {
       return args;
     }
@@ -726,7 +719,7 @@ std::string BTF::get_all_raw_tracepoints_from_btf(const BTFObj &btf_obj) const
   return funcs;
 }
 
-std::unique_ptr<std::istream> BTF::get_all_raw_tracepoints()
+std::unique_ptr<std::istream> BTF::get_all_raw_tracepoints() const
 {
   if (!all_rawtracepoints_.empty()) {
     return std::make_unique<std::stringstream>(all_rawtracepoints_);
@@ -842,8 +835,8 @@ FuncParamLists BTF::get_kprobes_params_from_btf(
     const std::string obj_func_name = btf_obj.name + ":" + pure_func_name;
 
     // First match the module prefix name, then match the pure function name.
-    // For example, first match "kprobe:vmlinux:do_sys*", then "kprobe:do_sys*".
-    // The same goes for other modules, such as "kvm".
+    // For example, first match "kprobe:vmlinux:do_sys*", then
+    // "kprobe:do_sys*". The same goes for other modules, such as "kvm".
     if (funcs.contains(obj_func_name))
       func_name = obj_func_name;
     else if (funcs.contains(pure_func_name))
@@ -1202,7 +1195,7 @@ void BTF::resolve_fields(const SizedType &type)
     return;
 
   auto const &name = type.GetName();
-  auto record = bpftrace_->structs.Lookup(name).lock();
+  auto record = structs_.Lookup(name).lock();
   if (record->HasFields())
     return;
 
@@ -1354,10 +1347,11 @@ ast::Pass CreateParseBTFPass()
   return ast::Pass::create(
       "btf",
       [](ast::ASTContext &ast, BPFtrace &b, ast::FunctionInfo &func_info) {
+        // Create ProbeMatcher locally for module listing.
         ProbeMatcher probe_matcher(&b,
                                    func_info.kernel_info(),
                                    func_info.user_info());
-        b.parse_module_btf(b.list_modules(ast, probe_matcher));
+        return b.parse_module_btf(b.list_modules(ast, probe_matcher));
       });
 }
 

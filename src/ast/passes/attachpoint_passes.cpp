@@ -160,12 +160,6 @@ void AttachPointChecker::visit(AttachPoint &ap)
   } else if (ap.provider == "rawtracepoint") {
     if (ap.func.empty())
       ap.addError() << "rawtracepoint should be attached to a function";
-
-    if (!bpftrace_.has_btf_data()) {
-      ap.addError() << "rawtracepoints require kernel BTF. Try using a "
-                       "'tracepoint' instead.";
-    }
-
   } else if (ap.provider == "profile") {
     if (ap.target.empty())
       ap.addError() << "profile probe must have unit of time";
@@ -313,8 +307,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
     if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
-    if (bpftrace_.btf_->has_data() &&
-        !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
+    if (!bpftrace_.btf_->get_all_iters().contains(ap.func)) {
       ap.addError() << "iter " << ap.func
                     << " not available for your kernel version.";
     }
@@ -1024,7 +1017,7 @@ AttachPointParser::State AttachPointParser::fentry_parser()
               << ap_->func << "\'";
         return INVALID;
       }
-    } else // leave the module empty for now
+    } else // Leave the module empty for now.
       ap_->target = "*";
   }
 
