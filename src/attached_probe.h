@@ -1,12 +1,10 @@
 #pragma once
 
+#include <bcc/libbpf.h>
 #include <functional>
 #include <string>
-#include <vector>
 
-#include "bpffeature.h"
 #include "bpfprogram.h"
-#include "btf.h"
 #include "probe_types.h"
 #include "util/result.h"
 

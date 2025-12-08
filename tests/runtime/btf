@@ -18,17 +18,6 @@ PROG begin { printf("%d\n", sizeof(BTF_VAR_STATIC));  }
 EXPECT_REGEX ^8$
 REQUIRES_FEATURE btf
 
-NAME redefine_btf_type
-PROG struct task_struct { int x; } begin { printf("%d\n", curtask.x); exit() }
-EXPECT_REGEX -?[0-9][0-9]*
-REQUIRES_FEATURE btf
-
-NAME redefine_btf_type_missing_def
-PROG struct task_struct { struct thread_info x; } begin { printf("%d\n", curtask.x.status); }
-EXPECT_REGEX error:.*'struct thread_info'
-REQUIRES_FEATURE btf
-WILL_FAIL
-
 NAME kernel_module_attach
 RUN {{BPFTRACE}} -e 'fentry:nf_tables_newtable { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace

@@ -26,6 +26,7 @@
 #include "log.h"
 #include "util/bpf_names.h"
 #include "util/cpus.h"
+#include "util/elf_parser.h"
 #include "util/exceptions.h"
 #include "util/kernel.h"
 #include "util/symbols.h"
