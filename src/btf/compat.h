@@ -30,7 +30,13 @@ template <typename T>
 struct compatTypeFor {
   Result<SizedType> operator()(const T &t)
   {
-    return make_error<CompatTypeError>(t);
+    // By default, types are merely opaque blobs of data. This allows us
+    // to represent them, but we can't do anything other than inspect.
+    auto size = t.size();
+    if (!size) {
+      return size.takeError();
+    }
+    return CreateBuffer(*size);
   }
 };
 
@@ -51,7 +57,12 @@ Result<SizedType> getCompatType(const Struct &type);
 Result<SizedType> getCompatType(const Enum &type);
 Result<SizedType> getCompatType(const Enum64 &type);
 Result<SizedType> getCompatType(const TypeTag &type);
+Result<SizedType> getCompatType(const DeclTag &type);
 Result<SizedType> getCompatType(const Typedef &type);
+Result<SizedType> getCompatType(const Const &type);
+Result<SizedType> getCompatType(const Volatile &type);
+Result<SizedType> getCompatType(const Restrict &type);
+Result<SizedType> getCompatType(const Function &type);
 
 template <typename T>
 Result<SizedType> getCompatType(const T &type)

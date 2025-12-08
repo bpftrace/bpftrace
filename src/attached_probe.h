@@ -1,15 +1,10 @@
 #pragma once
 
 #include <bcc/libbpf.h>
-#include <functional>
 #include <string>
-#include <vector>
 
-#include "bpffeature.h"
 #include "bpfprogram.h"
-#include "btf.h"
 #include "probe_types.h"
-#include "usdt.h"
 #include "util/result.h"
 
 namespace bpftrace {
@@ -38,7 +33,6 @@ public:
   static Result<std::unique_ptr<AttachedProbe>> make(Probe &probe,
                                                      const BpfProgram &prog,
                                                      std::optional<int> pid,
-                                                     BPFtrace &bpftrace,
                                                      bool safe_mode = true);
   virtual ~AttachedProbe() = default;
   AttachedProbe(const AttachedProbe &) = delete;

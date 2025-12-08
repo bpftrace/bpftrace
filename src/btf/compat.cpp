@@ -107,6 +107,11 @@ Result<SizedType> getCompatType(const TypeTag &type)
   }
 }
 
+Result<SizedType> getCompatType(const DeclTag &type)
+{
+  return make_error<CompatTypeError>(type);
+}
+
 Result<SizedType> getCompatType(const Typedef &type)
 {
   auto t = type.type();
@@ -114,6 +119,38 @@ Result<SizedType> getCompatType(const Typedef &type)
     return t.takeError();
   }
   return getCompatType(*t);
+}
+
+Result<SizedType> getCompatType(const Const &type)
+{
+  auto t = type.type();
+  if (!t) {
+    return t.takeError();
+  }
+  return getCompatType(*t);
+}
+
+Result<SizedType> getCompatType(const Volatile &type)
+{
+  auto t = type.type();
+  if (!t) {
+    return t.takeError();
+  }
+  return getCompatType(*t);
+}
+
+Result<SizedType> getCompatType(const Restrict &type)
+{
+  auto t = type.type();
+  if (!t) {
+    return t.takeError();
+  }
+  return getCompatType(*t);
+}
+
+Result<SizedType> getCompatType([[maybe_unused]] const Function &type)
+{
+  return CreatePointer(CreateVoid());
 }
 
 } // namespace bpftrace::btf
