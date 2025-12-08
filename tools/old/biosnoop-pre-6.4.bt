@@ -10,11 +10,6 @@
 //
 // 15-Nov-2017	Brendan Gregg	Created this.
 
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/blkdev.h>
-#include <linux/blk-mq.h>
-#endif
-
 BEGIN
 {
   printf("%-12s %-7s %-16s %-6s %7s\n", "TIME(ms)", "DISK", "COMM", "PID", "LAT(ms)");

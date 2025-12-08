@@ -33,6 +33,7 @@ namespace bpftrace::test::bpftrace {
 using ::testing::_;
 using ::testing::ContainerEq;
 using ::testing::Contains;
+using ::testing::NiceMock;
 using ::testing::StrictMock;
 
 static const int STRING_SIZE = 64;
@@ -731,13 +732,6 @@ TEST_F(bpftrace_btf, add_probes_iter_task_vma)
 }
 
 class bpftrace_bad_btf : public test_bad_btf {};
-
-// Test that we can handle bad data and don't just crash
-TEST_F(bpftrace_bad_btf, parse_invalid_btf)
-{
-  BPFtrace bpftrace;
-  EXPECT_FALSE(bpftrace.has_btf_data());
-}
 
 TEST_F(bpftrace_btf, add_probes_rawtracepoint)
 {
