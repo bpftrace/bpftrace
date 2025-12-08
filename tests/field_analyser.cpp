@@ -12,6 +12,7 @@
 #endif // HAVE_LIBDW
 
 namespace bpftrace::test::field_analyser {
+using ::bpftrace::test::create_bpftrace;
 
 using ::testing::_;
 
@@ -24,6 +25,7 @@ void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
   auto result = ast::PassManager()
                     .put(ast)
                     .put(bpftrace)
+                    .put(get_mock_function_info())
                     .add(CreateParsePass())
                     .add(ast::CreateParseAttachpointsPass())
                     .add(ast::CreateProbeAndApExpansionPass())
@@ -425,12 +427,12 @@ class field_analyser_dwarf : public test_dwarf {};
 
 TEST_F(field_analyser_dwarf, parse_struct)
 {
-  BPFtrace bpftrace;
+  auto bpftrace = create_bpftrace();
   std::string uprobe = "uprobe:" + std::string(bin_);
-  test(bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", true);
+  test(*bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", true);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
-  auto str = bpftrace.structs.Lookup("struct Foo1").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo1"));
+  auto str = bpftrace->structs.Lookup("struct Foo1").lock();
 
   ASSERT_TRUE(str->HasFields());
   ASSERT_EQ(str->fields.size(), 3);
@@ -453,14 +455,14 @@ TEST_F(field_analyser_dwarf, parse_struct)
 
 TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 {
-  BPFtrace bpftrace;
+  auto bpftrace = create_bpftrace();
   std::string uprobe = "uprobe:" + std::string(bin_);
-  test(bpftrace,
+  test(*bpftrace,
        uprobe + ":func_1 { @ = ((struct Foo4 *)args.foo4)->pid; }",
        true);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo4"));
-  auto foo4 = bpftrace.structs.Lookup("struct Foo4").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo4"));
+  auto foo4 = bpftrace->structs.Lookup("struct Foo4").lock();
 
   // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
   // return from function so that these are in fact checked accesses.

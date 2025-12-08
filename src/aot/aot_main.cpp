@@ -126,9 +126,14 @@ int main(int argc, char* argv[])
 
   libbpf_set_print(libbpf_print);
 
-  BPFtrace bpftrace;
+  auto ok = BPFtrace::create();
+  if (!ok) {
+    LOG(ERROR) << "Failed to create BPFtrace: " << ok.takeError();
+    return 1;
+  }
+  auto bpftrace = std::move(*ok);
 
-  int err = aot::load(bpftrace, argv[0]);
+  int err = aot::load(*bpftrace, argv[0]);
   if (err) {
     LOG(ERROR) << "Failed to load AOT script";
     return err;
@@ -138,10 +143,10 @@ int main(int argc, char* argv[])
   // payload in order to allow this printing to work.
   ast::CDefinitions no_c_defs;
 
-  return run_bpftrace(bpftrace,
+  return run_bpftrace(*bpftrace,
                       output_file,
                       output_format,
                       no_c_defs,
-                      bpftrace.bytecode_,
+                      bpftrace->bytecode_,
                       std::move(named_params));
 }

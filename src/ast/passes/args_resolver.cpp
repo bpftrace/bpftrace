@@ -3,12 +3,14 @@
 
 #include "arch/arch.h"
 #include "ast/passes/args_resolver.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/tracepoint_format_parser.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
 #include "probe_types.h"
+#include "util/kernel.h"
 #include "util/result.h"
 
 namespace bpftrace::ast {
@@ -29,7 +31,8 @@ namespace {
 
 class ArgsResolver : public Visitor<ArgsResolver> {
 public:
-  explicit ArgsResolver(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
+  ArgsResolver(BPFtrace &bpftrace, util::KernelFunctionInfo &func_info)
+      : bpftrace_(bpftrace), func_info_(func_info) {};
 
   using Visitor<ArgsResolver>::visit;
   void visit(Builtin &builtin);
@@ -40,6 +43,7 @@ private:
   Result<std::shared_ptr<Struct>> resolve_args(const AttachPoint &ap);
 
   BPFtrace &bpftrace_;
+  util::KernelFunctionInfo &func_info_;
   Probe *probe_ = nullptr;
 };
 
@@ -60,9 +64,9 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
     case ProbeType::fentry:
     case ProbeType::fexit:
       return bpftrace_.btf_->resolve_args(
-          ap.func, probe_type == ProbeType::fexit, true, false);
+          ap.func, probe_type == ProbeType::fexit, true, false, func_info_);
     case ProbeType::rawtracepoint:
-      return bpftrace_.btf_->resolve_raw_tracepoint_args(ap.func);
+      return bpftrace_.btf_->resolve_raw_tracepoint_args(ap.func, func_info_);
     case ProbeType::tracepoint: {
       TracepointFormatParser parser(ap.target, ap.func, bpftrace_);
       auto ok = parser.parse_format_file();
@@ -123,8 +127,8 @@ void ArgsResolver::visit(Probe &probe)
 
 Pass CreateArgsResolverPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b) {
-    ArgsResolver resolver(b);
+  auto fn = [](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info_state) {
+    ArgsResolver resolver(b, func_info_state.kernel_function_info());
     resolver.visit(ast.root);
   };
 

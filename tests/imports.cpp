@@ -4,6 +4,7 @@
 
 #include "ast/passes/parser.h"
 #include "ast/passes/resolve_imports.h"
+#include "mocks.h"
 #include "util/temp.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -11,6 +12,7 @@
 namespace bpftrace::test::imports {
 
 using ::bpftrace::ast::Imports;
+using ::bpftrace::test::create_bpftrace;
 using ::bpftrace::util::TempDir;
 using ::bpftrace::util::TempFile;
 using ::testing::HasSubstr;
@@ -81,15 +83,16 @@ void test(const std::string &input,
           std::vector<std::string> &&import_paths,
           std::variant<checkFn, std::string> check)
 {
-  BPFtrace bpftrace;
-  bpftrace.config_->unstable_import = ConfigUnstable::enable;
+  auto bpftrace = create_bpftrace();
+  bpftrace->config_->unstable_import = ConfigUnstable::enable;
   ast::ASTContext ast("stdin", input);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   auto ok = ast::PassManager()
                 .put(ast)
-                .put(bpftrace)
+                .put(*bpftrace)
+                .put(get_mock_function_info())
                 .add(ast::AllParsePasses({}, std::move(import_paths)))
                 .run();
   std::stringstream out;

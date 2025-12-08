@@ -40,9 +40,6 @@
 //
 // 22-May-2022	Rong Tao	Created this.
 // 13-Nov-2025	Rong Tao	Support dgram packet capture.
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/skbuff.h>
-#endif
 
 BEGIN
 {

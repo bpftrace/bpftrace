@@ -26,7 +26,8 @@ static void test(const std::string &prog,
                  bool features)
 {
   auto mock_bpftrace = get_mock_bpftrace();
-  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(features);
+  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(
+      *mock_bpftrace->btf_, features);
 
   BPFtrace &bpftrace = *mock_bpftrace;
   ast::ASTContext ast("stdin", prog);
@@ -34,6 +35,58 @@ static void test(const std::string &prog,
   ast::PassManager pm;
   pm.put(ast)
       .put(bpftrace)
+      .put(get_mock_function_info())
+      .add(CreateParsePass())
+      .add(ast::CreateParseAttachpointsPass())
+      .add(ast::CreateProbeAndApExpansionPass());
+  auto result = pm.run();
+  ASSERT_TRUE(result && ast.diagnostics().ok());
+
+  if (!expected_aps.empty()) {
+    ASSERT_EQ(ast.root->probes.size(), expected_aps.size());
+    for (size_t i = 0; i < expected_aps.size(); i++) {
+      ASSERT_EQ(ast.root->probes.at(i)->attach_points.at(0)->name(),
+                expected_aps.at(i));
+    }
+  }
+
+  if (!expected_funcs.empty()) {
+    auto &expansions = result->get<ast::ExpansionResult>();
+    ASSERT_EQ(ast.root->probes.size(), expected_funcs.size());
+    for (size_t i = 0; i < expected_funcs.size(); i++) {
+      auto *ap = ast.root->probes.at(i)->attach_points.at(0);
+      ASSERT_EQ(expansions.get_expanded_funcs(*ap), expected_funcs.at(i));
+    }
+  }
+
+  EXPECT_THAT(ast, matcher);
+}
+
+// Test helper for BTF tests that uses MockBtfKernelFunctionInfo instead of
+// the default mocks. This mock returns functions matching the test BTF data.
+template <typename MatcherT>
+static void test_btf(const std::string &prog,
+                     const std::vector<std::string> &expected_aps,
+                     const std::vector<std::set<std::string>> &expected_funcs,
+                     const MatcherT &matcher,
+                     bool features)
+{
+  auto mock_bpftrace = get_mock_bpftrace();
+  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(
+      *mock_bpftrace->btf_, features);
+
+  BPFtrace &bpftrace = *mock_bpftrace;
+  ast::ASTContext ast("stdin", prog);
+
+  // Use BTF-specific mocks that return functions from test data.
+  static MockBtfKernelFunctionInfo kernel_func_info;
+  static MockUserFunctionInfo user_func_info;
+  static ast::FunctionInfo func_info(kernel_func_info, user_func_info);
+
+  ast::PassManager pm;
+  pm.put(ast)
+      .put(bpftrace)
+      .put(func_info)
       .add(CreateParsePass())
       .add(ast::CreateParseAttachpointsPass())
       .add(ast::CreateProbeAndApExpansionPass());
@@ -65,6 +118,13 @@ static void test_attach_points(const std::string &input,
                                bool features = true)
 {
   test(input, expected_aps, {}, _, features);
+}
+
+static void test_btf_attach_points(const std::string &input,
+                                   const std::vector<std::string> &expected_aps,
+                                   bool features = true)
+{
+  test_btf(input, expected_aps, {}, _, features);
 }
 
 static void test_multi_attach_points(
@@ -277,44 +337,47 @@ TEST(ap_probe_expansion, tracepoint_wildcard_no_matches)
 
 class ap_probe_expansion_btf : public test_btf {};
 
-TEST(ap_probe_expansion_btf, fentry_wildcard)
+TEST_F(ap_probe_expansion_btf, fentry_wildcard)
 {
-  test_attach_points("fentry:func_* {}",
-                     { "fentry:vmlinux:func_1",
-                       "fentry:vmlinux:func_2",
-                       "fentry:vmlinux:func_3" });
+  test_btf_attach_points("fentry:func_* {}",
+                         { "fentry:vmlinux:func_1",
+                           "fentry:vmlinux:func_2",
+                           "fentry:vmlinux:func_3",
+                           "fentry:vmlinux:func_anon_struct",
+                           "fentry:vmlinux:func_array_with_compound_data",
+                           "fentry:vmlinux:func_arrays" });
 }
 
-TEST(ap_probe_expansion_btf, fentry_wildcard_no_matches)
+TEST_F(ap_probe_expansion_btf, fentry_wildcard_no_matches)
 {
-  test_attach_points("fentry:foo*,fentry:vmlinux:func_1 {}",
-                     { "fentry:vmlinux:func_1" });
+  test_btf_attach_points("fentry:foo*,fentry:vmlinux:func_1 {}",
+                         { "fentry:vmlinux:func_1" });
 }
 
-TEST(ap_probe_expansion_btf, fentry_module_wildcard)
+TEST_F(ap_probe_expansion_btf, fentry_module_wildcard)
 {
-  test_attach_points("fentry:*:func_1 {}", { "fentry:vmlinux:func_1" });
+  test_btf_attach_points("fentry:*:func_1 {}", { "fentry:vmlinux:func_1" });
 }
 
-TEST(ap_probe_expansion_btf, fentry_bpf_id_wildcard)
+TEST_F(ap_probe_expansion_btf, fentry_bpf_id_wildcard)
 {
-  test_attach_points("fentry:bpf:123:func_* {}",
-                     { "fentry:bpf:123:func_1", "fentry:bpf:123:func_2" });
+  test_btf_attach_points("fentry:bpf:123:func_* {}",
+                         { "fentry:bpf:123:func_1", "fentry:bpf:123:func_2" });
 }
 
-TEST(ap_probe_expansion_btf, rawtracepoint_wildcard)
+TEST_F(ap_probe_expansion_btf, rawtracepoint_wildcard)
 {
-  test_attach_points("rawtracepoint:event* {}",
-                     { "rawtracepoint:vmlinux:event_rt" });
+  test_btf_attach_points("rawtracepoint:event* {}",
+                         { "rawtracepoint:vmlinux:event_rt" });
 }
 
-TEST(ap_probe_expansion_btf, rawtracepoint_wildcard_no_matches)
+TEST_F(ap_probe_expansion_btf, rawtracepoint_wildcard_no_matches)
 {
-  test_attach_points("rawtracepoint:foo*,rawtracepoint:event_rt {}",
-                     { "rawtracepoint:vmlinux:event_rt" });
+  test_btf_attach_points("rawtracepoint:foo*,rawtracepoint:event_rt {}",
+                         { "rawtracepoint:vmlinux:event_rt" });
 }
 
-TEST(ap_probe_expansion_btf, kprobe_session)
+TEST_F(ap_probe_expansion_btf, kprobe_session)
 {
   test_multi_attach_points("kprobe:my_* {} kretprobe:my_* {}",
                            { "kprobe:my_*" },

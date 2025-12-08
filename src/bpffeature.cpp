@@ -105,7 +105,7 @@ bool BPFfeature::try_load(enum bpf_prog_type prog_type,
   char logbuf[log_size] = {};
 
   std::optional<unsigned> btf_id;
-  if (prog_type == BPF_PROG_TYPE_TRACING && has_btf()) {
+  if (prog_type == BPF_PROG_TYPE_TRACING) {
     btf_id = btf_.get_btf_id(name, "vmlinux");
   }
 
@@ -196,47 +196,38 @@ bool BPFfeature::kfunc_allowed(const char* kfunc, enum bpf_prog_type prog_type)
   char logbuf[4096] = {};
   struct bpf_insn insn_buf[512];
   struct bpf_insn* insn = insn_buf;
-
-  if (has_btf()) {
-    int kfunc_btf_id = btf_.get_btf_id(kfunc, "vmlinux");
-    size_t insn_cnt = 0;
-
-    if (kfunc_btf_id <= 0) {
-      return false;
-    }
-
-    *insn++ = BPF_CALL_KFUNC(0, kfunc_btf_id);
-    *insn++ = BPF_EXIT_INSN();
-
-    insn_cnt = insn - insn_buf;
-
-    if (try_load_(nullptr,
-                  prog_type,
-                  std::nullopt,
-                  std::nullopt,
-                  insn_buf,
-                  insn_cnt,
-                  1,
-                  logbuf,
-                  4096)) {
-      return true;
-    } else {
-      std::string errmsg = std::string("calling kernel function ") + kfunc +
-                           " is not allowed";
-      return strstr(logbuf, errmsg.c_str()) == nullptr;
-    }
+  size_t insn_cnt = 0;
+  int kfunc_btf_id = btf_.get_btf_id(kfunc, "vmlinux");
+  if (kfunc_btf_id <= 0) {
+    return false;
   }
 
-  return false;
+  *insn++ = BPF_CALL_KFUNC(0, kfunc_btf_id);
+  *insn++ = BPF_EXIT_INSN();
+
+  *insn++ = BPF_CALL_KFUNC(0, kfunc_btf_id);
+  *insn++ = BPF_EXIT_INSN();
+
+  if (try_load_(nullptr,
+                prog_type,
+                std::nullopt,
+                std::nullopt,
+                insn_buf,
+                insn_cnt,
+                1,
+                logbuf,
+                4096)) {
+    return true;
+  } else {
+    std::string errmsg = std::string("calling kernel function ") + kfunc +
+                         " is not allowed";
+    return strstr(logbuf, errmsg.c_str()) == nullptr;
+  }
 }
 
 bool BPFfeature::has_kfunc(std::string kfunc)
 {
-  int btf_id = 0;
-  if (has_btf()) {
-    btf_id = btf_.get_btf_id(kfunc, "vmlinux");
-  }
-  return btf_id > 0;
+  return btf_.get_btf_id(kfunc, "vmlinux");
 }
 
 bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type,
@@ -247,11 +238,6 @@ bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type,
   struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
   return try_load(
       prog_type, insns, ARRAY_SIZE(insns), name, attach_type, outfd);
-}
-
-bool BPFfeature::has_btf()
-{
-  return btf_.has_data();
 }
 
 bool BPFfeature::has_btf_func_global()
@@ -521,7 +507,6 @@ std::string BPFfeature::report()
 
   std::vector<std::pair<std::string, std::string>> features = {
     { "Instruction limit", std::to_string(instruction_limit()) },
-    { "btf", to_str(has_btf()) },
     { "module btf", to_str(btf_.has_module_btf()) },
     { "map batch", to_str(has_map_batch()) },
   };

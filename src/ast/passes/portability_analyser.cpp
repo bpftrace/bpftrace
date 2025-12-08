@@ -17,7 +17,7 @@ class PortabilityAnalyser : public Visitor<PortabilityAnalyser> {
 public:
   using Visitor<PortabilityAnalyser>::visit;
   void visit(PositionalParameter &param);
-  void visit(Builtin &builtin);
+  void visit(Identifier &ident);
   void visit(Call &call);
   void visit(Cast &cast);
 };
@@ -36,13 +36,13 @@ void PortabilityAnalyser::visit(PositionalParameter &param)
   param.addError() << "AOT does not yet support positional parameters";
 }
 
-void PortabilityAnalyser::visit(Builtin &builtin)
+void PortabilityAnalyser::visit(Identifier &identifier)
 {
   // `struct task_struct` is unstable across kernel versions and configurations.
   // This makes it inherently unportable. We must block it until we support
   // field access relocations.
-  if (builtin.ident == "__builtin_curtask") {
-    builtin.addError() << "AOT does not yet support accessing `curtask`";
+  if (identifier.ident == "curtask") {
+    identifier.addWarning() << "AOT does not yet support relocating `curtask`";
   }
 }
 

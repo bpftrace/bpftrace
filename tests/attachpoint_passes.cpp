@@ -27,6 +27,7 @@ void test(const std::string& input,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass(listing))
                 .run();
@@ -66,6 +67,7 @@ void test_uprobe_lang(const std::string& input, const std::string& lang = "")
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass(false))
                 .run();
@@ -124,6 +126,7 @@ void test(BPFtrace& bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass(listing))
                 .add(ast::CreateCheckAttachpointsPass(listing))

@@ -111,7 +111,6 @@ public:
   CallInst *CreateGetCurrentCgroupId(const Location &loc);
   CallInst *CreateGetUidGid(const Location &loc);
   CallInst *CreateGetCpuId(const Location &loc);
-  CallInst *CreateGetCurrentTask(const Location &loc);
   CallInst *CreateGetRandom(const Location &loc);
   CallInst *CreateGetStack(Value *ctx,
                            Value *buf,

@@ -291,11 +291,6 @@ Attached 1 probe
 
 ```
 # cat path.bt
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/path.h>
-#include <linux/dcache.h>
-#endif
-
 kprobe:vfs_open
 {
 	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));

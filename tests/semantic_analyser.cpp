@@ -50,7 +50,7 @@ using ::testing::_;
 using ::testing::HasSubstr;
 
 struct Mock {
-  BPFtrace &bpftrace;
+  std::reference_wrapper<BPFtrace> bpftrace;
 };
 enum class UnsafeMode {
   Enable = 0, // Default is safe.
@@ -71,7 +71,7 @@ struct Error {
   std::string_view str;
 };
 struct Types {
-  ast::TypeMetadata &types;
+  std::reference_wrapper<ast::TypeMetadata> types;
 };
 struct ExpectedAST {
   ProgramMatcher matcher;
@@ -144,23 +144,25 @@ public:
     if (!mock) {
       // Create a fresh instance.
       bpftrace_ = get_mock_bpftrace();
-      mock.emplace(*bpftrace_);
+      mock.emplace(std::ref(*bpftrace_));
     }
-    mock->bpftrace.safe_mode_ = !unsafe_mode.has_value();
-    mock->bpftrace.feature_ = std::make_unique<MockBPFfeature>(
-        !no_features.has_value());
+    mock->bpftrace.get().safe_mode_ = !unsafe_mode.has_value();
+    mock->bpftrace.get().feature_ = std::make_unique<MockBPFfeature>(
+        *mock->bpftrace.get().btf_, !no_features.has_value());
     if (child.has_value()) {
-      mock->bpftrace.cmd_ = "not-empty"; // Used by SemanticAnalyser.
+      mock->bpftrace.get().cmd_ = "not-empty"; // Used by SemanticAnalyser.
     }
+
     if (!types) {
       types_.emplace();
-      types.emplace(*types_);
+      types.emplace(std::ref(*types_));
     }
 
     auto ok = ast::PassManager()
                   .put(ast)
-                  .put(mock->bpftrace)
-                  .put(types->types)
+                  .put(mock->bpftrace.get())
+                  .put(types->types.get())
+                  .put(get_mock_function_info())
                   .add(CreateParsePass())
                   .add(ast::CreateResolveRootImportsPass())
                   .add(ast::CreateLoopReturnPass())
@@ -781,8 +783,10 @@ TEST_F(SemanticAnalyserTest, call_lhist_posparam)
   bpftrace->add_param("10");
   bpftrace->add_param("1");
   bpftrace->add_param("hello");
-  test("kprobe:f { @ = lhist(5, $1, $2, $3); }", Mock{ *bpftrace });
-  test("kprobe:f { @ = lhist(5, $1, $2, $4); }", Mock{ *bpftrace }, Error{});
+  test("kprobe:f { @ = lhist(5, $1, $2, $3); }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { @ = lhist(5, $1, $2, $4); }",
+       Mock{ std::ref(*bpftrace) },
+       Error{});
 }
 
 TEST_F(SemanticAnalyserTest, call_tseries)
@@ -884,7 +888,7 @@ TEST_F(SemanticAnalyserTest, call_tseries_posparam)
   bpftrace->add_param("10s");
   bpftrace->add_param("5");
   bpftrace->add_param("20");
-  test("kprobe:f { @ = tseries(5, $1, $2); }", Mock{ *bpftrace });
+  test("kprobe:f { @ = tseries(5, $1, $2); }", Mock{ std::ref(*bpftrace) });
 }
 
 TEST_F(SemanticAnalyserTest, call_count)
@@ -1038,7 +1042,7 @@ TEST_F(SemanticAnalyserTest, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = "
        "5; delete(@y, (1, 2)); }",
        Error{ R"(
-stdlib/base.bt:258:3-32: ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,uint8,uint8)'
+ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,uint8,uint8)'
 )" },
        Types{ types });
 
@@ -1069,7 +1073,7 @@ ERROR: call to delete() with two arguments expects a map with explicit keys (non
 
   test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })",
        Error{ R"(
-stdlib/base.bt:258:3-32: ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(string[3],uint8)' when variable already has a type '(uint8,string[3])'
+ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(string[3],uint8)' when variable already has a type '(uint8,string[3])'
 )" },
        Types{ types });
 
@@ -1281,13 +1285,13 @@ TEST_F(SemanticAnalyserTest, call_has_key)
 
   test("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
        Error{ R"(
-stdlib/base.bt:403:3-32: ERROR: Type mismatch for $$has_key_$key: trying to assign value of type 'uint8' when variable already has a type '(uint8,uint8)'
+ERROR: Type mismatch for $$has_key_$key: trying to assign value of type 'uint8' when variable already has a type '(uint8,uint8)'
 )" },
        Types{ types });
 
   test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
        Error{ R"(
-stdlib/base.bt:403:3-32: ERROR: Type mismatch for $$has_key_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,string[3])'
+ERROR: Type mismatch for $$has_key_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,string[3])'
 )" },
        Types{ types });
 
@@ -1354,7 +1358,6 @@ TEST_F(SemanticAnalyserTest, call_str_2_lit)
   test("kprobe:f { str(arg0, \"hello\"); }", Error{});
 
   // Check the string size
-  BPFtrace bpftrace;
   auto ast = test("kprobe:f { $x = str(arg0, 3); }");
 
   auto *x =
@@ -1414,8 +1417,8 @@ TEST_F(SemanticAnalyserTest, call_buf_posparam)
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("1");
   bpftrace->add_param("hello");
-  test("kprobe:f { buf(arg0, $1); }", Mock{ *bpftrace });
-  test("kprobe:f { buf(arg0, $2); }", Mock{ *bpftrace }, Error{});
+  test("kprobe:f { buf(arg0, $1); }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { buf(arg0, $2); }", Mock{ std::ref(*bpftrace) }, Error{});
 }
 
 TEST_F(SemanticAnalyserTest, call_ksym)
@@ -1525,7 +1528,6 @@ TEST_F(SemanticAnalyserTest, call_uaddr)
 
   // The C struct parser should set the
   // is_signed flag on signed types
-  BPFtrace bpftrace;
   std::string prog = "uprobe:/bin/sh:main {"
                      "$a = __builtin_uaddr(\"12345_1\");"
                      "$b = __builtin_uaddr(\"12345_2\");"
@@ -1625,14 +1627,14 @@ TEST_F(SemanticAnalyserTest, call_stack)
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("3");
   bpftrace->add_param("hello");
-  test("kprobe:f { kstack($1) }", Mock{ *bpftrace });
-  test("kprobe:f { ustack($1) }", Mock{ *bpftrace });
-  test("kprobe:f { kstack(perf, $1) }", Mock{ *bpftrace });
-  test("kprobe:f { ustack(perf, $1) }", Mock{ *bpftrace });
-  test("kprobe:f { kstack($2) }", Mock{ *bpftrace }, Error{});
-  test("kprobe:f { ustack($2) }", Mock{ *bpftrace }, Error{});
-  test("kprobe:f { kstack(perf, $2) }", Mock{ *bpftrace }, Error{});
-  test("kprobe:f { ustack(perf, $2) }", Mock{ *bpftrace }, Error{});
+  test("kprobe:f { kstack($1) }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { ustack($1) }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { kstack(perf, $1) }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { ustack(perf, $1) }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { kstack($2) }", Mock{ std::ref(*bpftrace) }, Error{});
+  test("kprobe:f { ustack($2) }", Mock{ std::ref(*bpftrace) }, Error{});
+  test("kprobe:f { kstack(perf, $2) }", Mock{ std::ref(*bpftrace) }, Error{});
+  test("kprobe:f { ustack(perf, $2) }", Mock{ std::ref(*bpftrace) }, Error{});
 }
 
 TEST_F(SemanticAnalyserTest, call_macaddr)
@@ -1798,16 +1800,16 @@ TEST_F(SemanticAnalyserTest, array_access)
   test("struct MyStruct { int y[4]; } "
        "kprobe:f { $s = ((struct MyStruct "
        "*)arg0)->y[$1]; }",
-       Mock{ *bpftrace });
+       Mock{ std::ref(*bpftrace) });
   test("struct MyStruct { int y[4]; } "
        "kprobe:f { $s = ((struct MyStruct "
        "*)arg0)->y[$2]; }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{});
 
   test("struct MyStruct { int x; int y[]; } "
        "kprobe:f { $s = (struct MyStruct *) arg0; @y = $s->y[0];}",
-       Mock{ *bpftrace });
+       Mock{ std::ref(*bpftrace) });
 }
 
 TEST_F(SemanticAnalyserTest, array_in_map)
@@ -1900,13 +1902,15 @@ TEST_F(SemanticAnalyserTest, unroll)
   bpftrace->add_param("10");
   bpftrace->add_param("hello");
   bpftrace->add_param("101");
-  test(R"(kprobe:f { unroll($#) { printf("hi\n"); } })", Mock{ *bpftrace });
-  test(R"(kprobe:f { unroll($1) { printf("hi\n"); } })", Mock{ *bpftrace });
+  test(R"(kprobe:f { unroll($#) { printf("hi\n"); } })",
+       Mock{ std::ref(*bpftrace) });
+  test(R"(kprobe:f { unroll($1) { printf("hi\n"); } })",
+       Mock{ std::ref(*bpftrace) });
   test(R"(kprobe:f { unroll($2) { printf("hi\n"); } })",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{});
   test(R"(kprobe:f { unroll($3) { printf("hi\n"); } })",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{});
 }
 
@@ -2618,7 +2622,6 @@ TEST_F(SemanticAnalyserTest, field_access_sub_struct)
 
 TEST_F(SemanticAnalyserTest, field_access_is_internal)
 {
-  BPFtrace bpftrace;
   std::string structs = "struct type1 { int x; }";
 
   {
@@ -2714,35 +2717,46 @@ TEST_F(SemanticAnalyserTest, positional_parameters)
   bpftrace->add_param("hello");
   bpftrace->add_param("0x123");
 
-  test("kprobe:f { printf(\"%d\", $1); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str($1)); }", Mock{ *bpftrace });
+  test("kprobe:f { printf(\"%d\", $1); }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str($1)); }", Mock{ std::ref(*bpftrace) });
 
-  test("kprobe:f { printf(\"%s\", str($2)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str($2 + 1)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%d\", $2); }", Mock{ *bpftrace }, Error{});
+  test("kprobe:f { printf(\"%s\", str($2)); }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str($2 + 1)); }",
+       Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%d\", $2); }",
+       Mock{ std::ref(*bpftrace) },
+       Error{});
 
-  test("kprobe:f { printf(\"%d\", $3); }", Mock{ *bpftrace });
+  test("kprobe:f { printf(\"%d\", $3); }", Mock{ std::ref(*bpftrace) });
 
   // Pointer arithmetic in str() for parameters
-  test("kprobe:f { printf(\"%s\", str($1 + 1)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str(1 + $1)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str($1 + 4)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str($1 * 2)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str($1 + 1 + 1)); }", Mock{ *bpftrace });
+  test("kprobe:f { printf(\"%s\", str($1 + 1)); }",
+       Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str(1 + $1)); }",
+       Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str($1 + 4)); }",
+       Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str($1 * 2)); }",
+       Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str($1 + 1 + 1)); }",
+       Mock{ std::ref(*bpftrace) });
 
   // Parameters are not required to exist to be used:
-  test("kprobe:f { printf(\"%s\", str($4)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%d\", $4); }", Mock{ *bpftrace });
+  test("kprobe:f { printf(\"%s\", str($4)); }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%d\", $4); }", Mock{ std::ref(*bpftrace) });
 
-  test("kprobe:f { printf(\"%d\", $#); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str($#)); }", Mock{ *bpftrace });
-  test("kprobe:f { printf(\"%s\", str($#+1)); }", Mock{ *bpftrace });
+  test("kprobe:f { printf(\"%d\", $#); }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str($#)); }", Mock{ std::ref(*bpftrace) });
+  test("kprobe:f { printf(\"%s\", str($#+1)); }", Mock{ std::ref(*bpftrace) });
 
   // Parameters can be used as string literals
-  test("kprobe:f { printf(\"%d\", cgroupid(str($2))); }", Mock{ *bpftrace });
+  test("kprobe:f { printf(\"%d\", cgroupid(str($2))); }",
+       Mock{ std::ref(*bpftrace) });
 
   bpftrace->add_param("0999");
-  test("kprobe:f { printf(\"%d\", $4); }", Mock{ *bpftrace }, Error{});
+  test("kprobe:f { printf(\"%d\", $4); }",
+       Mock{ std::ref(*bpftrace) },
+       Error{});
 }
 
 TEST_F(SemanticAnalyserTest, c_macros)
@@ -3472,11 +3486,11 @@ TEST_F(SemanticAnalyserTest, signal)
     bpftrace->add_param("hello");
     test("k:f {" + signal + "($1) }",
          UnsafeMode::Enable,
-         Mock{ *bpftrace },
+         Mock{ std::ref(*bpftrace) },
          Types{ types });
     test("k:f {" + signal + "($2) }",
          UnsafeMode::Enable,
-         Mock{ *bpftrace },
+         Mock{ std::ref(*bpftrace) },
          Types{ types },
          Error{});
   }
@@ -3499,8 +3513,10 @@ TEST_F(SemanticAnalyserTest, strncmp_posparam)
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("1");
   bpftrace->add_param("hello");
-  test(R"(i:s:1 { strncmp("foo", "bar", $1) })", Mock{ *bpftrace });
-  test(R"(i:s:1 { strncmp("foo", "bar", $2) })", Mock{ *bpftrace }, Error{});
+  test(R"(i:s:1 { strncmp("foo", "bar", $1) })", Mock{ std::ref(*bpftrace) });
+  test(R"(i:s:1 { strncmp("foo", "bar", $2) })",
+       Mock{ std::ref(*bpftrace) },
+       Error{});
 }
 
 TEST_F(SemanticAnalyserTest, override)
@@ -4526,9 +4542,10 @@ TEST_F(SemanticAnalyserTest, btf_type_tags)
   type.lock()->AddField("field_with_tag", ptr_type_w_tag, 8);
   type.lock()->AddField("field_with_bad_tag", ptr_type_w_bad_tag, 16);
 
-  test("kprobe:f { ((struct Foo *)arg0)->field_with_tag }", Mock{ *bpftrace });
+  test("kprobe:f { ((struct Foo *)arg0)->field_with_tag }",
+       Mock{ std::ref(*bpftrace) });
   test("kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:32-34: ERROR: Attempting to access pointer field 'field_with_bad_tag' with unsupported tag attribute: percpu
 kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }
@@ -5035,13 +5052,15 @@ TEST_F(SemanticAnalyserTest, buf_strlen_too_large)
   auto bpftrace = get_mock_bpftrace();
   bpftrace->config_->max_strlen = 9999999999;
 
-  test("uprobe:/bin/sh:f { buf(arg0, 4) }", Mock{ *bpftrace }, Error{ R"(
+  test("uprobe:/bin/sh:f { buf(arg0, 4) }",
+       Mock{ std::ref(*bpftrace) },
+       Error{ R"(
 stdin:1:20-32: ERROR: BPFTRACE_MAX_STRLEN too large to use on buffer (9999999999 > 4294967295)
 uprobe:/bin/sh:f { buf(arg0, 4) }
                    ~~~~~~~~~~~~
 )" });
 
-  test("uprobe:/bin/sh:f { buf(arg0) }", Mock{ *bpftrace }, Error{ R"(
+  test("uprobe:/bin/sh:f { buf(arg0) }", Mock{ std::ref(*bpftrace) }, Error{ R"(
 stdin:1:20-29: ERROR: BPFTRACE_MAX_STRLEN too large to use on buffer (9999999999 > 4294967295)
 uprobe:/bin/sh:f { buf(arg0) }
                    ~~~~~~~~~
@@ -5431,48 +5450,49 @@ TEST_F(SemanticAnalyserTest, map_declarations)
   auto bpftrace = get_mock_bpftrace();
   bpftrace->config_->unstable_map_decl = ConfigUnstable::enable;
 
-  test("let @a = hash(2); begin { @a = 1; }", Mock{ *bpftrace });
-  test("let @a = lruhash(2); begin { @a = 1; }", Mock{ *bpftrace });
-  test("let @a = percpuhash(2); begin { @a[1] = count(); }", Mock{ *bpftrace });
+  test("let @a = hash(2); begin { @a = 1; }", Mock{ std::ref(*bpftrace) });
+  test("let @a = lruhash(2); begin { @a = 1; }", Mock{ std::ref(*bpftrace) });
+  test("let @a = percpuhash(2); begin { @a[1] = count(); }",
+       Mock{ std::ref(*bpftrace) });
   test("let @a = percpulruhash(2); begin { @a[1] = count(); }",
-       Mock{ *bpftrace });
+       Mock{ std::ref(*bpftrace) });
   test("let @a = percpulruhash(2); begin { @a[1] = count(); }",
-       Mock{ *bpftrace });
+       Mock{ std::ref(*bpftrace) });
 
   test("let @a = hash(2); begin { print(1); }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Warning{ "WARNING: Unused map: @a" });
 
   test("let @a = percpuhash(2); begin { @a = 1; }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:33-35: ERROR: Incompatible map types. Type from declaration: percpuhash. Type from value/key type: hash
 let @a = percpuhash(2); begin { @a = 1; }
                                 ~~
 )" });
   test("let @a = percpulruhash(2); begin { @a = 1; }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:36-38: ERROR: Incompatible map types. Type from declaration: percpulruhash. Type from value/key type: hash
 let @a = percpulruhash(2); begin { @a = 1; }
                                    ~~
 )" });
   test("let @a = hash(2); begin { @a = count(); }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:27-29: ERROR: Incompatible map types. Type from declaration: hash. Type from value/key type: percpuhash
 let @a = hash(2); begin { @a = count(); }
                           ~~
 )" });
   test("let @a = lruhash(2); begin { @a = count(); }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:30-32: ERROR: Incompatible map types. Type from declaration: lruhash. Type from value/key type: percpuhash
 let @a = lruhash(2); begin { @a = count(); }
                              ~~
 )" });
   test("let @a = potato(2); begin { @a[1] = count(); }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:1-20: ERROR: Invalid bpf map type: potato
 let @a = potato(2); begin { @a[1] = count(); }
@@ -5486,7 +5506,7 @@ TEST_F(SemanticAnalyserTest, macros)
   auto bpftrace = get_mock_bpftrace();
 
   test("macro set($x) { $x = 1; $x } begin { $a = \"string\"; set($a); }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'uint8' when variable already contains a value of type 'string[7]'
 macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
@@ -5499,7 +5519,7 @@ macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
   test("macro add2($x) { $x + 1 } "
        "macro add1($x) { add2($x) } "
        "begin { $a = \"string\"; add1($a); }",
-       Mock{ *bpftrace },
+       Mock{ std::ref(*bpftrace) },
        Error{ R"(
 stdin:1:21-22: ERROR: Type mismatch for '+': comparing string[7] with uint8
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
@@ -5525,7 +5545,7 @@ TEST_F(SemanticAnalyserTest, warning_for_empty_positional_parameters)
   bpftrace->add_param("1");
   test("begin { print(($1, $2)) }",
        Warning{ "Positional parameter $2 is empty or not provided." },
-       Mock{ *bpftrace });
+       Mock{ std::ref(*bpftrace) });
 }
 
 TEST_F(SemanticAnalyserTest, warning_for_discared_expression_statement_value)

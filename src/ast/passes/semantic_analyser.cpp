@@ -27,7 +27,7 @@
 #include "probe_matcher.h"
 #include "probe_types.h"
 #include "types.h"
-#include "usdt.h"
+#include "util/elf_parser.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/system.h"
@@ -264,7 +264,7 @@ private:
       const SizedType &rightTy,
       Expression &rightExpr,
       const SizedType &leftTy,
-      std::optional<std::reference_wrapper<Expression>> leftExpr = {});
+      const Expression *leftExpr = nullptr);
   void resolve_struct_type(SizedType &type, Node &node);
 
   AddrSpace find_addrspace(ProbeType pt);
@@ -883,12 +883,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
              builtin.ident == "__builtin_jiffies" ||
              builtin.ident == "__builtin_ncpus") {
     builtin.builtin_type = CreateUInt64();
-  } else if (builtin.ident == "__builtin_curtask") {
-    // Retype curtask to its original type: struct task_struct.
-    builtin.builtin_type = CreatePointer(
-        CreateRecord("struct task_struct",
-                     bpftrace_.structs.Lookup("struct task_struct")),
-        AddrSpace::kernel);
   } else if (builtin.ident == "__builtin_retval") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
@@ -2306,7 +2300,7 @@ void SemanticAnalyser::binop_int(Binop &binop)
                          CreateInteger(64, rightTy.IsSigned()))) {
       show_warning = true;
     }
-  } else if (!update_int_type(rightTy, binop.right, leftTy, binop.left)) {
+  } else if (!update_int_type(rightTy, binop.right, leftTy, &binop.left)) {
     show_warning = true;
   }
 
@@ -2780,7 +2774,7 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
 
   bool type_mismatch_error = false;
   if (lhs.IsIntegerTy()) {
-    auto updatedTy = update_int_type(rhs, if_expr.right, lhs, if_expr.left);
+    auto updatedTy = update_int_type(rhs, if_expr.right, lhs, &if_expr.left);
     if (!updatedTy) {
       type_mismatch_error = true;
     } else {
@@ -3155,16 +3149,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!bpftrace_.structs.Has(type.GetName())) {
-    acc.addError() << "Unknown struct/union: '" << type.GetName() << "'";
-    return;
-  }
-
-  std::string cast_type = type.GetName();
   const auto &record = type.GetStruct();
-
-  if (!record->HasField(acc.field)) {
-    acc.addError() << "Struct/union of type '" << cast_type
+  if (!record) {
+    acc.addError() << "Struct/union is not resolvable";
+  } else if (!record->HasField(acc.field)) {
+    acc.addError() << "Struct/union of type '" << type.GetName()
                    << "' does not contain " << "a field named '" << acc.field
                    << "'";
   } else {
@@ -4444,19 +4433,19 @@ std::optional<SizedType> SemanticAnalyser::update_int_type(
     const SizedType &rightTy,
     Expression &rightExpr,
     const SizedType &leftTy,
-    std::optional<std::reference_wrapper<Expression>> leftExpr)
+    const Expression *leftExpr)
 {
   assert(leftTy.IsIntegerTy() && rightTy.IsIntegerTy());
 
   auto updatedTy =
-      leftExpr ? get_promoted_int(leftTy, rightTy, leftExpr->get(), rightExpr)
+      leftExpr ? get_promoted_int(leftTy, rightTy, *leftExpr, rightExpr)
                : get_promoted_int(leftTy, rightTy, std::nullopt, rightExpr);
   if (!updatedTy) {
     return std::nullopt;
   }
 
   if (*updatedTy != leftTy && leftExpr) {
-    create_int_cast(leftExpr->get(), *updatedTy);
+    create_int_cast(const_cast<Expression &>(*leftExpr), *updatedTy);
   }
 
   if (*updatedTy != rightTy) {

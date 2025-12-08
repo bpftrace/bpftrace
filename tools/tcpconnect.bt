@@ -31,16 +31,11 @@
 //
 // 23-Nov-2018	Dale Hamel	created this.
 
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/socket.h>
-#include <net/sock.h>
-#else
 // BTF provides the types, we just need to define AF_INET and AF_INET6.
 // These are Linux ABI defines, and are not architecture-specific.
 // With BTF, this allows tcpconnect.bt to work without glibc headers:
 #define AF_INET   2 /* IPv4 */
 #define AF_INET6 10 /* IPv6 */
-#endif
 
 BEGIN
 {

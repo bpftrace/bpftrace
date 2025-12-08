@@ -24,18 +24,11 @@
 //
 // 17-Apr-2019  Brendan Gregg   Created this.
 
-#ifndef BPFTRACE_HAVE_BTF
-#include <net/tcp_states.h>
-#include <net/sock.h>
-#include <linux/socket.h>
-#include <linux/tcp.h>
-#else
 // With BTF providing types, socket headers are not needed.
 // We only need to supply the preprocessor defines in this script.
 // AF_INET/AF_INET6 are part of the stable arch-independent Linux ABI
 #define AF_INET   2
 #define AF_INET6 10
-#endif
 
 BEGIN
 {

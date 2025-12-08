@@ -10,19 +10,6 @@
 //
 // 07-Oct-2018	Brendan Gregg	Created this.
 
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/sched.h>
-
-// Without BTF, we'll need to declare some of this struct manually,
-// since it isn't available to be #included. This will need maintenance to match
-// your kernel version. It is from kernel/sched/sched.h:
-struct cfs_rq {
-	struct load_weight load;
-	unsigned int nr_running;
-	unsigned int h_nr_running;
-};
-#endif
-
 BEGIN
 {
   printf("Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.\n");

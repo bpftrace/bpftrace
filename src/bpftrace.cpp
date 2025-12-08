@@ -113,6 +113,36 @@ static void set_rlimit_nofile(size_t num_probes, size_t num_maps)
         << "\"ulimit -n\" to fix the problem";
 }
 
+BPFtrace::BPFtrace(std::unique_ptr<Config> config)
+    : ncpus_(util::get_possible_cpus().size()),
+      max_cpu_id_(util::get_max_cpu_id()),
+      config_(std::move(config)),
+      ksyms_(*config_),
+      usyms_(*config_)
+{
+}
+
+Result<std::unique_ptr<BPFtrace>> BPFtrace::create(
+    BPFnofeature no_feature,
+    std::unique_ptr<Config> config)
+{
+  // Create BPFtrace first.
+  auto bpftrace = std::unique_ptr<BPFtrace>(new BPFtrace(std::move(config)));
+
+  // Now load BTF with reference to the StructManager.
+  auto btf_result = BTF::load(bpftrace->structs);
+  if (!btf_result) {
+    return btf_result.takeError();
+  }
+  bpftrace->btf_ = std::move(*btf_result);
+
+  // Initialize BPFfeature with the BTF.
+  bpftrace->feature_ = std::make_unique<BPFfeature>(no_feature,
+                                                    *bpftrace->btf_);
+
+  return bpftrace;
+}
+
 BPFtrace::~BPFtrace()
 {
   close_pcaps();
@@ -316,7 +346,7 @@ Result<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
   std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
                                     : this->pid();
 
-  auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
+  auto ap = AttachedProbe::make(probe, program, pid, safe_mode_);
   if (!ap) {
     auto missing_probes = config_->missing_probes;
     auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
@@ -1352,47 +1382,9 @@ std::string BPFtrace::resolve_probe(uint64_t probe_id) const
   return resources.probe_ids[probe_id];
 }
 
-const util::FuncsModulesMap &BPFtrace::get_traceable_funcs() const
-{
-  if (traceable_funcs_.empty())
-    traceable_funcs_ = util::parse_traceable_funcs();
-
-  return traceable_funcs_;
-}
-
-const util::FuncsModulesMap &BPFtrace::get_raw_tracepoints() const
-{
-  if (raw_tracepoints_.empty())
-    raw_tracepoints_ = util::parse_rawtracepoints();
-
-  return raw_tracepoints_;
-}
-
-bool BPFtrace::is_traceable_func(const std::string &func_name) const
-{
-  const auto &funcs = get_traceable_funcs();
-  return funcs.contains(func_name);
-}
-
 int BPFtrace::resume_tracee(pid_t tracee_pid)
 {
   return ::kill(tracee_pid, SIGCONT);
-}
-
-std::unordered_set<std::string> BPFtrace::get_func_modules(
-    const std::string &func_name) const
-{
-  const auto &funcs = get_traceable_funcs();
-  auto mod = funcs.find(func_name);
-  return mod != funcs.end() ? mod->second : std::unordered_set<std::string>();
-}
-
-std::unordered_set<std::string> BPFtrace::get_raw_tracepoint_modules(
-    const std::string &name) const
-{
-  const auto &rts = get_raw_tracepoints();
-  auto mod = rts.find(name);
-  return mod != rts.end() ? mod->second : std::unordered_set<std::string>();
 }
 
 const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
@@ -1519,21 +1511,17 @@ bool BPFtrace::write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt)
   return writer->write(ns, pkt.data(), pkt.size());
 }
 
-void BPFtrace::parse_module_btf(const std::set<std::string> &modules)
+Result<> BPFtrace::parse_module_btf(const std::set<std::string> &modules)
 {
-  btf_->load_module_btfs(modules);
-}
-
-bool BPFtrace::has_btf_data() const
-{
-  return btf_->has_data();
+  return btf_->load_modules(modules);
 }
 
 // Retrieves the list of kernel modules for all attachpoints. Will be used to
 // identify modules whose BTF we need to parse.
 // Currently, this is useful for fentry/fexit, k(ret)probes, tracepoints,
 // and raw tracepoints
-std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
+std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx,
+                                             ProbeMatcher &probe_matcher)
 {
   std::set<std::string> modules;
   for (const auto &probe : ctx.root->probes) {
@@ -1552,7 +1540,7 @@ std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
           clear_target = false;
         }
 
-        for (std::string match : probe_matcher_->get_matches_for_ap(*ap)) {
+        for (std::string match : probe_matcher.get_matches_for_ap(*ap)) {
           auto module = util::erase_prefix(match);
           modules.insert(module);
         }

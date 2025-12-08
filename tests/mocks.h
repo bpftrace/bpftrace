@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ast/passes/attachpoint_passes.h"
 #include "attached_probe.h"
 #include "bpffeature.h"
 #include "bpfmap.h"
@@ -7,38 +8,46 @@
 #include "child.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "tracefs/tracefs.h"
 #include "util/elf_parser.h"
+#include "util/kernel.h"
 #include "util/result.h"
 #include "util/strings.h"
+#include "util/user.h"
 #include "gmock/gmock-function-mocker.h"
 
 namespace bpftrace::test {
 
-class MockProbeMatcher : public ::bpftrace::ProbeMatcher {
+// Mock KernelFunctionInfo for testing.
+class MockKernelFunctionInfo : public util::KernelFunctionInfo {
 public:
-  MockProbeMatcher(BPFtrace *bpftrace) : ::bpftrace::ProbeMatcher(bpftrace){};
-#pragma GCC diagnostic push
-#ifdef __clang__
-#pragma GCC diagnostic ignored "-Winconsistent-missing-override"
-#endif
-  MOCK_CONST_METHOD1(get_symbols_from_file,
-                     std::unique_ptr<std::istream>(const std::string &path));
-  MOCK_CONST_METHOD1(get_symbols_from_traceable_funcs,
-                     std::unique_ptr<std::istream>(bool with_modules));
-  MOCK_CONST_METHOD2(get_symbols_from_usdt,
-                     std::unique_ptr<std::istream>(std::optional<int> pid,
-                                                   const std::string &target));
-  MOCK_CONST_METHOD2(get_func_symbols_from_file,
-                     std::unique_ptr<std::istream>(std::optional<int> pid,
-                                                   const std::string &path));
-  MOCK_CONST_METHOD0(get_raw_tracepoint_symbols,
-                     std::unique_ptr<std::istream>());
+  bool is_traceable(const std::string &func_name) const override;
+  std::unordered_set<std::string> get_modules(const std::string &func) const override;
+  const util::FuncsModulesMap& get_traceable_funcs() const override;
+  const util::FuncsModulesMap& get_raw_tracepoints() const override;
+  std::vector<std::pair<__u32, std::string>> get_bpf_progs() const override;
+};
 
-  MOCK_CONST_METHOD0(get_fentry_symbols, std::unique_ptr<std::istream>());
+// Mock UserFunctionInfo for testing.
+class MockUserFunctionInfo : public util::UserFunctionInfo {
+public:
+  Result<std::unique_ptr<std::istream>> get_symbols_from_file(const std::string &path) const override;
+  Result<std::unique_ptr<std::istream>> get_func_symbols_from_file(std::optional<int> pid, const std::string &path) const override;
+  Result<std::unique_ptr<std::istream>> get_symbols_from_usdt(std::optional<int> pid, const std::string &target) const override;
+  Result<util::usdt_probe_entry> find_usdt(std::optional<int> pid, const std::string &target, const std::string &provider, const std::string &name) const override;
+  Result<util::usdt_probe_list> usdt_probes_for_pid(int pid) const override;
+  Result<util::usdt_probe_list> usdt_probes_for_all_pids() const override;
+  Result<util::usdt_probe_list> usdt_probes_for_path(const std::string & path) const override;
+};
 
-  MOCK_CONST_METHOD0(get_running_bpf_programs, std::unique_ptr<std::istream>());
-
-#pragma GCC diagnostic pop
+// Mock KernelFunctionInfo for BTF tests that returns functions from test data.
+class MockBtfKernelFunctionInfo : public util::KernelFunctionInfo {
+public:
+  bool is_traceable(const std::string &func_name) const override;
+  std::unordered_set<std::string> get_modules(const std::string &func) const override;
+  const util::FuncsModulesMap &get_traceable_funcs() const override;
+  const util::FuncsModulesMap &get_raw_tracepoints() const override;
+  std::vector<std::pair<__u32, std::string>> get_bpf_progs() const override;
 };
 
 class MockBpfMap : public BpfMap {
@@ -61,6 +70,16 @@ public:
 
 class MockBPFtrace : public BPFtrace {
 public:
+  MockBPFtrace() : BPFtrace(std::make_unique<bpftrace::Config>())
+  {
+    // Load BTF with reference to our StructManager.
+    auto btf_result = BTF::load(structs);
+    if (!btf_result) {
+      throw std::runtime_error("BTF loading failed in MockBPFtrace");
+    }
+    btf_ = std::move(*btf_result);
+  }
+
   MOCK_METHOD2(
       attach_probe,
       Result<std::unique_ptr<AttachedProbe>>(::bpftrace::Probe &probe,
@@ -107,22 +126,10 @@ public:
     return 0;
   }
 
-  bool is_traceable_func(
-      const std::string &__attribute__((unused)) /*func_name*/) const override
-  {
-    return true;
-  }
-
   Result<uint64_t> get_buffer_pages(
       bool __attribute__((unused)) /*per_cpu*/) const override
   {
     return 64;
-  }
-
-  std::unordered_set<std::string> get_func_modules(
-      const std::string &__attribute__((unused)) /*func_name*/) const override
-  {
-    return { "mock_vmlinux" };
   }
 
   const std::optional<struct stat> &get_pidns_self_stat() const override
@@ -143,25 +150,31 @@ public:
     return child_pid_namespace;
   }
 
-  void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
-  {
-    probe_matcher_ = std::move(probe_matcher);
-    mock_probe_matcher = dynamic_cast<MockProbeMatcher *>(probe_matcher_.get());
-  }
+  util::KernelFunctionInfo* get_mock_kernel_func_info();
+  util::UserFunctionInfo* get_mock_user_func_info();
 
-  MockProbeMatcher *mock_probe_matcher;
   bool mock_in_init_pid_ns = true;
 };
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
 std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace();
 
+// Helper to get FunctionInfo for tests.
+//
+// Returns a reference to a static instance that can be used with PassManager.
+ast::FunctionInfo& get_mock_function_info();
+
+// Helper to create a real BPFtrace for tests.
+//
+// Throws if BTF loading fails.
+std::unique_ptr<BPFtrace> create_bpftrace();
+
 static auto bpf_nofeature = BPFnofeature();
-static auto btf_obj = BTF(nullptr);
 
 class MockBPFfeature : public BPFfeature {
 public:
-  MockBPFfeature(bool has_features = true) : BPFfeature(bpf_nofeature, btf_obj)
+  MockBPFfeature(BTF& btf, bool has_features = true)
+      : BPFfeature(bpf_nofeature, btf)
   {
     has_prog_fentry_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
@@ -175,6 +188,7 @@ public:
     has_loop_ = std::make_optional<bool>(has_features);
   };
 
+private:
   bool has_iter(std::string name __attribute__((unused))) override
   {
     return has_features_;
@@ -217,25 +231,6 @@ public:
   {
     return pid_ > 0;
   }
-};
-
-class MockUSDTHelper : public USDTHelper {
-public:
-  MockUSDTHelper()
-  {
-  }
-#pragma GCC diagnostic push
-#ifdef __clang__
-#pragma GCC diagnostic ignored "-Winconsistent-missing-override"
-#endif
-  MOCK_METHOD5(
-      find,
-      std::optional<util::usdt_probe_entry>(std::optional<int> pid,
-                                            const std::string &target,
-                                            const std::string &provider,
-                                            const std::string &name,
-                                            bool has_uprobe_multi));
-#pragma GCC diagnostic pop
 };
 
 } // namespace bpftrace::test

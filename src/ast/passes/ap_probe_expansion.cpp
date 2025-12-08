@@ -2,8 +2,10 @@
 
 #include <algorithm>
 
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
+#include "probe_matcher.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
@@ -212,8 +214,12 @@ class ProbeAndApExpander : public Visitor<ProbeAndApExpander> {
 public:
   ProbeAndApExpander(ASTContext &ast,
                      BPFtrace &bpftrace,
+                     const FunctionInfo &func_info_state,
                      ExpansionResult &result)
-      : ast_(ast), bpftrace_(bpftrace), result_(result)
+      : ast_(ast),
+        bpftrace_(bpftrace),
+        func_info_state_(func_info_state),
+        result_(result)
   {
   }
 
@@ -228,6 +234,7 @@ private:
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
+  const FunctionInfo &func_info_state_;
   ExpansionResult &result_;
 };
 
@@ -262,6 +269,9 @@ void ProbeAndApExpander::visit(Program &prog)
 
 void ProbeAndApExpander::visit(AttachPointList &aps)
 {
+  ProbeMatcher probe_matcher(&bpftrace_,
+                             func_info_state_.kernel_function_info(),
+                             func_info_state_.user_function_info());
   const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
 
   AttachPointList new_aps;
@@ -270,7 +280,7 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
     auto expansion = result_.get_expansion(*ap);
     switch (expansion) {
       case ExpansionType::FULL: {
-        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        auto matches = probe_matcher.get_matches_for_ap(*ap);
 
         probe_count_ += matches.size();
         if (probe_count_ > max_bpf_progs) {
@@ -293,7 +303,7 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
 
       case ExpansionType::SESSION:
       case ExpansionType::MULTI: {
-        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        auto matches = probe_matcher.get_matches_for_ap(*ap);
         if (util::has_wildcard(ap->target)) {
           // If we have a wildcard in the target path, we need to generate one
           // attach point per expanded target
@@ -331,18 +341,19 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
 
 Pass CreateProbeAndApExpansionPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &bpftrace) {
-    ExpansionAnalyser analyser(bpftrace);
-    auto result = analyser.analyse(*ast.root);
+  auto fn =
+      [](ASTContext &ast, BPFtrace &bpftrace, FunctionInfo &func_info_state) {
+        ExpansionAnalyser analyser(bpftrace);
+        auto result = analyser.analyse(*ast.root);
 
-    SessionExpander session_expander(ast, bpftrace, result);
-    session_expander.visit(*ast.root);
+        SessionExpander session_expander(ast, bpftrace, result);
+        session_expander.visit(*ast.root);
 
-    ProbeAndApExpander expander(ast, bpftrace, result);
-    expander.expand();
+        ProbeAndApExpander expander(ast, bpftrace, func_info_state, result);
+        expander.expand();
 
-    return result;
-  };
+        return result;
+      };
 
   return Pass::create("ProbeAndApExpansion", fn);
 }

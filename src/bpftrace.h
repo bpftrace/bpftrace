@@ -2,6 +2,7 @@
 
 #include <bcc/bcc_syms.h>
 #include <cstdint>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <memory>
@@ -96,18 +97,13 @@ private:
 
 class BPFtrace : public ast::State<"bpftrace"> {
 public:
-  BPFtrace(BPFnofeature no_feature = BPFnofeature(),
-           std::unique_ptr<Config> config = std::make_unique<Config>())
-      : btf_(std::make_unique<BTF>(this)),
-        feature_(std::make_unique<BPFfeature>(no_feature, *btf_)),
-        probe_matcher_(std::make_unique<ProbeMatcher>(this)),
-        ncpus_(util::get_possible_cpus().size()),
-        max_cpu_id_(util::get_max_cpu_id()),
-        config_(std::move(config)),
-        ksyms_(*config_),
-        usyms_(*config_)
-  {
-  }
+  // Static factory for creating BPFtrace instances.
+  // This is required because BTF loading can fail, and we use the Result
+  // pattern to handle errors properly.
+  static Result<std::unique_ptr<BPFtrace>> create(
+      BPFnofeature no_feature = BPFnofeature(),
+      std::unique_ptr<Config> config = std::make_unique<Config>());
+
   ~BPFtrace() override;
   virtual int add_probe(const ast::AttachPoint &ap,
                         const ast::Probe &p,
@@ -161,12 +157,8 @@ public:
   size_t num_params() const;
   void request_finalize();
   std::optional<std::string> get_watchpoint_binary_path() const;
-  virtual bool is_traceable_func(const std::string &func_name) const;
+
   virtual int resume_tracee(pid_t tracee_pid);
-  virtual std::unordered_set<std::string> get_func_modules(
-      const std::string &func_name) const;
-  virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
-      const std::string &name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
   // This gets the number of perf or ring buffer pages in total across all cpus
   // by first checking if the user set this manually with a config value
@@ -176,11 +168,11 @@ public:
   Result<uint64_t> get_buffer_pages_per_cpu() const;
 
   bool write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt);
-  void parse_module_btf(const std::set<std::string> &modules);
-  bool has_btf_data() const;
+  Result<> parse_module_btf(const std::set<std::string> &modules);
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
-  std::set<std::string> list_modules(const ast::ASTContext &ctx);
+  std::set<std::string> list_modules(const ast::ASTContext &ctx,
+                                     ProbeMatcher &probe_matcher);
 
   std::string cmd_;
 
@@ -198,8 +190,6 @@ public:
   FunctionRegistry functions;
   // For each helper, list of all generated call sites.
   std::map<bpf_func_id, std::vector<RuntimeErrorInfo>> helper_use_loc_;
-  const util::FuncsModulesMap &get_traceable_funcs() const;
-  const util::FuncsModulesMap &get_raw_tracepoints() const;
   util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<int> sigusr1_prog_fds_;
@@ -218,8 +208,6 @@ public:
   std::optional<struct timespec> delta_taitime_;
   bool need_recursion_check_ = false;
 
-  std::unique_ptr<ProbeMatcher> probe_matcher_;
-
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;
@@ -235,6 +223,11 @@ public:
   std::unique_ptr<Config> config_;
   bool run_tests_ = false;
   bool run_benchmarks_ = false;
+
+protected:
+  // Protected constructor for subclasses (e.g., MockBPFtrace).
+  // Regular users should use create() instead.
+  BPFtrace(std::unique_ptr<Config> config);
 
 private:
   Ksyms ksyms_;
@@ -272,11 +265,6 @@ private:
   struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
 
-  // Mapping traceable functions to modules (or "vmlinux") they appear in.
-  // Needs to be mutable to allow lazy loading of the mapping from const lookup
-  // functions.
-  mutable util::FuncsModulesMap traceable_funcs_;
-  mutable util::FuncsModulesMap raw_tracepoints_;
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };
 
