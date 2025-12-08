@@ -12,6 +12,7 @@
 #endif // HAVE_LIBDW
 
 namespace bpftrace::test::field_analyser {
+using ::bpftrace::test::create_bpftrace;
 
 using ::testing::_;
 
@@ -316,7 +317,8 @@ TEST_F(field_analyser_btf, btf_types_anon_structs)
   test(*bpftrace,
        "fentry:func_anon_struct {\n"
        "  @ = args.AnonStruct->AnonArray[0];\n"
-       "}");
+       "}",
+       true);
 
   ASSERT_TRUE(bpftrace->structs.Has("struct anon_structs"));
   auto anonstruct = bpftrace->structs.Lookup("struct anon_structs").lock();
@@ -352,7 +354,9 @@ TEST_F(field_analyser_btf, btf_types_anon_structs)
 TEST_F(field_analyser_btf, btf_types_bitfields)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, "fentry:func_1 { @ = ((struct Foo4 *)args.foo4)->pid; }");
+  test(*bpftrace,
+       "fentry:func_1 { @ = ((struct Foo4 *)args.foo4)->pid; }",
+       true);
 
   ASSERT_TRUE(bpftrace->structs.Has("struct Foo4"));
   auto foo4 = bpftrace->structs.Lookup("struct Foo4").lock();
@@ -402,7 +406,7 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
 TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, "begin { @ = (struct FirstFieldsAreAnonUnion *)0; }");
+  test(*bpftrace, "begin { @ = (struct FirstFieldsAreAnonUnion *)0; }", true);
 
   ASSERT_TRUE(bpftrace->structs.Has("struct FirstFieldsAreAnonUnion"));
   auto record =

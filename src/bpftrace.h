@@ -95,17 +95,14 @@ private:
 
 class BPFtrace : public ast::State<"bpftrace"> {
 public:
-  BPFtrace(BPFnofeature no_feature = BPFnofeature(),
-           std::unique_ptr<Config> config = std::make_unique<Config>())
-      : btf_(std::make_unique<BTF>(this)),
-        feature_(std::make_unique<BPFfeature>(no_feature, *btf_)),
-        ncpus_(util::get_possible_cpus().size()),
-        max_cpu_id_(util::get_max_cpu_id()),
-        config_(std::move(config)),
-        ksyms_(*config_),
-        usyms_(*config_)
-  {
-  }
+  // Static factory for creating BPFtrace instances.
+  //
+  // This is required because BTF loading can fail, and we use the Result
+  // pattern to handle errors properly.
+  static Result<std::unique_ptr<BPFtrace>> create(
+      BPFnofeature no_feature = BPFnofeature(),
+      std::unique_ptr<Config> config = std::make_unique<Config>());
+
   ~BPFtrace() override;
 
   virtual int add_probe(const ast::AttachPoint &ap,
@@ -170,8 +167,7 @@ public:
   Result<uint64_t> get_buffer_pages_per_cpu() const;
 
   bool write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt);
-  void parse_module_btf(const std::set<std::string> &modules);
-  bool has_btf_data() const;
+  Result<> parse_module_btf(const std::set<std::string> &modules);
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
   std::set<std::string> list_modules(const ast::ASTContext &ctx,
@@ -225,6 +221,11 @@ public:
   std::unique_ptr<Config> config_;
   bool run_tests_ = false;
   bool run_benchmarks_ = false;
+
+protected:
+  // Protected constructor for subclasses (e.g., MockBPFtrace).
+  // Regular users should use create() instead.
+  BPFtrace(std::unique_ptr<Config> config);
 
 private:
   Ksyms ksyms_;

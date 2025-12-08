@@ -48,10 +48,6 @@
 // 07-Sep-2018	Brendan Gregg	Created this.
 // 03-Sep-2025	Rong Tao	Support memory cgroup.
 
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/oom.h>
-#endif
-
 BEGIN
 {
   printf("Tracing oom_kill_process()... Hit Ctrl-C to end.\n");

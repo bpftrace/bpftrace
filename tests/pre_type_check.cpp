@@ -8,6 +8,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/pre_type_check.h"
+#include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 
@@ -517,14 +518,16 @@ TEST(CallPreCheck, debugf)
        warning);
 }
 
-TEST(CallPreCheck, path)
+class CallPreCheck_btf : public test_btf {};
+
+TEST_F(CallPreCheck_btf, path)
 {
-  test("fentry:f { path(\"adf\", 1); }");
+  test("fentry:func_1 { path(\"adf\", 1); }");
 
   // Errors
-  test(R"(fentry:f { path("adf", "Na"); })",
+  test(R"(fentry:func_1 { path("adf", "Na"); })",
        "path: invalid size value, need non-negative literal");
-  test("fentry:f { path(\"adf\", -1); }",
+  test("fentry:func_1 { path(\"adf\", -1); }",
        "path: invalid size value, need non-negative literal");
 }
 

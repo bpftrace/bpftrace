@@ -21,6 +21,7 @@ void test(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateConfigPass())
                 .run();
@@ -48,6 +49,7 @@ ast::ASTContext test_for_warning(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateConfigPass())
                 .run();

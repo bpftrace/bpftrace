@@ -752,8 +752,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                                     module_->getGlobalVariable(std::string(
                                         bpftrace::globalvars::NUM_CPUS)),
                                     "num_cpu.cmp"));
-  } else if (builtin.ident == "__builtin_curtask") {
-    return ScopedExpr(b_.CreateGetCurrentTask(builtin.loc));
   } else if (builtin.ident == "__builtin_rand") {
     Value *random = b_.CreateGetRandom(builtin.loc);
     return ScopedExpr(b_.CreateZExt(random, b_.getInt64Ty()));

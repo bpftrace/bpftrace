@@ -1740,19 +1740,6 @@ CallInst *IRBuilderBPF::CreateGetCpuId(const Location &loc)
                           loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetCurrentTask(const Location &loc)
-{
-  // u64 bpf_get_current_task(void)
-  // Return: current task_struct
-  FunctionType *getcurtask_func_type = FunctionType::get(getInt64Ty(), false);
-  return CreateHelperCall(BPF_FUNC_get_current_task,
-                          getcurtask_func_type,
-                          {},
-                          true,
-                          "get_cur_task",
-                          loc);
-}
-
 CallInst *IRBuilderBPF::CreateGetRandom(const Location &loc)
 {
   // u32 bpf_get_prandom_u32(void)

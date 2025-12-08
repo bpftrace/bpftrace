@@ -56,6 +56,16 @@ public:
 
 class MockBPFtrace : public BPFtrace {
 public:
+  MockBPFtrace() : BPFtrace(std::make_unique<bpftrace::Config>())
+  {
+    // Load BTF with reference to our StructManager.
+    auto btf_result = BTF::load(structs);
+    if (!btf_result) {
+      throw std::runtime_error("BTF loading failed in MockBPFtrace");
+    }
+    btf_ = std::move(*btf_result);
+  }
+
   MOCK_METHOD2(
       attach_probe,
       Result<std::unique_ptr<AttachedProbe>>(::bpftrace::Probe &probe,
@@ -151,11 +161,11 @@ std::unique_ptr<ast::FunctionInfo> get_real_user_info();
 std::unique_ptr<BPFtrace> create_bpftrace();
 
 static auto bpf_nofeature = BPFnofeature();
-static auto btf_obj = BTF(nullptr);
 
 class MockBPFfeature : public BPFfeature {
 public:
-  MockBPFfeature(bool has_features = true) : BPFfeature(bpf_nofeature, btf_obj)
+  MockBPFfeature(BTF& btf, bool has_features = true)
+      : BPFfeature(bpf_nofeature, btf)
   {
     has_prog_fentry_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
@@ -169,6 +179,7 @@ public:
     has_loop_ = std::make_optional<bool>(has_features);
   };
 
+private:
   bool has_iter(std::string name __attribute__((unused))) override
   {
     return has_features_;

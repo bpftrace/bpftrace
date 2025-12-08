@@ -330,11 +330,6 @@ The context of this probe is important: this fires when the I/O is issued to the
 
 ```
 # cat path.bt
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/path.h>
-#include <linux/dcache.h>
-#endif
-
 kprobe:vfs_open
 {
   printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));

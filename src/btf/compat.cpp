@@ -59,14 +59,14 @@ Result<SizedType> getCompatType(const Array &type, CompatTypeCache &type_cache)
   return CreateArray(type.element_count(), *ty);
 }
 
-Result<SizedType> asRecord(
+Result<SizedType> asCStruct(
     uint32_t type_id,
     std::vector<std::pair<std::string, FieldInfo>> &&fields,
     CompatTypeCache &type_cache)
 {
   auto it = type_cache.find(type_id);
   if (it != type_cache.end()) {
-    return CreateRecord(std::shared_ptr<bpftrace::Struct>(it->second));
+    return CreateCStruct(std::shared_ptr<bpftrace::Struct>(it->second));
   }
 
   // The record start empty, and we construct below.
@@ -98,7 +98,7 @@ Result<SizedType> getCompatType(const Struct &type, CompatTypeCache &type_cache)
   if (!f) {
     return f.takeError();
   }
-  return asRecord(type.type_id(), std::move(*f), type_cache);
+  return asCStruct(type.type_id(), std::move(*f), type_cache);
 }
 
 Result<SizedType> getCompatType(const Union &type, CompatTypeCache &type_cache)
@@ -107,7 +107,7 @@ Result<SizedType> getCompatType(const Union &type, CompatTypeCache &type_cache)
   if (!f) {
     return f.takeError();
   }
-  return asRecord(type.type_id(), std::move(*f), type_cache);
+  return asCStruct(type.type_id(), std::move(*f), type_cache);
 }
 
 Result<SizedType> getCompatType(const Enum &type,
