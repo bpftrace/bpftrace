@@ -55,7 +55,6 @@ public:
   BPFfeature& operator=(BPFfeature&&) = delete;
 
   int instruction_limit();
-  bool has_btf();
   bool has_btf_func_global();
   bool has_map_batch();
   bool has_d_path();

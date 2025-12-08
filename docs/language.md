@@ -426,12 +426,6 @@ $c = $d; // ERROR: type mismatch because there isn't a larger type
          // that fits both.
 ```
 
-Additionally, when vmlinux BTF is available, bpftrace supports
-casting to some of the kernel's fixed integer types:
-```
-$a = (uint64_t)1; // $a is a uint64
-```
-
 ### String
 
 bpftrace also supports a `string` data type, which it uses for string literals, e.g. `"hello"`.
@@ -1278,7 +1272,7 @@ Here arg0 was cast as a (struct path *), since that is the first argument to vfs
 The struct support is the same as bcc and based on available kernel headers.
 This means that many, but not all, structs will be available, and you may need to manually define structs.
 
-If the kernel has BTF (BPF Type Format) data, all kernel structs are always available without defining them. For example:
+With BTF (BPF Type Format), kernel structs are always available without defining them. For example:
 
 ```
 kprobe:vfs_open {
@@ -1889,14 +1883,8 @@ You can specify a different license using the "license" config variable.
 
 ### BTF Support
 
-If the kernel version has BTF support, kernel types are automatically available and there is no need to include additional headers to use them.
-It is not recommended to mix definitions from multiple sources (ie. BTF and header files).
-If your program mixes definitions, bpftrace will do its best but can easily get confused due to redefinition conflicts.
-Prefer to exclusively use BTF as it can never get out of sync on a running system. BTF is also less susceptible to parsing failures (C is constantly evolving).
-Almost all current linux deployments will support BTF.
-
-To allow users to detect this situation in scripts, the preprocessor macro `BPFTRACE_HAVE_BTF` is defined if BTF is detected.
-See `tools/` for examples of its usage.
+BTF is required to for bpftrace to work properly.
+If the kernel does not have embedded BTF, an external BTF file (from e.g. [BTFhub](https://github.com/aquasecurity/btfhub-archive/)) can be used with the environment variable `BPFTRACE_BTF`.
 
 Requirements for using BTF for vmlinux:
 

@@ -100,8 +100,7 @@ void FieldAnalyser::visit(Builtin &builtin)
     return;
   }
 
-  if (bpftrace_.has_btf_data())
-    sized_type_ = bpftrace_.btf_->get_stype(builtin_type);
+  sized_type_ = bpftrace_.btf_->get_stype(builtin_type);
 }
 
 void FieldAnalyser::visit(Map &map)
@@ -144,7 +143,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
     if (!field_type.IsNoneTy()) {
       sized_type_ = field_type;
-    } else if (bpftrace_.has_btf_data()) {
+    } else {
       // If the struct type or the field type has not been resolved, add the
       // type to the BTF set to let ClangParser resolve it
       bpftrace_.btf_set_.insert(sized_type_.GetName());
@@ -236,8 +235,9 @@ void FieldAnalyser::resolve_fields(SizedType &type)
         dwarf->resolve_fields(type);
   }
 
-  if (type.GetFieldCount() == 0 && bpftrace_.has_btf_data())
+  if (type.GetFieldCount() == 0) {
     bpftrace_.btf_->resolve_fields(type);
+  }
 }
 
 void FieldAnalyser::resolve_type(SizedType &type)
@@ -257,8 +257,9 @@ void FieldAnalyser::resolve_type(SizedType &type)
         sized_type_ = dwarf->get_stype(name);
   }
 
-  if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
+  if (sized_type_.IsNoneTy()) {
     sized_type_ = bpftrace_.btf_->get_stype(name);
+  }
 
   // Could not resolve destination type - let ClangParser do it
   if (sized_type_.IsNoneTy())
