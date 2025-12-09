@@ -165,7 +165,6 @@ public:
   }
 
   StackType stack_type;
-  bool is_internal = false;
   TimestampMode ts_mode = TimestampMode::boot;
 
 private:
@@ -193,7 +192,6 @@ private:
   {
     archive(type_,
             stack_type,
-            is_internal,
             is_anon_,
             is_signed_,
             element_type_,
