@@ -2380,7 +2380,7 @@ TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
        ExpectedAST{ Program().WithProbe(
            Probe({ "kprobe:f" },
                  { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-                   ExprStatement(Call("count", { Map("@y"), Integer(0) })),
+                   DiscardExpr(Call("count", { Map("@y"), Integer(0) })),
                    AssignMapStatement(
                        Map("@x"),
                        Integer(0),
@@ -2391,7 +2391,7 @@ TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             ExprStatement(Call("sum", { Map("@y"), Integer(0), Integer(5) })),
+             DiscardExpr(Call("sum", { Map("@y"), Integer(0), Integer(5) })),
              AssignMapStatement(
                  Map("@x"),
                  Integer(0),
@@ -2402,7 +2402,7 @@ TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             ExprStatement(Call("min", { Map("@y"), Integer(0), Integer(5) })),
+             DiscardExpr(Call("min", { Map("@y"), Integer(0), Integer(5) })),
              AssignMapStatement(
                  Map("@x"),
                  Integer(0),
@@ -2413,7 +2413,7 @@ TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             ExprStatement(Call("max", { Map("@y"), Integer(0), Integer(5) })),
+             DiscardExpr(Call("max", { Map("@y"), Integer(0), Integer(5) })),
              AssignMapStatement(
                  Map("@x"),
                  Integer(0),
@@ -2424,7 +2424,7 @@ TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             ExprStatement(Call("avg", { Map("@y"), Integer(0), Integer(5) })),
+             DiscardExpr(Call("avg", { Map("@y"), Integer(0), Integer(5) })),
              AssignMapStatement(
                  Map("@x"),
                  Integer(0),
@@ -3405,7 +3405,7 @@ TEST_F(SemanticAnalyserTest, mixed_int_like_binop)
   test("kprobe:f { @a = sum(-1); $a = (uint8)1 == @a; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { ExprStatement(
+           { DiscardExpr(
                  Call("sum", { Map("@a"), Integer(0), NegativeInteger(-1) })),
              AssignVarStatement(
                  Variable("$a"),

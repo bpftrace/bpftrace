@@ -298,8 +298,10 @@ void MapAssignmentCall::visit(Statement &stmt)
                           assign->map_access->map,
                           assign->map_access->key);
     if (expr) {
-      // We injected a call, and can flatten the statement.
-      stmt.value = ast_.make_node<ExprStatement>(assign->loc, expr.value());
+      // We injected a call, and can flatten the statement. This discards
+      // the return value, because it is not otherwise useful. We originally
+      // visited as a statement, so this does not affect the semantics.
+      stmt.value = ast_.make_node<DiscardExpr>(assign->loc, expr.value());
     }
   }
   Visitor<MapAssignmentCall>::visit(stmt);

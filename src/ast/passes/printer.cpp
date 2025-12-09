@@ -943,6 +943,14 @@ Buffer Formatter::visit(Unroll& unroll)
       .text("}");
 }
 
+Buffer Formatter::visit(DiscardExpr& discard)
+{
+  return Buffer()
+      .text("_ = ")
+      .append(format(discard.expr, metadata, max_width, true))
+      .text(";");
+}
+
 Buffer Formatter::visit(Range& range)
 {
   Buffer start;

@@ -1157,6 +1157,15 @@ inline ExprStatementMatcher ExprStatement(
   return ExprStatementMatcher().WithExpr(expr_matcher);
 }
 
+class DiscardExprMatcher
+    : public NodeMatcher<DiscardExprMatcher, ast::DiscardExpr> {};
+
+inline DiscardExprMatcher DiscardExpr(
+    const Matcher<const ast::Expression&>& expr_matcher)
+{
+  return DiscardExprMatcher().WithExpr(expr_matcher);
+}
+
 class IfExprMatcher : public NodeMatcher<IfExprMatcher, ast::IfExpr> {};
 
 inline IfExprMatcher If(const Matcher<const ast::Expression&>& cond,
