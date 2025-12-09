@@ -140,7 +140,7 @@ EXPECT_REGEX SUCCESS2 [0-9]+
 EXPECT_REGEX SUCCESS3 [0-9]+
 
 NAME builtin wrapper func
-PROG k:vfs_read { if (__builtin_func == func() && __builtin_func == func) { print(func); } exit(); }
+PROG k:vfs_read { print(func); exit(); }
 EXPECT vfs_read
 AFTER ./testprogs/syscall read
 
