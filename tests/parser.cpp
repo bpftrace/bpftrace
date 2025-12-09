@@ -3232,4 +3232,9 @@ TEST(Parser, for_loop_unary_condition)
                  { ExprStatement(Call("print", { Variable("$i") })) }) })));
 }
 
+TEST(Parser, discard)
+{
+  test("kprobe:f { _ = 1; }",
+       Program().WithProbe(Probe({ "kprobe:f" }, { DiscardExpr(Integer(1)) })));
+}
 } // namespace bpftrace::test::parser

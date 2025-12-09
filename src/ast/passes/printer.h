@@ -95,6 +95,7 @@ public:
   Buffer visit(VarDeclStatement &decl);
   Buffer visit(Jump &jump);
   Buffer visit(Unroll &unroll);
+  Buffer visit(DiscardExpr &discard);
   Buffer visit(While &while_block);
   Buffer visit(Range &range);
   Buffer visit(For &for_loop);
