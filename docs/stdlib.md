@@ -449,11 +449,15 @@ You can find all kernel symbols at `/proc/kallsyms`.
 
 Determine if a kfunc is supported for particular probe types.
 
+Argument kfunc must be string literal.
+
 
 ### kfunc_exist
 - `boolean kfunc_exist(const string kfunc)`
 
 Determine if a kfunc exists using BTF.
+
+Argument kfunc must be string literal.
 
 
 ### kptr
