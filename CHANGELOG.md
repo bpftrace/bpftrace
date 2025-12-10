@@ -29,6 +29,9 @@ and this project adheres to
   - [#4861](https://github.com/bpftrace/bpftrace/pull/4861)
 - Fix anonymous struct/unions not resolving correctly from BTF
   - [#4732](https://github.com/bpftrace/bpftrace/pull/4732)
+- Fix getopt support for unsigned integers
+  - [#4881](https://github.com/bpftrace/bpftrace/pull/4881)
+#### Changed
 - Disallow builtin and type idents as macro parameter names
   - [#4873](https://github.com/bpftrace/bpftrace/pull/4873)
 
