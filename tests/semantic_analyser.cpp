@@ -3291,10 +3291,11 @@ TEST_F(SemanticAnalyserTest, intarray_cast_types)
   test("kprobe:f { @ = (int8[])1 }");
   test("kprobe:f { @ = (uint8[8])1 }");
   test("kretprobe:f { @ = (int8[8])retval }");
+  test("kprobe:f { @ = (int8[6])\"hello\" }");
+  test("kprobe:f { @ = (int8[])\"hello\" }");
 
   test("kprobe:f { @ = (int8[4])1 }", Error{});
   test("kprobe:f { @ = (int32[])(int16)1 }", Error{});
-  test("kprobe:f { @ = (int8[6])\"hello\" }", Error{});
 
   test("struct Foo { int x; } kprobe:f { @ = (struct Foo [2])1 }", Error{});
 }

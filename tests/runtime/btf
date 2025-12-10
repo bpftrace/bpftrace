@@ -93,3 +93,9 @@ NAME btf_type_tag_access
 PROG begin { printf("SUCCESS %d\n", curtask->parent->pid); exit() }
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 REQUIRES_FEATURE btf
+
+NAME btf_char_array_to_string
+PROG begin { if (curtask->comm == "bpftrace") { print(curtask->comm); printf("comm %s\n", curtask->comm); } }
+EXPECT bpftrace
+EXPECT comm bpftrace
+REQUIRES_FEATURE btf

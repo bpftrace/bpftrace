@@ -164,7 +164,7 @@ TEST_F(field_analyser_btf, btf_arrays)
   // well-formed (including the NUL), even if the field itself contains no NUL
   // character, because the field has a known fixed size.
   EXPECT_TRUE(arrs->GetField("char_arr").type.IsStringTy());
-  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U + 1U);
+  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U);
   EXPECT_EQ(arrs->GetField("char_arr").offset, 16);
 
   EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());
