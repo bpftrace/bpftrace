@@ -3289,7 +3289,8 @@ void SemanticAnalyser::visit(Cast &cast)
       // casting from/to int arrays must respect the size
       (cast.cast_type.IsArrayTy() &&
        (!rhs.IsBoolTy() || cast.cast_type.GetSize() != rhs.GetSize()) &&
-       (!rhs.IsIntTy() || cast.cast_type.GetSize() != rhs.GetSize())) ||
+       (!rhs.IsIntTy() || cast.cast_type.GetSize() != rhs.GetSize()) &&
+       (!rhs.IsStringTy() || cast.cast_type.GetSize() != rhs.GetSize())) ||
       (rhs.IsArrayTy() && (!cast.cast_type.IsIntTy() ||
                            cast.cast_type.GetSize() != rhs.GetSize()))) {
     cast.addError() << "Cannot cast from \"" << rhs << "\" to \""
