@@ -50,8 +50,6 @@ and this project adheres to
 - Add support for `--fmt` mode (automatic formatting)
   - [#4621](https://github.com/bpftrace/bpftrace/pull/4621)
 #### Changed
-- Disallow builtin and type idents as macro parameter names
-  - [#4873](https://github.com/bpftrace/bpftrace/pull/4873)
 - Add helpers to check if a kfunc exists and is supported for particular probe types.
   - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)
 - `uaddr` support PIE and dynamic library symbols.
@@ -78,26 +76,8 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
-- Fix language part being overwritten in uprobe attachpoint parser
-  - [#4856](https://github.com/bpftrace/bpftrace/pull/4856)
-- output: prevent crash when printing overflow-only lhist
-  - [#4801](https://github.com/bpftrace/bpftrace/pull/4801)
-- join(): Fix wrong index of GEP that was causing truncation
-  - [#4786](https://github.com/bpftrace/bpftrace/pull/4786)
 - Improved tuple binop comparison
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
-- Fix off-by-one for function argument size comparison
-  - [#4698](https://github.com/bpftrace/bpftrace/pull/4698)
-- Fix resolution of enum-typed tracepoint args
-  - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
-- Fix block expression handling inside print statements
-  - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
-- codegen: Fix tid/pid in non-init namespaces
-  - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
-- Fix automatic conversion of BTF char arrays to bpftrace strings
-  - [#4861](https://github.com/bpftrace/bpftrace/pull/4861)
-- Fix anonymous struct/unions not resolving correctly from BTF
-  - [#4732](https://github.com/bpftrace/bpftrace/pull/4732)
 #### Security
 #### Docs
 #### Tools
@@ -115,6 +95,35 @@ and this project adheres to
   - [#4600](https://github.com/bpftrace/bpftrace/pull/4600)
 - oomkill.bt: support memory cgroup
   - [#4533](https://github.com/bpftrace/bpftrace/pull/4533)
+
+## [0.24.2] 2025-12-12
+
+#### Fixed
+- Fix off-by-one for function argument size comparison
+  - [#4698](https://github.com/bpftrace/bpftrace/pull/4698)
+- Fix resolution of enum-typed tracepoint args
+  - [#4714](https://github.com/bpftrace/bpftrace/pull/4714)
+- Fix block expression handling inside print statements
+  - [#4704](https://github.com/bpftrace/bpftrace/issues/4704)
+- join(): Fix wrong index of GEP that was causing truncation
+  - [#4786](https://github.com/bpftrace/bpftrace/pull/4786)
+- output: prevent crash when printing overflow-only lhist
+  - [#4801](https://github.com/bpftrace/bpftrace/pull/4801)
+- codegen: Fix tid/pid in non-init namespaces
+  - [#4813](https://github.com/bpftrace/bpftrace/issues/4813)
+- Fix segfault in printf ordering
+  - [#4838](https://github.com/bpftrace/bpftrace/pull/4838)
+- Fix language part being overwritten in uprobe attachpoint parser
+  - [#4856](https://github.com/bpftrace/bpftrace/pull/4856)
+- Fix automatic conversion of BTF char arrays to bpftrace strings
+  - [#4871](https://github.com/bpftrace/bpftrace/pull/4871)
+- Fix anonymous struct/unions not resolving correctly from BTF
+  - [#4732](https://github.com/bpftrace/bpftrace/pull/4732)
+- Fix getopt support for unsigned integers
+  - [#4881](https://github.com/bpftrace/bpftrace/pull/4881)
+#### Changed
+- Disallow builtin and type idents as macro parameter names
+  - [#4873](https://github.com/bpftrace/bpftrace/pull/4873)
 
 ## [0.24.1] 2025-10-03
 
