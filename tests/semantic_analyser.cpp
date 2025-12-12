@@ -13,6 +13,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
+#include "ast/passes/loop_return.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
@@ -162,6 +163,7 @@ public:
                   .put(types->types)
                   .add(CreateParsePass())
                   .add(ast::CreateResolveRootImportsPass())
+                  .add(ast::CreateLoopReturnPass())
                   .add(ast::CreateControlFlowPass())
                   .add(ast::CreateImportInternalScriptsPass())
                   .add(ast::CreateMacroExpansionPass())
@@ -4786,25 +4788,27 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_modified_during_loop)
       }
       print($var);
     })",
-      ExpectedAST{ Program().WithProbe(
-          Probe({ "begin" },
-                {
-                    AssignVarStatement(Variable("$var"), Integer(0)),
-                    AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
-                    For(Variable("$kv"),
-                        Map("@map"),
-                        { ExprStatement(
-                            Block({ ExprStatement(Unop(Operator::POST_INCREMENT,
-                                                       Variable("$var"))),
-                                    Jump(ast::JumpType::CONTINUE) })) })
-                        .WithContext(bpftrace::test::SizedType(Type::record)
-                                         .WithField("$var",
-                                                    bpftrace::test::SizedType(
-                                                        Type::pointer))),
-                    ExprStatement(Block(
-                        { ExprStatement(Call("print", { Variable("$var") })),
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          {
+              AssignVarStatement(Variable("$var"), Integer(0)),
+              AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+              For(Variable("$kv"),
+                  Map("@map"),
+                  { ExprStatement(
+                      Block({ ExprStatement(Unop(Operator::POST_INCREMENT,
+                                                 Variable("$var"))),
+                              Jump(ast::JumpType::CONTINUE) })) })
+                  .WithContext(
+                      bpftrace::test::SizedType(Type::record)
+                          .WithField("$var",
+                                     bpftrace::test::SizedType(Type::pointer)
+                                         .WithElement(bpftrace::test::SizedType(
+                                             Type::integer)))),
+              ExprStatement(
+                  Block({ ExprStatement(Call("print", { Variable("$var") })),
                           Jump(ast::JumpType::RETURN) })),
-                })) });
+          })) });
 }
 
 TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop)
@@ -4857,9 +4861,16 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
                   ExprStatement(Block(
                       { ExprStatement(Call("print", { Variable("$var3") })),
                         Jump(ast::JumpType::CONTINUE) })) })
-                .WithContext(bpftrace::test::SizedType(Type::record)
-                                 .WithField("$var1", SizedType(Type::pointer))
-                                 .WithField("$var3", SizedType(Type::pointer))),
+                .WithContext(
+                    bpftrace::test::SizedType(Type::record)
+                        .WithField("$var1",
+                                   SizedType(Type::pointer)
+                                       .WithElement(bpftrace::test::SizedType(
+                                           Type::integer)))
+                        .WithField("$var3",
+                                   SizedType(Type::pointer)
+                                       .WithElement(bpftrace::test::SizedType(
+                                           Type::string)))),
             Jump(ast::JumpType::RETURN) })) });
 }
 
@@ -4934,13 +4945,7 @@ TEST_F(SemanticAnalyserTest, for_loop_control_flow)
 {
   test("begin { @map[0] = 1; for ($kv : @map) { break; } }");
   test("begin { @map[0] = 1; for ($kv : @map) { continue; } }");
-
-  // Error location is incorrect: #3063
-  test("begin { @map[0] = 1; for ($kv : @map) { return; } }", Error{ R"(
-stdin:1:41-47: ERROR: 'return' statement is not allowed in a for-loop
-begin { @map[0] = 1; for ($kv : @map) { return; } }
-                                        ~~~~~~
-)" });
+  test("begin { @map[0] = 1; for ($kv : @map) { return; } }");
 }
 
 TEST_F(SemanticAnalyserTest, for_range_loop)
@@ -5013,12 +5018,7 @@ TEST_F(SemanticAnalyserTest, for_range_control_flow)
 {
   test("begin { for ($i : 0..5) { break; } }");
   test("begin { for ($i : 0..5) { continue; } }");
-
-  test("begin { for ($i : 0..5) { return; } }", Error{ R"(
-stdin:1:27-33: ERROR: 'return' statement is not allowed in a for-loop
-begin { for ($i : 0..5) { return; } }
-                          ~~~~~~
-)" });
+  test("begin { for ($i : 0..5) { return; } }");
 }
 
 TEST_F(SemanticAnalyserTest, for_range_out_of_scope)
