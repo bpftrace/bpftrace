@@ -113,7 +113,7 @@ Result<> FormatString::check(const std::vector<SizedType>& args) const
     { "p", any_integer },
   };
   for (size_t i = 0; i < specs.size(); i++) {
-    if (args[i].IsNoneTy()) {
+    if (args[i].IsNoneTy() || args[i].IsVoidTy()) {
       err << "unable to print none type for specifier: " << specs[i].specifier;
       return make_error<FormatError>(err.str());
     }
