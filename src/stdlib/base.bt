@@ -592,7 +592,7 @@ macro len(e)
 //
 macro memcmp($left, $right, count)
 {
-  __memcmp((void *)(&$left), (void *)(&$right), count)
+  __memcmp((int8*)(&$left), (int8*)(&$right), count)
 }
 
 macro memcmp($left, right, count)

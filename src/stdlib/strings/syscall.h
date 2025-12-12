@@ -1,6 +1,8 @@
 #pragma once
-#include "strings.h"
+
 #include <linux/types.h>
+
+typedef char syscall_str[64];
 
 // A constant whose low-order bits are all 1 and is greater than the maximum
 // syscall number.
@@ -8,7 +10,7 @@
 
 // Syscall table for Linux x86_64.
 #ifdef __TARGET_ARCH_x86
-static m_str syscall_names[] = {
+static syscall_str syscall_names[] = {
   [0] = "read",
   [1] = "write",
   [2] = "open",
@@ -430,7 +432,7 @@ static m_str syscall_names[] = {
   [NR_SYSCALL_ALIGN_BITS] = "",
 };
 #elif defined(__TARGET_ARCH_arm)
-static m_str syscall_names[] = {
+static syscall_str syscall_names[] = {
   [0] = "restart_syscall",
   [1] = "exit",
   [2] = "fork",
@@ -868,7 +870,7 @@ static m_str syscall_names[] = {
   [NR_SYSCALL_ALIGN_BITS] = "",
 };
 #elif defined(__TARGET_ARCH_mips)
-static m_str syscall_names[] = {
+static syscall_str syscall_names[] = {
   [0] = "read",
   [1] = "write",
   [2] = "open",
@@ -1245,7 +1247,7 @@ static m_str syscall_names[] = {
   [NR_SYSCALL_ALIGN_BITS] = "",
 };
 #elif defined(__TARGET_ARCH_powerpc)
-static m_str syscall_names[] = {
+static syscall_str syscall_names[] = {
   [0] = "restart_syscall",
   [1] = "exit",
   [2] = "fork",
@@ -1797,7 +1799,7 @@ static m_str syscall_names[] = {
   [NR_SYSCALL_ALIGN_BITS] = "",
 };
 #elif defined(__TARGET_ARCH_s390)
-static m_str syscall_names[] = {
+static syscall_str syscall_names[] = {
   [1] = "exit",
   [2] = "fork",
   [3] = "read",
@@ -2265,7 +2267,7 @@ static m_str syscall_names[] = {
 };
 #elif defined(__TARGET_ARCH_arm64) || defined(__TARGET_ARCH_riscv) ||          \
     defined(__TARGET_ARCH_loongarch)
-static m_str syscall_names[] = {
+static syscall_str syscall_names[] = {
   [0] = "io_setup",
   [1] = "io_destroy",
   [2] = "io_submit",
@@ -2601,9 +2603,9 @@ static m_str syscall_names[] = {
 #else
 // All architectures supported by bpftrace are listed above. If the architecture
 // is still not supported, the unknown system call will be returned.
-static m_str syscall_names[] = {
+static syscall_str syscall_names[] = {
   [NR_SYSCALL_ALIGN_BITS] = "",
 };
 #endif
 
-static m_str unknown_syscall = "Unknown syscall";
+static syscall_str unknown_syscall = "Unknown syscall";

@@ -1940,7 +1940,12 @@ TEST_F(SemanticAnalyserTest, binop_tuple)
 {
   ast::TypeMetadata types;
 
-  auto vd_ty = types.global.lookup<btf::Void>("void");
+  // See the actual function prototype in src/stdlib/base/base.bpf.c.
+  //
+  // If we wind up with many required extern types, we could consider
+  // either automatically imported for semantic analyser tests or having
+  // a single point where we define these required external functions.
+  auto vd_ty = types.global.add<btf::Integer>("char", 1, 1);
   ASSERT_TRUE(bool(vd_ty));
   auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
   ASSERT_TRUE(bool(vd_ptr));

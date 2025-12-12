@@ -1,8 +1,10 @@
 #pragma once
-#include "strings.h"
+
 #include <linux/types.h>
 
-static m_str errors[] = {
+typedef char err_str[64];
+
+static err_str errors[] = {
   [0] = "Success",
   [EPERM] = "Operation not permitted",
   [ENOENT] = "No such file or directory",
@@ -137,4 +139,4 @@ static m_str errors[] = {
   [EHWPOISON] = "Memory page has hardware error",
 };
 
-static m_str unknown_error = "Unknown error";
+static err_str unknown_error = "Unknown error";

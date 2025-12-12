@@ -67,7 +67,7 @@ macro strlen(exp)
 macro __strnlen(ptr, max_size)
 {
   import "stdlib/strings/strings.bpf.c";
-  __bpf_strnlen(ptr, (size_t)max_size)
+  __bpf_strnlen((int8*)ptr, (size_t)max_size)
 }
 
 // Returns the "capacity" of a string-like object.
@@ -106,7 +106,7 @@ macro strstr($haystack, $needle)
     // Special case: the needle is empty.
     0
   } else {
-    __bpf_strnstr(&$haystack, &$needle, $haystack_size, $needle_size)
+    __bpf_strnstr((int8*)&$haystack, (int8*)&$needle, $haystack_size, $needle_size)
   }
 }
 macro strstr($haystack, needle)
@@ -148,11 +148,6 @@ macro strerror(errno)
 {
   import "stdlib/strings/strings.bpf.c";
   let $v : string[64];
-  // Ensure that the size of the string is equal to the size of the returned
-  // buffer. On the C side, it will be a compilation error if any of the
-  // strings exceed this size.
-  static_assert(sizeof($v) == sizeof(*__strerror((int32)errno, &$v)),
-                "$v is sized correctly");
   __strerror((int32)errno, &$v);
   $v
 }
@@ -171,11 +166,6 @@ macro syscall_name(n)
 {
   import "stdlib/strings/strings.bpf.c";
   let $v : string[64];
-  // Ensure that the size of the string is equal to the size of the returned
-  // buffer. On the C side, it will be a compilation error if any of the
-  // strings exceed this size.
-  static_assert(sizeof($v) == sizeof(*__syscall_name((int32)n, &$v)),
-                "$v is sized correctly");
   __syscall_name((int32)n, &$v);
   $v
 }

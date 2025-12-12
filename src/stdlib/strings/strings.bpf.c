@@ -7,7 +7,6 @@
 
 #include <bpf/bpf_helpers.h>
 #include "errors.h"
-#include "strings.h"
 #include "syscall.h"
 
 extern int bpf_strnlen(const char *s__ign, size_t count) __ksym __weak;
@@ -67,19 +66,19 @@ int __bpf_strnstr(const char *haystack,
   return -1;
 }
 
-m_str* __strerror(int errno, m_arg *out) {
+int __strerror(int errno, err_str *out) {
   if (errno < 0) {
     errno = -errno;
   }
   if (errno >= 0 && errno <= EHWPOISON) {
-    __builtin_memcpy(&out->data, &errors[errno], sizeof(*out));
+    __builtin_memcpy(out, &errors[errno], sizeof(*out));
   } else {
-    __builtin_memcpy(&out->data, &unknown_error, sizeof(*out));
+    __builtin_memcpy(out, &unknown_error, sizeof(*out));
   }
-  return &out->data;
+  return 0;
 }
 
-m_str* __syscall_name(int n, m_arg *out) {
+int __syscall_name(int n, syscall_str *out) {
   if (n >= 0 && n < NR_SYSCALL_ALIGN_BITS) {
     // To resolve the verifier's complaint that the off range is too large,
     // resulting in "possible" access beyond the range of syscall_names[],
@@ -89,13 +88,12 @@ m_str* __syscall_name(int n, m_arg *out) {
     // System call numbers are not sequential, so when syscall_names is empty,
     // we return "unknown system call".
     if (syscall_names[n][0] == '\0') {
-      __builtin_memcpy(&out->data, &unknown_syscall, sizeof(*out));
+      __builtin_memcpy(out, &unknown_syscall, sizeof(*out));
     } else {
-      __builtin_memcpy(&out->data, &syscall_names[n], sizeof(*out));
+      __builtin_memcpy(out, &syscall_names[n], sizeof(*out));
     }
   } else {
-    __builtin_memcpy(&out->data, &unknown_syscall, sizeof(*out));
+    __builtin_memcpy(out, &unknown_syscall, sizeof(*out));
   }
-
-  return &out->data;
+  return 0;
 }
