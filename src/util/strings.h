@@ -29,6 +29,11 @@ std::vector<std::string> split_string(const std::string &str,
                                       char delimiter,
                                       bool remove_empty = false);
 
+// Split string by delimiter, respecting quotes and escaped characters.
+std::vector<std::string> split_string_quoted(const std::string &str,
+                                             char delimiter,
+                                             bool remove_empty = false);
+
 std::string str_join(const std::vector<std::string> &list,
                      const std::string &delim);
 

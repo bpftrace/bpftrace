@@ -37,7 +37,7 @@ private:
   State benchmark_parser();
   State kprobe_parser(bool allow_offset = true);
   State kretprobe_parser();
-  State uprobe_parser(bool allow_offset = true, bool allow_abs_addr = true);
+  State uprobe_parser(bool allow_offset = true, bool allow_abs_addr = true, bool allow_stmt_map = true);
   State uretprobe_parser();
   State usdt_parser();
   State tracepoint_parser();
