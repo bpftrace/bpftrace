@@ -26,7 +26,7 @@ and this project adheres to
 - Fix language part being overwritten in uprobe attachpoint parser
   - [#4856](https://github.com/bpftrace/bpftrace/pull/4856)
 - Fix automatic conversion of BTF char arrays to bpftrace strings
-  - [#4861](https://github.com/bpftrace/bpftrace/pull/4861)
+  - [#4871](https://github.com/bpftrace/bpftrace/pull/4871)
 - Fix anonymous struct/unions not resolving correctly from BTF
   - [#4732](https://github.com/bpftrace/bpftrace/pull/4732)
 - Fix getopt support for unsigned integers
