@@ -70,3 +70,25 @@ macro usdt_arg(x)
 {
   __usdt_arg((void *)ctx, x)
 }
+
+macro elf_is_exe()
+{
+  if comptime (probetype != "uprobe" && probetype != "uretprobe" &&
+               probetype != "usdt") {
+    fail("elf_is_exe can not be used for this probetype %s", probetype);
+    false
+  } else {
+    __builtin_elf_is_exe
+  }
+}
+
+macro elf_info()
+{
+  if comptime (probetype != "uprobe" && probetype != "uretprobe" &&
+               probetype != "usdt") {
+    fail("elf_info can not be used for this probetype %s", probetype);
+    false
+  } else {
+    __builtin_elf_ino
+  }
+}
