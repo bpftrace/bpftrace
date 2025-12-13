@@ -139,6 +139,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> TYPEINFO "typeinfo"
 %token <std::string> COMPTIME "comptime"
 %token <std::string> LET "let"
+%token <std::string> GLOBAL "global"
 %token <std::string> IMPORT "import"
 %token <std::string> HEADER "header"
 %token <bool> BOOL "bool"
@@ -621,8 +622,10 @@ map_decl_stmt:
         ;
 
 var_decl_stmt:
-                 LET var                {  $$ = driver.ctx.make_node<ast::VarDeclStatement>(@$, $2); }
-        |        LET var COLON any_type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>(@$, $2, $4); }
+                 GLOBAL var                {  $$ = driver.ctx.make_node<ast::VarDeclStatement>(@$, $2, true); }
+        |        GLOBAL var COLON any_type {  $$ = driver.ctx.make_node<ast::VarDeclStatement>(@$, $2, $4, true); }
+        |        LET var                   {  $$ = driver.ctx.make_node<ast::VarDeclStatement>(@$, $2, false); }
+        |        LET var COLON any_type    {  $$ = driver.ctx.make_node<ast::VarDeclStatement>(@$, $2, $4, false); }
         ;
 
 tuple_expr:
@@ -889,6 +892,7 @@ keyword:
         |       CONTINUE      { $$ = $1; }
         |       ELSE          { $$ = $1; }
         |       FOR           { $$ = $1; }
+        |       GLOBAL        { $$ = $1; }
         |       IF            { $$ = $1; }
         |       LET           { $$ = $1; }
         |       OFFSETOF      { $$ = $1; }

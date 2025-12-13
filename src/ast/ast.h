@@ -1363,10 +1363,14 @@ public:
   explicit VarDeclStatement(ASTContext &ctx,
                             Location &&loc,
                             Variable *var,
-                            Typeof *typeof)
-      : Node(ctx, std::move(loc)), var(var), typeof(typeof) {};
-  explicit VarDeclStatement(ASTContext &ctx, Location &&loc, Variable *var)
-      : Node(ctx, std::move(loc)), var(var) {};
+                            Typeof *typeof,
+                            bool global)
+      : Node(ctx, std::move(loc)), var(var), typeof(typeof), global(global) {};
+  explicit VarDeclStatement(ASTContext &ctx,
+                            Location &&loc,
+                            Variable *var,
+                            bool global)
+      : Node(ctx, std::move(loc)), var(var), global(global) {};
   explicit VarDeclStatement(ASTContext &ctx,
                             const Location &loc,
                             const VarDeclStatement &other)
@@ -1387,6 +1391,7 @@ public:
 
   Variable *var = nullptr;
   Typeof *typeof = nullptr;
+  bool global = false;
 };
 
 // Scalar map assignment is purely syntactic sugar that is removed by the pass

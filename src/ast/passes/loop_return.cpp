@@ -196,7 +196,7 @@ void LoopReturn::inject(T &node)
     // need to supercede all the other statements in the block.
     if (loop_return_.value()) {
       auto *ret_var_decl = ast_.make_node<VarDeclStatement>(
-          node.loc, get_return_var(node));
+          node.loc, get_return_var(node), false);
       node.block->stmts.insert(node.block->stmts.begin(),
                                Statement(ret_var_decl));
     }

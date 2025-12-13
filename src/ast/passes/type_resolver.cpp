@@ -249,6 +249,7 @@ private:
 
   bool has_error() const;
 
+#define GLOBAL_SCOPE ((Node *)0xFFFFFFFFUL)
   // At the moment we iterate over the stack from top to
   // bottom as variable shadowing is not supported.
   std::vector<Node *> scope_stack_;
@@ -2640,12 +2641,18 @@ void TypeResolver::visit(VarDeclStatement &decl)
 
   bool can_resize = decl.var->var_type.GetSize() == 0;
 
-  variables_[scope_stack_.back()].insert({ var_ident,
-                                           {
-                                               .type = decl.var->var_type,
-                                               .can_resize = can_resize,
-                                           } });
-  variable_decls_[scope_stack_.back()].insert({ var_ident, decl });
+  Node *scope = scope_stack_.back();
+
+  if (decl.global) {
+    scope = GLOBAL_SCOPE;
+  }
+
+  variables_[scope].insert({ var_ident,
+                             {
+                                 .type = decl.var->var_type,
+                                 .can_resize = can_resize,
+                             } });
+  variable_decls_[scope].insert({ var_ident, decl });
 }
 
 void TypeResolver::visit(BlockExpr &block)
@@ -3193,6 +3200,14 @@ Node *TypeResolver::find_variable_scope(const std::string &var_ident, bool safe)
       return scope;
     }
   }
+
+  // If the variable cannot be found in the scope, it will be searched in the
+  // global variables by default.
+  if (auto search_val = variables_[GLOBAL_SCOPE].find(var_ident);
+      search_val != variables_[GLOBAL_SCOPE].end()) {
+    return GLOBAL_SCOPE;
+  }
+
   if (safe) {
     LOG(BUG) << "No scope found for variable: " << var_ident;
   }
