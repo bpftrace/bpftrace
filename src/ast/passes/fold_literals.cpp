@@ -29,6 +29,7 @@ public:
   std::optional<Expression> visit(PositionalParameter &param);
   std::optional<Expression> visit(Call &call);
   std::optional<Expression> visit(Expression &expr);
+  std::optional<Expression> visit(ExprStatement &expr);
   std::optional<Expression> visit(Probe &probe);
   std::optional<Expression> visit(Builtin &builtin);
   std::optional<Expression> visit(BlockExpr &block_expr);
@@ -731,6 +732,22 @@ std::optional<Expression> LiteralFolder::visit(Expression &expr)
   return std::nullopt;
 }
 
+std::optional<Expression> LiteralFolder::visit(ExprStatement &expr)
+{
+  visit(expr.expr);
+
+  // Removes excess nesting caused by comptime folding/pruning
+  if (auto *block_expr = expr.expr.as<BlockExpr>()) {
+    if (block_expr->stmts.size() == 1 &&
+        block_expr->stmts.back().is<ExprStatement>() &&
+        block_expr->expr.is<None>()) {
+      expr.expr = block_expr->stmts.back().as<ExprStatement>()->expr;
+    }
+  }
+
+  return std::nullopt;
+}
+
 std::optional<Expression> LiteralFolder::visit(Probe &probe)
 {
   top_level_node_ = &probe;
@@ -760,10 +777,23 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
 {
   Visitor<LiteralFolder, std::optional<Expression>>::visit(expr);
 
+  StatementList stmt_list;
+  for (auto &stmt : expr.stmts) {
+    if (auto *expr_stmt = stmt.as<ExprStatement>()) {
+      if (expr_stmt->expr.is<None>()) {
+        continue;
+      }
+    }
+    stmt_list.emplace_back(std::move(stmt));
+  }
+
+  expr.stmts = std::move(stmt_list);
+
   // We fold this only if the statement list is empty, and we find a literal
   // as the expression value. We should have recorded an error if there was an
   // attempt to access variables, calls, or generally do anything non-hermetic.
-  if (expr.stmts.empty() && (expr.expr.is_literal() || expr.expr.is<Tuple>())) {
+  if (expr.stmts.empty() && (expr.expr.is_literal() || expr.expr.is<Tuple>() ||
+                             expr.expr.is<None>())) {
     return expr.expr;
   }
 

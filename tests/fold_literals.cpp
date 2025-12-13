@@ -11,14 +11,17 @@ using ::testing::HasSubstr;
 void test(const std::string& input,
           const Matcher<const ast::Expression&>& expr_matcher,
           const std::string& error = "",
-          const std::string& warn = "")
+          const std::string& warn = "",
+          bool single_stmt = false)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
 
   // The input provided here is embedded into an expression.
   std::string code;
-  if (input[input.size() - 1] == '}' || input[input.size() - 1] == ';') {
+  if (single_stmt) {
+    code = "begin { " + input + " }";
+  } else if (input[input.size() - 1] == '}' || input[input.size() - 1] == ';') {
     code = "begin { " + input + " exit(); }";
   } else {
     code = "begin { " + input + "; exit(); }";
@@ -40,9 +43,15 @@ void test(const std::string& input,
 
   if (error.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
-    EXPECT_THAT(ast,
-                Program().WithProbe(
-                    Probe({ "begin" }, { ExprStatement(expr_matcher), _ })));
+    if (single_stmt) {
+      EXPECT_THAT(ast,
+                  Program().WithProbe(
+                      Probe({ "begin" }, { ExprStatement(expr_matcher) })));
+    } else {
+      EXPECT_THAT(ast,
+                  Program().WithProbe(
+                      Probe({ "begin" }, { ExprStatement(expr_matcher), _ })));
+    }
     if (!warn.empty()) {
       EXPECT_THAT(out.str(), HasSubstr(warn)) << msg.str() << out.str();
     }
@@ -66,6 +75,17 @@ void test_not(const std::string& input,
               const Matcher<const ast::Expression&>& expr_matcher)
 {
   test(input, testing::Not(expr_matcher), "");
+}
+
+void test_comptime_if(const std::string& input)
+{
+  test(input, Block({ Jump(ast::JumpType::RETURN) }), "", "", true);
+}
+
+void test_comptime_if(const std::string& input,
+                      const Matcher<const ast::Expression&>& expr_matcher)
+{
+  test(input, expr_matcher, "", "", true);
 }
 
 TEST(fold_literals, equals)
@@ -513,14 +533,21 @@ TEST(fold_literals, cast)
 
 TEST(fold_literals, conditional)
 {
-  test_not("if (comptime 1) { }", IfExprMatcher());
-  test_not("if (comptime -1) { }", IfExprMatcher());
-  test_not("if (comptime 0) { }", IfExprMatcher());
-  test_not("if comptime (1 + 1) { }", IfExprMatcher());
-  test_not("if (comptime \"str\") { }", IfExprMatcher());
-  test_not("if (comptime \"\") { }", IfExprMatcher());
-  test_not("if (comptime true) { }", IfExprMatcher());
-  test_not("if (comptime false) { }", IfExprMatcher());
+  test_comptime_if("if (comptime 1) { }");
+  test_comptime_if("if (comptime 1) { 1 }",
+                   Block({ ExprStatement(Integer(1)),
+                           Jump(ast::JumpType::RETURN) }));
+  test_comptime_if("if (comptime 0) { } else { 2 }",
+                   Block({ ExprStatement(Integer(2)),
+                           Jump(ast::JumpType::RETURN) }));
+  test_comptime_if("if (comptime -1) { }");
+  test_comptime_if("if (comptime 0) { }");
+  test_comptime_if("if comptime (1 + 1) { }");
+  test_comptime_if("if (comptime \"str\") { }");
+  test_comptime_if("if (comptime \"\") { }");
+  test_comptime_if("if (comptime true) { }");
+  test_comptime_if("if (comptime false) { }");
+  test_comptime_if("if (comptime 1) { }");
   test("if (true) { }", IfExprMatcher());
   test("if (false) { }", IfExprMatcher());
 }
@@ -549,6 +576,13 @@ TEST(fold_literals, comptime)
   // These can't be evaluated at compile time
   test("{ $x = 0; comptime ($x + 1) };", Block({ _ }, ComptimeMatcher()));
   test("{ @x = 0; comptime (@x + 1) };", Block({ _ }, ComptimeMatcher()));
+}
+
+TEST(fold_literals, expr_stmt_collapse)
+{
+  test("{ 1 };", Integer(1));
+  test("{ { 1 } };", Integer(1));
+  test("{ if comptime (false) {} 1 };", Integer(1));
 }
 
 } // namespace bpftrace::test::fold_literals
