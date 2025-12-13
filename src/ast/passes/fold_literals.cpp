@@ -760,6 +760,17 @@ std::optional<Expression> LiteralFolder::visit(BlockExpr &expr)
 {
   Visitor<LiteralFolder, std::optional<Expression>>::visit(expr);
 
+  // Remove all useless statements that might have been created by
+  // folding/pruning so that we can collapse this BlockExpr if possible
+  StatementList stmt_list;
+  for (auto &stmt : expr.stmts) {
+    if (stmt.is<ExprStatement>() && stmt.as<ExprStatement>()->expr.is<None>()) {
+      continue;
+    }
+    stmt_list.emplace_back(std::move(stmt));
+  }
+  expr.stmts = std::move(stmt_list);
+
   // We fold this only if the statement list is empty, and we find a literal
   // as the expression value. We should have recorded an error if there was an
   // attempt to access variables, calls, or generally do anything non-hermetic.
