@@ -121,7 +121,6 @@ public:
   CallInst *CreateGetFuncIp(Value *ctx, const Location &loc);
   CallInst *CreatePerCpuPtr(Value *var, Value *cpu, const Location &loc);
   CallInst *CreateThisCpuPtr(Value *var, const Location &loc);
-  CallInst *CreateGetSocketCookie(Value *var, const Location &loc);
   CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const Location &loc);
   CallInst *CreateGetStackScratchMap(StackType stack_type,
                                      BasicBlock *failure_callback,

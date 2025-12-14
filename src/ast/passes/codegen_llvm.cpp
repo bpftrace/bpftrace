@@ -1933,10 +1933,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     bool force_init = shouldForceInitPidNs(call.vargs);
 
     return ScopedExpr(b_.CreateGetTid(call.loc, force_init));
-  } else if (call.func == "socket_cookie") {
-    auto scoped_arg = visit(call.vargs.at(0));
-
-    return ScopedExpr(b_.CreateGetSocketCookie(scoped_arg.value(), call.loc));
   } else {
     auto *func = extern_funcs_[call.func];
     if (!func) {
