@@ -3494,9 +3494,24 @@ void SemanticAnalyser::visit(ExprStatement &expr)
 {
   visit(expr.expr);
 
-  if (is_final_pass() &&
-      !(expr.expr.type().IsNoneTy() || expr.expr.type().IsVoidTy())) {
-    expr.addWarning() << "Return value discarded.";
+  if (is_final_pass()) {
+    bool warn_discarded = true;
+    if (auto *unop = expr.expr.as<Unop>()) {
+      if (unop->op == Operator::PRE_INCREMENT ||
+          unop->op == Operator::PRE_DECREMENT ||
+          unop->op == Operator::POST_INCREMENT ||
+          unop->op == Operator::POST_DECREMENT) {
+        warn_discarded = false;
+      }
+    }
+
+    if (expr.expr.type().IsNoneTy() || expr.expr.type().IsVoidTy()) {
+      warn_discarded = false;
+    }
+
+    if (warn_discarded) {
+      expr.addWarning() << "Return value discarded.";
+    }
   }
 }
 
