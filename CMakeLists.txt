@@ -49,24 +49,17 @@ add_compile_options("-Wdisabled-optimization")
 # [1]: https://en.cppreference.com/w/cpp/language/aggregate_initialization.html
 add_compile_options("-Wno-missing-field-initializers")
 
-if(HARDENED_STDLIB)
-  add_compile_definitions("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")
-  add_compile_definitions("-D_GLIBCXX_ASSERTIONS")
-  if("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-    # _FORTIFY_SOURCE requires at least -O1
-    add_compile_definitions("-D_FORTIFY_SOURCE=3")
-  endif()
-endif()
+add_compile_definitions(
+  $<$<BOOL:${HARDENED_STDLIB}>:_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG>
+  $<$<BOOL:${HARDENED_STDLIB}>:_GLIBCXX_ASSERTIONS>
+  $<$<AND:$<BOOL:${HARDENED_STDLIB}>,$<CONFIG:Release>>:_FORTIFY_SOURCE=3>
+)
 
-if (WARNINGS_AS_ERRORS)
-  add_compile_options("-Werror")
-endif()
+add_compile_options($<$<BOOL:${WARNINGS_AS_ERRORS}>:-Werror>)
 
 # Clang compiler produces narrowing errors when calling BPF_LD_MAP_FD in the bcc library
 # Turning off them before bcc library fixes this
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  add_compile_options("-Wno-narrowing")
-endif()
+add_compile_options($<$<CXX_COMPILER_ID:Clang>:-Wno-narrowing>)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_BINARY_DIR}/src)
@@ -74,13 +67,10 @@ include_directories(${CMAKE_BINARY_DIR})
 
 # Ninja buffers output so gcc/clang think it's not an interactive session.
 # Colors are useful for compiler errors so force the color
-if("${CMAKE_GENERATOR}" STREQUAL "Ninja")
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    add_compile_options(-fdiagnostics-color=always)
-  elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    add_compile_options(-fcolor-diagnostics)
-  endif()
-endif()
+add_compile_options(
+  $<$<AND:$<STREQUAL:${CMAKE_GENERATOR},Ninja>,$<CXX_COMPILER_ID:GNU>>:-fdiagnostics-color=always>
+  $<$<AND:$<STREQUAL:${CMAKE_GENERATOR},Ninja>,$<CXX_COMPILER_ID:Clang>>:-fcolor-diagnostics>
+)
 
 include(CTest)
 

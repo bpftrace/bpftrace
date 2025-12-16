@@ -25,15 +25,13 @@ if(LIBPCAP_FOUND)
 endif(LIBPCAP_FOUND)
 
 # Linking
-if(STATIC_LINKING)
-  target_link_options(bpftrace-aotrt  BEFORE PRIVATE "-static-libgcc" "-static-libstdc++")
-endif(STATIC_LINKING)
+target_link_options(bpftrace-aotrt BEFORE PRIVATE
+  $<$<BOOL:${STATIC_LINKING}>:-static-libgcc>
+  $<$<BOOL:${STATIC_LINKING}>:-static-libstdc++>
+)
 
-# ASAN
-if(BUILD_ASAN)
-  target_link_options(bpftrace-aotrt PUBLIC "-fsanitize=address")
-endif()
-
-if(BUILD_UBSAN)
-  target_link_options(bpftrace-aotrt PUBLIC "-fsanitize=undefined")
-endif()
+# ASAN/UBSAN
+target_link_options(bpftrace-aotrt PUBLIC
+  $<$<BOOL:${BUILD_ASAN}>:-fsanitize=address>
+  $<$<BOOL:${BUILD_UBSAN}>:-fsanitize=undefined>
+)
