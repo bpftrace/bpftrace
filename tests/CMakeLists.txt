@@ -64,15 +64,14 @@ target_link_libraries(bpftrace_test btf)
 
 target_compile_definitions(bpftrace_test PRIVATE ${BPFTRACE_FLAGS})
 
-if(BUILD_ASAN)
-  target_compile_options(bpftrace_test PUBLIC "-fsanitize=address")
-  target_link_options(bpftrace_test PUBLIC "-fsanitize=address")
-endif()
-
-if(BUILD_UBSAN)
-  target_compile_options(bpftrace_test PUBLIC "-fsanitize=undefined")
-  target_link_options(bpftrace_test PUBLIC "-fsanitize=undefined")
-endif()
+target_compile_options(bpftrace_test PUBLIC
+  $<$<BOOL:${BUILD_ASAN}>:-fsanitize=address>
+  $<$<BOOL:${BUILD_UBSAN}>:-fsanitize=undefined>
+)
+target_link_options(bpftrace_test PUBLIC
+  $<$<BOOL:${BUILD_ASAN}>:-fsanitize=address>
+  $<$<BOOL:${BUILD_UBSAN}>:-fsanitize=undefined>
+)
 
 # bpftrace tests require (at minimum) version 1.11.
 # There's no great way to enforce a minimum version from cmake -- the cmake
