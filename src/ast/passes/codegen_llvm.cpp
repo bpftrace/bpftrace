@@ -1848,7 +1848,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &right_arg = call.vargs.at(1);
     auto size_opt = call.vargs.at(2).as<Integer>()->value;
     uint64_t size = std::min(
-        { size_opt, left_arg.type().GetSize(), right_arg.type().GetSize() });
+        { size_opt,
+          static_cast<uint64_t>(left_arg.type().GetSize()),
+          static_cast<uint64_t>(right_arg.type().GetSize()) });
 
     auto left_string = visit(&left_arg);
     auto right_string = visit(&right_arg);
