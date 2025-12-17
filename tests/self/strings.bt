@@ -1,0 +1,164 @@
+test:strcontains_literals
+{
+  if (!strcontains("abc", "a")) {
+    return 1;
+  }
+}
+
+test:strcontains_basic_substring_match
+{
+  if (!strcontains("hello-test-world", "test")) {
+    return 1;
+  }
+}
+
+test:strcontains_substring_at_end
+{
+  if (!strcontains("hello-test-world", "world")) {
+    return 1;
+  }
+}
+
+test:strcontains_substring_at_beginning
+{
+  if (!strcontains("hello-test-world", "hello")) {
+    return 1;
+  }
+}
+
+test:strcontains_no_match
+{
+  if strcontains("hello-test-world", "not-there") {
+    return 1;
+  }
+}
+
+test:strcontains_empty_haystack_empty_needle
+{
+  if (!strcontains("", "")) {
+    return 1;
+  }
+}
+
+test:strcontains_non_empty_haystack_empty_needle
+{
+  if (!strcontains("hello", "")) {
+    return 1;
+  }
+}
+
+test:strcontains_empty_haystack_non_empty_needle
+{
+  if strcontains("", "test") {
+    return 1;
+  }
+}
+
+test:strcontains_exact_match
+{
+  if (!strcontains("hello", "hello")) {
+    return 1;
+  }
+}
+
+test:strcontains_needle_longer_than_haystack
+{
+  if strcontains("hello", "hello-longer") {
+    return 1;
+  }
+}
+
+test:strcontains_case_sensitivity_check
+{
+  if strcontains("Hello World", "hello") {
+    return 1;
+  }
+}
+
+test:strcontains_multiple_occurrences
+{
+  if (!strcontains("test-test-test", "test")) {
+    return 1;
+  }
+}
+
+test:strcontains_overlapping_potential_matches
+{
+  if (!strcontains("ababac", "abac")) {
+    return 1;
+  }
+}
+
+test:strcontains_special_characters
+{
+  if (!strcontains("hello\tworld", "\two")) {
+    return 1;
+  }
+}
+
+test:strcontains_null_terminator_inside_haystack
+{
+  $str = "hello\x00world";
+  if strcontains($str, "world") {
+    return 1;
+  }
+}
+
+test:strcontains_content_after_null_terminator
+{
+  $str = "hello\x00test";
+  if strcontains($str, "test") {
+    return 1;
+  }
+}
+
+test:strcontains_null_character_in_needle
+{
+  $needle = "wo\x00rld";
+  if (!strcontains("hello world", $needle)) {
+    return 1;
+  }
+}
+
+test:strcontains_null_character_in_both
+{
+  $haystack = "hello\x00world";
+  $needle = "wo\x00rld";
+  if strcontains($haystack, $needle) {
+    return 1;
+  }
+}
+
+test:strcontains_variable_not_present
+{
+  $a = "bar";
+  if strcontains("foo", $a) {
+    return 1;
+  }
+}
+
+test:strcontains_variable_present
+{
+  $a = "bar";
+  if (!strcontains("foobar", $a)) {
+    return 1;
+  }
+}
+
+test:string_indexing
+{
+  $a = "foo";
+  if ($a[0] != "f"[0]) {
+    return 1;
+  }
+}
+
+// This test verifies that invalid string indexing passes BPF verification without
+// crashing. The result value is undefined and may be zero or random depending on
+// whether the read comes from proberead or points to BPF memory.
+test:string_invalid_indexing
+{
+  $a = "foo";
+  $i = (uint64)10;
+  $c = $a[$i];
+}

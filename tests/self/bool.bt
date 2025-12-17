@@ -1,0 +1,117 @@
+test:bool_values
+{
+  $result = (true,false);
+  if ($result.0 != true || $result.1 != false) {
+    return 1;
+  }
+}
+
+test:bool_in_conditional
+{
+  $passed = 0;
+  if true {
+    $passed = 1;
+  } else {
+    return 1;
+  }
+  if false {
+    return 1;
+  } else {
+    $passed += 1;
+  }
+  if ($passed != 2) {
+    return 1;
+  }
+}
+
+test:bool_as_a_variable
+{
+  $b = true;
+  $c = false;
+  if ($b != true || $c != false) {
+    return 1;
+  }
+}
+
+test:cast_int_to_bool
+{
+  if (((bool)1) != true || ((bool)0) != false) {
+    return 1;
+  }
+}
+
+test:cast_string_to_bool
+{
+  if (((bool)"hello") != true || ((bool)"") != false) {
+    return 1;
+  }
+}
+
+test:cast_ptr_to_bool
+{
+  if (((bool)((int64 *)1)) != true || ((bool)((int64 *)0)) != false) {
+    return 1;
+  }
+}
+
+test:cast_castable_map_to_bool
+{
+  @cctb_x = count();
+  @cctb_y = sum(0);
+  if (((bool)@cctb_x) != true || ((bool)@cctb_y) != false) {
+    return 1;
+  }
+}
+
+test:cast_bool_true_to_int
+{
+  $t = (int64)true;
+  if ($t != 1) {
+    return 1;
+  }
+}
+
+test:cast_bool_false_to_int
+{
+  $f = (int64)false;
+  if ($f != 0) {
+    return 1;
+  }
+}
+
+test:bool_logical_not_literals
+{
+  if ((!0) != true || (!10) != false) {
+    return 1;
+  }
+}
+
+test:bool_logical_not_variable
+{
+  $x = 0;
+  if ((!$x) != true) {
+    return 1;
+  }
+}
+
+test:complex_bool_logical
+{
+  $a = 100000;
+  $b = 0;
+  $c = $a > $b;
+  $d = $a && $b;
+  $e = $c || $d;
+  $f = (uint64)$c;
+  if ($c != true || $d != false || $e != true || $f != 1) {
+    return 1;
+  }
+}
+
+test:bool_as_map_keys_and_values
+{
+  @bkv[true] = false;
+  @bkv[false] = true;
+  if (@bkv[true] != false || @bkv[false] != true) {
+    return 1;
+  }
+}

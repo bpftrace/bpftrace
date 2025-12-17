@@ -1,0 +1,55 @@
+test:avg_with_negative_values
+{
+  @a = avg(-30);
+  @a = avg(-10);
+  if (@a != (-20)) {
+    return 1;
+  }
+}
+
+test:negative_map_value
+{
+  @n = -11;
+  if (@n != (-11)) {
+    return 1;
+  }
+}
+
+test:sum_negative_maps
+{
+  @sm = -11;
+  @sm += @sm;
+  if (@sm != (-22)) {
+    return 1;
+  }
+}
+
+test:comparison_should_print_as_0_or_1
+{
+  $a = (uint64)0;
+  $gt = $a > (-1);
+  $lt = $a < 1;
+  if ($gt != 0 || $lt != 1) {
+    return 1;
+  }
+}
+
+test:sum_with_negative_value
+{
+  @ = sum(10);
+  @ = sum(-20);
+  if (@ != (-10)) {
+    return 1;
+  }
+}
+
+test:mixed_values
+{
+  $a = (int8)(-10);
+  $b = -5555;
+  $c = (int16)(-123);
+  $d = 100;
+  if ($a != (-10) || $b != (-5555) || $c != (-123) || $d != 100) {
+    return 1;
+  }
+}

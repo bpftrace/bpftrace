@@ -1,3 +1,149 @@
-test:noop
+test:increment_decrement_variable
 {
+  $x = 10;
+  $result1 = $x++;
+  $result2 = ++$x;
+  $result3 = $x--;
+  $result4 = --$x;
+  if ($result1 != 10 || $result2 != 12 || $result3 != 12 || $result4 != 10) {
+    return 1;
+  }
+}
+
+test:variable_strings_are_memset
+{
+  $x = "xxxxx";
+  $x = "a";
+  @vs[$x] = 1;
+  if (len(@vs) != 1) {
+    return 1;
+  }
+  $y = "yyyyyyyy";
+  $y = "a";
+  @vs[$y] = 1;
+  if (len(@vs) != 1) {
+    return 1;
+  }
+}
+
+test:map_strings_are_memset
+{
+  @x = "xxxxx";
+  @x = "a";
+  @ms[@x] = 1;
+  @y = "yyyyy";
+  @y = "a";
+  @ms[@y] = 1;
+  if (len(@ms) != 1) {
+    return 1;
+  }
+}
+
+test:print_large_int
+{
+  $a = 10223372036854775807;
+  if ($a != 10223372036854775807) {
+    return 1;
+  }
+}
+
+test:block_expression
+{
+  let $a = {
+             let $b = 1;
+             $b
+           };
+  if ($a != 1) {
+    return 1;
+  }
+}
+
+test:print_block_expression_with_print
+{
+  $result = {
+              $x = 1;
+              $x > 1
+            };
+  if ($result != false) {
+    return 1;
+  }
+}
+
+test:ppid
+{
+  if (ppid(curtask) <= 0) {
+    return 1;
+  }
+}
+
+test:strerror
+{
+  if (strerror(22) != "Invalid argument") {
+    return 1;
+  }
+}
+
+test:comm_from_pid
+{
+  if (comm(pid) != "bpftrace") {
+    return 1;
+  }
+}
+
+test:clear_map
+{
+  @ = 1;
+  @a[1] = 1;
+  clear(@);
+  clear(@a);
+}
+
+test:delete_map
+{
+  @dm_scalar = 1;
+  @dm_single_key[1] = 1;
+  @dm_multi_key[1,2] = 2;
+
+  if (!delete(@dm_scalar)) {
+    return 1;
+  }
+  if (@dm_scalar != 0) {
+    return 1;
+  }
+
+  if (!delete(@dm_single_key, 1)) {
+    return 1;
+  }
+  if has_key(@dm_single_key, 1) {
+    return 1;
+  }
+
+  if (!delete(@dm_multi_key, (1,2))) {
+    return 1;
+  }
+  if has_key(@dm_multi_key, (1,2)) {
+    return 1;
+  }
+
+  if delete(@dm_multi_key, (5,6)) {
+    return 1;
+  }
+}
+
+test:bad_delete
+{
+  @bd[1] = 1;
+  $x = delete(@bd, 2);
+  $y = delete(@bd, 1);
+  if ($x != false || $y != true) {
+    return 1;
+  }
+}
+
+test:strlen
+{
+  $a = "hello";
+  if (strlen($a) != 5) {
+    return 1;
+  }
 }

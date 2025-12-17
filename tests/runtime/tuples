@@ -1,72 +1,6 @@
-NAME basic tuple
-PROG begin { $v = 99; $t = (0, 1, "str", (5, 6), $v); printf("%d %d %s %d %d %d\n", $t.0, $t.1, $t.2, $t.3.0, $t.3.1, $t.4);  }
-EXPECT 0 1 str 5 6 99
-
-NAME basic tuple map
-PROG begin { $v = 99; @t = (0, 1, "str"); printf("%d %d %s\n", @t.0, @t.1, @t.2);  }
-EXPECT 0 1 str
-
-NAME mixed int tuple map
-PROG begin { @ = ( (int32) -100, (int8) 10, 50 ); }
-EXPECT @: (-100, 10, 50)
-
-NAME mixed int tuple map 2
-PROG begin { @ = ( -100, (int8) 10, (int32) 50 ); }
-EXPECT @: (-100, 10, 50)
-
-NAME mixed int tuple map 3
-PROG begin { @ = ( -100, (int8) 10, (int32) 50, 100 ); }
-EXPECT @: (-100, 10, 50, 100)
-
-NAME tuple map key
-PROG begin { @[(1, "hello")] = 1; }
-EXPECT @[1, hello]: 1
-
-NAME tuple map key and value
-PROG begin { @[(1, 2)] = (3, 4); }
-EXPECT @[1, 2]: (3, 4)
-
-NAME implicit conversion of multi map key to tuple
-PROG begin { @["abcd", 2] = (3, 4, 5); }
-EXPECT @[abcd, 2]: (3, 4, 5)
-
-NAME tuple map key same as assoc array
-PROG begin { @[(1, "hello")] = 1;  @[2, "hello"] = 2; delete(@, (1, "hello")); }
-EXPECT @[2, hello]: 2
-
-NAME tuple map key variable
-PROG begin { $a = (1, "hello"); @[(1, "hello")] = 1; @[$a] = 2; }
-EXPECT @[1, hello]: 2
-
-NAME tuple map key string resize
-PROG begin { @a["hellotherelongstr", 4] = 1; @a["by", 6] = 2;  }
-EXPECT @a[hellotherelongstr, 4]: 1
-EXPECT @a[by, 6]: 2
-
-NAME tuple map key compatible int sizes
-PROG begin { $a = (1,(123,(uint64)1234)); $b = (4,(1234,(uint8)123)); @a[$a] = 1; @a[$b] = 2;  }
-EXPECT @a[1, (123, 1234)]: 1
-EXPECT @a[4, (1234, 123)]: 2
-
-NAME complex tuple 1
-PROG begin { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555));  }
-EXPECT (-100, 100, abcdef, 3, 1, -10, 10, -555)
-
-NAME tuple struct sizing 1
-PROG begin { $t = ((int8) 1, (int64) 1, (int8) 1, (int64) 1); print(sizeof($t)); exit() }
-EXPECT 32
-
-NAME tuple struct sizing 2
-PROG begin { $t = ((int8) 1, (int16) 1, (int32) 1); print(sizeof($t)); exit() }
-EXPECT 8
-
-NAME tuple struct sizing 3
-PROG begin { $t = ((int32) 1, (int16) 1, (int8) 1); print(sizeof($t)); exit() }
-EXPECT 8
-
-NAME complex tuple 4
-PROG begin { $a = ((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555, "abc"); print(sizeof($a));  }
-EXPECT 32
+NAME tuple print
+PROG begin { @ = (1, 2, "string", (4, 5));  }
+EXPECT @: (1, 2, string, (4, 5))
 
 NAME struct in tuple
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }
@@ -106,13 +40,13 @@ NAME tuple strftime type is packed
 PROG begin { @ = (nsecs, strftime("%M:%S", nsecs));  }
 EXPECT_REGEX ^@: \(\d+, \d+:\d+\)$
 
-NAME bytearray in tuple
+NAME bytearray in tuple x86_64
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = ((int8)1, usym(reg("ip")), 10); exit(); }
 EXPECT_REGEX ^@: \(1, uprobeFunction1, 10\)$
 ARCH x86_64
 AFTER ./testprogs/uprobe_test
 
-NAME bytearray in tuple
+NAME bytearray in tuple ppc64
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = ((int8)1, usym(reg("nip")), 10); exit(); }
 EXPECT_REGEX ^@: \(1, uprobeFunction1, 10\)$
 ARCH ppc64|ppc64le

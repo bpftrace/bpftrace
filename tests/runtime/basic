@@ -247,15 +247,27 @@ RUN {{BPFTRACE}} -e "$(echo '#define _UNDERSCORE 314'; echo 'begin { printf("%d\
 EXPECT 314
 TIMEOUT 1
 
-NAME clear map
-PROG begin { @ = 1; @a[1] = 1; clear(@); clear(@a); printf("ok\n"); }
-EXPECT ok
-TIMEOUT 1
-
 NAME clear count-map
 PROG begin { @ = count(); @a[1] = count(); clear(@); clear(@a); }
 EXPECT_NONE @: 0
 EXPECT_NONE @a[1]: 1
+TIMEOUT 1
+
+NAME delete count-map
+PROG begin { @ = count(); @a[1] = count(); delete(@); delete(@a, 1); }
+EXPECT_NONE @: 0
+EXPECT_NONE @a[1]: 1
+TIMEOUT 1
+
+NAME delete deprecated
+PROG begin { @a[1] = 1; @b[2, "hi"] = 2; delete(@a[1]); delete(@b[2, "hi"]); }
+EXPECT_NONE @a[1]: 1
+EXPECT_NONE @b[2, hi]: 2
+TIMEOUT 1
+
+NAME bad delete
+PROG begin { @a[1] = 1; $x = delete(@a, 2); $y = delete(@a, 1); if ($x == false && $y == true) { printf("SUCCESS"); } }
+EXPECT SUCCESS
 TIMEOUT 1
 
 NAME increment/decrement map

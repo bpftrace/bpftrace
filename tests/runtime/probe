@@ -180,7 +180,7 @@ EXPECT SUCCESS
 REQUIRES_FEATURE kprobe_multi
 AFTER ./testprogs/syscall read
 
-NAME kprobe_offset_module
+NAME kprobe_offset_module x86_64
 RUN {{BPFTRACE}} -e 'kprobe:nf_tables_newtable+0x4 { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace
 EXPECT hit
@@ -192,7 +192,7 @@ REQUIRES test -d /mnt/vmtest
 CLEANUP nft delete table bpftrace
 
 # Local entry point to nf_tables_newtable is located at offset of 8 bytes in ppc64 and aarch64.
-NAME kprobe_offset_module
+NAME kprobe_offset_module ppc64 aarch64
 RUN {{BPFTRACE}} -e 'kprobe:nf_tables_newtable+0x8 { printf("hit\n"); exit(); }'
 AFTER nft add table bpftrace
 EXPECT hit
@@ -201,14 +201,14 @@ REQUIRES lsmod | grep '^nf_tables'
 REQUIRES nft --help
 CLEANUP nft delete table bpftrace
 
-NAME kprobe_offset_module_error
+NAME kprobe_offset_module_error x86_64
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
 EXPECT ERROR: Possible attachment attempt in the middle of an instruction, try a different offset.
 ARCH x86_64
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
 
-NAME kprobe_offset_module_error
+NAME kprobe_offset_module_error other
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
 EXPECT ERROR: Unable to attach probe: kprobe:nft_trans_alloc_gfp+0x1. If this is expected, set the 'missing_probes' config variable to 'warn'.
 ARCH aarch64|ppc64le|ppc64
@@ -287,7 +287,7 @@ PROG uprobe:/bin/bash:echo_builtin+0 { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*
 AFTER /bin/bash -c "echo lala"
 
-NAME uprobe_offset
+NAME uprobe_offset quoted function
 PROG uprobe:/bin/bash:"echo_builtin"+0 { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*
 AFTER /bin/bash -c "echo lala"

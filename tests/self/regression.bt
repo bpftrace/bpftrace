@@ -1,0 +1,67 @@
+test:regression_modulo_operator
+{
+  @x = 4;
+  if ((@x % 2) != 0) {
+    return 1;
+  }
+  delete(@x);
+}
+
+test:regression_bad_modulo_optimization
+{
+  @mod1 = 1;
+  if ((((uint64)10) % ((uint64)@mod1)) != 0) {
+    return 1;
+  }
+  delete(@mod1);
+}
+
+test:regression_string_compare_with_empty
+{
+  if ("hello" == "") {
+    return 1;
+  }
+}
+
+test:regression_string_compare_with_prefix
+{
+  if ("hello" == "hell") {
+    return 1;
+  }
+}
+
+test:regression_strncmp_with_prefix
+{
+  if (strncmp("hello", "hell", 5) == 0) {
+    return 1;
+  }
+}
+
+test:regression_strncmp_checks_for_nul
+{
+  if (strncmp("one", "one ", 4) == 0) {
+    return 1;
+  }
+}
+
+test:regression_nested_ternary_operators
+{
+  let $x = 1;
+  let $y = 2;
+  let $z = 3;
+  $result = if $x { if $y { if $z { $x } else { $y } } else { $z } } else { 0 };
+  if ($result != 1) {
+    return 1;
+  }
+}
+
+test:regression_strncmp_n_longer_than_buffer
+{
+  // Tests that strncmp with n longer than buffer still works correctly.
+  // Here "wow" has length 3, but we check 17 bytes against "bpftrace".
+  $comm_placeholder = "bpftrace";
+  if (strncmp("wow", $comm_placeholder, 17) == 0) {
+    return 1;
+  }
+}
+

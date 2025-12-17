@@ -1,0 +1,258 @@
+enum TestEnum { ONE = 1, TWO = 2, THREE = 3 };
+enum CastEnum { FOO = 333, BAR = 334 };
+
+test:if_gt
+{
+  $a = 10;
+  if ($a > 2) {
+    $a = 20;
+  }
+  if ($a != 20) {
+    return 1;
+  }
+}
+
+test:if_lt
+{
+  $a = 10;
+  if ($a < 2) {
+    $a = 20;
+  }
+  if ($a != 10) {
+    return 1;
+  }
+}
+
+test:ifelse_go_else
+{
+  $a = "";
+  if (10 < 2) {
+    $a = "hi";
+  } else {
+    $a = "hello";
+  }
+  if ($a != "hello") {
+    return 1;
+  }
+}
+
+test:ifelse_go_if
+{
+  $a = "";
+  if (10 > 2) {
+    $a = "hi";
+  } else {
+    $a = "hello";
+  }
+  if ($a != "hi") {
+    return 1;
+  }
+}
+
+test:ifelseif_go_elseif
+{
+  $a = "";
+  if (1 > 2) {
+    $a = "hi";
+  } else if (2 < 3) {
+    $a = "hello";
+  }
+  if ($a != "hello") {
+    return 1;
+  }
+}
+
+test:ifelseifelse_go_else
+{
+  $a = "";
+  if (1 > 2) {
+    $a = "hi";
+  } else if (5 < 3) {
+    $a = "hello";
+  } else {
+    $a = "asdf";
+  }
+  if ($a != "asdf") {
+    return 1;
+  }
+}
+
+test:if_cast
+{
+  if ((int32)pid) {}
+}
+
+test:ternary
+{
+  $a = 1 ? "yes" : "no";
+  if ($a != "yes") {
+    return 1;
+  }
+}
+
+test:ternary_lnot
+{
+  $a = (!nsecs) ? 0 : 1;
+  if ($a != 1) {
+    return 1;
+  }
+}
+
+test:ternary_int8
+{
+  $a = 1 ? ((int8)1) : 0;
+  if ($a != 1) {
+    return 1;
+  }
+}
+
+test:ternary_buf
+{
+  $a = nsecs ? buf("hi", 2) : buf("bye", 3);
+  if ($a != buf("hi", 2)) {
+    return 1;
+  }
+}
+
+test:ternary_tuple
+{
+  $a = nsecs ? ("hellolongstr","a") : ("b","hellolongstr");
+  if ($a.0 != "hellolongstr" || $a.1 != "a") {
+    return 1;
+  }
+}
+
+test:unroll
+{
+  $a = 1;
+  unroll (10) {
+    $a += 1;
+  }
+  if ($a != 11) {
+    return 1;
+  }
+}
+
+
+test:optional_positional_int
+{
+  if ($1 != 0) {
+    return 1;
+  }
+}
+
+test:optional_positional_str
+{
+  if (str($1) != "") {
+    return 1;
+  }
+}
+
+test:lhist_can_be_cleared
+{
+  @lh[1] = lhist(3, 0, 10, 1);
+}
+
+test:hist_can_be_cleared
+{
+  @h[1] = hist(1);
+}
+
+test:stats_can_be_cleared
+{
+  @st[1] = stats(1);
+}
+
+test:avg_can_be_cleared
+{
+  @av[1] = avg(1);
+}
+
+test:tseries_can_be_cleared
+{
+  @ts[1] = tseries(1, 1ms, 5);
+}
+
+test:enum_in_map_key
+{
+  @e[ONE] = 11;
+  @e[TWO] = 22;
+  if (@e[ONE] != 11 || @e[TWO] != 22) {
+    return 1;
+  }
+}
+
+test:enum_in_tuple_map_key
+{
+  @et[ONE,TWO,ONE] = -1;
+  if (@et[ONE,TWO,ONE] != (-1)) {
+    return 1;
+  }
+}
+
+test:enum_in_map_value
+{
+  @ev = ONE;
+  if (@ev != 1) {
+    return 1;
+  }
+}
+
+test:enum_in_tuple_map_value
+{
+  @etv = (ONE,TWO);
+  if (@etv.0 != 1 || @etv.1 != 2) {
+    return 1;
+  }
+}
+
+test:enum_arithmetic
+{
+  @ea[ONE + 1] = TWO - 1;
+  if (@ea[2] != 1) {
+    return 1;
+  }
+}
+
+test:enum_arithmetic_mixed
+{
+  @eam[ONE + 1] = TWO - 1;
+  @eam[ONE] = ONE;
+  if (@eam[2] != 1 || @eam[1] != 1) {
+    return 1;
+  }
+}
+
+test:enum_in_scratch_variable
+{
+  $f = THREE;
+  if ($f != 3) {
+    return 1;
+  }
+}
+
+test:enum_in_scratch_variable_tuple
+{
+  $t = (ONE,TWO);
+  if ($t.0 != 1 || $t.1 != 2) {
+    return 1;
+  }
+}
+
+test:enum_int_cast
+{
+  $x = (enum CastEnum)333;
+  if ($x != 333) {
+    return 1;
+  }
+}
+
+test:enum_int_cast_unknown
+{
+  $x = 444;
+  $y = (enum CastEnum)$x;
+  if ($y != 444) {
+    return 1;
+  }
+}
+
