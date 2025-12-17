@@ -8,6 +8,13 @@ Every contribution should (1) not break the existing tests and (2) introduce new
 
 Unit tests for individual components (semantic analyser, codegen, etc.) are based on the GoogleTest framework. These tests can be run with the `bpftrace_test` executable. Tests can be selected with the `--gtest_filter` flag or the `GTEST_FILTER` environment variable, see `--help` for more information. These are located in `tests/*.cpp` and are executed by `<builddir>/tests/bpftrace_test`.
 
+## Self tests
+
+These are `test:` probes written to test core functionality, and standard library functionality. They can be found in `tests/self` and are run by a simple script.
+
+* Run: `sudo <builddir>/tests/self-tests.sh`
+* To debug a test, you can run an individual file directly, e.g. `<builddir>src/bpftrace --test <builddir>/tests/<testfile>`
+
 ## Runtime tests
 
 Runtime tests will call the bpftrace executable. These are located in `tests/runtime` and are managed by a custom framework.
