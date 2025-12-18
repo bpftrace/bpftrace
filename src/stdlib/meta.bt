@@ -70,3 +70,22 @@ macro usdt_arg(x)
 {
   __usdt_arg((void *)ctx, x)
 }
+
+macro assert_userspace_probe(func) {
+  if comptime (probetype != "uprobe" && probetype != "uretprobe" &&
+               probetype != "usdt") {
+    fail("%s can not be used for this probetype: %s", func, probetype);
+  }
+}
+
+macro elf_is_exe()
+{
+  assert_userspace_probe("elf_is_exe");
+  __builtin_elf_is_exe
+}
+
+macro elf_info()
+{
+  assert_userspace_probe("elf_info");
+  __builtin_elf_ino
+}
