@@ -400,6 +400,12 @@ private:
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
 
+  ScopedExpr createExternFuncCall(const std::string &name,
+                                  llvm::Type *return_type,
+                                  llvm::ArrayRef<llvm::Type *> arg_types,
+                                  llvm::ArrayRef<llvm::Value *> arg_values,
+                                  const Location &loc);
+
   ASTContext &ast_;
   BPFtrace &bpftrace_;
   CDefinitions &c_definitions_;
@@ -635,13 +641,33 @@ ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
   BasicBlock *get_stack_fail = BasicBlock::Create(module_->getContext(),
                                                   "get_stack_fail",
                                                   parent);
-  Value *stack_size = b_.CreateGetStack(ctx_,
-                                        b_.CreateGEP(stack_struct_type,
-                                                     stack,
-                                                     { b_.getInt64(0),
-                                                       b_.getInt32(3) }),
-                                        stype.stack_type,
-                                        loc);
+  Value *stack_trace = b_.CreateGEP(stack_struct_type,
+                                    stack,
+                                    { b_.getInt64(0), b_.getInt32(3) });
+  Value *stack_size;
+#if LLVM_VERSION_MAJOR >= 21
+  if (stype.stack_type.mode != StackMode::build_id) {
+    Value *p_stack_size = b_.getInt32(stype.stack_type.limit *
+                                      stype.stack_type.elem_size());
+    Value *tgid = b_.CreateGetPid(loc, false);
+    std::array<llvm::Type *, 4> arg_types = {
+      b_.getPtrTy(), b_.getPtrTy(), b_.getInt32Ty(), b_.getInt32Ty()
+    };
+    std::array<llvm::Value *, 4> arg_values = {
+      ctx_, stack_trace, p_stack_size, tgid
+    };
+    stack_size = createExternFuncCall("__ustack_dwunwind",
+                                      b_.getInt64Ty(),
+                                      arg_types,
+                                      arg_values,
+                                      loc)
+                     .value();
+  } else
+#endif
+  {
+    stack_size = b_.CreateGetStack(ctx_, stack_trace, stype.stack_type, loc);
+  }
+
   Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
 
@@ -703,7 +729,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return ScopedExpr(ns_delta);
   } else if (builtin.ident == "kstack") {
     return kstack(builtin.builtin_type, builtin.loc);
-  } else if (builtin.ident == "ustack") {
+  } else if (builtin.ident == "__builtin_ustack") {
     return ustack(builtin.builtin_type, builtin.loc);
   } else if (builtin.ident == "pid") {
     return ScopedExpr(b_.CreateGetPid(builtin.loc, false));
@@ -1862,7 +1888,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "kstack") {
     return kstack(call.return_type, call.loc);
-  } else if (call.func == "ustack") {
+  } else if (call.func == "__builtin_ustack") {
     return ustack(call.return_type, call.loc);
   } else if (call.func == "strncmp") {
     auto &left_arg = call.vargs.at(0);
@@ -4700,6 +4726,48 @@ Value *CodegenLLVM::createFmtString(int print_id)
   res->setAlignment(MaybeAlign(1));
   res->setLinkage(llvm::GlobalValue::InternalLinkage);
   return res;
+}
+
+//
+// Implementation taken from
+// commit 7c4f43613d3d10a675c989dfcf479bfe56291513
+// Author: Jordan Rome <linux@jordanrome.com>
+// Date:   Sun Nov 16 04:48:15 2025 -0800
+//
+//     Move murmur2hash function to stdlib
+//
+ScopedExpr CodegenLLVM::createExternFuncCall(
+    const std::string &name,
+    llvm::Type *return_type,
+    llvm::ArrayRef<llvm::Type *> arg_types,
+    llvm::ArrayRef<llvm::Value *> arg_values,
+    const Location &loc)
+{
+  auto *func = extern_funcs_[name];
+  if (!func) {
+    FunctionType *function_type = FunctionType::get(return_type,
+                                                    arg_types,
+                                                    false);
+    func = llvm::Function::Create(
+        function_type, llvm::Function::ExternalLinkage, name, module_.get());
+    func->addFnAttr(Attribute::AlwaysInline);
+    func->addFnAttr(Attribute::NoUnwind);
+    func->setDSOLocal(true);
+
+    // Add noundef attribute to each argument.
+    for (auto &arg : func->args()) {
+      arg.addAttr(Attribute::NoUndef);
+    }
+    extern_funcs_[name] = func;
+  }
+
+  auto *inst = b_.CreateCall(func, arg_values, name);
+  return ScopedExpr(inst, [this, inst, loc] {
+    // We set the debug location on the call instructions only after the
+    // scoped expression is not longer used. Otherwise the instruction emitter
+    // seems to use this location for everything, which results in problems.
+    inst->setDebugLoc(debug_.createDebugLocation(llvm_ctx_, scope_, loc));
+  });
 }
 
 /// This should emit

@@ -1,6 +1,9 @@
 #include <cassert>
 #include <cerrno>
+#include <cstdint>
+#include <elf.h>
 #include <fcntl.h>
+#include <fstream>
 #include <poll.h>
 #include <sched.h>
 #include <string>
@@ -8,6 +11,7 @@
 #include <sys/ptrace.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
+#include <sys/user.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <unordered_set>
@@ -63,6 +67,7 @@ public:
 
   Result<> run(bool pause = false) override;
   Result<> resume() override;
+  Result<> run_until_entry() override;
   Result<> terminate(bool force = false) override;
   Result<bool> wait(std::optional<int> timeout_ms = std::nullopt) override;
   bool is_alive() override;
@@ -266,6 +271,74 @@ Result<> ChildProcImpl::resume()
     return make_error<SystemError>("Unable to resume; was the child traced?");
   }
   return OK();
+}
+
+static Result<uint64_t> read_entry_point(pid_t pid)
+{
+  std::string auxv_path = "/proc/" + std::to_string(pid) + "/auxv";
+  std::ifstream auxv(auxv_path, std::ios::binary);
+  if (auxv.fail())
+    return make_error<SystemError>("Failed to open " + auxv_path);
+
+  Elf64_auxv_t entry;
+  while (auxv.read(reinterpret_cast<char*>(&entry), sizeof(entry))) {
+    if (entry.a_type == AT_ENTRY)
+      return entry.a_un.a_val;
+  }
+
+  return make_error<SystemError>("AT_ENTRY not found in " + auxv_path, ENOENT);
+}
+
+Result<> ChildProcImpl::run_until_entry()
+{
+#ifdef __x86_64__
+  auto entry_point = read_entry_point(child_pid_);
+  if (!entry_point)
+    return entry_point.takeError();
+
+  // Read original instruction at entry point
+  errno = 0;
+  long orig_data = ptrace(PTRACE_PEEKTEXT, child_pid_, *entry_point, nullptr);
+  if (errno != 0)
+    return make_error<SystemError>("Failed to read instruction at entry point");
+
+  // Set breakpoint (INT3 = 0xcc)
+  long bp_data = (orig_data & ~0xffL) | 0xcc;
+  if (ptrace(PTRACE_POKETEXT, child_pid_, *entry_point, bp_data) == -1)
+    return make_error<SystemError>("Failed to set breakpoint at entry point");
+
+  // Continue until breakpoint
+  if (ptrace(PTRACE_CONT, child_pid_, nullptr, 0) == -1) {
+    ptrace(PTRACE_POKETEXT, child_pid_, *entry_point, orig_data);
+    return make_error<SystemError>("Failed to continue child to entry point");
+  }
+
+  int wstatus;
+  if (waitpid(child_pid_, &wstatus, 0) < 0) {
+    ptrace(PTRACE_POKETEXT, child_pid_, *entry_point, orig_data);
+    return make_error<SystemError>("Failed to wait for child at entry point");
+  }
+
+  // Restore original instruction
+  if (ptrace(PTRACE_POKETEXT, child_pid_, *entry_point, orig_data) == -1)
+    return make_error<SystemError>(
+        "Failed to restore instruction at entry point");
+
+  if (!WIFSTOPPED(wstatus) || WSTOPSIG(wstatus) != SIGTRAP)
+    return make_error<SystemError>("Child stopped unexpectedly at entry point");
+
+  // INT3 advances IP past the breakpoint byte; reset it back to entry point
+  struct user_regs_struct regs;
+  if (ptrace(PTRACE_GETREGS, child_pid_, nullptr, &regs) == -1)
+    return make_error<SystemError>("Failed to read registers at entry point");
+  regs.rip = *entry_point;
+  if (ptrace(PTRACE_SETREGS, child_pid_, nullptr, &regs) == -1)
+    return make_error<SystemError>("Failed to reset IP to entry point");
+
+  return OK();
+#else
+  return make_error<SystemError>("run_until_entry() only supported on x86_64");
+#endif
 }
 
 Result<> ChildProcImpl::run(bool pause)

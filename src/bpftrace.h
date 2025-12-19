@@ -213,6 +213,8 @@ public:
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<util::ChildProc> child_;
   std::unique_ptr<util::Proc> procmon_;
+  std::vector<uint64_t> dwarf_pids_;
+  bool dwarf_unwind_ = false;
   std::optional<pid_t> pid() const
   {
     if (procmon_) {
