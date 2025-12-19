@@ -165,6 +165,7 @@ class Runner(object):
         bpffeature["get_func_ip"] = output.find("get_func_ip: yes") != -1
         bpffeature["jiffies64"] = output.find("jiffies64: yes") != -1
         bpffeature["lookup_percpu_elem"] = output.find("lookup_percpu_elem: yes") != -1
+        bpffeature["dwunwind"] = output.find("dwunwind (DWARF stack unwinding): yes") != -1
         return bpffeature
 
 

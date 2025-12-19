@@ -872,7 +872,8 @@ void TypeRuleCollector::visit(Builtin &builtin)
       builtin_type = CreateStack(
           true, StackType{ .mode = bpftrace_.config_->stack_mode });
     }
-  } else if (builtin.ident == "ustack") {
+  } else if (builtin.ident == "ustack" ||
+             builtin.ident == "__builtin_dw_ustack") {
     builtin_type = CreateStack(
         false, StackType{ .mode = bpftrace_.config_->stack_mode });
   } else if (builtin.ident == "__builtin_comm") {
@@ -1206,7 +1207,7 @@ void TypeRuleCollector::visit(Call &call)
       return_type = CreatePointer(CreateInt(pointee_size), AddrSpace::user);
     } else if (call.func == "kstack") {
       return_type = get_stack_type(call, true);
-    } else if (call.func == "ustack") {
+    } else if (call.func == "ustack" || call.func == "__builtin_dw_ustack") {
       return_type = get_stack_type(call, false);
     } else if (call.func == "path") {
       auto call_type_size = bpftrace_.config_->max_strlen;

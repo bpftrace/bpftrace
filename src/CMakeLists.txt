@@ -37,6 +37,8 @@ add_library(runtime STATIC
   types_format.cpp
   ksyms.cpp
   usyms.cpp
+  dwunwind_table.cpp
+  dwunwind.cpp
   ${BFD_DISASM_SRC}
 )
 add_library(libbpftrace STATIC

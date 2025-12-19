@@ -19,6 +19,7 @@ const auto IMPORT_STATEMENTS = "import statements";
 const auto TSERIES = "tseries";
 const auto ADDR = "address-of operator (&)";
 const auto TYPEINFO = "typeinfo";
+const auto DW_USTACK = "dw_ustack (DWARF stack unwinding)";
 
 std::string get_warning(const std::string &feature, const std::string &config)
 {
@@ -54,6 +55,8 @@ private:
   std::unordered_set<std::string> warned_features;
 
   void check_unstable_addr(Node &node);
+  void check_unstable_tseries(Node &node);
+  void check_unstable_dw_ustack(Node &node);
 };
 
 } // namespace
@@ -96,18 +99,10 @@ void UnstableFeature::visit(RootImport &imp)
 
 void UnstableFeature::visit(Call &call)
 {
-  if (call.func != "tseries") {
-    return;
-  }
-
-  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::error) {
-    call.addError() << get_error(TSERIES, UNSTABLE_TSERIES);
-    return;
-  }
-  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::warn &&
-      !warned_features.contains(UNSTABLE_TSERIES)) {
-    LOG(WARNING) << get_warning(TSERIES, UNSTABLE_TSERIES);
-    warned_features.insert(UNSTABLE_TSERIES);
+  if (call.func == "tseries") {
+    check_unstable_tseries(call);
+  } else if (call.func == "dw_ustack") {
+    check_unstable_dw_ustack(call);
   }
 }
 
@@ -133,6 +128,34 @@ void UnstableFeature::check_unstable_addr(Node &node)
       !warned_features.contains(UNSTABLE_ADDR)) {
     LOG(WARNING) << get_warning(ADDR, UNSTABLE_ADDR);
     warned_features.insert(UNSTABLE_ADDR);
+  }
+}
+
+void UnstableFeature::check_unstable_tseries(Node &node)
+{
+  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::error) {
+    node.addError() << get_error(TSERIES, UNSTABLE_TSERIES);
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_tseries == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_TSERIES)) {
+    LOG(WARNING) << get_warning(TSERIES, UNSTABLE_TSERIES);
+    warned_features.insert(UNSTABLE_TSERIES);
+  }
+}
+
+void UnstableFeature::check_unstable_dw_ustack(Node &node)
+{
+  if (bpftrace_.config_->unstable_dw_ustack == ConfigUnstable::error) {
+    node.addError() << get_error(DW_USTACK, UNSTABLE_DW_USTACK);
+    return;
+  }
+
+  if (bpftrace_.config_->unstable_dw_ustack == ConfigUnstable::warn &&
+      !warned_features.contains(UNSTABLE_DW_USTACK)) {
+    LOG(WARNING) << get_warning(DW_USTACK, UNSTABLE_DW_USTACK);
+    warned_features.insert(UNSTABLE_DW_USTACK);
   }
 }
 

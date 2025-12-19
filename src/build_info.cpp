@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "build_info.h"
+#include "dwunwind.h"
 
 #include "version.h"
 
@@ -35,6 +36,12 @@ std::string BuildInfo::report()
 #endif
   buf << "  blazesym (advanced symbolization): "
 #ifdef HAVE_BLAZESYM
+      << "yes" << std::endl;
+#else
+      << "no" << std::endl;
+#endif
+  buf << "  dwunwind (DWARF stack unwinding): "
+#ifdef DWUNWIND
       << "yes" << std::endl;
 #else
       << "no" << std::endl;
