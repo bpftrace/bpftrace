@@ -42,6 +42,7 @@
 #include "bpfprogram.h"
 #include "bpftrace.h"
 #include "btf.h"
+#include "dwunwind.h"
 #include "log.h"
 #include "output/capture.h"
 #include "output/discard.h"
@@ -407,6 +408,28 @@ int BPFtrace::run_iter()
   return 0;
 }
 
+int add_unwind_mapping(const BpfBytecode *bytecode_, TableType table_type,
+  uint32_t key, const std::vector<uint8_t>& value)
+{
+  std::string name;
+  if (table_type == TableType::UnwindTable) {
+    name = "dwunwind_offsetmaps";
+  } else if (table_type == TableType::UnwindEntries) {
+    name = "dwunwind_cfts";
+  } else if (table_type == TableType::Expressions) {
+    name = "dwunwind_expressions";
+  } else if (table_type == TableType::Mappings) {
+    name = "dwunwind_mappings";
+  } else {
+    LOG(ERROR) << "Unknown table type: " << static_cast<int>(table_type);
+    return -1;
+  }
+  auto const &table = bytecode_->getMap(name);
+  auto ret = table.update_elem(&key, value.data());
+
+  return 0;
+}
+
 int BPFtrace::prerun() const
 {
   uint64_t num_probes = this->num_probes();
@@ -476,6 +499,19 @@ int BPFtrace::run(output::Output &out,
   } catch (const std::runtime_error &e) {
     LOG(ERROR) << e.what();
     return -1;
+  }
+
+  if (bytecode_.hasMap("dwunwind_mappings") && !unwind_pids_.empty()) {
+    auto const *b = &bytecode_;
+    auto unwind = DWARFUnwind([b](TableType t, uint32_t k,
+      const std::vector<uint8_t> &v) {
+      add_unwind_mapping(b, t, k, v);
+    });
+    for (const auto &pid : unwind_pids_) {
+      auto ret = unwind.add_pid(pid);
+      if (ret != DWARFError::Success)
+        return -1;
+    }
   }
 
   async_action::AsyncHandlers handlers(*this, c_definitions, out);

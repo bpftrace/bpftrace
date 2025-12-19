@@ -200,9 +200,9 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("kstack")) })));
 
-  test("kprobe:f { ustack }",
+  test("kprobe:f { __builtin_ustack }",
        Program().WithProbe(
-           Probe({ "kprobe:f" }, { ExprStatement(Builtin("ustack")) })));
+           Probe({ "kprobe:f" }, { ExprStatement(Builtin("__builtin_ustack")) })));
 
   test("kprobe:f { arg0 }",
        Program().WithProbe(
@@ -1458,7 +1458,7 @@ TEST(Parser, wildcard_func)
     "printf",
     "usym",
     "kstack",
-    "ustack",
+    "__builtin_ustack",
     "bpftrace",
     "perf",
     "raw",

@@ -224,6 +224,7 @@ public:
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;
+  std::vector<uint64_t> unwind_pids_;
   std::optional<pid_t> pid() const
   {
     if (procmon_) {

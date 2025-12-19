@@ -625,7 +625,7 @@ static const std::map<std::string, call_spec> CALL_SPEC = {
     { .min_args=1,
       .max_args=1,
        } },
-  { "ustack",
+  { "__builtin_ustack",
     { .min_args=0,
       .max_args=2,
        } },
@@ -912,7 +912,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.builtin_type = CreateStack(
           true, StackType{ .mode = bpftrace_.config_->stack_mode });
     }
-  } else if (builtin.ident == "ustack") {
+  } else if (builtin.ident == "__builtin_ustack") {
     builtin.builtin_type = CreateStack(
         false, StackType{ .mode = bpftrace_.config_->stack_mode });
   } else if (builtin.ident == "__builtin_comm") {
@@ -1540,7 +1540,7 @@ void SemanticAnalyser::visit(Call &call)
     }
   } else if (call.func == "kstack") {
     check_stack_call(call, true);
-  } else if (call.func == "ustack") {
+  } else if (call.func == "__builtin_ustack") {
     check_stack_call(call, false);
   } else if (call.func == "path") {
     auto *probe = get_probe(call, call.func);
