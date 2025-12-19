@@ -168,7 +168,8 @@ void ResourceAnalyser::visit(Builtin &builtin)
     resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
   } else if (builtin.ident == "__builtin_cpid") {
     resources_.global_vars.add_known(bpftrace::globalvars::CHILD_PID);
-  } else if (builtin.ident == "ustack" || builtin.ident == "kstack") {
+  } else if (builtin.ident == "ustack" || builtin.ident == "kstack" ||
+             builtin.ident == "__builtin_dw_ustack") {
     const auto &ty = type_map_.type(&builtin);
     if (exceeds_stack_limit(ty.GetSize())) {
       resources_.call_stack_buffers++;
@@ -332,7 +333,8 @@ void ResourceAnalyser::visit(Call &call)
     } else {
       call.addError() << "Different tseries bounds in a single map unsupported";
     }
-  } else if (call.func == "ustack" || call.func == "kstack") {
+  } else if (call.func == "ustack" || call.func == "kstack" ||
+             call.func == "__builtin_dw_ustack") {
     const auto &ty = type_map_.type(&call);
     if (exceeds_stack_limit(ty.GetSize())) {
       resources_.call_stack_buffers++;
@@ -607,7 +609,8 @@ bool ResourceAnalyser::exceeds_stack_limit(size_t size)
 
 bool ResourceAnalyser::uses_usym_table(const std::string &fun)
 {
-  return fun == "usym" || fun == "__builtin_func" || fun == "ustack";
+  return fun == "usym" || fun == "__builtin_func" || fun == "ustack" ||
+         fun == "__builtin_dw_ustack";
 }
 
 void ResourceAnalyser::update_map_info(Map &map)

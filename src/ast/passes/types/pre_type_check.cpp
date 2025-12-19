@@ -283,6 +283,7 @@ struct nargs_spec {
 
 // clang-format off
 const std::map<std::string, nargs_spec> CALL_NARGS = {
+  { "__builtin_dw_ustack", { .min_args=0, .max_args=2 } },
   { "__builtin_uaddr", { .min_args=1, .max_args=1 } },
   { "avg",            { .min_args=3, .max_args=3 } },
   { "bswap",          { .min_args=1, .max_args=1 } },
