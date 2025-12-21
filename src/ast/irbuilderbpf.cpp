@@ -134,7 +134,7 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *val,
   return buf;
 }
 
-StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
+StructType *IRBuilderBPF::GetStackStructType(const StackType &stack_type)
 {
   // Kernel stacks should not be differentiated by pid, since the kernel
   // address space is the same between pids (and when aggregating you *want*
@@ -142,21 +142,16 @@ StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
   // are special because of ASLR, hence we also store the pid; probe id is
   // stored for cases when only ELF resolution works (e.g. ASLR disabled and
   // process exited).
-  if (is_ustack) {
-    std::vector<llvm::Type *> elements{
-      getInt64Ty(), // stack id
-      getInt64Ty(), // nr_stack_frames
-      getInt32Ty(), // pid
-      getInt32Ty(), // probe id
-    };
-    return GetStructType("ustack_key", elements, false);
-  } else {
-    std::vector<llvm::Type *> elements{
-      getInt64Ty(), // stack id
-      getInt64Ty(), // nr_stack_frames
-    };
-    return GetStructType("kstack_key", elements, false);
+  std::vector<llvm::Type *> elements{
+    getInt64Ty(),                                   // nr_stack_frames
+    ArrayType::get(getInt64Ty(), stack_type.limit), // stack of addresses
+  };
+  if (!stack_type.kernel) {
+    elements.emplace_back(getInt32Ty()); // pid
+    elements.emplace_back(getInt32Ty()); // probe id
   }
+
+  return GetStructType(stack_type.name(), elements, false);
 }
 
 StructType *IRBuilderBPF::GetStructType(
@@ -367,7 +362,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 
     ty = GetStructType(ty_name, llvm_elems, false);
   } else if (stype.IsStack()) {
-    ty = GetStackStructType(stype.IsUstackTy());
+    ty = GetStackStructType(stype.stack_type);
   } else if (stype.IsPtrTy()) {
     ty = getPtrTy();
   } else if (stype.IsVoidTy()) {
@@ -534,17 +529,6 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(BasicBlock *failure_callback,
       to_string(MapType::Join), "join", loc, failure_callback);
 }
 
-CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
-                                                 BasicBlock *failure_callback,
-                                                 const Location &loc)
-{
-  SizedType value_type = CreateArray(stack_type.limit, CreateUInt64());
-  return createGetScratchMap(StackType::scratch_name(),
-                             StackType::scratch_name(),
-                             loc,
-                             failure_callback);
-}
-
 Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
                                             const Location &loc,
                                             uint64_t pad)
@@ -576,6 +560,19 @@ Value *IRBuilderBPF::CreateTupleAllocation(const SizedType &tuple_type,
                           loc,
                           [](AsyncIds &async_ids) {
                             return async_ids.tuple();
+                          });
+}
+
+Value *IRBuilderBPF::CreateKUStackAllocation(const SizedType &stack_type,
+                                             const std::string &name,
+                                             const Location &loc)
+{
+  return createAllocation(bpftrace::globalvars::KU_STACK_BUFFER,
+                          GetType(stack_type),
+                          name,
+                          loc,
+                          [](AsyncIds &async_ids) {
+                            return async_ids.ku_stack();
                           });
 }
 
@@ -1807,13 +1804,12 @@ CallInst *IRBuilderBPF::CreateGetRandom(const Location &loc)
 }
 
 CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
-                                       bool ustack,
                                        Value *buf,
-                                       StackType stack_type,
+                                       const StackType &stack_type,
                                        const Location &loc)
 {
   int flags = 0;
-  if (ustack)
+  if (!stack_type.kernel)
     flags |= (1 << 8);
   Value *flags_val = getInt64(flags);
   Value *stack_size = getInt32(stack_type.limit * sizeof(uint64_t));
