@@ -919,7 +919,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
         true, StackType{ .mode = bpftrace_.config_->stack_mode });
   } else if (builtin.ident == "ustack") {
     builtin.builtin_type = CreateStack(
-        false, StackType{ .mode = bpftrace_.config_->stack_mode });
+        false,
+        StackType{ .mode = bpftrace_.config_->stack_mode, .kernel = false });
   } else if (builtin.ident == "__builtin_comm") {
     constexpr int COMM_SIZE = 16;
     builtin.builtin_type = CreateString(COMM_SIZE);
@@ -1988,6 +1989,7 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   call.return_type = CreateStack(kernel);
   StackType stack_type;
   stack_type.mode = bpftrace_.config_->stack_mode;
+  stack_type.kernel = kernel;
 
   switch (call.vargs.size()) {
     case 0:

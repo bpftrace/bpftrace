@@ -234,6 +234,14 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
                         CreateArray(resources.max_tuple_size, CreateInt8()));
   }
 
+  if (global_var_name == CALL_STACK_BUFFER) {
+    assert(resources.max_call_stack_size > 0);
+    assert(resources.call_stack_buffers > 0);
+    return make_rw_type(resources.call_stack_buffers,
+                        CreateArray(resources.max_call_stack_size,
+                                    CreateInt8()));
+  }
+
   if (global_var_name == GET_STR_BUFFER) {
     assert(resources.str_buffers > 0);
     const auto max_strlen = bpftrace_config.max_strlen;

@@ -185,6 +185,10 @@ public:
   size_t tuple_buffers = 0;
   size_t max_tuple_size = 0;
 
+  // Required for sizing of kstack and ustack scratch buffer
+  size_t call_stack_buffers = 0;
+  size_t max_call_stack_size = 0;
+
   // Required for sizing of string scratch buffer
   size_t str_buffers = 0;
 
