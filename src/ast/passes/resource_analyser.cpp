@@ -98,6 +98,11 @@ RequiredResources ResourceAnalyser::resources()
     resources_.global_vars.add_known(bpftrace::globalvars::TUPLE_BUFFER);
   }
 
+  if (resources_.max_ku_stack_size > 0) {
+    assert(resources_.ku_stack_buffers > 0);
+    resources_.global_vars.add_known(bpftrace::globalvars::KU_STACK_BUFFER);
+  }
+
   if (resources_.str_buffers > 0) {
     resources_.global_vars.add_known(bpftrace::globalvars::GET_STR_BUFFER);
   }
@@ -147,8 +152,16 @@ void ResourceAnalyser::visit(Builtin &builtin)
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
-  } else if (builtin.ident == "__builtin_ncpus") {
+  }
+
+  if (builtin.ident == "__builtin_ncpus") {
     resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
+  } else if (builtin.ident == "ustack" || builtin.ident == "kstack") {
+    if (exceeds_stack_limit(builtin.builtin_type.GetSize())) {
+      resources_.ku_stack_buffers++;
+      resources_.max_ku_stack_size = std::max(resources_.max_ku_stack_size,
+                                              builtin.builtin_type.GetSize());
+    }
   }
 }
 
@@ -303,6 +316,12 @@ void ResourceAnalyser::visit(Call &call)
       // Same arguments.
     } else {
       call.addError() << "Different tseries bounds in a single map unsupported";
+    }
+  } else if (call.func == "ustack" || call.func == "kstack") {
+    if (exceeds_stack_limit(call.return_type.GetSize())) {
+      resources_.ku_stack_buffers++;
+      resources_.max_ku_stack_size = std::max(resources_.max_ku_stack_size,
+                                              call.return_type.GetSize());
     }
   } else if (call.func == "time") {
     resources_.time_args_id_map[&call] = resources_.time_args.size();
