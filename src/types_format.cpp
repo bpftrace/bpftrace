@@ -18,6 +18,30 @@ void TypeFormatError::log(llvm::raw_ostream &OS) const
   OS << "unable to convert type: " << typestr(ty_);
 }
 
+std::string format_build_id_stack(uint64_t nr_stack_frames,
+                                  const OpaqueValue &raw_stack)
+{
+  std::ostringstream stack;
+
+  stack << "\n";
+  for (uint64_t i = 0; i < nr_stack_frames; ++i) {
+    auto build_id_struct = raw_stack.bitcast<bpf_stack_build_id>(i);
+    if (build_id_struct.status == 1) {
+      // Format build_id as a continuous hex string
+      stack << std::hex << std::setfill('0');
+      for (unsigned char j : build_id_struct.build_id) {
+        stack << std::setw(2) << static_cast<unsigned int>(j);
+      }
+      stack << std::dec << " " << "0x" << std::setfill('0') << std::setw(2)
+            << std::hex << build_id_struct.offset << std::dec << std::endl;
+    } else {
+      stack << std::hex << build_id_struct.ip << std::dec << std::endl;
+    }
+  }
+
+  return stack.str();
+}
+
 Result<output::Primitive> format(BPFtrace &bpftrace,
                                  const ast::CDefinitions &c_definitions,
                                  const SizedType &type,
@@ -51,8 +75,8 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       auto num_frames = value.bitcast<uint64_t>(0);
       auto limit = type.stack_type.limit;
       constexpr size_t stack_offset = sizeof(uint64_t);
-      const auto raw_stack = value.slice(stack_offset,
-                                         sizeof(uint64_t) * limit);
+      auto len = static_cast<size_t>(type.stack_type.elem_size() * limit);
+      const auto raw_stack = value.slice(stack_offset, len);
 
       return bpftrace.get_stack(
           num_frames, raw_stack, -1, -1, false, type.stack_type, 8);
@@ -64,8 +88,13 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
           value.slice(sizeof(uint64_t), sizeof(uint64_t)).bitcast<uint64_t>(0);
       auto limit = type.stack_type.limit;
       constexpr size_t stack_offset = sizeof(uint64_t) * 2;
-      const auto raw_stack = value.slice(stack_offset,
-                                         sizeof(uint64_t) * limit);
+
+      auto len = static_cast<size_t>(type.stack_type.elem_size() * limit);
+      const auto raw_stack = value.slice(stack_offset, len);
+
+      if (type.stack_type.mode == StackMode::build_id) {
+        return format_build_id_stack(num_frames, raw_stack);
+      }
 
       return bpftrace.get_stack(
           num_frames, raw_stack, pid, probe_id, true, type.stack_type, 8);

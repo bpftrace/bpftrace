@@ -2040,6 +2040,9 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
     call.addError() << call.func << "([int limit]): limit shouldn't exceed "
                     << MAX_STACK_SIZE << ", " << stack_type.limit << " given";
   }
+  if (stack_type.mode == StackMode::build_id && kernel) {
+    call.addError() << "build_id stack mode can only be used for ustack";
+  }
   call.return_type = CreateStack(kernel, stack_type);
 }
 
