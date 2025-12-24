@@ -587,8 +587,8 @@ ScopedExpr CodegenLLVM::kstack_ustack(const SizedType &stype,
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(get_stack_success);
 
-  const auto uint64_size = sizeof(uint64_t);
-  Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt64(uint64_size));
+  const auto stack_elem_size = stype.stack_type.stack_elem_size;
+  Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt64(stack_elem_size));
   b_.CreateStore(num_frames,
                  b_.CreateGEP(stack_struct_type,
                               stack,

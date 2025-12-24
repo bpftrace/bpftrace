@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <glob.h>
+#include <iomanip>
 #include <iostream>
 #include <ranges>
 #include <regex>
@@ -989,6 +990,31 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   }
 }
 
+std::string BPFtrace::get_stack(
+    uint64_t nr_stack_frames,
+    const std::vector<bpf_stack_build_id> &raw_stack)
+{
+  std::ostringstream stack;
+
+  stack << "\n";
+  for (uint64_t i = 0; i < nr_stack_frames; ++i) {
+    auto build_id_struct = raw_stack.at(i);
+    if (build_id_struct.status == 1) {
+      // Format build_id as a continuous hex string
+      stack << std::hex << std::setfill('0');
+      for (unsigned char j : build_id_struct.build_id) {
+        stack << std::setw(2) << static_cast<unsigned int>(j);
+      }
+      stack << std::dec << " " << "0x" << std::setfill('0') << std::setw(2)
+            << std::hex << build_id_struct.offset << std::dec << std::endl;
+    } else {
+      stack << std::hex << build_id_struct.ip << std::dec << std::endl;
+    }
+  }
+
+  return stack.str();
+}
+
 std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
                                 std::vector<uint64_t> &&raw_stack,
                                 int32_t pid,
@@ -1034,8 +1060,10 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
                 << std::endl;
           break;
         case StackMode::raw:
-          LOG(BUG) << "StackMode::raw should have been processed before "
-                      "symbolication.";
+        case StackMode::build_id:
+          LOG(BUG)
+              << "StackMode::raw or build_id should have been processed before "
+                 "symbolication.";
           break;
       }
       ++i;
