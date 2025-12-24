@@ -51,10 +51,10 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       auto num_frames = value.bitcast<uint64_t>(0);
       auto limit = type.stack_type.limit;
       std::vector<uint64_t> stack(limit);
+      auto len = static_cast<size_t>(type.stack_type.stack_elem_size * limit);
       constexpr size_t stack_offset = sizeof(uint64_t);
-      const auto *raw_stack =
-          value.slice(stack_offset, sizeof(uint64_t) * limit).data();
-      memcpy(stack.data(), raw_stack, sizeof(uint64_t) * limit);
+      const auto *raw_stack = value.slice(stack_offset, len).data();
+      memcpy(stack.data(), raw_stack, len);
 
       return bpftrace.get_stack(
           num_frames, std::move(stack), -1, -1, false, type.stack_type, 8);
@@ -62,14 +62,21 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
     case Type::ustack_t: {
       auto num_frames = value.bitcast<uint64_t>(0);
       constexpr size_t stack_offset = sizeof(uint64_t);
-
       auto limit = type.stack_type.limit;
-      std::vector<uint64_t> stack(limit);
-      const auto *raw_stack =
-          value.slice(stack_offset, sizeof(uint64_t) * limit).data();
-      memcpy(stack.data(), raw_stack, sizeof(uint64_t) * limit);
+      auto len = static_cast<size_t>(type.stack_type.stack_elem_size * limit);
+      if (type.stack_type.mode == StackMode::build_id) {
+        std::vector<bpf_stack_build_id> stack(limit);
+        const auto *raw_stack = value.slice(stack_offset, len).data();
+        memcpy(stack.data(), raw_stack, len);
 
-      auto pid_probe_offset = stack_offset + (sizeof(uint64_t) * limit);
+        return bpftrace.get_stack(num_frames, stack);
+      }
+
+      std::vector<uint64_t> stack(limit);
+      const auto *raw_stack = value.slice(stack_offset, len).data();
+      memcpy(stack.data(), raw_stack, len);
+
+      auto pid_probe_offset = stack_offset + len;
       auto pid_probe = value.slice(pid_probe_offset, sizeof(uint64_t));
 
       return bpftrace.get_stack(num_frames,
