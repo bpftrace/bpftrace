@@ -143,9 +143,35 @@ StructType *IRBuilderBPF::GetStackStructType(const StackType &stack_type)
   // stored for cases when only ELF resolution works (e.g. ASLR disabled and
   // process exited).
   std::vector<llvm::Type *> elements{
-    getInt64Ty(),                                   // nr_stack_frames
-    ArrayType::get(getInt64Ty(), stack_type.limit), // stack of addresses
+    getInt64Ty(), // nr_stack_frames
   };
+  if (stack_type.mode == StackMode::build_id) {
+    // struct bpf_stack_build_id {
+    //   __s32		status;
+    //   unsigned char	build_id[BPF_BUILD_ID_SIZE];
+    //   union {
+    //     __u64	offset;
+    //     __u64	ip;
+    //   };
+    // };
+    std::vector<llvm::Type *> union_elem = {
+      getInt64Ty(),
+    };
+    StructType *union_type = GetStructType("offset_union", union_elem, false);
+
+    std::vector<llvm::Type *> build_id_elements = {
+      getInt32Ty(), // status
+      ArrayType::get(getInt8Ty(),
+                     BPF_BUILD_ID_SIZE), // build_id[BPF_BUILD_ID_SIZE]
+      union_type,
+    };
+    StructType *stack_build_id = GetStructType("stack_build_id",
+                                               build_id_elements,
+                                               false);
+    elements.emplace_back(ArrayType::get(stack_build_id, stack_type.limit));
+  } else {
+    elements.emplace_back(ArrayType::get(getInt64Ty(), stack_type.limit));
+  }
   if (!stack_type.kernel) {
     elements.emplace_back(getInt32Ty()); // pid
     elements.emplace_back(getInt32Ty()); // probe id
@@ -1817,10 +1843,14 @@ CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
                                        const Location &loc)
 {
   int flags = 0;
-  if (!stack_type.kernel)
+  if (!stack_type.kernel) {
     flags |= (1 << 8);
+    if (stack_type.mode == StackMode::build_id) {
+      flags |= (1 << 11);
+    }
+  }
   Value *flags_val = getInt64(flags);
-  Value *stack_size = getInt32(stack_type.limit * sizeof(uint64_t));
+  Value *stack_size = getInt32(stack_type.limit * stack_type.stack_elem_size);
 
   // long bpf_get_stack(void *ctx, void *buf, u32 size, u64 flags)
   // Return: The non-negative copied *buf* length equal to or less than
