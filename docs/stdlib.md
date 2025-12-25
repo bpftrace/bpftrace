@@ -326,6 +326,8 @@ If no default type is provided, the option is treated like a boolean arg e.g. `g
 Additionally, boolean args accept the following false values: `0`, `false` e.g. `--hello=false`.
 If the arg is not set on the command line, the default value is used.
 
+You can use `--help` to see all amed arguments/options.
+
 ```
 # bpftrace -e 'BEGIN { print((getopt("aa", 10), getopt("bb", "hello"), getopt("cc"), getopt("dd", false))); }' -- --cc --bb=bye
 
