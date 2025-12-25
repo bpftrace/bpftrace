@@ -171,7 +171,10 @@ int run_bpftrace(BPFtrace &bpftrace,
   if (!named_param_vals) {
     auto ok = handleErrors(std::move(named_param_vals),
                            [&](const globalvars::UnknownParamError &uo_err) {
-                             LOG(ERROR) << uo_err.err();
+                             auto err = uo_err.err();
+                             if (!err.empty()) {
+                               LOG(ERROR) << err;
+                             }
                              auto hint = uo_err.hint();
                              if (!hint.empty()) {
                                LOG(HINT) << hint;

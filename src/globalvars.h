@@ -49,14 +49,24 @@ public:
   {
     std::string err = "unexpected program command line options: ";
     size_t i;
+    bool has_help = false, has_err = false;
     for (i = 0; i < unexpected_.size(); ++i) {
-      err += "--";
-      err += unexpected_[i];
-      if (i != unexpected_.size() - 1) {
-        err += ", ";
+      if (unexpected_[i] == "help") {
+        has_help = true;
+      } else {
+        has_err = true;
+        err += "--";
+        err += unexpected_[i];
+        if (i != unexpected_.size() - 1) {
+          err += ", ";
+        }
       }
     }
-    return err;
+    if (has_help && !has_err) {
+      return {};
+    } else {
+      return err;
+    }
   }
 
   std::string hint() const
@@ -64,6 +74,11 @@ public:
     std::string hint = "expected program options: ";
 
     size_t j;
+
+    if (expected_.empty()) {
+      return "no custom program options defined.";
+    }
+
     for (j = 0; j < expected_.size(); ++j) {
       hint += "--";
       hint += expected_[j];
