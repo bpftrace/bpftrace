@@ -1498,6 +1498,19 @@ uprobe:/bin/bash:rl_set_prompt
     const char* prompt
 ```
 
+When DWARF debug info is available in the target binary, bpftrace can attach uprobes directly to source file statements, similar to setting a breakpoint at a `file:line[:col]` location in a debugger. This avoids manually locating instruction offsets in the ELF when probes are needed inside a function body.
+
+```
+uprobe:binary@file:line[:col] { ... }
+```
+
+`file` may be absolute or relative, and `line:col` must refer to a valid statement in that file. Only statements originating from the specified file are considered; statements from included files are ignored.
+
+```
+uprobe:/bin/bash@readline.c:362
+uprobe:/bin/bash@readline.c:362:6
+```
+
 When tracing C++ programs, it’s possible to turn on automatic symbol demangling by using the `:cpp` prefix:
 
 ```
