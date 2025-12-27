@@ -131,16 +131,33 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       return record;
     }
     case Type::tuple: {
-      output::Primitive::Tuple tuple;
-      for (auto &field : type.GetFields()) {
-        auto elem_data = value.slice(field.offset, field.type.GetSize());
-        auto val = format(bpftrace, c_definitions, field.type, elem_data, div);
-        if (!val) {
-          return val.takeError();
+      // N.B. tuples with named fields are printed like records/structs
+      const auto &fields = type.GetFields();
+      if (!fields.empty() && !fields.at(0).name.empty()) {
+        output::Primitive::Record record;
+        for (auto &field : type.GetFields()) {
+          auto elem_data = value.slice(field.offset, field.type.GetSize());
+          auto val = format(
+              bpftrace, c_definitions, field.type, elem_data, div);
+          if (!val) {
+            return val.takeError();
+          }
+          record.fields.emplace_back(field.name, std::move(*val));
         }
-        tuple.values.emplace_back(std::move(*val));
+        return record;
+      } else {
+        output::Primitive::Tuple tuple;
+        for (auto &field : type.GetFields()) {
+          auto elem_data = value.slice(field.offset, field.type.GetSize());
+          auto val = format(
+              bpftrace, c_definitions, field.type, elem_data, div);
+          if (!val) {
+            return val.takeError();
+          }
+          tuple.values.emplace_back(std::move(*val));
+        }
+        return tuple;
       }
-      return tuple;
     }
     case Type::count_t: {
       return util::reduce_value<uint64_t>(value) / div;

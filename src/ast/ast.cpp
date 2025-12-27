@@ -34,7 +34,7 @@ bool Expression::is_literal() const
   }
   if (auto *tuple = as<Tuple>()) {
     return std::ranges::all_of(tuple->elems, [](const auto &elem) {
-      return elem.is_literal();
+      return elem.second.is_literal();
     });
   }
   return false;

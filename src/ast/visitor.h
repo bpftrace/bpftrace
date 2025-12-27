@@ -153,7 +153,10 @@ public:
   }
   R visit(Tuple &tuple)
   {
-    return visitImpl(tuple.elems);
+    for (auto& elem : tuple.elems) {
+      visitImpl(elem.second);
+    }
+    return default_value();
   }
   R visit(ExprStatement &expr)
   {

@@ -1547,7 +1547,11 @@ public:
       const std::vector<Matcher<const ast::Expression&>>& exprs_matchers)
   {
     return Where([exprs_matchers](const ast::Tuple& tuple) {
-      return CheckList(tuple, tuple.elems, exprs_matchers, "elements");
+      ast::ExpressionList exprs;
+      for (const auto& pair : tuple.elems) {
+        exprs.emplace_back(pair.second);
+      }
+      return CheckList(tuple, exprs, exprs_matchers, "elements");
     });
   }
 };

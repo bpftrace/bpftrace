@@ -35,6 +35,7 @@ public:
   std::optional<Expression> visit(BlockExpr &block_expr);
   std::optional<Expression> visit(ArrayAccess &acc);
   std::optional<Expression> visit(TupleAccess &acc);
+  std::optional<Expression> visit(FieldAccess &acc);
   std::optional<Expression> visit(Comptime &comptime);
 
 private:
@@ -155,13 +156,21 @@ std::optional<bool> LiteralFolder::compare_tuples(Tuple *left_tuple,
   }
 
   for (size_t i = 0; i < left_tuple->elems.size(); ++i) {
-    auto l_expr = left_tuple->elems[i];
-    auto r_expr = right_tuple->elems[i];
+    auto l_expr = left_tuple->elems[i].second;
+    auto r_expr = right_tuple->elems[i].second;
 
     visit(l_expr);
     visit(r_expr);
 
     if (!l_expr.is_literal() || !r_expr.is_literal()) {
+      return std::nullopt;
+    }
+
+    auto &l_name = left_tuple->elems[i].first;
+    auto &r_name = right_tuple->elems[i].first;
+
+    if (l_name != r_name) {
+      // This will be a type-mismatch error
       return std::nullopt;
     }
 
@@ -839,7 +848,23 @@ std::optional<Expression> LiteralFolder::visit(TupleAccess &acc)
       // This access error happens in a later pass.
       return std::nullopt;
     }
-    return tuple->elems[acc.index];
+    return tuple->elems[acc.index].second;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(FieldAccess &acc)
+{
+  visit(acc.expr);
+
+  if (acc.expr.is<Tuple>()) {
+    auto *tuple = acc.expr.as<Tuple>();
+    for (auto &elem : tuple->elems) {
+      if (elem.first == acc.field) {
+        return elem.second;
+      }
+    }
   }
 
   return std::nullopt;

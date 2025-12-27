@@ -775,10 +775,32 @@ Buffer Formatter::visit(Tuple& tuple)
   // N.B. tuples are packed, separated by `,` instead of `, `.
   Buffer elems;
   if (tuple.elems.size() == 1) {
-    elems = format(tuple.elems[0], metadata, max_width - 3).text(",");
+    auto elem_buf = format(tuple.elems[0].second, metadata, max_width - 3);
+    if (tuple.elems[0].first.empty()) {
+      elems = elems.append(std::move(elem_buf)).text(",");
+    } else {
+      elems = Buffer()
+                  .text(tuple.elems[0].first)
+                  .text("=")
+                  .append(std::move(elem_buf))
+                  .text(",");
+    }
   } else {
-    elems = format_list(
-        tuple.elems, ",", metadata, max_width - kIndentWidth - 1);
+    for (size_t i = 0; i < tuple.elems.size(); ++i) {
+      bool at_end = (tuple.elems.size() - 1) == i;
+      auto& name = tuple.elems[i].first;
+      auto elem_buf = format(tuple.elems[i].second,
+                             metadata,
+                             max_width - kIndentWidth - 1);
+      if (name.empty()) {
+        elems = elems.append(std::move(elem_buf));
+      } else {
+        elems = elems.text(name).text("=").append(std::move(elem_buf));
+      }
+      if (!at_end) {
+        elems = elems.text(",");
+      }
+    }
   }
   if (bare) {
     return elems;
