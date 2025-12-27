@@ -194,7 +194,15 @@ template <>
 struct JsonEmitter<Primitive::Tuple> {
   static void emit(std::ostream &out, const Primitive::Tuple &v)
   {
-    JsonEmitter<std::vector<Primitive>>::emit(out, v.values);
+    if (v.is_named) {
+      JsonEmitter<std::decay_t<decltype(v.fields)>>::emit(out, v.fields);
+    } else {
+      std::vector<Primitive> values;
+      for (const auto &[key, elem] : v.fields) {
+        values.emplace_back(elem);
+      }
+      JsonEmitter<std::vector<Primitive>>::emit(out, values);
+    }
   }
 };
 

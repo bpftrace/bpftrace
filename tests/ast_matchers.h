@@ -1541,13 +1541,29 @@ inline NegativeIntegerMatcher NegativeInteger(int64_t value)
   return NegativeIntegerMatcher().WithValue(value);
 }
 
+class NamedArgumentMatcher
+    : public NodeMatcher<NamedArgumentMatcher, ast::NamedArgument> {
+public:
+  NamedArgumentMatcher& WithName(const std::string& name)
+  {
+    return Where(CheckField(&ast::NamedArgument::name, name, "name"));
+  }
+};
+
+inline NamedArgumentMatcher NamedArgument(
+    const std::string& name,
+    const Matcher<const ast::Expression&>& expr)
+{
+  return NamedArgumentMatcher().WithName(name).WithExpr(expr);
+}
+
 class TupleMatcher : public NodeMatcher<TupleMatcher, ast::Tuple> {
 public:
-  TupleMatcher& WithElems(
-      const std::vector<Matcher<const ast::Expression&>>& exprs_matchers)
+  TupleMatcher& WithNamedElems(
+      const std::vector<Matcher<const ast::NamedArgument&>>& named_arguments)
   {
-    return Where([exprs_matchers](const ast::Tuple& tuple) {
-      return CheckList(tuple, tuple.elems, exprs_matchers, "elements");
+    return Where([named_arguments](const ast::Tuple& tuple) {
+      return CheckList(tuple, tuple.named_elems, named_arguments, "elements");
     });
   }
 };
@@ -1555,7 +1571,17 @@ public:
 inline TupleMatcher Tuple(
     const std::vector<Matcher<const ast::Expression&>>& elems)
 {
-  return TupleMatcher().WithElems(elems);
+  std::vector<Matcher<const ast::NamedArgument&>> named_arguments;
+  for (const auto& elem : elems) {
+    named_arguments.emplace_back(NamedArgument("", elem));
+  }
+  return TupleMatcher().WithNamedElems(named_arguments);
+}
+
+inline TupleMatcher Tuple(
+    const std::vector<Matcher<const ast::NamedArgument&>>& named_arguments)
+{
+  return TupleMatcher().WithNamedElems(named_arguments);
 }
 
 template <typename Derived, typename NodeType>

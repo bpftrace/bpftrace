@@ -1239,12 +1239,52 @@ public:
   Expression expr;
 };
 
+class NamedArgument : public Node {
+public:
+  explicit NamedArgument(ASTContext &ctx,
+                              Location &&loc,
+                              std::string name,
+                              Expression expr)
+      : Node(ctx, std::move(loc)), name(std::move(name)), expr(std::move(expr)) {};
+  explicit NamedArgument(ASTContext &ctx,
+                              const Location &loc,
+                              const NamedArgument &other)
+      : Node(ctx, loc + other.loc),
+        name(other.name),
+        expr(clone(ctx, loc, other.expr)) {};
+
+  bool operator==(const NamedArgument &other) const
+  {
+    return name == other.name && expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const NamedArgument &other) const
+  {
+    if (auto cmp = name <=> other.name; cmp != 0)
+      return cmp;
+    return expr <=> other.expr;
+  }
+
+  const std::string name;
+  Expression expr;
+};
+
+using NamedArgumentList = std::vector<NamedArgument *>;
+
 class Tuple : public Node {
 public:
-  explicit Tuple(ASTContext &ctx, Location &&loc, ExpressionList &&elems)
-      : Node(ctx, std::move(loc)), elems(std::move(elems)) {};
+  explicit Tuple(ASTContext &ctx, Location &&loc, ExpressionList &&list)
+      : Node(ctx, std::move(loc))
+  {
+    for (auto& elem : list) {
+      named_elems.emplace_back(
+          ctx.make_node<NamedArgument>(Location(elem.loc()), "", elem));
+    }
+  };
+  explicit Tuple(ASTContext &ctx, Location &&loc, NamedArgumentList &&named_args)
+      : Node(ctx, std::move(loc)), named_elems(std::move(named_args)) {};
   explicit Tuple(ASTContext &ctx, const Location &loc, const Tuple &other)
-      : Node(ctx, loc + other.loc), elems(clone(ctx, loc, other.elems)) {};
+      : Node(ctx, loc + other.loc),
+        named_elems(clone(ctx, loc, other.named_elems)) {};
 
   const SizedType &type() const
   {
@@ -1253,16 +1293,30 @@ public:
 
   bool operator==(const Tuple &other) const
   {
-    return elems == other.elems && tuple_type == other.tuple_type;
+    if (named_elems.size() != other.named_elems.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < named_elems.size(); ++i) {
+      if (*named_elems[i] != *other.named_elems[i]) {
+        return false;
+      }
+    }
+    return tuple_type == other.tuple_type;
   }
   std::strong_ordering operator<=>(const Tuple &other) const
   {
-    if (auto cmp = elems <=> other.elems; cmp != 0)
+    if (auto cmp = named_elems.size() <=> other.named_elems.size(); cmp != 0) {
       return cmp;
+    }
+    for (size_t i = 0; i < named_elems.size(); ++i) {
+      if (auto cmp = *named_elems[i] <=> *other.named_elems[i]; cmp != 0) {
+        return cmp;
+      }
+    }
     return tuple_type <=> other.tuple_type;
   }
 
-  ExpressionList elems;
+  NamedArgumentList named_elems;
   SizedType tuple_type;
 };
 

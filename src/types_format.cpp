@@ -131,15 +131,17 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       return record;
     }
     case Type::tuple: {
+      const auto &fields = type.GetFields();
       output::Primitive::Tuple tuple;
-      for (auto &field : type.GetFields()) {
+      for (const auto &field : fields) {
         auto elem_data = value.slice(field.offset, field.type.GetSize());
         auto val = format(bpftrace, c_definitions, field.type, elem_data, div);
         if (!val) {
           return val.takeError();
         }
-        tuple.values.emplace_back(std::move(*val));
+        tuple.fields.emplace_back(field.name, std::move(*val));
       }
+      tuple.is_named = !fields.empty() && !fields.at(0).name.empty();
       return tuple;
     }
     case Type::count_t: {

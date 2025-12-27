@@ -49,6 +49,8 @@ and this project adheres to
   - [#4853](https://github.com/bpftrace/bpftrace/pull/4853)
 - Add support for `--fmt` mode (automatic formatting)
   - [#4621](https://github.com/bpftrace/bpftrace/pull/4621)
+- Add support for named tuple fields
+  - [#4914](https://github.com/bpftrace/bpftrace/pull/4914)
 #### Changed
 - Add helpers to check if a kfunc exists and is supported for particular probe types.
   - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)

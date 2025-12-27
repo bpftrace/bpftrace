@@ -35,6 +35,7 @@ public:
   std::optional<Expression> visit(BlockExpr &block_expr);
   std::optional<Expression> visit(ArrayAccess &acc);
   std::optional<Expression> visit(TupleAccess &acc);
+  std::optional<Expression> visit(FieldAccess &acc);
   std::optional<Expression> visit(Comptime &comptime);
 
 private:
@@ -150,19 +151,29 @@ static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
 std::optional<bool> LiteralFolder::compare_tuples(Tuple *left_tuple,
                                                   Tuple *right_tuple)
 {
-  if (left_tuple->elems.size() != right_tuple->elems.size()) {
+  if (left_tuple->named_elems.size() != right_tuple->named_elems.size()) {
     return false;
   }
 
-  for (size_t i = 0; i < left_tuple->elems.size(); ++i) {
-    auto l_expr = left_tuple->elems[i];
-    auto r_expr = right_tuple->elems[i];
+  for (size_t i = 0; i < left_tuple->named_elems.size(); ++i) {
+    auto l_expr = left_tuple->named_elems[i]->expr;
+    auto r_expr = right_tuple->named_elems[i]->expr;
 
     visit(l_expr);
     visit(r_expr);
 
     if (!l_expr.is_literal() || !r_expr.is_literal()) {
       return std::nullopt;
+    }
+
+    const auto &l_name = left_tuple->named_elems[i]->name;
+    const auto &r_name = right_tuple->named_elems[i]->name;
+
+    if (!l_name.empty() && !r_name.empty()) {
+      if (l_name != r_name) {
+        // This will be a type-mismatch error
+        return std::nullopt;
+      }
     }
 
     if (auto *l_int = l_expr.as<Integer>()) {
@@ -835,11 +846,27 @@ std::optional<Expression> LiteralFolder::visit(TupleAccess &acc)
 
   if (acc.expr.is<Tuple>() && acc.expr.is_literal()) {
     auto *tuple = acc.expr.as<Tuple>();
-    if (acc.index >= tuple->elems.size()) {
+    if (acc.index >= tuple->named_elems.size()) {
       // This access error happens in a later pass.
       return std::nullopt;
     }
-    return tuple->elems[acc.index];
+    return tuple->named_elems[acc.index]->expr;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(FieldAccess &acc)
+{
+  visit(acc.expr);
+
+  if (acc.expr.is<Tuple>()) {
+    auto *tuple = acc.expr.as<Tuple>();
+    for (auto *elem : tuple->named_elems) {
+      if (elem->name == acc.field) {
+        return elem->expr;
+      }
+    }
   }
 
   return std::nullopt;

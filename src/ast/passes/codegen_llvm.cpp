@@ -2852,10 +2852,10 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
 
   std::vector<std::pair<llvm::Value *, Location>> vals;
   std::vector<ScopedExpr> scoped_exprs;
-  vals.reserve(tuple.elems.size());
+  vals.reserve(tuple.named_elems.size());
 
-  for (auto &elem : tuple.elems) {
-    auto scoped_expr = visit(elem);
+  for (auto *elem : tuple.named_elems) {
+    auto scoped_expr = visit(elem->expr);
     vals.emplace_back(scoped_expr.value(), tuple.loc);
     scoped_exprs.emplace_back(std::move(scoped_expr));
   }

@@ -186,6 +186,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
+%type <ast::NamedArgument *> named_argument
+%type <ast::NamedArgumentList> named_argument_list
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
 %type <ast::VariableAddr *> var_addr
@@ -634,11 +636,30 @@ tuple_expr:
                   // Tuple with a single element (possibly).
                   $$ = driver.ctx.make_node<ast::Tuple>(@$, std::move($2));
                 }
+        |       "(" named_argument_list "," named_argument ")"
+                {
+                  auto &args = $2;
+                  args.push_back($4);
+                  $$ = driver.ctx.make_node<ast::Tuple>(@$, std::move(args));
+                }
+        |       "(" named_argument_list "," ")"
+                {
+                  $$ = driver.ctx.make_node<ast::Tuple>(@$, std::move($2));
+                }
         |       "(" ")"
                 {
                   // Empty tuple.
                   $$ = driver.ctx.make_node<ast::Tuple>(@$, ast::ExpressionList({}));
                 }
+                ;
+
+named_argument_list:
+                named_argument_list "," named_argument { $$ = std::move($1); $$.push_back($3); }
+        |       named_argument                            { $$ = ast::NamedArgumentList{}; $$.push_back($1); }
+                ;
+
+named_argument:
+                IDENT ASSIGN expr { $$ = driver.ctx.make_node<ast::NamedArgument>(@$, $1, $3); }
                 ;
 
 integer:

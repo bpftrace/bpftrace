@@ -2395,7 +2395,7 @@ void SemanticAnalyser::create_tuple_cast(Expression &exp,
     LOG(BUG) << "Unexpected expression kind: create_tuple_cast";
   }
 
-  ExpressionList expr_list = {};
+  NamedArgumentList elems;
 
   for (size_t i = 0; i < target_type.GetFields().size(); ++i) {
     auto &c_ty = curr_type.GetField(i).type;
@@ -2403,8 +2403,8 @@ void SemanticAnalyser::create_tuple_cast(Expression &exp,
     Expression elem;
     if (auto *tuple_literal = exp.as<Tuple>()) {
       elem = clone(ctx_,
-                   tuple_literal->elems.at(i).loc(),
-                   tuple_literal->elems.at(i));
+                   tuple_literal->named_elems.at(i)->expr.loc(),
+                   tuple_literal->named_elems.at(i)->expr);
     } else {
       elem = ctx_.make_node<TupleAccess>(Location(exp.loc()),
                                          clone(ctx_, exp.loc(), exp),
@@ -2418,10 +2418,11 @@ void SemanticAnalyser::create_tuple_cast(Expression &exp,
     } else if (t_ty.IsTupleTy()) {
       create_tuple_cast(elem, c_ty, t_ty);
     }
-    expr_list.emplace_back(std::move(elem));
+    elems.emplace_back(ctx_.make_node<NamedArgument>(
+        Location(exp.loc()), target_type.GetField(i).name, std::move(elem)));
   }
 
-  exp = ctx_.make_node<Tuple>(Location(exp.loc()), std::move(expr_list));
+  exp = ctx_.make_node<Tuple>(Location(exp.loc()), std::move(elems));
   exp.as<Tuple>()->tuple_type = target_type;
   visit(exp);
 }
@@ -3117,7 +3118,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!type.IsRecordTy()) {
+  if (!type.IsRecordTy() && !type.IsTupleTy()) {
     if (is_final_pass()) {
       acc.addError() << "Can not access field '" << acc.field
                      << "' on expression of type '" << type << "'";
@@ -3143,7 +3144,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!bpftrace_.structs.Has(type.GetName())) {
+  if (!type.IsTupleTy() && !bpftrace_.structs.Has(type.GetName())) {
     acc.addError() << "Unknown struct/union: '" << type.GetName() << "'";
     return;
   }
@@ -3152,9 +3153,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   const auto &record = type.GetStruct();
 
   if (!record->HasField(acc.field)) {
-    acc.addError() << "Struct/union of type '" << cast_type
-                   << "' does not contain " << "a field named '" << acc.field
-                   << "'";
+    if (is_final_pass()) {
+      acc.addError() << "Struct, union, or tuple of type '" << cast_type
+                     << "' does not contain " << "a field named '" << acc.field
+                     << "'";
+    }
   } else {
     const auto &field = record->GetField(acc.field);
 
@@ -3407,7 +3410,9 @@ void SemanticAnalyser::visit(Cast &cast)
 void SemanticAnalyser::visit(Tuple &tuple)
 {
   std::vector<SizedType> elements;
-  for (auto &elem : tuple.elems) {
+  std::vector<std::string_view> names;
+  for (auto *named_arg : tuple.named_elems) {
+    auto &elem = named_arg->expr;
     visit(elem);
 
     // If elem type is none that means that the tuple is not yet resolved.
@@ -3419,9 +3424,28 @@ void SemanticAnalyser::visit(Tuple &tuple)
           << "Map type " << elem.type() << " cannot exist inside a tuple.";
     }
     elements.emplace_back(elem.type());
+    if (!named_arg->name.empty()) {
+      names.emplace_back(named_arg->name);
+    }
   }
 
-  tuple.tuple_type = CreateTuple(Struct::CreateTuple(elements));
+  if (!names.empty()) {
+    if (names.size() != elements.size()) {
+      tuple.addError()
+          << "All tuple elements must be uniformly named or not named.";
+    }
+    std::unordered_set<std::string_view> seen;
+    for (const auto &name : names) {
+      if (seen.contains(name)) {
+        tuple.addError()
+            << "Tuple has more than one element with the same name: " << name;
+        break;
+      }
+      seen.insert(name);
+    }
+  }
+
+  tuple.tuple_type = CreateTuple(Struct::CreateRecord(elements, names));
 }
 
 void SemanticAnalyser::visit(Expression &expr)
@@ -3452,6 +3476,19 @@ void SemanticAnalyser::visit(Expression &expr)
       auto *full_ty = ctx_.make_node<String>(type_id->loc, typestr(ty));
       expr.value = ctx_.make_node<Tuple>(
           type_id->loc, ExpressionList{ id, base_ty, full_ty });
+    }
+  } else if (auto *field_access = expr.as<FieldAccess>()) {
+    // N.B. convert named FieldAccess for tuples into indexed TupleAccess
+    // because tuples are stored as actual structs in codegen as opposed to
+    // records which are stored as byte arrays
+    if (field_access->expr.type().IsTupleTy()) {
+      const auto &ty = field_access->expr.type();
+      if (ty.HasField(field_access->field)) {
+        expr.value = ctx_.make_node<TupleAccess>(
+            field_access->loc,
+            clone(ctx_, field_access->loc, field_access->expr),
+            ty.GetFieldIdx(field_access->field));
+      }
     }
   } else if (auto *binop = expr.as<Binop>()) {
     if (binop->left.type().IsTupleTy() &&
@@ -4284,11 +4321,15 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
   SizedType new_key_type = expr_type;
   if (expr_type.IsTupleTy()) {
     std::vector<SizedType> elements;
+    std::vector<std::string_view> names;
     for (const auto &field : expr_type.GetFields()) {
       SizedType keytype = create_key_type(field.type, node);
       elements.push_back(std::move(keytype));
+      if (!field.name.empty()) {
+        names.emplace_back(field.name);
+      }
     }
-    new_key_type = CreateTuple(Struct::CreateTuple(elements));
+    new_key_type = CreateTuple(Struct::CreateRecord(elements, names));
   }
 
   if (new_key_type.IsPtrTy() && new_key_type.IsCtxAccess()) {
@@ -4378,9 +4419,19 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_tuple(
   assert(leftTy.IsTupleTy() && leftTy.IsSameType(rightTy));
 
   std::vector<SizedType> new_elems;
+  std::vector<std::string_view> names;
   for (ssize_t i = 0; i < rightTy.GetFieldCount(); i++) {
-    auto storedElemTy = leftTy.GetField(i).type;
-    auto assignElemTy = rightTy.GetField(i).type;
+    auto &left_field = leftTy.GetField(i);
+    auto &right_field = rightTy.GetField(i);
+
+    if (!left_field.name.empty()) {
+      names.emplace_back(left_field.name);
+    } else if (!right_field.name.empty()) {
+      names.emplace_back(right_field.name);
+    }
+
+    auto storedElemTy = left_field.type;
+    auto assignElemTy = right_field.type;
     if (storedElemTy.IsIntegerTy()) {
       auto updatedTy = get_promoted_int(storedElemTy, assignElemTy);
       if (!updatedTy) {
@@ -4411,7 +4462,7 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_tuple(
 
     new_elems.emplace_back(storedElemTy);
   }
-  return CreateTuple(Struct::CreateTuple(new_elems));
+  return CreateTuple(Struct::CreateRecord(new_elems, names));
 }
 
 // The leftExpr is optional because in cases of variable assignment,

@@ -111,6 +111,7 @@ public:
   Buffer visit(Statement &stmt);
   Buffer visit(RootStatement &root);
   Buffer visit(CStatement &cstmt);
+  Buffer visit(NamedArgument& named_arg);
   Buffer visit(const SizedType &type);
 
 private:
