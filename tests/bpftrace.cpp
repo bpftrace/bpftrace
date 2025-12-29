@@ -20,6 +20,7 @@
 #include "driver.h"
 #include "mocks.h"
 #include "output/text.h"
+#include "tracefs/tracefs.h"
 #include "types.h"
 #include "types_format.h"
 #include "gmock/gmock-matchers.h"
@@ -356,6 +357,9 @@ TEST(bpftrace, add_probes_usdt_duplicate_markers)
 TEST(bpftrace, add_probes_tracepoint)
 {
   auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_file(tracefs::available_events()))
+      .Times(1);
   parse_probe("tracepoint:sched:sched_switch {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());

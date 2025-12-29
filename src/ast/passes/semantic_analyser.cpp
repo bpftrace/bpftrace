@@ -3845,9 +3845,13 @@ void SemanticAnalyser::visit(BlockExpr &block)
 
 void SemanticAnalyser::visit(Probe &probe)
 {
-  top_level_node_ = &probe;
-  visit(probe.attach_points);
-  visit(probe.block);
+  // If this probe has no attachment points, we should ignore it because
+  // parsing args, etc., will result in errors when config::missing_probes=warn.
+  if (!probe.attach_points.empty()) {
+    top_level_node_ = &probe;
+    visit(probe.attach_points);
+    visit(probe.block);
+  }
 }
 
 void SemanticAnalyser::visit(Subprog &subprog)
