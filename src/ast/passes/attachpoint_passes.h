@@ -14,7 +14,7 @@ class AttachPointParser {
 public:
   AttachPointParser(ASTContext &ctx, BPFtrace &bpftrace, bool listing);
   ~AttachPointParser() = default;
-  int parse();
+  void parse();
 
 private:
   enum State { OK = 0, INVALID, NEW_APS, SKIP };

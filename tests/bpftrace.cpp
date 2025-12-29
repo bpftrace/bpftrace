@@ -20,6 +20,7 @@
 #include "driver.h"
 #include "mocks.h"
 #include "output/text.h"
+#include "tracefs/tracefs.h"
 #include "types.h"
 #include "types_format.h"
 #include "gmock/gmock-matchers.h"
@@ -30,6 +31,7 @@ using namespace std::chrono_literals;
 
 namespace bpftrace::test::bpftrace {
 
+using ::testing::_;
 using ::testing::ContainerEq;
 using ::testing::Contains;
 using ::testing::StrictMock;
@@ -234,6 +236,9 @@ TEST(bpftrace, add_bench_probes)
 TEST(bpftrace, add_probes_single)
 {
   auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
+      .Times(1);
   parse_probe("kprobe:sys_read {}", *bpftrace);
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
@@ -244,6 +249,9 @@ TEST(bpftrace, add_probes_single)
 TEST(bpftrace, add_probes_multiple)
 {
   auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
+      .Times(2);
   parse_probe("kprobe:sys_read,kprobe:sys_write{}", *bpftrace);
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
@@ -255,29 +263,38 @@ TEST(bpftrace, add_probes_multiple)
 TEST(bpftrace, add_probes_kernel_module)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("kprobe:func_in_mod{}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
+      .Times(1);
+  parse_probe("kprobe:mod_func_1{}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod");
+  check_kprobe(bpftrace->get_probes().at(0), "mod_func_1");
 }
 
 TEST(bpftrace, add_probes_specify_kernel_module)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("kprobe:kernel_mod:func_in_mod{}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(true))
+      .Times(1);
+  parse_probe("kprobe:kernel_mod_1:mod_func_1{}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", 0, "kernel_mod");
+  check_kprobe(bpftrace->get_probes().at(0), "mod_func_1", 0, "kernel_mod_1");
 }
 
 TEST(bpftrace, add_probes_offset)
 {
   auto offset = 10;
   auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
+      .Times(1);
   parse_probe("kprobe:sys_read+10{}", *bpftrace);
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
@@ -288,12 +305,15 @@ TEST(bpftrace, add_probes_offset)
 TEST(bpftrace, add_probes_uprobe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("uprobe:/bin/sh:foo {}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_func_symbols_from_file(_, "/bin/sh"))
+      .Times(1);
+  parse_probe("uprobe:/bin/sh:f {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
   check_uprobe(
-      bpftrace->get_probes().at(0), "/bin/sh", "foo", "uprobe:/bin/sh:foo");
+      bpftrace->get_probes().at(0), "/bin/sh", "f", "uprobe:/bin/sh:f");
 }
 
 TEST(bpftrace, add_probes_uprobe_address)
@@ -310,14 +330,17 @@ TEST(bpftrace, add_probes_uprobe_address)
 TEST(bpftrace, add_probes_uprobe_string_offset)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("uprobe:/bin/sh:foo+10{}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_func_symbols_from_file(_, "/bin/sh"))
+      .Times(1);
+  parse_probe("uprobe:/bin/sh:f+10{}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
   check_uprobe(bpftrace->get_probes().at(0),
                "/bin/sh",
-               "foo",
-               "uprobe:/bin/sh:foo+10",
+               "f",
+               "uprobe:/bin/sh:f+10",
                0,
                10);
 }
@@ -325,11 +348,14 @@ TEST(bpftrace, add_probes_uprobe_string_offset)
 TEST(bpftrace, add_probes_usdt)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("usdt:/bin/sh:prov1:mytp {}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_usdt(no_pid, "/bin/sh"))
+      .Times(1);
+  parse_probe("usdt:/bin/sh:prov1:tp1 {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
-  check_usdt(bpftrace->get_probes().at(0), "/bin/sh", "prov1", "mytp");
+  check_usdt(bpftrace->get_probes().at(0), "/bin/sh", "prov1", "tp1");
 }
 
 TEST(bpftrace, add_probes_usdt_empty_namespace_conflict)
@@ -346,22 +372,28 @@ TEST(bpftrace, add_probes_usdt_duplicate_markers)
 {
   auto bpftrace = get_strict_mock_bpftrace();
 
-  parse_probe("usdt:/bin/sh:prov1:mytp {}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_usdt(no_pid, "/bin/sh"))
+      .Times(1);
+  parse_probe("usdt:/bin/sh:prov1:tp1 {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
-  check_usdt(bpftrace->get_probes().at(0), "/bin/sh", "prov1", "mytp");
+  check_usdt(bpftrace->get_probes().at(0), "/bin/sh", "prov1", "tp1");
 }
 
 TEST(bpftrace, add_probes_tracepoint)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  parse_probe("tracepoint:sched:sched_switch {}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_file(tracefs::available_events()))
+      .Times(1);
+  parse_probe("tracepoint:sched:sched_one {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
-  check_tracepoint(bpftrace->get_probes().at(0), "sched", "sched_switch");
+  check_tracepoint(bpftrace->get_probes().at(0), "sched", "sched_one");
 }
 
 TEST(bpftrace, add_probes_profile)
@@ -410,7 +442,7 @@ TEST(bpftrace, add_probes_hardware)
 
 TEST(bpftrace, trailing_comma)
 {
-  ast::ASTContext ast("stdin", "kprobe:f1, {}");
+  ast::ASTContext ast("stdin", "kprobe:f, {}");
   Driver driver(ast);
 
   // Trailing comma is fine
@@ -641,17 +673,18 @@ TEST_F(bpftrace_btf, add_probes_fentry)
 {
   auto bpftrace = get_strict_mock_bpftrace();
 
-  parse_probe("fentry:func_1,fexit:func_1 {}", *bpftrace);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols()).Times(2);
+  parse_probe("fentry:vmlinux:func_1,fexit:vmlinux:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
   check_probe(bpftrace->get_probes().at(0),
               ProbeType::fentry,
-              "fentry:mock_vmlinux:func_1");
+              "fentry:vmlinux:func_1");
   check_probe(bpftrace->get_probes().at(1),
               ProbeType::fexit,
-              "fexit:mock_vmlinux:func_1");
+              "fexit:vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_fentry_bpf_func)
@@ -688,6 +721,9 @@ TEST_F(bpftrace_btf, add_probes_fentry_bpf_id)
 TEST_F(bpftrace_btf, add_probes_kprobe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(true))
+      .Times(2);
   parse_probe("kprobe:mock_vmlinux:func_1,kretprobe:mock_vmlinux:func_1 {}",
               *bpftrace);
 
@@ -814,21 +850,21 @@ static std::set<std::string> list_modules(std::string_view ap)
 // Test modules are extracted when module is not explicit in attachpoint
 TEST(bpftrace, list_modules_kprobe_implicit)
 {
-  auto modules = list_modules("k:queued_spin_lock_slowpath,kr:func_in_mod{}");
+  auto modules = list_modules("k:queued_spin_lock_slowpath,kr:mod_func_1{}");
   EXPECT_EQ(modules.size(), 3);
   EXPECT_THAT(modules, Contains("vmlinux"));
-  EXPECT_THAT(modules, Contains("kernel_mod"));
-  EXPECT_THAT(modules, Contains("other_kernel_mod"));
+  EXPECT_THAT(modules, Contains("kernel_mod_1"));
+  EXPECT_THAT(modules, Contains("kernel_mod_2"));
 }
 
 // Inverse of above
 TEST(bpftrace, list_modules_kprobe_explicit)
 {
   auto modules = list_modules(
-      "k:vmlinux:queued_spin_lock_slowpath,kr:kernel_mod:func_in_mod{}");
+      "k:vmlinux:queued_spin_lock_slowpath,kr:kernel_mod_1:mod_func_1{}");
   EXPECT_EQ(modules.size(), 2);
   EXPECT_THAT(modules, Contains("vmlinux"));
-  EXPECT_THAT(modules, Contains("kernel_mod"));
+  EXPECT_THAT(modules, Contains("kernel_mod_1"));
 }
 
 // Implicit fentry/fexit is not tested b/c the mocks are currently wired

@@ -492,20 +492,7 @@ Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
       !bpftrace.is_traceable_func(probe.attach_point))
     return make_error<AttachError>();
 
-  // Construct a string containing "module:function."
-  // Also log a warning or throw an error if the module doesn't exist,
-  // before attempting to attach.
-  // Note that we do not pass vmlinux, if it is specified.
   std::string funcname = probe.attach_point;
-  const std::string &modname = probe.path;
-  if ((!modname.empty()) && modname != "vmlinux") {
-    if (!util::is_module_loaded(modname)) {
-      return make_error<AttachError>("specified module " + modname +
-                                     " in probe " + probe.name +
-                                     " is not loaded.");
-    }
-    funcname = modname + ":" + funcname;
-  }
 
   // The kprobe can either be defined by a symbol+offset or an address:
   // For symbol+offset kprobe, we need to check the validity of the offset.

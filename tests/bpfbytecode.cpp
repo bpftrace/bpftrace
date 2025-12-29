@@ -37,19 +37,19 @@ BpfBytecode codegen(const std::string &input)
 
 TEST(bpfbytecode, create_programs)
 {
-  auto bytecode = codegen("kprobe:foo { 1 }");
+  auto bytecode = codegen("kprobe:f { 1 }");
 
-  Probe foo;
-  foo.type = ProbeType::kprobe;
-  foo.name = "kprobe:foo";
-  foo.index = 1;
+  Probe f;
+  f.type = ProbeType::kprobe;
+  f.name = "kprobe:f";
+  f.index = 1;
 
-  auto &program = bytecode.getProgramForProbe(foo);
+  auto &program = bytecode.getProgramForProbe(f);
 
   EXPECT_EQ(std::string_view{ bpf_program__name(program.bpf_prog()) },
-            "kprobe_foo_1");
+            "kprobe_f_1");
   EXPECT_EQ(std::string_view{ bpf_program__section_name(program.bpf_prog()) },
-            "s_kprobe_foo_1");
+            "s_kprobe_f_1");
 }
 
 } // namespace bpftrace::test::bpfbytecode

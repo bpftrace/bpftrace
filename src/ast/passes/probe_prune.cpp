@@ -17,7 +17,7 @@ Pass CreateProbePrunePass()
                                "config variable to 'warn'.";
         } else if (missing_config == ConfigMissingProbes::warn) {
           probe->addWarning()
-              << "Probe " << missing_msg
+              << "Probe" << missing_msg
               << " It is being removed which may cause issues with "
                  "program behavior.";
         }

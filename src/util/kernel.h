@@ -40,6 +40,4 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &kobj,
                                            const KConfig &kconfig);
 
-bool is_module_loaded(const std::string &module);
-
 } // namespace bpftrace::util
