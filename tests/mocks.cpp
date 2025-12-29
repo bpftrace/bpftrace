@@ -12,12 +12,28 @@ using ::testing::StrictMock;
 
 void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 {
+  // Since we skip non-existent attachment points from `ProbeAndApExpander`,
+  // we should ensure that `get_symbols_from_traceable_funcs` contains the
+  // same symbols as much as possible, and should not be affected by the
+  // `with_modules` parameter.
+  // For example, `kprobe:func_in_mod` will first call
+  // `get_symbols_from_traceable_funcs(false)`, instead of
+  // `get_symbols_from_traceable_funcs(true)`.
   ON_CALL(matcher, get_symbols_from_traceable_funcs(false)).WillByDefault([]() {
-    std::string ksyms = "SyS_read\n"
+    std::string ksyms = "f\n"
+                        "f1\n"
+                        "f2\n"
+                        "foo\n"
+                        "func_1\n"
+                        "func_in_mod\n"
+                        "g\n"
+                        "SyS_read\n"
                         "sys_read\n"
                         "sys_write\n"
+                        "tcp_shutdown\n"
                         "my_one\n"
-                        "my_two\n";
+                        "my_two\n"
+                        "queued_spin_lock_slowpath\n";
     auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
     return myval;
   });
@@ -25,6 +41,7 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
   ON_CALL(matcher, get_symbols_from_traceable_funcs(true)).WillByDefault([]() {
     std::string ksyms = "kernel_mod:func_in_mod\n"
                         "kernel_mod:other_func_in_mod\n"
+                        "mock_vmlinux:func_1\n"
                         "other_kernel_mod:func_in_mod\n"
                         "vmlinux:queued_spin_lock_slowpath\n";
     auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
@@ -33,7 +50,9 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 
   ON_CALL(matcher, get_symbols_from_file(tracefs::available_events()))
       .WillByDefault([](const std::string &) {
-        std::string tracepoints = "sched:sched_one\n"
+        std::string tracepoints = "category:event\n"
+                                  "sched:sched_one\n"
+                                  "sched:sched_switch\n"
                                   "sched:sched_two\n"
                                   "sched:foo\n"
                                   "sched_extra:sched_extra\n"
@@ -47,23 +66,35 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
       });
 
   ON_CALL(matcher, get_raw_tracepoint_symbols()).WillByDefault([]() {
-    std::string rawtracepoints = "vmlinux:event_rt\n"
+    std::string rawtracepoints = "module:event\n"
+                                 "vmlinux:event_rt\n"
                                  "vmlinux:sched_switch\n";
     return std::unique_ptr<std::istream>(
         new std::istringstream(rawtracepoints));
   });
 
   ON_CALL(matcher, get_fentry_symbols()).WillByDefault([]() {
-    std::string funcs = "vmlinux:func_1\n"
+    std::string funcs = "mock_vmlinux:f\n"
+                        "mock_vmlinux:func_1\n"
+                        "mock_vmlinux:func_2\n"
+                        "mock_vmlinux:func_3\n"
+                        "mock_vmlinux:func_anon_struct\n"
+                        "mock_vmlinux:func_arrays\n"
+                        "mock_vmlinux:tcp_shutdown\n"
+                        "vmlinux:func_1\n"
                         "vmlinux:func_2\n"
                         "vmlinux:func_3\n"
                         "vmlinux:queued_spin_lock_slowpath\n";
     return std::unique_ptr<std::istream>(new std::istringstream(funcs));
   });
 
-  std::string sh_usyms = "/bin/sh:first_open\n"
-                         "/bin/sh:second_open\n"
+  std::string sh_usyms = "/bin/sh:f\n"
+                         "/bin/sh:first_open\n"
+                         "/bin/sh:foo\n"
+                         "/bin/sh:main\n"
                          "/bin/sh:open_as_well\n"
+                         "/bin/sh:readline\n"
+                         "/bin/sh:second_open\n"
                          "/bin/sh:something_else\n"
                          "/bin/sh:cpp_mangled\n"
                          "/bin/sh:_Z11cpp_mangledi\n"
@@ -82,8 +113,10 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                 new std::istringstream(sh_usyms + bash_usyms));
           });
 
-  std::string sh_usdts = "/bin/sh:prov1:tp1\n"
+  std::string sh_usdts = "/bin/sh:probe\n"
+                         "/bin/sh:prov1:tp1\n"
                          "/bin/sh:prov1:tp2\n"
+                         "/bin/sh:prov1:mytp\n"
                          "/bin/sh:prov2:tp\n"
                          "/bin/sh:prov2:notatp\n"
                          "/bin/sh:nahprov:tp\n";

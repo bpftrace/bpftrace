@@ -320,7 +320,26 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
         break;
       }
       case ExpansionType::NONE: {
-        new_aps.push_back(ap);
+        auto pt = probetype(ap->provider);
+        bool skip = false;
+        // Filter out unnecessary probes, as they may not be missing.
+        if (pt == ProbeType::watchpoint) {
+          skip = true;
+        }
+        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        if (matches.empty() && !skip) {
+          const auto missing_probes = bpftrace_.config_->missing_probes;
+          std::string msg = "No matches for " +
+                            probetypeName(probetype(ap->provider)) + " " +
+                            ap->target + ":" + ap->func;
+          if (missing_probes == ConfigMissingProbes::warn) {
+            ap->addWarning() << msg << ". Skipping.";
+          } else if (missing_probes == ConfigMissingProbes::error) {
+            ap->addError() << msg << ".";
+          }
+        } else {
+          new_aps.push_back(ap);
+        }
         break;
       }
     }

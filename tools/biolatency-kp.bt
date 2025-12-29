@@ -50,6 +50,9 @@ config = {
 BEGIN
 {
   printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
+  // If kprobes does not exist, accessing @start in END will result in an error,
+  // which is incorrect in CI/CD, so let's create one.
+  @start[0] = (uint64)0;
 }
 
 kprobe:blk_account_io_start,

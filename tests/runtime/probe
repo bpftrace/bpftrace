@@ -60,13 +60,13 @@ AFTER ./testprogs/fentry_args 1111 2222
 
 NAME fentry_missing_probes
 PROG fentry:vfs_read,fentry:nonsense { exit(); }
-EXPECT ERROR: No BTF found for nonsense.
+EXPECT_REGEX .* ERROR: No matches for fentry :nonsense.
 WILL_FAIL
 REQUIRES_FEATURE btf
 
 NAME fentry_warn_missing_probes
 PROG config = { missing_probes = "warn" } fentry:vfs_read,fentry:nonsense { exit(); }
-EXPECT WARNING: No BTF found for nonsense.
+EXPECT_REGEX .* WARNING: No matches for fentry :nonsense. Skipping.
 REQUIRES_FEATURE btf
 
 NAME fentry_ignore_missing_probes
@@ -133,7 +133,7 @@ AFTER ./testprogs/syscall read
 
 NAME kprobe_module_missing
 PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT ERROR: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
+EXPECT_REGEX .* ERROR: No matches for kprobe nonsense:vfs_read.
 WILL_FAIL
 
 NAME kprobe_wildcard_all_leading_underscore
@@ -153,7 +153,8 @@ EXPECT 0
 
 NAME kprobe_func_missing
 PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT ERROR: Unable to attach probe: kprobe:vmlinux:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
+EXPECT_REGEX .* ERROR: No matches for kprobe vmlinux:nonsense.
+EXPECT stdin:1:1-24: WARNING: nonsense is not traceable (either non-existing, inlined, or marked as "notrace"); attaching to it will likely fail
 WILL_FAIL
 
 NAME kprobe_multi_wildcard
@@ -332,13 +333,13 @@ AFTER ./testprogs/uprobe_test
 
 NAME uprobe_missing_probes
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
-EXPECT ERROR: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3
+EXPECT_REGEX .* ERROR: No matches for uprobe ./testprogs/uprobe_test:uprobeFunction3.
 AFTER ./testprogs/uprobe_test
 WILL_FAIL
 
 NAME uprobe_warn_missing_probes
 PROG config = { missing_probes = "warn" } uprobe:./testprogs/uprobe_test:uprobeFunction1,uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
-EXPECT WARNING: Could not resolve symbol: ./testprogs/uprobe_test:uprobeFunction3
+EXPECT_REGEX .* WARNING: No matches for uprobe ./testprogs/uprobe_test:uprobeFunction3. Skipping.
 AFTER ./testprogs/uprobe_test
 
 NAME uprobe_ignore_missing_probes
@@ -377,12 +378,12 @@ EXPECT hit
 
 NAME tracepoint_missing
 PROG t:syscalls:nonsense { print("hit"); exit(); }
-EXPECT ERROR: Unable to attach probe: tracepoint:syscalls:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
+EXPECT_REGEX .* ERROR: No matches for tracepoint syscalls:nonsense.
 WILL_FAIL
 
 NAME tracepoint_multiattach_missing
 PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { print("hit"); exit(); }
-EXPECT ERROR: Unable to attach probe: tracepoint:syscalls:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
+EXPECT_REGEX .* ERROR: No matches for tracepoint syscalls:nonsense.
 WILL_FAIL
 
 NAME tracepoint args
@@ -429,7 +430,7 @@ AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME rawtracepoint_module_missing
 PROG rawtracepoint:nonsense:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
-EXPECT ERROR: No BTF found for nonsense:sys_exit.
+EXPECT_REGEX .* ERROR: No matches for rawtracepoint nonsense:sys_exit.
 REQUIRES_FEATURE btf
 WILL_FAIL
 
@@ -598,17 +599,23 @@ EXPECT_REGEX (first)+ second
 
 NAME some_missing_probes_default_error
 PROG kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); }
-EXPECT ERROR: Unable to attach probe: tracepoint:syscalls:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
+EXPECT_REGEX .* ERROR: No matches for tracepoint syscalls:nonsense.
 WILL_FAIL
 
 NAME missing_probes_multiple_attach_points_default_error
 PROG kprobe:vfs_read, kprobe:bad { exit(); }
-EXPECT ERROR: Unable to attach probe: kprobe:bad. If this is expected, set the 'missing_probes' config variable to 'warn'.
+EXPECT_REGEX .* ERROR: No matches for kprobe :bad.
+EXPECT stdin:1:18-28: WARNING: bad is not traceable (either non-existing, inlined, or marked as "notrace"); attaching to it will likely fail
 WILL_FAIL
 
 NAME some_missing_probes_warn
 PROG config = { missing_probes=warn } kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); }
-EXPECT WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
+EXPECT stdin:1:62-81: WARNING: No matches for tracepoint syscalls:nonsense. Skipping.
+EXPECT stdin:1:62-81: WARNING: Probe  has no valid attach points. It is being removed which may cause issues with program behavior.
+
+NAME some_missing_probes_warn_args
+PROG config = { missing_probes=warn } tracepoint:syscalls:sys_enter_read,tracepoint:nonsense:nonsense { $cnt = args.count; exit(); }
+EXPECT_REGEX .* WARNING: No matches for tracepoint nonsense:nonsense. Skipping.
 
 NAME some_missing_probes_ignore
 PROG config = { missing_probes=ignore } kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); }
@@ -616,10 +623,18 @@ EXPECT_NONE WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipp
 
 NAME all_missing_probes_warn
 PROG config = { missing_probes=warn } kprobe:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
-EXPECT WARNING: Unable to attach probe: kprobe:nonsense. Skipping.
-EXPECT WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
-EXPECT WARNING: Unable to attach probe: uprobe:./testprogs/uprobe_test:uprobeFunction3. Skipping.
-EXPECT ERROR: Attachment failed for all probes.
+EXPECT stdin:1:34-49: WARNING: nonsense is not traceable (either non-existing, inlined, or marked as "notrace"); attaching to it will likely fail
+EXPECT stdin:1:34-49: WARNING: No matches for kprobe :nonsense. Skipping.
+EXPECT stdin:1:62-81: WARNING: No matches for tracepoint syscalls:nonsense. Skipping.
+EXPECT stdin:1:94-140: WARNING: No matches for uprobe ./testprogs/uprobe_test:uprobeFunction3. Skipping.
+EXPECT stdin:1:34-49: WARNING: Probe  has no valid attach points. It is being removed which may cause issues with program behavior.
+EXPECT stdin:1:62-81: WARNING: Probe  has no valid attach points. It is being removed which may cause issues with program behavior.
+EXPECT stdin:1:94-140: WARNING: Probe  has no valid attach points. It is being removed which may cause issues with program behavior.
+WILL_FAIL
+
+NAME all_missing_probes_ignore
+PROG config = { missing_probes=ignore } kprobe:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+EXPECT No probes to attach
 WILL_FAIL
 
 # This is hacky because we can't easily run a separate bpftrace program in BEFORE

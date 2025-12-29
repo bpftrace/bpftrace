@@ -2762,8 +2762,9 @@ TEST_F(SemanticAnalyserTest, probe_short_name)
   test("t:sched:sched_one { 1 }");
   test("k:f { pid }");
   test("kr:f { pid }");
-  test("u:sh:f { 1 }");
-  test("ur:sh:f { 1 }");
+  // avoid match to /usr/bin/sh, use /bin/sh
+  test("u:/bin/sh:f { 1 }");
+  test("ur:/bin/sh:f { 1 }");
   test("p:hz:997 { 1 }");
   test("h:cache-references:1000000 { 1 }");
   test("s:faults:1000 { 1 }");
