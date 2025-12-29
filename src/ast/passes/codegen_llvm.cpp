@@ -2855,7 +2855,7 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
   vals.reserve(tuple.elems.size());
 
   for (auto &elem : tuple.elems) {
-    auto scoped_expr = visit(elem);
+    auto scoped_expr = visit(elem.second);
     vals.emplace_back(scoped_expr.value(), tuple.loc);
     scoped_exprs.emplace_back(std::move(scoped_expr));
   }

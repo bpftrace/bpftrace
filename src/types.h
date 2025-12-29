@@ -325,7 +325,7 @@ public:
 
   const std::string &GetName() const
   {
-    assert(IsRecordTy() || IsEnumTy());
+    assert(IsRecordTy() || IsEnumTy() || IsTupleTy());
     return name_;
   }
 

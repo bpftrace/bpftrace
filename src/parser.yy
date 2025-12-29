@@ -186,6 +186,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::VarDeclStatement *> var_decl_stmt
 %type <ast::AssignConfigVarStatement *> config_assign_stmt
 %type <ast::ConfigStatementList> config_assign_stmt_list config_block
+%type <ast::AssignFieldStatement *> field_assign_stmt
+%type <ast::AssignFieldStatementList> field_assign_stmt_list
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
 %type <ast::VariableAddr *> var_addr
@@ -634,11 +636,30 @@ tuple_expr:
                   // Tuple with a single element (possibly).
                   $$ = driver.ctx.make_node<ast::Tuple>(@$, std::move($2));
                 }
+        |       "(" field_assign_stmt_list "," field_assign_stmt ")"
+                {
+                  auto &args = $2;
+                  args.push_back($4);
+                  $$ = driver.ctx.make_node<ast::Tuple>(@$, std::move(args));
+                }
+        |       "(" field_assign_stmt_list "," ")"
+                {
+                  $$ = driver.ctx.make_node<ast::Tuple>(@$, std::move($2));
+                }
         |       "(" ")"
                 {
                   // Empty tuple.
                   $$ = driver.ctx.make_node<ast::Tuple>(@$, ast::ExpressionList({}));
                 }
+                ;
+
+field_assign_stmt_list:
+                field_assign_stmt_list "," field_assign_stmt { $$ = std::move($1); $$.push_back($3); }
+        |       field_assign_stmt                            { $$ = ast::AssignFieldStatementList{}; $$.push_back($1); }
+                ;
+
+field_assign_stmt:
+                IDENT ASSIGN expr { $$ = driver.ctx.make_node<ast::AssignFieldStatement>(@$, $1, $3); }
                 ;
 
 integer:
