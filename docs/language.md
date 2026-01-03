@@ -351,6 +351,7 @@ Available modes/formats:
 * bpftrace
 * perf
 * raw: no symbolication
+* build_id: no symbolication but print build_id and file offset or IP if not available (ustack only)
 
 This can be overwritten at the call site.
 

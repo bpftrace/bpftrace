@@ -459,6 +459,11 @@ ENV BPFTRACE_STACK_MODE=perf
 EXPECT_REGEX ^[\da-fA-F]+$
 AFTER ./testprogs/uprobe_loop
 
+NAME ustack_stack_mode_build_id
+PROG u:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack(build_id)); exit(); }
+EXPECT_REGEX ^[\da-fA-F]+ 0x[\da-fA-F]+$
+AFTER ./testprogs/uprobe_loop
+
 NAME ustack_elf_symtable
 ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
 PROG config = { show_debug_info=0 } uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
