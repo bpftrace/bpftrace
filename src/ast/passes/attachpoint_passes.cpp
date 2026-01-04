@@ -334,12 +334,11 @@ AttachPointParser::AttachPointParser(ASTContext &ctx,
 {
 }
 
-int AttachPointParser::parse()
+void AttachPointParser::parse()
 {
   if (!ctx_.root)
-    return 1;
+    return;
 
-  uint32_t failed = 0;
   for (Probe *probe : ctx_.root->probes) {
     for (size_t i = 0; i < probe->attach_points.size(); ++i) {
       auto *ap_ptr = probe->attach_points[i];
@@ -348,7 +347,6 @@ int AttachPointParser::parse()
 
       State s = parse_attachpoint(ap);
       if (s == INVALID) {
-        ++failed;
         ap.addError() << errs_.str();
       } else if (s == SKIP || s == NEW_APS) {
         // Remove the current attach point
@@ -374,14 +372,14 @@ int AttachPointParser::parse()
     probe->attach_points.erase(it.begin(), it.end());
 
     if (probe->attach_points.empty()) {
-      probe->addError() << "No attach points for probe";
-      failed++;
+      const auto missing_probes = bpftrace_.config_->missing_probes;
+      if (missing_probes == ConfigMissingProbes::error) {
+        probe->addError() << "No attach points for probe";
+      }
     }
 
     has_iter_ap_ = false; // reset for each probe
   }
-
-  return failed;
 }
 
 AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
@@ -568,6 +566,23 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
   parts_.emplace_back(std::move(argument));
 
   return State::OK;
+}
+
+bool AttachPointParser::should_skip_tracepoint(AttachPoint &ap)
+{
+  auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(ap);
+  if (matches.empty()) {
+    const auto missing_probes = bpftrace_.config_->missing_probes;
+    if (missing_probes == ConfigMissingProbes::warn) {
+      ap.addWarning() << "No matches for "
+                      << probetypeName(probetype(ap.provider)) << " "
+                      << ap.target << ":" << ap.func << ". Skipping.";
+      return true;
+    } else if (missing_probes == ConfigMissingProbes::ignore) {
+      return true;
+    }
+  }
+  return false;
 }
 
 AttachPointParser::State AttachPointParser::special_parser()
@@ -818,6 +833,9 @@ AttachPointParser::State AttachPointParser::tracepoint_parser()
 
   ap_->target = parts_[1];
   ap_->func = parts_[2];
+
+  if (should_skip_tracepoint(*ap_))
+    return SKIP;
 
   return OK;
 }
@@ -1072,6 +1090,9 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
     ap_->target = "*";
     ap_->func = parts_[1];
   }
+
+  if (should_skip_tracepoint(*ap_))
+    return SKIP;
 
   return OK;
 }
