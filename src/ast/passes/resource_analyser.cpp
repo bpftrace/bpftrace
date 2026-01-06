@@ -166,6 +166,8 @@ void ResourceAnalyser::visit(Builtin &builtin)
       resources_.max_call_stack_size = std::max(resources_.max_call_stack_size,
                                                 builtin.builtin_type.GetSize());
     }
+  } else if (builtin.ident == "__builtin_elapsed") {
+    resources_.needs_elapsed_map = true;
   }
 }
 
