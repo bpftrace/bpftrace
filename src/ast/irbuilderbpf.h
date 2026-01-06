@@ -121,7 +121,6 @@ public:
   CallInst *CreatePerCpuPtr(Value *var, Value *cpu, const Location &loc);
   CallInst *CreateThisCpuPtr(Value *var, const Location &loc);
   CallInst *CreateGetSocketCookie(Value *var, const Location &loc);
-  CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const Location &loc);
   Value *CreateGetStrAllocation(const std::string &name,
                                 const Location &loc,
                                 uint64_t pad = 0);
@@ -134,6 +133,7 @@ public:
   Value *CreateCallStackAllocation(const SizedType &stack_type,
                                const std::string &name,
                                const Location &loc);
+  Value *CreateJoinAllocation(const Location &loc);
   Value *CreateWriteMapValueAllocation(const SizedType &value_type,
                                        const std::string &name,
                                        const Location &loc);
@@ -284,11 +284,6 @@ private:
       Value *cpu,
       PointerType *val_ptr_ty,
       const std::string &name = "lookup_percpu_elem");
-  CallInst *createGetScratchMap(const std::string &map_name,
-                                const std::string &name,
-                                const Location &loc,
-                                BasicBlock *failure_callback,
-                                int key = 0);
   Value *CreateReadMapValueAllocation(const SizedType &value_type,
                                       const std::string &name,
                                       const Location &loc);

@@ -9,7 +9,6 @@ namespace bpftrace::ast {
 
 struct CodegenResources {
   bool needs_elapsed_map = false;
-  bool needs_join_map = false;
 };
 
 // Codegen resource analysis pass
@@ -24,7 +23,6 @@ public:
 
   using Visitor<CodegenResourceAnalyser>::visit;
   void visit(Builtin &builtin);
-  void visit(Call &call);
 
 private:
   const ::bpftrace::Config &config_;
