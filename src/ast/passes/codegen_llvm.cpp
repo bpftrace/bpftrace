@@ -49,7 +49,6 @@
 #include "async_action.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
-#include "codegen_resources.h"
 #include "config.h"
 #include "globalvars.h"
 #include "log.h"
@@ -276,8 +275,7 @@ private:
       const std::string &name,
       const Location &loc);
 
-  void generate_maps(const RequiredResources &required_resources,
-                     const CodegenResources &codegen_resources);
+  void generate_maps(const RequiredResources &required_resources);
   void generate_global_vars(const RequiredResources &resources,
                             const ::bpftrace::Config &bpftrace_config);
 
@@ -4022,8 +4020,7 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 // normally set by libbpf's linker but since we load BTF directly, we must do
 // the fixing ourselves, until we start loading BPF programs via bpf_object.
 // See BpfBytecode::fixupBTF for details.
-void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
-                                const CodegenResources &codegen_resources)
+void CodegenLLVM::generate_maps(const RequiredResources &required_resources)
 {
   // User-defined maps
   for (const auto &[name, info] : required_resources.maps_info) {
@@ -4034,7 +4031,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   }
 
   // bpftrace internal maps
-  if (codegen_resources.needs_elapsed_map) {
+  if (required_resources.needs_elapsed_map) {
     createMapDefinition(to_string(MapType::Elapsed),
                         BPF_MAP_TYPE_HASH,
                         1,
@@ -4605,9 +4602,7 @@ GlobalVariable *CodegenLLVM::DeclareKernelVar(const std::string &var_name)
 
 std::unique_ptr<llvm::Module> CodegenLLVM::compile()
 {
-  CodegenResourceAnalyser analyser(*bpftrace_.config_);
-  auto codegen_resources = analyser.analyse(*ast_.root);
-  generate_maps(bpftrace_.resources, codegen_resources);
+  generate_maps(bpftrace_.resources);
   generate_global_vars(bpftrace_.resources, *bpftrace_.config_);
   {
     visit(ast_.root);

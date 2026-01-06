@@ -218,6 +218,7 @@ public:
   std::map<std::string, MapInfo> maps_info;
   globalvars::GlobalVars global_vars;
   bool using_skboutput = false;
+  bool needs_elapsed_map = false;
 
   // Probe metadata
   //
