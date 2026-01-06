@@ -23,13 +23,4 @@ void CodegenResourceAnalyser::visit(Builtin &builtin)
   }
 }
 
-void CodegenResourceAnalyser::visit(Call &call)
-{
-  Visitor::visit(call);
-
-  if (call.func == "join") {
-    resources_.needs_join_map = true;
-  }
-}
-
 } // namespace bpftrace::ast
