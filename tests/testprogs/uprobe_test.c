@@ -23,6 +23,18 @@ struct Foo *uprobeFunction2(struct Foo *foo1,
   return foo1;
 }
 
+int uprobeFunctionBranching(int n)
+{
+  if (n == 1) {
+   return 1; 
+  } else if (n == 2) {
+    return 2;
+  } else {
+    return 3;
+  }
+  return 0;
+}
+
 // clang-format off
 /*
  * Anonymous types inside parameter lists are not legal until C23 [0][1][2].
@@ -73,6 +85,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
       .a = 456, .b = "world", .c = { 4, 5, 6 }, .d = 0xFEDCBA9876543210
     };
     uprobeFunction2(&foo1, &foo2);
+
+    uprobeFunctionBranching(n);
 
     __uint128_t x = 0x123456789ABCDEF0;
     __uint128_t y = 0xEFEFEFEFEFEFEFEF;

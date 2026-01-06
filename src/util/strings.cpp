@@ -22,6 +22,34 @@ std::vector<std::string> split_string(const std::string &str,
   return elems;
 }
 
+std::vector<std::string> split_string_quoted(const std::string &str,
+                                             char delimiter,
+                                             bool remove_empty)
+{
+  std::vector<std::string> elems;
+  std::string value;
+  bool in_quotes = false;
+
+  for (size_t i = 0; i < str.size(); ++i) {
+    if (str[i] == delimiter && !in_quotes) {
+      if (!remove_empty || !value.empty())
+        elems.emplace_back(std::move(value));
+      value.clear();
+    } else if (str[i] == '"') {
+      in_quotes = !in_quotes;
+    } else if (in_quotes && str[i] == '\\' && (i + 1 < str.size())) {
+      value += str[i + 1];
+      ++i;
+    } else {
+      value += str[i];
+    }
+  }
+
+  if (!remove_empty || !value.empty())
+    elems.emplace_back(std::move(value));
+  return elems;
+}
+
 /// Erase prefix up to the first colon (:) from str and return the prefix
 std::string erase_prefix(std::string &str)
 {

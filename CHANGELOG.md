@@ -23,6 +23,8 @@ and this project adheres to
 - Experimental `watchpoint:func+arg` and `asyncwatchpoint:func+arg` attach points are not supported anymore (for now, at least)
   - [#4890](https://github.com/bpftrace/bpftrace/pull/4890)
 #### Added
+- Add `uprobe` support for statement attach points.
+  - [#4867](https://github.com/bpftrace/bpftrace/pull/4867)
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)
 - Add `syscall_name()` to convert system call numbers into names.
