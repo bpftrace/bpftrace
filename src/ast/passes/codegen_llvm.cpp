@@ -3862,7 +3862,7 @@ void CodegenLLVM::createJoinCall(Call &call, int id)
   BasicBlock *failure_callback = BasicBlock::Create(module_->getContext(),
                                                     "failure_callback",
                                                     parent);
-  Value *perfdata = b_.CreateGetJoinMap(failure_callback, call.loc);
+  Value *perfdata = b_.CreateJoinAllocation(call.loc);
 
   uint32_t content_size = bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
 
@@ -4034,18 +4034,6 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
   }
 
   // bpftrace internal maps
-
-  if (codegen_resources.needs_join_map) {
-    auto value_size = offsetof(AsyncEvent::Join, content) +
-                      (bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
-    SizedType value_type = CreateArray(value_size, CreateInt8());
-    createMapDefinition(to_string(MapType::Join),
-                        BPF_MAP_TYPE_PERCPU_ARRAY,
-                        1,
-                        CreateUInt32(),
-                        value_type);
-  }
-
   if (codegen_resources.needs_elapsed_map) {
     createMapDefinition(to_string(MapType::Elapsed),
                         BPF_MAP_TYPE_HASH,

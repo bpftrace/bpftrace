@@ -97,7 +97,6 @@ private:
 enum class MapType {
   // Also update to_string
   PerfEvent,
-  Join,
   Elapsed,
   Ringbuf,
   EventLossCounter,

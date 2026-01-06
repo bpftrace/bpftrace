@@ -128,6 +128,10 @@ RequiredResources ResourceAnalyser::resources()
     resources_.global_vars.add_known(bpftrace::globalvars::MAP_KEY_BUFFER);
   }
 
+  if (resources_.join_value_size > 0) {
+    resources_.global_vars.add_known(bpftrace::globalvars::JOIN_BUFFER);
+  }
+
   resources_.global_vars.add_known(bpftrace::globalvars::MAX_CPU_ID);
   resources_.global_vars.add_known(bpftrace::globalvars::EVENT_LOSS_COUNTER);
 
@@ -375,6 +379,12 @@ void ResourceAnalyser::visit(Call &call)
     const auto max_strlen = bpftrace_.config_->max_strlen;
     if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;
+  }
+
+  if (call.func == "join") {
+    resources_.join_value_size = offsetof(AsyncEvent::Join, content) +
+                                 (bpftrace_.join_argnum_ *
+                                  bpftrace_.join_argsize_);
   }
 
   // These functions, some of which are desugared AssignMapStatements (e.g.,

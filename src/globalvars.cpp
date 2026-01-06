@@ -281,6 +281,11 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
     return make_rw_type(1, CreateUInt64());
   }
 
+  if (global_var_name == JOIN_BUFFER) {
+    return make_rw_type(1,
+                        CreateArray(resources.join_value_size, CreateInt8()));
+  }
+
   if (!config.type) {
     LOG(BUG) << "Unknown global variable " << global_var_name;
   }
