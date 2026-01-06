@@ -1000,13 +1000,26 @@ std::string BPFtrace::get_stack(
   for (uint64_t i = 0; i < nr_stack_frames; ++i) {
     auto build_id_struct = raw_stack.at(i);
     if (build_id_struct.status == 1) {
-      // Format build_id as a continuous hex string
-      stack << std::hex << std::setfill('0');
-      for (unsigned char j : build_id_struct.build_id) {
-        stack << std::setw(2) << static_cast<unsigned int>(j);
+      std::string_view build_id = std::string_view(reinterpret_cast<char*>(build_id_struct.build_id), sizeof(build_id_struct.build_id));
+      std::vector<std::string> syms = usyms_.resolve(build_id, build_id_struct.offset);
+
+      // TODO: move this into resolve...
+      if (syms.empty())
+        syms.emplace_back("[unknown]");
+
+      for (auto sym : syms) {
+        // Format build_id as a continuous hex string
+        stack << "\t" << sym << " (";
+
+        stack << std::hex << std::setfill('0');
+        for (unsigned char j : build_id_struct.build_id) {
+          stack << std::setw(2) << static_cast<unsigned int>(j);
+        }
+        stack << std::dec << " " << "0x" << std::setfill('0') << std::setw(2)
+              << std::hex << build_id_struct.offset << std::dec;
+
+        stack << ")" << std::endl ;
       }
-      stack << std::dec << " " << "0x" << std::setfill('0') << std::setw(2)
-            << std::hex << build_id_struct.offset << std::dec << std::endl;
     } else {
       stack << std::hex << build_id_struct.ip << std::dec << std::endl;
     }
