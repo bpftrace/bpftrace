@@ -339,7 +339,7 @@ WILL_FAIL
 
 NAME has_key error type mismatch
 PROG begin { @g[1, "hi"] = 2; if (has_key(@g, (1, 2))) { printf("ok\n"); }  }
-EXPECT_REGEX .* ERROR: Argument mismatch for @g: trying to access with arguments: '\(uint8,uint8\)' when map expects arguments: '\(uint8,string\[3\]\)'.*
+EXPECT_REGEX .* ERROR: Type mismatch for \$\$has_key_\$key: trying to assign value of type '\(uint8,uint8\)' when variable already has a type '\(uint8,string\[3\]\)'.*
 WILL_FAIL
 
 NAME exit code

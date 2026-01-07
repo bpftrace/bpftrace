@@ -3258,10 +3258,12 @@ void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
       }
     }
     if (type_mismatch_error) {
-      key_expr.node().addError()
-          << "Argument mismatch for " << map->ident << ": "
-          << "trying to access with arguments: '" << new_key_type
-          << "' when map expects arguments: '" << storedTy << "'";
+      if (is_final_pass()) {
+        key_expr.node().addError()
+            << "Argument mismatch for " << map->ident << ": "
+            << "trying to access with arguments: '" << new_key_type
+            << "' when map expects arguments: '" << storedTy << "'";
+      }
     }
   } else {
     if (!new_key_type.IsNoneTy()) {
@@ -4270,10 +4272,12 @@ void SemanticAnalyser::assign_map_type(Map &map,
       }
     }
     if (type_mismatch_error) {
-      loc_node->addError() << "Type mismatch for " << map_ident << ": "
-                           << "trying to assign value of type '" << type
-                           << "' when map already contains a value of type '"
-                           << storedTy << "'";
+      if (is_final_pass()) {
+        loc_node->addError() << "Type mismatch for " << map_ident << ": "
+                             << "trying to assign value of type '" << type
+                             << "' when map already contains a value of type '"
+                             << storedTy << "'";
+      }
     } else {
       map.value_type = storedTy;
       *maptype = storedTy;
