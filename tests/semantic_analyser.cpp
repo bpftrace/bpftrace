@@ -362,6 +362,7 @@ TEST_F(SemanticAnalyserTest, consistent_map_keys)
   test("begin { @x[1] = 0; @x[2]; }");
   test("begin { @x[@y] = 5; @y = 1;}");
   test("begin { @x[@y[@z]] = 5; @y[2] = 1; @z = @x[0]; }");
+  test("begin { @y[1] = 0; @y[@x] = 2; @x = 1; }");
 
   test("begin { @x = 0; @x[1]; }", Error{ R"(
 stdin:1:17-22: ERROR: @x used as a map with an explicit key (non-scalar map), previously used without an explicit key (scalar map)
@@ -1048,9 +1049,7 @@ TEST_F(SemanticAnalyserTest, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = "
        "5; delete(@y, (1, 2)); }",
        Error{ R"(
-stdin:1:42-48: ERROR: Argument mismatch for @y: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,uint8,uint8)'
-kprobe:f { @y[(3, 4, 5)] = 5; delete(@y, (1, 2)); }
-                                         ~~~~~~
+stdlib/base.bt:258:3-32: ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,uint8,uint8)'
 )" },
        Types{ types });
 
@@ -1081,9 +1080,7 @@ ERROR: call to delete() with two arguments expects a map with explicit keys (non
 
   test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })",
        Error{ R"(
-stdin:1:36-47: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],uint8)' when map expects arguments: '(uint8,string[3])'
-kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); }
-                                   ~~~~~~~~~~~
+stdlib/base.bt:258:3-32: ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(string[3],uint8)' when variable already has a type '(uint8,string[3])'
 )" },
        Types{ types });
 
@@ -1295,17 +1292,13 @@ TEST_F(SemanticAnalyserTest, call_has_key)
 
   test("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
        Error{ R"(
-stdin:1:43-44: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
-kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }
-                                          ~
+stdlib/base.bt:403:3-32: ERROR: Type mismatch for $$has_key_$key: trying to assign value of type 'uint8' when variable already has a type '(uint8,uint8)'
 )" },
        Types{ types });
 
   test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
        Error{ R"(
-stdin:1:45-51: ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,string[3])'
-kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} }
-                                            ~~~~~~
+stdlib/base.bt:403:3-32: ERROR: Type mismatch for $$has_key_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,string[3])'
 )" },
        Types{ types });
 
@@ -1772,6 +1765,7 @@ kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = 1; }
 TEST_F(SemanticAnalyserTest, map_use_before_assign)
 {
   test("kprobe:f { @x = @y; @y = 2; }");
+  test("kprobe:f { @y = 0; @y = @x; @x = 1; }");
 }
 
 TEST_F(SemanticAnalyserTest, variable_use_before_assign)
@@ -2483,9 +2477,6 @@ kprobe:f { @y = stats(5); @x = @y; }
 )" });
   test("kprobe:f { @x = 1; @y = stats(5); @x = @y; }", Error{ R"(
 stdin:1:35-42: ERROR: Map value 'ustats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
-kprobe:f { @x = 1; @y = stats(5); @x = @y; }
-                                  ~~~~~~~
-stdin:1:35-42: ERROR: Type mismatch for @x: trying to assign value of type 'ustats_t' when map already contains a value of type 'uint8'
 kprobe:f { @x = 1; @y = stats(5); @x = @y; }
                                   ~~~~~~~
 )" });
