@@ -40,6 +40,7 @@ namespace {
 struct variable {
   SizedType type;
   bool can_resize;
+  // Only used during the final pass to issue warnings
   bool was_assigned;
 };
 
@@ -2127,7 +2128,7 @@ void SemanticAnalyser::check_variable(Variable &var, bool check_assigned)
 {
   if (auto *found = find_variable(var.ident)) {
     var.var_type = found->type;
-    if (!found->was_assigned && check_assigned) {
+    if (is_final_pass() && !found->was_assigned && check_assigned) {
       var.addWarning() << "Variable used before it was assigned: " << var.ident;
     }
     return;
@@ -2153,7 +2154,7 @@ void SemanticAnalyser::visit(VariableAddr &var_addr)
     }
     // We can't know if the pointer to a scratch variable was passed
     // to an external function for assignment so just mark it as assigned.
-    found->was_assigned = true;
+    found->was_assigned = is_final_pass();
   }
   if (is_final_pass() && var_addr.var_addr_type.IsNoneTy()) {
     var_addr.addError() << "No type available for variable "
@@ -3712,24 +3713,26 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         assignTy = *updatedTy;
       }
     }
-    if (type_mismatch_error && is_final_pass()) {
-      const auto *err_segment =
-          foundVar.was_assigned
-              ? "when variable already contains a value of type"
-              : "when variable already has a type";
-      assignment.addError() << "Type mismatch for " << var_ident << ": "
-                            << "trying to assign value of type '" << assignTy
-                            << "' " << err_segment << " '" << storedTy << "'";
+    if (type_mismatch_error) {
+      if (is_final_pass()) {
+        const auto *err_segment =
+            foundVar.was_assigned
+                ? "when variable already contains a value of type"
+                : "when variable already has a type";
+        assignment.addError() << "Type mismatch for " << var_ident << ": "
+                              << "trying to assign value of type '" << assignTy
+                              << "' " << err_segment << " '" << storedTy << "'";
+      }
     } else {
-      if (!foundVar.was_assigned) {
-        // The assign type is possibly more complete than the stored type,
-        // which could come from a variable declaration. The assign type may
-        // resolve builtins like `curtask` which also specifies the address
-        // space.
-        if (assignTy.GetSize() < storedTy.GetSize()) {
-          assignTy.SetSize(storedTy.GetSize());
-        }
-        foundVar.type = assignTy;
+      // The assign type is possibly more complete than the stored type,
+      // which could come from a variable declaration. The assign type may
+      // resolve builtins like `curtask` which also specifies the address
+      // space.
+      if (assignTy.GetSize() < storedTy.GetSize()) {
+        assignTy.SetSize(storedTy.GetSize());
+      }
+      foundVar.type = assignTy;
+      if (is_final_pass()) {
         foundVar.was_assigned = true;
       }
       var_scope = scope;
@@ -3739,7 +3742,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   if (var_scope == nullptr) {
     variables_[scope_stack_.back()].insert(
         { var_ident,
-          { .type = assignTy, .can_resize = true, .was_assigned = true } });
+          {
+              .type = assignTy,
+              .can_resize = true,
+              .was_assigned = is_final_pass(),
+          } });
     var_scope = scope_stack_.back();
   }
 
@@ -3864,7 +3871,7 @@ void SemanticAnalyser::visit(Subprog &subprog)
                     .emplace(arg->var->ident,
                              variable{ .type = ty,
                                        .can_resize = true,
-                                       .was_assigned = true })
+                                       .was_assigned = is_final_pass() })
                     .first->second;
     var.type = ty; // Override in case it has changed.
   }
