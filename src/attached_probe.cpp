@@ -40,21 +40,21 @@ void AttachError::log(llvm::raw_ostream &OS) const
   OS << msg_;
 }
 
-bpf_probe_attach_type attachtype(ProbeType t)
+bool is_return_type(ProbeType t)
 {
   // clang-format off
   switch (t)
   {
-    case ProbeType::kprobe:    return BPF_PROBE_ENTRY;  break;
-    case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
-    case ProbeType::special:   return BPF_PROBE_ENTRY;  break;
-    case ProbeType::test:      return BPF_PROBE_ENTRY;  break;
-    case ProbeType::benchmark: return BPF_PROBE_ENTRY;  break;
-    case ProbeType::uprobe:    return BPF_PROBE_ENTRY;  break;
-    case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
-    case ProbeType::usdt:      return BPF_PROBE_ENTRY;  break;
+    case ProbeType::kprobe:    return false;  break;
+    case ProbeType::kretprobe: return true; break;
+    case ProbeType::special:   return false;  break;
+    case ProbeType::test:      return false;  break;
+    case ProbeType::benchmark: return false;  break;
+    case ProbeType::uprobe:    return false;  break;
+    case ProbeType::uretprobe: return true; break;
+    case ProbeType::usdt:      return false;  break;
     default:
-      LOG(BUG) << "invalid probe attachtype \"" << t << "\"";
+      LOG(BUG) << "invalid probe type \"" << t << "\"";
   }
   // clang-format on
 }
@@ -105,14 +105,7 @@ std::string progtypeName(bpf_prog_type t)
 
 std::string eventprefix(ProbeType t)
 {
-  switch (attachtype(t)) {
-    case BPF_PROBE_ENTRY:
-      return "p_";
-    case BPF_PROBE_RETURN:
-      return "r_";
-  }
-
-  return {}; // unreached
+  return is_return_type(t) ? "r_" : "p_";
 }
 
 std::string eventname(const Probe &probe, uint64_t offset)
