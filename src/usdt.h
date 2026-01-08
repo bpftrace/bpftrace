@@ -8,8 +8,6 @@
 
 namespace bpftrace {
 
-// Note this class is fully static because bcc_usdt_foreach takes a function
-// pointer callback without a context variable. So we must keep global state.
 class USDTHelper {
 public:
   virtual ~USDTHelper() = default;

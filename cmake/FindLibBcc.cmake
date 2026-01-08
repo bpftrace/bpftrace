@@ -76,6 +76,7 @@ INCLUDE(CheckCXXSourceCompiles)
 SET(CMAKE_REQUIRED_INCLUDES ${LIBBCC_INCLUDE_DIRS})
 SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES})
 include(CheckSymbolExists)
+# N.B. we don't use bcc_usdt_foreach - it's just a proxy for seeing if the libbcc runtime exists
 check_symbol_exists(bcc_usdt_foreach ${LIBBCC_INCLUDE_DIRS}/bcc/bcc_usdt.h LIBBCC_BPF_CONTAINS_RUNTIME)
 SET(CMAKE_REQUIRED_LIBRARIES)
 SET(CMAKE_REQUIRED_INCLUDES)
