@@ -18,7 +18,7 @@ endif (LIBBCC_LIBRARIES AND LIBBCC_INCLUDE_DIRS)
 
 find_path (LIBBCC_INCLUDE_DIRS
   NAMES
-    bcc/libbpf.h
+    bcc/bcc_syms.h
   PATHS
     ENV CPATH
 )

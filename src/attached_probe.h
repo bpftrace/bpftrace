@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bcc/libbpf.h>
 #include <functional>
 #include <string>
 #include <vector>
@@ -14,7 +13,7 @@
 
 namespace bpftrace {
 
-bpf_probe_attach_type attachtype(ProbeType t);
+bool is_return_type(ProbeType t);
 bpf_prog_type progtype(ProbeType t);
 std::string progtypeName(bpf_prog_type t);
 
