@@ -109,6 +109,9 @@ endif()
 find_package(LibElf REQUIRED)
 include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
 
+find_package(PkgConfig)
+pkg_check_modules(libdebuginfod REQUIRED IMPORTED_TARGET libdebuginfod)
+
 find_package(LibCereal REQUIRED)
 include_directories(SYSTEM ${LIBCEREAL_INCLUDE_DIRS})
 

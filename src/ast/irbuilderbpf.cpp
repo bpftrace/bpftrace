@@ -134,7 +134,7 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *val,
   return buf;
 }
 
-StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
+StructType *IRBuilderBPF::GetStackStructType(const StackType &stack_type)
 {
   // Kernel stacks should not be differentiated by pid, since the kernel
   // address space is the same between pids (and when aggregating you *want*
@@ -142,21 +142,42 @@ StructType *IRBuilderBPF::GetStackStructType(bool is_ustack)
   // are special because of ASLR, hence we also store the pid; probe id is
   // stored for cases when only ELF resolution works (e.g. ASLR disabled and
   // process exited).
-  if (is_ustack) {
-    std::vector<llvm::Type *> elements{
-      getInt64Ty(), // stack id
-      getInt64Ty(), // nr_stack_frames
-      getInt32Ty(), // pid
-      getInt32Ty(), // probe id
+  std::vector<llvm::Type *> elements{
+    getInt64Ty(), // nr_stack_frames
+  };
+  if (stack_type.mode == StackMode::build_id) {
+    // struct bpf_stack_build_id {
+    //   __s32		status;
+    //   unsigned char	build_id[BPF_BUILD_ID_SIZE];
+    //   union {
+    //     __u64	offset;
+    //     __u64	ip;
+    //   };
+    // };
+    std::vector<llvm::Type *> union_elem = {
+      getInt64Ty(),
     };
-    return GetStructType("ustack_key", elements, false);
+    StructType *union_type = GetStructType("offset_union", union_elem, false);
+
+    std::vector<llvm::Type *> build_id_elements = {
+      getInt32Ty(), // status
+      ArrayType::get(getInt8Ty(),
+                     BPF_BUILD_ID_SIZE), // build_id[BPF_BUILD_ID_SIZE]
+      union_type,
+    };
+    StructType *stack_build_id = GetStructType("stack_build_id",
+                                               build_id_elements,
+                                               false);
+    elements.emplace_back(ArrayType::get(stack_build_id, stack_type.limit));
   } else {
-    std::vector<llvm::Type *> elements{
-      getInt64Ty(), // stack id
-      getInt64Ty(), // nr_stack_frames
-    };
-    return GetStructType("kstack_key", elements, false);
+    elements.emplace_back(ArrayType::get(getInt64Ty(), stack_type.limit));
   }
+  if (!stack_type.kernel) {
+    elements.emplace_back(getInt32Ty()); // pid
+    elements.emplace_back(getInt32Ty()); // probe id
+  }
+
+  return GetStructType(stack_type.name(), elements, false);
 }
 
 StructType *IRBuilderBPF::GetStructType(
@@ -367,7 +388,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 
     ty = GetStructType(ty_name, llvm_elems, false);
   } else if (stype.IsStack()) {
-    ty = GetStackStructType(stype.IsUstackTy());
+    ty = GetStackStructType(stype.stack_type);
   } else if (stype.IsPtrTy()) {
     ty = getPtrTy();
   } else if (stype.IsVoidTy()) {
@@ -538,11 +559,8 @@ CallInst *IRBuilderBPF::CreateGetStackScratchMap(StackType stack_type,
                                                  BasicBlock *failure_callback,
                                                  const Location &loc)
 {
-  SizedType value_type = CreateArray(stack_type.limit, CreateUInt64());
-  return createGetScratchMap(StackType::scratch_name(),
-                             StackType::scratch_name(),
-                             loc,
-                             failure_callback);
+  return createGetScratchMap(
+      stack_type.name(), stack_type.name(), loc, failure_callback);
 }
 
 Value *IRBuilderBPF::CreateGetStrAllocation(const std::string &name,
@@ -576,6 +594,19 @@ Value *IRBuilderBPF::CreateTupleAllocation(const SizedType &tuple_type,
                           loc,
                           [](AsyncIds &async_ids) {
                             return async_ids.tuple();
+                          });
+}
+
+Value *IRBuilderBPF::CreateKUStackAllocation(const SizedType &stack_type,
+                                             const std::string &name,
+                                             const Location &loc)
+{
+  return createAllocation(bpftrace::globalvars::KU_STACK_BUFFER,
+                          GetType(stack_type),
+                          name,
+                          loc,
+                          [](AsyncIds &async_ids) {
+                            return async_ids.ku_stack();
                           });
 }
 
@@ -1807,16 +1838,19 @@ CallInst *IRBuilderBPF::CreateGetRandom(const Location &loc)
 }
 
 CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
-                                       bool ustack,
                                        Value *buf,
-                                       StackType stack_type,
+                                       const StackType &stack_type,
                                        const Location &loc)
 {
   int flags = 0;
-  if (ustack)
+  if (!stack_type.kernel) {
     flags |= (1 << 8);
+    if (stack_type.mode == StackMode::build_id) {
+      flags |= (1 << 11);
+    }
+  }
   Value *flags_val = getInt64(flags);
-  Value *stack_size = getInt32(stack_type.limit * sizeof(uint64_t));
+  Value *stack_size = getInt32(stack_type.limit * stack_type.stack_elem_size);
 
   // long bpf_get_stack(void *ctx, void *buf, u32 size, u64 flags)
   // Return: The non-negative copied *buf* length equal to or less than

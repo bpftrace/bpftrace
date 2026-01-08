@@ -33,6 +33,8 @@ public:
                                    bool show_offset,
                                    bool perf_mode,
                                    bool show_debug_info);
+  std::vector<std::string> resolve(const std::string_view &build_id,
+                                   uint64_t offset);
 
 private:
   const Config& config_;

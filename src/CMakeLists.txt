@@ -229,6 +229,8 @@ if (ENABLE_SYSTEMD)
   target_link_libraries(runtime PkgConfig::libsystemd)
 endif()
 
+target_link_libraries(runtime PkgConfig::libdebuginfod)
+
 unset(BPFTRACE)
 
 add_subdirectory(aot)

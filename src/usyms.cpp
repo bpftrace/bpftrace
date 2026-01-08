@@ -1,6 +1,8 @@
 #include "types.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
+#include <blazesym.h>
+#include <elfutils/debuginfod.h>
 #include <sstream>
 
 #include "config.h"
@@ -422,6 +424,67 @@ std::vector<std::string> Usyms::resolve(uint64_t addr,
   return std::vector<std::string>{
     resolve_bcc(addr, pid, pid_exe, show_offset, perf_mode)
   };
+}
+
+std::vector<std::string> Usyms::resolve(const std::string_view &build_id, uint64_t offset)
+{
+  std::vector<std::string> str_syms;
+  char *debugpath = nullptr;
+  int fd = -1;
+
+  debuginfod_client *client = debuginfod_begin();
+  if (!client) {
+    printf("no client\n");
+    return std::vector<std::string>{};
+  }
+
+  // In case of an error, the function returns a negative error code and
+  // debugpath stays nullptr.
+  fd = debuginfod_find_debuginfo(client, reinterpret_cast<const unsigned char *>(build_id.data()),
+                                 build_id.length(),
+                                 &debugpath);
+  if (fd >= 0)
+    close(fd);
+
+  debuginfod_end(client);
+
+  if (!debugpath) {
+    printf("no hit %d!\n", fd);
+    return str_syms;
+  }
+
+  if (symbolizer_ == nullptr) {
+    symbolizer_ = create_symbolizer();
+    if (symbolizer_ == nullptr)
+      return str_syms;
+  }
+
+  auto cache_type = config_.user_symbol_cache_type;
+  SCOPE_EXIT
+  {
+    if (cache_type == UserSymbolCacheType::none) {
+      blaze_symbolizer_free(symbolizer_);
+      symbolizer_ = nullptr;
+    }
+  };
+
+  blaze_symbolize_src_elf src = {
+    .type_size = sizeof(src),
+    .path = debugpath,
+    .debug_syms = true,
+  };
+
+  const blaze_syms *syms = blaze_symbolize_elf_file_offsets(
+      symbolizer_, &src, static_cast<uintptr_t *>(&offset), 1);
+  if (syms == nullptr)
+    return str_syms;
+  SCOPE_EXIT
+  {
+    blaze_syms_free(syms);
+  };
+
+  add_symbols(&syms->syms[0], false, false, str_syms);
+  return str_syms;
 }
 
 struct bcc_symbol_option &Usyms::get_symbol_opts()

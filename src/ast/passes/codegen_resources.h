@@ -10,7 +10,6 @@ namespace bpftrace::ast {
 struct CodegenResources {
   bool needs_elapsed_map = false;
   bool needs_join_map = false;
-  std::unordered_set<StackType> stackid_maps;
 };
 
 // Codegen resource analysis pass

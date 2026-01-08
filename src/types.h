@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <bpf/bpf.h>
 #include <cassert>
 #include <cereal/access.hpp>
 #include <cereal/types/variant.hpp>
@@ -75,12 +76,14 @@ enum class StackMode : uint8_t {
   bpftrace,
   perf,
   raw,
+  build_id
 };
 
 const std::map<StackMode, std::string> STACK_MODE_NAME_MAP = {
   { StackMode::bpftrace, "bpftrace" },
   { StackMode::perf, "perf" },
   { StackMode::raw, "raw" },
+  { StackMode::build_id, "build_id" },
 };
 
 template <>
@@ -111,25 +114,26 @@ struct ConfigParser<StackMode> {
 };
 
 struct StackType {
-  // N.B. the limit of 127 defines the default stack size.
+  // Defines the default number of stack elements.
   uint16_t limit = 127;
+  // Most stack modes store IPs (8) but build_id mode
+  // stores struct bpf_stack_build_id (32).
+  uint16_t stack_elem_size = 8;
   StackMode mode = StackMode::bpftrace;
+  bool kernel = true;
 
   bool operator==(const StackType &obj) const
   {
-    return limit == obj.limit && mode == obj.mode;
+    return limit == obj.limit && mode == obj.mode
+    && stack_elem_size && obj.stack_elem_size
+    && kernel == obj.kernel;
   }
 
   std::string name() const
   {
-    return "stack_" + STACK_MODE_NAME_MAP.at(mode) + "_" +
+    std::string prefix = kernel ? "k" : "u";
+    return prefix + "stack_" + STACK_MODE_NAME_MAP.at(mode) + "_" +
            std::to_string(limit);
-  }
-
-  static const std::string &scratch_name()
-  {
-    static const std::string scratch_name = "stack_scratch";
-    return scratch_name;
   }
 
 private:
@@ -602,6 +606,8 @@ struct hash<bpftrace::StackType> {
         return std::hash<std::string>()("perf#" + to_string(obj.limit));
       case bpftrace::StackMode::raw:
         return std::hash<std::string>()("raw#" + to_string(obj.limit));
+      case bpftrace::StackMode::build_id:
+        return std::hash<std::string>()("build_id#" + to_string(obj.limit));
     }
 
     return {}; // unreached

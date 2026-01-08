@@ -45,11 +45,6 @@ using util::symbol;
 
 const int timeout_ms = 100;
 
-struct stack_key {
-  int64_t stackid;
-  int64_t nr_stack_frames;
-};
-
 enum class DebugStage;
 
 // globals
@@ -129,13 +124,15 @@ public:
       Probe &probe,
       const BpfBytecode &bytecode);
   int run_iter();
-  std::string get_stack(int64_t stackid,
-                        uint32_t nr_stack_frames,
+  std::string get_stack(uint64_t nr_stack_frames,
+                        std::vector<uint64_t>&& raw_stack,
                         int32_t pid,
                         int32_t probe_id,
                         bool ustack,
                         StackType stack_type,
                         int indent = 0);
+  std::string get_stack(uint64_t nr_stack_frames,
+                        const std::vector<bpf_stack_build_id>& raw_stack);
   std::string resolve_ksym(uint64_t addr);
   std::string resolve_usym(uint64_t addr, int32_t pid, int32_t probe_id);
   std::string resolve_inet(int af, const char *inet) const;

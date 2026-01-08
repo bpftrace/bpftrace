@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <glob.h>
+#include <iomanip>
 #include <iostream>
 #include <ranges>
 #include <regex>
@@ -989,32 +990,58 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   }
 }
 
-std::string BPFtrace::get_stack(int64_t stackid,
-                                uint32_t nr_stack_frames,
+std::string BPFtrace::get_stack(
+    uint64_t nr_stack_frames,
+    const std::vector<bpf_stack_build_id> &raw_stack)
+{
+  std::ostringstream stack;
+
+  stack << "\n";
+  for (uint64_t i = 0; i < nr_stack_frames; ++i) {
+    auto build_id_struct = raw_stack.at(i);
+    if (build_id_struct.status == 1) {
+      std::string_view build_id = std::string_view(reinterpret_cast<char*>(build_id_struct.build_id), sizeof(build_id_struct.build_id));
+      std::vector<std::string> syms = usyms_.resolve(build_id, build_id_struct.offset);
+
+      // TODO: move this into resolve...
+      if (syms.empty())
+        syms.emplace_back("[unknown]");
+
+      for (auto sym : syms) {
+        // Format build_id as a continuous hex string
+        stack << "\t" << sym << " (";
+
+        stack << std::hex << std::setfill('0');
+        for (unsigned char j : build_id_struct.build_id) {
+          stack << std::setw(2) << static_cast<unsigned int>(j);
+        }
+        stack << std::dec << " " << "0x" << std::setfill('0') << std::setw(2)
+              << std::hex << build_id_struct.offset << std::dec;
+
+        stack << ")" << std::endl ;
+      }
+    } else {
+      stack << std::hex << build_id_struct.ip << std::dec << std::endl;
+    }
+  }
+
+  return stack.str();
+}
+
+std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
+                                std::vector<uint64_t> &&raw_stack,
                                 int32_t pid,
                                 int32_t probe_id,
                                 bool ustack,
                                 StackType stack_type,
                                 int indent)
 {
-  struct stack_key stack_key = { .stackid = stackid,
-                                 .nr_stack_frames = nr_stack_frames };
-  auto stack_trace = std::vector<uint64_t>(stack_type.limit);
-  auto map = bytecode_.getMap(stack_type.name());
-  auto ok = map.lookup_elem(&stack_key, stack_trace.data());
-  if (!ok) {
-    LOG(ERROR) << "failed to look up stack id: " << stackid
-               << " stack length: " << nr_stack_frames << " (pid " << pid
-               << "): " << ok.takeError();
-    return "";
-  }
-
   std::ostringstream stack;
   std::string padding(indent, ' ');
 
   stack << "\n";
-  for (uint32_t i = 0; i < nr_stack_frames;) {
-    uint64_t addr = stack_trace.at(i);
+  for (uint64_t i = 0; i < nr_stack_frames;) {
+    uint64_t addr = raw_stack.at(i);
     if (stack_type.mode == StackMode::raw) {
       stack << std::hex << addr << std::endl;
       ++i;
@@ -1046,8 +1073,10 @@ std::string BPFtrace::get_stack(int64_t stackid,
                 << std::endl;
           break;
         case StackMode::raw:
-          LOG(BUG) << "StackMode::raw should have been processed before "
-                      "symbolication.";
+        case StackMode::build_id:
+          LOG(BUG)
+              << "StackMode::raw or build_id should have been processed before "
+                 "symbolication.";
           break;
       }
       ++i;
