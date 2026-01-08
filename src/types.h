@@ -114,6 +114,11 @@ struct StackType {
   // N.B. the limit of 127 defines the default stack size.
   uint16_t limit = 127;
   StackMode mode = StackMode::bpftrace;
+  // This is used to construct the name() below,
+  // which is then used in irbuilder as the struct name.
+  // Since ustacks and kstacks have different structs
+  // we need to make sure the names a different.
+  bool kernel = true;
 
   bool operator==(const StackType &obj) const
   {
@@ -122,14 +127,9 @@ struct StackType {
 
   std::string name() const
   {
-    return "stack_" + STACK_MODE_NAME_MAP.at(mode) + "_" +
+    std::string prefix = kernel ? "k" : "u";
+    return prefix + "stack_" + STACK_MODE_NAME_MAP.at(mode) + "_" +
            std::to_string(limit);
-  }
-
-  static const std::string &scratch_name()
-  {
-    static const std::string scratch_name = "stack_scratch";
-    return scratch_name;
   }
 
 private:

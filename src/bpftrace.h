@@ -45,11 +45,6 @@ using util::symbol;
 
 const int timeout_ms = 100;
 
-struct stack_key {
-  int64_t stackid;
-  int64_t nr_stack_frames;
-};
-
 enum class DebugStage;
 
 // globals
@@ -129,8 +124,8 @@ public:
       Probe &probe,
       const BpfBytecode &bytecode);
   int run_iter();
-  std::string get_stack(int64_t stackid,
-                        uint32_t nr_stack_frames,
+  std::string get_stack(uint64_t nr_stack_frames,
+                        const OpaqueValue &raw_stack,
                         int32_t pid,
                         int32_t probe_id,
                         bool ustack,

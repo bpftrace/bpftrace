@@ -989,32 +989,20 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   }
 }
 
-std::string BPFtrace::get_stack(int64_t stackid,
-                                uint32_t nr_stack_frames,
+std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
+                                const OpaqueValue &raw_stack,
                                 int32_t pid,
                                 int32_t probe_id,
                                 bool ustack,
                                 StackType stack_type,
                                 int indent)
 {
-  struct stack_key stack_key = { .stackid = stackid,
-                                 .nr_stack_frames = nr_stack_frames };
-  auto stack_trace = std::vector<uint64_t>(stack_type.limit);
-  auto map = bytecode_.getMap(stack_type.name());
-  auto ok = map.lookup_elem(&stack_key, stack_trace.data());
-  if (!ok) {
-    LOG(ERROR) << "failed to look up stack id: " << stackid
-               << " stack length: " << nr_stack_frames << " (pid " << pid
-               << "): " << ok.takeError();
-    return "";
-  }
-
   std::ostringstream stack;
   std::string padding(indent, ' ');
 
   stack << "\n";
-  for (uint32_t i = 0; i < nr_stack_frames;) {
-    uint64_t addr = stack_trace.at(i);
+  for (uint64_t i = 0; i < nr_stack_frames;) {
+    auto addr = raw_stack.bitcast<uint64_t>(i);
     if (stack_type.mode == StackMode::raw) {
       stack << std::hex << addr << std::endl;
       ++i;

@@ -315,9 +315,8 @@ private:
   ScopedExpr unop_int(Unop &unop);
   ScopedExpr unop_ptr(Unop &unop);
 
-  ScopedExpr kstack_ustack(const std::string &ident,
-                           StackType stack_type,
-                           const Location &loc);
+  ScopedExpr kstack(const SizedType &stype, const Location &loc);
+  ScopedExpr ustack(const SizedType &stype, const Location &loc);
 
   int get_probe_id();
 
@@ -375,7 +374,6 @@ private:
   llvm::Function *createForEachMapCallback(const For &f,
                                            const Map &map,
                                            llvm::Type *ctx_t);
-  llvm::Function *createMurmurHash2Func();
 
   Value *createFmtString(int print_id);
 
@@ -421,7 +419,6 @@ private:
 
   llvm::Function *linear_func_ = nullptr;
   llvm::Function *log2_func_ = nullptr;
-  llvm::Function *murmur_hash_2_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
 
   size_t getStructSize(StructType *s)
@@ -551,35 +548,22 @@ ScopedExpr CodegenLLVM::visit(Identifier &identifier)
   }
 }
 
-ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
-                                      StackType stack_type,
-                                      const Location &loc)
+ScopedExpr CodegenLLVM::kstack(const SizedType &stype, const Location &loc)
 {
-  if (!murmur_hash_2_func_)
-    murmur_hash_2_func_ = createMurmurHash2Func();
-
-  const bool is_ustack = ident == "ustack";
-  const auto uint64_size = sizeof(uint64_t);
-
-  StructType *stack_key_struct = b_.GetStackStructType(is_ustack);
-  AllocaInst *stack_key = b_.CreateAllocaBPF(stack_key_struct, "stack_key");
-  b_.CreateMemsetBPF(stack_key,
-                     b_.getInt8(0),
-                     datalayout().getTypeStoreSize(stack_key_struct));
+  StructType *stack_struct_type = b_.GetStackStructType(stype.stack_type);
 
   llvm::Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *stack_scratch_failure = BasicBlock::Create(
-      module_->getContext(), "stack_scratch_failure", parent);
+
   BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
                                                "merge_block",
                                                parent);
 
-  Value *stack_trace = b_.CreateGetStackScratchMap(stack_type,
-                                                   stack_scratch_failure,
-                                                   loc);
-  b_.CreateMemsetBPF(stack_trace,
+  auto *stack = b_.CreateCallStackAllocation(stype,
+                                             stype.stack_type.name(),
+                                             loc);
+  b_.CreateMemsetBPF(stack,
                      b_.getInt8(0),
-                     uint64_size * stack_type.limit);
+                     datalayout().getTypeStoreSize(stack_struct_type));
 
   BasicBlock *get_stack_success = BasicBlock::Create(module_->getContext(),
                                                      "get_stack_success",
@@ -587,75 +571,96 @@ ScopedExpr CodegenLLVM::kstack_ustack(const std::string &ident,
   BasicBlock *get_stack_fail = BasicBlock::Create(module_->getContext(),
                                                   "get_stack_fail",
                                                   parent);
-
-  Value *stack_size = b_.CreateGetStack(
-      ctx_, is_ustack, stack_trace, stack_type, loc);
+  Value *stack_size = b_.CreateGetStack(ctx_,
+                                        b_.CreateGEP(stack_struct_type,
+                                                     stack,
+                                                     { b_.getInt64(0),
+                                                       b_.getInt32(1) }),
+                                        stype.stack_type,
+                                        loc);
   Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
 
   b_.SetInsertPoint(get_stack_fail);
-  b_.CreateDebugOutput("Failed to get stack. Error: %d",
+  b_.CreateDebugOutput("Failed to get kstack. Error: %d",
                        std::vector<Value *>{ stack_size },
                        loc);
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(get_stack_success);
 
+  const auto uint64_size = sizeof(uint64_t);
   Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt64(uint64_size));
   b_.CreateStore(num_frames,
-                 b_.CreateGEP(stack_key_struct,
-                              stack_key,
-                              { b_.getInt64(0), b_.getInt32(1) }));
-  // A random seed (or using pid) is probably unnecessary in this situation
-  // and might hurt storage as the same pids may have the same stack and
-  // we don't need to store it twice
-  Value *seed = b_.getInt64(1);
-
-  // LLVM-12 produces code that fails the BPF verifier because it
-  // can't determine the bounds of nr_stack_frames. The only thing that seems
-  // to work is truncating the type, which is fine because 255 is long enough.
-  Value *trunc_nr_stack_frames = b_.CreateTrunc(num_frames, b_.getInt8Ty());
-
-  // Here we use the murmur2 hash function to create the stack ids because
-  // bpf_get_stackid() is kind of broken by design and can suffer from hash
-  // collisions.
-  // More details here: https://github.com/bpftrace/bpftrace/issues/2962
-  Value *murmur_hash_2 = b_.CreateCall(
-      murmur_hash_2_func_,
-      { stack_trace, trunc_nr_stack_frames, seed },
-      "murmur_hash_2");
-
-  b_.CreateStore(murmur_hash_2,
-                 b_.CreateGEP(stack_key_struct,
-                              stack_key,
+                 b_.CreateGEP(stack_struct_type,
+                              stack,
                               { b_.getInt64(0), b_.getInt32(0) }));
-  // Add the stack and id to the stack map
-  b_.CreateMapUpdateElem(
-      stack_type.name(), stack_key, stack_trace, loc, BPF_ANY);
-  b_.CreateBr(merge_block);
-
-  b_.SetInsertPoint(stack_scratch_failure);
-  b_.CreateDebugOutput("Failed to get stack from scratch map.",
-                       std::vector<Value *>{},
-                       loc);
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(merge_block);
 
-  // ustack keys are special: see IRBuilderBPF::GetStackStructType()
-  if (is_ustack) {
-    // store pid
-    b_.CreateStore(b_.CreateGetPid(loc, false),
-                   b_.CreateGEP(stack_key_struct,
-                                stack_key,
-                                { b_.getInt64(0), b_.getInt32(2) }));
-    // store probe id
-    b_.CreateStore(b_.GetIntSameSize(get_probe_id(),
-                                     stack_key_struct->getTypeAtIndex(3)),
-                   b_.CreateGEP(stack_key_struct,
-                                stack_key,
-                                { b_.getInt64(0), b_.getInt32(3) }));
-  }
+  return ScopedExpr(stack);
+}
 
-  return ScopedExpr(stack_key);
+ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
+{
+  StructType *stack_struct_type = b_.GetStackStructType(stype.stack_type);
+
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
+
+  BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                               "merge_block",
+                                               parent);
+
+  auto *stack = b_.CreateCallStackAllocation(stype,
+                                             stype.stack_type.name(),
+                                             loc);
+  b_.CreateMemsetBPF(stack,
+                     b_.getInt8(0),
+                     datalayout().getTypeStoreSize(stack_struct_type));
+
+  BasicBlock *get_stack_success = BasicBlock::Create(module_->getContext(),
+                                                     "get_stack_success",
+                                                     parent);
+  BasicBlock *get_stack_fail = BasicBlock::Create(module_->getContext(),
+                                                  "get_stack_fail",
+                                                  parent);
+  Value *stack_size = b_.CreateGetStack(ctx_,
+                                        b_.CreateGEP(stack_struct_type,
+                                                     stack,
+                                                     { b_.getInt64(0),
+                                                       b_.getInt32(3) }),
+                                        stype.stack_type,
+                                        loc);
+  Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
+  b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
+
+  b_.SetInsertPoint(get_stack_fail);
+  b_.CreateDebugOutput("Failed to get ustack. Error: %d",
+                       std::vector<Value *>{ stack_size },
+                       loc);
+  b_.CreateBr(merge_block);
+  b_.SetInsertPoint(get_stack_success);
+
+  const auto uint64_size = sizeof(uint64_t);
+  Value *num_frames = b_.CreateUDiv(stack_size, b_.getInt64(uint64_size));
+  b_.CreateStore(num_frames,
+                 b_.CreateGEP(stack_struct_type,
+                              stack,
+                              { b_.getInt64(0), b_.getInt32(2) }));
+  // store pid
+  b_.CreateStore(b_.CreateGetPid(loc, false),
+                 b_.CreateGEP(stack_struct_type,
+                              stack,
+                              { b_.getInt64(0), b_.getInt32(0) }));
+  // store probe id
+  b_.CreateStore(b_.GetIntSameSize(get_probe_id(),
+                                   stack_struct_type->getTypeAtIndex(1)),
+                 b_.CreateGEP(stack_struct_type,
+                              stack,
+                              { b_.getInt64(0), b_.getInt32(1) }));
+  b_.CreateBr(merge_block);
+  b_.SetInsertPoint(merge_block);
+
+  return ScopedExpr(stack);
 }
 
 int CodegenLLVM::get_probe_id()
@@ -685,10 +690,10 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
     return ScopedExpr(ns_delta);
-  } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
-    return kstack_ustack(builtin.ident,
-                         builtin.builtin_type.stack_type,
-                         builtin.loc);
+  } else if (builtin.ident == "kstack") {
+    return kstack(builtin.builtin_type, builtin.loc);
+  } else if (builtin.ident == "ustack") {
+    return ustack(builtin.builtin_type, builtin.loc);
   } else if (builtin.ident == "pid") {
     return ScopedExpr(b_.CreateGetPid(builtin.loc, false));
   } else if (builtin.ident == "tid") {
@@ -1784,11 +1789,15 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "stack_len") {
     auto &arg = call.vargs.at(0);
     auto scoped_arg = visit(arg);
-
-    auto *stack_key_struct = b_.GetStackStructType(arg.type().IsUstackTy());
-    Value *nr_stack_frames = b_.CreateGEP(stack_key_struct,
+    auto *stack_struct_type = b_.GetStackStructType(arg.type().stack_type);
+    // The nr_frames field is in a separate place depending on
+    // if we're dealing with a ustack or kstack. See
+    // IRBuilderBPF::GetStackStructType
+    auto nr_frames_offset = arg.type().stack_type.kernel ? 0 : 2;
+    Value *nr_stack_frames = b_.CreateGEP(stack_struct_type,
                                           scoped_arg.value(),
-                                          { b_.getInt64(0), b_.getInt32(1) });
+                                          { b_.getInt64(0),
+                                            b_.getInt32(nr_frames_offset) });
     return ScopedExpr(
         b_.CreateIntCast(b_.CreateLoad(b_.getInt64Ty(), nr_stack_frames),
                          b_.getInt64Ty(),
@@ -1841,8 +1850,10 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         scoped_expr.value(),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "kstack" || call.func == "ustack") {
-    return kstack_ustack(call.func, call.return_type.stack_type, call.loc);
+  } else if (call.func == "kstack") {
+    return kstack(call.return_type, call.loc);
+  } else if (call.func == "ustack") {
+    return ustack(call.return_type, call.loc);
   } else if (call.func == "strncmp") {
     auto &left_arg = call.vargs.at(0);
     auto &right_arg = call.vargs.at(1);
@@ -4024,24 +4035,6 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources,
 
   // bpftrace internal maps
 
-  uint16_t max_stack_limit = 0;
-  for (const StackType &stack_type : codegen_resources.stackid_maps) {
-    createMapDefinition(stack_type.name(),
-                        BPF_MAP_TYPE_LRU_HASH,
-                        128 << 10,
-                        CreateArray(16, CreateInt8()),
-                        CreateArray(stack_type.limit, CreateUInt64()));
-    max_stack_limit = std::max(stack_type.limit, max_stack_limit);
-  }
-
-  if (max_stack_limit > 0) {
-    createMapDefinition(StackType::scratch_name(),
-                        BPF_MAP_TYPE_PERCPU_ARRAY,
-                        1,
-                        CreateUInt32(),
-                        CreateArray(max_stack_limit, CreateUInt64()));
-  }
-
   if (codegen_resources.needs_join_map) {
     auto value_size = offsetof(AsyncEvent::Join, content) +
                       (bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
@@ -4303,169 +4296,6 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     LOG(BUG) << "invalid expression passed to " << opstr(unop);
     __builtin_unreachable();
   }
-}
-
-llvm::Function *CodegenLLVM::createMurmurHash2Func()
-{
-  // The goal is to produce the following code:
-  //
-  // uint64_t murmur_hash_2(void *stack, uint8_t nr_stack_frames, uint64_t
-  // seed)
-  // {
-  //   const uint64_t m = 0xc6a4a7935bd1e995LLU;
-  //   const int r = 47;
-  //   uint64_t id = seed ^ (nr_stack_frames * m);
-  //   int i = 0;
-
-  //   while(i < nr_stack_frames) {
-  //     uint64_t k = stack[i];
-  //     k *= m;
-  //     k ^= k >> r;
-  //     k *= m;
-  //     id ^= k;
-  //     id *= m;
-  //     ++i;
-  //   }
-  //   return id;
-  // }
-  //
-  // https://github.com/aappleby/smhasher/blob/92cf3702fcfaadc84eb7bef59825a23e0cd84f56/src/MurmurHash2.cpp
-  auto saved_ip = b_.saveIP();
-
-  std::array<llvm::Type *, 3> args = { b_.getPtrTy(),
-                                       b_.getInt8Ty(),
-                                       b_.getInt64Ty() };
-  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
-
-  auto *callback = llvm::Function::Create(
-      callback_type,
-      llvm::Function::LinkageTypes::InternalLinkage,
-      "murmur_hash_2",
-      module_.get());
-  callback->addFnAttr(Attribute::AlwaysInline);
-  callback->setSection("helpers");
-  callback->addFnAttr(Attribute::NoUnwind);
-
-  auto *bb = BasicBlock::Create(module_->getContext(), "entry", callback);
-  b_.SetInsertPoint(bb);
-
-  AllocaInst *nr_stack_frames = b_.CreateAllocaBPF(b_.getInt8Ty(),
-                                                   "nr_stack_frames_addr");
-  AllocaInst *seed_addr = b_.CreateAllocaBPF(b_.getInt64Ty(), "seed_addr");
-
-  AllocaInst *id = b_.CreateAllocaBPF(b_.getInt64Ty(), "id");
-  AllocaInst *i = b_.CreateAllocaBPF(b_.getInt8Ty(), "i");
-  AllocaInst *k = b_.CreateAllocaBPF(b_.getInt64Ty(), "k");
-
-  Value *m = b_.getInt64(0xc6a4a7935bd1e995LLU);
-  Value *r = b_.getInt64(47);
-
-  Value *stack_addr = callback->getArg(0);
-
-  b_.CreateStore(callback->getArg(1), nr_stack_frames);
-  b_.CreateStore(callback->getArg(2), seed_addr);
-
-  // uint64_t id = seed ^ (len * m);
-  b_.CreateStore(
-      b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), seed_addr),
-                   b_.CreateMul(b_.CreateIntCast(b_.CreateLoad(b_.getInt8Ty(),
-                                                               nr_stack_frames),
-                                                 b_.getInt64Ty(),
-                                                 false),
-                                m)),
-      id);
-
-  // int i = 0;
-  b_.CreateStore(b_.getInt8(0), i);
-
-  llvm::Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *while_cond = BasicBlock::Create(module_->getContext(),
-                                              "while_cond",
-                                              parent);
-  BasicBlock *while_body = BasicBlock::Create(module_->getContext(),
-                                              "while_body",
-                                              parent);
-  BasicBlock *while_end = BasicBlock::Create(module_->getContext(),
-                                             "while_end",
-                                             parent);
-  b_.CreateBr(while_cond);
-  b_.SetInsertPoint(while_cond);
-  auto *cond = b_.CreateICmp(CmpInst::ICMP_ULT,
-                             b_.CreateLoad(b_.getInt8Ty(), i),
-                             b_.CreateLoad(b_.getInt8Ty(), nr_stack_frames),
-                             "length.cmp");
-  b_.CreateCondBr(cond, while_body, while_end);
-
-  b_.SetInsertPoint(while_body);
-
-  // uint64_t k = stack[i];
-  Value *stack_ptr = b_.CreateGEP(b_.getInt64Ty(),
-                                  stack_addr,
-                                  b_.CreateLoad(b_.getInt8Ty(), i));
-  b_.CreateStore(b_.CreateLoad(b_.getInt64Ty(), stack_ptr), k);
-
-  // k *= m;
-  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), k), m), k);
-
-  // // k ^= k >> r
-  b_.CreateStore(b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), k),
-                              b_.CreateLShr(b_.CreateLoad(b_.getInt64Ty(), k),
-                                            r)),
-                 k);
-
-  // // k *= m
-  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), k), m), k);
-
-  // id ^= k
-  b_.CreateStore(b_.CreateXor(b_.CreateLoad(b_.getInt64Ty(), id),
-                              b_.CreateLoad(b_.getInt64Ty(), k)),
-                 id);
-
-  // id *= m
-  b_.CreateStore(b_.CreateMul(b_.CreateLoad(b_.getInt64Ty(), id), m), id);
-
-  // ++i
-  b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt8Ty(), i), b_.getInt8(1)),
-                 i);
-
-  b_.CreateBr(while_cond);
-  b_.SetInsertPoint(while_end);
-
-  b_.CreateLifetimeEnd(nr_stack_frames);
-  b_.CreateLifetimeEnd(seed_addr);
-  b_.CreateLifetimeEnd(i);
-  b_.CreateLifetimeEnd(k);
-
-  // We reserve 0 for errors so if we happen to hash to 0 just set to 1.
-  // This should reduce hash collisions as we now have to come across two
-  // stacks that naturally hash to 1 AND 0.
-  BasicBlock *if_zero = BasicBlock::Create(module_->getContext(),
-                                           "if_zero",
-                                           parent);
-  BasicBlock *if_end = BasicBlock::Create(module_->getContext(),
-                                          "if_end",
-                                          parent);
-
-  Value *zero_cond = b_.CreateICmpEQ(b_.CreateLoad(b_.getInt64Ty(), id),
-                                     b_.getInt64(0),
-                                     "zero_cond");
-
-  b_.CreateCondBr(zero_cond, if_zero, if_end);
-  b_.SetInsertPoint(if_zero);
-  b_.CreateStore(b_.getInt64(1), id);
-
-  b_.CreateBr(if_end);
-  b_.SetInsertPoint(if_end);
-
-  Value *ret = b_.CreateLoad(b_.getInt64Ty(), id);
-
-  b_.CreateLifetimeEnd(id);
-
-  b_.CreateRet(ret);
-
-  b_.restoreIP(saved_ip);
-
-  return callback;
 }
 
 std::pair<llvm::Type *, llvm::Value *> CodegenLLVM::createForContext(

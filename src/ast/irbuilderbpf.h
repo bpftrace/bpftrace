@@ -114,18 +114,14 @@ public:
   CallInst *CreateGetCurrentTask(const Location &loc);
   CallInst *CreateGetRandom(const Location &loc);
   CallInst *CreateGetStack(Value *ctx,
-                           bool ustack,
                            Value *buf,
-                           StackType stack_type,
+                           const StackType& stack_type,
                            const Location &loc);
   CallInst *CreateGetFuncIp(Value *ctx, const Location &loc);
   CallInst *CreatePerCpuPtr(Value *var, Value *cpu, const Location &loc);
   CallInst *CreateThisCpuPtr(Value *var, const Location &loc);
   CallInst *CreateGetSocketCookie(Value *var, const Location &loc);
   CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const Location &loc);
-  CallInst *CreateGetStackScratchMap(StackType stack_type,
-                                     BasicBlock *failure_callback,
-                                     const Location &loc);
   Value *CreateGetStrAllocation(const std::string &name,
                                 const Location &loc,
                                 uint64_t pad = 0);
@@ -133,6 +129,9 @@ public:
                                           const std::string &name,
                                           const Location &loc);
   Value *CreateTupleAllocation(const SizedType &tuple_type,
+                               const std::string &name,
+                               const Location &loc);
+  Value *CreateCallStackAllocation(const SizedType &stack_type,
                                const std::string &name,
                                const Location &loc);
   Value *CreateWriteMapValueAllocation(const SizedType &value_type,
@@ -183,7 +182,7 @@ public:
   void CreateHelperErrorCond(Value *return_value,
                              bpf_func_id func_id,
                              const Location &loc);
-  StructType *GetStackStructType(bool is_ustack);
+  StructType *GetStackStructType(const StackType& stack_type);
   StructType *GetStructType(const std::string &name,
                             const std::vector<llvm::Type *> &elements,
                             bool packed = false);
