@@ -1,6 +1,5 @@
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
-#include <bcc/bcc_usdt.h>
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
