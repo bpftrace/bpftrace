@@ -669,7 +669,6 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::min_t:
     case Type::stats_t:
     case Type::sum_t:
-    case Type::stack_mode:
     case Type::voidtype:
       return false;
     case Type::integer:
