@@ -73,6 +73,11 @@ jobs:
           CC: clang
           CXX: clang++
           TOOLS_TEST_DISABLE: runqlen.bt
+        - NAME: LLVM 21 + sanitizers
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm21
+          BUILD_ASAN: 1
+          BUILD_UBSAN: 1
         - NAME: Fuzzing
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-fuzz
