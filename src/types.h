@@ -45,7 +45,6 @@ enum class Type : uint8_t {
   usym_t,
   username,
   inet,
-  stack_mode,
   array,
   buffer,
   tuple,
@@ -277,7 +276,7 @@ public:
 
   bool IsPrintableTy() const
   {
-    return type_ != Type::none && type_ != Type::stack_mode &&
+    return type_ != Type::none &&
            type_ != Type::timestamp_mode &&
            (!IsCtxAccess() || is_funcarg); // args builtin is printable
   }
@@ -459,10 +458,6 @@ public:
   {
     return type_ == Type::inet;
   };
-  bool IsStackModeTy() const
-  {
-    return type_ == Type::stack_mode;
-  };
   bool IsArrayTy() const
   {
     return type_ == Type::array;
@@ -566,7 +561,6 @@ SizedType CreateRecord(std::shared_ptr<Struct> &&record);
 SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record);
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
 
-SizedType CreateStackMode();
 SizedType CreateStack(bool kernel, StackType st = StackType());
 
 SizedType CreateMin(bool is_signed);
