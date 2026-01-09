@@ -124,9 +124,13 @@ struct TextEmitter<Primitive::Tuple> {
   {
     bool first = true;
     out << "(";
-    for (const auto &elem : v.values) {
+    for (const auto &[key, elem] : v.fields) {
       if (!first) {
         out << ", "; // N.B. tuples get spaces, arrays do not.
+      }
+      if (v.is_named) {
+        TextEmitter<std::string>::emit(out, key);
+        out << " = ";
       }
       TextEmitter<Primitive>::emit(out, elem);
       first = false;

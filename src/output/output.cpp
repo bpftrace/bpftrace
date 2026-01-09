@@ -15,12 +15,12 @@ bool Primitive::Array::operator==(const Array &other) const
 
 std::partial_ordering Primitive::Tuple::operator<=>(const Tuple &other) const
 {
-  return values <=> other.values;
+  return fields <=> other.fields;
 }
 
 bool Primitive::Tuple::operator==(const Tuple &other) const
 {
-  return values == other.values;
+  return fields == other.fields;
 }
 
 std::partial_ordering Primitive::Record::operator<=>(const Record &other) const

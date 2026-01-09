@@ -109,11 +109,15 @@ TEST(fold_literals, equals)
   test(R"((-1,true,"foo",1) == (1,-1,true,"foo"))", Boolean(false));
   test("(1,-1) == (1,-1,true)", Boolean(false));
   test("($x,-1) == ($x,-1,true)", Boolean(false));
+  test("(hello=1,bye=-1) == (1,-1)", Boolean(true));
+  test("(hello=1,bye=-1) == (hello=-1,bye=-1)", Boolean(false));
+  test("(hello=-1,bye=-1) == (1,-1)", Boolean(false));
 
   // These should be unexpanded.
   test("\"foo\" == 1", Binop(Operator::EQ, String("foo"), Integer(1)));
   test("\"foo\" == true", Binop(Operator::EQ, String("foo"), Boolean(true)));
   test("($x,-1) == ($x,-1)", testing::Not(Boolean(true)));
+  test("(hello=1,bye=-1) == (left=1,right=-1)", testing::Not(Boolean(true)));
 }
 
 TEST(fold_literals, not_equals)

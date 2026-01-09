@@ -214,6 +214,7 @@ public:
   std::vector<Field> &GetFields() const;
   bool HasField(const std::string &name) const;
   const Field &GetField(const std::string &name) const;
+  size_t GetFieldIdx(const std::string &name) const;
   Field &GetField(ssize_t n) const;
   ssize_t GetFieldCount() const;
   std::shared_ptr<const Struct> GetStruct() const;
@@ -325,7 +326,7 @@ public:
 
   const std::string &GetName() const
   {
-    assert(IsRecordTy() || IsEnumTy());
+    assert(IsRecordTy() || IsEnumTy() || IsTupleTy());
     return name_;
   }
 

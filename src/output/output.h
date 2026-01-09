@@ -29,7 +29,8 @@ struct Primitive {
     bool operator==(const Buffer& other) const = default;
   };
   struct Tuple {
-    std::vector<Primitive> values;
+    std::vector<std::pair<std::string, Primitive>> fields;
+    bool is_named = false;
     std::partial_ordering operator<=>(const Tuple& other) const;
     bool operator==(const Tuple& other) const;
   };

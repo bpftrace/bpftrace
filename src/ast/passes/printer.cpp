@@ -734,7 +734,7 @@ Buffer Formatter::visit(MapAccess& acc)
 {
   Buffer key;
   auto* tuple = acc.key.as<Tuple>();
-  if (tuple && tuple->elems.size() >= 2) {
+  if (tuple && tuple->named_elems.size() >= 2) {
     // We need to explicitly override the bare behavior for tuples,
     // because they will never be bare by default.
     key = format(*tuple, metadata, max_width - kIndentWidth, true);
@@ -774,11 +774,11 @@ Buffer Formatter::visit(Tuple& tuple)
 {
   // N.B. tuples are packed, separated by `,` instead of `, `.
   Buffer elems;
-  if (tuple.elems.size() == 1) {
-    elems = format(tuple.elems[0], metadata, max_width - 3).text(",");
+  if (tuple.named_elems.size() == 1) {
+    elems = format(tuple.named_elems[0], metadata, max_width - 3).text(",");
   } else {
     elems = format_list(
-        tuple.elems, ",", metadata, max_width - kIndentWidth - 1);
+        tuple.named_elems, ",", metadata, max_width - kIndentWidth - 1);
   }
   if (bare) {
     return elems;
@@ -1345,6 +1345,20 @@ Buffer Formatter::visit(Expression& expr)
     return buffer;
   }
   return buffer.text(")");
+}
+
+Buffer Formatter::visit(NamedArgument& named_arg)
+{
+  Buffer elem;
+  if (named_arg.name.empty()) {
+    elem = format(named_arg.expr, metadata, max_width);
+  } else {
+    // -1 for the equals
+    size_t width = max_width - (named_arg.name.size()) - 1;
+    auto elem_buf = format(named_arg.expr, metadata, width);
+    elem = Buffer().text(named_arg.name).text("=").append(std::move(elem_buf));
+  }
+  return elem;
 }
 
 Buffer Formatter::visit(const SizedType& type)

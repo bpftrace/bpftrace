@@ -136,6 +136,10 @@ NAME tuple_with_escaped_string
 RUN {{BPFTRACE}} -q -f json -e 'begin { @ = (1, 2, "string with \"quotes\"");  }'
 EXPECT {"type": "map", "data": {"@": [1,2,"string with \"quotes\""]}}
 
+NAME tuple_with_named_fields
+RUN {{BPFTRACE}} -q -f json -e 'begin { @ = (hello="string", bye=(4, 5));  }'
+EXPECT {"type": "map", "data": {"@": {"hello": "string", "bye": [4,5]}}}
+
 NAME print_non_map
 RUN {{BPFTRACE}} -q -f json -e 'begin { $x = 5; print($x); exit() }'
 EXPECT {"type": "value", "data": 5}

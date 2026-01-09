@@ -2263,9 +2263,11 @@ TEST(Parser, while_loop)
 
 TEST(Parser, tuples)
 {
+  std::vector<Matcher<const ast::Expression &>> empty = {};
   test("k:f { print(()); }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Call("print", { Tuple({}) })) })));
+       Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { ExprStatement(Call("print", { Tuple(empty) })) })));
 
   // Not a tuple.
   test("k:f { print((1)); }",
@@ -2293,6 +2295,43 @@ TEST(Parser, tuples)
 stdin:1:14-15: ERROR: syntax error, unexpected ","
 k:f { print((,)); }
              ~
+)");
+}
+
+TEST(Parser, tuples_named_fields)
+{
+  test("k:f{ print((hello=1,)); }",
+       Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { ExprStatement(Call(
+                     "print",
+                     { Tuple({ NamedArgument("hello", Integer(1)) }) })) })));
+
+  test("k:f{ print((hello=1,bye=2)); }",
+       Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { ExprStatement(Call(
+                     "print",
+                     { Tuple({ NamedArgument("hello", Integer(1)),
+                               NamedArgument("bye", Integer(2)) }) })) })));
+
+  test("k:f{ print((hello=1,bye=2,)); }",
+       Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { ExprStatement(Call(
+                     "print",
+                     { Tuple({ NamedArgument("hello", Integer(1)),
+                               NamedArgument("bye", Integer(2)) }) })) })));
+
+  test_parse_failure("k:f { $a = (hello=1, 12) }", R"(
+stdin:1:22-24: ERROR: syntax error, unexpected integer, expecting ) or identifier
+k:f { $a = (hello=1, 12) }
+                     ~~
+)");
+  test_parse_failure("k:f { $a = (hello=1) }", R"(
+stdin:1:20-21: ERROR: syntax error, unexpected ), expecting ","
+k:f { $a = (hello=1) }
+                   ~
 )");
 }
 

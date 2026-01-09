@@ -151,9 +151,13 @@ public:
     visitImpl(cast.typeof);
     return visitImpl(cast.expr);
   }
+  R visit(NamedArgument &named_arg)
+  {
+    return visitImpl(named_arg.expr);
+  }
   R visit(Tuple &tuple)
   {
-    return visitImpl(tuple.elems);
+    return visitImpl(tuple.named_elems);
   }
   R visit(ExprStatement &expr)
   {

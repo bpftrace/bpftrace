@@ -135,3 +135,23 @@ NAME tuple binop not equals
 PROG begin { $x = ("hello", -6); $y = ("hello", -6); $a = (1, true, $x); @b = (1, true, $y); if ($a != @b) { printf("nok\n"); } if ($a != (1, true, ("ello", -6))) { printf("ok\n"); } }
 EXPECT ok
 EXPECT_NONE nok
+
+NAME named tuple field access
+PROG begin { $x = (name="Jordan", age=234, eyes=(left="Red", right="Green")); print($x.eyes.left); }
+EXPECT Red
+
+NAME named tuple field printing
+PROG begin { $x = (name="Jordan", age=234, eyes=(left="Red", right="Green")); print($x); }
+EXPECT (name = Jordan, age = 234, eyes = (left = Red, right = Green))
+
+NAME named tuple field promotion
+PROG begin { $x = (1, "bye"); $x = (age=(uint64)2, greeting="hello"); print($x); }
+EXPECT (age = 2, greeting = hello)
+
+NAME named tuple field late update
+PROG begin { $x = (1, "bye"); print($x.greeting); $x = (age=(uint64)2, greeting="hello"); }
+EXPECT bye
+
+NAME named tuple field in map
+PROG begin { @a[(age=1, greeting="bye")] = (left="Red", right="Green"); }
+EXPECT @a[age = 1, greeting = bye]: (left = Red, right = Green)
