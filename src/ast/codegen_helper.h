@@ -17,7 +17,7 @@ inline bool needMemcpy(const SizedType &stype)
 inline bool shouldBeInBpfMemoryAlready(const SizedType &type)
 {
   return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
-         type.IsUsymTy() || type.IsKstackTy() || type.IsUstackTy() ||
+         type.IsUsymTy() || type.IsStack() ||
          type.IsTupleTy() || type.IsTimestampTy() || type.IsMacAddressTy() ||
          type.IsCgroupPathTy();
 }

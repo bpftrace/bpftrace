@@ -6,6 +6,7 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "required_resources.h"
+#include "types.h"
 #include "types_format.h"
 #include "util/stats.h"
 
@@ -70,17 +71,26 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       res << "0x" << std::hex << n;
       return output::Primitive::Symbolic(res.str(), n);
     }
-    case Type::kstack_t: {
+    case Type::base_stack_t: {
       auto num_frames = value.bitcast<uint64_t>(0);
       auto limit = type.stack_type.limit;
       constexpr size_t stack_offset = sizeof(uint64_t);
-      auto len = static_cast<size_t>(type.stack_type.elem_size() * limit);
+      auto len = static_cast<size_t>(GetStackElementSize(type.GetTy()) * limit);
       const auto raw_stack = value.slice(stack_offset, len);
 
       return bpftrace.get_stack(
-          num_frames, raw_stack, -1, -1, false, type.stack_type, 8);
+          num_frames, raw_stack, -1, -1, type.stack_type, 8);
     }
-    case Type::ustack_t: {
+    case Type::build_id_stack_t: {
+      auto num_frames = value.bitcast<uint64_t>(0);
+      auto limit = type.stack_type.limit;
+      constexpr size_t stack_offset = sizeof(uint64_t);
+      auto len = static_cast<size_t>(GetStackElementSize(type.GetTy()) * limit);
+      const auto raw_stack = value.slice(stack_offset, len);
+
+      return format_build_id_stack(num_frames, raw_stack);
+    }
+    case Type::tagged_stack_t: {
       auto pid = value.bitcast<int32_t>(0);
       auto probe_id = value.bitcast<int32_t>(1);
       auto num_frames =
@@ -88,15 +98,11 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       auto limit = type.stack_type.limit;
       constexpr size_t stack_offset = sizeof(uint64_t) * 2;
 
-      auto len = static_cast<size_t>(type.stack_type.elem_size() * limit);
+      auto len = static_cast<size_t>(GetStackElementSize(type.GetTy()) * limit);
       const auto raw_stack = value.slice(stack_offset, len);
 
-      if (type.stack_type.mode == StackMode::build_id) {
-        return format_build_id_stack(num_frames, raw_stack);
-      }
-
       return bpftrace.get_stack(
-          num_frames, raw_stack, pid, probe_id, true, type.stack_type, 8);
+          num_frames, raw_stack, pid, probe_id, type.stack_type, 8);
     }
     case Type::ksym_t: {
       return bpftrace.resolve_ksym(value.bitcast<uint64_t>());

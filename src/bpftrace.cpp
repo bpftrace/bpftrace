@@ -994,7 +994,6 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
                                 const OpaqueValue &raw_stack,
                                 int32_t pid,
                                 int32_t probe_id,
-                                bool ustack,
                                 StackType stack_type,
                                 int indent)
 {
@@ -1004,40 +1003,40 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
   stack << "\n";
   for (uint64_t i = 0; i < nr_stack_frames;) {
     auto addr = raw_stack.bitcast<uint64_t>(i);
-    if (stack_type.mode == StackMode::raw) {
+    if (stack_type.mode == SymbolicationMode::none) {
       stack << std::hex << addr << std::endl;
       ++i;
       continue;
     }
     std::vector<std::string> syms;
-    if (!ustack)
+    if (stack_type.kernel) {
       syms = resolve_ksym_stack(addr,
                                 true,
-                                stack_type.mode == StackMode::perf,
+                                stack_type.mode == SymbolicationMode::perf,
                                 config_->show_debug_info);
-    else
+    } else {
       syms = resolve_usym_stack(addr,
                                 pid,
                                 probe_id,
                                 true,
-                                stack_type.mode == StackMode::perf,
+                                stack_type.mode == SymbolicationMode::perf,
                                 config_->show_debug_info);
+    }
 
     std::string sym;
     for (size_t sym_idx = 0; i < nr_stack_frames && sym_idx < syms.size();) {
       sym = syms.at(sym_idx);
       switch (stack_type.mode) {
-        case StackMode::bpftrace:
+        case SymbolicationMode::bpftrace:
           stack << padding << sym << std::endl;
           break;
-        case StackMode::perf:
+        case SymbolicationMode::perf:
           stack << "\t" << std::hex << addr << std::dec << " " << sym
                 << std::endl;
           break;
-        case StackMode::raw:
-        case StackMode::build_id:
+        case SymbolicationMode::none:
           LOG(BUG)
-              << "StackMode::raw or build_id should have been processed before "
+              << "SymbolicationMode::none should have been processed before "
                  "symbolication.";
           break;
       }

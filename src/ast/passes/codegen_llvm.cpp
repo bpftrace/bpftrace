@@ -313,8 +313,8 @@ private:
   ScopedExpr unop_int(Unop &unop);
   ScopedExpr unop_ptr(Unop &unop);
 
-  ScopedExpr kstack(const SizedType &stype, const Location &loc);
-  ScopedExpr ustack(const SizedType &stype, const Location &loc);
+  ScopedExpr stack(const SizedType &stype, const Location &loc);
+  ScopedExpr tagged_stack(const SizedType &stype, const Location &loc);
 
   int get_probe_id();
 
@@ -546,9 +546,13 @@ ScopedExpr CodegenLLVM::visit(Identifier &identifier)
   }
 }
 
-ScopedExpr CodegenLLVM::kstack(const SizedType &stype, const Location &loc)
+ScopedExpr CodegenLLVM::stack(const SizedType &stype, const Location &loc)
 {
-  StructType *stack_struct_type = b_.GetStackStructType(stype.stack_type);
+  if (stype.IsTaggedStackTy()) {
+    return tagged_stack(stype, loc);
+  }
+
+  StructType *stack_struct_type = b_.GetStackStructType(stype);
 
   llvm::Function *parent = b_.GetInsertBlock()->getParent();
 
@@ -557,7 +561,7 @@ ScopedExpr CodegenLLVM::kstack(const SizedType &stype, const Location &loc)
                                                parent);
 
   auto *stack = b_.CreateCallStackAllocation(stype,
-                                             stype.stack_type.name(),
+                                             stype.stack_type.name(stype),
                                              loc);
   b_.CreateMemsetBPF(stack,
                      b_.getInt8(0),
@@ -574,7 +578,7 @@ ScopedExpr CodegenLLVM::kstack(const SizedType &stype, const Location &loc)
                                                      stack,
                                                      { b_.getInt64(0),
                                                        b_.getInt32(1) }),
-                                        stype.stack_type,
+                                        stype,
                                         loc);
   Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
@@ -586,8 +590,8 @@ ScopedExpr CodegenLLVM::kstack(const SizedType &stype, const Location &loc)
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(get_stack_success);
 
-  Value *num_frames = b_.CreateUDiv(stack_size,
-                                    b_.getInt64(stype.stack_type.elem_size()));
+  Value *num_frames = b_.CreateUDiv(
+      stack_size, b_.getInt64(GetStackElementSize(stype.GetTy())));
   b_.CreateStore(num_frames,
                  b_.CreateGEP(stack_struct_type,
                               stack,
@@ -598,9 +602,10 @@ ScopedExpr CodegenLLVM::kstack(const SizedType &stype, const Location &loc)
   return ScopedExpr(stack);
 }
 
-ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
+ScopedExpr CodegenLLVM::tagged_stack(const SizedType &stype,
+                                     const Location &loc)
 {
-  StructType *stack_struct_type = b_.GetStackStructType(stype.stack_type);
+  StructType *stack_struct_type = b_.GetStackStructType(stype);
 
   llvm::Function *parent = b_.GetInsertBlock()->getParent();
 
@@ -609,7 +614,7 @@ ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
                                                parent);
 
   auto *stack = b_.CreateCallStackAllocation(stype,
-                                             stype.stack_type.name(),
+                                             stype.stack_type.name(stype),
                                              loc);
   b_.CreateMemsetBPF(stack,
                      b_.getInt8(0),
@@ -626,7 +631,7 @@ ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
                                                      stack,
                                                      { b_.getInt64(0),
                                                        b_.getInt32(3) }),
-                                        stype.stack_type,
+                                        stype,
                                         loc);
   Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
@@ -638,8 +643,8 @@ ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
   b_.CreateBr(merge_block);
   b_.SetInsertPoint(get_stack_success);
 
-  Value *num_frames = b_.CreateUDiv(stack_size,
-                                    b_.getInt64(stype.stack_type.elem_size()));
+  Value *num_frames = b_.CreateUDiv(
+      stack_size, b_.getInt64(GetStackElementSize(stype.GetTy())));
   b_.CreateStore(num_frames,
                  b_.CreateGEP(stack_struct_type,
                               stack,
@@ -688,10 +693,8 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
     return ScopedExpr(ns_delta);
-  } else if (builtin.ident == "kstack") {
-    return kstack(builtin.builtin_type, builtin.loc);
-  } else if (builtin.ident == "ustack") {
-    return ustack(builtin.builtin_type, builtin.loc);
+  } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
+    return stack(builtin.builtin_type, builtin.loc);
   } else if (builtin.ident == "pid") {
     return ScopedExpr(b_.CreateGetPid(builtin.loc, false));
   } else if (builtin.ident == "tid") {
@@ -1787,10 +1790,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
   } else if (call.func == "stack_len") {
     auto &arg = call.vargs.at(0);
     auto scoped_arg = visit(arg);
-    auto *stack_struct_type = b_.GetStackStructType(arg.type().stack_type);
+    auto *stack_struct_type = b_.GetStackStructType(arg.type());
     // The nr_frames field is in a separate place depending on
-    // if we're dealing with a ustack or kstack. See
-    // IRBuilderBPF::GetStackStructType
+    // the stack type - See IRBuilderBPF::GetStackStructType.
     auto nr_frames_offset = arg.type().stack_type.kernel ? 0 : 2;
     Value *nr_stack_frames = b_.CreateGEP(stack_struct_type,
                                           scoped_arg.value(),
@@ -1848,10 +1850,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         scoped_expr.value(),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "kstack") {
-    return kstack(call.return_type, call.loc);
-  } else if (call.func == "ustack") {
-    return ustack(call.return_type, call.loc);
+  } else if (call.func == "kstack" || call.func == "ustack") {
+    return stack(call.return_type, call.loc);
   } else if (call.func == "strncmp") {
     auto &left_arg = call.vargs.at(0);
     auto &right_arg = call.vargs.at(1);

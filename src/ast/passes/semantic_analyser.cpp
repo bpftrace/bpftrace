@@ -672,8 +672,9 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::voidtype:
       return false;
     case Type::integer:
-    case Type::kstack_t:
-    case Type::ustack_t:
+    case Type::base_stack_t:
+    case Type::build_id_stack_t:
+    case Type::tagged_stack_t:
     case Type::timestamp:
     case Type::ksym_t:
     case Type::usym_t:
@@ -774,7 +775,7 @@ void SemanticAnalyser::visit(Identifier &identifier)
     StackMode mode;
     auto ok = parser.parse(func_, &mode, identifier.ident);
     if (ok) {
-      identifier.ident_type = CreateStack(true, StackType{ .mode = mode });
+      // valid stack mode
     } else if (is_type_name_) {
       identifier.ident_type = bpftrace_.btf_->get_stype(identifier.ident);
     } else {
@@ -915,12 +916,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     // For uretprobe -> AddrSpace::user
     builtin.builtin_type.SetAS(find_addrspace(type));
   } else if (builtin.ident == "kstack") {
-    builtin.builtin_type = CreateStack(
-        true, StackType{ .mode = bpftrace_.config_->stack_mode });
+    builtin.builtin_type = CreateStack(true, bpftrace_.config_->stack_mode);
   } else if (builtin.ident == "ustack") {
-    builtin.builtin_type = CreateStack(
-        false,
-        StackType{ .mode = bpftrace_.config_->stack_mode, .kernel = false });
+    builtin.builtin_type = CreateStack(false, bpftrace_.config_->stack_mode);
   } else if (builtin.ident == "__builtin_comm") {
     constexpr int COMM_SIZE = 16;
     builtin.builtin_type = CreateString(COMM_SIZE);
@@ -1986,10 +1984,8 @@ void SemanticAnalyser::visit(Typeinfo &typeinfo)
 
 void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
 {
-  call.return_type = CreateStack(kernel);
-  StackType stack_type;
-  stack_type.mode = bpftrace_.config_->stack_mode;
-  stack_type.kernel = kernel;
+  StackMode mode = bpftrace_.config_->stack_mode;
+  std::optional<uint16_t> limit;
 
   switch (call.vargs.size()) {
     case 0:
@@ -1997,13 +1993,13 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
     case 1: {
       if (auto *ident = call.vargs.at(0).as<Identifier>()) {
         ConfigParser<StackMode> parser;
-        auto ok = parser.parse(call.func, &stack_type.mode, ident->ident);
+        auto ok = parser.parse(call.func, &mode, ident->ident);
         if (!ok) {
           ident->addError() << "Error parsing stack mode: " << ok.takeError();
         }
       } else if (check_arg(call, Type::integer, 0, true)) {
-        if (auto *limit = call.vargs.at(0).as<Integer>()) {
-          stack_type.limit = limit->value;
+        if (auto *integer = call.vargs.at(0).as<Integer>()) {
+          limit = integer->value;
         } else {
           call.addError() << call.func << ": invalid limit value";
         }
@@ -2013,7 +2009,7 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
     case 2: {
       if (auto *ident = call.vargs.at(0).as<Identifier>()) {
         ConfigParser<StackMode> parser;
-        auto ok = parser.parse(call.func, &stack_type.mode, ident->ident);
+        auto ok = parser.parse(call.func, &mode, ident->ident);
         if (!ok) {
           ident->addError() << "Error parsing stack mode: " << ok.takeError();
         }
@@ -2022,8 +2018,8 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
         call.addError() << "Expected stack mode as first argument";
       }
       if (check_arg(call, Type::integer, 1, true)) {
-        if (auto *limit = call.vargs.at(1).as<Integer>()) {
-          stack_type.limit = limit->value;
+        if (auto *integer = call.vargs.at(1).as<Integer>()) {
+          limit = integer->value;
         } else {
           call.addError() << call.func << ": invalid limit value";
         }
@@ -2035,14 +2031,14 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
       break;
   }
   constexpr int MAX_STACK_SIZE = 1024;
-  if (stack_type.limit > MAX_STACK_SIZE) {
+  if (limit.has_value() && *limit > MAX_STACK_SIZE) {
     call.addError() << call.func << "([int limit]): limit shouldn't exceed "
-                    << MAX_STACK_SIZE << ", " << stack_type.limit << " given";
+                    << MAX_STACK_SIZE << ", " << *limit << " given";
   }
-  if (stack_type.mode == StackMode::build_id && kernel) {
+  if (mode == StackMode::build_id && kernel) {
     call.addError() << "build_id stack mode can only be used for ustack";
   }
-  call.return_type = CreateStack(kernel, stack_type);
+  call.return_type = CreateStack(kernel, mode, limit);
 }
 
 Probe *SemanticAnalyser::get_probe(Node &node, std::string name)
