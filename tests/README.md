@@ -20,7 +20,7 @@ These are `test:` probes written to test core functionality, and standard librar
 Runtime tests will call the bpftrace executable. These are located in `tests/runtime` and are managed by a custom framework.
 
 * Run: `sudo <builddir>/tests/runtime-tests.sh`
-* Use the `TEST_FILTER` environment variable (or the `--filter` arg when running `runtime-tests.sh`) to only run a subset of the tests e.g. `sudo <builddir>/tests/runtime-tests.sh --filter=".*uprobe.*"`
+* Use the `TEST_FILTER` environment variable (or the `--filter` arg when running `runtime-tests.sh`) to only run a subset of the tests. The passed value should be a colon-separated list of positive and negative (starting with `-`) regex patterns. Only tests which match any of the positive patterns (by default `.*`) and none of the negative patterns will be executed. For example, `sudo <builddir>/tests/runtime-tests.sh --filter="^uprobe.*:-list"` will run all tests from the `uprobe` suite, except for tests for probe listing.
 * There are environment variables to override paths for the bpftrace executables, if necessary. See runtime-tests.sh for details.
 
 Runtime tests are grouped into "suites". A suite is usually a single file. The
