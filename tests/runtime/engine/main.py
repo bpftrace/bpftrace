@@ -28,10 +28,21 @@ def main(test_filter, allowlist_file, run_aot_tests):
         print(fail(f"[  FAILED  ] {str(error)}"))
         exit(1)
 
-    # Apply filter
+    # Apply filters
+    positive_patterns = "|".join([p for p in test_filter.split(':')
+                                  if not p.startswith('-')])
+    negative_patterns = "|".join([p[1:] for p in test_filter.split(':')
+                                  if p.startswith('-')])
+    if len(positive_patterns) == 0:
+        positive_patterns = ".*"
+
     filtered_suites = []
     for fname, tests in test_suite:
-        filtered_tests = [t for t in tests if re.search(test_filter, "{}.{}".format(fname, t.name))]
+        filtered_tests = [t for t in tests if
+                          re.search(positive_patterns, "{}.{}".format(fname, t.name))]
+        if negative_patterns:
+            filtered_tests = [t for t in filtered_tests if
+                              not re.search(negative_patterns, "{}.{}".format(fname, t.name))]
         if len(filtered_tests) != 0:
             filtered_suites.append((fname, filtered_tests))
     test_suite = filtered_suites
