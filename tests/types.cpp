@@ -59,8 +59,12 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateCount()), "count_t");
 
   EXPECT_EQ(to_str(CreateMacAddress()), "mac_address");
-  EXPECT_EQ(to_str(CreateStack(true)), "kstack");
-  EXPECT_EQ(to_str(CreateStack(false)), "ustack");
+  EXPECT_EQ(to_str(CreateStack(true, StackMode::perf)), "base_stack_t");
+  EXPECT_EQ(to_str(CreateStack(true, StackMode::raw)), "base_stack_t");
+  EXPECT_EQ(to_str(CreateStack(false, StackMode::perf)), "tagged_stack_t");
+  EXPECT_EQ(to_str(CreateStack(false, StackMode::raw)), "base_stack_t");
+  EXPECT_EQ(to_str(CreateStack(false, StackMode::build_id)),
+            "build_id_stack_t");
   EXPECT_EQ(to_str(CreateTimestamp()), "timestamp");
   EXPECT_EQ(to_str(CreateKSym()), "ksym_t");
   EXPECT_EQ(to_str(CreateUSym()), "usym_t");

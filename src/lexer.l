@@ -49,7 +49,7 @@ path     :(\\.|[_\-\./a-zA-Z0-9#$+\*])+
 builtin  arg[0-9]+|args|ctx|kstack|nsecs|pid|sarg[0-9]|tid|ustack|__builtin_cgroup|__builtin_comm|__builtin_cpid|__builtin_cpu|__builtin_curtask|__builtin_elapsed|__builtin_func|__builtin_gid|__builtin_jiffies|__builtin_ncpus|__builtin_probe|__builtin_rand|__builtin_retval|__builtin_uid|__builtin_usermode|__builtin_username
 
 int_type        bool|(u)?int(8|16|32|64)
-builtin_type    void|(u)?(min|max|sum|avg|stats)_t|count_t|probe_t|username_t|lhist_t|hist_t|usym_t|ksym_t|timestamp|macaddr_t|cgroup_path_t|kstack_t|ustack_t|tseries_t
+builtin_type    void|(u)?(min|max|sum|avg|stats)_t|count_t|probe_t|username_t|lhist_t|hist_t|usym_t|ksym_t|timestamp|macaddr_t|cgroup_path_t|tseries_t
 sized_type      inet|buffer|string
 subprog         fn
 macro           macro

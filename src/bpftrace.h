@@ -128,7 +128,6 @@ public:
                         const OpaqueValue &raw_stack,
                         int32_t pid,
                         int32_t probe_id,
-                        bool ustack,
                         StackType stack_type,
                         int indent = 0);
   std::string resolve_ksym(uint64_t addr);

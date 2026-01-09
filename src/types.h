@@ -38,8 +38,9 @@ enum class Type : uint8_t {
   max_t,
   avg_t,
   stats_t,
-  kstack_t,
-  ustack_t,
+  base_stack_t,
+  tagged_stack_t,
+  build_id_stack_t,
   string,
   ksym_t,
   usym_t,
@@ -75,7 +76,13 @@ enum class StackMode : uint8_t {
   bpftrace,
   perf,
   raw,
-  build_id
+  build_id,
+};
+
+enum class SymbolicationMode : uint8_t {
+  none,
+  bpftrace,
+  perf,
 };
 
 const std::map<StackMode, std::string> STACK_MODE_NAME_MAP = {
@@ -112,14 +119,12 @@ struct ConfigParser<StackMode> {
   }
 };
 
+class SizedType;
+
 struct StackType {
-  // Defines the default number of stack elements.
+  // N.B. the limit of 127 defines the default stack size.
   uint16_t limit = 127;
-  StackMode mode = StackMode::bpftrace;
-  // This is used to construct the name() below,
-  // which is then used in irbuilder as the struct name.
-  // Since ustacks and kstacks have different structs
-  // we need to make sure the names a different.
+  SymbolicationMode mode = SymbolicationMode::bpftrace;
   bool kernel = true;
 
   bool operator==(const StackType &obj) const
@@ -127,18 +132,7 @@ struct StackType {
     return limit == obj.limit && mode == obj.mode && kernel == obj.kernel;
   }
 
-  std::string name() const
-  {
-    std::string prefix = kernel ? "k" : "u";
-    return prefix + "stack_" + STACK_MODE_NAME_MAP.at(mode) + "_" +
-           std::to_string(limit);
-  }
-
-  size_t elem_size() const {
-    return mode == StackMode::build_id
-                              ? sizeof(bpf_stack_build_id)
-                              : sizeof(uint64_t);
-  }
+  std::string name(const SizedType& stype) const;
 
 private:
   friend class cereal::access;
@@ -430,14 +424,6 @@ public:
   {
     return type_ == Type::stats_t;
   };
-  bool IsKstackTy() const
-  {
-    return type_ == Type::kstack_t;
-  };
-  bool IsUstackTy() const
-  {
-    return type_ == Type::ustack_t;
-  };
   bool IsStringTy() const
   {
     return type_ == Type::string;
@@ -457,6 +443,18 @@ public:
   bool IsInetTy() const
   {
     return type_ == Type::inet;
+  };
+  bool IsBaseStackTy() const
+  {
+    return type_ == Type::base_stack_t;
+  };
+  bool IsTaggedStackTy() const
+  {
+    return type_ == Type::tagged_stack_t;
+  };
+  bool IsBuildIdStackTy() const
+  {
+    return type_ == Type::build_id_stack_t;
   };
   bool IsArrayTy() const
   {
@@ -560,9 +558,7 @@ SizedType CreateRecord(const std::string &name);
 SizedType CreateRecord(std::shared_ptr<Struct> &&record);
 SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record);
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
-
-SizedType CreateStack(bool kernel, StackType st = StackType());
-
+SizedType CreateStack(bool kernel, StackMode stack_mode, std::optional<uint16_t> limit = std::nullopt);
 SizedType CreateMin(bool is_signed);
 SizedType CreateMax(bool is_signed);
 SizedType CreateSum(bool is_signed);
@@ -585,6 +581,7 @@ SizedType CreateTimestampMode();
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string typestr(const SizedType &type);
+size_t GetStackElementSize(Type t);
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
 enum class TSeriesAggFunc { none, avg, max, min, sum };
@@ -599,14 +596,12 @@ struct hash<bpftrace::StackType> {
   size_t operator()(const bpftrace::StackType &obj) const
   {
     switch (obj.mode) {
-      case bpftrace::StackMode::bpftrace:
-        return std::hash<std::string>()("bpftrace#" + to_string(obj.limit));
-      case bpftrace::StackMode::perf:
-        return std::hash<std::string>()("perf#" + to_string(obj.limit));
-      case bpftrace::StackMode::raw:
-        return std::hash<std::string>()("raw#" + to_string(obj.limit));
-      case bpftrace::StackMode::build_id:
-        return std::hash<std::string>()("build_id#" + to_string(obj.limit));
+      case bpftrace::SymbolicationMode::bpftrace:
+        return std::hash<std::string>()("bpftrace#" + to_string(obj.limit) + to_string(obj.kernel));
+      case bpftrace::SymbolicationMode::perf:
+        return std::hash<std::string>()("perf#" + to_string(obj.limit) + to_string(obj.kernel));
+      case bpftrace::SymbolicationMode::none:
+        return std::hash<std::string>()("none#" + to_string(obj.limit) + to_string(obj.kernel));
     }
 
     return {}; // unreached

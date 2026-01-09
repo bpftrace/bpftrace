@@ -87,8 +87,9 @@ std::string typestr(const SizedType &type)
       return (type.is_signed_ ? "" : "u") + typestr(type.GetTy());
     case Type::count_t:
     case Type::mac_address:
-    case Type::kstack_t:
-    case Type::ustack_t:
+    case Type::base_stack_t:
+    case Type::build_id_stack_t:
+    case Type::tagged_stack_t:
     case Type::timestamp:
     case Type::ksym_t:
     case Type::usym_t:
@@ -201,7 +202,8 @@ bool SizedType::IsAggregate() const
 
 bool SizedType::IsStack() const
 {
-  return type_ == Type::ustack_t || type_ == Type::kstack_t;
+  return type_ == Type::base_stack_t || type_ == Type::tagged_stack_t ||
+         type_ == Type::build_id_stack_t;
 }
 
 std::string addrspacestr(AddrSpace as)
@@ -239,8 +241,9 @@ std::string typestr(Type t)
     case Type::max_t:      return "max_t";      break;
     case Type::avg_t:      return "avg_t";      break;
     case Type::stats_t:    return "stats_t";    break;
-    case Type::kstack_t:   return "kstack";   break;
-    case Type::ustack_t:   return "ustack";   break;
+    case Type::base_stack_t:   return "base_stack_t";   break;
+    case Type::tagged_stack_t:   return "tagged_stack_t";   break;
+    case Type::build_id_stack_t:   return "build_id_stack_t";   break;
     case Type::string:   return "string";   break;
     case Type::ksym_t:     return "ksym_t";     break;
     case Type::usym_t:     return "usym_t";     break;
@@ -390,14 +393,51 @@ SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record)
   return ty;
 }
 
-SizedType CreateStack(bool kernel, StackType stack)
+size_t GetStackElementSize(Type t)
 {
-  // These sizes are based on the stack struct (see
-  // IRBuilderBPF::GetStackStructType)
-  auto base_size = (stack.limit * stack.elem_size()) + 8;
-  auto st = SizedType(kernel ? Type::kstack_t : Type::ustack_t,
-                      kernel ? base_size : (base_size + 8));
-  st.stack_type = stack;
+  assert(t == Type::build_id_stack_t || t == Type::base_stack_t ||
+         t == Type::tagged_stack_t);
+  return t == Type::build_id_stack_t ? sizeof(bpf_stack_build_id)
+                                     : sizeof(uint64_t);
+}
+
+SizedType CreateStack(bool kernel,
+                      StackMode stack_mode,
+                      std::optional<uint16_t> limit)
+{
+  Type ty;
+  StackType stack_type;
+  if (kernel || stack_mode == StackMode::raw) {
+    ty = Type::base_stack_t;
+  } else if (stack_mode == StackMode::build_id) {
+    ty = Type::build_id_stack_t;
+  } else {
+    ty = Type::tagged_stack_t;
+  }
+
+  if (limit.has_value()) {
+    stack_type.limit = *limit;
+  }
+
+  stack_type.kernel = kernel;
+
+  if (stack_mode == StackMode::perf) {
+    stack_type.mode = SymbolicationMode::perf;
+  } else if (stack_mode == StackMode::bpftrace) {
+    stack_type.mode = SymbolicationMode::bpftrace;
+  } else {
+    stack_type.mode = SymbolicationMode::none;
+  }
+
+  auto ty_size = (stack_type.limit * GetStackElementSize(ty)) + 8;
+
+  if (ty == Type::tagged_stack_t) {
+    ty_size += 8; // pid and probe_id
+  }
+
+  SizedType st = SizedType(ty, ty_size);
+  st.stack_type = stack_type;
+
   return st;
 }
 
@@ -649,6 +689,11 @@ std::ostream &operator<<(std::ostream &os, TSeriesAggFunc agg)
   }
 
   return os;
+}
+
+std::string StackType::name(const SizedType &stype) const
+{
+  return typestr(stype) + "_" + std::to_string(limit);
 }
 
 } // namespace bpftrace

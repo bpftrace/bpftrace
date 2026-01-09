@@ -134,53 +134,68 @@ AllocaInst *IRBuilderBPF::CreateUSym(Value *val,
   return buf;
 }
 
-StructType *IRBuilderBPF::GetStackStructType(const StackType &stack_type)
+StructType *IRBuilderBPF::GetStackStructType(const SizedType &stype)
 {
-  std::vector<llvm::Type *> elements;
-  // Kernel stacks should not be differentiated by pid, since the kernel
-  // address space is the same between pids (and when aggregating you *want*
-  // to be able to correlate between pids in most cases). User-space stacks
-  // are special because of ASLR, hence we also store the pid; probe id is
-  // stored for cases when only ELF resolution works (e.g. ASLR disabled and
-  // process exited).
-  if (!stack_type.kernel) {
-    elements.emplace_back(getInt32Ty()); // pid
-    elements.emplace_back(getInt32Ty()); // probe id
-  }
-  // If the offset changes, make sure to also change the codegen for "stack_len"
-  elements.emplace_back(getInt64Ty()); // nr_stack_frames
-
-  if (stack_type.mode == StackMode::build_id) {
-    // struct bpf_stack_build_id {
-    //   __s32		status;
-    //   unsigned char	build_id[BPF_BUILD_ID_SIZE];
-    //   union {
-    //     __u64	offset;
-    //     __u64	ip;
-    //   };
-    // };
-    std::vector<llvm::Type *> union_elem = {
-      getInt64Ty(),
-    };
-    StructType *union_type = GetStructType("offset_ip_union",
-                                           union_elem,
-                                           false);
-
-    std::vector<llvm::Type *> build_id_elements = {
-      getInt32Ty(), // status
-      ArrayType::get(getInt8Ty(),
-                     BPF_BUILD_ID_SIZE), // build_id[BPF_BUILD_ID_SIZE]
-      union_type,
-    };
-    StructType *stack_build_id = GetStructType("stack_build_id",
-                                               build_id_elements,
-                                               false);
-    elements.emplace_back(ArrayType::get(stack_build_id, stack_type.limit));
+  if (stype.IsBuildIdStackTy()) {
+    return GetBuildIdStackStructType(stype);
+  } else if (stype.IsBaseStackTy()) {
+    return GetBaseStackStructType(stype);
+  } else if (stype.IsTaggedStackTy()) {
+    return GetTaggedStructType(stype);
   } else {
-    elements.emplace_back(ArrayType::get(getInt64Ty(), stack_type.limit));
+    LOG(BUG) << "Invalid sized type";
   }
+}
 
-  return GetStructType(stack_type.name(), elements, false);
+StructType *IRBuilderBPF::GetBaseStackStructType(const SizedType &stype)
+{
+  std::vector<llvm::Type *> elements = {
+    getInt64Ty(), // number of frames
+    ArrayType::get(getInt64Ty(), stype.stack_type.limit),
+  };
+  return GetStructType(stype.stack_type.name(stype), elements, false);
+}
+
+StructType *IRBuilderBPF::GetTaggedStructType(const SizedType &stype)
+{
+  std::vector<llvm::Type *> elements = {
+    getInt32Ty(), // pid
+    getInt32Ty(), // probe id
+    getInt64Ty(), // number of frames
+    ArrayType::get(getInt64Ty(), stype.stack_type.limit),
+  };
+  return GetStructType(stype.stack_type.name(stype), elements, false);
+}
+
+StructType *IRBuilderBPF::GetBuildIdStackStructType(const SizedType &stype)
+{
+  // struct bpf_stack_build_id {
+  //   __s32		status;
+  //   unsigned char	build_id[BPF_BUILD_ID_SIZE];
+  //   union {
+  //     __u64	offset;
+  //     __u64	ip;
+  //   };
+  // };
+  std::vector<llvm::Type *> union_elem = {
+    getInt64Ty(),
+  };
+  StructType *union_type = GetStructType("offset_ip_union", union_elem, false);
+
+  std::vector<llvm::Type *> build_id_elements = {
+    getInt32Ty(), // status
+    ArrayType::get(getInt8Ty(),
+                   BPF_BUILD_ID_SIZE), // build_id[BPF_BUILD_ID_SIZE]
+    union_type,
+  };
+  StructType *stack_build_id = GetStructType("stack_build_id",
+                                             build_id_elements,
+                                             false);
+  std::vector<llvm::Type *> elements = {
+    getInt64Ty(), // number of frames
+    ArrayType::get(stack_build_id, stype.stack_type.limit),
+  };
+  return GetStructType(stype.stack_type.name(stype), elements, false);
 }
 
 StructType *IRBuilderBPF::GetStructType(
@@ -391,7 +406,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 
     ty = GetStructType(ty_name, llvm_elems, false);
   } else if (stype.IsStack()) {
-    ty = GetStackStructType(stype.stack_type);
+    ty = GetStackStructType(stype);
   } else if (stype.IsPtrTy()) {
     ty = getPtrTy();
   } else if (stype.IsVoidTy()) {
@@ -1779,18 +1794,19 @@ CallInst *IRBuilderBPF::CreateGetRandom(const Location &loc)
 
 CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
                                        Value *buf,
-                                       const StackType &stack_type,
+                                       const SizedType &stype,
                                        const Location &loc)
 {
   int flags = 0;
-  if (!stack_type.kernel) {
+  if (!stype.stack_type.kernel) {
     flags |= (1 << 8);
-    if (stack_type.mode == StackMode::build_id) {
+    if (stype.IsBuildIdStackTy()) {
       flags |= (1 << 11);
     }
   }
   Value *flags_val = getInt64(flags);
-  Value *stack_size = getInt32(stack_type.limit * stack_type.elem_size());
+  Value *stack_size = getInt32(stype.stack_type.limit *
+                               GetStackElementSize(stype.GetTy()));
 
   // long bpf_get_stack(void *ctx, void *buf, u32 size, u64 flags)
   // Return: The non-negative copied *buf* length equal to or less than
