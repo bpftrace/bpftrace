@@ -35,7 +35,7 @@ TEST(types, to_str)
 
   EXPECT_EQ(to_str(CreateArray(2, CreateInt8())), "int8[2]");
 
-  EXPECT_EQ(to_str(CreateRecord("hello")), "hello");
+  EXPECT_EQ(to_str(CreateCStruct("hello")), "hello");
 
   std::shared_ptr<Struct> tuple = Struct::CreateTuple(
       { CreateInt8(), CreateString(10) });

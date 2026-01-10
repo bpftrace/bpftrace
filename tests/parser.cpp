@@ -1579,16 +1579,16 @@ TEST(Parser, cast_sized_type_pointer_with_size)
 TEST(Parser, cast_struct)
 {
   test("kprobe:sys_read { (struct mytype)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(
-                     Typeof(SizedType(Type::record).WithName("struct mytype")),
-                     Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(
+               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
+                    Builtin("arg0"))) })));
   test("kprobe:sys_read { (union mytype)arg0; }",
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
                  { ExprStatement(Cast(
-                     Typeof(SizedType(Type::record).WithName("union mytype")),
+                     Typeof(SizedType(Type::c_struct).WithName("union mytype")),
                      Builtin("arg0"))) })));
 }
 
@@ -1612,7 +1612,7 @@ TEST(Parser, cast_typedef)
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
                  { ExprStatement(
-                     Cast(Typeof(SizedType(Type::record).WithName("mytype")),
+                     Cast(Typeof(SizedType(Type::c_struct).WithName("mytype")),
                           Builtin("arg0"))) })));
 }
 
@@ -1637,11 +1637,11 @@ TEST(Parser, cast_multiple_pointer)
 TEST(Parser, cast_or_expr1)
 {
   test("kprobe:sys_read { (struct mytype)*arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(
-                     Typeof(SizedType(Type::record).WithName("struct mytype")),
-                     Unop(Operator::MUL, Builtin("arg0")))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(
+               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
+                    Unop(Operator::MUL, Builtin("arg0")))) })));
 }
 
 TEST(Parser, cast_or_expr2)
@@ -1656,11 +1656,11 @@ TEST(Parser, cast_or_expr2)
 TEST(Parser, cast_precedence)
 {
   test("kprobe:sys_read { (struct mytype)arg0.field; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(
-                     Typeof(SizedType(Type::record).WithName("struct mytype")),
-                     FieldAccess("field", Builtin("arg0")))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(
+               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
+                    FieldAccess("field", Builtin("arg0")))) })));
 
   test("kprobe:sys_read { (struct mytype*)arg0->field; }",
        Program().WithProbe(Probe(
@@ -1673,7 +1673,7 @@ TEST(Parser, cast_precedence)
            { "kprobe:sys_read" },
            { ExprStatement(Binop(
                Operator::PLUS,
-               Cast(Typeof(SizedType(Type::record).WithName("struct mytype")),
+               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
                     Builtin("arg0")),
                Integer(123))) })));
 }
@@ -1710,19 +1710,21 @@ TEST(Parser, offsetof_type)
   test("struct Foo { int x; } begin { offsetof(struct Foo, x); }",
        Program()
            .WithCStatements({ CStatement("struct Foo { int x; };") })
-           .WithProbe(Probe({ "begin" },
-                            { ExprStatement(Offsetof(
-                                SizedType(Type::record).WithName("struct Foo"),
-                                { "x" })) })));
+           .WithProbe(
+               Probe({ "begin" },
+                     { ExprStatement(Offsetof(
+                         SizedType(Type::c_struct).WithName("struct Foo"),
+                         { "x" })) })));
   test("struct Foo { struct Bar { int x; } bar; } "
        "begin { offsetof(struct Foo, bar.x); }",
        Program()
            .WithCStatements(
                { CStatement("struct Foo { struct Bar { int x; } bar; };") })
-           .WithProbe(Probe({ "begin" },
-                            { ExprStatement(Offsetof(
-                                SizedType(Type::record).WithName("struct Foo"),
-                                { "bar", "x" })) })));
+           .WithProbe(
+               Probe({ "begin" },
+                     { ExprStatement(Offsetof(
+                         SizedType(Type::c_struct).WithName("struct Foo"),
+                         { "bar", "x" })) })));
   test_parse_failure("struct Foo { struct Bar { int x; } *bar; } "
                      "begin { offsetof(struct Foo, bar->x); }",
                      R"(
@@ -1753,10 +1755,11 @@ TEST(Parser, offsetof_builtin_type)
        "}",
        Program()
            .WithCStatements({ CStatement("struct Foo { timestamp x; };") })
-           .WithProbe(Probe({ "begin" },
-                            { ExprStatement(Offsetof(
-                                SizedType(Type::record).WithName("struct Foo"),
-                                { "timestamp" })) })));
+           .WithProbe(
+               Probe({ "begin" },
+                     { ExprStatement(Offsetof(
+                         SizedType(Type::c_struct).WithName("struct Foo"),
+                         { "timestamp" })) })));
 }
 
 TEST(Parser, dereference_precedence)
@@ -2503,10 +2506,10 @@ TEST(Parser, keywords_as_identifiers)
     test("begin { $x = (struct Foo)0; $x." + keyword + "; }",
          Program().WithProbe(Probe(
              { "begin" },
-             { AssignVarStatement(
-                   Variable("$x"),
-                   Cast(Typeof(SizedType(Type::record).WithName("struct Foo")),
-                        Integer(0))),
+             { AssignVarStatement(Variable("$x"),
+                                  Cast(Typeof(SizedType(Type::c_struct)
+                                                  .WithName("struct Foo")),
+                                       Integer(0))),
                ExprStatement(FieldAccess(keyword, Variable("$x"))) })));
     test("begin { $x = offsetof(*__builtin_curtask, " + keyword + "); }",
          Program().WithProbe(Probe(
@@ -2588,19 +2591,21 @@ TEST(Parser, subprog_struct_arg)
            "f",
            Typeof(SizedType(Type::voidtype)),
            { SubprogArg(Variable("$a"),
-                        Typeof(SizedType(Type::record).WithName("struct x"))) },
+                        Typeof(
+                            SizedType(Type::c_struct).WithName("struct x"))) },
            {})));
 }
 
 TEST(Parser, subprog_union_arg)
 {
-  test("fn f($a : union x): void {}",
-       Program().WithFunction(Subprog(
-           "f",
-           Typeof(SizedType(Type::voidtype)),
-           { SubprogArg(Variable("$a"),
-                        Typeof(SizedType(Type::record).WithName("union x"))) },
-           {})));
+  test(
+      "fn f($a : union x): void {}",
+      Program().WithFunction(Subprog(
+          "f",
+          Typeof(SizedType(Type::voidtype)),
+          { SubprogArg(Variable("$a"),
+                       Typeof(SizedType(Type::c_struct).WithName("union x"))) },
+          {})));
 }
 
 TEST(Parser, subprog_enum_arg)
@@ -2644,15 +2649,19 @@ TEST(Parser, subprog_string)
 TEST(Parser, subprog_struct)
 {
   test("fn f(): struct x {}",
-       Program().WithFunction(Subprog(
-           "f", Typeof(SizedType(Type::record).WithName("struct x")), {}, {})));
+       Program().WithFunction(
+           Subprog("f",
+                   Typeof(SizedType(Type::c_struct).WithName("struct x")),
+                   {},
+                   {})));
 }
 
 TEST(Parser, subprog_union)
 {
-  test("fn f(): union x {}",
-       Program().WithFunction(Subprog(
-           "f", Typeof(SizedType(Type::record).WithName("union x")), {}, {})));
+  test(
+      "fn f(): union x {}",
+      Program().WithFunction(Subprog(
+          "f", Typeof(SizedType(Type::c_struct).WithName("union x")), {}, {})));
 }
 
 TEST(Parser, subprog_enum)
@@ -2802,10 +2811,10 @@ TEST(Parser, struct_save_nested)
 };)") })
            .WithProbe(Probe(
                { "interval:ms:100" },
-               { AssignVarStatement(
-                   Variable("$s"),
-                   Cast(Typeof(SizedType(Type::record).WithName("struct Foo")),
-                        Integer(1))) })));
+               { AssignVarStatement(Variable("$s"),
+                                    Cast(Typeof(SizedType(Type::c_struct)
+                                                    .WithName("struct Foo")),
+                                         Integer(1))) })));
 }
 
 TEST(Parser, map_address)

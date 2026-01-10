@@ -2182,7 +2182,7 @@ std::string opstr(const Unop &unop);
 std::string opstr(const Jump &jump);
 bool is_comparison_op(Operator op);
 
-SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
+SizedType ident_to_c_struct(const std::string &ident, int pointer_level = 0);
 SizedType ident_to_sized_type(const std::string &ident);
 
 } // namespace bpftrace::ast

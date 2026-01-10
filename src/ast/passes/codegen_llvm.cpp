@@ -2012,7 +2012,7 @@ ScopedExpr CodegenLLVM::visit(Variable &var)
 {
   // Arrays and structs are not memcopied for local variables
   if (needMemcpy(var.var_type) &&
-      !(var.var_type.IsArrayTy() || var.var_type.IsRecordTy())) {
+      !(var.var_type.IsArrayTy() || var.var_type.IsCStructTy())) {
     return ScopedExpr(getVariable(var.ident).value);
   } else {
     auto &var_llvm = getVariable(var.ident);
@@ -2491,7 +2491,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   SizedType type = acc.expr.type();
   auto scoped_arg = visit(acc.expr);
 
-  assert(type.IsRecordTy());
+  assert(type.IsCStructTy());
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
@@ -2845,7 +2845,7 @@ Value *CodegenLLVM::createTuple(
 
     if (inBpfMemory(type))
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
-    else if (type.IsArrayTy() || type.IsRecordTy())
+    else if (type.IsArrayTy() || type.IsCStructTy())
       b_.CreateProbeRead(dst, type, val, vloc);
     else
       b_.CreateStore(val, dst);
@@ -2897,7 +2897,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
                              : expr;
   if (shouldBeInBpfMemoryAlready(expr_type)) {
     b_.CreateMemcpyBPF(value, expr, expr_type.GetSize());
-  } else if (map_type.IsRecordTy() || map_type.IsArrayTy()) {
+  } else if (map_type.IsCStructTy() || map_type.IsArrayTy()) {
     if (!expr_type.is_internal) {
       // expr currently contains a pointer to the struct or array
       // We now want to read the entire struct/array in so we can save it
@@ -2929,7 +2929,7 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
   // Arrays and structs need not to be copied when assigned to local variables
   // since they are treated as read-only - it is sufficient to assign
   // the pointer and do the memcpy/proberead later when necessary
-  if (var_type.IsArrayTy() || var_type.IsRecordTy()) {
+  if (var_type.IsArrayTy() || var_type.IsCStructTy()) {
     const auto &pointee_type = var_type.IsArrayTy() ? *var_type.GetElementTy()
                                                     : var_type;
     alloca_type = CreatePointer(pointee_type, var_type.GetAS());
@@ -2981,7 +2981,7 @@ ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
 
   maybeAllocVariable(var.ident, var.var_type, var.loc);
 
-  if (var.var_type.IsArrayTy() || var.var_type.IsRecordTy()) {
+  if (var.var_type.IsArrayTy() || var.var_type.IsCStructTy()) {
     // For arrays and structs, only the pointer is stored. However, this means
     // that we cannot release the underlying memory for any of these types. We
     // just disarm the scoped expression, and therefore never free any of these
@@ -3307,7 +3307,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
     b_.CreateStore(
         b_.CreateIntCast(scoped_key_expr.value(), b_.getInt1Ty(), false), key);
   } else {
-    if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
+    if (key_expr.type().IsArrayTy() || key_expr.type().IsCStructTy()) {
       // We need to read the entire array/struct and save it
       b_.CreateProbeRead(
           key, key_expr.type(), scoped_key_expr.value(), map.loc);
@@ -3363,7 +3363,7 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
     if ((map_key_size % 8) != 0)
       aligned = false;
   } else {
-    if (key_expr.type().IsArrayTy() || key_expr.type().IsRecordTy()) {
+    if (key_expr.type().IsArrayTy() || key_expr.type().IsCStructTy()) {
       // Read the array/struct into the key
       b_.CreateProbeRead(
           offset_val, key_expr.type(), scoped_expr.value(), map.loc);
@@ -4155,7 +4155,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
   // to cast the pointer to the expected value.
   Value *src = b_.CreateSafeGEP(b_.getInt8Ty(), scoped_src.value(), offset);
 
-  if (elem_type.IsRecordTy() || elem_type.IsArrayTy()) {
+  if (elem_type.IsCStructTy() || elem_type.IsArrayTy()) {
     // For nested arrays and structs, just pass the pointer along and
     // dereference it later when necessary. We just need to extend lifetime
     // of the source pointer.

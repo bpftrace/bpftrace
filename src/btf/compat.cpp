@@ -67,7 +67,7 @@ Result<SizedType> getCompatType(const Struct &type)
     fields.emplace_back(*ft);
     idents.emplace_back(name);
   }
-  return CreateRecord(bpftrace::Struct::CreateRecord(fields, idents));
+  return CreateCStruct(bpftrace::Struct::CreateRecord(fields, idents));
 }
 
 Result<SizedType> getCompatType(const Enum &type)

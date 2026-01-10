@@ -272,7 +272,7 @@ TEST(clang_parser, nested_struct_named)
   ASSERT_TRUE(foo->HasField("bar"));
 
   const auto &bar = foo->GetField("bar");
-  EXPECT_TRUE(bar.type.IsRecordTy());
+  EXPECT_TRUE(bar.type.IsCStructTy());
   EXPECT_EQ(bar.type.GetName(), "struct Bar");
   EXPECT_EQ(bar.type.GetSize(), 4U);
   EXPECT_EQ(bar.offset, 0);
@@ -293,7 +293,7 @@ TEST(clang_parser, nested_struct_ptr_named)
 
   const auto &bar = foo->GetField("bar");
   EXPECT_TRUE(bar.type.IsPtrTy());
-  EXPECT_TRUE(bar.type.GetPointeeTy()->IsRecordTy());
+  EXPECT_TRUE(bar.type.GetPointeeTy()->IsCStructTy());
   EXPECT_EQ(bar.type.GetPointeeTy()->GetName(), "struct Bar");
   EXPECT_EQ(bar.type.GetPointeeTy()->GetSize(), sizeof(int));
   EXPECT_EQ(bar.offset, 0);
@@ -340,12 +340,12 @@ TEST(clang_parser, nested_struct_no_type)
 
   {
     const auto &bar_field = foo->GetField("bar");
-    EXPECT_TRUE(bar_field.type.IsRecordTy());
+    EXPECT_TRUE(bar_field.type.IsCStructTy());
     EXPECT_EQ(bar_field.type.GetSize(), sizeof(int));
     EXPECT_EQ(bar_field.offset, 0);
 
     const auto &baz_field = foo->GetField("baz");
-    EXPECT_TRUE(baz_field.type.IsRecordTy());
+    EXPECT_TRUE(baz_field.type.IsCStructTy());
     EXPECT_EQ(baz_field.type.GetSize(), sizeof(int));
     EXPECT_EQ(baz_field.offset, 4);
   }
@@ -679,7 +679,7 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(foo2->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo2->GetField("a").offset, 0);
 
-  EXPECT_TRUE(foo2->GetField("f").type.IsRecordTy());
+  EXPECT_TRUE(foo2->GetField("f").type.IsCStructTy());
   EXPECT_EQ(foo2->GetField("f").type.GetSize(), 16U);
   EXPECT_EQ(foo2->GetField("f").offset, 8);
 
@@ -862,10 +862,10 @@ TEST(clang_parser, struct_qualifiers)
   EXPECT_EQ(SB->fields.size(), 2U);
 
   EXPECT_TRUE(SB->GetField("a").type.IsPtrTy());
-  EXPECT_TRUE(SB->GetField("a").type.GetPointeeTy()->IsRecordTy());
+  EXPECT_TRUE(SB->GetField("a").type.GetPointeeTy()->IsCStructTy());
   EXPECT_EQ(SB->GetField("a").type.GetPointeeTy()->GetName(), "struct a");
 
-  EXPECT_TRUE(SB->GetField("a2").type.IsRecordTy());
+  EXPECT_TRUE(SB->GetField("a2").type.IsCStructTy());
   EXPECT_EQ(SB->GetField("a2").type.GetName(), "struct a");
 }
 

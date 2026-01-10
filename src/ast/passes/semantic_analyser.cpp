@@ -684,7 +684,7 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::pointer:
     case Type::array:
     case Type::mac_address:
-    case Type::record:
+    case Type::c_struct:
     case Type::tuple:
     case Type::cgroup_path_t:
     case Type::none:
@@ -742,7 +742,7 @@ void SemanticAnalyser::visit(Identifier &identifier)
     const auto &enum_name = std::get<1>(c_definitions_.enums[identifier.ident]);
     identifier.ident_type = CreateEnum(64, enum_name);
   } else if (bpftrace_.structs.Has(identifier.ident)) {
-    identifier.ident_type = CreateRecord(
+    identifier.ident_type = CreateCStruct(
         identifier.ident, bpftrace_.structs.Lookup(identifier.ident));
   } else if (func_ == "nsecs") {
     identifier.ident_type = CreateTimestampMode();
@@ -839,7 +839,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
         auto record = bpftrace_.structs.Lookup("struct pt_regs");
         if (!record.expired()) {
           builtin.builtin_type = CreatePointer(
-              CreateRecord("struct pt_regs", record), AddrSpace::kernel);
+              CreateCStruct("struct pt_regs", record), AddrSpace::kernel);
           builtin.builtin_type.MarkCtxAccess();
         } else {
           builtin.builtin_type = CreatePointer(CreateNone());
@@ -851,9 +851,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
         break;
       case BPF_PROG_TYPE_PERF_EVENT:
         builtin.builtin_type = CreatePointer(
-            CreateRecord("struct bpf_perf_event_data",
-                         bpftrace_.structs.Lookup(
-                             "struct bpf_perf_event_data")),
+            CreateCStruct("struct bpf_perf_event_data",
+                          bpftrace_.structs.Lookup(
+                              "struct bpf_perf_event_data")),
             AddrSpace::kernel);
         builtin.builtin_type.MarkCtxAccess();
         break;
@@ -861,7 +861,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
         if (pt == ProbeType::iter) {
           std::string type = "struct bpf_iter__" + func;
           builtin.builtin_type = CreatePointer(
-              CreateRecord(type, bpftrace_.structs.Lookup(type)),
+              CreateCStruct(type, bpftrace_.structs.Lookup(type)),
               AddrSpace::kernel);
           builtin.builtin_type.MarkCtxAccess();
         } else {
@@ -886,8 +886,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (builtin.ident == "__builtin_curtask") {
     // Retype curtask to its original type: struct task_struct.
     builtin.builtin_type = CreatePointer(
-        CreateRecord("struct task_struct",
-                     bpftrace_.structs.Lookup("struct task_struct")),
+        CreateCStruct("struct task_struct",
+                      bpftrace_.structs.Lookup("struct task_struct")),
         AddrSpace::kernel);
   } else if (builtin.ident == "__builtin_retval") {
     auto *probe = get_probe(builtin, builtin.ident);
@@ -1018,8 +1018,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
           return;
         }
       }
-      builtin.builtin_type = CreateRecord(*type_name,
-                                          bpftrace_.structs.Lookup(*type_name));
+      builtin.builtin_type = CreateCStruct(
+          *type_name, bpftrace_.structs.Lookup(*type_name));
       if (builtin.builtin_type.GetFieldCount() == 0)
         builtin.addError() << "Cannot read function parameters";
 
@@ -1031,8 +1031,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
       if (type == ProbeType::uprobe)
         builtin.builtin_type.is_internal = true;
     } else if (type == ProbeType::tracepoint) {
-      builtin.builtin_type = CreateRecord(*type_name,
-                                          bpftrace_.structs.Lookup(*type_name));
+      builtin.builtin_type = CreateCStruct(
+          *type_name, bpftrace_.structs.Lookup(*type_name));
       builtin.builtin_type.SetAS(probe->attach_points.front()->target ==
                                          "syscalls"
                                      ? AddrSpace::user
@@ -1618,7 +1618,7 @@ void SemanticAnalyser::visit(Call &call)
     // It's record when it's referenced as object pointer
     // member, like: path(args.filp->f_path))
     auto &arg = call.vargs.at(0);
-    if (arg.type().GetTy() != Type::record &&
+    if (arg.type().GetTy() != Type::c_struct &&
         arg.type().GetTy() != Type::pointer) {
       call.addError() << "path() only supports pointer or record argument ("
                       << arg.type().GetTy() << " provided)";
@@ -1731,11 +1731,11 @@ void SemanticAnalyser::visit(Call &call)
 
     const auto &type = call.vargs.at(0).type();
     if (!type.IsPtrTy() || !type.GetPointeeTy() ||
-        !type.GetPointeeTy()->IsRecordTy()) {
+        !type.GetPointeeTy()->IsCStructTy()) {
       logError(type.GetTy());
       return;
     }
-    if (!type.GetPointeeTy()->IsSameType(CreateRecord("struct sock"))) {
+    if (!type.GetPointeeTy()->IsSameType(CreateCStruct("struct sock"))) {
       logError("'" + type.GetPointeeTy()->GetName() + " *'");
       return;
     }
@@ -1923,25 +1923,25 @@ std::optional<size_t> SemanticAnalyser::check(Offsetof &offof)
   is_type_name_ = false;
   meta_depth_--;
 
-  auto check_type = [&](SizedType record) -> std::optional<size_t> {
+  auto check_type = [&](SizedType cstruct) -> std::optional<size_t> {
     size_t offset = 0;
     // Check if all sub-fields are present.
     for (const auto &field : offof.field) {
-      if (!record.IsRecordTy()) {
-        offof.addError() << "'" << record << "' " << "is not a record type.";
+      if (!cstruct.IsCStructTy()) {
+        offof.addError() << "'" << cstruct << "' " << "is not a c_struct type.";
         return std::nullopt;
-      } else if (!bpftrace_.structs.Has(record.GetName())) {
-        offof.addError() << "'" << record.GetName() << "' does not exist.";
+      } else if (!bpftrace_.structs.Has(cstruct.GetName())) {
+        offof.addError() << "'" << cstruct.GetName() << "' does not exist.";
         return std::nullopt;
-      } else if (!record.HasField(field)) {
-        offof.addError() << "'" << record.GetName() << "' "
+      } else if (!cstruct.HasField(field)) {
+        offof.addError() << "'" << cstruct.GetName() << "' "
                          << "has no field named " << "'" << field << "'";
         return std::nullopt;
       } else {
         // Get next sub-field
-        const auto &f = record.GetField(field);
+        const auto &f = cstruct.GetField(field);
         offset += f.offset;
-        record = f.type;
+        cstruct = f.type;
       }
     }
     return offset;
@@ -2693,7 +2693,7 @@ void SemanticAnalyser::visit(Unop &unop)
         unop.result_type.MarkCtxAccess();
       unop.result_type.is_internal = type.is_internal;
       unop.result_type.SetAS(type.GetAS());
-    } else if (type.IsRecordTy()) {
+    } else if (type.IsCStructTy()) {
       // We allow dereferencing "args" with no effect (for backwards compat)
       if (type.IsCtxAccess())
         unop.result_type = type;
@@ -3102,7 +3102,7 @@ void SemanticAnalyser::visit(For &f)
     ctx_types.push_back(CreatePointer(var.var_type, AddrSpace::none));
     ctx_idents.push_back(var.ident);
   }
-  f.ctx_type = CreateRecord(Struct::CreateRecord(ctx_types, ctx_idents));
+  f.ctx_type = CreateCStruct(Struct::CreateRecord(ctx_types, ctx_idents));
 }
 
 void SemanticAnalyser::visit(FieldAccess &acc)
@@ -3129,7 +3129,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!type.IsRecordTy()) {
+  if (!type.IsCStructTy()) {
     if (is_final_pass()) {
       acc.addError() << "Can not access field '" << acc.field
                      << "' on expression of type '" << type << "'";
@@ -3186,7 +3186,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
     acc.field_type = field.type;
     if (acc.expr.type().IsCtxAccess() &&
-        (acc.field_type.IsArrayTy() || acc.field_type.IsRecordTy())) {
+        (acc.field_type.IsArrayTy() || acc.field_type.IsCStructTy())) {
       // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
       acc.field_type.MarkCtxAccess();
     }
@@ -3299,7 +3299,7 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   auto rhs = cast.expr.type();
-  if (rhs.IsRecordTy()) {
+  if (rhs.IsCStructTy()) {
     cast.addError() << "Cannot cast from struct type \"" << cast.expr.type()
                     << "\"";
   } else if (rhs.IsNoneTy()) {
@@ -3327,7 +3327,7 @@ void SemanticAnalyser::visit(Cast &cast)
 
   if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy() &&
       (!ty.IsPtrTy() || ty.GetElementTy()->IsIntTy() ||
-       ty.GetElementTy()->IsRecordTy()) &&
+       ty.GetElementTy()->IsCStructTy()) &&
       // we support casting integers to int arrays
       !(ty.IsArrayTy() && ty.GetElementTy()->IsBoolTy()) &&
       !(ty.IsArrayTy() && ty.GetElementTy()->IsIntTy())) {
@@ -3594,7 +3594,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   const auto &map_ident = assignment.map_access->map->ident;
   const auto &type = assignment.expr.type();
 
-  if (type.IsRecordTy() && map_val_[map_ident].IsRecordTy()) {
+  if (type.IsCStructTy() && map_val_[map_ident].IsCStructTy()) {
     std::string ty = assignment.expr.type().GetName();
     std::string stored_ty = map_val_[map_ident].GetName();
     if (!stored_ty.empty() && stored_ty != ty) {
@@ -4226,7 +4226,7 @@ void SemanticAnalyser::assign_map_type(Map &map,
 {
   const std::string &map_ident = map.ident;
 
-  if (type.IsRecordTy() && type.GetStruct() &&
+  if (type.IsCStructTy() && type.GetStruct() &&
       type.GetStruct()->is_tracepoint_args) {
     loc_node->addError() << "Storing tracepoint args in maps is not supported";
   }
@@ -4474,7 +4474,7 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
     inner_type = inner_type->GetPointeeTy();
     pointer_level++;
   }
-  if (inner_type->IsRecordTy() && !inner_type->GetStruct()) {
+  if (inner_type->IsCStructTy() && !inner_type->GetStruct()) {
     auto struct_type = bpftrace_.structs.Lookup(inner_type->GetName()).lock();
     if (!struct_type) {
       // Try to find the type as something other than a struct, e.g. 'char' or
@@ -4491,7 +4491,7 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
         }
       }
     } else {
-      type = CreateRecord(inner_type->GetName(), struct_type);
+      type = CreateCStruct(inner_type->GetName(), struct_type);
       while (pointer_level > 0) {
         type = CreatePointer(type);
         pointer_level--;
