@@ -49,7 +49,6 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
                                  uint32_t div)
 {
   switch (type.GetTy()) {
-    case Type::stack_mode:
     case Type::timestamp_mode:
     case Type::hist_t:
     case Type::lhist_t:
