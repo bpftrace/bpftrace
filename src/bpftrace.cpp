@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <glob.h>
+#include <iomanip>
 #include <iostream>
 #include <ranges>
 #include <regex>
@@ -1034,8 +1035,10 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
                 << std::endl;
           break;
         case StackMode::raw:
-          LOG(BUG) << "StackMode::raw should have been processed before "
-                      "symbolication.";
+        case StackMode::build_id:
+          LOG(BUG)
+              << "StackMode::raw or build_id should have been processed before "
+                 "symbolication.";
           break;
       }
       ++i;

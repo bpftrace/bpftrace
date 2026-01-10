@@ -350,7 +350,8 @@ Available modes/formats:
 
 * bpftrace
 * perf
-* raw: no symbolication
+* raw: no symbolication (print instruction pointer)
+* build_id: no symbolication (print build_id and file offset) (ustack only)
 
 This can be overwritten at the call site.
 
