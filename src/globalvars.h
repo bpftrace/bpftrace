@@ -110,6 +110,7 @@ constexpr std::string_view WRITE_MAP_VALUE_BUFFER = "__bt__write_map_val_buf";
 constexpr std::string_view VARIABLE_BUFFER = "__bt__var_buf";
 constexpr std::string_view MAP_KEY_BUFFER = "__bt__map_key_buf";
 constexpr std::string_view EVENT_LOSS_COUNTER = "__bt__event_loss_counter";
+constexpr std::string_view JOIN_BUFFER = "__bt__join_buf";
 
 // Section names
 constexpr std::string_view RO_SECTION_NAME = ".rodata";
@@ -126,6 +127,8 @@ constexpr std::string_view VARIABLE_BUFFER_SECTION_NAME = ".data.var_buf";
 constexpr std::string_view MAP_KEY_BUFFER_SECTION_NAME = ".data.map_key_buf";
 constexpr std::string_view EVENT_LOSS_COUNTER_SECTION_NAME =
     ".data.event_loss_counter";
+constexpr std::string_view JOIN_BUFFER_SECTION_NAME =
+    ".data.join_buf";
 
 struct GlobalVarConfig {
   std::string section;
@@ -169,6 +172,8 @@ const std::unordered_map<std::string_view, GlobalVarConfig>
         { .section = std::string(VARIABLE_BUFFER_SECTION_NAME) } },
       { MAP_KEY_BUFFER,
         { .section = std::string(MAP_KEY_BUFFER_SECTION_NAME) } },
+      { JOIN_BUFFER,
+        { .section = std::string(JOIN_BUFFER_SECTION_NAME) } },
     };
 
 class GlobalVars {
