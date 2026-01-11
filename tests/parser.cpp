@@ -184,10 +184,6 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("__builtin_cpu")) })));
 
-  test("kprobe:f { __builtin_curtask }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_curtask")) })));
-
   test("kprobe:f { __builtin_rand }",
        Program().WithProbe(Probe(
            { "kprobe:f" }, { ExprStatement(Builtin("__builtin_rand")) })));
@@ -1448,7 +1444,6 @@ TEST(Parser, wildcard_func)
   std::string keywords[] = {
     "arg0",
     "args",
-    "__builtin_curtask",
     "errorf",
     "warnf",
     "func",
@@ -2552,13 +2547,13 @@ TEST(Parser, keywords_as_identifiers)
                                                   .WithName("struct Foo")),
                                        Integer(0))),
                ExprStatement(FieldAccess(keyword, Variable("$x"))) })));
-    test("begin { $x = offsetof(*__builtin_curtask, " + keyword + "); }",
-         Program().WithProbe(Probe(
-             { "begin" },
-             { AssignVarStatement(Variable("$x"),
-                                  Offsetof(Unop(Operator::MUL,
-                                                Builtin("__builtin_curtask")),
-                                           { keyword })) })));
+    test("begin { $x = offsetof(*__builtin_cpu, " + keyword + "); }",
+         Program().WithProbe(
+             Probe({ "begin" },
+                   { AssignVarStatement(Variable("$x"),
+                                        Offsetof(Unop(Operator::MUL,
+                                                      Builtin("__builtin_cpu")),
+                                                 { keyword })) })));
   }
 }
 
