@@ -334,12 +334,11 @@ AttachPointParser::AttachPointParser(ASTContext &ctx,
 {
 }
 
-int AttachPointParser::parse()
+void AttachPointParser::parse()
 {
   if (!ctx_.root)
-    return 1;
+    return;
 
-  uint32_t failed = 0;
   for (Probe *probe : ctx_.root->probes) {
     for (size_t i = 0; i < probe->attach_points.size(); ++i) {
       auto *ap_ptr = probe->attach_points[i];
@@ -348,7 +347,6 @@ int AttachPointParser::parse()
 
       State s = parse_attachpoint(ap);
       if (s == INVALID) {
-        ++failed;
         ap.addError() << errs_.str();
       } else if (s == SKIP || s == NEW_APS) {
         // Remove the current attach point
@@ -374,14 +372,14 @@ int AttachPointParser::parse()
     probe->attach_points.erase(it.begin(), it.end());
 
     if (probe->attach_points.empty()) {
-      probe->addError() << "No attach points for probe";
-      failed++;
+      const auto missing_probes = bpftrace_.config_->missing_probes;
+      if (missing_probes == ConfigMissingProbes::error) {
+        probe->addError() << "No attach points for probe";
+      }
     }
 
     has_iter_ap_ = false; // reset for each probe
   }
-
-  return failed;
 }
 
 AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)

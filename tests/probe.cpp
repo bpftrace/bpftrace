@@ -78,7 +78,7 @@ TEST(probe, short_name)
                    "t:sched:sched_one { args }");
   compare_bytecode("kprobe:f { pid }", "k:f { pid }");
   compare_bytecode("kretprobe:f { pid }", "kr:f { pid }");
-  compare_bytecode("uprobe:sh:f { 1 }", "u:sh:f { 1 }");
+  compare_bytecode("uprobe:/bin/sh:f { 1 }", "u:/bin/sh:f { 1 }");
   compare_bytecode("profile:hz:997 { 1 }", "p:hz:997 { 1 }");
   compare_bytecode("hardware:cache-references:1000000 { 1 }",
                    "h:cache-references:1000000 { 1 }");
