@@ -48,9 +48,9 @@ TEST_F(field_analyser_btf, btf_types)
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace,
        "kprobe:sys_read {\n"
-       "  @x1 = (struct Foo1 *) curtask;\n"
-       "  @x2 = (struct Foo2 *) curtask;\n"
-       "  @x3 = (struct Foo3 *) curtask;\n"
+       "  @x1 = (struct Foo1 *) ctx;\n"
+       "  @x2 = (struct Foo2 *) ctx;\n"
+       "  @x3 = (struct Foo3 *) ctx;\n"
        "}",
        true);
 
@@ -261,7 +261,7 @@ TEST_F(field_analyser_btf, btf_types_struct_ptr)
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace,
        "kprobe:sys_read {\n"
-       "  @x1 = ((struct Foo3 *) curtask);\n"
+       "  @x1 = ((struct Foo3 *) ctx);\n"
        "  @x3 = @x1->foo2;\n"
        "}",
        true);
