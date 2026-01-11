@@ -237,7 +237,6 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("kprobe:f { elapsed }");
   test("kprobe:f { cpu }");
   test("kprobe:f { ncpus }");
-  test("kprobe:f { curtask }");
   test("kprobe:f { rand }");
   test("kprobe:f { ctx }");
   test("kprobe:f { comm }");
@@ -303,9 +302,6 @@ TEST_F(SemanticAnalyserTest, builtin_functions)
   test("kprobe:f { pton(\"127.0.0.1\") }");
   test("kprobe:f { pton(\"::1\") }");
   test("kprobe:f { pton(\"0000:0000:0000:0000:0000:0000:0000:0001\") }");
-#ifdef __x86_64__
-  test("kprobe:f { reg(\"ip\") }");
-#endif
   test("kprobe:f { kstack(1) }");
   test("kprobe:f { ustack(1) }");
   test("kprobe:f { cat(\"/proc/uptime\") }");
@@ -351,11 +347,6 @@ TEST_F(SemanticAnalyserTest, consistent_map_values)
 stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'uint8'
 kprobe:f { @x = 0; @x = "a"; }
                    ~~~~~~~~
-)" });
-  test("kprobe:f { @x = 0; @x = *curtask; }", Error{ R"(
-stdin:1:20-33: ERROR: Type mismatch for @x: trying to assign value of type 'struct task_struct' when map already contains a value of type 'uint8'
-kprobe:f { @x = 0; @x = *curtask; }
-                   ~~~~~~~~~~~~~
 )" });
 }
 
@@ -438,8 +429,6 @@ TEST_F(SemanticAnalyserTest, if_statements)
   test("kprobe:f { if(1) { 123 } else { 456 } }");
   test("kprobe:f { if(0) { 123 } else if(1) { 456 } else { 789 } }");
   test("kprobe:f { if((int32)pid) { 123 } }");
-  test("kprobe:f { if(curtask) { 123 } }");
-  test("kprobe:f { if(curtask && (int32)pid) { 123 } }");
 }
 
 TEST_F(SemanticAnalyserTest, predicate_expressions)
@@ -485,17 +474,17 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
   };
 
   for (const auto &[left, right] : supported_types) {
-    test("kprobe:f { curtask ? " + left + " : " + right + " }");
+    test("kprobe:f { true ? " + left + " : " + right + " }");
   }
 
   test("kprobe:f { pid < 10000 ? printf(\"lo\") : exit() }");
   test(R"(kprobe:f { @x = pid < 10000 ? printf("lo") : cat("/proc/uptime") })",
        Error{});
-  test("struct Foo { int x; } kprobe:f { curtask ? (struct Foo)*arg0 : "
+  test("struct Foo { int x; } kprobe:f { true ? (struct Foo)*arg0 : "
        "(struct "
        "Foo)*arg1 }",
        Error{});
-  test("struct Foo { int x; } kprobe:f { curtask ? (struct Foo*)arg0 : "
+  test("struct Foo { int x; } kprobe:f { true ? (struct Foo*)arg0 : "
        "(struct "
        "Foo*)arg1 }");
   test(
@@ -1578,17 +1567,6 @@ TEST_F(SemanticAnalyserTest, call_cgroupid)
        "); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_reg)
-{
-#ifdef __x86_64__
-  test("kprobe:f { reg(\"ip\"); }");
-  test("kprobe:f { @x = reg(\"ip\"); }");
-#endif
-  test("kprobe:f { reg(\"blah\"); }", Error{});
-  test("kprobe:f { reg(); }", Error{});
-  test("kprobe:f { reg(123); }", Error{});
-}
-
 TEST_F(SemanticAnalyserTest, call_probe)
 {
   test("kprobe:f { @[probe] = count(); }");
@@ -2576,7 +2554,6 @@ TEST_F(SemanticAnalyserTest, field_access)
   std::string structs = "struct type1 { int field; }";
   test(structs + "kprobe:f { $x = *(struct type1*)cpu; $x.field }");
   test(structs + "kprobe:f { @x = *(struct type1*)cpu; @x.field }");
-  test("struct task_struct {int x;} kprobe:f { curtask->x }");
 }
 
 TEST_F(SemanticAnalyserTest, field_access_wrong_field)
@@ -3584,6 +3561,8 @@ TEST_F(SemanticAnalyserTest, unwatch)
 
 TEST_F(SemanticAnalyserTest, struct_member_keywords)
 {
+  // These are valid builtins / existing keywords in scripts, and we ensure that
+  // these are not parsed in that way and are instead treated as fields.
   std::string keywords[] = {
     "arg0",   "args",   "curtask", "func",   "gid",      "rand",
     "uid",    "avg",    "cat",     "exit",   "kaddr",    "min",
@@ -3870,9 +3849,6 @@ TEST_F(SemanticAnalyserTest, tuple)
   test(R"(begin { @t = (1, (2,3)) })");
   test(R"(begin { $t = (1, (int64)2); $t = (2, (int32)3); })");
   test(R"(begin { $t = (1, (int32)2); $t = (2, (int64)3); })");
-
-  test(R"(struct task_struct { int x; } begin { $t = (1, curtask); })");
-  test(R"(struct task_struct { int x[4]; } begin { $t = (1, curtask->x); })");
 
   test(R"(begin { $t = (1, 2); $t = (4, "other"); })", Error{});
   test(R"(begin { $t = (1, 2); $t = 5; })", Error{});
@@ -4382,19 +4358,6 @@ fexit:func_1 { $x = args.foo; }
   test("fexit:func_1 { $x = args; }");
   test("fentry:func_1 { @ = args; }");
   test("fentry:func_1 { @[args] = 1; }");
-  // reg() is not available in fentry
-  if (arch::Host::Machine == arch::Machine::X86_64) {
-    test("fentry:func_1 { reg(\"ip\") }", Error{ R"(
-stdin:1:17-26: ERROR: reg can not be used with "fentry" probes
-fentry:func_1 { reg("ip") }
-                ~~~~~~~~~
-)" });
-    test("fexit:func_1 { reg(\"ip\") }", Error{ R"(
-stdin:1:16-25: ERROR: reg can not be used with "fexit" probes
-fexit:func_1 { reg("ip") }
-               ~~~~~~~~~
-)" });
-  }
   // Backwards compatibility
   test("fentry:func_1 { $x = args->a; }");
 }
@@ -4528,19 +4491,6 @@ kretfunc:func_1 { $x = args.foo; }
   test("kretfunc:func_1 { $x = args; }");
   test("kfunc:func_1 { @ = args; }");
   test("kfunc:func_1 { @[args] = 1; }");
-  // reg() is not available in kfunc
-  if (arch::Host::Machine == arch::Machine::X86_64) {
-    test("kfunc:func_1 { reg(\"ip\") }", Error{ R"(
-stdin:1:16-25: ERROR: reg can not be used with "fentry" probes
-kfunc:func_1 { reg("ip") }
-               ~~~~~~~~~
-)" });
-    test("kretfunc:func_1 { reg(\"ip\") }", Error{ R"(
-stdin:1:19-28: ERROR: reg can not be used with "fexit" probes
-kretfunc:func_1 { reg("ip") }
-                  ~~~~~~~~~
-)" });
-  }
   // Backwards compatibility
   test("kfunc:func_1 { $x = args->a; }");
 }
@@ -5103,7 +5053,6 @@ TEST_F(SemanticAnalyserTest, variable_declarations)
   // Test more types
   test("struct x { int a; }; begin { let $a: struct x; }");
   test("struct x { int a; }; begin { let $a: struct x *; }");
-  test("begin { let $a: struct task_struct *; $a = curtask; }");
   test("struct x { int a; } begin { let $a: struct x[10]; }");
   test("begin { if (pid) { let $x; } $x = 2; }");
   test("begin { if (pid) { let $x; } else { let $x; } let $x; }");
@@ -5170,9 +5119,9 @@ begin { let $a: sum_t; }
         ~~~~~~~~~~~~~
 )" });
 
-  test(R"(begin { let $a: struct bad_task; $a = *curtask; })", Error{ R"(
+  test(R"(begin { let $a: struct bad_task; print($a); })", Error{ R"(
 stdin:1:17-32: ERROR: Cannot resolve unknown type "struct bad_task"
-begin { let $a: struct bad_task; $a = *curtask; }
+begin { let $a: struct bad_task; print($a); }
                 ~~~~~~~~~~~~~~~
 )" });
 
