@@ -780,7 +780,7 @@ TEST_F(clang_parser_btf, btf_type_override)
   parse("struct Foo1 { int a; };\n",
         *bpftrace,
         true,
-        "kprobe:sys_read { @x = ((struct Foo1 *)curtask); }");
+        "kprobe:sys_read { @x = ((struct Foo1 *)ctx); }");
 
   ASSERT_TRUE(bpftrace->structs.Has("struct Foo1"));
   auto foo1 = bpftrace->structs.Lookup("struct Foo1").lock();
@@ -793,7 +793,7 @@ TEST_F(clang_parser_btf, btf_type_override)
   parse("struct Foo1 { struct Foo2 foo2; };\n",
         *bpftrace,
         false,
-        "kprobe:sys_read { @x = ((struct Foo1 *)curtask); }");
+        "kprobe:sys_read { @x = ((struct Foo1 *)ctx); }");
 
   // Here, Foo1 redefinition will take place when resolving incomplete types
   // (since Foo3 contains a pointer to Foo1)
@@ -801,7 +801,7 @@ TEST_F(clang_parser_btf, btf_type_override)
   parse("struct Foo1 { struct Foo2 foo2; };\n",
         *bpftrace,
         false,
-        "kprobe:sys_read { @x1 = ((struct Foo3 *)curtask); }");
+        "kprobe:sys_read { @x1 = ((struct Foo3 *)ctx); }");
 }
 
 TEST(clang_parser, struct_typedef)
