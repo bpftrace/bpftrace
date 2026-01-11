@@ -32,6 +32,7 @@ namespace bpftrace::test::bpftrace {
 
 using ::testing::ContainerEq;
 using ::testing::Contains;
+using ::testing::NiceMock;
 using ::testing::StrictMock;
 
 static const int STRING_SIZE = 64;
@@ -61,6 +62,7 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
@@ -335,9 +337,6 @@ TEST(bpftrace, add_probes_usdt)
 TEST(bpftrace, add_probes_usdt_empty_namespace_conflict)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_usdt(no_pid, "/bin/sh"))
-      .Times(1);
 
   parse_probe("usdt:/bin/sh:tp {}", *bpftrace);
 }
@@ -431,7 +430,9 @@ TEST(bpftrace, empty_attachpoint)
   // ... ah, but it doesn't really. What fails is the attachpoint parser. The
   // above is a valid program, it is just not a valid attachpoint.
   StrictMock<MockBPFtrace> bpftrace;
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ast::FunctionInfo func_info_state(*bpftrace.get_mock_kernel_func_info(),
+                                    *bpftrace.get_mock_user_func_info());
+  ast::AttachPointParser ap_parser(ast, bpftrace, func_info_state, false);
   ap_parser.parse();
   EXPECT_FALSE(ast.diagnostics().ok());
 }
@@ -740,13 +741,6 @@ TEST_F(bpftrace_btf, add_probes_iter_task_vma)
 
 class bpftrace_bad_btf : public test_bad_btf {};
 
-// Test that we can handle bad data and don't just crash
-TEST_F(bpftrace_bad_btf, parse_invalid_btf)
-{
-  BPFtrace bpftrace;
-  EXPECT_FALSE(bpftrace.has_btf_data());
-}
-
 TEST_F(bpftrace_btf, add_probes_rawtracepoint)
 {
   auto bpftrace = get_mock_bpftrace();
@@ -800,7 +794,8 @@ static std::set<std::string> list_modules(std::string_view ap)
 
   auto ok = ast::PassManager()
                 .put(ast)
-                .put(static_cast<BPFtrace &>(*bpftrace))
+                .put<BPFtrace>(*bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .run();
@@ -808,7 +803,12 @@ static std::set<std::string> list_modules(std::string_view ap)
   ast.diagnostics().emit(out);
   EXPECT_TRUE(ok && ast.diagnostics().ok()) << out.str();
 
-  return bpftrace->list_modules(ast);
+  // Create a real ProbeMatcher with mock function info for list_modules.
+  ProbeMatcher probe_matcher(bpftrace.get(),
+                             *bpftrace->get_mock_kernel_func_info(),
+                             *bpftrace->get_mock_user_func_info());
+
+  return bpftrace->list_modules(ast, probe_matcher);
 }
 
 // Test modules are extracted when module is not explicit in attachpoint

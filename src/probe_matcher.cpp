@@ -13,11 +13,9 @@
 #include "probe_matcher.h"
 #include "scopeguard.h"
 #include "tracefs/tracefs.h"
-#include "util/bpf_progs.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/symbols.h"
-#include "util/system.h"
 #include "util/wildcard.h"
 
 #include <bcc/bcc_elf.h>
@@ -25,16 +23,6 @@
 #include <elf.h>
 
 namespace bpftrace {
-
-static int add_symbol(const char* symname,
-                      uint64_t /*start*/,
-                      uint64_t /*size*/,
-                      void* payload)
-{
-  auto* syms = static_cast<std::set<std::string>*>(payload);
-  syms->insert(std::string(symname));
-  return 0;
-}
 
 // Finds all matches of search_input in the provided input stream.
 std::set<std::string> ProbeMatcher::get_matches_in_stream(
@@ -124,19 +112,21 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::watchpoint: {
-      symbol_stream = get_func_symbols_from_file(bpftrace_->pid(), target);
+      auto result = user_func_info_.get_func_symbols_from_file(bpftrace_->pid(),
+                                                               target);
+      if (!result)
+        return {};
+      symbol_stream = std::move(*result);
       break;
     }
     case ProbeType::tracepoint: {
-      symbol_stream = get_symbols_from_file(tracefs::available_events());
+      auto result = user_func_info_.get_symbols_from_file(
+          tracefs::available_events());
+      if (!result)
+        return {};
+      symbol_stream = std::move(*result);
       break;
     }
-    // The two `has_btf_data` checks below for fentry/fexit/rawtracepoints
-    // are more about ordering than system properties.
-    // Initially, before BTF is loaded and we want to determine what modules to
-    // load BTF from we check "/sys/kernel/tracing/available_filter_functions".
-    // Then we check the BTF to filter out functions from that list that don't
-    // have any BTF definitions.
     case ProbeType::rawtracepoint: {
       symbol_stream = get_raw_tracepoint_symbols();
       break;
@@ -151,7 +141,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::usdt: {
-      symbol_stream = get_symbols_from_usdt(bpftrace_->pid(), target);
+      auto result = user_func_info_.get_symbols_from_usdt(bpftrace_->pid(),
+                                                          target);
+      if (!result)
+        return {};
+      symbol_stream = std::move(*result);
       break;
     }
     case ProbeType::software: {
@@ -163,9 +157,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::iter: {
-      if (!bpftrace_->has_btf_data())
-        break;
-
       std::string ret;
       auto iters = bpftrace_->btf_->get_all_iters();
       for (const auto& iter : iters) {
@@ -219,24 +210,11 @@ std::set<std::string> ProbeMatcher::get_matches_in_set(
   return get_matches_in_stream(search_input, stream, false, '$');
 }
 
-std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file(
-    const std::string& path) const
-{
-  auto file = std::make_unique<std::ifstream>(path);
-  if (file->fail()) {
-    LOG(WARNING) << "Could not read symbols from " << path << ": "
-                 << strerror(errno);
-    return nullptr;
-  }
-
-  return file;
-}
-
 std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
     bool with_modules) const
 {
   std::string funcs;
-  for (const auto& func_mod : bpftrace_->get_traceable_funcs()) {
+  for (const auto& func_mod : kernel_func_info_.get_traceable_funcs()) {
     if (with_modules) {
       for (const auto& mod : func_mod.second)
         funcs += mod + ":" + func_mod.first + "\n";
@@ -249,7 +227,8 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
 
 std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols() const
 {
-  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded())
+  // If modules are loaded (more than just vmlinux), use BTF data
+  if (bpftrace_->btf_->objects_cnt() > 1)
     return bpftrace_->btf_->get_all_funcs();
   else {
     return get_symbols_from_traceable_funcs(true);
@@ -259,7 +238,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols() const
 std::unique_ptr<std::istream> ProbeMatcher::get_running_bpf_programs() const
 {
   std::string funcs;
-  auto ids_and_syms = util::get_bpf_progs();
+  auto ids_and_syms = kernel_func_info_.get_bpf_progs();
   for (const auto& [id, symbol] : ids_and_syms) {
     funcs += "bpf:" + std::to_string(id) + ":" + symbol + "\n";
   }
@@ -268,107 +247,16 @@ std::unique_ptr<std::istream> ProbeMatcher::get_running_bpf_programs() const
 
 std::unique_ptr<std::istream> ProbeMatcher::get_raw_tracepoint_symbols() const
 {
-  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded()) {
+  if (bpftrace_->btf_->objects_cnt() > 1) {
     return bpftrace_->btf_->get_all_raw_tracepoints();
   } else {
     std::string rts;
-    for (const auto& rt_mod : bpftrace_->get_raw_tracepoints()) {
+    for (const auto& rt_mod : kernel_func_info_.get_raw_tracepoints()) {
       for (const auto& mod : rt_mod.second)
         rts += mod + ":" + rt_mod.first + "\n";
     }
     return std::make_unique<std::istringstream>(rts);
   }
-}
-
-std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
-    std::optional<int> pid,
-    const std::string& path) const
-{
-  if (path.empty())
-    return std::make_unique<std::istringstream>("");
-
-  auto get_paths = [&]() -> Result<std::vector<std::string>> {
-    if (path == "*") {
-      if (pid.has_value()) {
-        return util::get_mapped_paths_for_pid(*pid);
-      } else {
-        return util::get_mapped_paths_for_running_pids();
-      }
-    } else if (path.find('*') != std::string::npos) {
-      return util::resolve_binary_path(path, pid);
-    } else {
-      return std::vector<std::string>({ path });
-    }
-  };
-  auto real_paths = get_paths();
-  if (!real_paths) {
-    // This will crash, but we need to plumb the ability to return errors
-    // through these APIs. Right now we have no other choice.
-    LOG(WARNING) << "Could not resolve binary path: " << real_paths.takeError();
-    return nullptr;
-  }
-
-  struct bcc_symbol_option symbol_option;
-  memset(&symbol_option, 0, sizeof(symbol_option));
-  symbol_option.use_debug_file = 1;
-  symbol_option.check_debug_file_crc = 1;
-  symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
-
-  std::string result;
-  for (auto& real_path : *real_paths) {
-    std::set<std::string> syms;
-    // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
-    // it's also found in debug info (#1138), so a std::set is used here
-    // (and in the add_symbol callback) to ensure that each symbol will be
-    // unique in the returned string.
-    int err = bcc_elf_foreach_sym(
-        real_path.c_str(), add_symbol, &symbol_option, &syms);
-    if (err) {
-      LOG(WARNING) << "Could not list function symbols: " + real_path;
-    }
-    for (const auto& sym : syms)
-      result += real_path + ":" + sym + "\n";
-  }
-  return std::make_unique<std::istringstream>(result);
-}
-
-std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_usdt(
-    std::optional<int> pid,
-    const std::string& target) const
-{
-  std::string probes;
-  util::usdt_probe_list usdt_probes;
-
-  if (pid.has_value())
-    usdt_probes = USDTHelper::probes_for_pid(
-        *pid, bpftrace_->feature_->has_uprobe_multi());
-  else if (target == "*")
-    usdt_probes = USDTHelper::probes_for_all_pids(
-        bpftrace_->feature_->has_uprobe_multi());
-  else if (!target.empty()) {
-    std::vector<std::string> real_paths;
-    if (target.find('*') != std::string::npos)
-      real_paths = util::resolve_binary_path(target);
-    else
-      real_paths.push_back(target);
-
-    for (auto& real_path : real_paths) {
-      auto target_usdt_probes = USDTHelper::probes_for_path(
-          real_path, bpftrace_->feature_->has_uprobe_multi());
-      usdt_probes.insert(usdt_probes.end(),
-                         target_usdt_probes.begin(),
-                         target_usdt_probes.end());
-    }
-  }
-
-  for (auto const& usdt_probe : usdt_probes) {
-    std::string path = usdt_probe.path;
-    std::string provider = usdt_probe.provider;
-    std::string fname = usdt_probe.name;
-    probes += path + ":" + provider + ":" + fname + "\n";
-  }
-
-  return std::make_unique<std::istringstream>(probes);
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_list(

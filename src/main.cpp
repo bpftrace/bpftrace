@@ -203,7 +203,14 @@ static void info(BPFnofeature no_feature)
   struct utsname utsname;
   uname(&utsname);
 
-  auto btf = bpftrace::BTF();
+  // Load BTF for system information.
+  bpftrace::StructManager structs;
+  auto btf = bpftrace::BTF::load(structs);
+  if (!btf) {
+    // BTF is required, just dump the error and leave it.
+    std::cerr << "Error loading BTF: " << btf.takeError();
+    return;
+  }
 
   std::cout << "System" << std::endl
             << "  OS: " << utsname.sysname << " " << utsname.release << " "
@@ -214,7 +221,7 @@ static void info(BPFnofeature no_feature)
   std::cout << BuildInfo::report();
 
   std::cout << std::endl;
-  std::cout << BPFfeature(no_feature, btf).report();
+  std::cout << BPFfeature(no_feature, **btf).report();
 }
 
 static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
@@ -796,8 +803,20 @@ int main(int argc, char* argv[])
 
   libbpf_set_print(libbpf_print);
 
+  // Create function info for both kernel and user space.
+  util::KernelFunctionInfoImpl kernel_func_info;
+  util::UserFunctionInfoImpl user_func_info;
+  ast::FunctionInfo func_info_state(kernel_func_info, user_func_info);
+
   auto config = std::make_unique<Config>(!args.cmd_str.empty());
-  BPFtrace bpftrace(args.no_feature, std::move(config));
+
+  auto bpftrace_result = BPFtrace::create(args.no_feature, std::move(config));
+  if (!bpftrace_result) {
+    LOG(ERROR) << "Failed to create BPFtrace: " << bpftrace_result.takeError();
+    return 1;
+  }
+  auto bpftrace_ptr = std::move(*bpftrace_result);
+  auto& bpftrace = *bpftrace_ptr;
 
   // Most configuration can be applied during the configuration pass, however
   // we need to extract a few bits of configuration up front, because they may
@@ -877,6 +896,7 @@ int main(int argc, char* argv[])
     auto pmresult = ast::PassManager()
                         .put(ast)
                         .put(bpftrace)
+                        .put(func_info_state)
                         .put(no_c_defs)
                         .put(no_types)
                         .put(macro_registry)
@@ -896,10 +916,12 @@ int main(int argc, char* argv[])
       return 1;
     }
 
+    // Create ProbeMatcher locally for listing
+    ProbeMatcher probe_matcher(&bpftrace, kernel_func_info, user_func_info);
     if (is_search_a_type) {
-      bpftrace.probe_matcher_->list_structs(args.search);
+      probe_matcher.list_structs(args.search);
     } else {
-      bpftrace.probe_matcher_->list_probes(ast.root);
+      probe_matcher.list_probes(ast.root);
     }
 
     return 0;
@@ -1005,6 +1027,7 @@ int main(int argc, char* argv[])
   ast::PassManager pm;
   pm.put(ast);
   pm.put(bpftrace);
+  pm.put(func_info_state);
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
@@ -1030,7 +1053,9 @@ int main(int argc, char* argv[])
       ast.diagnostics().emit(std::cerr);
       return 1;
     }
-    bpftrace.probe_matcher_->list_probes(ast.root);
+    // Create ProbeMatcher locally for listing
+    ProbeMatcher probe_matcher(&bpftrace, kernel_func_info, user_func_info);
+    probe_matcher.list_probes(ast.root);
     return 0;
   }
 

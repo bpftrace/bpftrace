@@ -24,9 +24,9 @@
 #include "bpftrace.h"
 #include "disasm.h"
 #include "log.h"
-#include "usdt.h"
 #include "util/bpf_names.h"
 #include "util/cpus.h"
+#include "util/elf_parser.h"
 #include "util/exceptions.h"
 #include "util/kernel.h"
 #include "util/symbols.h"
@@ -460,8 +460,7 @@ class AttachedKprobeProbe : public AttachedProbe {
 public:
   static Result<std::unique_ptr<AttachedKprobeProbe>> make(
       Probe &probe,
-      const BpfProgram &prog,
-      BPFtrace &bpftrace);
+      const BpfProgram &prog);
   ~AttachedKprobeProbe() override;
 
   int link_fd() override;
@@ -492,13 +491,8 @@ int AttachedKprobeProbe::link_fd()
 
 Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
     Probe &probe,
-    const BpfProgram &prog,
-    BPFtrace &bpftrace)
+    const BpfProgram &prog)
 {
-  if ((!probe.attach_point.empty() || probe.address != 0) &&
-      !bpftrace.is_traceable_func(probe.attach_point))
-    return make_error<AttachError>();
-
   // Construct a string containing "module:function."
   // Also log a warning or throw an error if the module doesn't exist,
   // before attempting to attach.
@@ -1492,7 +1486,6 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
     Probe &probe,
     const BpfProgram &prog,
     std::optional<int> pid,
-    BPFtrace &bpftrace,
     bool safe_mode)
 {
   LOG(V1) << "Trying to attach probe: " << probe.name;
@@ -1502,7 +1495,7 @@ Result<std::unique_ptr<AttachedProbe>> AttachedProbe::make(
       if (!probe.funcs.empty()) {
         return AttachedMultiKprobeProbe::make(probe, prog);
       }
-      return AttachedKprobeProbe::make(probe, prog, bpftrace);
+      return AttachedKprobeProbe::make(probe, prog);
     case ProbeType::tracepoint:
       return AttachedTracepointProbe::make(probe, prog);
     case ProbeType::profile:
