@@ -37,6 +37,11 @@ bool Expression::is_literal() const
       return elem.is_literal();
     });
   }
+  if (auto *record = as<Record>()) {
+    return std::ranges::all_of(record->elems, [](const auto &elem) {
+      return elem->expr.is_literal();
+    });
+  }
   return false;
 }
 

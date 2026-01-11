@@ -35,13 +35,16 @@ using bpftrace::test::Binop;
 using bpftrace::test::Builtin;
 using bpftrace::test::Cast;
 using bpftrace::test::ExprStatement;
+using bpftrace::test::FieldAccess;
 using bpftrace::test::For;
 using bpftrace::test::If;
 using bpftrace::test::Integer;
 using bpftrace::test::Map;
 using bpftrace::test::MapAccess;
+using bpftrace::test::NamedArgument;
 using bpftrace::test::Probe;
 using bpftrace::test::Program;
+using bpftrace::test::Record;
 using bpftrace::test::String;
 using bpftrace::test::Tuple;
 using bpftrace::test::Typeof;
@@ -5843,6 +5846,260 @@ TEST_F(SemanticAnalyserTest, probe_return)
                                 Variable("$a"))) })) });
 
   test("begin { return \"tomato\"; }", Error{});
+}
+
+TEST_F(SemanticAnalyserTest, record)
+{
+  // Variables
+  test(R"(begin { $t = (a=1)})");
+  test(R"(begin { $t = (a=1, b=2); $v = $t;})");
+  test(R"(begin { $t = (a=1, b=2, c="string")})");
+  test(R"(begin { $t = (a=1, b=2, c="string"); $t = (a=3, b=4, c="other"); })");
+  test(R"(begin { $t = (a=1, b=kstack()) })");
+  test(R"(begin { $t = (a=1, b=(x=2,y=3)) })");
+
+  // Map Values
+  test(R"(begin { @t = (a=1)})");
+  test(R"(begin { @t = (a=1, b=2); @v = @t;})");
+  test(R"(begin { @t = (a=1, b=2, c="string")})");
+  test(R"(begin { @t = (a=1, b=2, c="string"); @t = (a=3, b=4, c="other"); })");
+  test(R"(begin { @t = (a=1, b=kstack()) })");
+  test(R"(begin { @t = (a=1, b=(x=2,y=3)) })");
+
+  // Map Keys
+  test(R"(begin { @t[(a=1)] = 1; })");
+  test(R"(begin { @t[(a=1, b=2, c="string")] = 1; })");
+  test(
+      R"(begin { @t[(a=1, b=2, c="string")] = 1; @t[(b=4, c="other", a=3)] = 1; })");
+  test(R"(begin { @t[(a=1, b=kstack())] = 1; })");
+  test(R"(begin { @t[(a=1, b=(x=2,y=3))] = 1; })");
+
+  test(R"(begin { $t = (a=1, b=(int64)2); $t = (a=2, b=(int32)3); })");
+  test(R"(begin { $t = (a=1, b=(int32)2); $t = (a=2, b=(int64)3); })");
+
+  test(R"(struct task_struct { int x; } begin { $t = (a=1, b=curtask); })");
+  test(
+      R"(struct task_struct { int x[4]; } begin { $t = (a=1, b=curtask->x); })");
+
+  // Different field order should be compatible as long as types match
+  test(R"(begin { $t = (a=1, b=2); $t = (b=4, a=5); })");
+  test(R"(begin { @t = (a=1, b=2); @t = (b=4, a=5); })");
+
+  // Compatible types
+  test(
+      R"(begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(uint8)5, y=6)); })");
+  test(
+      R"(begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(int64)5, y=6)); })");
+  test(
+      R"(begin { $t = (a=(uint8)1, b=(x=2, y=3)); $t = (a=4, b=(x=5, y=6)); })");
+  test(
+      R"(begin { @t = (a=1, b=2, c="hi"); @t = (a=3, b=4, c="hellolongstr"); })");
+  test(
+      R"(begin { $t = (a=1, b=(x="hi", y=2)); $t = (a=3, b=(x="hellolongstr", y=4)); })");
+
+  // Error cases - type mismatch
+  test(R"(begin { $t = (a=1, b=2); $t = (a=4, b="other"); })", Error{});
+  test(R"(begin { $t = (a=1, b=2); $t = 5; })", Error{});
+  test(R"(begin { $t = (a=1, b=count()) })", Error{});
+  test(R"(begin { @t = (a=1, b=2); @t = (a=4, b="other"); })", Error{});
+  test(R"(begin { @t = (a=1, b=2); @t = 5; })", Error{});
+  test(R"(begin { @t = (a=1, b=count()) })", Error{});
+  test(R"(begin { $t = (a=1, b=2); $t = (a=3); })", Error{});
+
+  test(
+      R"(begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(int64)5, y="hi")); })",
+      Error{ R"(
+stdin:1:35-69: ERROR: Type mismatch for $t: trying to assign value of type 'record { .a = uint8, .b = record { .x = int64, .y = string[3] } }' when variable already contains a value of type 'record { .a = uint8, .b = record { .x = uint8, .y = uint8 } }'
+begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(int64)5, y="hi")); }
+                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)" });
+
+  test("begin { @x[1] = hist(10); $y = (a=1, b=@x[1]); }", Error{ R"(
+stdin:1:40-45: ERROR: Map type hist_t cannot exist inside a record.
+begin { @x[1] = hist(10); $y = (a=1, b=@x[1]); }
+                                       ~~~~~
+)" });
+
+  // Different field names should cause error
+  test(R"(begin { $t = (a=1, b=2); $t = (a=3, c=4); })", Error{});
+  test(R"(begin { $t = (a=1, b=2); $t = (x=3, y=4); })", Error{});
+}
+
+TEST_F(SemanticAnalyserTest, record_field_access)
+{
+  test(R"(begin { (a=1,b=2).a })");
+  test(R"(begin { (a=1,b=2).b })");
+  test(R"(begin { (a=1,b=2,c=3).c })");
+  test(R"(begin { $t = (a=1,b=2,c=3).a })");
+  test(R"(begin { $t = (a=1,b=2,c=3); $v = $t.a; })");
+
+  test(R"(begin { (a=1,b=2).c })", Error{});
+}
+
+TEST_F(SemanticAnalyserTest, record_assign_var)
+{
+  class SizedType ty = CreateRecord(
+      Struct::CreateRecord({ CreateUInt8(), CreateString(6) }, { "a", "b" }));
+  auto ast = test(R"(begin { $t = (a=1, b="str"); $t = (b="other", a=4); })");
+  auto &stmts = ast.root->probes.at(0)->block->stmts;
+
+  // The field order of both assignments are preserved
+  auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
+  EXPECT_EQ(ty, assignment->var()->var_type);
+  EXPECT_EQ("a", assignment->expr.as<ast::Record>()->elems[0]->name);
+  EXPECT_EQ("b", assignment->expr.as<ast::Record>()->elems[1]->name);
+
+  assignment = stmts.at(1).as<ast::AssignVarStatement>();
+  EXPECT_EQ(ty, assignment->var()->var_type);
+  EXPECT_EQ("b", assignment->expr.as<ast::Record>()->elems[0]->name);
+  EXPECT_EQ("a", assignment->expr.as<ast::Record>()->elems[1]->name);
+}
+
+TEST_F(SemanticAnalyserTest, record_mixed_types)
+{
+  // The same resizing rules should exist for ints, strings, and tuples inside
+  // records
+  test(
+      R"(begin { $a = (x=(int16)1, y="hi"); $a = (x=(uint16)2, y="hellostr"); })");
+  test(
+      R"(begin { $a = (y="hi", x=(int16)1); $a = (x=(uint16)2, y="hellostr"); })");
+  test(
+      R"(begin { $a = (x=(1, (uint32)2), y="hi"); $a = (x=((uint16)2, 3), y="hellostr"); })");
+  test(
+      R"(begin { @a[(x=(int64)1, y="hi")] = 1; @a[(x=(uint16)2, y="hellostr")] = 2; })");
+  test(R"(begin { @a = (x=(int64)1, y="hi"); @a = (x=2, y="hellostr"); })");
+  test(
+      R"(begin { print(if (pid == 1) { (x=(int32)1, y="hi") } else { (x=(uint16)2, y="hellostr") }); })");
+  test(
+      R"(begin { $a = (y="hi", x=(a=(uint8)1, b=(uint32)2)); $a = (x=(b=(uint8)3, a=(int16)5), y="hellostr"); })");
+
+  test(
+      R"(begin { $a = (x=(int64)1, y="hi"); $a = (x=(uint64)2, y="hellostr"); })",
+      Error{});
+  test(
+      R"(begin { @a[(x=(int64)1, y="hi")] = 1; @a[(x=(uint64)2, y="hellostr")] = 2; })",
+      Error{});
+  test(
+      R"(begin { @a = (x=(int64)1, y="hi"); @a = (x=(uint64)2, y="hellostr"); })",
+      Error{});
+  test(
+      R"(begin { print(if (pid == 1) { (x=(int64)1, y="hi") } else { (x=(uint64)2, y="hellostr") }); })",
+      Error{});
+
+  // Test inserted casts
+  test(
+      R"(begin { $a = (a=(int16)1, b="hi"); $a = (b="hellostr", a=(uint16)2); })",
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignVarStatement(
+                Variable("$a"),
+                Record(
+                    { NamedArgument("a",
+                                    Cast(Typeof(SizedType(Type::integer)
+                                                    .WithSize(4)
+                                                    .WithSigned(true)),
+                                         Cast(Typeof(SizedType(Type::integer)),
+                                              Integer(1)))),
+                      NamedArgument("b",
+                                    Cast(Typeof(SizedType(Type::string)),
+                                         String("hi"))) })),
+            AssignVarStatement(
+                Variable("$a"),
+                Record(
+                    { NamedArgument("b", String("hellostr")),
+                      NamedArgument("a",
+                                    Cast(Typeof(SizedType(Type::integer)
+                                                    .WithSize(4)
+                                                    .WithSigned(true)),
+                                         Cast(Typeof(SizedType(Type::integer)),
+                                              Integer(2)))) })),
+            Jump(ast::JumpType::RETURN) })) });
+
+  // Nested record with casts
+  test(
+      R"(begin { $a = (x=(a=(int8)1, b=(uint16)2), y="hi"); $a = (y="hello", x=(b=(uint8)4, a=(int16)3)); })",
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignVarStatement(
+                Variable("$a"),
+                Record({ NamedArgument(
+                             "x",
+                             Record({ NamedArgument(
+                                          "a",
+                                          Cast(Typeof(SizedType(Type::integer)
+                                                          .WithSize(2)
+                                                          .WithSigned(true)),
+                                               Cast(Typeof(SizedType(
+                                                        Type::integer)),
+                                                    Integer(1)))),
+                                      NamedArgument(
+                                          "b",
+                                          Cast(Typeof(SizedType(Type::integer)
+                                                          .WithSize(2)
+                                                          .WithSigned(false)),
+                                               Integer(2))) })),
+                         NamedArgument("y",
+                                       Cast(Typeof(SizedType(Type::string)),
+                                            String("hi"))) })),
+            AssignVarStatement(
+                Variable("$a"),
+                Record({
+                    NamedArgument("y", String("hello")),
+                    NamedArgument(
+                        "x",
+                        Record({
+                            NamedArgument(
+                                "b",
+                                Cast(Typeof(SizedType(Type::integer)
+                                                .WithSize(2)
+                                                .WithSigned(false)),
+                                     Cast(Typeof(SizedType(Type::integer)),
+                                          Integer(4)))),
+                            NamedArgument("a",
+                                          Cast(Typeof(SizedType(Type::integer)
+                                                          .WithSize(2)
+                                                          .WithSigned(true)),
+                                               Integer(3))),
+                        })),
+                })),
+            Jump(ast::JumpType::RETURN) })) });
+
+  // Tuple inside record with casts
+  test(
+      R"(begin { $a = (x=((int8)1, (uint16)2), y="hi"); $a = (x=((int16)3, (uint8)4), y="hello"); })",
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignVarStatement(
+                Variable("$a"),
+                Record({ NamedArgument(
+                             "x",
+                             Tuple({ Cast(Typeof(SizedType(Type::integer)
+                                                     .WithSize(2)
+                                                     .WithSigned(true)),
+                                          Cast(Typeof(SizedType(Type::integer)),
+                                               Integer(1))),
+                                     Cast(Typeof(SizedType(Type::integer)
+                                                     .WithSize(2)
+                                                     .WithSigned(false)),
+                                          Integer(2)) })),
+                         NamedArgument("y",
+                                       Cast(Typeof(SizedType(Type::string)),
+                                            String("hi"))) })),
+            AssignVarStatement(
+                Variable("$a"),
+                Record({ NamedArgument(
+                             "x",
+                             Tuple({ Cast(Typeof(SizedType(Type::integer)
+                                                     .WithSize(2)
+                                                     .WithSigned(true)),
+                                          Integer(3)),
+                                     Cast(Typeof(SizedType(Type::integer)
+                                                     .WithSize(2)
+                                                     .WithSigned(false)),
+                                          Cast(Typeof(SizedType(Type::integer)),
+                                               Integer(4))) })),
+                         NamedArgument("y", String("hello")) })),
+            Jump(ast::JumpType::RETURN) })) });
 }
 
 } // namespace bpftrace::test::semantic_analyser

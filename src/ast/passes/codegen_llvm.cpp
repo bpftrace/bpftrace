@@ -230,6 +230,7 @@ public:
   ScopedExpr visit(MapAccess &acc);
   ScopedExpr visit(Cast &cast);
   ScopedExpr visit(Tuple &tuple);
+  ScopedExpr visit(Record &record);
   ScopedExpr visit(ExprStatement &expr);
   ScopedExpr visit(AssignMapStatement &assignment);
   ScopedExpr visit(AssignVarStatement &assignment);
@@ -269,12 +270,26 @@ private:
                            uint64_t max_entries,
                            const SizedType &key_type,
                            const SizedType &value_type);
-  Value *createTuple(
-      const SizedType &tuple_type,
+  Value *createAnonStruct(
+      const SizedType &stype,
       const std::vector<std::pair<llvm::Value *, Location>> &vals,
       const std::string &name,
       const Location &loc);
+  ScopedExpr createAnonStructAccess(const SizedType &stype,
+                                    ScopedExpr &&expr_value,
+                                    size_t field_idx);
 
+  void createVariableStore(const SizedType &src_type,
+                           Value *src,
+                           const SizedType &dst_type,
+                           Value *dst,
+                           bool recursing = false);
+  void createMapBufferStore(const SizedType &src_type,
+                            Value *src,
+                            const SizedType &dst_type,
+                            Value *dst,
+                            const Location &loc,
+                            bool recursing = false);
   void generate_maps(const RequiredResources &required_resources);
   void generate_global_vars(const RequiredResources &resources,
                             const ::bpftrace::Config &bpftrace_config);
@@ -295,15 +310,6 @@ private:
       Expression &key_expr,
       const std::vector<Value *> &extra_keys,
       const Location &loc);
-
-  // Copy expression value into a map buffer (key or value allocation).
-  // Handles memcpy for BPF memory, probe_read for structs/arrays, or store.
-  void copyToMapBuffer(Value *dest,
-                       const SizedType &dest_type,
-                       Value *src,
-
-                       const SizedType &src_type,
-                       const Location &loc);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 
@@ -2500,7 +2506,13 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   SizedType type = acc.expr.type();
   auto scoped_arg = visit(acc.expr);
 
-  assert(type.IsCStructTy());
+  assert(type.IsRecordTy() || type.IsCStructTy());
+
+  if (type.IsRecordTy()) {
+    return createAnonStructAccess(type,
+                                  std::move(scoped_arg),
+                                  type.GetFieldIdx(acc.field));
+  }
 
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
@@ -2661,24 +2673,31 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
   }
 }
 
-ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
+ScopedExpr CodegenLLVM::createAnonStructAccess(const SizedType &stype,
+                                               ScopedExpr &&expr_value,
+                                               size_t field_idx)
 {
-  const SizedType &type = acc.expr.type();
-  auto scoped_arg = visit(acc.expr);
-  assert(type.IsTupleTy());
+  assert(stype.IsTupleTy() || stype.IsRecordTy());
 
-  Value *src = b_.CreateGEP(b_.GetType(type),
-                            scoped_arg.value(),
-                            { b_.getInt32(0), b_.getInt32(acc.index) });
-  SizedType &elem_type = type.GetFields()[acc.index].type;
+  Value *src = b_.CreateGEP(b_.GetType(stype),
+                            expr_value.value(),
+                            { b_.getInt32(0), b_.getInt32(field_idx) });
+  SizedType &elem_type = stype.GetFields()[field_idx].type;
 
   if (shouldBeInBpfMemoryAlready(elem_type)) {
     // Extend lifetime of source buffer
-    return ScopedExpr(src, std::move(scoped_arg));
+    return ScopedExpr(src, std::move(expr_value));
   } else {
     // Lifetime is not extended, it is freed after the load
     return ScopedExpr(b_.CreateLoad(b_.GetType(elem_type), src));
   }
+}
+
+ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
+{
+  const SizedType &type = acc.expr.type();
+  auto scoped_arg = visit(acc.expr);
+  return createAnonStructAccess(type, std::move(scoped_arg), acc.index);
 }
 
 ScopedExpr CodegenLLVM::visit(MapAccess &acc)
@@ -2830,27 +2849,24 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
   }
 }
 
-// createTuple
-//
-// Constructs a tuple on the scratch buffer or stack from the provided values.
-Value *CodegenLLVM::createTuple(
-    const SizedType &tuple_type,
+// Constructs a tuple or record on the scratch buffer or stack from the provided
+// values.
+Value *CodegenLLVM::createAnonStruct(
+    const SizedType &stype,
     const std::vector<std::pair<llvm::Value *, Location>> &vals,
     const std::string &name,
     const Location &loc)
 {
-  auto *tuple_ty = b_.GetType(tuple_type);
-  size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
-  auto *buf = b_.CreateTupleAllocation(tuple_type, name, loc);
-  b_.CreateMemsetBPF(buf, b_.getInt8(0), tuple_size);
+  auto *llvm_ty = b_.GetType(stype);
+  size_t alloc_size = datalayout().getTypeAllocSize(llvm_ty);
+  auto *buf = b_.CreateAnonStructAllocation(stype, name, loc);
+  b_.CreateMemsetBPF(buf, b_.getInt8(0), alloc_size);
 
   for (size_t i = 0; i < vals.size(); ++i) {
     auto [val, vloc] = vals[i];
-    SizedType &type = tuple_type.GetField(i).type;
+    SizedType &type = stype.GetField(i).type;
 
-    Value *dst = b_.CreateGEP(tuple_ty,
-                              buf,
-                              { b_.getInt32(0), b_.getInt32(i) });
+    Value *dst = b_.CreateGEP(llvm_ty, buf, { b_.getInt32(0), b_.getInt32(i) });
 
     if (inBpfMemory(type))
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
@@ -2869,6 +2885,8 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
   compareStructure(tuple.tuple_type, tuple_ty);
 
   std::vector<std::pair<llvm::Value *, Location>> vals;
+  // This is used to extend the life of the element expressions
+  // beyond the `for` loop body below
   std::vector<ScopedExpr> scoped_exprs;
   vals.reserve(tuple.elems.size());
 
@@ -2878,7 +2896,31 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
     scoped_exprs.emplace_back(std::move(scoped_expr));
   }
 
-  auto *buf = createTuple(tuple.tuple_type, vals, "tuple", tuple.loc);
+  auto *buf = createAnonStruct(tuple.tuple_type, vals, "tuple", tuple.loc);
+  if (isa<AllocaInst>(buf))
+    return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
+  return ScopedExpr(buf);
+}
+
+ScopedExpr CodegenLLVM::visit(Record &record)
+{
+  llvm::Type *record_ty = b_.GetType(record.record_type);
+
+  compareStructure(record.record_type, record_ty);
+
+  std::vector<std::pair<llvm::Value *, Location>> vals;
+  // This is used to extend the life of the element expressions
+  // beyond the `for` loop body below
+  std::vector<ScopedExpr> scoped_exprs;
+  vals.reserve(record.elems.size());
+
+  for (auto *elem : record.elems) {
+    auto scoped_expr = visit(elem->expr);
+    vals.emplace_back(scoped_expr.value(), record.loc);
+    scoped_exprs.emplace_back(std::move(scoped_expr));
+  }
+
+  auto *buf = createAnonStruct(record.record_type, vals, "record", record.loc);
   if (dyn_cast<AllocaInst>(buf))
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   return ScopedExpr(buf);
@@ -2898,7 +2940,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
 
   const auto &map_type = assignment.map_access->map->type();
   const auto &expr_type = assignment.expr.type();
-  const auto alloca_created_here = needMapAllocation(expr_type);
+  const auto alloca_created_here = needMapAllocation(map_type, expr_type);
   Value *value = alloca_created_here
                      ? b_.CreateWriteMapValueAllocation(
                            map_type,
@@ -2906,7 +2948,7 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
                            assignment.loc)
                      : expr;
   if (alloca_created_here) {
-    copyToMapBuffer(value, map_type, expr, expr_type, assignment.loc);
+    createMapBufferStore(expr_type, expr, map_type, value, assignment.loc);
   }
   b_.CreateMapUpdateElem(assignment.map_access->map->ident,
                          scoped_key.value(),
@@ -2963,6 +3005,54 @@ VariableLLVM &CodegenLLVM::getVariable(const std::string &var_ident)
   return *variable;
 }
 
+void CodegenLLVM::createVariableStore(const SizedType &src_type,
+                                      Value *src,
+                                      const SizedType &dst_type,
+                                      Value *dst,
+                                      bool recursing)
+{
+  if (dst_type.IsTupleTy() || dst_type.IsRecordTy()) {
+    if (src_type == dst_type) {
+      // If the types exactly match we don't need to do field matching
+      b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
+      return;
+    }
+
+    llvm::Type *src_llvm_type = b_.GetType(src_type);
+    llvm::Type *dst_llvm_type = b_.GetType(dst_type);
+    for (size_t i = 0; i < dst_type.GetFields().size(); ++i) {
+      const auto &dst_field = dst_type.GetField(i);
+      auto src_field_index = dst_type.IsRecordTy()
+                                 ? src_type.GetFieldIdx(dst_field.name)
+                                 : i;
+      const auto &src_field = src_type.GetField(src_field_index);
+      Value *src_field_val = b_.CreateGEP(
+          src_llvm_type, src, { b_.getInt64(0), b_.getInt32(src_field_index) });
+      Value *dst_field_val = b_.CreateGEP(dst_llvm_type,
+                                          dst,
+                                          { b_.getInt64(0), b_.getInt32(i) });
+      createVariableStore(
+          src_field.type, src_field_val, dst_field.type, dst_field_val, true);
+    }
+
+    return;
+  }
+
+  if (recursing) {
+    // We're inside a tuple or record but we can just copy the fields
+    b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
+    return;
+  }
+
+  if (dst_type.IsArrayTy() || dst_type.IsCStructTy()) {
+    b_.CreateStore(b_.CreatePtrToInt(src, b_.getInt64Ty()), dst);
+  } else if (needMemcpy(dst_type)) {
+    b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
+  } else {
+    b_.CreateStore(src, dst);
+  }
+}
+
 ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
 {
   Variable &var = *assignment.var();
@@ -2988,15 +3078,12 @@ ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
     // just disarm the scoped expression, and therefore never free any of these
     // values; this is a bug that matches existing behavior.
     scoped_expr.disarm();
-    b_.CreateStore(b_.CreatePtrToInt(scoped_expr.value(), b_.getInt64Ty()),
-                   getVariable(var.ident).value);
-  } else if (needMemcpy(var.var_type)) {
-    auto *val = getVariable(var.ident).value;
-    const auto &expr_type = assignment.expr.type();
-    b_.CreateMemcpyBPF(val, scoped_expr.value(), expr_type.GetSize());
-  } else {
-    b_.CreateStore(scoped_expr.value(), getVariable(var.ident).value);
   }
+
+  auto *val = getVariable(var.ident).value;
+  const auto &expr_type = assignment.expr.type();
+  createVariableStore(expr_type, scoped_expr.value(), var.var_type, val);
+
   return ScopedExpr();
 }
 
@@ -3287,27 +3374,64 @@ int CodegenLLVM::getNextIndexForProbe()
   return next_probe_index_++;
 }
 
-void CodegenLLVM::copyToMapBuffer(Value *dest,
-                                  const SizedType &dest_type,
-                                  Value *src,
-                                  const SizedType &src_type,
-                                  const Location &loc)
+void CodegenLLVM::createMapBufferStore(const SizedType &src_type,
+                                       Value *src,
+                                       const SizedType &dst_type,
+                                       Value *dst,
+                                       const Location &loc,
+                                       bool recursing)
 {
-  if (shouldBeInBpfMemoryAlready(src_type)) {
-    b_.CreateMemcpyBPF(dest, src, src_type.GetSize());
-  } else if (dest_type.IsCStructTy() || dest_type.IsArrayTy()) {
+  if (dst_type.IsTupleTy() || dst_type.IsRecordTy()) {
+    if (src_type == dst_type) {
+      // If the types exactly match we don't need to do field matching
+      b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
+      return;
+    }
+
+    llvm::Type *src_llvm_type = b_.GetType(src_type);
+    llvm::Type *dst_llvm_type = b_.GetType(dst_type);
+    for (size_t i = 0; i < dst_type.GetFields().size(); ++i) {
+      const auto &dst_field = dst_type.GetField(i);
+      auto src_field_index = dst_type.IsRecordTy()
+                                 ? src_type.GetFieldIdx(dst_field.name)
+                                 : i;
+      const auto &src_field = src_type.GetField(src_field_index);
+      Value *src_field_val = b_.CreateGEP(
+          src_llvm_type, src, { b_.getInt64(0), b_.getInt32(src_field_index) });
+      Value *dst_field_val = b_.CreateGEP(dst_llvm_type,
+                                          dst,
+                                          { b_.getInt64(0), b_.getInt32(i) });
+      createMapBufferStore(src_field.type,
+                           src_field_val,
+                           dst_field.type,
+                           dst_field_val,
+                           loc,
+                           true);
+    }
+
+    return;
+  }
+
+  if (recursing) {
+    b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
+    return;
+  }
+
+  if (dst_type.IsArrayTy() || dst_type.IsCStructTy()) {
     // src currently contains a pointer to the struct or array
     // We now want to read the entire struct/array in so we can save it
-    b_.CreateProbeRead(dest, dest_type, src, loc, src_type.GetAS());
+    b_.CreateProbeRead(dst, dst_type, src, loc, src_type.GetAS());
+  } else if (shouldBeInBpfMemoryAlready(dst_type)) {
+    b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
   } else {
-    b_.CreateStore(src, dest);
+    b_.CreateStore(src, dst);
   }
 }
 
 ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
 {
   const auto &expr_type = key_expr.type();
-  const auto alloca_created_here = needMapAllocation(expr_type);
+  const auto alloca_created_here = needMapAllocation(map.key_type, expr_type);
 
   auto scoped_key_expr = visit(key_expr);
   const auto &key_type = map.key_type;
@@ -3321,7 +3445,7 @@ ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
                    : expr;
 
   if (alloca_created_here) {
-    copyToMapBuffer(key, key_type, expr, expr_type, map.loc);
+    createMapBufferStore(expr_type, expr, key_type, key, map.loc);
   }
   // Either way we hold on to the original key, to ensure that its lifetime
   // lasts as long as it may be accessed.
@@ -4538,10 +4662,10 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
           val = b_.CreateLoad(b_.GetType(val_type), val, "val");
         }
 
-        return createTuple(f.decl->type(),
-                           { { key, f.decl->loc }, { val, f.decl->loc } },
-                           f.decl->ident,
-                           f.decl->loc);
+        return createAnonStruct(f.decl->type(),
+                                { { key, f.decl->loc }, { val, f.decl->loc } },
+                                f.decl->ident,
+                                f.decl->loc);
       });
 
   // Invoke via the helper.

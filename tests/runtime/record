@@ -1,0 +1,19 @@
+NAME basic record
+PROG begin { $v = 99; $t = (a=0, b=1, c="str", d=(5, 6), e=$v); printf("%d %d %s %d %d %d\n", $t.a, $t.b, $t.c, $t.d.0, $t.d.1, $t.e);  }
+EXPECT 0 1 str 5 6 99
+
+NAME record printing
+PROG begin { $v = (x=1, y=2); $t = (a=0, b=1, c="str", d=(5, 6), e=$v); print($t);  }
+EXPECT { .a = 0, .b = 1, .c = str, .d = (5, 6), .e = { .x = 1, .y = 2 } }
+
+NAME record printing complex args
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { $args = args; $a = (a=1, b="hello", c=(args, (x=100, y=$args.c))); @[$a] = ("bye", (m=args, n=10)); exit(); }
+EXPECT_REGEX @[{ .a = 1, .b = hello, .c = \({ .n = 0x[0-9a-f]+, .c = 120 }, { .x = 100, .y = 120 }\) }]: \(bye, { .m = { .n = 0x[0-9a-f]+, .c = 120 }, .n = 10 }\)
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME record evaluation order
+PROG begin { $a = (foo={ printf("hello"); 1 }, bar={ printf("world"); 2 }); $a = (bar={ printf("hello"); 1 }, foo={ printf("world\n"); 2 }); print($a) }
+EXPECT helloworldhelloworld
+EXPECT { .foo = 2, .bar = 1 }

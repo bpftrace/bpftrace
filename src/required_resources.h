@@ -181,9 +181,9 @@ public:
   // rather than duplicating it in CodegenResources.
   uint64_t max_fmtstring_args_size = 0;
 
-  // Required for sizing of tuple scratch buffer
-  size_t tuple_buffers = 0;
-  size_t max_tuple_size = 0;
+  // Required for sizing of tuple/record scratch buffer
+  size_t anon_struct_buffers = 0;
+  size_t max_anon_struct_size = 0;
 
   // Required for sizing of kstack and ustack scratch buffer
   size_t call_stack_buffers = 0;

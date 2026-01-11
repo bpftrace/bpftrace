@@ -378,7 +378,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
     ty = ArrayType::get(getInt8Ty(), stype.GetSize());
   } else if (stype.IsArrayTy()) {
     ty = ArrayType::get(GetType(*stype.GetElementTy()), stype.GetNumElements());
-  } else if (stype.IsTupleTy()) {
+  } else if (stype.IsTupleTy() || stype.IsRecordTy()) {
     std::vector<llvm::Type *> llvm_elems;
     std::string ty_name;
 
@@ -387,7 +387,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
       llvm_elems.emplace_back(GetType(elemtype));
       ty_name += typestr(elemtype) + "_";
     }
-    ty_name += "_tuple_t";
+    ty_name += (stype.IsTupleTy() ? "_tuple_t" : "_record_t");
 
     ty = GetStructType(ty_name, llvm_elems, false);
   } else if (stype.IsStack()) {
@@ -572,16 +572,16 @@ Value *IRBuilderBPF::CreateGetFmtStringArgsAllocation(StructType *struct_type,
       bpftrace::globalvars::FMT_STRINGS_BUFFER, struct_type, name, loc);
 }
 
-Value *IRBuilderBPF::CreateTupleAllocation(const SizedType &tuple_type,
-                                           const std::string &name,
-                                           const Location &loc)
+Value *IRBuilderBPF::CreateAnonStructAllocation(const SizedType &tuple_type,
+                                                const std::string &name,
+                                                const Location &loc)
 {
-  return createAllocation(bpftrace::globalvars::TUPLE_BUFFER,
+  return createAllocation(bpftrace::globalvars::ANON_STRUCT_BUFFER,
                           GetType(tuple_type),
                           name,
                           loc,
                           [](AsyncIds &async_ids) {
-                            return async_ids.tuple();
+                            return async_ids.anon_struct();
                           });
 }
 

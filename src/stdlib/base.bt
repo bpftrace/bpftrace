@@ -612,6 +612,15 @@ macro memcmp(left, right, count)
   memcmp($left, $right, count)
 }
 
+macro memcmp_record(left, right, count)
+{
+  let $left = left;
+  // This ensures that the $right variable type has fields
+  // in the exact same order as the $left
+  let $right: typeof($left) = right;
+  memcmp($left, $right, count)
+}
+
 // :variant uint64 ncpus()
 // Number of CPUs
 macro ncpus()

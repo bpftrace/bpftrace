@@ -6,12 +6,12 @@ namespace bpftrace::ast {
 
 // Add new ids here
 #define FOR_LIST_OF_ASYNC_IDS(DO)                                              \
-  DO(call_stack)                                                                 \
+  DO(call_stack)                                                               \
   DO(map_key)                                                                  \
   DO(read_map_value)                                                           \
   DO(runtime_error)                                                            \
   DO(str)                                                                      \
-  DO(tuple)                                                                    \
+  DO(anon_struct)                                                              \
   DO(variable)                                                                 \
   DO(watchpoint)
 

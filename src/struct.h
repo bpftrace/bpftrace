@@ -95,6 +95,7 @@ struct Struct {
 
   bool HasField(const std::string &name) const;
   const Field &GetField(const std::string &name) const;
+  size_t GetFieldIdx(const std::string &name) const;
   void AddField(const std::string &field_name,
                 const SizedType &type,
                 ssize_t offset = 0,

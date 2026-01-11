@@ -190,6 +190,7 @@ public:
   void visit(MapAccess &acc);
   void visit(Cast &cast);
   void visit(Tuple &tuple);
+  void visit(Record &record);
   void visit(Expression &expr);
   void visit(ExprStatement &expr);
   void visit(AssignMapStatement &assignment);
@@ -260,6 +261,8 @@ private:
       const std::optional<Expression> &rightExpr = std::nullopt);
   std::optional<SizedType> get_promoted_tuple(const SizedType &leftTy,
                                               const SizedType &rightTy);
+  std::optional<SizedType> get_promoted_record(const SizedType &storedTy,
+                                               const SizedType &assignTy);
   std::optional<SizedType> update_int_type(
       const SizedType &rightTy,
       Expression &rightExpr,
@@ -278,6 +281,12 @@ private:
   void create_tuple_cast(Expression &exp,
                          const SizedType &curr_type,
                          const SizedType &target_type);
+  void create_record_cast(Expression &exp,
+                          const SizedType &curr_type,
+                          const SizedType &target_type);
+  void apply_element_cast(Expression &elem,
+                          const SizedType &curr_type,
+                          const SizedType &target_type);
 
   bool has_error() const;
   bool in_loop()
@@ -685,6 +694,7 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::mac_address:
     case Type::c_struct:
     case Type::tuple:
+    case Type::record:
     case Type::cgroup_path_t:
     case Type::none:
     case Type::timestamp_mode:
@@ -2355,7 +2365,7 @@ void SemanticAnalyser::create_tuple_cast(Expression &exp,
   }
 
   if (!exp.is<Variable>() && !exp.is<TupleAccess>() && !exp.is<MapAccess>() &&
-      !exp.is<Tuple>()) {
+      !exp.is<Tuple>() && !exp.is<FieldAccess>() && !exp.is<Unop>()) {
     LOG(BUG) << "Unexpected expression kind: create_tuple_cast";
   }
 
@@ -2375,19 +2385,77 @@ void SemanticAnalyser::create_tuple_cast(Expression &exp,
                                          i);
       elem.as<TupleAccess>()->element_type = c_ty;
     }
-    if (t_ty.IsIntTy() && c_ty != t_ty) {
-      create_int_cast(elem, t_ty);
-    } else if (t_ty.IsStringTy()) {
-      create_string_cast(elem, t_ty);
-    } else if (t_ty.IsTupleTy()) {
-      create_tuple_cast(elem, c_ty, t_ty);
-    }
+    apply_element_cast(elem, c_ty, t_ty);
     expr_list.emplace_back(std::move(elem));
   }
 
   exp = ctx_.make_node<Tuple>(Location(exp.loc()), std::move(expr_list));
   exp.as<Tuple>()->tuple_type = target_type;
   visit(exp);
+}
+
+void SemanticAnalyser::create_record_cast(Expression &exp,
+                                          const SizedType &curr_type,
+                                          const SizedType &target_type)
+{
+  if (auto *block_expr = exp.as<BlockExpr>()) {
+    create_record_cast(block_expr->expr, curr_type, target_type);
+    return;
+  }
+
+  if (!exp.is<Variable>() && !exp.is<FieldAccess>() && !exp.is<MapAccess>() &&
+      !exp.is<Record>() && !exp.is<TupleAccess>() && !exp.is<Unop>()) {
+    LOG(BUG) << "Unexpected expression kind: create_record_cast";
+  }
+
+  std::unordered_map<size_t, NamedArgument *> named_arg_map;
+
+  for (size_t i = 0; i < curr_type.GetFields().size(); ++i) {
+    const auto &target_field = target_type.GetField(i);
+    const auto &c_ty = curr_type.GetField(target_field.name).type;
+    const auto &t_ty = target_field.type;
+    Expression elem;
+    if (auto *record_literal = exp.as<Record>()) {
+      auto field_idx = curr_type.GetFieldIdx(target_field.name);
+      elem = clone(ctx_,
+                   record_literal->elems.at(field_idx)->expr.loc(),
+                   record_literal->elems.at(field_idx)->expr);
+    } else {
+      elem = ctx_.make_node<FieldAccess>(Location(exp.loc()),
+                                         clone(ctx_, exp.loc(), exp),
+                                         target_field.name);
+      elem.as<FieldAccess>()->field_type = c_ty;
+    }
+    apply_element_cast(elem, c_ty, t_ty);
+    auto *named_arg = ctx_.make_node<NamedArgument>(Location(exp.loc()),
+                                                    target_field.name,
+                                                    std::move(elem));
+    named_arg_map[curr_type.GetFieldIdx(target_field.name)] = named_arg;
+  }
+
+  // Maintain the ordering for the current type
+  NamedArgumentList named_args = {};
+  for (size_t i = 0; i < curr_type.GetFields().size(); ++i) {
+    named_args.emplace_back(named_arg_map[i]);
+  }
+
+  exp = ctx_.make_node<Record>(Location(exp.loc()), std::move(named_args));
+  visit(exp);
+}
+
+void SemanticAnalyser::apply_element_cast(Expression &elem,
+                                          const SizedType &curr_type,
+                                          const SizedType &target_type)
+{
+  if (target_type.IsIntTy() && curr_type != target_type) {
+    create_int_cast(elem, target_type);
+  } else if (target_type.IsStringTy()) {
+    create_string_cast(elem, target_type);
+  } else if (target_type.IsTupleTy()) {
+    create_tuple_cast(elem, curr_type, target_type);
+  } else if (target_type.IsRecordTy()) {
+    create_record_cast(elem, curr_type, target_type);
+  }
 }
 
 void SemanticAnalyser::binop_array(Binop &binop)
@@ -2744,6 +2812,19 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
       }
       if_expr.result_type = *updatedTy;
     }
+  } else if (lhs.IsRecordTy()) {
+    auto updatedTy = get_promoted_record(lhs, rhs);
+    if (!updatedTy) {
+      type_mismatch_error = true;
+    } else {
+      if (*updatedTy != lhs) {
+        create_record_cast(if_expr.left, lhs, *updatedTy);
+      }
+      if (*updatedTy != rhs) {
+        create_record_cast(if_expr.right, rhs, *updatedTy);
+      }
+      if_expr.result_type = *updatedTy;
+    }
   } else {
     auto lsize = lhs.GetSize();
     auto rsize = rhs.GetSize();
@@ -3076,7 +3157,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!type.IsCStructTy()) {
+  if (!type.IsCStructTy() && !type.IsRecordTy()) {
     if (is_final_pass()) {
       acc.addError() << "Can not access field '" << acc.field
                      << "' on expression of type '" << type << "'";
@@ -3102,18 +3183,24 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (!bpftrace_.structs.Has(type.GetName())) {
+  if (!type.IsRecordTy() && !bpftrace_.structs.Has(type.GetName())) {
     acc.addError() << "Unknown struct/union: '" << type.GetName() << "'";
     return;
   }
 
-  std::string cast_type = type.GetName();
   const auto &record = type.GetStruct();
 
   if (!record->HasField(acc.field)) {
-    acc.addError() << "Struct/union of type '" << cast_type
-                   << "' does not contain " << "a field named '" << acc.field
-                   << "'";
+    if (is_final_pass()) {
+      if (type.IsRecordTy()) {
+        acc.addError() << "Record does not contain " << "a field named '"
+                       << acc.field << "'";
+      } else {
+        acc.addError() << "Struct/union of type '" << type.GetName()
+                       << "' does not contain " << "a field named '"
+                       << acc.field << "'";
+      }
+    }
   } else {
     const auto &field = record->GetField(acc.field);
 
@@ -3203,6 +3290,16 @@ void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
         } else {
           if (*updatedTy != new_key_type) {
             create_tuple_cast(key_expr, new_key_type, *updatedTy);
+          }
+          storedTy = *updatedTy;
+        }
+      } else if (storedTy.IsRecordTy()) {
+        auto updatedTy = get_promoted_record(storedTy, new_key_type);
+        if (!updatedTy) {
+          type_mismatch_error = true;
+        } else {
+          if (*updatedTy != new_key_type) {
+            create_record_cast(key_expr, new_key_type, *updatedTy);
           }
           storedTy = *updatedTy;
         }
@@ -3385,6 +3482,29 @@ void SemanticAnalyser::visit(Tuple &tuple)
   tuple.tuple_type = CreateTuple(Struct::CreateTuple(elements));
 }
 
+void SemanticAnalyser::visit(Record &record)
+{
+  std::vector<SizedType> elements;
+  std::vector<std::string_view> names;
+  for (auto *named_arg : record.elems) {
+    auto &elem = named_arg->expr;
+    visit(elem);
+    names.emplace_back(named_arg->name);
+
+    // If elem type is none that means that the record is not yet resolved.
+    if (elem.type().IsNoneTy()) {
+      pass_tracker_.inc_num_unresolved();
+      return;
+    } else if (elem.type().IsMultiKeyMapTy()) {
+      elem.node().addError()
+          << "Map type " << elem.type() << " cannot exist inside a record.";
+    }
+    elements.emplace_back(elem.type());
+  }
+
+  record.record_type = CreateRecord(Struct::CreateRecord(elements, names));
+}
+
 void SemanticAnalyser::visit(Expression &expr)
 {
   // Visit and fold all other values.
@@ -3415,28 +3535,49 @@ void SemanticAnalyser::visit(Expression &expr)
           type_id->loc, ExpressionList{ id, base_ty, full_ty });
     }
   } else if (auto *binop = expr.as<Binop>()) {
-    if (binop->left.type().IsTupleTy() &&
+    if ((binop->left.type().IsTupleTy() || binop->left.type().IsRecordTy()) &&
         binop->left.type().IsCompatible(binop->right.type()) &&
         (binop->op == Operator::EQ || binop->op == Operator::NE)) {
+      bool is_tuple = binop->left.type().IsTupleTy();
       const auto &lht = binop->left.type();
       const auto &rht = binop->right.type();
-      auto updatedTy = get_promoted_tuple(lht, rht);
+      auto updatedTy = is_tuple ? get_promoted_tuple(lht, rht)
+                                : get_promoted_record(lht, rht);
       if (!updatedTy) {
         binop->addError() << "Type mismatch for '" << opstr(*binop)
                           << "': comparing " << lht << " with " << rht;
       } else {
         if (*updatedTy != lht) {
-          create_tuple_cast(binop->left, lht, *updatedTy);
+          if (is_tuple) {
+            create_tuple_cast(binop->left, lht, *updatedTy);
+          } else {
+            create_record_cast(binop->left, lht, *updatedTy);
+          }
         }
         if (*updatedTy != rht) {
-          create_tuple_cast(binop->right, rht, *updatedTy);
+          if (is_tuple) {
+            create_tuple_cast(binop->right, rht, *updatedTy);
+          } else {
+            create_record_cast(binop->right, rht, *updatedTy);
+          }
         }
+
+        bool types_equal = binop->left.type() == binop->right.type();
+
         auto *size = ctx_.make_node<Integer>(binop->loc,
                                              updatedTy->GetSize(),
                                              CreateUInt64());
+        // N.B. if the types aren't equal at this point it means that
+        // we're dealing with record types that are same except for
+        // their fields are in a different order so we need to use a
+        // different memcmp that saves off both the left and right to
+        // variables but sets the type of the right variable to the left
+        // before assignment (e.g. `let $right: typeof($left) = right;`)
+        // as this ensures the temporary `$right` variable has the same
+        // field ordering as the `$left`.
         auto *call = ctx_.make_node<Call>(
             binop->loc,
-            "memcmp",
+            types_equal ? "memcmp" : "memcmp_record",
             ExpressionList{ binop->left, binop->right, size });
         auto *typeof = ctx_.make_node<Typeof>(binop->loc, CreateBool());
         auto *cast = ctx_.make_node<Cast>(binop->loc, typeof, call);
@@ -3672,6 +3813,17 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       } else {
         if (*updatedTy != assignTy) {
           create_tuple_cast(assignment.expr, assignTy, *updatedTy);
+        }
+        storedTy = *updatedTy;
+        assignTy = *updatedTy;
+      }
+    } else if (assignTy.IsRecordTy()) {
+      auto updatedTy = get_promoted_record(storedTy, assignTy);
+      if (!updatedTy || (*updatedTy != storedTy && !foundVar.can_resize)) {
+        type_mismatch_error = true;
+      } else {
+        if (*updatedTy != assignTy) {
+          create_record_cast(assignment.expr, assignTy, *updatedTy);
         }
         storedTy = *updatedTy;
         assignTy = *updatedTy;
@@ -4236,6 +4388,20 @@ void SemanticAnalyser::assign_map_type(Map &map,
           storedTy = *updatedTy;
         }
       }
+    } else if (storedTy.IsRecordTy()) {
+      if (!storedTy.IsCompatible(type)) {
+        type_mismatch_error = true;
+      } else {
+        auto updatedTy = get_promoted_record(storedTy, type);
+        if (!updatedTy) {
+          type_mismatch_error = true;
+        } else {
+          if (*updatedTy != type) {
+            create_record_cast(assignment->expr, type, *updatedTy);
+          }
+          storedTy = *updatedTy;
+        }
+      }
     } else if (type.IsMinTy() || type.IsMaxTy() || type.IsAvgTy() ||
                type.IsSumTy() || type.IsStatsTy()) {
       if (storedTy.IsSigned() != type.IsSigned()) {
@@ -4271,6 +4437,17 @@ SizedType SemanticAnalyser::create_key_type(const SizedType &expr_type,
       elements.push_back(std::move(keytype));
     }
     new_key_type = CreateTuple(Struct::CreateTuple(elements));
+  }
+
+  if (expr_type.IsRecordTy()) {
+    std::vector<SizedType> elements;
+    std::vector<std::string_view> names;
+    for (const auto &field : expr_type.GetFields()) {
+      SizedType keytype = create_key_type(field.type, node);
+      elements.push_back(std::move(keytype));
+      names.emplace_back(field.name);
+    }
+    new_key_type = CreateRecord(Struct::CreateRecord(elements, names));
   }
 
   if (new_key_type.IsPtrTy() && new_key_type.IsCtxAccess()) {
@@ -4379,6 +4556,14 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_tuple(
         new_elems.emplace_back(*new_elem);
         continue;
       }
+    } else if (storedElemTy.IsRecordTy()) {
+      auto new_elem = get_promoted_record(storedElemTy, assignElemTy);
+      if (!new_elem) {
+        return std::nullopt;
+      } else {
+        new_elems.emplace_back(*new_elem);
+        continue;
+      }
     } else if (storedElemTy.IsStringTy()) {
       storedElemTy.SetSize(
           std::max(storedElemTy.GetSize(), assignElemTy.GetSize()));
@@ -4394,6 +4579,61 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_tuple(
     new_elems.emplace_back(storedElemTy);
   }
   return CreateTuple(Struct::CreateTuple(new_elems));
+}
+
+std::optional<SizedType> SemanticAnalyser::get_promoted_record(
+    const SizedType &storedTy,
+    const SizedType &assignTy)
+{
+  assert(storedTy.IsRecordTy() && storedTy.IsCompatible(assignTy));
+
+  std::vector<SizedType> new_elems;
+  std::vector<std::string_view> names;
+  // Maintain the ordering of the storedTy
+  for (const auto &storedElemField : storedTy.GetFields()) {
+    names.emplace_back(storedElemField.name);
+
+    auto storedElemTy = storedElemField.type;
+    auto assignElemTy = assignTy.GetField(storedElemField.name).type;
+    if (storedElemTy.IsIntegerTy()) {
+      auto updatedTy = get_promoted_int(storedElemTy, assignElemTy);
+      if (!updatedTy) {
+        return std::nullopt;
+      }
+
+      new_elems.emplace_back(*updatedTy);
+      continue;
+    } else if (storedElemTy.IsTupleTy()) {
+      auto new_elem = get_promoted_tuple(storedElemTy, assignElemTy);
+      if (!new_elem) {
+        return std::nullopt;
+      } else {
+        new_elems.emplace_back(*new_elem);
+        continue;
+      }
+    } else if (storedElemTy.IsRecordTy()) {
+      auto new_elem = get_promoted_record(storedElemTy, assignElemTy);
+      if (!new_elem) {
+        return std::nullopt;
+      } else {
+        new_elems.emplace_back(*new_elem);
+        continue;
+      }
+    } else if (storedElemTy.IsStringTy()) {
+      storedElemTy.SetSize(
+          std::max(storedElemTy.GetSize(), assignElemTy.GetSize()));
+      new_elems.emplace_back(storedElemTy);
+      continue;
+    } else if (storedElemTy.IsArrayTy()) {
+      if ((storedElemTy.GetSize() != assignElemTy.GetSize()) ||
+          (*storedElemTy.GetElementTy() != *assignElemTy.GetElementTy())) {
+        return std::nullopt;
+      }
+    }
+
+    new_elems.emplace_back(storedElemTy);
+  }
+  return CreateRecord(Struct::CreateRecord(new_elems, names));
 }
 
 // The leftExpr is optional because in cases of variable assignment,

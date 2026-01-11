@@ -2299,6 +2299,47 @@ k:f { print((,)); }
 )");
 }
 
+TEST(Parser, records)
+{
+  test("k:f{ print((a=1)); }",
+       Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { ExprStatement(Call(
+               "print", { Record({ NamedArgument("a", Integer(1)) }) })) })));
+
+  test("k:f{ print((a=1, b=\"hello\")); }",
+       Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { ExprStatement(Call(
+                     "print",
+                     { Record({ NamedArgument("a", Integer(1)),
+                                NamedArgument("b", String("hello")) }) })) })));
+
+  test("k:f{ print((a=(a=1))); }",
+       Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { ExprStatement(Call(
+               "print",
+               { Record({ NamedArgument(
+                   "a", Record({ NamedArgument("a", Integer(1)) })) }) })) })));
+
+  test_parse_failure("k:f { print((hello=1, 5)); }", R"(
+stdin:1:23-24: ERROR: syntax error, unexpected integer, expecting builtin or builtin type or sized type or identifier
+k:f { print((hello=1, 5)); }
+                      ~
+)");
+  test_parse_failure("k:f { print((hello=1,)); }", R"(
+stdin:1:22-23: ERROR: syntax error, unexpected ), expecting builtin or builtin type or sized type or identifier
+k:f { print((hello=1,)); }
+                     ~
+)");
+  test_parse_failure("k:f { print((hello=1,hello=2)); }", R"(
+stdin:1:22-29: ERROR: Named argument list already contains name: hello
+k:f { print((hello=1,hello=2)); }
+                     ~~~~~~~
+)");
+}
+
 TEST(Parser, tuple_assignment_error_message)
 {
   std::stringstream out;
@@ -2470,7 +2511,7 @@ config = { BPFTRACE_STACK_MODE=perf BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }
   test_parse_failure("config = { BPFTRACE_STACK_MODE=perf } i:s:1 { "
                      "BPFTRACE_MAX_PROBES=2; exit(); }",
                      R"(
-stdin:1:66-67: ERROR: syntax error, unexpected =
+stdin:1:66-67: ERROR: syntax error, unexpected =, expecting ++ or --
 config = { BPFTRACE_STACK_MODE=perf } i:s:1 { BPFTRACE_MAX_PROBES=2; exit(); }
                                                                  ~
 )");

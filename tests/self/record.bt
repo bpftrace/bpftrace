@@ -1,0 +1,235 @@
+config = {
+    unstable_typeinfo=enable
+}
+
+test:record_field_access {
+    $a = (a=1, b="hello");
+    if ($a.b != "hello" || $a.a != 1) {
+        return 1;
+    }
+}
+
+test:record_var_mixed_order {
+    $a = (a=1, b="hello");
+
+    if ($a.b != "hello" || $a.a != 1) {
+        return 1;
+    }
+
+    $a = (b="bye", a=2);
+    if ($a.b != "bye" || $a.a != 2) {
+        return 1;
+    }
+}
+
+test:record_var_mixed_order_nested {
+    $a = (3, (a=(x=1, y=true), b="hello"));
+
+    if ($a.0 != 3 || $a.1.b != "hello" || $a.1.a.x != 1 || $a.1.a.y != true) {
+        return 1;
+    }
+
+    $a = (4, (b="bye", a=(y=false, x=2)));
+
+    if ($a.0 != 4 || $a.1.b != "bye" || $a.1.a.x != 2 || $a.1.a.y != false) {
+        return 1;
+    }
+
+    $b = (a=(3, (x="hello", y=5)), b=5);
+
+    if ($b.a.0 != 3 || $b.a.1.x != "hello" || $b.a.1.y != 5 || $b.b != 5) {
+        return 1;
+    }
+
+    $b = (b=10, a=(20, (y=100, x="bye")));
+
+    if ($b.a.0 != 20 || $b.a.1.x != "bye" || $b.a.1.y != 100 || $b.b != 10) {
+        return 1;
+    }
+}
+
+test:record_map_value_mixed_order {
+    @aaa = (a=1, b="hello");
+
+    if (@aaa.b != "hello" || @aaa.a != 1) {
+        return 1;
+    }
+
+    @aaa = (b="bye", a=2);
+    if (@aaa.b != "bye" || @aaa.a != 2) {
+        return 1;
+    }
+}
+
+test:record_map_value_mixed_order_nested {
+    @bbb = (3, (a=(x=1, y=true), b="hello"));
+
+    if (@bbb.0 != 3 || @bbb.1.b != "hello" || @bbb.1.a.x != 1 || @bbb.1.a.y != true) {
+        return 1;
+    }
+
+    @bbb = (4, (b="bye", a=(y=false, x=2)));
+
+    if (@bbb.0 != 4 || @bbb.1.b != "bye" || @bbb.1.a.x != 2 || @bbb.1.a.y != false) {
+        return 1;
+    }
+
+    @ccc = (a=(3, (x="hello", y=5)), b=5);
+
+    if (@ccc.a.0 != 3 || @ccc.a.1.x != "hello" || @ccc.a.1.y != 5 || @ccc.b != 5) {
+        return 1;
+    }
+
+    @ccc = (b=10, a=(20, (y=100, x="bye")));
+
+    if (@ccc.a.0 != 20 || @ccc.a.1.x != "bye" || @ccc.a.1.y != 100 || @ccc.b != 10) {
+        return 1;
+    }
+}
+
+test:record_map_key_mixed_order {
+    @ddd[(a=1, b="hello")] = 1;
+
+    for ($kv : @ddd) {
+        if ($kv.0.a != 1 || $kv.0.b != "hello" || $kv.1 != 1) {
+            return 1;
+        }
+    }
+
+    // Store the same key but different order
+    @ddd[(b="hello", a=1)] = 2;
+    for ($kv : @ddd) {
+        if ($kv.0.a != 1 || $kv.0.b != "hello" || $kv.1 != 2) {
+            return 1;
+        }
+    }
+}
+
+test:record_map_key_mixed_order_nested {
+    @eee[(3, (a=(x=1, y=true), b="hello"))] = 1;
+
+    for ($kv : @eee) {
+        if ($kv.0.0 != 3 || $kv.0.1.b != "hello" || $kv.0.1.a.x != 1 || $kv.0.1.a.y != true || $kv.1 != 1) {
+            return 1;
+        }
+    }
+
+    // Store the same key but different order
+    @eee[(3, (b="hello", a=(y=true, x=1)))] = 2;
+
+    for ($kv : @eee) {
+        if ($kv.0.0 != 3 || $kv.0.1.b != "hello" || $kv.0.1.a.x != 1 || $kv.0.1.a.y != true || $kv.1 != 2) {
+            return 1;
+        }
+    }
+}
+
+test:record_promotion {
+    $a = (a=1, b="hello");
+    $a = (b="greeting", a=(uint64)2);
+    // Original type order respected
+    if (typeinfo($a.a).2 != "uint64" || typeinfo($a.b).2 != "string[9]") {
+        return 1;
+    }
+
+    if ($a.b != "greeting" || $a.a != 2) {
+        return 1;
+    }
+
+    $b = (a=(uint64)2, b="greeting");
+    $b = (b="hello", a=1);
+    if (typeinfo($b.a).2 != "uint64" || typeinfo($b.b).2 != "string[9]") {
+        return 1;
+    }
+
+    if ($b.b != "hello" || $b.a != 1) {
+        return 1;
+    }
+}
+
+test:record_promotion_nested {
+    $a = (3, (a=(uint64)1, b=(x="bye", y=-1)));
+
+    if ($a.0 != 3 || $a.1.a != 1 || $a.1.b.x != "bye" || $a.1.b.y != -1) {
+        return 1;
+    }
+
+    $a = ((int16)-10, (b=(y=(int64)-100, x="muchlongerstr"), a=5));
+
+    if ($a.0 != -10 || $a.1.a != 5 || $a.1.b.x != "muchlongerstr" || $a.1.b.y != -100) {
+        return 1;
+    }
+
+    $b = ((int64)-50, (b=(x="areallyreallyreallylongstr", y=20), a=500));
+
+    $a = $b;
+
+    if ($a.0 != -50 || $a.1.a != 500 || $a.1.b.x != "areallyreallyreallylongstr" || $a.1.b.y != 20) {
+        return 1;
+    }
+
+    if (typeinfo($a).2 != "(int64,record { .a = uint64, .b = record { .x = string[27], .y = int64 } })") {
+        return 1;
+    }
+}
+
+test:record_binop_literal {
+    if ((a=1, b="hello") != (b="hello", a=1)) {
+        return 1;
+    }
+
+    if ((a=1, b="hello") != (a=1, b="hello")) {
+        return 1;
+    }
+
+    if ((a=(1, "bye"), b=(x="x", y=3)) != (a=(1, "bye"), b=(y=3, x="x"))) {
+        return 1;
+    }
+}
+
+test:record_binop {
+    $a = (a=1, b="hello");
+
+    // Same order on the right
+    if ($a != (a=(uint64)1, b="hello")) {
+        return 1;
+    }
+
+    // Different order on the right
+    if ($a != (b="hello", a=(uint64)1)) {
+        return 1;
+    }
+
+    // Insert in different order but $a field order doesn't change
+    $a = (b="bye", a=2);
+
+    if ($a != (a=(uint64)2, b="bye") || $a != (b="bye", a=(uint64)2)) {
+        return 1;
+    }
+
+    if ($a == (b="muchlongerstr", a=(uint64)1)) {
+        return 1;
+    }
+
+    // Test nested ordering
+    $b = (a=((uint64)1, "bye"), b=(y=3, x="x"));
+
+    if ((a=(1, "bye"), b=(y=3, x="x")) != $b) {
+        return 1;
+    }
+
+    if ((b=(x="x", y=3), a=(1, "bye")) != $b) {
+        return 1;
+    }
+
+    if ((b=(x="x", y=3), a=(1, "hello")) == $b) {
+        return 1;
+    }
+
+    // Test tuples and records
+    $c = (3, "hello", (a=1, b=(10, "bye")));
+
+    if ($c != (3, "hello", (b=(10, "bye"), a=1))) {
+        return 1;
+    }
+}

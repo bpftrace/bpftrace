@@ -1646,7 +1646,7 @@ kprobe:dummy {
 bpftrace has support for immutable N-tuples.
 A tuple is a sequence type (like an array) where, unlike an array, every element can have a different type.
 
-Tuples are a comma separated list of expressions, enclosed in brackets, `(1,"hello")`.
+Tuples are a comma separated list of expressions, enclosed in parenthesis, `(1,"hello")`.
 Individual fields can be accessed with the `.` operator or via array-style access.
 The array index expression must evaluate to an integer literal at compile time (no variables but this is ok `(1, "hello")[1 - 1]`).
 Tuples are zero indexed like arrays. Examples:
@@ -1664,6 +1664,29 @@ interval:s:1 {
 
 Single-element and empty tuples can be specified using Python-like syntax.
 A single element tuple requires a trailing comma, `(1,)`, while the empty tuple is simply `()`.
+
+## Records
+
+bpftrace has support for immutable N-records.
+A record is a struct-like type where every element has a name and a type.
+
+Records are a comma separated list of named expressions, enclosed in parenthesis, `(color="green", size=2)`.
+Individual fields can be accessed with the `.` operator and the field name.
+Records maintain their initial ordering but maybe assigned to out of order, e.g. `$a = (color="green", size=2); $a = (size=10, color="blue");`. Note that evaluation order is maintained, e.g. `$a = (size={ print("first"); 20 }, color={ print("second"); "pink" });` will print "first" then "second" but `$a` will now contain `(color="pink", size=20)` in that order.
+Examples:
+
+```
+interval:s:1 {
+  $a = (color="green", size=2);
+  print($a);        // { .color = "green", .size = 2 }
+  print($a.size);   // 2
+  $a = (size=10, color="blue");
+  print($a.color);  // blue
+  print($a);        // { .color = "blue", .size = 10 }
+}
+```
+
+
 
 ## Type conversion
 

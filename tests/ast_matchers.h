@@ -1558,6 +1558,39 @@ inline TupleMatcher Tuple(
   return TupleMatcher().WithElems(elems);
 }
 
+class NamedArgumentMatcher
+    : public NodeMatcher<NamedArgumentMatcher, ast::NamedArgument> {
+public:
+  NamedArgumentMatcher& WithName(const std::string& name)
+  {
+    return Where(CheckField(&ast::NamedArgument::name, name, "name"));
+  }
+};
+
+inline NamedArgumentMatcher NamedArgument(
+    const std::string& name,
+    const Matcher<const ast::Expression&>& expr)
+{
+  return NamedArgumentMatcher().WithName(name).WithExpr(expr);
+}
+
+class RecordMatcher : public NodeMatcher<RecordMatcher, ast::Record> {
+public:
+  RecordMatcher& WithNamedArgs(
+      const std::vector<Matcher<const ast::NamedArgument&>>& named_args)
+  {
+    return Where([named_args](const ast::Record& record) {
+      return CheckList(record, record.elems, named_args, "named_args");
+    });
+  }
+};
+
+inline RecordMatcher Record(
+    const std::vector<Matcher<const ast::NamedArgument&>>& named_args)
+{
+  return RecordMatcher().WithNamedArgs(named_args);
+}
+
 template <typename Derived, typename NodeType>
 Derived& NodeMatcher<Derived, NodeType>::WithStatements(
     const std::vector<Matcher<const ast::Statement&>>& statements)
