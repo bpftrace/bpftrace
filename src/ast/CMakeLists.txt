@@ -31,6 +31,7 @@ add_library(ast STATIC
   passes/field_analyser.cpp
   passes/fold_literals.cpp
   passes/import_scripts.cpp
+  passes/lift_context.cpp
   passes/link.cpp
   passes/loop_return.cpp
   passes/map_sugar.cpp

@@ -13,6 +13,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
+#include "ast/passes/lift_context.h"
 #include "ast/passes/loop_return.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -50,6 +51,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateLoopReturnPass());
   passes.emplace_back(CreateControlFlowPass());
   passes.emplace_back(CreateMacroExpansionPass());
+  passes.emplace_back(CreateLiftContextPass());
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateProbeAndApExpansionPass());
   passes.emplace_back(CreateContextResolverPass());
