@@ -47,7 +47,7 @@ private:
 class FormatString {
 public:
   FormatString();
-  FormatString(const std::string &fmt);
+  FormatString(std::string fmt);
   ~FormatString();
 
   // check can be used to check if the format is valid, given a set of arguments

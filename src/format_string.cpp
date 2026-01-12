@@ -44,7 +44,7 @@ FormatSpec::FormatSpec(const std::smatch& match)
 
 FormatString::FormatString() = default;
 
-FormatString::FormatString(const std::string& fmt) : fmt_(std::move(fmt))
+FormatString::FormatString(std::string fmt) : fmt_(std::move(fmt))
 {
   parse();
 }
