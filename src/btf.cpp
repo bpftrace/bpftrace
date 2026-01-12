@@ -1267,6 +1267,8 @@ void BTF::resolve_fields(const BTFId &type_id,
   }
 }
 
+static char user_pointer[] = R"(__attribute__((btf_type_tag("user"))) *)";
+
 SizedType BTF::get_stype(std::string_view type_name)
 {
   auto btf_name = btf_type_str(type_name);
@@ -1283,10 +1285,21 @@ SizedType BTF::get_stype(std::string_view type_name)
     return get_stype(new_name);
   }
 
+  if (type_name.ends_with(user_pointer)) {
+    auto pointee = std::string(
+        type_name.substr(0, type_name.length() - strlen(user_pointer)));
+    util::rtrim(pointee);
+    auto ty = get_stype(pointee);
+    ty.SetAS(AddrSpace::user);
+    return CreatePointer(ty, AddrSpace::user);
+  }
+
   if (type_name.ends_with("*")) {
     auto pointee = std::string(type_name.substr(0, type_name.length() - 1));
     util::rtrim(pointee);
-    return CreatePointer(get_stype(pointee));
+    auto ty = get_stype(pointee);
+    ty.SetAS(AddrSpace::kernel);
+    return CreatePointer(ty, AddrSpace::kernel);
   }
 
   if (type_name == "unsigned")

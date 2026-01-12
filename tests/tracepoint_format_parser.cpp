@@ -333,4 +333,39 @@ TEST_F(tracepoint_format_parser, pointer_types)
   EXPECT_EQ(dbl_const_ptr.offset, 32);
 }
 
+TEST_F(tracepoint_format_parser, user_pointer)
+{
+  // Check that we can handle user-space pointer types marked with
+  // btf_type_tag("user")
+  std::string input =
+      " field:char __attribute__((btf_type_tag(\"user\"))) * user_buf; "
+      "offset:0; size:8; signed:0;\n"
+      " field:char * kernel_buf; offset:8; size:8; signed:0;\n";
+
+  std::istringstream format_file(input);
+
+  auto bpftrace = get_mock_bpftrace();
+  MockTracepointFormatParser parser("syscalls", "sys_enter_read", *bpftrace);
+  auto result = parser.get_tracepoint_struct_public(format_file);
+
+  EXPECT_TRUE(bool(result));
+
+  Struct *type = result->get();
+  EXPECT_EQ(type->size, 16);
+
+  EXPECT_TRUE(type->HasField("user_buf"));
+  auto user_buf = type->GetField("user_buf");
+  EXPECT_TRUE(user_buf.type.IsPtrTy());
+  EXPECT_EQ(user_buf.type.GetAS(), AddrSpace::user);
+  EXPECT_TRUE(user_buf.type.GetPointeeTy()->IsIntTy());
+  EXPECT_EQ(user_buf.offset, 0);
+
+  EXPECT_TRUE(type->HasField("kernel_buf"));
+  auto kernel_buf = type->GetField("kernel_buf");
+  EXPECT_TRUE(kernel_buf.type.IsPtrTy());
+  EXPECT_EQ(kernel_buf.type.GetAS(), AddrSpace::kernel);
+  EXPECT_TRUE(kernel_buf.type.GetPointeeTy()->IsIntTy());
+  EXPECT_EQ(kernel_buf.offset, 8);
+}
+
 } // namespace bpftrace::test::tracepoint_format_parser
