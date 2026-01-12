@@ -150,8 +150,16 @@ Result<Field> TracepointFormatParser::parse_field(const std::string &line,
 
   if (field.is_data_loc) {
     field.type = CreateInt64();
+    field.type.SetAS(AddrSpace::kernel);
   } else {
     auto type = bpftrace_.btf_->get_stype(field_type);
+    // There may be fields that are parsed that have the __user type
+    // tag, which indicates an user address space. Otherwise, no explicit
+    // type is attached. However, we know that tracepoint fields generally
+    // refer to kernel space, so we attach this explicitly if it present.
+    if (type.GetAS() == AddrSpace::none) {
+      type.SetAS(AddrSpace::kernel);
+    }
     if (is_array) {
       if (field_type == "char") {
         // See src/btf.cpp for why this is converted to a string
