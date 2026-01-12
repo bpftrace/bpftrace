@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bcc/bcc_usdt.h>
 #include <llvm/Config/llvm-config.h>
 #include <llvm/IR/IRBuilder.h>
 #include <optional>
