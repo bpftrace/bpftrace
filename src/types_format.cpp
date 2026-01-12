@@ -118,8 +118,9 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       size_t length = buf.length;
       output::Primitive::Buffer v;
       v.data.resize(buf.length);
-      const auto *content = value.slice(sizeof(AsyncEvent::Buf), length).data();
-      memcpy(v.data.data(), content, length);
+      memcpy(v.data.data(),
+             value.slice(sizeof(AsyncEvent::Buf), length).data(),
+             length);
       return v;
     }
     case Type::string: {
