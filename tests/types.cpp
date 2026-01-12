@@ -59,8 +59,20 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateCount()), "count_t");
 
   EXPECT_EQ(to_str(CreateMacAddress()), "mac_address");
-  EXPECT_EQ(to_str(CreateStack(true)), "kstack");
-  EXPECT_EQ(to_str(CreateStack(false)), "ustack");
+
+  EXPECT_EQ(to_str(CreateStack(true)), "kstack_bpftrace_127");
+  EXPECT_EQ(to_str(CreateStack(false)), "ustack_bpftrace_127");
+
+  StackType stack_type = StackType();
+  stack_type.limit = 10;
+  stack_type.mode = StackMode::raw;
+  EXPECT_EQ(to_str(CreateStack(true, stack_type)), "kstack_raw_10");
+
+  StackType stack_type2 = StackType();
+  stack_type2.limit = 20;
+  stack_type2.mode = StackMode::build_id;
+  EXPECT_EQ(to_str(CreateStack(false, stack_type2)), "ustack_build_id_20");
+
   EXPECT_EQ(to_str(CreateTimestamp()), "timestamp");
   EXPECT_EQ(to_str(CreateKSym()), "ksym_t");
   EXPECT_EQ(to_str(CreateUSym()), "usym_t");

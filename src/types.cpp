@@ -79,6 +79,9 @@ std::string typestr(const SizedType &type)
       res += ")";
       return res;
     }
+    case Type::kstack_t:
+    case Type::ustack_t:
+      return type.stack_type.name();
     case Type::max_t:
     case Type::min_t:
     case Type::sum_t:
@@ -87,8 +90,6 @@ std::string typestr(const SizedType &type)
       return (type.is_signed_ ? "" : "u") + typestr(type.GetTy());
     case Type::count_t:
     case Type::mac_address:
-    case Type::kstack_t:
-    case Type::ustack_t:
     case Type::timestamp:
     case Type::ksym_t:
     case Type::usym_t:
@@ -133,6 +134,10 @@ bool SizedType::IsSameType(const SizedType &t) const
       if (!GetField(i).type.IsSameType(t.GetField(i).type))
         return false;
     }
+  }
+
+  if (IsStack() && stack_type != t.stack_type) {
+    return false;
   }
 
   return type_ == t.GetTy();
@@ -398,6 +403,7 @@ SizedType CreateStack(bool kernel, StackType stack)
   auto st = SizedType(kernel ? Type::kstack_t : Type::ustack_t,
                       kernel ? base_size : (base_size + 8));
   st.stack_type = stack;
+  st.stack_type.kernel = kernel;
   return st;
 }
 
