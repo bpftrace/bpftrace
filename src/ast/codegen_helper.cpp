@@ -23,7 +23,7 @@ bool needAssignMapStatementAllocation(const AssignMapStatement &assignment)
   const auto &expr_type = assignment.expr.type();
   if (shouldBeInBpfMemoryAlready(expr_type)) {
     return false;
-  } else if (map.map->value_type.IsRecordTy() ||
+  } else if (map.map->value_type.IsCStructTy() ||
              map.map->value_type.IsArrayTy()) {
     return !expr_type.is_internal;
   }

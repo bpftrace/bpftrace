@@ -764,12 +764,12 @@ cast_expr:
                 LPAREN any_type RPAREN cast_expr           { $$ = driver.ctx.make_node<ast::Cast>(@1 + @3, $2, $4); }
         |       LPAREN any_type RPAREN unary_expr          { $$ = driver.ctx.make_node<ast::Cast>(@1 + @3, $2, $4); }
 /* workaround for typedef types, see https://github.com/bpftrace/bpftrace/pull/2560#issuecomment-1521783935 */
-        |       LPAREN IDENT RPAREN cast_expr          { $$ = driver.ctx.make_node<ast::Cast>(@1 + @3, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_record($2, 0)), $4); }
-        |       LPAREN IDENT RPAREN unary_expr         { $$ = driver.ctx.make_node<ast::Cast>(@1 + @3, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_record($2, 0)), $4); }
-        |       LPAREN IDENT "*" RPAREN cast_expr      { $$ = driver.ctx.make_node<ast::Cast>(@1 + @4, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_record($2, 1)), $5); }
-        |       LPAREN IDENT "*" RPAREN unary_expr     { $$ = driver.ctx.make_node<ast::Cast>(@1 + @4, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_record($2, 1)), $5); }
-        |       LPAREN IDENT "*" "*" RPAREN cast_expr  { $$ = driver.ctx.make_node<ast::Cast>(@1 + @5, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_record($2, 2)), $6); }
-        |       LPAREN IDENT "*" "*" RPAREN unary_expr { $$ = driver.ctx.make_node<ast::Cast>(@1 + @5, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_record($2, 2)), $6); }
+        |       LPAREN IDENT RPAREN cast_expr          { $$ = driver.ctx.make_node<ast::Cast>(@1 + @3, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_c_struct($2, 0)), $4); }
+        |       LPAREN IDENT RPAREN unary_expr         { $$ = driver.ctx.make_node<ast::Cast>(@1 + @3, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_c_struct($2, 0)), $4); }
+        |       LPAREN IDENT "*" RPAREN cast_expr      { $$ = driver.ctx.make_node<ast::Cast>(@1 + @4, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_c_struct($2, 1)), $5); }
+        |       LPAREN IDENT "*" RPAREN unary_expr     { $$ = driver.ctx.make_node<ast::Cast>(@1 + @4, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_c_struct($2, 1)), $5); }
+        |       LPAREN IDENT "*" "*" RPAREN cast_expr  { $$ = driver.ctx.make_node<ast::Cast>(@1 + @5, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_c_struct($2, 2)), $6); }
+        |       LPAREN IDENT "*" "*" RPAREN unary_expr { $$ = driver.ctx.make_node<ast::Cast>(@1 + @5, driver.ctx.make_node<ast::Typeof>(@2, ast::ident_to_c_struct($2, 2)), $6); }
                 ;
 
 unary_expr:
@@ -831,8 +831,8 @@ offsetof_expr:
 
 typeof_expr:
                 TYPEOF "(" type ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, $3); }
-        |       TYPEOF "(" IDENT "*" ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, ast::ident_to_record($3, 1)); }
-        |       TYPEOF "(" IDENT "*" "*" ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, ast::ident_to_record($3, 2)); }
+        |       TYPEOF "(" IDENT "*" ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, ast::ident_to_c_struct($3, 1)); }
+        |       TYPEOF "(" IDENT "*" "*" ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, ast::ident_to_c_struct($3, 2)); }
         |       TYPEOF "(" expr ")"  { $$ = driver.ctx.make_node<ast::Typeof>(@$, $3); }
                 ;
 

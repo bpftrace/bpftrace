@@ -175,7 +175,7 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
     case DW_TAG_union_type: {
       std::string name = dwarf_diename(&type_die);
       name = (tag == DW_TAG_structure_type ? "struct " : "union ") + name;
-      auto result = CreateRecord(
+      auto result = CreateCStruct(
           name, bpftrace_->structs.LookupOrAdd(name, bit_size / 8));
       if (resolve_structs)
         resolve_fields(result);
@@ -248,7 +248,7 @@ std::optional<Bitfield> Dwarf::resolve_bitfield(Dwarf_Die &field_die) const
 
 void Dwarf::resolve_fields(const SizedType &type) const
 {
-  if (!type.IsRecordTy())
+  if (!type.IsCStructTy())
     return;
 
   auto str = bpftrace_->structs.Lookup(type.GetName()).lock();

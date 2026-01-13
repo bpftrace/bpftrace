@@ -257,7 +257,7 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
       // Struct map entry may not exist for forward declared types so we
       // create it now and fill it later
       auto s = structs.LookupOrAdd(typestr, size / 8);
-      return CreateRecord(typestr, s);
+      return CreateCStruct(typestr, s);
     }
     case CXType_Char_S:
     case CXType_SChar:

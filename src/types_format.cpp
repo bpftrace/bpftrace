@@ -151,7 +151,7 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       }
       return array;
     }
-    case Type::record: {
+    case Type::c_struct: {
       output::Primitive::Record record;
       for (auto &field : type.GetFields()) {
         auto elem_data = value.slice(field.offset, field.type.GetSize());

@@ -271,7 +271,7 @@ DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
 /// name and size (fields are not necessary).
 DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 {
-  if (!emit_codegen_types && stype.IsRecordTy()) {
+  if (!emit_codegen_types && stype.IsCStructTy()) {
     std::string name = stype.GetName();
     static constexpr std::string_view struct_prefix = "struct ";
     static constexpr std::string_view union_prefix = "union ";
@@ -291,7 +291,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
                             getOrCreateArray({}));
   }
 
-  if (stype.IsByteArray() || stype.IsRecordTy() || stype.IsStack()) {
+  if (stype.IsByteArray() || stype.IsCStructTy() || stype.IsStack()) {
     auto *subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
         stype.GetSize() * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));

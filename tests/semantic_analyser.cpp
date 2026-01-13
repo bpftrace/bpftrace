@@ -3725,7 +3725,7 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   fieldaccess = assignment->expr.as<ast::FieldAccess>();
   EXPECT_EQ(chartype, fieldaccess->field_type);
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsRecordTy());
+  EXPECT_TRUE(unop->result_type.IsCStructTy());
   fieldaccess = unop->expr.as<ast::FieldAccess>();
   EXPECT_TRUE(fieldaccess->field_type.IsPtrTy());
   unop = fieldaccess->expr.as<ast::Unop>();
@@ -3786,8 +3786,10 @@ TEST_F(SemanticAnalyserTest, double_pointer_struct)
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
   ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsPtrTy());
-  ASSERT_TRUE(
-      assignment->var()->var_type.GetPointeeTy()->GetPointeeTy()->IsRecordTy());
+  ASSERT_TRUE(assignment->var()
+                  ->var_type.GetPointeeTy()
+                  ->GetPointeeTy()
+                  ->IsCStructTy());
   EXPECT_EQ(
       assignment->var()->var_type.GetPointeeTy()->GetPointeeTy()->GetName(),
       "struct Foo");
@@ -3795,7 +3797,7 @@ TEST_F(SemanticAnalyserTest, double_pointer_struct)
   // $p = *$pp;
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsRecordTy());
+  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsCStructTy());
   EXPECT_EQ(assignment->var()->var_type.GetPointeeTy()->GetName(),
             "struct Foo");
 
@@ -4224,7 +4226,7 @@ TEST_F(SemanticAnalyserTest, call_offsetof)
   test("struct Foo { struct Bar { int a; } *bar; } \
               begin { @x = offsetof(struct Foo, bar.a); }",
        Error{ R"(
-stdin:1:71-98: ERROR: 'struct Bar *' is not a record type.
+stdin:1:71-98: ERROR: 'struct Bar *' is not a c_struct type.
 struct Foo { struct Bar { int a; } *bar; }               begin { @x = offsetof(struct Foo, bar.a); }
                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -4243,7 +4245,7 @@ stdin:1:70-117: ERROR: 'struct Bar' has no field named '__notexist_subfield__'
 struct Foo { struct Bar { int a; } bar; }               begin { @x = offsetof(struct Foo, bar.__notexist_subfield__); }
                                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
-  // Not exist record
+  // Not exist c_struct
   test("begin { @x = offsetof(__passident__, x); }", Error{});
   test("begin { @x = offsetof(__passident__, x.y.z); }", Error{});
   test("begin { @x = offsetof(struct __notexiststruct__, x); }", Error{});
@@ -4756,7 +4758,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_read_only)
                       { ExprStatement(Call("print", { Variable("$var") })),
                         Jump(ast::JumpType::CONTINUE) })) })
                   .WithContext(
-                      bpftrace::test::SizedType(Type::record)
+                      bpftrace::test::SizedType(Type::c_struct)
                           .WithField("$var",
                                      bpftrace::test::SizedType(Type::pointer)
                                          .WithElement(bpftrace::test::SizedType(
@@ -4791,7 +4793,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_modified_during_loop)
                                                  Variable("$var"))),
                               Jump(ast::JumpType::CONTINUE) })) })
                   .WithContext(
-                      bpftrace::test::SizedType(Type::record)
+                      bpftrace::test::SizedType(Type::c_struct)
                           .WithField("$var",
                                      bpftrace::test::SizedType(Type::pointer)
                                          .WithElement(bpftrace::test::SizedType(
@@ -4822,7 +4824,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop)
                        { ExprStatement(Call("print", { Variable("$var") })),
                          Jump(ast::JumpType::CONTINUE) })) })
                  .WithContext(testing::Not(
-                     SizedType(Type::record).WithField("$var", _))),
+                     SizedType(Type::c_struct).WithField("$var", _))),
              Jump(ast::JumpType::RETURN) })) });
 }
 
@@ -4853,7 +4855,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
                       { ExprStatement(Call("print", { Variable("$var3") })),
                         Jump(ast::JumpType::CONTINUE) })) })
                 .WithContext(
-                    bpftrace::test::SizedType(Type::record)
+                    bpftrace::test::SizedType(Type::c_struct)
                         .WithField("$var1",
                                    SizedType(Type::pointer)
                                        .WithElement(bpftrace::test::SizedType(

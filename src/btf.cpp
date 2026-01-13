@@ -495,7 +495,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     auto name = recprefix + rname;
 
     auto record = bpftrace_->structs.LookupOrAdd(name, t->size).lock();
-    stype = CreateRecord(name, record);
+    stype = CreateCStruct(name, record);
     if (is_anon)
       stype.SetAnon();
     if (resolve_structs)
@@ -1197,7 +1197,7 @@ void BTF::resolve_fields(const SizedType &type)
 {
   BTFId type_id;
 
-  if (!type.IsRecordTy())
+  if (!type.IsCStructTy())
     return;
 
   auto const &name = type.GetName();

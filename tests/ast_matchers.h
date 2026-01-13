@@ -409,7 +409,7 @@ public:
         [field_name, field_type_matcher](const class SizedType& type_obj,
                                          MatchResultListener* listener) {
           // Check if this is a record type (struct/union) or tuple.
-          if (!type_obj.IsRecordTy() && !type_obj.IsTupleTy()) {
+          if (!type_obj.IsCStructTy() && !type_obj.IsTupleTy()) {
             *listener << "type is not a record or tuple, cannot have fields";
             return false;
           }

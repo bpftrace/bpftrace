@@ -90,7 +90,7 @@ protected:
         "unique_struct",
         CreateNone(),
         {
-            Param{ "a", CreateRecord("unique_struct_arg", unique_struct_arg) },
+            Param{ "a", CreateCStruct("unique_struct_arg", unique_struct_arg) },
         });
 
     takes_c_string_ = reg_.add(Function::Origin::Builtin,
@@ -308,11 +308,11 @@ TEST_F(TestFunctionRegistryPopulated, unique_struct)
   different_struct->AddField("b", CreateInt8(), 0);
 
   test("unique_struct",
-       { CreateRecord("unique_struct_arg", exact_struct) },
+       { CreateCStruct("unique_struct_arg", exact_struct) },
        unique_struct_);
 
   test("unique_struct",
-       { CreateRecord("same_layout_as_unique_struct_arg", compatible_struct) },
+       { CreateCStruct("same_layout_as_unique_struct_arg", compatible_struct) },
        R"(
 ERROR: Cannot call function 'unique_struct' using argument types: (same_layout_as_unique_struct_arg)
 HINT: Candidate function:
@@ -320,8 +320,8 @@ HINT: Candidate function:
 )");
 
   test("unique_struct",
-       { CreateRecord("different_layout_to_unique_struct_arg",
-                      different_struct) },
+       { CreateCStruct("different_layout_to_unique_struct_arg",
+                       different_struct) },
        R"(
 ERROR: Cannot call function 'unique_struct' using argument types: (different_layout_to_unique_struct_arg)
 HINT: Candidate function:

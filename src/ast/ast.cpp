@@ -391,9 +391,9 @@ void Program::clear_empty_probes()
   probes.erase(it.begin(), it.end());
 }
 
-SizedType ident_to_record(const std::string &ident, int pointer_level)
+SizedType ident_to_c_struct(const std::string &ident, int pointer_level)
 {
-  SizedType result = CreateRecord(ident);
+  SizedType result = CreateCStruct(ident);
   for (int i = 0; i < pointer_level; i++)
     result = CreatePointer(result);
   return result;
@@ -411,7 +411,7 @@ SizedType ident_to_sized_type(const std::string &ident)
     // if we check the variant values during semantic analysis.
     return CreateEnum(64, enum_name);
   }
-  return ident_to_record(ident);
+  return ident_to_c_struct(ident);
 }
 
 } // namespace bpftrace::ast

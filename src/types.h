@@ -28,7 +28,7 @@ enum class Type : uint8_t {
   integer, // int is a protected keyword
   boolean,
   pointer,
-  record, // struct/union, as struct is a protected keyword
+  c_struct, // struct/union from external c programs or the kernel
   hist_t,
   lhist_t,
   tseries_t,
@@ -333,19 +333,19 @@ public:
 
   const std::string &GetName() const
   {
-    assert(IsRecordTy() || IsEnumTy());
+    assert(IsCStructTy() || IsEnumTy());
     return name_;
   }
 
   bool IsAnonTy() const
   {
-    assert(IsRecordTy());
+    assert(IsCStructTy());
     return is_anon_;
   }
 
   void SetAnon()
   {
-    assert(IsRecordTy());
+    assert(IsCStructTy());
     is_anon_ = true;
   }
 
@@ -462,9 +462,9 @@ public:
   {
     return type_ == Type::array;
   };
-  bool IsRecordTy() const
+  bool IsCStructTy() const
   {
-    return type_ == Type::record;
+    return type_ == Type::c_struct;
   };
   bool IsBufferTy() const
   {
@@ -525,9 +525,9 @@ public:
                                const SizedType &element_type);
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
-  friend SizedType CreateRecord(const std::string &name);
-  friend SizedType CreateRecord(std::shared_ptr<Struct> &&record);
-  friend SizedType CreateRecord(const std::string &name,
+  friend SizedType CreateCStruct(const std::string &name);
+  friend SizedType CreateCStruct(std::shared_ptr<Struct> &&record);
+  friend SizedType CreateCStruct(const std::string &name,
                                 std::weak_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
   friend SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
@@ -556,9 +556,9 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type,
                         AddrSpace as = AddrSpace::none);
 
-SizedType CreateRecord(const std::string &name);
-SizedType CreateRecord(std::shared_ptr<Struct> &&record);
-SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record);
+SizedType CreateCStruct(const std::string &name);
+SizedType CreateCStruct(std::shared_ptr<Struct> &&record);
+SizedType CreateCStruct(const std::string &name, std::weak_ptr<Struct> record);
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
 
 SizedType CreateStack(bool kernel, StackType st = StackType());

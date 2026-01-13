@@ -370,11 +370,11 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 /// Convert internal SizedType to a corresponding LLVM type.
 ///
 /// Only one type is not converted directly into an LLVM type:
-/// - structs (records) are represented as byte arrays
+/// - C structs (c_struct) are represented as byte arrays
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
-  if (stype.IsByteArray() || stype.IsRecordTy()) {
+  if (stype.IsByteArray() || stype.IsCStructTy()) {
     ty = ArrayType::get(getInt8Ty(), stype.GetSize());
   } else if (stype.IsArrayTy()) {
     ty = ArrayType::get(GetType(*stype.GetElementTy()), stype.GetNumElements());
@@ -2134,7 +2134,7 @@ Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,
 Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
                                             const SizedType &args_type)
 {
-  assert(args_type.IsRecordTy());
+  assert(args_type.IsCStructTy());
 
   auto *args_t = UprobeArgsType(args_type);
   AllocaInst *result = CreateAllocaBPF(args_t, "args");
