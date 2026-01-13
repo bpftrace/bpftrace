@@ -45,6 +45,7 @@ NIX_TARGET_KERNEL = os.environ.get("NIX_TARGET_KERNEL", "")
 TOOLS_TEST_OLDVERSION = os.environ.get("TOOLS_TEST_OLDVERSION", "")
 TOOLS_TEST_DISABLE = os.environ.get("TOOLS_TEST_DISABLE", "")
 AOT_ALLOWLIST_FILE = os.environ.get("AOT_ALLOWLIST_FILE", "")
+RUNTIME_TESTS_FILTER = os.environ.get("RUNTIME_TESTS_FILTER", "")
 
 
 class TestStatus(Enum):
@@ -261,10 +262,10 @@ def run_with_kernel(script):
         modules = ["kvm", "nf_tables", "xfs"]
         modprobe = f"modprobe -d {eval.stdout} -a {' '.join(modules)}"
 
-        c = f"{modprobe} && {script}"
+        c = f"{modprobe} && {' '.join(script)}"
         cmd = ["vmtest", "-k", f"{eval.stdout}/bzImage", c]
     else:
-        cmd = [script]
+        cmd = script
 
     shell(
         cmd,
@@ -282,12 +283,15 @@ def run_with_kernel(script):
 
 def run_self_tests():
     """Runs self tests, under a controlled kernel if requested"""
-    run_with_kernel("./tests/self-tests.sh")
+    run_with_kernel(["./tests/self-tests.sh"])
 
 
 def run_runtime_tests():
     """Runs runtime tests, under a controlled kernel if requested"""
-    run_with_kernel("./tests/runtime-tests.sh")
+    cmd = ["./tests/runtime-tests.sh"]
+    if RUNTIME_TESTS_FILTER:
+        cmd.append(f"--filter=\"{RUNTIME_TESTS_FILTER}\"")
+    run_with_kernel(cmd)
 
 
 def fuzz():
