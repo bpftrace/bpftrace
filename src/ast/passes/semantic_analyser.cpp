@@ -149,16 +149,14 @@ public:
                             MapMetadata &map_metadata,
                             NamedParamDefaults &named_param_defaults,
                             TypeMetadata &type_metadata,
-                            MacroRegistry &macro_registry,
-                            bool has_child = true)
+                            MacroRegistry &macro_registry)
       : ctx_(ctx),
         bpftrace_(bpftrace),
         c_definitions_(c_definitions),
         map_metadata_(map_metadata),
         named_param_defaults_(named_param_defaults),
         type_metadata_(type_metadata),
-        macro_registry_(macro_registry),
-        has_child_(has_child)
+        macro_registry_(macro_registry)
   {
   }
 
@@ -316,7 +314,6 @@ private:
 
   uint32_t loop_depth_ = 0;
   uint32_t meta_depth_ = 0; // sizeof, offsetof, etc.
-  bool has_child_ = false;
 };
 
 } // namespace
@@ -825,15 +822,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
     ProbeType pt = probetype(probe->attach_points[0]->provider);
     bpf_prog_type bt = progtype(pt);
     std::string func = probe->attach_points[0]->func;
-
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType pt = probetype(attach_point->provider);
-      bpf_prog_type bt2 = progtype(pt);
-      if (bt != bt2)
-        builtin.addError()
-            << "ctx cannot be used in different BPF program types: "
-            << progtypeName(bt) << " and " << progtypeName(bt2);
-    }
     switch (bt) {
       case BPF_PROG_TYPE_KPROBE: {
         auto record = bpftrace_.structs.Lookup("struct pt_regs");
@@ -846,9 +834,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
         }
         break;
       }
-      case BPF_PROG_TYPE_TRACEPOINT:
-        builtin.addError() << "Use args instead of ctx in tracepoint";
-        break;
       case BPF_PROG_TYPE_PERF_EVENT:
         builtin.builtin_type = CreatePointer(
             CreateCStruct("struct bpf_perf_event_data",
@@ -864,12 +849,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
               CreateCStruct(type, bpftrace_.structs.Lookup(type)),
               AddrSpace::kernel);
           builtin.builtin_type.MarkCtxAccess();
-        } else {
-          builtin.addError() << "invalid program type";
         }
         break;
       default:
-        builtin.addError() << "invalid program type";
         break;
     }
   } else if (builtin.ident == "pid" || builtin.ident == "tid") {
@@ -904,12 +886,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
         builtin.builtin_type = arg->type;
       } else
         builtin.addError() << "Can't find a field " << RETVAL_FIELD_NAME;
-    } else {
-      builtin.addError()
-          << "The retval builtin can only be used with 'kretprobe' and "
-          << "'uretprobe' and 'fentry' probes"
-          << (type == ProbeType::tracepoint ? " (try to use args.ret instead)"
-                                            : "");
     }
     // For kretprobe, fentry, fexit -> AddrSpace::kernel
     // For uretprobe -> AddrSpace::user
@@ -938,29 +914,14 @@ void SemanticAnalyser::visit(Builtin &builtin)
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return;
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType type = probetype(attach_point->provider);
-      if (type == ProbeType::kprobe || type == ProbeType::kretprobe)
-        builtin.builtin_type = CreateKSym();
-      else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
-        builtin.builtin_type = CreateUSym();
-      else if (type == ProbeType::fentry || type == ProbeType::fexit) {
-        if (!bpftrace_.feature_->has_helper_get_func_ip()) {
-          builtin.addError()
-              << "BPF_FUNC_get_func_ip not available for your kernel version";
-        }
-        builtin.builtin_type = CreateKSym();
-      } else
-        builtin.addError() << "The func builtin can not be used with '"
-                           << attach_point->provider << "' probes";
 
-      if ((type == ProbeType::kretprobe || type == ProbeType::uretprobe) &&
-          !bpftrace_.feature_->has_helper_get_func_ip()) {
-        builtin.addError()
-            << "The 'func' builtin is not available for " << type
-            << "s on kernels without the get_func_ip BPF feature. Consider "
-               "using the 'probe' builtin instead.";
-      }
+    ProbeType type = probetype(probe->attach_points[0]->provider);
+    if (type == ProbeType::kprobe || type == ProbeType::kretprobe)
+      builtin.builtin_type = CreateKSym();
+    else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
+      builtin.builtin_type = CreateUSym();
+    else if (type == ProbeType::fentry || type == ProbeType::fexit) {
+      builtin.builtin_type = CreateKSym();
     }
   } else if (builtin.is_argx()) {
     auto *probe = get_probe(builtin, builtin.ident);
@@ -968,34 +929,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
       return;
     ProbeType pt = probetype(probe->attach_points[0]->provider);
     AddrSpace addrspace = find_addrspace(pt);
-    int arg_num = atoi(builtin.ident.substr(3).c_str());
-    for (auto *attach_point : probe->attach_points) {
-      ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
-          type != ProbeType::usdt && type != ProbeType::rawtracepoint)
-        builtin.addError() << "The " << builtin.ident
-                           << " builtin can only be used with "
-                           << "'kprobes', 'uprobes' and 'usdt' probes";
-      // argx in USDT probes doesn't need to check against arch::max_arg()
-      if (type != ProbeType::usdt &&
-          static_cast<size_t>(arg_num) >= arch::Host::arguments().size())
-        builtin.addError() << arch::Host::Machine << " doesn't support "
-                           << builtin.ident;
-    }
     builtin.builtin_type = CreateUInt64();
     builtin.builtin_type.SetAS(addrspace);
   } else if (builtin.ident == "__builtin_username") {
     builtin.builtin_type = CreateUsername();
   } else if (builtin.ident == "__builtin_usermode") {
-    if (arch::Host::Machine != arch::Machine::X86_64) {
-      builtin.addError() << "'usermode' builtin is only supported on x86_64";
-      return;
-    }
     builtin.builtin_type = CreateUInt8();
   } else if (builtin.ident == "__builtin_cpid") {
-    if (!has_child_) {
-      builtin.addError() << "cpid cannot be used without child command";
-    }
     builtin.builtin_type = CreateUInt32();
   } else if (builtin.ident == "args") {
     auto *probe = get_probe(builtin, builtin.ident);
@@ -1011,13 +951,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
     if (type == ProbeType::fentry || type == ProbeType::fexit ||
         type == ProbeType::uprobe || type == ProbeType::rawtracepoint) {
-      for (auto *attach_point : probe->attach_points) {
-        if (attach_point->target == "bpf") {
-          builtin.addError() << "The args builtin cannot be used for "
-                                "'fentry/fexit:bpf' probes";
-          return;
-        }
-      }
       builtin.builtin_type = CreateCStruct(
           *type_name, bpftrace_.structs.Lookup(*type_name));
       if (builtin.builtin_type.GetFieldCount() == 0)
@@ -1038,10 +971,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                      ? AddrSpace::user
                                      : AddrSpace::kernel);
       builtin.builtin_type.MarkCtxAccess();
-    } else {
-      builtin.addError() << "The args builtin can only be used with "
-                            "tracepoint/fentry/uprobe probes ("
-                         << type << " used here)";
     }
   } else {
     builtin.addError() << "Unknown builtin variable: '" << builtin.ident << "'";
@@ -3085,8 +3014,7 @@ void SemanticAnalyser::visit(For &f)
   CollectNodes<Builtin> builtins;
   builtins.visit(f.block);
   for (const Builtin &builtin : builtins.nodes()) {
-    if (builtin.builtin_type.IsCtxAccess() || builtin.is_argx() ||
-        builtin.ident == "__builtin_retval") {
+    if (builtin.builtin_type.IsCtxAccess()) {
       builtin.addError() << "'" << builtin.ident
                          << "' builtin is not allowed in a for-loop";
     }
@@ -4509,14 +4437,8 @@ Pass CreateSemanticPass()
                NamedParamDefaults &named_param_defaults,
                TypeMetadata &types,
                MacroRegistry &macro_registry) {
-    SemanticAnalyser semantics(ast,
-                               b,
-                               c_definitions,
-                               mm,
-                               named_param_defaults,
-                               types,
-                               macro_registry,
-                               !b.cmd_.empty() || b.child_ != nullptr);
+    SemanticAnalyser semantics(
+        ast, b, c_definitions, mm, named_param_defaults, types, macro_registry);
     semantics.analyse();
   };
 
