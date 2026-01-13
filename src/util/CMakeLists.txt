@@ -2,6 +2,7 @@ add_library(util STATIC
   bpf_funcs.cpp
   bpf_names.cpp
   bpf_progs.cpp
+  cache.cpp
   cgroup.cpp
   cpus.cpp
   elf_parser.cpp
