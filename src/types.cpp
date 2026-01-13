@@ -115,7 +115,7 @@ std::string to_string(Type ty)
   return ss.str();
 }
 
-bool SizedType::IsSameType(const SizedType &t) const
+bool SizedType::IsCompatible(const SizedType &t) const
 {
   if (t.GetTy() != type_)
     return false;
@@ -123,15 +123,28 @@ bool SizedType::IsSameType(const SizedType &t) const
   if (IsCStructTy())
     return t.GetName() == GetName();
 
-  if (IsPtrTy() && t.IsPtrTy())
-    return GetPointeeTy()->IsSameType(*t.GetPointeeTy());
+  if (IsPtrTy())
+    return GetPointeeTy()->IsCompatible(*t.GetPointeeTy());
 
-  if (IsTupleTy() && t.IsTupleTy()) {
+  if (IsIntegerTy()) {
+    if (IsSigned() == t.IsSigned()) {
+      return true;
+    }
+    // If the signs don't match then then unsigned side
+    // can't be promoted anymore if it's already the largest int
+    if (!t.IsSigned()) {
+      return t.GetSize() != 8;
+    } else { // t is signed
+      return GetSize() != 8;
+    }
+  }
+
+  if (IsTupleTy()) {
     if (GetFieldCount() != t.GetFieldCount())
       return false;
 
     for (ssize_t i = 0; i < GetFieldCount(); i++) {
-      if (!GetField(i).type.IsSameType(t.GetField(i).type))
+      if (!GetField(i).type.IsCompatible(t.GetField(i).type))
         return false;
     }
   }
@@ -140,7 +153,7 @@ bool SizedType::IsSameType(const SizedType &t) const
     return false;
   }
 
-  return type_ == t.GetTy();
+  return true;
 }
 
 bool SizedType::IsEqual(const SizedType &t) const
@@ -597,7 +610,7 @@ std::shared_ptr<const Struct> SizedType::GetStruct() const
 
 bool SizedType::FitsInto(const SizedType &t) const
 {
-  if (!IsSameType(t))
+  if (!IsCompatible(t))
     return false;
 
   if (IsStringTy() && t.IsStringTy())

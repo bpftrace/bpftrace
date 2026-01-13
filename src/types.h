@@ -271,7 +271,7 @@ public:
   bool IsEqual(const SizedType &t) const;
   bool operator==(const SizedType &t) const;
   std::strong_ordering operator<=>(const SizedType &t) const;
-  bool IsSameType(const SizedType &t) const;
+  bool IsCompatible(const SizedType &t) const;
   bool FitsInto(const SizedType &t) const;
 
   bool IsPrintableTy() const
