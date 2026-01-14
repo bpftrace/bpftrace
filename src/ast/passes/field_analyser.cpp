@@ -16,8 +16,7 @@ namespace {
 
 class FieldAnalyser : public Visitor<FieldAnalyser> {
 public:
-  explicit FieldAnalyser(BPFtrace &bpftrace, ExpansionResult &expansions)
-      : bpftrace_(bpftrace), expansions_(expansions)
+  explicit FieldAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
   {
   }
 
@@ -47,7 +46,6 @@ private:
   std::string attach_func_;
   SizedType sized_type_;
   BPFtrace &bpftrace_;
-  ExpansionResult &expansions_;
   bpf_prog_type prog_type_{ BPF_PROG_TYPE_UNSPEC };
   bool has_builtin_args_;
   Probe *probe_ = nullptr;
@@ -293,8 +291,8 @@ void FieldAnalyser::visit(Cast &cast)
 
 Pass CreateFieldAnalyserPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b, ExpansionResult &expansions) {
-    FieldAnalyser analyser(b, expansions);
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    FieldAnalyser analyser(b);
     analyser.visit(ast.root);
   };
 

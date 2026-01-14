@@ -283,7 +283,8 @@ TEST_F(field_analyser_btf, btf_types_struct_ptr)
 
 TEST_F(field_analyser_btf, btf_types_arr_access)
 {
-  auto bpftrace = get_mock_bpftrace();
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols()).Times(1);
   test(*bpftrace,
        "fentry:func_1 {\n"
        "  @foo2 = args.foo3[0].foo2;\n"
@@ -307,7 +308,8 @@ TEST_F(field_analyser_btf, btf_types_arr_access)
 
 TEST_F(field_analyser_btf, btf_types_anon_structs)
 {
-  auto bpftrace = get_mock_bpftrace();
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols()).Times(1);
   test(*bpftrace,
        "fentry:func_anon_struct {\n"
        "  @ = args.AnonStruct->AnonArray[0];\n"

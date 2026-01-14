@@ -12,20 +12,28 @@ using ::testing::StrictMock;
 
 void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 {
+  // This must return all functions used throughout the unit tests, otherwise
+  // attach points will be skipped in `ProbeAndApExpander` which calls
+  // `get_symbols_from_traceable_funcs(false)`.
   ON_CALL(matcher, get_symbols_from_traceable_funcs(false)).WillByDefault([]() {
-    std::string ksyms = "SyS_read\n"
+    std::string ksyms = "f\n"
+                        "func_1\n"
+                        "func_2\n"
+                        "mod_func_1\n"
+                        "mod_func_2\n"
                         "sys_read\n"
                         "sys_write\n"
-                        "my_one\n"
-                        "my_two\n";
+                        "tcp_shutdown\n"
+                        "queued_spin_lock_slowpath\n";
     auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
     return myval;
   });
 
   ON_CALL(matcher, get_symbols_from_traceable_funcs(true)).WillByDefault([]() {
-    std::string ksyms = "kernel_mod:func_in_mod\n"
-                        "kernel_mod:other_func_in_mod\n"
-                        "other_kernel_mod:func_in_mod\n"
+    std::string ksyms = "kernel_mod_1:mod_func_1\n"
+                        "kernel_mod_1:mod_func_2\n"
+                        "kernel_mod_2:mod_func_1\n"
+                        "mock_vmlinux:func_1\n"
                         "vmlinux:queued_spin_lock_slowpath\n";
     auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
     return myval;
@@ -33,38 +41,43 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 
   ON_CALL(matcher, get_symbols_from_file(tracefs::available_events()))
       .WillByDefault([](const std::string &) {
-        std::string tracepoints = "sched:sched_one\n"
+        std::string tracepoints = "category:event\n"
+                                  "sched:sched_one\n"
                                   "sched:sched_two\n"
-                                  "sched:foo\n"
                                   "sched_extra:sched_extra\n"
-                                  "notsched:bar\n"
-                                  "file:filename\n"
-                                  "tcp:some_tcp_tp\n"
-                                  "btf:tag\n"
                                   "vmlinux:event_rt\n";
         return std::unique_ptr<std::istream>(
             new std::istringstream(tracepoints));
       });
 
   ON_CALL(matcher, get_raw_tracepoint_symbols()).WillByDefault([]() {
-    std::string rawtracepoints = "vmlinux:event_rt\n"
+    std::string rawtracepoints = "module:event\n"
+                                 "vmlinux:event_rt\n"
                                  "vmlinux:sched_switch\n";
     return std::unique_ptr<std::istream>(
         new std::istringstream(rawtracepoints));
   });
 
   ON_CALL(matcher, get_fentry_symbols()).WillByDefault([]() {
-    std::string funcs = "vmlinux:func_1\n"
+    std::string funcs = "mock_vmlinux:f\n"
+                        "mock_vmlinux:func_1\n"
+                        "mock_vmlinux:func_2\n"
+                        "mock_vmlinux:func_3\n"
+                        "mock_vmlinux:func_anon_struct\n"
+                        "mock_vmlinux:func_arrays\n"
+                        "mock_vmlinux:tcp_shutdown\n"
+                        "vmlinux:func_1\n"
                         "vmlinux:func_2\n"
                         "vmlinux:func_3\n"
                         "vmlinux:queued_spin_lock_slowpath\n";
     return std::unique_ptr<std::istream>(new std::istringstream(funcs));
   });
 
-  std::string sh_usyms = "/bin/sh:first_open\n"
+  std::string sh_usyms = "/bin/sh:f\n"
+                         "/bin/sh:first_open\n"
+                         "/bin/sh:main\n"
+                         "/bin/sh:readline\n"
                          "/bin/sh:second_open\n"
-                         "/bin/sh:open_as_well\n"
-                         "/bin/sh:something_else\n"
                          "/bin/sh:cpp_mangled\n"
                          "/bin/sh:_Z11cpp_mangledi\n"
                          "/bin/sh:_Z11cpp_mangledv\n"
@@ -82,10 +95,10 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                 new std::istringstream(sh_usyms + bash_usyms));
           });
 
-  std::string sh_usdts = "/bin/sh:prov1:tp1\n"
+  std::string sh_usdts = "/bin/sh:probe\n"
+                         "/bin/sh:prov1:tp1\n"
                          "/bin/sh:prov1:tp2\n"
                          "/bin/sh:prov2:tp\n"
-                         "/bin/sh:prov2:notatp\n"
                          "/bin/sh:nahprov:tp\n";
   std::string bash_usdts = "/bin/bash:prov1:tp3\n";
   ON_CALL(matcher, get_symbols_from_usdt(_, "/bin/sh"))

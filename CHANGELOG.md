@@ -78,6 +78,8 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
+- Respect `missing_probes` config for bad `args` if the probe will be pruned
+  - [#4915](https://github.com/bpftrace/bpftrace/pull/4915)
 - Improved tuple binop comparison
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
 - Stack type comparison and compatibility

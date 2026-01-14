@@ -1763,11 +1763,12 @@ TEST_F(SemanticAnalyserTest, variable_reassignment)
 {
   test("kprobe:f { $x = 1; $x = 2; }");
   test("kprobe:f { $x = 1; $x = \"foo\"; }", Error{});
-  test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = "bye"; })");
+  test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = "bye"; })");
 
-  test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = 1; })", Error{ R"(
+  test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = 1; })",
+       Error{ R"(
 stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'uint8' when variable already contains a value of type 'string[3]'
-kprobe:f { $b = "hi"; $b = @b; } kprobe:g { @b = 1; }
+kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = 1; }
                       ~~~~~~~
 )" });
 }
@@ -1785,14 +1786,14 @@ TEST_F(SemanticAnalyserTest, variable_use_before_assign)
 
 TEST_F(SemanticAnalyserTest, maps_are_global)
 {
-  test("kprobe:f { @x = 1 } kprobe:g { @y = @x }");
-  test("kprobe:f { @x = 1 } kprobe:g { @x = \"abc\" }", Error{});
+  test("kprobe:f { @x = 1 } kprobe:func_1 { @y = @x }");
+  test("kprobe:f { @x = 1 } kprobe:func_1 { @x = \"abc\" }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, variables_are_local)
 {
-  test("kprobe:f { $x = 1 } kprobe:g { $x = \"abc\"; }");
-  test("kprobe:f { $x = 1 } kprobe:g { @y = $x }", Error{});
+  test("kprobe:f { $x = 1 } kprobe:func_1 { $x = \"abc\"; }");
+  test("kprobe:f { $x = 1 } kprobe:func_1 { @y = $x }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, array_access)
@@ -2535,7 +2536,7 @@ TEST_F(SemanticAnalyserTest, variable_casts_are_local)
   std::string structs = "struct type1 { int field; } struct "
                         "type2 { int field; }";
   test(structs + "kprobe:f { $x = *(struct type1 *)cpu } "
-                 "kprobe:g { $x = *(struct type2 *)cpu; }");
+                 "kprobe:func_1 { $x = *(struct type2 *)cpu; }");
 }
 
 TEST_F(SemanticAnalyserTest, map_casts_are_global)
@@ -2543,7 +2544,7 @@ TEST_F(SemanticAnalyserTest, map_casts_are_global)
   std::string structs = "struct type1 { int field; } struct "
                         "type2 { int field; }";
   test(structs + "kprobe:f { @x = *(struct type1 *)cpu }"
-                 "kprobe:g { @x = *(struct type2 *)cpu }",
+                 "kprobe:func_1 { @x = *(struct type2 *)cpu }",
        Error{});
 }
 
@@ -2763,8 +2764,8 @@ TEST_F(SemanticAnalyserTest, probe_short_name)
   test("t:sched:sched_one { 1 }");
   test("k:f { pid }");
   test("kr:f { pid }");
-  test("u:sh:f { 1 }");
-  test("ur:sh:f { 1 }");
+  test("u:/bin/sh:f { 1 }");
+  test("ur:/bin/sh:f { 1 }");
   test("p:hz:997 { 1 }");
   test("h:cache-references:1000000 { 1 }");
   test("s:faults:1000 { 1 }");
@@ -4277,14 +4278,14 @@ TEST_F(SemanticAnalyserTest, string_size)
   ASSERT_TRUE(var_assign->var()->var_type.IsStringTy());
   ASSERT_EQ(var_assign->var()->var_type.GetSize(), 6UL);
 
-  ast = test(R"(k:f1 {@ = "hi";} k:f2 {@ = "hello";})");
+  ast = test(R"(k:func_1 {@ = "hi";} k:func_2 {@ = "hello";})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   auto *map_assign = stmt.as<ast::AssignMapStatement>();
   ASSERT_TRUE(map_assign->expr.is<ast::Cast>());
   ASSERT_TRUE(map_assign->map_access->map->value_type.IsStringTy());
   ASSERT_EQ(map_assign->map_access->map->value_type.GetSize(), 6UL);
 
-  ast = test(R"(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})");
+  ast = test(R"(k:func_1 {@["hi"] = 0;} k:func_2 {@["hello"] = 1;})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
   ASSERT_TRUE(map_assign->map_access->key.is<ast::Cast>());
@@ -4292,7 +4293,7 @@ TEST_F(SemanticAnalyserTest, string_size)
   ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 6UL);
   ASSERT_EQ(map_assign->map_access->map->key_type.GetSize(), 6UL);
 
-  ast = test(R"(k:f1 {@["hi", 0] = 0;} k:f2 {@["hello", 1] = 1;})");
+  ast = test(R"(k:func_1 {@["hi", 0] = 0;} k:func_2 {@["hello", 1] = 1;})");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
   ASSERT_TRUE(map_assign->map_access->key.as<ast::Tuple>()
@@ -4306,7 +4307,7 @@ TEST_F(SemanticAnalyserTest, string_size)
   ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 7UL);
   ASSERT_EQ(map_assign->map_access->map->key_type.GetSize(), 7UL);
 
-  ast = test(R"(k:f1 {$x = ("hello", 0);} k:f2 {$x = ("hi", 0); })");
+  ast = test(R"(k:func_1 {$x = ("hello", 0);} k:func_2 {$x = ("hi", 0); })");
   stmt = ast.root->probes.at(0)->block->stmts.at(0);
   var_assign = stmt.as<ast::AssignVarStatement>();
   ASSERT_TRUE(var_assign->var()->var_type.IsTupleTy());

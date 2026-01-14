@@ -1374,6 +1374,26 @@ bool BPFtrace::is_traceable_func(const std::string &func_name) const
   return funcs.contains(func_name);
 }
 
+bool BPFtrace::is_module_loaded(const std::string &module) const
+{
+  if (module == "vmlinux") {
+    return true;
+  }
+
+  // This file lists all loaded modules
+  std::ifstream modules_file("/proc/modules");
+
+  for (std::string line; std::getline(modules_file, line);) {
+    if (line.compare(0, module.size() + 1, module + " ") == 0) {
+      modules_file.close();
+      return true;
+    }
+  }
+
+  modules_file.close();
+  return false;
+}
+
 int BPFtrace::resume_tracee(pid_t tracee_pid)
 {
   return ::kill(tracee_pid, SIGCONT);

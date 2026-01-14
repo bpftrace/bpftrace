@@ -495,24 +495,4 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   return cflags;
 }
 
-bool is_module_loaded(const std::string &module)
-{
-  if (module == "vmlinux") {
-    return true;
-  }
-
-  // This file lists all loaded modules
-  std::ifstream modules_file("/proc/modules");
-
-  for (std::string line; std::getline(modules_file, line);) {
-    if (line.compare(0, module.size() + 1, module + " ") == 0) {
-      modules_file.close();
-      return true;
-    }
-  }
-
-  modules_file.close();
-  return false;
-}
-
 } // namespace bpftrace::util

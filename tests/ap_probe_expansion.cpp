@@ -98,10 +98,10 @@ TEST(ap_probe_expansion, session_ast)
 TEST(ap_probe_expansion, kprobe_wildcard)
 {
   // Disabled kprobe_multi - should get full expansion
-  test_attach_points("kprobe:sys_read,kprobe:my_*,kprobe:sys_write {}",
+  test_attach_points("kprobe:sys_read,kprobe:func_*,kprobe:sys_write {}",
                      { "kprobe:sys_read",
-                       "kprobe:my_one",
-                       "kprobe:my_two",
+                       "kprobe:func_1",
+                       "kprobe:func_2",
                        "kprobe:sys_write" },
                      false);
 }
@@ -109,9 +109,9 @@ TEST(ap_probe_expansion, kprobe_wildcard)
 TEST(ap_probe_expansion, kprobe_multi_wildcard)
 {
   test_multi_attach_points(
-      "kprobe:sys_read,kprobe:my_*,kprobe:sys_write {}",
-      { "kprobe:sys_read", "kprobe:my_*", "kprobe:sys_write" },
-      { {}, { "my_one", "my_two" }, {} });
+      "kprobe:sys_read,kprobe:func_*,kprobe:sys_write {}",
+      { "kprobe:sys_read", "kprobe:func_*", "kprobe:sys_write" },
+      { {}, { "func_1", "func_2" }, {} });
 }
 
 TEST(ap_probe_expansion, probe_builtin)
@@ -119,10 +119,10 @@ TEST(ap_probe_expansion, probe_builtin)
   // Even though kprobe_multi is enabled (by default), we should get full
   // expansion due to using the "probe" builtin.
   test_attach_points(
-      "kprobe:sys_read,kprobe:my_*,kprobe:sys_write { __builtin_probe }",
+      "kprobe:sys_read,kprobe:func_*,kprobe:sys_write { __builtin_probe }",
       { "kprobe:sys_read",
-        "kprobe:my_one",
-        "kprobe:my_two",
+        "kprobe:func_1",
+        "kprobe:func_2",
         "kprobe:sys_write" });
 }
 
@@ -143,19 +143,19 @@ TEST(ap_probe_expansion, kprobe_module_wildcard)
 {
   // We leave kprobe_multi enabled here but it doesn't support the
   // module:function syntax so full expansion should be done anyways.
-  test_attach_points("kprobe:*kernel_mod:* {}",
-                     { "kprobe:kernel_mod:func_in_mod",
-                       "kprobe:kernel_mod:other_func_in_mod",
-                       "kprobe:other_kernel_mod:func_in_mod" });
+  test_attach_points("kprobe:kernel_mod_*:* {}",
+                     { "kprobe:kernel_mod_1:mod_func_1",
+                       "kprobe:kernel_mod_1:mod_func_2",
+                       "kprobe:kernel_mod_2:mod_func_1" });
 }
 
 TEST(ap_probe_expansion, kprobe_module_function_wildcard)
 {
   // We leave kprobe_multi enabled here but it doesn't support the
   // module:function syntax so full expansion should be done anyways.
-  test_attach_points("kprobe:kernel_mod:*func_in_mod {}",
-                     { "kprobe:kernel_mod:func_in_mod",
-                       "kprobe:kernel_mod:other_func_in_mod" });
+  test_attach_points("kprobe:kernel_mod_1:mod_func_* {}",
+                     { "kprobe:kernel_mod_1:mod_func_1",
+                       "kprobe:kernel_mod_1:mod_func_2" });
 }
 
 TEST(ap_probe_expansion, uprobe_wildcard)
@@ -195,14 +195,14 @@ TEST(ap_probe_expansion, uprobe_multi_wildcard_file)
 
 TEST(ap_probe_expansion, uprobe_wildcard_no_matches)
 {
-  test_attach_points("uprobe:/bin/sh:foo*,uprobe:/bin/sh:first_open {}",
+  test_attach_points("uprobe:/bin/sh:nonsense*,uprobe:/bin/sh:first_open {}",
                      { "uprobe:/bin/sh:first_open" },
                      false);
 }
 
 TEST(ap_probe_expansion, uprobe_wildcard_multi_no_matches)
 {
-  test_attach_points("uprobe:/bin/sh:foo*,uprobe:/bin/sh:first_open {}",
+  test_attach_points("uprobe:/bin/sh:nonsense*,uprobe:/bin/sh:first_open {}",
                      { "uprobe:/bin/sh:first_open" });
 }
 
@@ -280,7 +280,12 @@ class ap_probe_expansion_btf : public test_btf {};
 TEST(ap_probe_expansion_btf, fentry_wildcard)
 {
   test_attach_points("fentry:func_* {}",
-                     { "fentry:vmlinux:func_1",
+                     { "fentry:mock_vmlinux:func_1",
+                       "fentry:mock_vmlinux:func_2",
+                       "fentry:mock_vmlinux:func_3",
+                       "fentry:mock_vmlinux:func_anon_struct",
+                       "fentry:mock_vmlinux:func_arrays",
+                       "fentry:vmlinux:func_1",
                        "fentry:vmlinux:func_2",
                        "fentry:vmlinux:func_3" });
 }
@@ -293,7 +298,8 @@ TEST(ap_probe_expansion_btf, fentry_wildcard_no_matches)
 
 TEST(ap_probe_expansion_btf, fentry_module_wildcard)
 {
-  test_attach_points("fentry:*:func_1 {}", { "fentry:vmlinux:func_1" });
+  test_attach_points("fentry:*:func_1 {}",
+                     { "fentry:mock_vmlinux:func_1", "fentry:vmlinux:func_1" });
 }
 
 TEST(ap_probe_expansion_btf, fentry_bpf_id_wildcard)
@@ -305,7 +311,8 @@ TEST(ap_probe_expansion_btf, fentry_bpf_id_wildcard)
 TEST(ap_probe_expansion_btf, rawtracepoint_wildcard)
 {
   test_attach_points("rawtracepoint:event* {}",
-                     { "rawtracepoint:vmlinux:event_rt" });
+                     { "rawtracepoint:module:event",
+                       "rawtracepoint:vmlinux:event_rt" });
 }
 
 TEST(ap_probe_expansion_btf, rawtracepoint_wildcard_no_matches)
@@ -316,9 +323,9 @@ TEST(ap_probe_expansion_btf, rawtracepoint_wildcard_no_matches)
 
 TEST(ap_probe_expansion_btf, kprobe_session)
 {
-  test_multi_attach_points("kprobe:my_* {} kretprobe:my_* {}",
-                           { "kprobe:my_*" },
-                           { { "my_one", "my_two" } });
+  test_multi_attach_points("kprobe:func_* {} kretprobe:func_* {}",
+                           { "kprobe:func_*" },
+                           { { "func_1", "func_2" } });
 }
 
 } // namespace bpftrace::test::ap_probe_expansion

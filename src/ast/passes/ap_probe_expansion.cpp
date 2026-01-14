@@ -320,7 +320,40 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
         break;
       }
       case ExpansionType::NONE: {
-        new_aps.push_back(ap);
+        auto pt = probetype(ap->provider);
+
+        if (pt == ProbeType::kprobe || pt == ProbeType::kretprobe) {
+          // Construct a string containing "module:function."
+          // Also log a warning or throw an error if the module doesn't exist,
+          // before attempting to attach.
+          // Note that we do not pass vmlinux, if it is specified.
+          const std::string &funcname = ap->func;
+          const std::string &modname = ap->target;
+          if ((!modname.empty()) && modname != "vmlinux") {
+            if (!bpftrace_.is_module_loaded(modname)) {
+              ap->addError() << "specified module " + modname + " in probe " +
+                                    ap->provider + ":" + modname + ":" +
+                                    funcname + " is not loaded.";
+            }
+          }
+        }
+
+        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        // Filter out unnecessary probes, as they may not be missing.
+        if (matches.empty() && (pt != ProbeType::watchpoint)) {
+          const auto missing_probes = bpftrace_.config_->missing_probes;
+          std::string msg = "No matches for " +
+                            probetypeName(probetype(ap->provider)) + " " +
+                            (ap->target.empty() ? "" : ap->target + ":") +
+                            ap->func;
+          if (missing_probes == ConfigMissingProbes::warn) {
+            ap->addWarning() << msg << ". Skipping.";
+          } else if (missing_probes == ConfigMissingProbes::error) {
+            ap->addError() << msg << ".";
+          }
+        } else {
+          new_aps.push_back(ap);
+        }
         break;
       }
     }
