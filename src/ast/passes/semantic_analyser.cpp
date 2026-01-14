@@ -926,8 +926,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
   } else if (builtin.ident == "ustack") {
     builtin.builtin_type = CreateStack(
-        false,
-        StackType{ .mode = bpftrace_.config_->stack_mode, .kernel = false });
+        false, StackType{ .mode = bpftrace_.config_->stack_mode });
   } else if (builtin.ident == "__builtin_comm") {
     constexpr int COMM_SIZE = 16;
     builtin.builtin_type = CreateString(COMM_SIZE);
@@ -1996,7 +1995,6 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   call.return_type = CreateStack(kernel);
   StackType stack_type;
   stack_type.mode = bpftrace_.config_->stack_mode;
-  stack_type.kernel = kernel;
 
   switch (call.vargs.size()) {
     case 0:
@@ -2762,13 +2760,6 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
     // This assignment is just temporary to prevent errors
     // before the final pass
     if_expr.result_type = lhs;
-    return;
-  }
-
-  if (lhs.IsStack() && lhs.stack_type != rhs.stack_type) {
-    // TODO: fix this for different stack types
-    if_expr.addError() << "Branches must have the same stack type on the right "
-                          "and left sides.";
     return;
   }
 

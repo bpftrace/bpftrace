@@ -398,7 +398,7 @@ begin { @x[1] = 0; @x[2,3]; }
       @x["b", 2, kstack];
     })",
        Error{ R"(
-stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],uint8,kstack)' when map expects arguments: '(uint8,string[2],kstack)'
+stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],uint8,kstack_bpftrace_127)' when map expects arguments: '(uint8,string[2],kstack_bpftrace_127)'
       @x["b", 2, kstack];
       ~~~~~~~~~~~~~~~~~~
 )" });
@@ -471,6 +471,7 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
     { "macaddr(arg0)", "macaddr(arg1)" },
     { "kstack(3)", "kstack(3)" },
     { "ustack(3)", "ustack(3)" },
+    { "ustack(build_id, 3)", "ustack(build_id, 3)" },
     { "ntop(arg0)", "ntop(arg1)" },
     { "nsecs(boot)", "nsecs(monotonic)" },
     { "ksym(arg0)", "ksym(arg1)" },
@@ -534,13 +535,13 @@ kprobe:f { @x = pid < 10000 ? (1, 2) : ("a", 4) }
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }", Error{ R"(
-stdin:1:17-52: ERROR: Branches must have the same stack type on the right and left sides.
+stdin:1:17-52: ERROR: Branches must return the same type: have 'ustack_bpftrace_1' and 'ustack_bpftrace_2'
 kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }", Error{ R"(
-stdin:1:17-57: ERROR: Branches must have the same stack type on the right and left sides.
+stdin:1:17-57: ERROR: Branches must return the same type: have 'kstack_raw_127' and 'kstack_perf_127'
 kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -1686,6 +1687,15 @@ TEST_F(SemanticAnalyserTest, call_stack)
   test("kprobe:f { ustack($2) }", Mock{ *bpftrace }, Error{});
   test("kprobe:f { kstack(perf, $2) }", Mock{ *bpftrace }, Error{});
   test("kprobe:f { ustack(perf, $2) }", Mock{ *bpftrace }, Error{});
+
+  // Type comparisons
+  test("kprobe:f { $a = (1, kstack); $a = (2, kstack); }");
+  test("kprobe:f { $a = (1, kstack); $a = (2, ustack); }", Error{});
+  test("kprobe:f { $a = (1, kstack(10)); $a = (2, kstack(11)); }", Error{});
+  test("kprobe:f { $a = (1, kstack(perf)); $a = (2, kstack(bpftrace)); }",
+       Error{});
+  test("kprobe:f { $a = (1, kstack(perf, 1)); $a = (2, kstack(perf, 2)); }",
+       Error{});
 }
 
 TEST_F(SemanticAnalyserTest, call_macaddr)
@@ -2582,7 +2592,7 @@ TEST_F(SemanticAnalyserTest, cast_bool)
   test("kprobe:f { $a = (int64)true; $b = (int64)false; }");
 
   test("kprobe:f { $a = (bool)kstack; }", Error{ R"(
-stdin:1:17-23: ERROR: Cannot cast from "kstack" to "bool"
+stdin:1:17-23: ERROR: Cannot cast from "kstack_bpftrace_127" to "bool"
 kprobe:f { $a = (bool)kstack; }
                 ~~~~~~
 )" });

@@ -80,6 +80,8 @@ and this project adheres to
 #### Fixed
 - Improved tuple binop comparison
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
+- Stack type comparison and compatibility
+  - [#4948](https://github.com/bpftrace/bpftrace/pull/4948)
 #### Security
 #### Docs
 #### Tools

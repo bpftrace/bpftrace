@@ -148,3 +148,9 @@ NAME map key scratch buffer for map aggregates
 PROG config = { on_stack_limit = 0 }  begin { @a[pid, comm, "reallylongstr"] = count(); }
 EXPECT Attached 1 probe
 TIMEOUT 1
+
+# https://github.com/bpftrace/bpftrace/issues/4945
+NAME stack modes and size
+PROG begin { $a = (1, ustack); $b = (1, ustack(build_id)); $c = (1, ustack(build_id, 30)); $d = (1, kstack); $e = (1, kstack(raw)); $f = (1, kstack(raw, 30)); }
+EXPECT Attached 1 probe
+TIMEOUT 1

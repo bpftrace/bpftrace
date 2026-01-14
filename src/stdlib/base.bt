@@ -555,7 +555,7 @@ macro len(@map)
 
 macro len(e)
 {
-  if comptime (typeinfo(e) != typeinfo(ustack) && typeinfo(e) != typeinfo(kstack)) {
+  if comptime (typeinfo(e).1 != typeinfo(ustack).1 && typeinfo(e).1 != typeinfo(kstack).1) {
     fail("call to len() expects a map, ustack, or kstack")
   } else {
     // This is handled in codegen for now
