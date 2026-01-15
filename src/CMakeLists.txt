@@ -194,11 +194,6 @@ if (LIBDW_FOUND)
   endif()
 endif()
 
-# Support for std::filesystem
-# GCC version <9 and Clang (all versions) require -lstdc++fs
-target_link_libraries(runtime $<$<OR:$<CXX_COMPILER_ID:Clang>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9>>:stdc++fs>)
-target_link_libraries(libbpftrace $<$<OR:$<CXX_COMPILER_ID:Clang>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9>>:stdc++fs>)
-
 # We do not use add_link_options here since it doesn't work for some reason.
 # Instead, just pass -fsanitize=... to the linker when linking the bpftrace
 # target.
