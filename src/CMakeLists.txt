@@ -4,12 +4,8 @@ endif()
 
 # These add -fsanitize=... to all below compiler invocations, including
 # subdirectories.
-if (BUILD_ASAN)
-  add_compile_options("-fsanitize=address")
-endif()
-if (BUILD_UBSAN)
-  add_compile_options("-fsanitize=undefined")
-endif()
+add_compile_options($<$<BOOL:${BUILD_ASAN}>:-fsanitize=address>)
+add_compile_options($<$<BOOL:${BUILD_UBSAN}>:-fsanitize=undefined>)
 
 add_library(required_resources required_resources.cpp)
 add_dependencies(required_resources parser)
@@ -102,9 +98,10 @@ target_include_directories(libbpftrace PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(libbpftrace PRIVATE ${BPFTRACE_FLAGS})
 
 # Linking
-if(STATIC_LINKING)
-  target_link_options(bpftrace BEFORE PRIVATE "-static-libgcc" "-static-libstdc++")
-endif(STATIC_LINKING)
+target_link_options(bpftrace BEFORE PRIVATE
+  $<$<BOOL:${STATIC_LINKING}>:-static-libgcc>
+  $<$<BOOL:${STATIC_LINKING}>:-static-libstdc++>
+)
 
 
 target_link_libraries(runtime debugfs output tracefs util)
@@ -199,20 +196,14 @@ endif()
 
 # Support for std::filesystem
 # GCC version <9 and Clang (all versions) require -lstdc++fs
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9")
-  target_link_libraries(runtime "stdc++fs")
-  target_link_libraries(libbpftrace "stdc++fs")
-endif()
+target_link_libraries(runtime $<$<OR:$<CXX_COMPILER_ID:Clang>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9>>:stdc++fs>)
+target_link_libraries(libbpftrace $<$<OR:$<CXX_COMPILER_ID:Clang>,$<VERSION_LESS:$<CXX_COMPILER_VERSION>,9>>:stdc++fs>)
 
 # We do not use add_link_options here since it doesn't work for some reason.
 # Instead, just pass -fsanitize=... to the linker when linking the bpftrace
 # target.
-if (BUILD_ASAN)
-  target_link_options(bpftrace PUBLIC "-fsanitize=address")
-endif()
-if (BUILD_UBSAN)
-  target_link_options(bpftrace PUBLIC "-fsanitize=undefined")
-endif()
+target_link_options(bpftrace PUBLIC $<$<BOOL:${BUILD_ASAN}>:-fsanitize=address>)
+target_link_options(bpftrace PUBLIC $<$<BOOL:${BUILD_UBSAN}>:-fsanitize=undefined>)
 
 if (STATIC_LINKING)
   if(ANDROID)
