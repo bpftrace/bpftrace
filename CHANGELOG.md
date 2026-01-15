@@ -84,6 +84,8 @@ and this project adheres to
   - [#4523](https://github.com/bpftrace/bpftrace/pull/4523)
 - Stack type comparison and compatibility
   - [#4948](https://github.com/bpftrace/bpftrace/pull/4948)
+- Fix missing lines in stack resolution
+  - [#4953] (https://github.com/bpftrace/bpftrace/pull/4953)
 #### Security
 #### Docs
 #### Tools

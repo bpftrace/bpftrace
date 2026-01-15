@@ -1002,11 +1002,10 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
   std::string padding(indent, ' ');
 
   stack << "\n";
-  for (uint64_t i = 0; i < nr_stack_frames;) {
+  for (uint64_t i = 0; i < nr_stack_frames; ++i) {
     auto addr = raw_stack.bitcast<uint64_t>(i);
     if (stack_type.mode == StackMode::raw) {
       stack << std::hex << addr << std::endl;
-      ++i;
       continue;
     }
     std::vector<std::string> syms;
@@ -1023,9 +1022,7 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
                                 stack_type.mode == StackMode::perf,
                                 config_->show_debug_info);
 
-    std::string sym;
-    for (size_t sym_idx = 0; i < nr_stack_frames && sym_idx < syms.size();) {
-      sym = syms.at(sym_idx);
+    for (auto const &sym : syms) {
       switch (stack_type.mode) {
         case StackMode::bpftrace:
           stack << padding << sym << std::endl;
@@ -1041,8 +1038,6 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
                  "symbolication.";
           break;
       }
-      ++i;
-      ++sym_idx;
     }
   }
 
