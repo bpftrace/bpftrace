@@ -296,6 +296,15 @@ private:
       const std::vector<Value *> &extra_keys,
       const Location &loc);
 
+  // Copy expression value into a map buffer (key or value allocation).
+  // Handles memcpy for BPF memory, probe_read for structs/arrays, or store.
+  void copyToMapBuffer(Value *dest,
+                       const SizedType &dest_type,
+                       Value *src,
+
+                       const SizedType &src_type,
+                       const Location &loc);
+
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 
   llvm::Function *createLog2Function();
@@ -2889,29 +2898,21 @@ ScopedExpr CodegenLLVM::visit(AssignMapStatement &assignment)
 
   const auto &map_type = assignment.map_access->map->type();
   const auto &expr_type = assignment.expr.type();
-  const auto self_alloca = needAssignMapStatementAllocation(assignment);
-  Value *value = self_alloca ? b_.CreateWriteMapValueAllocation(
-                                   map_type,
-                                   assignment.map_access->map->ident + "_val",
-                                   assignment.loc)
-                             : expr;
-  if (shouldBeInBpfMemoryAlready(expr_type)) {
-    b_.CreateMemcpyBPF(value, expr, expr_type.GetSize());
-  } else if (map_type.IsCStructTy() || map_type.IsArrayTy()) {
-    if (!expr_type.is_internal) {
-      // expr currently contains a pointer to the struct or array
-      // We now want to read the entire struct/array in so we can save it
-      b_.CreateProbeRead(
-          value, map_type, expr, assignment.loc, expr_type.GetAS());
-    }
-  } else {
-    b_.CreateStore(expr, value);
+  const auto alloca_created_here = needMapAllocation(expr_type);
+  Value *value = alloca_created_here
+                     ? b_.CreateWriteMapValueAllocation(
+                           map_type,
+                           assignment.map_access->map->ident + "_val",
+                           assignment.loc)
+                     : expr;
+  if (alloca_created_here) {
+    copyToMapBuffer(value, map_type, expr, expr_type, assignment.loc);
   }
   b_.CreateMapUpdateElem(assignment.map_access->map->ident,
                          scoped_key.value(),
                          value,
                          assignment.loc);
-  if (self_alloca && dyn_cast<AllocaInst>(value))
+  if (alloca_created_here && dyn_cast<AllocaInst>(value))
     b_.CreateLifetimeEnd(value);
   return ScopedExpr();
 }
@@ -3286,39 +3287,41 @@ int CodegenLLVM::getNextIndexForProbe()
   return next_probe_index_++;
 }
 
+void CodegenLLVM::copyToMapBuffer(Value *dest,
+                                  const SizedType &dest_type,
+                                  Value *src,
+                                  const SizedType &src_type,
+                                  const Location &loc)
+{
+  if (shouldBeInBpfMemoryAlready(src_type)) {
+    b_.CreateMemcpyBPF(dest, src, src_type.GetSize());
+  } else if (dest_type.IsCStructTy() || dest_type.IsArrayTy()) {
+    // src currently contains a pointer to the struct or array
+    // We now want to read the entire struct/array in so we can save it
+    b_.CreateProbeRead(dest, dest_type, src, loc, src_type.GetAS());
+  } else {
+    b_.CreateStore(src, dest);
+  }
+}
+
 ScopedExpr CodegenLLVM::getMapKey(Map &map, Expression &key_expr)
 {
-  const auto alloca_created_here = needMapKeyAllocation(key_expr);
+  const auto &expr_type = key_expr.type();
+  const auto alloca_created_here = needMapAllocation(expr_type);
 
   auto scoped_key_expr = visit(key_expr);
   const auto &key_type = map.key_type;
+  Value *expr = scoped_key_expr.value();
   // Allocation needs to be done after recursing via visit(key_expr) so that
   // we have the expression SSA value.
   Value *key = alloca_created_here
                    ? b_.CreateMapKeyAllocation(key_type,
                                                map.ident + "_key",
                                                map.loc)
-                   : scoped_key_expr.value();
-  if (inBpfMemory(key_expr.type())) {
-    b_.CreateMemcpyBPF(key, scoped_key_expr.value(), key_expr.type().GetSize());
-  } else if (map.key_type.IsIntTy()) {
-    b_.CreateStore(scoped_key_expr.value(), key);
-  } else if (map.key_type.IsBoolTy()) {
-    b_.CreateStore(
-        b_.CreateIntCast(scoped_key_expr.value(), b_.getInt1Ty(), false), key);
-  } else {
-    if (key_expr.type().IsArrayTy() || key_expr.type().IsCStructTy()) {
-      // We need to read the entire array/struct and save it
-      b_.CreateProbeRead(
-          key, key_expr.type(), scoped_key_expr.value(), map.loc);
-    } else if (key_expr.type().IsPtrTy()) {
-      b_.CreateStore(scoped_key_expr.value(), key);
-    } else {
-      b_.CreateStore(b_.CreateIntCast(scoped_key_expr.value(),
-                                      b_.getInt64Ty(),
-                                      key_expr.type().IsSigned()),
-                     key);
-    }
+                   : expr;
+
+  if (alloca_created_here) {
+    copyToMapBuffer(key, key_type, expr, expr_type, map.loc);
   }
   // Either way we hold on to the original key, to ensure that its lifetime
   // lasts as long as it may be accessed.

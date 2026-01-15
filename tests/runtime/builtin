@@ -235,6 +235,13 @@ REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
+NAME args in a tuple in map
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { $a = (1, "hello", args); @[$a] = (args, "bye"); exit(); }
+EXPECT_REGEX @[1, hello, { .n = 0x[0-9a-f]+, .c = 120 }]: \({ .n = 0x[0-9a-f]+, .c = 120 }, bye\)
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
 NAME args in uprobe store in map and access field
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = args; print(@.c); exit(); }
 EXPECT 120
