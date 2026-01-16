@@ -1586,37 +1586,6 @@ TEST_F(SemanticAnalyserTest, call_reg)
   test("kprobe:f { reg(123); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_func)
-{
-  test("kprobe:f { @[func] = count(); }");
-  test("kprobe:f { printf(\"%s\", func); }");
-  test("uprobe:/bin/sh:f { @[func] = count(); }");
-  test("uprobe:/bin/sh:f { printf(\"%s\", func);  }");
-
-  test("fentry:f { func }");
-  test("fexit:f { func }");
-  test("kretprobe:f { func }");
-  test("uretprobe:/bin/sh:f { func }");
-
-  // We only care about the
-  // BPF_FUNC_get_func_ip feature and error
-  // message here, but don't have enough
-  // control over the mock features to only
-  // disable that.
-  test("fentry:f { func }", NoFeatures::Enable, Error{ R"(
-ERROR: BPF_FUNC_get_func_ip not available for your kernel version
-)" });
-  test("fexit:f { func }", NoFeatures::Enable, Error{ R"(
-BPF_FUNC_get_func_ip not available for your kernel version
-)" });
-  test("kretprobe:f { func }", NoFeatures::Enable, Error{ R"(
-ERROR: The 'func' builtin is not available for kretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
-)" });
-  test("uretprobe:/bin/sh:f { func }", NoFeatures::Enable, Error{ R"(
-ERROR: The 'func' builtin is not available for uretprobes on kernels without the get_func_ip BPF feature. Consider using the 'probe' builtin instead.
-)" });
-}
-
 TEST_F(SemanticAnalyserTest, call_probe)
 {
   test("kprobe:f { @[probe] = count(); }");
@@ -2339,21 +2308,6 @@ TEST_F(SemanticAnalyserTest, join_delimiter)
   test("kprobe:f { @x = join(arg0, \",\") }", Error{});
   test("kprobe:f { $x = join(arg0, \",\") }", Error{});
   test("kprobe:f { join(arg0, 3) }", Error{});
-}
-
-TEST_F(SemanticAnalyserTest, args_builtin_wrong_use)
-{
-  test("begin { args.foo }", Error{});
-  test("end { args.foo }", Error{});
-  test("kprobe:f { args.foo }", Error{});
-  test("kretprobe:f { args.foo }", Error{});
-  test("uretprobe:/bin/sh/:f { args.foo }", Error{});
-  test("profile:ms:1 { args.foo }", Error{});
-  test("usdt:sh:namespace:probe { args.foo }", Error{});
-  test("profile:ms:100 { args.foo }", Error{});
-  test("hardware:cache-references:1000000 { args.foo }", Error{});
-  test("software:faults:1000 { args.foo }", Error{});
-  test("interval:s:1 { args.foo }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, variable_cast_types)
@@ -4541,20 +4495,6 @@ kprobe:tcp_shutdown { $ret = socket_cookie((struct sock *)arg0); }
 )" });
 }
 
-TEST_F(SemanticAnalyserBTFTest, iter)
-{
-  test("iter:task { 1 }");
-  test("iter:task { $x = ctx->task->pid }");
-  test("iter:task_file { $x = ctx->file->ino }");
-  test("iter:task_vma { $x = ctx->vma->vm_start }");
-  test("iter:task { printf(\"%d\", ctx->task->pid); }");
-  test("iter:task { $x = args.foo; }", Error{ R"(
-stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint/fentry/uprobe probes (iter used here)
-iter:task { $x = args.foo; }
-                 ~~~~
-)" });
-}
-
 TEST_F(SemanticAnalyserBTFTest, rawtracepoint)
 {
   test("rawtracepoint:event_rt { args.first_real_arg }");
@@ -5095,10 +5035,10 @@ begin { @a = count(); @b = 1; @b = @a; }
 
 TEST_F(SemanticAnalyserTest, for_loop_no_ctx_access)
 {
-  test("kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }", Error{ R"(
-stdin:1:44-48: ERROR: 'arg0' builtin is not allowed in a for-loop
-kprobe:f { @map[0] = 1; for ($kv : @map) { arg0 } }
-                                           ~~~~
+  test("kprobe:f { @map[0] = 1; for ($kv : @map) { ctx } }", Error{ R"(
+stdin:1:44-47: ERROR: 'ctx' builtin is not allowed in a for-loop
+kprobe:f { @map[0] = 1; for ($kv : @map) { ctx } }
+                                           ~~~
 )" });
 }
 

@@ -6,6 +6,7 @@
 #include "ast/visitor.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
+#include "collect_nodes.h"
 #include "log.h"
 #include "util/paths.h"
 
@@ -15,24 +16,43 @@ namespace {
 
 class Builtins : public Visitor<Builtins, std::optional<Expression>> {
 public:
-  explicit Builtins(ASTContext &ast, BPFtrace &bpftrace)
-      : ast_(ast), bpftrace_(bpftrace) {};
+  explicit Builtins(ASTContext &ast, BPFtrace &bpftrace, bool has_child = true)
+      : ast_(ast), bpftrace_(bpftrace), has_child_(has_child) {};
 
   using Visitor<Builtins, std::optional<Expression>>::visit;
   std::optional<Expression> visit(Builtin &builtin);
   std::optional<Expression> visit(Call &call);
   std::optional<Expression> visit(Identifier &identifier);
   std::optional<Expression> visit(Expression &expression);
+  std::optional<Expression> visit(For &f);
   std::optional<Expression> visit(Probe &probe);
   std::optional<Expression> check(const std::string &ident, Node &node);
+
+  Probe *get_probe(Node &node, std::string name);
 
 private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
+  bool has_child_ = false;
   Node *top_level_node_ = nullptr;
 };
 
 } // namespace
+
+Probe *Builtins::get_probe(Node &node, std::string name)
+{
+  auto *probe = dynamic_cast<Probe *>(top_level_node_);
+  if (probe == nullptr) {
+    // Attempting to use probe-specific feature in non-probe context
+    if (name.empty()) {
+      node.addError() << "Feature not supported outside probe";
+    } else {
+      node.addError() << "Builtin " << name << " not supported outside probe";
+    }
+  }
+
+  return probe;
+}
 
 std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
 {
@@ -146,6 +166,116 @@ std::optional<Expression> Builtins::visit(Call &call)
 
 std::optional<Expression> Builtins::visit(Builtin &builtin)
 {
+  if (builtin.ident == "ctx") {
+    auto *probe = get_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return std::nullopt;
+    ProbeType pt = probe->get_probetype();
+    bpf_prog_type bt = progtype(pt);
+    bool has_error = false;
+    switch (bt) {
+      case BPF_PROG_TYPE_KPROBE:
+      case BPF_PROG_TYPE_PERF_EVENT:
+        break;
+      case BPF_PROG_TYPE_TRACEPOINT:
+        builtin.addError() << "Use args instead of ctx in tracepoint";
+        break;
+      case BPF_PROG_TYPE_TRACING:
+        if (pt != ProbeType::iter) {
+          has_error = true;
+        }
+        break;
+      default:
+        has_error = true;
+        break;
+    }
+
+    if (has_error) {
+      builtin.addError() << "The " << builtin.ident
+                         << " builtin can not be used with '"
+                         << probe->attach_points[0]->provider << "' probes";
+    }
+  } else if (builtin.ident == "__builtin_func") {
+    auto *probe = get_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return std::nullopt;
+    ProbeType type = probe->get_probetype();
+    if (type == ProbeType::kprobe || type == ProbeType::uprobe) {
+      // OK we don't use BPF_FUNC_get_func_ip helper
+    } else if (type == ProbeType::kretprobe || type == ProbeType::uretprobe ||
+               type == ProbeType::fentry || type == ProbeType::fexit) {
+      if (!bpftrace_.feature_->has_helper_get_func_ip()) {
+        builtin.addError()
+            << "BPF_FUNC_get_func_ip not available for your kernel version. "
+               "Consider using the 'probe' builtin instead.";
+      }
+    } else {
+      builtin.addError() << "The func builtin can not be used with '"
+                         << probe->attach_points[0]->provider << "' probes";
+    }
+  } else if (builtin.ident == "__builtin_retval") {
+    auto *probe = get_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return std::nullopt;
+    ProbeType type = probe->get_probetype();
+    if (type != ProbeType::kretprobe && type != ProbeType::uretprobe &&
+        type != ProbeType::fentry && type != ProbeType::fexit) {
+      builtin.addError()
+          << "The retval builtin can only be used with 'kretprobe' and "
+          << "'uretprobe' and 'fentry' probes"
+          << (type == ProbeType::tracepoint ? " (try to use args.ret instead)"
+                                            : "");
+    }
+  } else if (builtin.is_argx()) {
+    auto *probe = get_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return std::nullopt;
+    int arg_num = atoi(builtin.ident.substr(3).c_str());
+    ProbeType type = probe->get_probetype();
+    if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
+        type != ProbeType::usdt && type != ProbeType::rawtracepoint) {
+      // N.B. this works for rawtracepoints but it's discouraged
+      builtin.addError() << "The " << builtin.ident
+                         << " builtin can only be used with "
+                         << "'kprobes', 'uprobes' and 'usdt' probes";
+    }
+    // argx in USDT probes doesn't need to check against arch::max_arg()
+    if (type != ProbeType::usdt &&
+        static_cast<size_t>(arg_num) >= arch::Host::arguments().size()) {
+      builtin.addError() << arch::Host::Machine << " doesn't support "
+                         << builtin.ident;
+    }
+
+  } else if (builtin.ident == "__builtin_usermode") {
+    if (arch::Host::Machine != arch::Machine::X86_64) {
+      builtin.addError() << "'usermode' builtin is only supported on x86_64";
+    }
+  } else if (builtin.ident == "__builtin_cpid") {
+    if (!has_child_) {
+      builtin.addError() << "cpid cannot be used without child command";
+    }
+  } else if (builtin.ident == "args") {
+    auto *probe = get_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return std::nullopt;
+    ProbeType type = probe->get_probetype();
+
+    if (type == ProbeType::fentry || type == ProbeType::fexit ||
+        type == ProbeType::uprobe || type == ProbeType::rawtracepoint ||
+        type == ProbeType::tracepoint) {
+      if ((type == ProbeType::fentry || type == ProbeType::fexit) &&
+          probe->attach_points[0]->target == "bpf") {
+        builtin.addError() << "The args builtin cannot be used for "
+                              "'fentry/fexit:bpf' probes";
+      }
+    } else {
+      builtin.addError()
+          << "The args builtin can only be used with "
+             "tracepoint, rawtracepoint, fentry/fexit, and uprobe probes ("
+          << type << " used here)";
+    }
+  }
+
   return check(builtin.ident, builtin);
 }
 
@@ -163,6 +293,22 @@ std::optional<Expression> Builtins::visit(Expression &expression)
   return std::nullopt;
 }
 
+std::optional<Expression> Builtins::visit(For &f)
+{
+  // Currently, we do not pass BPF context to the callback so disable builtins
+  // which require ctx access.
+  CollectNodes<Builtin> builtins;
+  builtins.visit(f.block);
+  for (const Builtin &builtin : builtins.nodes()) {
+    if (builtin.is_argx() || builtin.ident == "__builtin_retval") {
+      builtin.addError() << "'" << builtin.ident
+                         << "' builtin is not allowed in a for-loop";
+    }
+  }
+
+  return std::nullopt;
+}
+
 std::optional<Expression> Builtins::visit(Probe &probe)
 {
   top_level_node_ = &probe;
@@ -172,7 +318,9 @@ std::optional<Expression> Builtins::visit(Probe &probe)
 Pass CreateBuiltinsPass()
 {
   auto fn = [&](ASTContext &ast, BPFtrace &bpftrace) {
-    Builtins builtins(ast, bpftrace);
+    Builtins builtins(ast,
+                      bpftrace,
+                      !bpftrace.cmd_.empty() || bpftrace.child_ != nullptr);
     builtins.visit(ast.root);
   };
 
