@@ -512,6 +512,8 @@ kprobe:ip_output { @[kstack(3)] = count(); }
  */
 ```
 
+Note: If a limit is used and `show_debug_info` is enabled then the number of symbolized frames might exceed that limit in the output as `limit` refers to instruction pointers, which can translate to multiple inlined symbols.
+
 You can also choose a different output format.
 Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
 
@@ -1439,6 +1441,8 @@ kprobe:ip_output { @[ustack(3)] = count(); }
  * ]: 20
  */
 ```
+
+Note: If a limit is used and `show_debug_info` is enabled then the number of symbolized frames might exceed that limit in the output as `limit` refers to instruction pointers, which can translate to multiple inlined symbols.
 
 You can also choose a different output format.
 Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):

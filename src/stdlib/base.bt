@@ -496,6 +496,8 @@ macro jiffies()
 //  */
 // ```
 //
+// Note: If a limit is used and `show_debug_info` is enabled then the number of symbolized frames might exceed that limit in the output as `limit` refers to instruction pointers, which can translate to multiple inlined symbols.
+//
 // You can also choose a different output format.
 // Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
 //
@@ -1404,6 +1406,8 @@ macro username()
 //  * ]: 20
 //  */
 // ```
+//
+// Note: If a limit is used and `show_debug_info` is enabled then the number of symbolized frames might exceed that limit in the output as `limit` refers to instruction pointers, which can translate to multiple inlined symbols.
 //
 // You can also choose a different output format.
 // Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
