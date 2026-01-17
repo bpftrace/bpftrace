@@ -475,12 +475,13 @@ MIN_KERNEL 6.12
 
 NAME ustack_with_inlined_funcs
 RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack()); exit(); } }' -c ./testprogs/usdt_inlined
-EXPECT_REGEX ^\s+\[inlined\] myclock@[\w\/]+.c:[0-9]+\s*\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+\s*mywrapper.*
+EXPECT_REGEX ^\s*\[inlined\] myclock@[\w\/]+.c:[0-9]+\s+\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+\s+mywrapper\+[0-9]+@[\w\/]+.c:[0-9]+\s+loop\+[0-9]+@[\w\/]+.c:[0-9]+\s+main\+[0-9]+@[\w\/]+.c:[0-9]+\s+_end\+[0-9]+\s+_end\+[0-9]+\s+_start\+[0-9]+$
 TIMEOUT 1
 
+# This outputs 4 frames because the limit refers to instruction pointers which may resolve to multiple inlined symbols
 NAME ustack_with_inlined_funcs_with_limit
 RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack(2)); exit(); } }' -c ./testprogs/usdt_inlined
-EXPECT_REGEX ^\s+\[inlined\] myclock@[\w\/]+.c:[0-9]+\s*\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+$
+EXPECT_REGEX ^\s*\[inlined\] myclock@[\w\/]+.c:[0-9]+\s+\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+\s+mywrapper\+[0-9]+@[\w\/]+.c:[0-9]+\s+loop\+[0-9]+@[\w\/]+.c:[0-9]+$
 TIMEOUT 1
 
 NAME ustack_with_inlined_funcs_env_perf
