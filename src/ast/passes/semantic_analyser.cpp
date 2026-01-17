@@ -1663,7 +1663,7 @@ void SemanticAnalyser::visit(Call &call)
       logError(type.GetTy());
       return;
     }
-    if (!type.GetPointeeTy()->IsSameType(CreateCStruct("struct sock"))) {
+    if (!type.GetPointeeTy()->IsCompatible(CreateCStruct("struct sock"))) {
       logError("'" + type.GetPointeeTy()->GetName() + " *'");
       return;
     }
@@ -2547,7 +2547,7 @@ void SemanticAnalyser::visit(Binop &binop)
   }
   // Compare type here, not the sized type as we it needs to work on strings
   // of different lengths
-  else if (!lht.IsSameType(rht)) {
+  else if (!lht.IsCompatible(rht)) {
     auto &err = binop.addError();
     err << "Type mismatch for '" << opstr(binop) << "': comparing " << lht
         << " with " << rht;
@@ -2681,7 +2681,7 @@ void SemanticAnalyser::visit(IfExpr &if_expr)
   const auto &lhs = if_expr.left.type();
   const auto &rhs = if_expr.right.type();
 
-  if (!lhs.IsSameType(rhs)) {
+  if (!lhs.IsCompatible(rhs)) {
     if (is_final_pass()) {
       if_expr.addError() << "Branches must return the same type: " << "have '"
                          << lhs << "' and '" << rhs << "'";
@@ -2775,7 +2775,7 @@ void SemanticAnalyser::visit(Jump &jump)
            (jump.return_value.has_value() &&
             jump.return_value->type() != ty))) {
         if (jump.return_value.has_value() &&
-            jump.return_value->type().IsSameType(ty)) {
+            jump.return_value->type().IsCompatible(ty)) {
           // TODO: fix this for other types
           if (ty.IsIntegerTy()) {
             auto updatedTy = update_int_type(jump.return_value->type(),
@@ -3159,7 +3159,7 @@ void SemanticAnalyser::reconcile_map_key(Map *map, Expression &key_expr)
   if (const auto &key = map_key_.find(map->ident); key != map_key_.end()) {
     SizedType &storedTy = key->second;
     bool type_mismatch_error = false;
-    if (!storedTy.IsSameType(new_key_type)) {
+    if (!storedTy.IsCompatible(new_key_type)) {
       type_mismatch_error = true;
     } else {
       if (storedTy.IsStringTy()) {
@@ -3388,7 +3388,7 @@ void SemanticAnalyser::visit(Expression &expr)
     }
   } else if (auto *binop = expr.as<Binop>()) {
     if (binop->left.type().IsTupleTy() &&
-        binop->left.type().IsSameType(binop->right.type()) &&
+        binop->left.type().IsCompatible(binop->right.type()) &&
         (binop->op == Operator::EQ || binop->op == Operator::NE)) {
       const auto &lht = binop->left.type();
       const auto &rht = binop->right.type();
@@ -3598,7 +3598,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     bool type_mismatch_error = false;
     if (storedTy.IsNoneTy()) {
       storedTy = assignTy;
-    } else if (!storedTy.IsSameType(assignTy) &&
+    } else if (!storedTy.IsCompatible(assignTy) &&
                (!storedTy.IsIntegerTy() || !assignTy.IsIntegerTy())) {
       if (!assignTy.IsNoneTy() || is_final_pass()) {
         type_mismatch_error = true;
@@ -4182,7 +4182,7 @@ void SemanticAnalyser::assign_map_type(Map &map,
         storedTy.SetSize(type.GetSize());
       }
     } else if (storedTy.IsTupleTy()) {
-      if (!storedTy.IsSameType(type)) {
+      if (!storedTy.IsCompatible(type)) {
         type_mismatch_error = true;
       } else {
         auto updatedTy = get_promoted_tuple(storedTy, type);
@@ -4316,7 +4316,7 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_tuple(
     const SizedType &leftTy,
     const SizedType &rightTy)
 {
-  assert(leftTy.IsTupleTy() && leftTy.IsSameType(rightTy));
+  assert(leftTy.IsTupleTy() && leftTy.IsCompatible(rightTy));
 
   std::vector<SizedType> new_elems;
   for (ssize_t i = 0; i < rightTy.GetFieldCount(); i++) {
