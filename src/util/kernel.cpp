@@ -495,4 +495,178 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   return cflags;
 }
 
+TraceableFunctionsReader::TraceableFunctionsReader()
+{
+  blocklist_init();
+}
+
+TraceableFunctionsReader::~TraceableFunctionsReader()
+{
+  if (available_filter_functions_.is_open())
+    available_filter_functions_.close();
+}
+
+bool TraceableFunctionsReader::check_open()
+{
+  if (available_filter_functions_.is_open())
+    return true;
+
+  if (available_filter_functions_.fail())
+    return false;
+
+  const char *path_env = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
+  const std::string path = path_env ? path_env
+                                    : tracefs::available_filter_functions();
+
+  available_filter_functions_.open(path);
+  if (available_filter_functions_.fail()) {
+    // TODO: Propagate error up to ProbeMatcher and print the error there
+    LOG(WARNING) << "Could not read traceable functions from " << path << ": "
+                 << strerror(errno);
+    return false;
+  }
+
+  return true;
+}
+
+void TraceableFunctionsReader::blocklist_init()
+{
+  std::ifstream blocklist_funcs(debugfs::kprobes_blacklist());
+  std::string line;
+
+  while (std::getline(blocklist_funcs, line)) {
+    auto addr_func_mod = split_addrrange_symbol_module(line);
+    const std::string &fn = std::get<1>(addr_func_mod);
+    const std::string &mod = std::get<2>(addr_func_mod);
+
+    blocklist_[mod].insert(fn);
+  }
+}
+
+std::string TraceableFunctionsReader::search_module_for_function(
+    const std::string &func_name)
+{
+  if (!check_open())
+    return "";
+
+  for (const auto &mod : modules_) {
+    if (mod.second.contains(func_name))
+      return mod.first;
+  }
+
+  if (available_filter_functions_.eof())
+    return "";
+
+  std::string line;
+  if (!last_checked_line_.empty()) {
+    auto func_mod = split_symbol_module(last_checked_line_);
+    modules_[func_mod.second].insert(func_mod.first);
+  }
+
+  bool found = false;
+  std::string module;
+
+  while (std::getline(available_filter_functions_, line)) {
+    auto func_mod = split_symbol_module(line);
+
+    // If we found the the module, continue reading until we get all the
+    // module functions. Stop when encunter line with the next module.
+    if (found && func_mod.second != module) {
+      last_checked_line_ = line;
+      break;
+    }
+
+    if (is_bad_func(func_mod.first) ||
+        blocklist_[func_mod.second].contains(func_mod.first))
+      continue;
+
+    if (func_mod.first == func_name) {
+      found = true;
+      module = func_mod.second;
+    }
+
+    modules_[func_mod.second].insert(func_mod.first);
+  }
+
+  return module;
+}
+
+const FunctionSet &TraceableFunctionsReader::get_module_funcs(
+    const std::string &mod_name)
+{
+  if (!check_open())
+    return empty_set_;
+
+  auto it = modules_.find(mod_name);
+  if (it != modules_.end())
+    return it->second;
+
+  if (available_filter_functions_.eof())
+    return empty_set_;
+
+  std::string line;
+
+  if (!last_checked_line_.empty()) {
+    auto func_mod = split_symbol_module(last_checked_line_);
+    modules_[func_mod.second].insert(func_mod.first);
+  }
+
+  bool found = false;
+
+  while (std::getline(available_filter_functions_, line)) {
+    auto func_mod = split_symbol_module(line);
+
+    // Cntinue reading untill we get all the module functions. Stop when
+    // encunter line with the next module.
+    if (found && func_mod.second != mod_name) {
+      last_checked_line_ = line;
+      break;
+    } else if (func_mod.second == mod_name) {
+      found = true;
+    }
+
+    if (is_bad_func(func_mod.first) ||
+        blocklist_[func_mod.second].contains(func_mod.first))
+      continue;
+
+    modules_[func_mod.second].insert(func_mod.first);
+  }
+
+  it = modules_.find(mod_name);
+  if (it != modules_.end()) {
+    return it->second;
+  }
+
+  return empty_set_;
+}
+
+bool TraceableFunctionsReader::is_traceable_function(
+    const std::string &func_name)
+{
+  std::string mod_name = search_module_for_function(func_name);
+  return !mod_name.empty();
+}
+
+const ModulesFuncsMap &TraceableFunctionsReader::get_all_funcs()
+{
+  // Force to read the whole available_filter_functions file.
+  (void)get_module_funcs("");
+
+  return modules_;
+}
+
+std::unordered_set<std::string> TraceableFunctionsReader::get_func_modules(
+    const std::string &func_name)
+{
+  // Force to read the whole available_filter_functions file.
+  (void)get_module_funcs("");
+
+  std::unordered_set<std::string> results;
+  for (const auto &mod : modules_) {
+    if (mod.second.contains(func_name))
+      results.insert(mod.first);
+  }
+
+  return results;
+}
 } // namespace bpftrace::util

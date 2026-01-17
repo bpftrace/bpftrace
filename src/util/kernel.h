@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -40,4 +41,30 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &kobj,
                                            const KConfig &kconfig);
 
+using FunctionSet = std::unordered_set<std::string>;
+using ModuleSet = std::unordered_set<std::string>;
+using ModulesFuncsMap = std::unordered_map<std::string, FunctionSet>;
+
+class TraceableFunctionsReader {
+public:
+  explicit TraceableFunctionsReader();
+  ~TraceableFunctionsReader();
+
+  const FunctionSet &get_module_funcs(const std::string &mod_name);
+  ModuleSet get_func_modules(const std::string &func_name);
+  bool is_traceable_function(const std::string &func_name);
+  const ModulesFuncsMap &get_all_funcs();
+
+private:
+  bool check_open();
+  void blocklist_init();
+  std::string search_module_for_function(const std::string &func_name);
+
+  std::ifstream available_filter_functions_;
+  std::string last_checked_line_;
+
+  ModulesFuncsMap modules_;
+  ModulesFuncsMap blocklist_;
+  FunctionSet empty_set_;
+};
 } // namespace bpftrace::util
