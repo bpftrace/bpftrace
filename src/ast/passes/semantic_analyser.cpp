@@ -302,7 +302,7 @@ private:
 
   variable *find_variable(const std::string &var_ident);
   void check_variable(Variable &var, bool check_assigned);
-  Node *find_variable_scope(const std::string &var_ident);
+  Node *find_variable_scope(const std::string &var_ident, bool safe = false);
 
   std::map<Node *, std::map<std::string, variable>> variables_;
   std::map<Node *, std::map<std::string, VarDeclStatement &>> variable_decls_;
@@ -3580,16 +3580,20 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                            assignment.expr);
   }
 
+  const auto &var_ident = assignment.var()->ident;
+
   if (!is_valid_assignment(assignment.expr, false)) {
     if (is_final_pass()) {
       assignment.addError() << "Value '" << assignment.expr.type()
                             << "' cannot be assigned to a scratch variable.";
+      // A bad assignment is still an assignment
+      variables_[find_variable_scope(var_ident, true)][var_ident].was_assigned =
+          true;
     }
     return;
   }
 
   Node *var_scope = nullptr;
-  const auto &var_ident = assignment.var()->ident;
   auto assignTy = assignment.expr.type();
 
   if (auto *scope = find_variable_scope(var_ident)) {
@@ -3664,10 +3668,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         assignTy.SetSize(storedTy.GetSize());
       }
       foundVar.type = assignTy;
-      if (is_final_pass()) {
-        foundVar.was_assigned = true;
-      }
       var_scope = scope;
+    }
+
+    if (is_final_pass()) {
+      foundVar.was_assigned = true;
     }
   }
 
@@ -3757,10 +3762,6 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
         }
       }
 
-      if (is_final_pass() && !foundVar.was_assigned) {
-        decl.addWarning() << "Variable " << var_ident << " never assigned to.";
-      }
-
       return;
     }
   }
@@ -3787,6 +3788,26 @@ void SemanticAnalyser::visit(Probe &probe)
   top_level_node_ = &probe;
   visit(probe.attach_points);
   visit(probe.block);
+
+  if (!is_final_pass()) {
+    return;
+  }
+
+  for (const auto &pair : variables_) {
+    for (const auto &[ident, var] : pair.second) {
+      if (var.was_assigned) {
+        continue;
+      }
+      if (auto scope = variable_decls_.find(pair.first);
+          scope != variable_decls_.end()) {
+        if (auto decl_search = scope->second.find(ident);
+            decl_search != scope->second.end()) {
+          decl_search->second.addWarning()
+              << "Variable " << ident << " was never assigned to.";
+        }
+      }
+    }
+  }
 }
 
 void SemanticAnalyser::visit(Subprog &subprog)
@@ -4444,13 +4465,17 @@ variable *SemanticAnalyser::find_variable(const std::string &var_ident)
   return nullptr;
 }
 
-Node *SemanticAnalyser::find_variable_scope(const std::string &var_ident)
+Node *SemanticAnalyser::find_variable_scope(const std::string &var_ident,
+                                            bool safe)
 {
   for (auto *scope : scope_stack_) {
     if (auto search_val = variables_[scope].find(var_ident);
         search_val != variables_[scope].end()) {
       return scope;
     }
+  }
+  if (safe) {
+    LOG(BUG) << "No scope found for variable: " << var_ident;
   }
   return nullptr;
 }

@@ -5356,51 +5356,27 @@ begin { unroll(1) { $a = 1; } print(($a)); }
 
 TEST_F(SemanticAnalyserTest, invalid_assignment)
 {
-  test("begin { @a = hist(10); let $b = @a; }",
-       Error{ R"(
+  test("begin { @a = hist(10); let $b = @a; }", Error{ R"(
 stdin:1:24-35: ERROR: Value 'hist_t' cannot be assigned to a scratch variable.
 begin { @a = hist(10); let $b = @a; }
-                       ~~~~~~~~~~~)" },
-       Warning{ R"(
-stdin:1:24-30: WARNING: Variable $b never assigned to.
-begin { @a = hist(10); let $b = @a; }
-                       ~~~~~~
-)" });
+                       ~~~~~~~~~~~)" });
 
-  test("begin { @a = lhist(123, 0, 123, 1); let $b = @a; }",
-       Error{ R"(
+  test("begin { @a = lhist(123, 0, 123, 1); let $b = @a; }", Error{ R"(
 stdin:1:37-48: ERROR: Value 'lhist_t' cannot be assigned to a scratch variable.
 begin { @a = lhist(123, 0, 123, 1); let $b = @a; }
                                     ~~~~~~~~~~~
-)" },
-       Warning{ R"(
-stdin:1:37-43: WARNING: Variable $b never assigned to.
-begin { @a = lhist(123, 0, 123, 1); let $b = @a; }
-                                    ~~~~~~
 )" });
 
-  test("begin { @a = tseries(10, 10s, 1); let $b = @a; }",
-       Error{ R"(
+  test("begin { @a = tseries(10, 10s, 1); let $b = @a; }", Error{ R"(
 stdin:1:35-46: ERROR: Value 'tseries_t' cannot be assigned to a scratch variable.
 begin { @a = tseries(10, 10s, 1); let $b = @a; }
                                   ~~~~~~~~~~~
-)" },
-       Warning{ R"(
-stdin:1:35-41: WARNING: Variable $b never assigned to.
-begin { @a = tseries(10, 10s, 1); let $b = @a; }
-                                  ~~~~~~
 )" });
 
-  test("begin { @a = stats(10); let $b = @a; }",
-       Error{ R"(
+  test("begin { @a = stats(10); let $b = @a; }", Error{ R"(
 stdin:1:25-36: ERROR: Value 'ustats_t' cannot be assigned to a scratch variable.
 begin { @a = stats(10); let $b = @a; }
                         ~~~~~~~~~~~
-)" },
-       Warning{ R"(
-stdin:1:25-31: WARNING: Variable $b never assigned to.
-begin { @a = stats(10); let $b = @a; }
-                        ~~~~~~
 )" });
 
   test("begin { @a = hist(10); @b = @a; }", Error{ R"(
@@ -5576,6 +5552,15 @@ TEST_F(SemanticAnalyserTest, warning_for_discared_expression_statement_value)
   test("k:f { print(1); }", NoWarning{ "Return value discarded" });
   test("k:f { $a = 1; }", NoWarning{ "Return value discarded" });
   test("k:f { @a[1] = count(); }", NoWarning{ "Return value discarded" });
+}
+
+TEST_F(SemanticAnalyserTest, warning_for_never_assigned_to)
+{
+  test("k:f { $a = { let $x = 1; $x + 1 }; }",
+       NoWarning{ "Variable $x was never assigned to" });
+  test("k:f { let $x; }", Warning{ "Variable $x was never assigned to" });
+  test("k:f { let $x; if comptime (false) { $x = 1; } }",
+       Warning{ "Variable $x was never assigned to" });
 }
 
 TEST_F(SemanticAnalyserTest, external_function)
