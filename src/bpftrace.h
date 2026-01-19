@@ -166,8 +166,6 @@ public:
   virtual int resume_tracee(pid_t tracee_pid);
   virtual std::unordered_set<std::string> get_func_modules(
       const std::string &func_name) const;
-  virtual std::unordered_set<std::string> get_raw_tracepoint_modules(
-      const std::string &name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
   // This gets the number of perf or ring buffer pages in total across all cpus
   // by first checking if the user set this manually with a config value
@@ -199,8 +197,8 @@ public:
   FunctionRegistry functions;
   // For each helper, list of all generated call sites.
   std::map<bpf_func_id, std::vector<RuntimeErrorInfo>> helper_use_loc_;
-  const util::FuncsModulesMap &get_traceable_funcs() const;
-  const util::FuncsModulesMap &get_raw_tracepoints() const;
+  std::unique_ptr<std::istream> get_traceable_funcs(bool with_modules) const;
+  std::unique_ptr<std::istream> get_raw_tracepoints_from_traceable_funcs() const;
   util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<int> sigusr1_prog_fds_;
@@ -273,11 +271,7 @@ private:
   struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
 
-  // Mapping traceable functions to modules (or "vmlinux") they appear in.
-  // Needs to be mutable to allow lazy loading of the mapping from const lookup
-  // functions.
-  mutable util::FuncsModulesMap traceable_funcs_;
-  mutable util::FuncsModulesMap raw_tracepoints_;
+  mutable util::TraceableFunctionsReader traceable_funcs_reader_;
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };
 

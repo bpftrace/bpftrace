@@ -1352,26 +1352,54 @@ std::string BPFtrace::resolve_probe(uint64_t probe_id) const
   return resources.probe_ids[probe_id];
 }
 
-const util::FuncsModulesMap &BPFtrace::get_traceable_funcs() const
+std::unique_ptr<std::istream> BPFtrace::get_traceable_funcs(
+    bool with_modules) const
 {
-  if (traceable_funcs_.empty())
-    traceable_funcs_ = util::parse_traceable_funcs();
+  auto mod_funcs_map = traceable_funcs_reader_.get_all_funcs();
+  std::string funcs;
 
-  return traceable_funcs_;
+  for (const auto &mod_funcs : mod_funcs_map) {
+    auto mod = mod_funcs.first;
+    for (const auto &fn : mod_funcs.second) {
+      if (with_modules)
+        funcs += mod + ":" + fn + "\n";
+      else
+        funcs += fn + "\n";
+    }
+  }
+
+  return std::make_unique<std::istringstream>(funcs);
 }
 
-const util::FuncsModulesMap &BPFtrace::get_raw_tracepoints() const
+// Using "available_filter_functions" here because they have the correct
+// module for the prefixed raw tracepoints e.g. in "available_events"
+// there is "kvmmmu:check_mmio_spte" but the module is actually "kvm"
+// and shows up as "__probestub_check_mmio_spte [kvm]" in
+// "available_filter_functions"
+std::unique_ptr<std::istream> BPFtrace::
+    get_raw_tracepoints_from_traceable_funcs() const
 {
-  if (raw_tracepoints_.empty())
-    raw_tracepoints_ = util::parse_rawtracepoints();
+  auto mod_funcs_map = traceable_funcs_reader_.get_all_funcs();
+  std::string rts;
 
-  return raw_tracepoints_;
+  for (const auto &mod_funcs : mod_funcs_map) {
+    auto mod = mod_funcs.first;
+    for (const auto &fn : mod_funcs.second) {
+      for (const auto &prefix : RT_BTF_PREFIXES) {
+        if (fn.starts_with(prefix)) {
+          rts += mod + ":" + fn.substr(prefix.length()) + "\n";
+          break;
+        }
+      }
+    }
+  }
+
+  return std::make_unique<std::istringstream>(rts);
 }
 
 bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
-  const auto &funcs = get_traceable_funcs();
-  return funcs.contains(func_name);
+  return traceable_funcs_reader_.is_traceable_function(func_name);
 }
 
 bool BPFtrace::is_module_loaded(const std::string &module) const
@@ -1402,17 +1430,7 @@ int BPFtrace::resume_tracee(pid_t tracee_pid)
 std::unordered_set<std::string> BPFtrace::get_func_modules(
     const std::string &func_name) const
 {
-  const auto &funcs = get_traceable_funcs();
-  auto mod = funcs.find(func_name);
-  return mod != funcs.end() ? mod->second : std::unordered_set<std::string>();
-}
-
-std::unordered_set<std::string> BPFtrace::get_raw_tracepoint_modules(
-    const std::string &name) const
-{
-  const auto &rts = get_raw_tracepoints();
-  auto mod = rts.find(name);
-  return mod != rts.end() ? mod->second : std::unordered_set<std::string>();
+  return traceable_funcs_reader_.get_func_modules(func_name);
 }
 
 const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const

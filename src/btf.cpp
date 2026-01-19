@@ -557,7 +557,8 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
 
   if (check_traceable) {
     if (bpftrace_ && !bpftrace_->is_traceable_func(std::string(func))) {
-      if (bpftrace_->get_traceable_funcs().empty()) {
+      // TODO: do not create stream just for not-empty check
+      if (bpftrace_->get_traceable_funcs(false)->eof()) {
         return make_error<ast::ArgParseError>(
             func,
             "could not read traceable functions from " +

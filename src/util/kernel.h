@@ -15,12 +15,6 @@ uint32_t kernel_version(KernelVersionMethod method);
 
 std::optional<std::string> find_vmlinux(struct symbol *sym = nullptr);
 
-using FuncsModulesMap =
-    std::unordered_map<std::string, std::unordered_set<std::string>>;
-
-FuncsModulesMap parse_traceable_funcs();
-FuncsModulesMap parse_rawtracepoints();
-
 struct KConfig {
   KConfig();
   bool has_value(const std::string &name, const std::string &value) const
