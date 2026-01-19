@@ -407,28 +407,6 @@ int BPFtrace::run_iter()
   return 0;
 }
 
-int add_unwind_mapping(const BpfBytecode *bytecode_, TableType table_type,
-  uint32_t key, const std::vector<uint8_t>& value)
-{
-  std::string name;
-  if (table_type == TableType::UnwindTable) {
-    name = "dwunwind_offsetmaps";
-  } else if (table_type == TableType::UnwindEntries) {
-    name = "dwunwind_cfts";
-  } else if (table_type == TableType::Expressions) {
-    name = "dwunwind_expressions";
-  } else if (table_type == TableType::Mappings) {
-    name = "dwunwind_mappings";
-  } else {
-    LOG(ERROR) << "Unknown table type: " << static_cast<int>(table_type);
-    return -1;
-  }
-  auto const &table = bytecode_->getMap(name);
-  auto ret = table.update_elem(&key, value.data());
-
-  return 0;
-}
-
 int BPFtrace::prerun() const
 {
   uint64_t num_probes = this->num_probes();
@@ -577,15 +555,36 @@ int BPFtrace::run(output::Output &out,
   }
 
   if (bytecode_.hasMap("dwunwind_mappings") && !dwarf_pids_.empty()) {
-    auto const *b = &bytecode_;
-    auto unwind = DWARFUnwind([b](TableType t, uint32_t k,
-      const std::vector<uint8_t> &v) {
-      add_unwind_mapping(b, t, k, v);
-    });
-    for (const auto &pid : dwarf_pids_) {
-      auto ret = unwind.add_pid(pid);
-      if (ret != DWARFError::Success)
+    // update arrays
+    for (auto const &t : unwind_data) {
+      std::string name;
+      const BpfMap *table;
+      if (t.first == TableType::UnwindTable) {
+        table = &bytecode_.getMap("dwunwind_offsetmaps");
+      } else if (t.first == TableType::UnwindEntries) {
+        table = &bytecode_.getMap("dwunwind_cfts");
+      } else if (t.first == TableType::Expressions) {
+        table = &bytecode_.getMap("dwunwind_expressions");
+      } else {
+        LOG(ERROR) << "Unknown table type: " << static_cast<int>(t.first);
         return -1;
+      }
+      for (size_t i = 0; i < t.second.size(); i++) {
+        auto ret = table->update_elem(&i, t.second[i].data());
+        if (!ret) {
+          LOG(ERROR) << "Failed to add unwind entry: " << ret.takeError();
+          return -1;
+        }
+      }
+    }
+    // unwind mappings are indexed by pid, so they are stored in a hash map
+    auto table = bytecode_.getMap("dwunwind_mappings");
+    for (auto const &m : unwind_mappings) {
+      auto ret = table.update_elem(&m.first, m.second.data());
+      if (!ret) {
+        LOG(ERROR) << "Failed to add unwind mapping: " << ret.takeError();
+        return -1;
+      }
     }
   }
 

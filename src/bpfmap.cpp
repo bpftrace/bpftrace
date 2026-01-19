@@ -121,6 +121,15 @@ Result<> BpfMap::lookup_elem(const void *key, void *value) const
   return OK();
 }
 
+Result<> BpfMap::resize(uint32_t new_size) const
+{
+  auto err = bpf_map__set_max_entries(bpf_map_, new_size);
+  if (err != 0) {
+    return make_error<BpfMapError>(name_, "resize", err);
+  }
+  return OK();
+}
+
 Result<MapElements> BpfMap::collect_elements(int nvalues) const
 {
   auto keys = collect_keys();

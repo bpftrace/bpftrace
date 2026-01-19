@@ -195,36 +195,34 @@ static __always_inline ulong opaquify_ul(ulong val, ulong seed) {
 
 /*
  * maps
- * we use a hashmaps instead of arrays to avoid preallocation
+ * once dynamic hashmaps are widely available, we can use those
+ * instead of arrays to avoid having to pre-calculate the number
+ * of entries in user space
  */
 struct {
   __uint(type, BPF_MAP_TYPE_HASH);
-  __uint(map_flags, BPF_F_NO_PREALLOC);
-  __uint(max_entries, 1000);
+  __uint(max_entries, 1);   // updated from user space
   __type(key, u32);
   __type(value, struct mapping);
 } dwunwind_mappings SEC(".maps");
 
 struct {
-  __uint(type, BPF_MAP_TYPE_HASH);
-  __uint(map_flags, BPF_F_NO_PREALLOC);
-  __uint(max_entries, 1000);
+  __uint(type, BPF_MAP_TYPE_ARRAY);
+  __uint(max_entries, 1);  // updated from user space
   __type(key, u32);
   __type(value, struct offsetmap);
 } dwunwind_offsetmaps SEC(".maps");
 
 struct {
-  __uint(type, BPF_MAP_TYPE_HASH);
-  __uint(map_flags, BPF_F_NO_PREALLOC);
-  __uint(max_entries, 100000);
+  __uint(type, BPF_MAP_TYPE_ARRAY);
+  __uint(max_entries, 1);  // updated from user space
   __type(key, u32);
   __type(value, struct cft);
 } dwunwind_cfts SEC(".maps");
 
 struct {
-  __uint(type, BPF_MAP_TYPE_HASH);
-  __uint(map_flags, BPF_F_NO_PREALLOC);
-  __uint(max_entries, 1000);
+  __uint(type, BPF_MAP_TYPE_ARRAY);
+  __uint(max_entries, 1);  // updated from user space
   __type(key, u32);
   __type(value, struct expression);
 } dwunwind_expressions SEC(".maps");
