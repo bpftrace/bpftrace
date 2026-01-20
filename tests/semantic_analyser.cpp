@@ -5558,9 +5558,23 @@ TEST_F(SemanticAnalyserTest, warning_for_never_assigned_to)
 {
   test("k:f { $a = { let $x = 1; $x + 1 }; }",
        NoWarning{ "Variable $x was never assigned to" });
+  test("begin { print(1); } k:f { $a = { let $x = 1; $x + 1 }; }",
+       NoWarning{ "Variable $x was never assigned to" });
+  test("fn foo($a : int64) : int8 { return 0; } begin { let $x; $x = 1; }",
+       NoWarning{ "Variable $x was never assigned to" });
+  test("fn foo($a : int64) : int8 { return 0; } fn bar($a : int64) : int8 { "
+       "let $x; $x = 2; return 0; }",
+       NoWarning{ "Variable $x was never assigned to" });
+
   test("k:f { let $x; }", Warning{ "Variable $x was never assigned to" });
   test("k:f { let $x; if comptime (false) { $x = 1; } }",
        Warning{ "Variable $x was never assigned to" });
+  test("fn foo($a : int64) : int8 { let $x; return 0; } begin { let $x; $x = "
+       "1; }",
+       Warning{ "Variable $x was never assigned to" });
+  test("fn foo($a : int64) : int8 { let $y; return 0; } begin { let $x; $x = "
+       "1; }",
+       Warning{ "Variable $y was never assigned to" });
 }
 
 TEST_F(SemanticAnalyserTest, external_function)

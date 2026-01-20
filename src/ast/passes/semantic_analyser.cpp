@@ -42,6 +42,7 @@ struct variable {
   bool can_resize;
   // Only used during the final pass to issue warnings
   bool was_assigned;
+  Node *top_level_node;
 };
 
 class PassTracker {
@@ -239,6 +240,7 @@ private:
   bool check_symbol(const Call &call, int arg_num);
 
   void check_stack_call(Call &call, bool kernel);
+  void check_variable_decls(Node *top_level_node);
 
   Probe *get_probe(Node &node, std::string name = "");
 
@@ -1979,6 +1981,29 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   call.return_type = CreateStack(kernel, stack_type);
 }
 
+void SemanticAnalyser::check_variable_decls(Node *top_level_node)
+{
+  if (!is_final_pass()) {
+    return;
+  }
+  for (const auto &pair : variables_) {
+    for (const auto &[ident, var] : pair.second) {
+      if (var.was_assigned || var.top_level_node != top_level_node) {
+        continue;
+      }
+      if (auto scope = variable_decls_.find(pair.first);
+          scope != variable_decls_.end()) {
+        const auto &decl_map = scope->second;
+        if (auto decl_search = decl_map.find(ident);
+            decl_search != decl_map.end()) {
+          decl_search->second.addWarning()
+              << "Variable " << ident << " was never assigned to.";
+        }
+      }
+    }
+  }
+}
+
 Probe *SemanticAnalyser::get_probe(Node &node, std::string name)
 {
   auto *probe = dynamic_cast<Probe *>(top_level_node_);
@@ -2990,9 +3015,12 @@ void SemanticAnalyser::visit(For &f)
 
   scope_stack_.push_back(&f);
 
-  variables_[scope_stack_.back()][decl_name] = { .type = f.decl->type(),
-                                                 .can_resize = true,
-                                                 .was_assigned = true };
+  variables_[scope_stack_.back()][decl_name] = {
+    .type = f.decl->type(),
+    .can_resize = true,
+    .was_assigned = true,
+    .top_level_node = top_level_node_,
+  };
 
   loop_depth_++;
   visit(f.block);
@@ -3683,6 +3711,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
               .type = assignTy,
               .can_resize = true,
               .was_assigned = is_final_pass(),
+              .top_level_node = top_level_node_,
           } });
     var_scope = scope_stack_.back();
   }
@@ -3768,10 +3797,14 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
 
   bool can_resize = decl.var->var_type.GetSize() == 0;
 
-  variables_[scope_stack_.back()].insert({ var_ident,
-                                           { .type = decl.var->var_type,
-                                             .can_resize = can_resize,
-                                             .was_assigned = false } });
+  variables_[scope_stack_.back()].insert(
+      { var_ident,
+        {
+            .type = decl.var->var_type,
+            .can_resize = can_resize,
+            .was_assigned = false,
+            .top_level_node = top_level_node_,
+        } });
   variable_decls_[scope_stack_.back()].insert({ var_ident, decl });
 }
 
@@ -3789,25 +3822,7 @@ void SemanticAnalyser::visit(Probe &probe)
   visit(probe.attach_points);
   visit(probe.block);
 
-  if (!is_final_pass()) {
-    return;
-  }
-
-  for (const auto &pair : variables_) {
-    for (const auto &[ident, var] : pair.second) {
-      if (var.was_assigned) {
-        continue;
-      }
-      if (auto scope = variable_decls_.find(pair.first);
-          scope != variable_decls_.end()) {
-        if (auto decl_search = scope->second.find(ident);
-            decl_search != scope->second.end()) {
-          decl_search->second.addWarning()
-              << "Variable " << ident << " was never assigned to.";
-        }
-      }
-    }
-  }
+  check_variable_decls(&probe);
 }
 
 void SemanticAnalyser::visit(Subprog &subprog)
@@ -3822,9 +3837,12 @@ void SemanticAnalyser::visit(Subprog &subprog)
     const auto &ty = arg->typeof->type();
     auto &var = variables_[scope_stack_.back()]
                     .emplace(arg->var->ident,
-                             variable{ .type = ty,
-                                       .can_resize = true,
-                                       .was_assigned = is_final_pass() })
+                             variable{
+                                 .type = ty,
+                                 .can_resize = true,
+                                 .was_assigned = true,
+                                 .top_level_node = top_level_node_,
+                             })
                     .first->second;
     var.type = ty; // Override in case it has changed.
   }
@@ -3853,6 +3871,8 @@ void SemanticAnalyser::visit(Subprog &subprog)
     }
   }
   scope_stack_.pop_back();
+
+  check_variable_decls(&subprog);
 }
 
 void SemanticAnalyser::visit(Comptime &comptime)
