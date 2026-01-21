@@ -161,7 +161,8 @@ public:
   size_t num_params() const;
   void request_finalize();
   std::optional<std::string> get_watchpoint_binary_path() const;
-  virtual bool is_traceable_func(const std::string &func_name) const;
+  virtual bool is_traceable_func(const std::string &func_name,
+                                 const std::string &mod_name = "") const;
   virtual bool is_module_loaded(const std::string &module) const;
   virtual int resume_tracee(pid_t tracee_pid);
   virtual std::unordered_set<std::string> get_func_modules(

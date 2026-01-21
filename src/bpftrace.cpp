@@ -1407,9 +1407,10 @@ std::unique_ptr<std::istream> BPFtrace::
   return std::make_unique<std::istringstream>(rts);
 }
 
-bool BPFtrace::is_traceable_func(const std::string &func_name) const
+bool BPFtrace::is_traceable_func(const std::string &func_name,
+                                 const std::string &mod_name) const
 {
-  return traceable_funcs_reader_.is_traceable_function(func_name);
+  return traceable_funcs_reader_.is_traceable_function(func_name, mod_name);
 }
 
 bool BPFtrace::is_module_loaded(const std::string &module) const

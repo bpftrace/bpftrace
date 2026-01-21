@@ -656,7 +656,7 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
       break;
     }
 
-    if (bpftrace_ && !bpftrace_->is_traceable_func(func_name))
+    if (bpftrace_ && !bpftrace_->is_traceable_func(func_name, btf_obj.name))
       continue;
 
     if (btf_vlen(t) > arch::Host::arguments().size())

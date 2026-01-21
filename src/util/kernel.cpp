@@ -25,6 +25,7 @@
 #include "util/kernel.h"
 #include "util/paths.h"
 #include "util/symbols.h"
+#include "util/wildcard.h"
 
 namespace bpftrace::util {
 
@@ -567,10 +568,15 @@ const FunctionSet &TraceableFunctionsReader::get_module_funcs(
 }
 
 bool TraceableFunctionsReader::is_traceable_function(
-    const std::string &func_name)
+    const std::string &func_name,
+    const std::string &mod_name)
 {
-  std::string mod_name = search_module_for_function(func_name);
-  return !mod_name.empty();
+  if (mod_name.empty() || has_wildcard(mod_name)) {
+    std::string found_mod_name = search_module_for_function(func_name);
+    return !found_mod_name.empty();
+  } else {
+    return get_module_funcs(mod_name).contains(func_name);
+  }
 }
 
 const ModulesFuncsMap &TraceableFunctionsReader::get_all_funcs()

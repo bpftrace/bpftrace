@@ -111,7 +111,9 @@ public:
   }
 
   bool is_traceable_func(
-      const std::string &__attribute__((unused)) /*func_name*/) const override
+      const std::string &__attribute__((unused)) /*func_name*/,
+      const std::string &__attribute__((unused)) /*mod_name*/
+  ) const override
   {
     return true;
   }
