@@ -1371,6 +1371,16 @@ std::unique_ptr<std::istream> BPFtrace::get_traceable_funcs(
   return std::make_unique<std::istringstream>(funcs);
 }
 
+std::unique_ptr<std::istream> BPFtrace::get_module_traceable_funcs(
+    const std::string &mod) const
+{
+  std::string funcs;
+
+  for (const auto &fn : traceable_funcs_reader_.get_module_funcs(mod))
+    funcs += mod + ":" + fn + "\n";
+
+  return std::make_unique<std::istringstream>(funcs);
+}
 // Using "available_filter_functions" here because they have the correct
 // module for the prefixed raw tracepoints e.g. in "available_events"
 // there is "kvmmmu:check_mmio_spte" but the module is actually "kvm"

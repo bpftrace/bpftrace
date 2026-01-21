@@ -198,7 +198,10 @@ public:
   // For each helper, list of all generated call sites.
   std::map<bpf_func_id, std::vector<RuntimeErrorInfo>> helper_use_loc_;
   std::unique_ptr<std::istream> get_traceable_funcs(bool with_modules) const;
-  std::unique_ptr<std::istream> get_raw_tracepoints_from_traceable_funcs() const;
+  std::unique_ptr<std::istream> get_module_traceable_funcs(
+      const std::string &module_name) const;
+  std::unique_ptr<std::istream> get_raw_tracepoints_from_traceable_funcs()
+      const;
   util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<int> sigusr1_prog_fds_;
