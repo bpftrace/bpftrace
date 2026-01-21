@@ -32,6 +32,10 @@ public:
   AsyncHandlers handlers;
 };
 
+// Workaround for type-dependent static_assert(false) for older (pre-C++23) compilers.
+template<typename T>
+constexpr bool always_false_v = false;
+
 // Process string type argument - handle const char*
 template <typename T, typename... R>
 void build_each_field(std::vector<Field> &fields,
@@ -46,7 +50,7 @@ void build_each_field(std::vector<Field> &fields,
   } else if constexpr (std::is_integral_v<T>) {
     ty = CreateInt(sizeof(T) * 8);
   } else {
-    static_assert(false, "unknown field type");
+    static_assert(always_false_v<T>, "unknown field type");
   }
   fields.push_back(Field{
       .name = "arg", .type = ty, .offset = offset, .bitfield = std::nullopt });
