@@ -107,18 +107,24 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
 std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     const ProbeType& probe_type,
     const std::string& target,
-    const std::string& search_input,
+    const std::string& orig_search_input,
     bool demangle_symbols)
 {
   std::unique_ptr<std::istream> symbol_stream;
+  std::string search_input = orig_search_input;
 
   switch (probe_type) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe: {
-      if (!target.empty())
+      if (!target.empty()) {
         symbol_stream = get_symbols_from_traceable_funcs(true);
-      else
-        symbol_stream = get_symbols_from_traceable_funcs(false);
+      } else {
+        // If there is no target provided, then we glob against any provided
+        // module. However, we want the expanded form here to include the
+        // module because the same symbol may appear in multiple modules.
+        search_input = "*:" + search_input;
+        symbol_stream = get_symbols_from_traceable_funcs(true);
+      }
       break;
     }
     case ProbeType::uprobe:
