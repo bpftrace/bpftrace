@@ -46,7 +46,7 @@ void build_each_field(std::vector<Field> &fields,
   } else if constexpr (std::is_integral_v<T>) {
     ty = CreateInt(sizeof(T) * 8);
   } else {
-    static_assert(false, "unknown field type");
+    static_assert(sizeof(T) == 0, "unknown field type");
   }
   fields.push_back(Field{
       .name = "arg", .type = ty, .offset = offset, .bitfield = std::nullopt });
