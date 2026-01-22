@@ -41,6 +41,7 @@ public:
   void visit(MapAccess &acc);
   void visit(MapDeclStatement &decl);
   void visit(Tuple &tuple);
+  void visit(Record &record);
   void visit(For &f);
   void visit(IfExpr &if_expr);
   void visit(AssignMapStatement &assignment);
@@ -93,9 +94,9 @@ RequiredResources ResourceAnalyser::resources()
     resources_.global_vars.add_known(bpftrace::globalvars::FMT_STRINGS_BUFFER);
   }
 
-  if (resources_.max_tuple_size > 0) {
-    assert(resources_.tuple_buffers > 0);
-    resources_.global_vars.add_known(bpftrace::globalvars::TUPLE_BUFFER);
+  if (resources_.max_anon_struct_size > 0) {
+    assert(resources_.anon_struct_buffers > 0);
+    resources_.global_vars.add_known(bpftrace::globalvars::ANON_STRUCT_BUFFER);
   }
 
   if (resources_.max_call_stack_size > 0) {
@@ -469,9 +470,20 @@ void ResourceAnalyser::visit(Tuple &tuple)
   Visitor<ResourceAnalyser>::visit(tuple);
 
   if (exceeds_stack_limit(tuple.tuple_type.GetSize())) {
-    resources_.tuple_buffers++;
-    resources_.max_tuple_size = std::max(resources_.max_tuple_size,
-                                         tuple.tuple_type.GetSize());
+    resources_.anon_struct_buffers++;
+    resources_.max_anon_struct_size = std::max(resources_.max_anon_struct_size,
+                                               tuple.tuple_type.GetSize());
+  }
+}
+
+void ResourceAnalyser::visit(Record &record)
+{
+  Visitor<ResourceAnalyser>::visit(record);
+
+  if (exceeds_stack_limit(record.record_type.GetSize())) {
+    resources_.anon_struct_buffers++;
+    resources_.max_anon_struct_size = std::max(resources_.max_anon_struct_size,
+                                               record.record_type.GetSize());
   }
 }
 
@@ -481,9 +493,9 @@ void ResourceAnalyser::visit(For &f)
 
   // Need tuple per for loop to store key and value
   if (exceeds_stack_limit(f.decl->type().GetSize())) {
-    resources_.tuple_buffers++;
-    resources_.max_tuple_size = std::max(resources_.max_tuple_size,
-                                         f.decl->type().GetSize());
+    resources_.anon_struct_buffers++;
+    resources_.max_anon_struct_size = std::max(resources_.max_anon_struct_size,
+                                               f.decl->type().GetSize());
   }
 }
 
@@ -512,13 +524,14 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
   visit(assignment.map_access->key);
   visit(assignment.expr);
 
+  const auto &map_type = assignment.map_access->map->value_type;
+
   // The `MapAccess` validated the read limit, we know this to be
   // a write, so we validate the write limit.
-  if (needMapAllocation(assignment.expr.type())) {
-    if (exceeds_stack_limit(assignment.map_access->map->value_type.GetSize())) {
+  if (needMapAllocation(map_type, assignment.expr.type())) {
+    if (exceeds_stack_limit(map_type.GetSize())) {
       resources_.max_write_map_value_size = std::max(
-          resources_.max_write_map_value_size,
-          assignment.map_access->map->value_type.GetSize());
+          resources_.max_write_map_value_size, map_type.GetSize());
     }
   }
   maybe_allocate_map_key_buffer(*assignment.map_access->map,
@@ -607,7 +620,8 @@ void ResourceAnalyser::maybe_allocate_map_key_buffer(const Map &map,
                                                      const Expression &key_expr)
 {
   const auto map_key_size = map.key_type.GetSize();
-  if (needMapAllocation(key_expr.type()) && exceeds_stack_limit(map_key_size)) {
+  if (needMapAllocation(map.key_type, key_expr.type()) &&
+      exceeds_stack_limit(map_key_size)) {
     resources_.map_key_buffers++;
     resources_.max_map_key_size = std::max(resources_.max_map_key_size,
                                            map_key_size);

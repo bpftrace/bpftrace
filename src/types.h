@@ -48,6 +48,7 @@ enum class Type : uint8_t {
   array,
   buffer,
   tuple,
+  record,
   timestamp,
   mac_address,
   cgroup_path_t,
@@ -222,6 +223,7 @@ public:
   std::vector<Field> &GetFields() const;
   bool HasField(const std::string &name) const;
   const Field &GetField(const std::string &name) const;
+  size_t GetFieldIdx(const std::string &name) const;
   Field &GetField(ssize_t n) const;
   ssize_t GetFieldCount() const;
   std::shared_ptr<const Struct> GetStruct() const;
@@ -474,6 +476,10 @@ public:
   {
     return type_ == Type::tuple;
   };
+  bool IsRecordTy() const
+  {
+    return type_ == Type::record;
+  };
   bool IsTimestampTy() const
   {
     return type_ == Type::timestamp;
@@ -531,6 +537,7 @@ public:
                                 std::weak_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
   friend SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
+  friend SizedType CreateRecord(std::shared_ptr<Struct> &&record);
 };
 
 // Type helpers
@@ -560,6 +567,7 @@ SizedType CreateCStruct(const std::string &name);
 SizedType CreateCStruct(std::shared_ptr<Struct> &&record);
 SizedType CreateCStruct(const std::string &name, std::weak_ptr<Struct> record);
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
+SizedType CreateRecord(std::shared_ptr<Struct> &&record);
 
 SizedType CreateStack(bool kernel, StackType st = StackType());
 

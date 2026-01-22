@@ -102,7 +102,7 @@ using GlobalVarMap = std::unordered_map<std::string, GlobalVarValue>;
 constexpr std::string_view NUM_CPUS = "__bt__num_cpus";
 constexpr std::string_view MAX_CPU_ID = "__bt__max_cpu_id";
 constexpr std::string_view FMT_STRINGS_BUFFER = "__bt__fmt_str_buf";
-constexpr std::string_view TUPLE_BUFFER = "__bt__tuple_buf";
+constexpr std::string_view ANON_STRUCT_BUFFER = "__bt__anon_struct_buf";
 constexpr std::string_view CALL_STACK_BUFFER = "__bt__call_stack_buf";
 constexpr std::string_view GET_STR_BUFFER = "__bt__get_str_buf";
 constexpr std::string_view READ_MAP_VALUE_BUFFER = "__bt__read_map_val_buf";
@@ -116,7 +116,7 @@ constexpr std::string_view JOIN_BUFFER = "__bt__join_buf";
 constexpr std::string_view RO_SECTION_NAME = ".rodata";
 constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
     ".data.fmt_str_buf";
-constexpr std::string_view TUPLE_BUFFER_SECTION_NAME = ".data.tuple_buf";
+constexpr std::string_view ANON_STRUCT_BUFFER_SECTION_NAME = ".data.anon_struct_buf";
 constexpr std::string_view CALL_STACK_BUFFER_SECTION_NAME = ".data.call_stack_buf";
 constexpr std::string_view GET_STR_BUFFER_SECTION_NAME = ".data.get_str_buf";
 constexpr std::string_view READ_MAP_VALUE_BUFFER_SECTION_NAME =
@@ -160,7 +160,7 @@ const std::unordered_map<std::string_view, GlobalVarConfig>
           .type = GlobalVarConfig::opt_unsigned } },
       { FMT_STRINGS_BUFFER,
         { .section = std::string(FMT_STRINGS_BUFFER_SECTION_NAME) } },
-      { TUPLE_BUFFER, { .section = std::string(TUPLE_BUFFER_SECTION_NAME) } },
+      { ANON_STRUCT_BUFFER, { .section = std::string(ANON_STRUCT_BUFFER_SECTION_NAME) } },
       { CALL_STACK_BUFFER, { .section = std::string(CALL_STACK_BUFFER_SECTION_NAME) } },
       { GET_STR_BUFFER,
         { .section = std::string(GET_STR_BUFFER_SECTION_NAME) } },

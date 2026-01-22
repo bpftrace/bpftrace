@@ -151,6 +151,37 @@ DIType *DIBuilderBPF::CreateTupleType(const SizedType &stype)
   return result;
 }
 
+// Create anonymous struct with named fields. It's possible that there will
+// be multiple records of the same (duplicated) type but BTF deduplication
+// should take care of that.
+DIType *DIBuilderBPF::CreateRecordType(const SizedType &stype)
+{
+  assert(stype.IsRecordTy());
+
+  SmallVector<Metadata *, 8> fields;
+  for (auto &field : stype.GetFields()) {
+    fields.push_back(createMemberType(file,
+                                      field.name,
+                                      file,
+                                      0,
+                                      field.type.GetSize() * 8,
+                                      0,
+                                      field.offset * 8,
+                                      DINode::FlagZero,
+                                      GetType(field.type)));
+  }
+  DICompositeType *result = createStructType(file,
+                                             "",
+                                             file,
+                                             0,
+                                             stype.GetSize() * 8,
+                                             0,
+                                             DINode::FlagZero,
+                                             nullptr,
+                                             getOrCreateArray(fields));
+  return result;
+}
+
 DIType *DIBuilderBPF::CreateMapStructType(const SizedType &stype)
 {
   assert(stype.IsMinTy() || stype.IsMaxTy() || stype.IsAvgTy() ||
@@ -307,6 +338,9 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
 
   if (stype.IsTupleTy())
     return CreateTupleType(stype);
+
+  if (stype.IsRecordTy())
+    return CreateRecordType(stype);
 
   if (stype.IsMinTy() || stype.IsMaxTy() || stype.IsAvgTy() ||
       stype.IsStatsTy())

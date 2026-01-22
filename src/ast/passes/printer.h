@@ -87,6 +87,7 @@ public:
   Buffer visit(MapAccess &acc);
   Buffer visit(Cast &cast);
   Buffer visit(Tuple &tuple);
+  Buffer visit(Record &record);
   Buffer visit(ExprStatement &expr);
   Buffer visit(AssignScalarMapStatement &assignment);
   Buffer visit(AssignMapStatement &assignment);
@@ -111,6 +112,7 @@ public:
   Buffer visit(Statement &stmt);
   Buffer visit(RootStatement &root);
   Buffer visit(CStatement &cstmt);
+  Buffer visit(NamedArgument& named_arg);
   Buffer visit(const SizedType &type);
 
 private:

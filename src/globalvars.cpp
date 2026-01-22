@@ -227,11 +227,12 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
         1, CreateArray(resources.max_fmtstring_args_size, CreateInt8()));
   }
 
-  if (global_var_name == TUPLE_BUFFER) {
-    assert(resources.max_tuple_size > 0);
-    assert(resources.tuple_buffers > 0);
-    return make_rw_type(resources.tuple_buffers,
-                        CreateArray(resources.max_tuple_size, CreateInt8()));
+  if (global_var_name == ANON_STRUCT_BUFFER) {
+    assert(resources.max_anon_struct_size > 0);
+    assert(resources.anon_struct_buffers > 0);
+    return make_rw_type(resources.anon_struct_buffers,
+                        CreateArray(resources.max_anon_struct_size,
+                                    CreateInt8()));
   }
 
   if (global_var_name == CALL_STACK_BUFFER) {
@@ -310,8 +311,8 @@ void GlobalVars::check_index(const std::string &global_var_name,
                              const RequiredResources &resources,
                              size_t index) const
 {
-  if (global_var_name == TUPLE_BUFFER) {
-    assert(index < resources.tuple_buffers);
+  if (global_var_name == ANON_STRUCT_BUFFER) {
+    assert(index < resources.anon_struct_buffers);
   } else if (global_var_name == GET_STR_BUFFER) {
     assert(index < resources.str_buffers);
   } else if (global_var_name == READ_MAP_VALUE_BUFFER) {

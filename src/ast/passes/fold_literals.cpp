@@ -35,12 +35,17 @@ public:
   std::optional<Expression> visit(BlockExpr &block_expr);
   std::optional<Expression> visit(ArrayAccess &acc);
   std::optional<Expression> visit(TupleAccess &acc);
+  std::optional<Expression> visit(FieldAccess &acc);
   std::optional<Expression> visit(Comptime &comptime);
 
 private:
-  // Return nullopt if we can't compare the tuples now
+  // Return nullopt if we can't compare the expressions now
   // e.g. they contain variables, which are resolved at runtime
+  std::optional<bool> compare_literal_exprs(Expression &l_expr,
+                                            Expression &r_expr);
   std::optional<bool> compare_tuples(Tuple *left_tuple, Tuple *right_tuple);
+  std::optional<bool> compare_records(Record *left_record,
+                                      Record *right_record);
 
   ASTContext &ast_;
   std::optional<std::reference_wrapper<BPFtrace>> bpftrace_;
@@ -147,6 +152,61 @@ static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
   return ast.make_node<Boolean>(op.loc, value);
 }
 
+std::optional<bool> LiteralFolder::compare_literal_exprs(Expression &l_expr,
+                                                         Expression &r_expr)
+{
+  visit(l_expr);
+  visit(r_expr);
+
+  if (!l_expr.is_literal() || !r_expr.is_literal()) {
+    return std::nullopt;
+  }
+
+  if (auto *l_int = l_expr.as<Integer>()) {
+    if (auto *r_int = r_expr.as<Integer>()) {
+      return l_int->value == r_int->value;
+    }
+    return false;
+  }
+
+  if (auto *l_nint = l_expr.as<NegativeInteger>()) {
+    if (auto *r_nint = r_expr.as<NegativeInteger>()) {
+      return l_nint->value == r_nint->value;
+    }
+    return false;
+  }
+
+  if (auto *l_str = l_expr.as<String>()) {
+    if (auto *r_str = r_expr.as<String>()) {
+      return l_str->value == r_str->value;
+    }
+    return false;
+  }
+
+  if (auto *l_bool = l_expr.as<Boolean>()) {
+    if (auto *r_bool = r_expr.as<Boolean>()) {
+      return l_bool->value == r_bool->value;
+    }
+    return false;
+  }
+
+  if (auto *l_tuple = l_expr.as<Tuple>()) {
+    if (auto *r_tuple = r_expr.as<Tuple>()) {
+      return compare_tuples(l_tuple, r_tuple);
+    }
+    return false;
+  }
+
+  if (auto *l_record = l_expr.as<Record>()) {
+    if (auto *r_record = r_expr.as<Record>()) {
+      return compare_records(l_record, r_record);
+    }
+    return false;
+  }
+
+  return std::nullopt;
+}
+
 std::optional<bool> LiteralFolder::compare_tuples(Tuple *left_tuple,
                                                   Tuple *right_tuple)
 {
@@ -158,57 +218,46 @@ std::optional<bool> LiteralFolder::compare_tuples(Tuple *left_tuple,
     auto l_expr = left_tuple->elems[i];
     auto r_expr = right_tuple->elems[i];
 
-    visit(l_expr);
-    visit(r_expr);
+    auto result = compare_literal_exprs(l_expr, r_expr);
+    if (!result.has_value()) {
+      return std::nullopt;
+    }
+    if (!*result) {
+      return false;
+    }
+  }
 
-    if (!l_expr.is_literal() || !r_expr.is_literal()) {
+  return true;
+}
+
+std::optional<bool> LiteralFolder::compare_records(Record *left_record,
+                                                   Record *right_record)
+{
+  if (left_record->elems.size() != right_record->elems.size()) {
+    return false;
+  }
+
+  for (auto *left_elm : left_record->elems) {
+    NamedArgument *right_elem = nullptr;
+    for (auto *elem : right_record->elems) {
+      if (elem->name == left_elm->name) {
+        right_elem = elem;
+        break;
+      }
+    }
+
+    if (!right_elem) {
       return std::nullopt;
     }
 
-    if (auto *l_int = l_expr.as<Integer>()) {
-      if (auto *r_int = r_expr.as<Integer>()) {
-        if (l_int->value != r_int->value) {
-          return false;
-        }
-        continue;
-      }
-      return false;
-    }
+    auto l_expr = left_elm->expr;
+    auto r_expr = right_elem->expr;
 
-    if (auto *l_nint = l_expr.as<NegativeInteger>()) {
-      if (auto *r_nint = r_expr.as<NegativeInteger>()) {
-        if (l_nint->value != r_nint->value) {
-          return false;
-        }
-        continue;
-      }
-      return false;
+    auto result = compare_literal_exprs(l_expr, r_expr);
+    if (!result.has_value()) {
+      return std::nullopt;
     }
-
-    if (auto *l_str = l_expr.as<String>()) {
-      if (auto *r_str = r_expr.as<String>()) {
-        if (l_str->value != r_str->value) {
-          return false;
-        }
-        continue;
-      }
-      return false;
-    }
-
-    if (auto *l_bool = l_expr.as<Boolean>()) {
-      if (auto *r_bool = r_expr.as<Boolean>()) {
-        if (l_bool->value != r_bool->value) {
-          return false;
-        }
-        continue;
-      }
-      return false;
-    }
-
-    if (auto *l_tuple = l_expr.as<Tuple>()) {
-      if (auto *r_tuple = r_expr.as<Tuple>()) {
-        return compare_tuples(l_tuple, r_tuple);
-      }
+    if (!*result) {
       return false;
     }
   }
@@ -518,6 +567,21 @@ std::optional<Expression> LiteralFolder::visit(Binop &op)
     auto *left_tuple = op.left.as<Tuple>();
     auto *right_tuple = op.right.as<Tuple>();
     auto same = compare_tuples(left_tuple, right_tuple);
+    if (same) {
+      return ast_.make_node<Boolean>(op.loc,
+                                     *same ? op.op == Operator::EQ
+                                           : op.op == Operator::NE);
+    } else {
+      // Can't compare here
+      return std::nullopt;
+    }
+  }
+
+  if (op.left.is<Record>() && op.right.is<Record>() &&
+      (op.op == Operator::EQ || op.op == Operator::NE)) {
+    auto *left_record = op.left.as<Record>();
+    auto *right_record = op.right.as<Record>();
+    auto same = compare_records(left_record, right_record);
     if (same) {
       return ast_.make_node<Boolean>(op.loc,
                                      *same ? op.op == Operator::EQ
@@ -840,6 +904,22 @@ std::optional<Expression> LiteralFolder::visit(TupleAccess &acc)
       return std::nullopt;
     }
     return tuple->elems[acc.index];
+  }
+
+  return std::nullopt;
+}
+
+std::optional<Expression> LiteralFolder::visit(FieldAccess &acc)
+{
+  visit(acc.expr);
+
+  if (acc.expr.is<Record>() && acc.expr.is_literal()) {
+    auto *record = acc.expr.as<Record>();
+    for (auto *elem : record->elems) {
+      if (elem->name == acc.field) {
+        return elem->expr;
+      }
+    }
   }
 
   return std::nullopt;

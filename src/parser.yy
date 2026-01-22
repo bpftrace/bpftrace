@@ -192,6 +192,9 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::MapAddr *> map_addr
 %type <ast::Program *> program
 %type <std::string> header c_struct
+%type <ast::NamedArgument *> named_argument
+%type <ast::NamedArgumentList> named_argument_list
+%type <ast::Record *> record_expr
 
 
 // A pseudo token, which is the lowest precedence among all tokens.
@@ -641,6 +644,35 @@ tuple_expr:
                 }
                 ;
 
+record_expr:
+                "(" named_argument_list ")"
+                {
+                  $$ = driver.ctx.make_node<ast::Record>(@$, std::move($2));
+                }
+                ;
+
+named_argument_list:
+                named_argument_list "," named_argument {
+                        $$ = std::move($1);
+                        $$.push_back($3);
+                        std::set<std::string> names;
+                        for (const auto& na : $$) {
+                                if (names.contains(na->name)) {
+                                        error(@3, "Named argument list already contains name: " + na->name);
+                                        YYERROR;
+                                } else {
+                                        names.insert(na->name);
+                                }
+                        }
+                  }
+        |       named_argument                         { $$ = ast::NamedArgumentList{}; $$.push_back($1); }
+                ;
+
+named_argument:
+                ident ASSIGN expr { $$ = driver.ctx.make_node<ast::NamedArgument>(@$, $1, $3); }
+                ;
+
+
 integer:
                 UNSIGNED_INT
                 {
@@ -672,6 +704,7 @@ primary_expr:
         |       tuple_expr         { $$ = $1; }
         |       tuple_access_expr  { $$ = $1; }
         |       array_access_expr  { $$ = $1; }
+        |       record_expr        { $$ = $1; }
         |       field_access_expr  { $$ = $1; }
         |       call_expr          { $$ = $1; }
         |       sizeof_expr        { $$ = $1; }

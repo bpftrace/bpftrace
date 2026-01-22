@@ -790,6 +790,23 @@ Buffer Formatter::visit(Tuple& tuple)
   }
 }
 
+Buffer Formatter::visit(Record& record)
+{
+  // N.B. records are packed, separated by `,` instead of `, `.
+  Buffer elems;
+  if (record.elems.size() == 1) {
+    elems = format(record.elems[0], metadata, max_width - 2);
+  } else {
+    elems = format_list(
+        record.elems, ",", metadata, max_width - kIndentWidth - 1);
+  }
+  if (elems.lines() > 1) {
+    return Buffer().text("(").append(std::move(elems), kIndentWidth).text(")");
+  } else {
+    return Buffer().text("(").append(std::move(elems)).text(")");
+  }
+}
+
 Buffer Formatter::visit(AssignScalarMapStatement& assignment)
 {
   std::string ops;
@@ -1345,6 +1362,16 @@ Buffer Formatter::visit(Expression& expr)
     return buffer;
   }
   return buffer.text(")");
+}
+
+Buffer Formatter::visit(NamedArgument& named_arg)
+{
+  Buffer elem;
+  // -1 for the equals
+  size_t width = max_width - (named_arg.name.size()) - 1;
+  auto elem_buf = format(named_arg.expr, metadata, width);
+  elem = Buffer().text(named_arg.name).text("=").append(std::move(elem_buf));
+  return elem;
 }
 
 Buffer Formatter::visit(const SizedType& type)

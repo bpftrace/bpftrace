@@ -126,7 +126,7 @@ public:
   Value *CreateGetFmtStringArgsAllocation(StructType *struct_type,
                                           const std::string &name,
                                           const Location &loc);
-  Value *CreateTupleAllocation(const SizedType &tuple_type,
+  Value *CreateAnonStructAllocation(const SizedType &tuple_type,
                                const std::string &name,
                                const Location &loc);
   Value *CreateCallStackAllocation(const SizedType &stack_type,

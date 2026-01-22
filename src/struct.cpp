@@ -147,6 +147,15 @@ const Field &Struct::GetField(const std::string &name) const
   throw util::FatalUserException("struct has no field named " + name);
 }
 
+size_t Struct::GetFieldIdx(const std::string &name) const
+{
+  for (size_t i = 0; i < fields.size(); ++i) {
+    if (fields.at(i).name == name)
+      return i;
+  }
+  throw util::FatalUserException("struct has no field named " + name);
+}
+
 void Struct::AddField(const std::string &field_name,
                       const SizedType &type,
                       ssize_t offset,

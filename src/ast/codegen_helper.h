@@ -18,7 +18,7 @@ inline bool shouldBeInBpfMemoryAlready(const SizedType &type)
 {
   return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
          type.IsUsymTy() || type.IsKstackTy() || type.IsUstackTy() ||
-         type.IsTupleTy() || type.IsTimestampTy() || type.IsMacAddressTy() ||
+         type.IsTupleTy() || type.IsRecordTy() || type.IsTimestampTy() || type.IsMacAddressTy() ||
          type.IsCgroupPathTy();
 }
 
@@ -33,6 +33,6 @@ inline AddrSpace find_addrspace_stack(const SizedType &ty)
 }
 
 // This applies to both map keys and map values
-bool needMapAllocation(const SizedType &ty);
+bool needMapAllocation(const SizedType &src, const SizedType &dst);
 
 } // namespace bpftrace::ast

@@ -155,6 +155,14 @@ public:
   {
     return visitImpl(tuple.elems);
   }
+  R visit(NamedArgument &named_arg)
+  {
+    return visitImpl(named_arg.expr);
+  }
+  R visit(Record &record)
+  {
+    return visitImpl(record.elems);
+  }
   R visit(ExprStatement &expr)
   {
     return visitImpl(expr.expr);

@@ -182,6 +182,7 @@ class IfExpr;
 class BlockExpr;
 class Typeinfo;
 class Comptime;
+class Record;
 
 class Expression : public VariantNode<Integer,
                                       NegativeInteger,
@@ -210,7 +211,8 @@ class Expression : public VariantNode<Integer,
                                       IfExpr,
                                       BlockExpr,
                                       Typeinfo,
-                                      Comptime> {
+                                      Comptime,
+                                      Record> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -1264,6 +1266,75 @@ public:
 
   ExpressionList elems;
   SizedType tuple_type;
+};
+
+class NamedArgument : public Node {
+public:
+  explicit NamedArgument(ASTContext &ctx,
+                         Location &&loc,
+                         std::string name,
+                         Expression expr)
+      : Node(ctx, std::move(loc)), name(std::move(name)), expr(std::move(expr)) {};
+  explicit NamedArgument(ASTContext &ctx,
+                         const Location &loc,
+                         const NamedArgument &other)
+      : Node(ctx, loc + other.loc),
+        name(other.name),
+        expr(clone(ctx, loc, other.expr)) {};
+
+  bool operator==(const NamedArgument &other) const
+  {
+    return name == other.name && expr == other.expr;
+  }
+  std::strong_ordering operator<=>(const NamedArgument &other) const
+  {
+    if (auto cmp = name <=> other.name; cmp != 0)
+      return cmp;
+    return expr <=> other.expr;
+  }
+
+  const std::string name;
+  Expression expr;
+};
+
+using NamedArgumentList = std::vector<NamedArgument *>;
+
+class Record : public Node {
+public:
+  explicit Record(ASTContext &ctx, Location &&loc, NamedArgumentList &&named_args)
+      : Node(ctx, std::move(loc)), elems(std::move(named_args)) {};
+  explicit Record(ASTContext &ctx, const Location &loc, const Record &other)
+      : Node(ctx, loc + other.loc),
+        elems(clone(ctx, loc, other.elems)) {};
+
+  const SizedType &type() const
+  {
+    return record_type;
+  }
+
+  bool operator==(const Record &other) const
+  {
+    return std::ranges::equal(
+               elems,
+               other.elems,
+               [](const auto *a, const auto *b) { return *a == *b; }) &&
+           record_type == other.record_type;
+  }
+  std::strong_ordering operator<=>(const Record &other) const
+  {
+    if (auto cmp = elems.size() <=> other.elems.size(); cmp != 0) {
+      return cmp;
+    }
+    for (size_t i = 0; i < elems.size(); ++i) {
+      if (auto cmp = *elems[i] <=> *other.elems[i]; cmp != 0) {
+        return cmp;
+      }
+    }
+    return record_type <=> other.record_type;
+  }
+
+  NamedArgumentList elems;
+  SizedType record_type;
 };
 
 class ExprStatement : public Node {

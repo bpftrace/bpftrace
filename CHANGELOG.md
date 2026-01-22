@@ -51,6 +51,8 @@ and this project adheres to
   - [#4621](https://github.com/bpftrace/bpftrace/pull/4621)
 - Add `build_id` stack mode for getting build_id and offset
   - [#4912](https://github.com/bpftrace/bpftrace/pull/4912)
+- Add new Record primitive
+  - [#4947](https://github.com/bpftrace/bpftrace/pull/4947)
 #### Changed
 - Add helpers to check if a kfunc exists and is supported for particular probe types.
   - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)
