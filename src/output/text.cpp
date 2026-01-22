@@ -213,8 +213,11 @@ struct TextEmitter<Value::Histogram> {
     for (const auto &v : hist.counts) {
       max_value = std::max(max_value, v);
     }
+    int max_width = 52;
+    std::u32string top_bar(max_width + 1, U'▔');
+    out << std::setw(16 + 1) << std::right << "" << "▕"
+        << util::to_utf8(top_bar) << "▎" << std::endl;
     for (size_t i = 0; i < hist.counts.size() || i < hist.labels.size(); i++) {
-      int max_width = 52;
       int bar_width = (hist.counts.at(i) / static_cast<float>(max_value)) *
                       max_width;
       std::ostringstream header;
@@ -254,11 +257,21 @@ struct TextEmitter<Value::Histogram> {
         TextEmitter<Primitive>::emit(header, hist.labels[i]);
         header << ")";
       }
-      std::string bar(bar_width, '@');
-      out << std::setw(16) << std::left << header.str() << std::setw(8)
-          << std::right << hist.counts.at(i) << " |" << std::setw(max_width)
-          << std::left << bar << "|" << std::endl;
+      uint32_t ch;
+      if (i % 2 == 0) {
+        ch = U'▇';
+      } else {
+        ch = U'▇';
+      }
+      std::u32string bar(bar_width, ch);
+      std::u32string padding(max_width - bar_width, ' ');
+      out << std::setw(16) << std::left << header.str() << " ▕"
+          << util::to_utf8(bar) << util::to_utf8(padding) << " ▎"
+          << std::setw(8) << std::left << hist.counts.at(i) << std::endl;
     }
+    std::u32string bottom_bar(max_width + 1, U'▁');
+    out << std::setw(16 + 1) << std::right << "" << "▕"
+        << util::to_utf8(bottom_bar) << "▎" << std::endl;
   }
 };
 
@@ -404,9 +417,12 @@ struct TextEmitter<Value::TimeSeries> {
     res << std::right;
     TextEmitter<Primitive>::emit(res, max_value);
     res << std::endl;
-    std::string top(graph_width - 2, '_');
+
+    std::u32string bar(graph_width, U'━');
+    bar[0] = U'┣';
+    bar[graph_width - 1] = U'┫';
     res << std::setw(time_size + 1) << std::left << time_fmt;
-    res << "|" << top << "|" << std::endl;
+    res << util::to_utf8(bar) << std::endl;
 
     int zero_offset = 0;
     if (distance(min_value, 0) < 0 && distance(0, max_value) < 0) {
@@ -415,14 +431,14 @@ struct TextEmitter<Value::TimeSeries> {
                     static_cast<float>(distance(min_value, max_value));
     }
     for (const auto &[epoch, v] : ts.values) {
-      std::string line(graph_width, ' ');
+      std::u32string line(graph_width, ' ');
       TextEmitter<Primitive::Timestamp>::emit(res, epoch, time_format, unit);
       res << " ";
 
-      line[0] = '|';
-      line[graph_width - 1] = '|';
+      line[0] = U'┃';
+      line[graph_width - 1] = U'┃';
       if (zero_offset > 0) {
-        line[zero_offset] = '.';
+        line[zero_offset] = U'·';
       }
       // There may be epochs with no valid entry.
       if (!std::holds_alternative<std::monostate>(v.variant)) {
@@ -433,19 +449,16 @@ struct TextEmitter<Value::TimeSeries> {
                          static_cast<float>(distance(min_value, max_value));
         }
         // Ensure that we don't have floating point issues.
-        line[std::max(0, std::min(graph_width - 1, point_offset))] = '*';
-        res << line << " ";
+        line[std::max(0, std::min(graph_width - 1, point_offset))] = U'•';
+        res << util::to_utf8(line) << " ";
         TextEmitter<Primitive>::emit(res, v);
       } else {
-        res << line << " -";
+        res << util::to_utf8(line) << " -";
       }
       res << std::endl;
     }
 
-    std::string bottom(graph_width, '_');
-    bottom[0] = 'v';
-    bottom[graph_width - 1] = 'v';
-    res << std::setw(time_size) << "" << " " << bottom << std::endl;
+    res << std::setw(time_size) << "" << " " << util::to_utf8(bar) << std::endl;
     res << std::setw(time_size) << "" << " ";
     res << std::setw(padding);
     res << std::left;
