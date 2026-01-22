@@ -3,7 +3,6 @@
 #include <unistd.h>
 
 #include "data/data_source_btf.h"
-#include "data/data_source_funcs.h"
 #include "util/temp.h"
 #include "gtest/gtest.h"
 
@@ -21,13 +20,6 @@ protected:
         { reinterpret_cast<const char *>(btf_data), sizeof(btf_data) })));
     setenv("BPFTRACE_BTF", f1->path().c_str(), true);
     btf_path.emplace(std::move(*f1));
-
-    auto f2 = TempFile::create();
-    ASSERT_TRUE(bool(f2));
-    ASSERT_TRUE(bool(f2->write_all(
-        { reinterpret_cast<const char *>(func_list), sizeof(func_list) })));
-    funcs_path.emplace(std::move(*f1));
-    setenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST", f2->path().c_str(), true);
   }
 
   void TearDown() override
@@ -35,12 +27,9 @@ protected:
     // clear the environment and remove the temp files.
     unsetenv("BPFTRACE_BTF");
     btf_path.reset();
-    unsetenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
-    funcs_path.reset();
   }
 
   std::optional<TempFile> btf_path;
-  std::optional<TempFile> funcs_path;
 };
 
 class test_bad_btf : public ::testing::Test {

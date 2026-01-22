@@ -441,10 +441,7 @@ bool TraceableFunctionsReader::check_open()
   if (available_filter_functions_.fail())
     return false;
 
-  const char *path_env = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
-  const std::string path = path_env ? path_env
-                                    : tracefs::available_filter_functions();
-
+  const std::string path = tracefs::available_filter_functions();
   available_filter_functions_.open(path);
   if (available_filter_functions_.fail()) {
     // TODO: Propagate error up to ProbeMatcher and print the error there
