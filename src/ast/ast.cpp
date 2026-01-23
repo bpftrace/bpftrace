@@ -419,4 +419,18 @@ SizedType ident_to_sized_type(const std::string &ident)
   return ident_to_c_struct(ident);
 }
 
+Record *make_record(ASTContext &ctx,
+                    const Location &loc,
+                    std::vector<std::pair<std::string, Expression>> &&args)
+{
+  NamedArgumentList named_args;
+  named_args.reserve(args.size());
+
+  for (const auto &[name, expr] : args) {
+    named_args.emplace_back(ctx.make_node<NamedArgument>(loc, name, expr));
+  }
+
+  return ctx.make_node<Record>(loc, std::move(named_args));
+}
+
 } // namespace bpftrace::ast

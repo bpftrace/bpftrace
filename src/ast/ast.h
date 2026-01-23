@@ -2255,5 +2255,8 @@ bool is_comparison_op(Operator op);
 
 SizedType ident_to_c_struct(const std::string &ident, int pointer_level = 0);
 SizedType ident_to_sized_type(const std::string &ident);
+Record* make_record(ASTContext &ctx,
+                    const Location &loc,
+                    std::vector<std::pair<std::string, Expression>>&& args);
 
 } // namespace bpftrace::ast

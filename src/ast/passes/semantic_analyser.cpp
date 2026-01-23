@@ -3528,11 +3528,14 @@ void SemanticAnalyser::visit(Expression &expr)
       // We currently lack a globally-unique enumeration of types. For
       // simplicity, just use the type string with a placeholder identifier.
       auto *id = ctx_.make_node<Integer>(type_id->loc, 0);
-      auto *base_ty = ctx_.make_node<String>(type_id->loc,
-                                             to_string(ty.GetTy()));
-      auto *full_ty = ctx_.make_node<String>(type_id->loc, typestr(ty));
-      expr.value = ctx_.make_node<Tuple>(
-          type_id->loc, ExpressionList{ id, base_ty, full_ty });
+      auto *base_type = ctx_.make_node<String>(type_id->loc,
+                                               to_string(ty.GetTy()));
+      auto *full_type = ctx_.make_node<String>(type_id->loc, typestr(ty));
+      expr.value = make_record(ctx_,
+                               type_id->loc,
+                               { { "btf_id", id },
+                                 { "base_type", base_type },
+                                 { "full_type", full_type } });
     }
   } else if (auto *binop = expr.as<Binop>()) {
     if ((binop->left.type().IsTupleTy() || binop->left.type().IsRecordTy()) &&

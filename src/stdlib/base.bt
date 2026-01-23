@@ -557,7 +557,7 @@ macro len(@map)
 
 macro len(e)
 {
-  if comptime (typeinfo(e).1 != typeinfo(ustack).1 && typeinfo(e).1 != typeinfo(kstack).1) {
+  if comptime (typeinfo(e).base_type != typeinfo(ustack).base_type && typeinfo(e).base_type != typeinfo(kstack).base_type) {
     fail("call to len() expects a map, ustack, or kstack")
   } else {
     // This is handled in codegen for now
@@ -747,8 +747,8 @@ macro override(expr)
     fail("override() can only be used inside kprobes");
   } else if comptime __builtin_safe_mode {
     fail("override() is unsafe. To use you need the --unsafe flag");
-  } else if comptime (typeinfo(expr).1 != typeinfo(0).1) {
-    fail("override() only supports int arguments (%s provided)", typeinfo(expr).1);
+  } else if comptime (typeinfo(expr).base_type != typeinfo(0).base_type) {
+    fail("override() only supports int arguments (%s provided)", typeinfo(expr).base_type);
   } else {
     __override((void *)ctx, (uint64)expr);
   }
