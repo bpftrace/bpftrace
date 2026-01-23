@@ -1318,8 +1318,8 @@ macro uaddr(sym)
   // There are three types of ELF that use uprobe: PIE, EXEC, and dynamic
   // libraries. Among them, PIE and dynamic libraries need to correct the
   // symbol address according to the actual load address.
-  if comptime (!__builtin_elf_is_exe) {
-    $offset = (uint64)__bpf_task_map_file_min_addr((uint64)__builtin_elf_ino);
+  if comptime (!elf_is_exe) {
+    $offset = (uint64)__bpf_task_map_file_min_addr((uint64)elf_info);
     $addr += $offset;
   }
   $addr

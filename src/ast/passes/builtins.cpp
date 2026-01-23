@@ -56,6 +56,15 @@ Probe *Builtins::get_probe(Node &node, std::string name)
 
 std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
 {
+  auto *probe = dynamic_cast<Probe *>(top_level_node_);
+  auto check_probe = [&]() -> bool {
+    if (!probe) {
+      node.addError() << ident << " can only be used inside of a probe.";
+      return false;
+    }
+    return true;
+  };
+
   // N.B. this pass *should* include all the compile-time builtins (probe,
   // provider, etc.) but it presently cannot due to the expansion rules. All
   // builtins should be added here once probes are fully-expanded up front.
@@ -67,20 +76,17 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
     std::stringstream ss;
     ss << bpftrace::arch::current();
     return ast_.make_node<String>(node.loc, ss.str());
-  }
-  if (ident == "__builtin_safe_mode") {
+  } else if (ident == "__builtin_safe_mode") {
     return ast_.make_node<Boolean>(node.loc, bpftrace_.safe_mode_);
-  }
-  if (ident == "__builtin_probe") {
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+  } else if (ident == "__builtin_probe") {
+    if (check_probe()) {
       return ast_.make_node<String>(node.loc,
                                     probe->attach_points.empty()
                                         ? "none"
                                         : probe->attach_points.front()->name());
     }
-  }
-  if (ident == "__builtin_probetype") {
-    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+  } else if (ident == "__builtin_probetype") {
+    if (check_probe()) {
       return ast_.make_node<String>(
           node.loc,
           probe->attach_points.empty()
@@ -88,27 +94,18 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
               : probetypeName(
                     probetype(probe->attach_points.front()->provider)));
     }
-  }
-  if (ident == "__builtin_elf_is_exe" || ident == "__builtin_elf_ino") {
-    auto *probe = dynamic_cast<Probe *>(top_level_node_);
-    if (!probe) {
-      return std::nullopt;
-    }
-    ProbeType type = probetype(probe->attach_points.front()->provider);
-    // Only for uprobe,uretprobe,USDT.
-    if (type != ProbeType::uprobe && type != ProbeType::uretprobe &&
-        type != ProbeType::usdt) {
-      LOG(BUG) << "The " << ident << " can not be used with '"
-               << probe->attach_points.front()->provider << "' probes";
-    }
-    if (ident == "__builtin_elf_is_exe") {
+  } else if (ident == "__builtin_elf_is_exe") {
+    if (check_probe()) {
       return ast_.make_node<Boolean>(
           node.loc, util::is_exe(probe->attach_points.front()->target));
-    } else {
+    }
+  } else if (ident == "__builtin_elf_ino") {
+    if (check_probe()) {
       return ast_.make_node<Integer>(
           node.loc, util::file_ino(probe->attach_points.front()->target));
     }
   }
+
   return std::nullopt;
 }
 
