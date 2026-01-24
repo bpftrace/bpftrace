@@ -185,6 +185,17 @@ bool SizedType::IsCompatible(const SizedType &t) const
     }
   }
 
+  if (IsArrayTy()) {
+    if (GetElementTy() != t.GetElementTy()) {
+      return false;
+    }
+    // Arrays wit no size e.g. `int8[]` are compatible with ones that do have a
+    // size
+    if ((GetSize() != 0) && (t.GetSize() != 0) && GetSize() != t.GetSize()) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -204,6 +215,12 @@ std::strong_ordering SizedType::operator<=>(const SizedType &t) const
     return cmp;
 
   if (IsCStructTy()) {
+    if (auto cmp = GetName() <=> t.GetName(); cmp != 0)
+      return cmp;
+    return GetSize() <=> t.GetSize();
+  }
+
+  if (IsEnumTy() || t.IsEnumTy()) {
     if (auto cmp = GetName() <=> t.GetName(); cmp != 0)
       return cmp;
     return GetSize() <=> t.GetSize();
@@ -584,6 +601,131 @@ SizedType CreateTimestampMode()
   return { Type::timestamp_mode, 0 };
 }
 
+std::optional<SizedType> get_promoted_int(const SizedType &currentType,
+                                          const SizedType &newType)
+{
+  bool currentSigned = currentType.IsSigned();
+  bool newSigned = newType.IsSigned();
+  auto currentSize = currentType.GetSize();
+  auto newSize = newType.GetSize();
+
+  if (currentSigned != newSigned) {
+    if (currentSigned && currentSize > newSize) {
+      return CreateInteger(currentSize * 8, true);
+    } else if (newSigned && newSize > currentSize) {
+      return CreateInteger(newSize * 8, true);
+    }
+
+    size_t promoted_size = std::max(currentSize, newSize) * 2;
+    if (promoted_size > 8) {
+      return std::nullopt;
+    } else {
+      return CreateInteger(promoted_size * 8, true);
+    }
+  }
+
+  // Same sign - return the larger of the two
+  size_t promoted_size = std::max(currentSize, newSize);
+  return CreateInteger(promoted_size * 8, currentSigned);
+}
+
+std::optional<SizedType> get_promoted_castable_map(const SizedType &currentType,
+                                                   const SizedType &newType)
+{
+  if (currentType.IsSigned() != newType.IsSigned()) {
+    return currentType.IsSigned() ? currentType : newType;
+  }
+  return currentType;
+}
+
+static std::optional<SizedType> get_promoted_element(const SizedType &currentTy,
+                                                     const SizedType &newTy)
+{
+  if (currentTy.IsIntegerTy()) {
+    return get_promoted_int(currentTy, newTy);
+  } else if (currentTy.IsCastableMapTy()) {
+    return get_promoted_castable_map(currentTy, newTy);
+  } else if (currentTy.IsTupleTy()) {
+    return get_promoted_tuple(currentTy, newTy);
+  } else if (currentTy.IsRecordTy()) {
+    return get_promoted_record(currentTy, newTy);
+  } else if (currentTy.IsStringTy()) {
+    auto promoted = currentTy;
+    promoted.SetSize(std::max(currentTy.GetSize(), newTy.GetSize()));
+    return promoted;
+  } else if (currentTy.IsPtrTy()) {
+    auto newPointeeTy = newTy.GetPointeeTy();
+    auto currentPointeeTy = currentTy.GetPointeeTy();
+    auto promoted = get_promoted_element(currentPointeeTy, newPointeeTy);
+    if (promoted) {
+      return CreatePointer(*promoted, newPointeeTy.GetAS());
+    } else {
+      return std::nullopt;
+    }
+  }
+  return currentTy;
+}
+
+std::optional<SizedType> get_promoted_tuple(const SizedType &currentType,
+                                            const SizedType &newType)
+{
+  assert(currentType.IsTupleTy() && currentType.IsCompatible(newType));
+
+  std::vector<SizedType> new_elems;
+  for (ssize_t i = 0; i < newType.GetFieldCount(); i++) {
+    auto promoted = get_promoted_element(currentType.GetField(i).type,
+                                         newType.GetField(i).type);
+    if (!promoted)
+      return std::nullopt;
+    new_elems.emplace_back(*promoted);
+  }
+  return CreateTuple(Struct::CreateTuple(new_elems));
+}
+
+std::optional<SizedType> get_promoted_record(const SizedType &currentType,
+                                             const SizedType &newType)
+{
+  assert(currentType.IsRecordTy() && currentType.IsCompatible(newType));
+
+  std::vector<SizedType> new_elems;
+  std::vector<std::string_view> names;
+  // Maintain the ordering of the currentType
+  for (const auto &field : currentType.GetFields()) {
+    names.emplace_back(field.name);
+    auto promoted = get_promoted_element(field.type,
+                                         newType.GetField(field.name).type);
+    if (!promoted)
+      return std::nullopt;
+    new_elems.emplace_back(*promoted);
+  }
+  return CreateRecord(Struct::CreateRecord(new_elems, names));
+}
+
+std::optional<SizedType> get_promoted_type(const SizedType &currentType,
+                                           const SizedType &newType)
+{
+  if (currentType.IsNoneTy()) {
+    if (newType.IsCastableMapTy()) {
+      return newType.IsSigned() ? CreateInt64() : CreateUInt64();
+    }
+    return newType;
+  }
+
+  if (currentType == newType) {
+    return newType;
+  }
+
+  if (!currentType.IsCompatible(newType)) {
+    if ((currentType.IsIntegerTy() && newType.IsCastableMapTy()) ||
+        (newType.IsIntegerTy() && currentType.IsCastableMapTy())) {
+      return get_promoted_int(currentType, newType);
+    }
+    return std::nullopt;
+  }
+
+  return get_promoted_element(currentType, newType);
+}
+
 bool SizedType::IsSigned() const
 {
   return is_signed_;
@@ -645,13 +787,13 @@ ssize_t SizedType::GetInTupleAlignment() const
 
 bool SizedType::HasField(const std::string &name) const
 {
-  assert(IsCStructTy() || IsRecordTy());
+  assert(IsCStructTy() || IsRecordTy() || IsTupleTy());
   return inner_struct()->HasField(name);
 }
 
 const Field &SizedType::GetField(const std::string &name) const
 {
-  assert(IsCStructTy() || IsRecordTy());
+  assert(IsCStructTy() || IsRecordTy() || IsTupleTy());
   return inner_struct()->GetField(name);
 }
 

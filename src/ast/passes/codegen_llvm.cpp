@@ -2225,9 +2225,9 @@ ScopedExpr CodegenLLVM::binop_ptr(Binop &binop)
   if (compare) {
     // The only other type pointers can be compared to is ints
     if (!binop.left.type().IsPtrTy()) {
-      rhs = b_.CreatePtrToInt(rhs, b_.GetType(binop.left.type()));
+      lhs = b_.CreateIntToPtr(lhs, rhs->getType());
     } else if (!binop.right.type().IsPtrTy()) {
-      lhs = b_.CreatePtrToInt(lhs, b_.GetType(binop.right.type()));
+      rhs = b_.CreateIntToPtr(rhs, lhs->getType());
     }
     switch (binop.op) {
       case Operator::EQ:

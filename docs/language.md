@@ -1671,7 +1671,7 @@ A record is a struct-like type where every element has a name and a type.
 
 Records are a comma separated list of named expressions, enclosed in parenthesis, `(color="green", size=2)`.
 Individual fields can be accessed with the `.` operator and the field name.
-Records maintain their initial ordering but maybe assigned to out of order, e.g. `$a = (color="green", size=2); $a = (size=10, color="blue");`. Note that evaluation order is maintained, e.g. `$a = (size={ print("first"); 20 }, color={ print("second"); "pink" });` will print "first" then "second" but `$a` will now contain `(color="pink", size=20)` in that order.
+If records are assigned in a different order to the same variable, map key, or map value then the final ordering is ambiguous. Note that the evaluation order is maintained, e.g. `$a = (size={ print("first"); 20 }, color={ print("second"); "pink" });` will print "first" then "second" regardless of the ordering of the final type.
 Examples:
 
 ```
@@ -1681,7 +1681,6 @@ interval:s:1 {
   print($a.size);   // 2
   $a = (size=10, color="blue");
   print($a.color);  // blue
-  print($a);        // { .color = "blue", .size = 10 }
 }
 ```
 

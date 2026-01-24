@@ -106,7 +106,7 @@ macro strstr($haystack, $needle)
     // Special case: the needle is empty.
     0
   } else {
-    __bpf_strnstr((int8*)&$haystack, (int8*)&$needle, $haystack_size, $needle_size)
+    __bpf_strnstr((int8*)&$haystack, (int8*)&$needle, (uint64)$haystack_size, (uint64)$needle_size)
   }
 }
 macro strstr($haystack, needle)
