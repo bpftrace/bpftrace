@@ -64,8 +64,6 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
 
-bool symbol_has_module(const std::string &symbol);
-
 std::pair<std::string, std::string> split_symbol_module(
     const std::string &symbol);
 

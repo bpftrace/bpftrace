@@ -1,5 +1,6 @@
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
+#include <cassert>
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
@@ -45,20 +46,16 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
   return symbol_table;
 }
 
-bool symbol_has_module(const std::string &symbol)
-{
-  return !symbol.empty() && symbol[symbol.size() - 1] == ']';
-}
-
 std::pair<std::string, std::string> split_symbol_module(
     const std::string &symbol)
 {
-  if (!symbol_has_module(symbol))
-    return { symbol, "" };
+  assert(!symbol.empty());
+
+  if (symbol[symbol.size() - 1] != ']')
+    return { symbol, "vmlinux" };
 
   size_t idx = symbol.rfind(" [");
-  if (idx == std::string::npos)
-    return { symbol, "" };
+  assert(idx != std::string::npos);
 
   return { symbol.substr(0, idx),
            symbol.substr(idx + strlen(" ["),
@@ -82,7 +79,7 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
     return { symbol.substr(0, idx1),
              symbol.substr(idx1 + strlen("\t"),
                            symbol.length() - idx1 - strlen("\t")),
-             "" };
+             "vmlinux" };
 
   return { symbol.substr(0, idx1),
            symbol.substr(idx1 + strlen("\t"), idx2 - idx1 - strlen("\t")),
