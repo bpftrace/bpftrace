@@ -83,7 +83,8 @@ std::shared_ptr<Struct> Struct::CreateRecord(
     offset += padding;
 
     record->fields.push_back(Field{
-        .name = field_names.empty() ? "" : std::string{ field_names[i] },
+        .name = field_names.empty() ? std::to_string(i)
+                                    : std::string{ field_names[i] },
         .type = field,
         .offset = offset,
         .bitfield = std::nullopt,

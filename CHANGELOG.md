@@ -24,6 +24,8 @@ and this project adheres to
   - [#4890](https://github.com/bpftrace/bpftrace/pull/4890)
 - `BPFTRACE_DEBUG_OUTPUT` is removed, and errors are now propagated via the runtime error path
   - [#4976](https://github.com/bpftrace/bpftrace/pull/4976)
+- Unary increment/decrement on maps (`++@a`) requires the map to have an initial type
+  - [#X](https://github.com/bpftrace/bpftrace/pull/X)
 #### Added
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)

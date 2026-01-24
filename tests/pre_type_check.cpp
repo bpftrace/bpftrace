@@ -563,4 +563,59 @@ TEST(CallPreCheck, pid_tid)
        "tid() only supports curr_ns and init as the argument");
 }
 
+TEST(CallPreCheck, call_uaddr)
+{
+  test("u:/bin/sh:main { "
+       "__builtin_uaddr(\"github.com/golang/"
+       "glog.severityName\"); }");
+  test("uprobe:/bin/sh:main { "
+       "__builtin_uaddr(\"glob_asciirange\"); }");
+  test("u:/bin/sh:main,u:/bin/sh:readline "
+       "{ __builtin_uaddr(\"glob_asciirange\"); }");
+  test("uprobe:/bin/sh:main { @x = "
+       "__builtin_uaddr(\"glob_asciirange\"); }");
+
+  // Errors
+  test("uprobe:/bin/sh:main { __builtin_uaddr(123); }",
+       "expects a string literal as the first argument");
+  test("uprobe:/bin/sh:main { "
+       "__builtin_uaddr(\"?\"); }",
+       "expects a string that is a valid symbol");
+  test("uprobe:/bin/sh:main { $str = "
+       "\"glob_asciirange\"; __builtin_uaddr($str); }",
+       "expects a string literal as the first argument");
+  test("uprobe:/bin/sh:main { @str = "
+       "\"glob_asciirange\"; __builtin_uaddr(@str); }",
+       "expects a string literal as the first argument");
+}
+
+TEST(CallPreCheck, raw_map_arg_funcs)
+{
+  test("kprobe:f { @x[1,2] = count(); clear(@x); }");
+  test("kprobe:f { @x[1,2] = count(); zero(@x); }");
+  test("kprobe:f { @x[1,2] = count(); len(@x); }");
+
+  // Errors
+  test("kprobe:f { @x[1,2] = count(); clear(@x[3,4]); }",
+       "expects a map argument");
+  test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }",
+       "expects a map argument");
+  test("kprobe:f { @x[1,2] = count(); len(@x[3,4]); }",
+       "expects a map argument");
+}
+
+TEST(MapPreCheck, no_meta_map_assignments)
+{
+  test("begin { let $b : typeof({ @a = 1; 1 }) = 1; }",
+       "Map assignments not allowed inside of typeof or typeinfo");
+  test("begin { $b = typeinfo({ @a = 1; 1 }); }",
+       "Map assignments not allowed inside of typeof or typeinfo");
+  test("begin { print(sizeof({ @a = 1; 1 })); }",
+       "Map assignments not allowed inside of sizeof");
+  test("struct Foo { int x; }  begin { let $a : struct Foo* = 1; "
+       "print(offsetof({ "
+       "@a =1; *$a}, x)); }",
+       "Map assignments not allowed inside of offsetof");
+}
+
 } // namespace bpftrace::test::pre_type_check

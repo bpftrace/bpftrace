@@ -144,10 +144,6 @@ private:
 
 static const std::map<std::string, std::vector<arg_type_spec>>
     CALL_ARG_TYPE_SPEC = {
-      { "avg",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "buf",
         { arg_type_spec{ .skip_check = true },
           arg_type_spec{ .type = Type::integer } } },
@@ -183,14 +179,6 @@ static const std::map<std::string, std::vector<arg_type_spec>>
           arg_type_spec{ .type = Type::integer, .literal = true },
           arg_type_spec{ .type = Type::integer, .literal = true },
           arg_type_spec{ .type = Type::string, .literal = true } } },
-      { "max",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
-      { "min",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "nsecs", { arg_type_spec{ .type = Type::timestamp_mode } } },
       { "path",
         { arg_type_spec{ .skip_check = true },
@@ -217,10 +205,6 @@ static const std::map<std::string, std::vector<arg_type_spec>>
                                                   // to 14 bytes can exclude
                                                   // this header
           arg_type_spec{ .type = Type::integer } } },
-      { "stats",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "str",
         { arg_type_spec{ .skip_check = true },
           arg_type_spec{ .type = Type::integer } } },
@@ -231,10 +215,6 @@ static const std::map<std::string, std::vector<arg_type_spec>>
         { arg_type_spec{ .type = Type::string },
           arg_type_spec{ .type = Type::string },
           arg_type_spec{ .type = Type::integer, .literal = true } } },
-      { "sum",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "system", { arg_type_spec{ .type = Type::string, .literal = true } } },
       { "time", { arg_type_spec{ .type = Type::string, .literal = true } } },
       { "__builtin_uaddr",
@@ -843,13 +823,6 @@ void TypeChecker::visit(ArrayAccess &arr)
 
   const SizedType &type = arr.expr.type();
 
-  if (!type.IsArrayTy() && !type.IsPtrTy() && !type.IsStringTy()) {
-    arr.addError() << "The array index operator [] can only be "
-                      "used on arrays and pointers, found "
-                   << type.GetTy() << ".";
-    return;
-  }
-
   if (type.IsPtrTy() && type.GetPointeeTy().GetSize() == 0) {
     arr.addError() << "The array index operator [] cannot be used "
                       "on a pointer to an unsized type (void *).";
@@ -941,33 +914,7 @@ void TypeChecker::visit(Binop &binop)
 
 void TypeChecker::visit(Unop &unop)
 {
-  if (unop.op == Operator::PRE_INCREMENT ||
-      unop.op == Operator::PRE_DECREMENT ||
-      unop.op == Operator::POST_INCREMENT ||
-      unop.op == Operator::POST_DECREMENT) {
-    if (!unop.expr.is<Variable>() && !unop.expr.is<MapAccess>()) {
-      unop.addError() << "The " << opstr(unop)
-                      << " operator must be applied to a map or variable";
-    }
-  }
-
   visit(unop.expr);
-
-  const SizedType &type = unop.expr.type();
-  bool invalid = false;
-  // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
-  // and context (we allow args->field for backwards compatibility)
-  if (type.IsBoolTy()) {
-    invalid = unop.op != Operator::LNOT;
-  } else if (!type.IsIntegerTy() && !((type.IsPtrTy() || type.IsCtxAccess()) &&
-                                      IsValidPtrOp(unop.op))) {
-    invalid = true;
-  }
-  if (invalid) {
-    unop.addError() << "The " << opstr(unop)
-                    << " operator can not be used on expressions of type '"
-                    << type << "'";
-  }
 }
 
 void TypeChecker::visit(IfExpr &if_expr)
@@ -975,6 +922,13 @@ void TypeChecker::visit(IfExpr &if_expr)
   visit(if_expr.cond);
   visit(if_expr.left);
   visit(if_expr.right);
+
+  const Type &cond = if_expr.cond.type().GetTy();
+
+  if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean) {
+    if_expr.addError() << "Invalid condition: " << cond;
+    return;
+  }
 }
 
 void TypeChecker::visit(Unroll &unroll)
@@ -1025,15 +979,6 @@ void TypeChecker::visit(For &f)
   loop_depth_--;
 
   scope_stack_.pop_back();
-
-  if (auto *range = f.iterable.as<Range>()) {
-    if (!range->start.type().IsIntTy()) {
-      range->addError() << "Loop range requires an integer for the start value";
-    }
-    if (!range->end.type().IsIntTy()) {
-      range->addError() << "Loop range requires an integer for the end value";
-    }
-  }
 
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.

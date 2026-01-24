@@ -946,6 +946,12 @@ void fold(ASTContext &ast, Expression &expr)
   folder.visit(expr);
 }
 
+void fold(ASTContext &ast)
+{
+  LiteralFolder folder(ast);
+  folder.visit(ast.root);
+}
+
 Pass CreateFoldLiteralsPass()
 {
   auto fn = [](ASTContext &ast, BPFtrace &b) {
