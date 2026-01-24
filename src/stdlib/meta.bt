@@ -47,7 +47,7 @@ macro check_key(@map, key, func)
   if comptime is_scalar(@map) {
     fail("call to %s expects a map with explicit keys (non-scalar map)", func);
   } else {
-    // The typeinfo(@map[key]) is a bit of a hack as it both checks if the passed key is compatible
+    // This is a bit of a hack as it both checks if the passed key is compatible
     // with the map key and it also possibly changes the key type to make them
     // compatible if possible, e.g.
     // @c[1, ("hello", (int8)5)] = 0;
