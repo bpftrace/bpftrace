@@ -7,6 +7,7 @@
 #include <fstream>
 #include <gelf.h>
 #include <glob.h>
+#include <iterator>
 #include <libelf.h>
 #include <link.h>
 #include <linux/limits.h>
@@ -18,7 +19,6 @@
 #include <unistd.h>
 #include <zlib.h>
 
-#include "btf.h"
 #include "debugfs/debugfs.h"
 #include "log.h"
 #include "tracefs/tracefs.h"
@@ -422,11 +422,6 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   return cflags;
 }
 
-TraceableFunctionsReader::TraceableFunctionsReader()
-{
-  blocklist_init();
-}
-
 TraceableFunctionsReader::~TraceableFunctionsReader()
 {
   if (available_filter_functions_.is_open())
@@ -450,6 +445,8 @@ bool TraceableFunctionsReader::check_open()
     return false;
   }
 
+  blocklist_init();
+
   return true;
 }
 
@@ -467,6 +464,43 @@ void TraceableFunctionsReader::blocklist_init()
   }
 }
 
+std::optional<std::string> TraceableFunctionsReader::populate_next_module()
+{
+  if (available_filter_functions_.eof())
+    return std::nullopt;
+
+  std::string module;
+
+  if (last_checked_line_.empty()) {
+    module = "vmlinux";
+  } else {
+    auto func_mod = split_symbol_module(last_checked_line_);
+    module = func_mod.second;
+    modules_[module].insert(func_mod.first);
+  }
+
+  std::string line;
+
+  while (std::getline(available_filter_functions_, line)) {
+    auto func_mod = split_symbol_module(line);
+
+    // Continue reading until we get all the module functions.
+    // Stop when encounter line with the next module.
+    if (func_mod.second != module) {
+      last_checked_line_ = line;
+      break;
+    }
+
+    if (is_bad_func(func_mod.first) ||
+        blocklist_[module].contains(func_mod.first))
+      continue;
+
+    modules_[module].insert(func_mod.first);
+  }
+
+  return module;
+}
+
 std::string TraceableFunctionsReader::search_module_for_function(
     const std::string &func_name)
 {
@@ -478,41 +512,12 @@ std::string TraceableFunctionsReader::search_module_for_function(
       return mod.first;
   }
 
-  if (available_filter_functions_.eof())
-    return "";
-
-  std::string line;
-  if (!last_checked_line_.empty()) {
-    auto func_mod = split_symbol_module(last_checked_line_);
-    modules_[func_mod.second].insert(func_mod.first);
+  while (auto mod = populate_next_module()) {
+    if (modules_[*mod].contains(func_name))
+      return *mod;
   }
 
-  bool found = false;
-  std::string module;
-
-  while (std::getline(available_filter_functions_, line)) {
-    auto func_mod = split_symbol_module(line);
-
-    // If we found the the module, continue reading until we get all the
-    // module functions. Stop when encunter line with the next module.
-    if (found && func_mod.second != module) {
-      last_checked_line_ = line;
-      break;
-    }
-
-    if (is_bad_func(func_mod.first) ||
-        blocklist_[func_mod.second].contains(func_mod.first))
-      continue;
-
-    if (func_mod.first == func_name) {
-      found = true;
-      module = func_mod.second;
-    }
-
-    modules_[func_mod.second].insert(func_mod.first);
-  }
-
-  return module;
+  return "";
 }
 
 const FunctionSet &TraceableFunctionsReader::get_module_funcs(
@@ -525,40 +530,11 @@ const FunctionSet &TraceableFunctionsReader::get_module_funcs(
   if (it != modules_.end())
     return it->second;
 
-  if (available_filter_functions_.eof())
-    return empty_set_;
+  std::string mod;
 
-  std::string line;
-
-  if (!last_checked_line_.empty()) {
-    auto func_mod = split_symbol_module(last_checked_line_);
-    modules_[func_mod.second].insert(func_mod.first);
-  }
-
-  bool found = false;
-
-  while (std::getline(available_filter_functions_, line)) {
-    auto func_mod = split_symbol_module(line);
-
-    // Cntinue reading untill we get all the module functions. Stop when
-    // encunter line with the next module.
-    if (found && func_mod.second != mod_name) {
-      last_checked_line_ = line;
-      break;
-    } else if (func_mod.second == mod_name) {
-      found = true;
-    }
-
-    if (is_bad_func(func_mod.first) ||
-        blocklist_[func_mod.second].contains(func_mod.first))
-      continue;
-
-    modules_[func_mod.second].insert(func_mod.first);
-  }
-
-  it = modules_.find(mod_name);
-  if (it != modules_.end()) {
-    return it->second;
+  while (auto mod = populate_next_module()) {
+    if (*mod == mod_name)
+      return modules_[*mod];
   }
 
   return empty_set_;

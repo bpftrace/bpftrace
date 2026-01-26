@@ -41,7 +41,7 @@ using ModulesFuncsMap = std::unordered_map<std::string, FunctionSet>;
 
 class TraceableFunctionsReader {
 public:
-  explicit TraceableFunctionsReader();
+  explicit TraceableFunctionsReader() = default;
   ~TraceableFunctionsReader();
 
   const FunctionSet &get_module_funcs(const std::string &mod_name);
@@ -53,6 +53,7 @@ public:
 private:
   bool check_open();
   void blocklist_init();
+  std::optional<std::string> populate_next_module();
   std::string search_module_for_function(const std::string &func_name);
 
   std::ifstream available_filter_functions_;
