@@ -2,35 +2,35 @@
 // Determine whether the given expression is a string.
 macro is_str(expr)
 {
-  typeinfo(expr).1 == "string"
+  typeinfo(expr).base_type == "string"
 }
 
 // :variant bool is_ptr(any expression)
 // Determine whether the given expression is a pointer.
 macro is_ptr(expr)
 {
-  typeinfo(expr).1 == "pointer"
+  typeinfo(expr).base_type == "pointer"
 }
 
 // :variant bool is_array(any expression)
 // Determine whether the given expression is an array.
 macro is_array(expr)
 {
-  typeinfo(expr).1 == "array"
+  typeinfo(expr).base_type == "array"
 }
 
 // :variant bool is_integer(any expression)
 // Determine whether the given expression is an integer.
 macro is_integer(expr)
 {
-  typeinfo(expr).1 == "int"
+  typeinfo(expr).base_type == "int"
 }
 
 // :variant bool is_unsigned_integer(any expression)
 // Determine whether the given expression is an unsigned integer.
 macro is_unsigned_integer(expr)
 {
-  typeinfo(expr).1 == typeinfo(0).1 && typeinfo(expr).2[0] == "u"[0]
+  typeinfo(expr).base_type == typeinfo(0).base_type && typeinfo(expr).full_type[0] == "u"[0]
 }
 
 // :variant void static_assert(bool condition, string msg)
@@ -53,7 +53,7 @@ macro check_key(@map, key, func)
     // @c[1, ("hello", (int8)5)] = 0;
     // has_key(@c, (1, ("hello", (uint8)5))) - now the key type is (uint8, (string, int16))
     // Other than that this has no side effects and shouldn't fail
-    if comptime (typeinfo(@map[key]).1 == "__dummy_key_type") {
+    if comptime (typeinfo(@map[key]).base_type == "__dummy_key_type") {
       fail("__dummy_key_type shouldn't exist");
     }
   }
