@@ -428,26 +428,24 @@ TraceableFunctionsReader::~TraceableFunctionsReader()
     available_filter_functions_.close();
 }
 
-bool TraceableFunctionsReader::check_open()
+Result<OK> TraceableFunctionsReader::check_open()
 {
   if (available_filter_functions_.is_open())
-    return true;
+    return OK();
 
   if (available_filter_functions_.fail())
-    return false;
+    return make_error<SystemError>("Traceable functions not available");
 
   const std::string path = tracefs::available_filter_functions();
   available_filter_functions_.open(path);
   if (available_filter_functions_.fail()) {
-    // TODO: Propagate error up to ProbeMatcher and print the error there
-    LOG(WARNING) << "Could not read traceable functions from " << path << ": "
-                 << strerror(errno);
-    return false;
+    return make_error<SystemError>("Could not read traceable functions from " +
+                                   path);
   }
 
   blocklist_init();
 
-  return true;
+  return OK();
 }
 
 void TraceableFunctionsReader::blocklist_init()
@@ -501,11 +499,12 @@ std::optional<std::string> TraceableFunctionsReader::populate_next_module()
   return module;
 }
 
-std::string TraceableFunctionsReader::search_module_for_function(
+Result<std::string> TraceableFunctionsReader::search_module_for_function(
     const std::string &func_name)
 {
-  if (!check_open())
-    return "";
+  auto ok = check_open();
+  if (!ok)
+    return ok.takeError();
 
   for (const auto &mod : modules_) {
     if (mod.second.contains(func_name))
@@ -520,11 +519,12 @@ std::string TraceableFunctionsReader::search_module_for_function(
   return "";
 }
 
-const FunctionSet &TraceableFunctionsReader::get_module_funcs(
+Result<const FunctionSet &> TraceableFunctionsReader::get_module_funcs(
     const std::string &mod_name)
 {
-  if (!check_open())
-    return empty_set_;
+  auto ok = check_open();
+  if (!ok)
+    return ok.takeError();
 
   auto it = modules_.find(mod_name);
   if (it != modules_.end())
@@ -537,25 +537,39 @@ const FunctionSet &TraceableFunctionsReader::get_module_funcs(
       return modules_[*mod];
   }
 
+  static FunctionSet empty_set_;
   return empty_set_;
 }
 
+// TODO: Propagate errors up to ProbeMatcher (or other initial caller)
+// and print the error there
 bool TraceableFunctionsReader::is_traceable_function(
     const std::string &func_name,
     const std::string &mod_name)
 {
   if (mod_name.empty() || has_wildcard(mod_name)) {
-    std::string found_mod_name = search_module_for_function(func_name);
-    return !found_mod_name.empty();
+    auto found_mod = search_module_for_function(func_name);
+    if (!found_mod) {
+      LOG(V1) << found_mod.takeError();
+      return false;
+    }
+    return !(*found_mod).empty();
   } else {
-    return get_module_funcs(mod_name).contains(func_name);
+    auto found_fn_set = get_module_funcs(mod_name);
+    if (!found_fn_set) {
+      LOG(V1) << found_fn_set.takeError();
+      return false;
+    }
+    return (*found_fn_set).contains(func_name);
   }
 }
 
 const ModulesFuncsMap &TraceableFunctionsReader::get_all_funcs()
 {
   // Force to read the whole available_filter_functions file.
-  (void)get_module_funcs("");
+  auto ok = get_module_funcs("");
+  if (!ok)
+    LOG(WARNING) << ok.takeError();
 
   return modules_;
 }
@@ -564,7 +578,9 @@ std::unordered_set<std::string> TraceableFunctionsReader::get_func_modules(
     const std::string &func_name)
 {
   // Force to read the whole available_filter_functions file.
-  (void)get_module_funcs("");
+  auto ok = get_module_funcs("");
+  if (!ok)
+    LOG(WARNING) << ok.takeError();
 
   std::unordered_set<std::string> results;
   for (const auto &mod : modules_) {

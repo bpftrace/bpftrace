@@ -1376,8 +1376,13 @@ std::unique_ptr<std::istream> BPFtrace::get_module_traceable_funcs(
 {
   std::string funcs;
 
-  for (const auto &fn : traceable_funcs_reader_.get_module_funcs(mod))
-    funcs += mod + ":" + fn + "\n";
+  auto fn_set = traceable_funcs_reader_.get_module_funcs(mod);
+  if (!fn_set) {
+    LOG(WARNING) << fn_set.takeError();
+  } else {
+    for (const auto &fn : *fn_set)
+      funcs += mod + ":" + fn + "\n";
+  }
 
   return std::make_unique<std::istringstream>(funcs);
 }

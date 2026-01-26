@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/result.h"
+
 #include <cstdint>
 #include <fstream>
 #include <optional>
@@ -44,23 +46,22 @@ public:
   explicit TraceableFunctionsReader() = default;
   ~TraceableFunctionsReader();
 
-  const FunctionSet &get_module_funcs(const std::string &mod_name);
+  Result<const FunctionSet &> get_module_funcs(const std::string &mod_name);
   ModuleSet get_func_modules(const std::string &func_name);
   bool is_traceable_function(const std::string &func_name,
                             const std::string &mod_name);
   const ModulesFuncsMap &get_all_funcs();
 
 private:
-  bool check_open();
+  Result<OK> check_open();
   void blocklist_init();
   std::optional<std::string> populate_next_module();
-  std::string search_module_for_function(const std::string &func_name);
+  Result<std::string> search_module_for_function(const std::string &func_name);
 
   std::ifstream available_filter_functions_;
   std::string last_checked_line_;
 
   ModulesFuncsMap modules_;
   ModulesFuncsMap blocklist_;
-  FunctionSet empty_set_;
 };
 } // namespace bpftrace::util
