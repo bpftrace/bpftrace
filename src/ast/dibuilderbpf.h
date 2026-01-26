@@ -31,7 +31,7 @@ public:
   // DIBuilderBPF::GetMapFieldInt.
   DIType *getIntTy();
 
-  DIType *GetType(const SizedType &stype, bool emit_codegen_types = true);
+  DIType *GetType(const SizedType &stype);
   DIType *CreateTupleType(const SizedType &stype);
   DIType *CreateRecordType(const SizedType &stype);
   DIType *CreateMapStructType(const SizedType &stype);

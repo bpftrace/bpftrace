@@ -23,9 +23,9 @@ DILocalScope *DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
   // Return type should be at index 0
   SmallVector<Metadata *> types;
   types.reserve(args.fields.size() + 1);
-  types.push_back(GetType(ret_type, false));
+  types.push_back(GetType(ret_type));
   for (const auto &arg : args.fields)
-    types.push_back(GetType(arg.type, false));
+    types.push_back(GetType(arg.type));
 
   DISubroutineType *ditype = createSubroutineType(getOrCreateTypeArray(types));
 
@@ -291,18 +291,13 @@ DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
 /// LLVM type but instead into a type which is easy to work with in BPF
 /// programs (see IRBuilderBPF::GetType for details).
 ///
-/// We do the same here for debug types and, similarly to IRBuilderBPF::GetType,
-/// allow to emit directly corresponding types by setting `emit_codegen_types`
-/// to false. This is necessary when emitting info for types whose BTF must
-/// exactly match the kernel BTF (e.g. kernel functions ("kfunc") prototypes).
-///
-/// Note: IRBuilderBPF::GetType doesn't implement creating actual struct types
-/// as it is not necessary for the current use-cases. For debug info types, this
-/// is not the case and we need to emit a struct type with at least the correct
-/// name and size (fields are not necessary).
-DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
+/// As opposed to IRBuilderBPF::GetType we need to emit proper struct type
+/// info for the c_struct SizedType whose BTF must exactly match the kernel
+/// BTF (e.g. kernel functions ("kfunc") prototypes). For debug info the name
+/// and size need to at least be correct but the fields are not necessary.
+DIType *DIBuilderBPF::GetType(const SizedType &stype)
 {
-  if (!emit_codegen_types && stype.IsCStructTy()) {
+  if (stype.IsCStructTy()) {
     std::string name = stype.GetName();
     static constexpr std::string_view struct_prefix = "struct ";
     static constexpr std::string_view union_prefix = "union ";
@@ -322,7 +317,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
                             getOrCreateArray({}));
   }
 
-  if (stype.IsByteArray() || stype.IsCStructTy() || stype.IsStack()) {
+  if (stype.IsByteArray() || stype.IsStack()) {
     auto *subrange = getOrCreateSubrange(0, stype.GetSize());
     return createArrayType(
         stype.GetSize() * 8, 0, getInt8Ty(), getOrCreateArray({ subrange }));
@@ -349,10 +344,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype, bool emit_codegen_types)
     return CreateTSeriesStructType(stype);
 
   if (stype.IsPtrTy())
-    return emit_codegen_types ? getInt64Ty()
-                              : createPointerType(GetType(*stype.GetPointeeTy(),
-                                                          emit_codegen_types),
-                                                  64);
+    return createPointerType(GetType(*stype.GetPointeeTy()), 64);
 
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {
@@ -448,7 +440,7 @@ DIGlobalVariableExpression *DIBuilderBPF::createGlobalVariable(
     const SizedType &stype)
 {
   return createGlobalVariableExpression(
-      file, name, "global", file, 0, GetType(stype, false), false);
+      file, name, "global", file, 0, GetType(stype), false);
 }
 
 DILocation *DIBuilderBPF::createDebugLocation(llvm::LLVMContext &ctx,
