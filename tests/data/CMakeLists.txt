@@ -17,14 +17,6 @@ embed(
 )
 
 embed(
-  data_source_funcs
-  data_source.funcs
-  OUTPUT  data_source_funcs.h
-  VAR     func_list
-  DEPENDS data_source
-)
-
-embed(
   data_source_dwarf
   data_source_exe
   OUTPUT  data_source_dwarf.h

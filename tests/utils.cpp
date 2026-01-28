@@ -57,7 +57,7 @@ TEST(utils, split_string)
 TEST(utils, split_addrrange_symbol_module)
 {
   std::tuple<std::string, std::string, std::string> tokens_ar_sym = {
-    "0xffffffff85201511-0xffffffff8520152f", "first_nmi", ""
+    "0xffffffff85201511-0xffffffff8520152f", "first_nmi", "vmlinux"
   };
   std::tuple<std::string, std::string, std::string> tokens_ar_sym_mod = {
     "0xffffffffc17e9373-0xffffffffc17e94ff", "vmx_vmexit", "kvm_intel"

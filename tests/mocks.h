@@ -25,6 +25,8 @@ public:
                      std::unique_ptr<std::istream>(const std::string &path));
   MOCK_CONST_METHOD1(get_symbols_from_traceable_funcs,
                      std::unique_ptr<std::istream>(bool with_modules));
+  MOCK_CONST_METHOD1(get_module_symbols_from_traceable_funcs,
+                     std::unique_ptr<std::istream>(const std::string &mod));
   MOCK_CONST_METHOD2(get_symbols_from_usdt,
                      std::unique_ptr<std::istream>(std::optional<int> pid,
                                                    const std::string &target));
@@ -34,7 +36,8 @@ public:
   MOCK_CONST_METHOD0(get_raw_tracepoint_symbols,
                      std::unique_ptr<std::istream>());
 
-  MOCK_CONST_METHOD0(get_fentry_symbols, std::unique_ptr<std::istream>());
+  MOCK_CONST_METHOD1(get_fentry_symbols,
+                     std::unique_ptr<std::istream>(const std::string &mod));
 
   MOCK_CONST_METHOD0(get_running_bpf_programs, std::unique_ptr<std::istream>());
 
@@ -108,7 +111,9 @@ public:
   }
 
   bool is_traceable_func(
-      const std::string &__attribute__((unused)) /*func_name*/) const override
+      const std::string &__attribute__((unused)) /*func_name*/,
+      const std::string &__attribute__((unused)) /*mod_name*/
+  ) const override
   {
     return true;
   }

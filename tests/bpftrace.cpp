@@ -278,7 +278,7 @@ TEST(bpftrace, add_probes_specify_kernel_module)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_traceable_funcs(true))
+              get_module_symbols_from_traceable_funcs("kernel_mod_1"))
       .Times(1);
   parse_probe("kprobe:kernel_mod_1:mod_func_1{}", *bpftrace);
 
@@ -673,7 +673,8 @@ TEST_F(bpftrace_btf, add_probes_fentry)
 {
   auto bpftrace = get_strict_mock_bpftrace();
 
-  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols()).Times(2);
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols("vmlinux"))
+      .Times(2);
   parse_probe("fentry:vmlinux:func_1,fexit:vmlinux:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
@@ -722,7 +723,7 @@ TEST_F(bpftrace_btf, add_probes_kprobe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_traceable_funcs(true))
+              get_module_symbols_from_traceable_funcs("mock_vmlinux"))
       .Times(2);
   parse_probe("kprobe:mock_vmlinux:func_1,kretprobe:mock_vmlinux:func_1 {}",
               *bpftrace);

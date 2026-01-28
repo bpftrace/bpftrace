@@ -87,6 +87,8 @@ private:
 
   virtual std::unique_ptr<std::istream> get_symbols_from_traceable_funcs(
       bool with_modules = false) const;
+  virtual std::unique_ptr<std::istream> get_module_symbols_from_traceable_funcs(
+    const std::string &module_name) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_file(
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_func_symbols_from_file(
@@ -97,7 +99,8 @@ private:
       const std::string &target) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_list(
       const std::vector<ProbeListItem> &probes_list) const;
-  virtual std::unique_ptr<std::istream> get_fentry_symbols() const;
+  virtual std::unique_ptr<std::istream> get_fentry_symbols(
+      const std::string &mod) const;
   virtual std::unique_ptr<std::istream> get_running_bpf_programs() const;
   virtual std::unique_ptr<std::istream> get_raw_tracepoint_symbols() const;
 

@@ -66,7 +66,6 @@ the fuzzer is by using the `--test=codegen` mode and providing overrides:
 AFL_NO_AFFINITY=1 \
 ASAN_OPTIONS=abort_on_error=1,symbolize=0 \
 BPFTRACE_BTF= \
-BPFTRACE_AVAILABLE_FUNCTIONS_TEST= \
 afl-fuzz -a text -M 0 -m none -i ./input -o ./output -t 3000 -- \
      src/bpftrace --test=codegen @@ 2>/dev/null
 ```

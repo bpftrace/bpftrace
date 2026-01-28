@@ -115,10 +115,13 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
   switch (probe_type) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe: {
-      if (!target.empty())
-        symbol_stream = get_symbols_from_traceable_funcs(true);
-      else
+      if (target.empty()) {
         symbol_stream = get_symbols_from_traceable_funcs(false);
+      } else if (!util::has_wildcard(target)) {
+        symbol_stream = get_module_symbols_from_traceable_funcs(target);
+      } else {
+        symbol_stream = get_symbols_from_traceable_funcs(true);
+      }
       break;
     }
     case ProbeType::uprobe:
@@ -146,7 +149,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       if (target == "bpf") {
         symbol_stream = get_running_bpf_programs();
       } else {
-        symbol_stream = get_fentry_symbols();
+        symbol_stream = get_fentry_symbols(target);
       }
       break;
     }
@@ -235,23 +238,23 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file(
 std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
     bool with_modules) const
 {
-  std::string funcs;
-  for (const auto& func_mod : bpftrace_->get_traceable_funcs()) {
-    if (with_modules) {
-      for (const auto& mod : func_mod.second)
-        funcs += mod + ":" + func_mod.first + "\n";
-    } else {
-      funcs += func_mod.first + "\n";
-    }
-  }
-  return std::make_unique<std::istringstream>(funcs);
+  return bpftrace_->get_traceable_funcs(with_modules);
 }
 
-std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols() const
+std::unique_ptr<std::istream> ProbeMatcher::
+    get_module_symbols_from_traceable_funcs(const std::string& mod) const
 {
-  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded())
+  return bpftrace_->get_module_traceable_funcs(mod);
+}
+
+std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols(
+    const std::string& mod) const
+{
+  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded()) {
     return bpftrace_->btf_->get_all_funcs();
-  else {
+  } else if (!mod.empty() && !util::has_wildcard(mod)) {
+    return get_module_symbols_from_traceable_funcs(mod);
+  } else {
     return get_symbols_from_traceable_funcs(true);
   }
 }
@@ -271,12 +274,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_raw_tracepoint_symbols() const
   if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded()) {
     return bpftrace_->btf_->get_all_raw_tracepoints();
   } else {
-    std::string rts;
-    for (const auto& rt_mod : bpftrace_->get_raw_tracepoints()) {
-      for (const auto& mod : rt_mod.second)
-        rts += mod + ":" + rt_mod.first + "\n";
-    }
-    return std::make_unique<std::istringstream>(rts);
+    return bpftrace_->get_raw_tracepoints_from_traceable_funcs();
   }
 }
 

@@ -55,7 +55,7 @@ add_test(NAME bpftrace_test COMMAND bpftrace_test)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
 
 add_subdirectory(data)
-add_dependencies(bpftrace_test data_source_dwarf data_source_btf data_source_funcs parser)
+add_dependencies(bpftrace_test data_source_dwarf data_source_btf parser)
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

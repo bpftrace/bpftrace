@@ -39,6 +39,20 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
     return myval;
   });
 
+  ON_CALL(matcher, get_module_symbols_from_traceable_funcs(_))
+      .WillByDefault([]() {
+        std::string ksyms = "kernel_mod_1:mod_func_1\n"
+                            "kernel_mod_1:mod_func_2\n"
+                            "kernel_mod_2:mod_func_1\n"
+                            "mock_vmlinux:func_1\n"
+                            "mock_vmlinux:func_anon_struct\n"
+                            "vmlinux:func_1\n"
+                            "vmlinux:queued_spin_lock_slowpath\n";
+        auto myval = std::unique_ptr<std::istream>(
+            new std::istringstream(ksyms));
+        return myval;
+      });
+
   ON_CALL(matcher, get_symbols_from_file(tracefs::available_events()))
       .WillByDefault([](const std::string &) {
         std::string tracepoints = "category:event\n"
@@ -58,7 +72,7 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
         new std::istringstream(rawtracepoints));
   });
 
-  ON_CALL(matcher, get_fentry_symbols()).WillByDefault([]() {
+  ON_CALL(matcher, get_fentry_symbols(_)).WillByDefault([]() {
     std::string funcs = "mock_vmlinux:f\n"
                         "mock_vmlinux:func_1\n"
                         "mock_vmlinux:func_2\n"

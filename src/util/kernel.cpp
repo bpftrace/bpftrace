@@ -7,6 +7,7 @@
 #include <fstream>
 #include <gelf.h>
 #include <glob.h>
+#include <iterator>
 #include <libelf.h>
 #include <link.h>
 #include <linux/limits.h>
@@ -18,13 +19,13 @@
 #include <unistd.h>
 #include <zlib.h>
 
-#include "btf.h"
 #include "debugfs/debugfs.h"
 #include "log.h"
 #include "tracefs/tracefs.h"
 #include "util/kernel.h"
 #include "util/paths.h"
 #include "util/symbols.h"
+#include "util/wildcard.h"
 
 namespace bpftrace::util {
 
@@ -211,7 +212,7 @@ std::optional<std::string> find_vmlinux(struct symbol *sym)
   return find_vmlinux(vmlinux_locs, sym);
 }
 
-static bool is_bad_func(std::string &func)
+static bool is_bad_func(const std::string &func)
 {
   // Certain kernel functions are known to cause system stability issues if
   // traced (but not marked "notrace" in the kernel) so they should be filtered
@@ -231,80 +232,6 @@ static bool is_bad_func(std::string &func)
   return std::ranges::any_of(bad_funcs_partial, [func](const auto &s) {
     return !std::strncmp(func.c_str(), s.c_str(), s.length());
   });
-}
-
-FuncsModulesMap parse_traceable_funcs()
-{
-  // Try to get the list of functions from BPFTRACE_AVAILABLE_FUNCTIONS_TEST env
-  const char *path_env = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
-  const std::string kprobe_path = path_env
-                                      ? path_env
-                                      : tracefs::available_filter_functions();
-
-  std::ifstream available_funs(kprobe_path);
-  if (available_funs.fail()) {
-    LOG(V1) << "Error while reading traceable functions from " << kprobe_path
-            << ": " << strerror(errno);
-    return {};
-  }
-
-  FuncsModulesMap result;
-  std::string line;
-  while (std::getline(available_funs, line)) {
-    auto func_mod = split_symbol_module(line);
-    if (func_mod.second.empty())
-      func_mod.second = "vmlinux";
-
-    if (!is_bad_func(func_mod.first))
-      result[func_mod.first].insert(func_mod.second);
-  }
-
-  // Filter out functions from the kprobe blacklist.
-  const std::string kprobes_blacklist_path = debugfs::kprobes_blacklist();
-  std::ifstream kprobes_blacklist_funs(kprobes_blacklist_path);
-  while (std::getline(kprobes_blacklist_funs, line)) {
-    auto addr_func_mod = split_addrrange_symbol_module(line);
-    if (result.contains(std::get<1>(addr_func_mod))) {
-      result.erase(std::get<1>(addr_func_mod));
-    }
-  }
-
-  return result;
-}
-
-FuncsModulesMap parse_rawtracepoints()
-{
-  // Using "available_filter_functions" here because they have the correct
-  // module for the prefixed raw tracepoints e.g. in "available_events"
-  // there is "kvmmmu:check_mmio_spte" but the module is actually "kvm"
-  // and shows up as "__probestub_check_mmio_spte [kvm]" in
-  // "available_filter_functions"
-  const std::string ff_path = tracefs::available_filter_functions();
-
-  std::ifstream available_funs(ff_path);
-  if (available_funs.fail()) {
-    LOG(V1) << "Error while reading traceable functions from " << ff_path
-            << ": " << strerror(errno);
-    return {};
-  }
-
-  FuncsModulesMap result;
-  std::string line;
-  while (std::getline(available_funs, line)) {
-    auto func_mod = split_symbol_module(line);
-    if (func_mod.second.empty())
-      func_mod.second = "vmlinux";
-
-    for (const auto &prefix : RT_BTF_PREFIXES) {
-      if (func_mod.first.starts_with(prefix)) {
-        func_mod.first.erase(0, prefix.length());
-        result[func_mod.first].insert(func_mod.second);
-        break;
-      }
-    }
-  }
-
-  return result;
 }
 
 KConfig::KConfig()
@@ -495,4 +422,172 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   return cflags;
 }
 
+TraceableFunctionsReader::~TraceableFunctionsReader()
+{
+  if (available_filter_functions_.is_open())
+    available_filter_functions_.close();
+}
+
+Result<OK> TraceableFunctionsReader::check_open()
+{
+  if (available_filter_functions_.is_open())
+    return OK();
+
+  if (available_filter_functions_.fail())
+    return make_error<SystemError>("Traceable functions not available");
+
+  const std::string path = tracefs::available_filter_functions();
+  available_filter_functions_.open(path);
+  if (available_filter_functions_.fail()) {
+    return make_error<SystemError>("Could not read traceable functions from " +
+                                   path);
+  }
+
+  blocklist_init();
+
+  return OK();
+}
+
+void TraceableFunctionsReader::blocklist_init()
+{
+  std::ifstream blocklist_funcs(debugfs::kprobes_blacklist());
+  std::string line;
+
+  while (std::getline(blocklist_funcs, line)) {
+    auto addr_func_mod = split_addrrange_symbol_module(line);
+    const std::string &fn = std::get<1>(addr_func_mod);
+    const std::string &mod = std::get<2>(addr_func_mod);
+
+    blocklist_[mod].insert(fn);
+  }
+}
+
+std::optional<std::string> TraceableFunctionsReader::populate_next_module()
+{
+  if (available_filter_functions_.eof())
+    return std::nullopt;
+
+  std::string module;
+
+  if (last_checked_line_.empty()) {
+    module = "vmlinux";
+  } else {
+    auto func_mod = split_symbol_module(last_checked_line_);
+    module = func_mod.second;
+    modules_[module].insert(func_mod.first);
+  }
+
+  std::string line;
+
+  while (std::getline(available_filter_functions_, line)) {
+    auto func_mod = split_symbol_module(line);
+
+    // Continue reading until we get all the module functions.
+    // Stop when encounter line with the next module.
+    if (func_mod.second != module) {
+      last_checked_line_ = line;
+      break;
+    }
+
+    if (is_bad_func(func_mod.first) ||
+        blocklist_[module].contains(func_mod.first))
+      continue;
+
+    modules_[module].insert(func_mod.first);
+  }
+
+  return module;
+}
+
+Result<std::string> TraceableFunctionsReader::search_module_for_function(
+    const std::string &func_name)
+{
+  auto ok = check_open();
+  if (!ok)
+    return ok.takeError();
+
+  for (const auto &mod : modules_) {
+    if (mod.second.contains(func_name))
+      return mod.first;
+  }
+
+  while (auto mod = populate_next_module()) {
+    if (modules_[*mod].contains(func_name))
+      return *mod;
+  }
+
+  return "";
+}
+
+Result<const FunctionSet &> TraceableFunctionsReader::get_module_funcs(
+    const std::string &mod_name)
+{
+  auto ok = check_open();
+  if (!ok)
+    return ok.takeError();
+
+  auto it = modules_.find(mod_name);
+  if (it != modules_.end())
+    return it->second;
+
+  std::string mod;
+
+  while (auto mod = populate_next_module()) {
+    if (*mod == mod_name)
+      return modules_[*mod];
+  }
+
+  static FunctionSet empty_set_;
+  return empty_set_;
+}
+
+// TODO: Propagate errors up to ProbeMatcher (or other initial caller)
+// and print the error there
+bool TraceableFunctionsReader::is_traceable_function(
+    const std::string &func_name,
+    const std::string &mod_name)
+{
+  if (mod_name.empty() || has_wildcard(mod_name)) {
+    auto found_mod = search_module_for_function(func_name);
+    if (!found_mod) {
+      LOG(V1) << found_mod.takeError();
+      return false;
+    }
+    return !(*found_mod).empty();
+  } else {
+    auto found_fn_set = get_module_funcs(mod_name);
+    if (!found_fn_set) {
+      LOG(V1) << found_fn_set.takeError();
+      return false;
+    }
+    return (*found_fn_set).contains(func_name);
+  }
+}
+
+const ModulesFuncsMap &TraceableFunctionsReader::get_all_funcs()
+{
+  // Force to read the whole available_filter_functions file.
+  auto ok = get_module_funcs("");
+  if (!ok)
+    LOG(WARNING) << ok.takeError();
+
+  return modules_;
+}
+
+std::unordered_set<std::string> TraceableFunctionsReader::get_func_modules(
+    const std::string &func_name)
+{
+  // Force to read the whole available_filter_functions file.
+  auto ok = get_module_funcs("");
+  if (!ok)
+    LOG(WARNING) << ok.takeError();
+
+  std::unordered_set<std::string> results;
+  for (const auto &mod : modules_) {
+    if (mod.second.contains(func_name))
+      results.insert(mod.first);
+  }
+
+  return results;
+}
 } // namespace bpftrace::util
