@@ -189,9 +189,7 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
 }
 
 // If a pid is specified, the binary path is taken relative to its own PATH if
-// it is in a different mount namespace. Otherwise, the path is resolved
-// relative to the local PATH env var for bpftrace's own mount namespace if it
-// is set
+// it is in a different mount namespace.
 std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                              std::optional<int> pid)
 {

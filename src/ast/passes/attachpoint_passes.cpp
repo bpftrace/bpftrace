@@ -11,6 +11,7 @@
 #include "ast/helpers.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/visitor.h"
+#include "probe_matcher.h"
 #include "util/int_parser.h"
 #include "util/paths.h"
 #include "util/strings.h"
@@ -22,17 +23,19 @@ namespace bpftrace::ast {
 class AttachPointChecker : public Visitor<AttachPointChecker> {
 public:
   explicit AttachPointChecker(BPFtrace &bpftrace,
-                              bool listing,
-                              bool has_child = true)
-      : bpftrace_(bpftrace), listing_(listing), has_child_(has_child) {};
+                              FunctionInfo &func_info_state,
+                              bool listing)
+      : bpftrace_(bpftrace),
+        func_info_state_(func_info_state),
+        listing_(listing) {};
 
   using Visitor<AttachPointChecker>::visit;
   void visit(AttachPoint &ap);
 
 private:
   BPFtrace &bpftrace_;
+  FunctionInfo &func_info_state_;
   bool listing_;
-  bool has_child_ = false;
   std::unordered_map<std::string, Location> test_locs_;
   std::unordered_map<std::string, Location> benchmark_locs_;
 };
@@ -44,7 +47,8 @@ void AttachPointChecker::visit(AttachPoint &ap)
       ap.addError() << "kprobes should be attached to a function";
     // Warn if user tries to attach to a non-traceable function
     if (bpftrace_.config_->missing_probes != ConfigMissingProbes::ignore &&
-        !util::has_wildcard(ap.func) && !bpftrace_.is_traceable_func(ap.func)) {
+        !util::has_wildcard(ap.func) &&
+        !func_info_state_.kernel_function_info().is_traceable(ap.func)) {
       ap.addWarning() << ap.func
                       << " is not traceable (either non-existing, inlined, "
                          "or marked as "
@@ -133,13 +137,24 @@ void AttachPointChecker::visit(AttachPoint &ap)
 
     const auto pid = bpftrace_.pid();
     if (pid.has_value()) {
-      USDTHelper::probes_for_pid(*pid, bpftrace_.feature_->has_uprobe_multi());
+      auto ok = func_info_state_.user_function_info().usdt_probes_for_pid(*pid);
+      if (!ok && !listing_) {
+        ap.addError() << ok.takeError();
+      }
     } else if (ap.target == "*") {
-      USDTHelper::probes_for_all_pids(bpftrace_.feature_->has_uprobe_multi());
+      auto ok =
+          func_info_state_.user_function_info().usdt_probes_for_all_pids();
+      if (!ok && !listing_) {
+        ap.addError() << ok.takeError();
+      }
     } else if (!ap.target.empty()) {
-      for (auto &path : util::resolve_binary_path(ap.target))
-        USDTHelper::probes_for_path(path,
-                                    bpftrace_.feature_->has_uprobe_multi());
+      for (auto &path : util::resolve_binary_path(ap.target)) {
+        auto ok = func_info_state_.user_function_info().usdt_probes_for_path(
+            path);
+        if (!ok && !listing_) {
+          ap.addError() << ok.takeError();
+        }
+      }
     } else {
       ap.addError() << "usdt probe must specify at least path or pid to "
                        "probe. To target "
@@ -329,8 +344,12 @@ AttachPointParser::State AttachPointParser::argument_count_error(
 
 AttachPointParser::AttachPointParser(ASTContext &ctx,
                                      BPFtrace &bpftrace,
+                                     FunctionInfo &func_info_state,
                                      bool listing)
-    : ctx_(ctx), bpftrace_(bpftrace), listing_(listing)
+    : ctx_(ctx),
+      bpftrace_(bpftrace),
+      func_info_state_(func_info_state),
+      listing_(listing)
 {
 }
 
@@ -419,13 +438,14 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     // If PID is specified or the second part of the attach point is a path
     // (contains '/'), use userspace probe types.
     // Otherwise, use kernel probe types.
+    ProbeMatcher probe_matcher(&bpftrace_,
+                               func_info_state_.kernel_function_info(),
+                               func_info_state_.user_function_info());
     if (bpftrace_.pid().has_value() ||
         (parts_.size() >= 2 && parts_[1].find('/') != std::string::npos)) {
-      probe_types = bpftrace_.probe_matcher_->expand_probetype_userspace(
-          probetype_query);
+      probe_types = probe_matcher.expand_probetype_userspace(probetype_query);
     } else {
-      probe_types = bpftrace_.probe_matcher_->expand_probetype_kernel(
-          probetype_query);
+      probe_types = probe_matcher.expand_probetype_kernel(probetype_query);
     }
   } else
     probe_types = { front };
@@ -996,7 +1016,8 @@ AttachPointParser::State AttachPointParser::fentry_parser()
   } else {
     ap_->func = parts_[1];
     if (!util::has_wildcard(ap_->func)) {
-      auto func_modules = bpftrace_.get_func_modules(ap_->func);
+      auto func_modules =
+          func_info_state_.kernel_function_info().get_func_modules(ap_->func);
       if (func_modules.size() == 1)
         ap_->target = *func_modules.begin();
       else if (func_modules.size() > 1) {
@@ -1077,21 +1098,22 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
 // Note: listing changes the parsing semantics for attach points
 Pass CreateParseAttachpointsPass(bool listing)
 {
-  return Pass::create("parse-attachpoints",
-                      [listing](ASTContext &ast, BPFtrace &b) {
-                        AttachPointParser ap_parser(ast, b, listing);
-                        ap_parser.parse();
-                      });
+  return Pass::create(
+      "parse-attachpoints",
+      [listing](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
+        AttachPointParser ap_parser(ast, b, func_info, listing);
+        ap_parser.parse();
+      });
 }
 
 Pass CreateCheckAttachpointsPass(bool listing)
 {
-  return Pass::create("check-attachpoints",
-                      [listing](ASTContext &ast, BPFtrace &b) {
-                        AttachPointChecker ap_checker(
-                            b, listing, !b.cmd_.empty() || b.child_ != nullptr);
-                        ap_checker.visit(*ast.root);
-                      });
+  return Pass::create(
+      "check-attachpoints",
+      [listing](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
+        AttachPointChecker ap_checker(b, func_info, listing);
+        ap_checker.visit(*ast.root);
+      });
 }
 
 } // namespace bpftrace::ast

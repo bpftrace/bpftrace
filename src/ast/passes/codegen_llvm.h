@@ -9,7 +9,6 @@
 
 #include "ast/pass_manager.h"
 #include "ast/passes/link.h"
-#include "usdt.h"
 
 namespace bpftrace::ast {
 

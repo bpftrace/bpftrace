@@ -27,7 +27,6 @@
 #include "probe_matcher.h"
 #include "probe_types.h"
 #include "types.h"
-#include "usdt.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/system.h"

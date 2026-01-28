@@ -52,6 +52,7 @@
 #include "util/kernel.h"
 #include "util/strings.h"
 #include "util/temp.h"
+#include "util/user.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -796,6 +797,16 @@ int main(int argc, char* argv[])
   auto config = std::make_unique<Config>(!args.cmd_str.empty());
   BPFtrace bpftrace(args.no_feature, std::move(config));
 
+  // Create function info objects for probe matching and pass state.
+  auto kernel_func_info = util::KernelFunctionInfoImpl::open();
+  if (!kernel_func_info) {
+    LOG(ERROR) << "Failed to open kernel function info: "
+               << kernel_func_info.takeError();
+    return 1;
+  }
+  util::UserFunctionInfoImpl user_func_info;
+  ast::FunctionInfo func_info_state(*kernel_func_info, user_func_info);
+
   // Most configuration can be applied during the configuration pass, however
   // we need to extract a few bits of configuration up front, because they may
   // affect the actual compilation process.
@@ -874,6 +885,7 @@ int main(int argc, char* argv[])
     auto pmresult = ast::PassManager()
                         .put(ast)
                         .put(bpftrace)
+                        .put(func_info_state)
                         .put(no_c_defs)
                         .put(no_types)
                         .put(macro_registry)
@@ -893,10 +905,11 @@ int main(int argc, char* argv[])
       return 1;
     }
 
+    ProbeMatcher probe_matcher(&bpftrace, *kernel_func_info, user_func_info);
     if (is_search_a_type) {
-      bpftrace.probe_matcher_->list_structs(args.search);
+      probe_matcher.list_structs(args.search);
     } else {
-      bpftrace.probe_matcher_->list_probes(ast.root);
+      probe_matcher.list_probes(ast.root);
     }
 
     return 0;
@@ -1002,6 +1015,7 @@ int main(int argc, char* argv[])
   ast::PassManager pm;
   pm.put(ast);
   pm.put(bpftrace);
+  pm.put(func_info_state);
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
@@ -1027,7 +1041,8 @@ int main(int argc, char* argv[])
       ast.diagnostics().emit(std::cerr);
       return 1;
     }
-    bpftrace.probe_matcher_->list_probes(ast.root);
+    ProbeMatcher probe_matcher(&bpftrace, *kernel_func_info, user_func_info);
+    probe_matcher.list_probes(ast.root);
     return 0;
   }
 

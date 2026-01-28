@@ -20,6 +20,7 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .put(no_types)
                 .add(ast::AllParsePasses())
                 .run();

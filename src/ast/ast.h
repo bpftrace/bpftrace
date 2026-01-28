@@ -15,7 +15,7 @@
 #include "diagnostic.h"
 #include "probe_types.h"
 #include "types.h"
-#include "usdt.h"
+#include "util/elf_parser.h"
 #include "util/strings.h"
 
 namespace bpftrace::ast {

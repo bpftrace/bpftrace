@@ -1,7 +1,6 @@
 add_library(util STATIC
   bpf_funcs.cpp
   bpf_names.cpp
-  bpf_progs.cpp
   cgroup.cpp
   cpus.cpp
   elf_parser.cpp
@@ -20,6 +19,7 @@ add_library(util STATIC
   temp.cpp
   time.cpp
   tseries.cpp
+  user.cpp
   wildcard.cpp
   )
 

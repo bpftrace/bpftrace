@@ -2,8 +2,10 @@
 
 #include <algorithm>
 
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
+#include "probe_matcher.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
@@ -212,8 +214,15 @@ class ProbeAndApExpander : public Visitor<ProbeAndApExpander> {
 public:
   ProbeAndApExpander(ASTContext &ast,
                      BPFtrace &bpftrace,
+                     FunctionInfo &func_info,
                      ExpansionResult &result)
-      : ast_(ast), bpftrace_(bpftrace), result_(result)
+      : ast_(ast),
+        bpftrace_(bpftrace),
+        func_info_(func_info),
+        result_(result),
+        probe_matcher_(&bpftrace,
+                       func_info.kernel_function_info(),
+                       func_info.user_function_info())
   {
   }
 
@@ -228,7 +237,9 @@ private:
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
+  FunctionInfo &func_info_;
   ExpansionResult &result_;
+  ProbeMatcher probe_matcher_;
 };
 
 void ProbeAndApExpander::expand()
@@ -270,7 +281,7 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
     auto expansion = result_.get_expansion(*ap);
     switch (expansion) {
       case ExpansionType::FULL: {
-        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        auto matches = probe_matcher_.get_matches_for_ap(*ap);
 
         probe_count_ += matches.size();
         if (probe_count_ > max_bpf_progs) {
@@ -293,7 +304,7 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
 
       case ExpansionType::SESSION:
       case ExpansionType::MULTI: {
-        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        auto matches = probe_matcher_.get_matches_for_ap(*ap);
         if (util::has_wildcard(ap->target)) {
           // If we have a wildcard in the target path, we need to generate one
           // attach point per expanded target
@@ -330,7 +341,7 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
           const std::string &funcname = ap->func;
           const std::string &modname = ap->target;
           if ((!modname.empty()) && modname != "vmlinux") {
-            if (!bpftrace_.is_module_loaded(modname)) {
+            if (!func_info_.kernel_function_info().is_module_loaded(modname)) {
               ap->addError() << "specified module " + modname + " in probe " +
                                     ap->provider + ":" + modname + ":" +
                                     funcname + " is not loaded.";
@@ -338,7 +349,7 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
           }
         }
 
-        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        auto matches = probe_matcher_.get_matches_for_ap(*ap);
         // Filter out unnecessary probes, as they may not be missing.
         if (matches.empty() && (pt != ProbeType::watchpoint)) {
           const auto missing_probes = bpftrace_.config_->missing_probes;
@@ -364,14 +375,14 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
 
 Pass CreateProbeAndApExpansionPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &bpftrace) {
+  auto fn = [](ASTContext &ast, BPFtrace &bpftrace, FunctionInfo &func_info) {
     ExpansionAnalyser analyser(bpftrace);
     auto result = analyser.analyse(*ast.root);
 
     SessionExpander session_expander(ast, bpftrace, result);
     session_expander.visit(*ast.root);
 
-    ProbeAndApExpander expander(ast, bpftrace, result);
+    ProbeAndApExpander expander(ast, bpftrace, func_info, result);
     expander.expand();
 
     return result;

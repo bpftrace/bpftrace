@@ -9,6 +9,7 @@
 #include "ast/passes/printer.h"
 #include "ast_matchers.h"
 #include "driver.h"
+#include "mocks.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::parser {
@@ -51,6 +52,7 @@ void test_parse_failure(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .run();
@@ -116,6 +118,7 @@ void test(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .run();

@@ -4,9 +4,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-
 #include <unistd.h>
-
 #include <elf.h>
 #include <gelf.h>
 #include <libelf.h>
@@ -47,28 +45,28 @@ struct elf_segment {
 };
 
 struct usdt_probe_entry {
-  std::string path;
   std::string provider;
   std::string name;
   long sema_addr;
   uint64_t sema_offset;
 
   usdt_probe_entry() = default;
-  usdt_probe_entry(std::string path,
-                   std::string provider,
+  usdt_probe_entry(const usdt_probe_entry&) = default;
+  usdt_probe_entry& operator=(const usdt_probe_entry&) = default;
+  usdt_probe_entry(std::string provider,
                    std::string name,
                    long sema_addr = 0,
                    uint64_t sema_offset = 0)
-      : path(std::move(path)),
-        provider(std::move(provider)),
+      : provider(std::move(provider)),
         name(std::move(name)),
         sema_addr(sema_addr),
         sema_offset(sema_offset)
   {
-  }
-};
+  };
 
-using usdt_probe_list = std::vector<usdt_probe_entry>;
+  bool operator==(const usdt_probe_entry& other) const = default;
+  auto operator<=>(const usdt_probe_entry& other) const = default;
+};
 
 // ELFParser encapsulates low-level ELF parsing operations.
 // It stores the ELF descriptor and file path as members, eliminating

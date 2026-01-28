@@ -117,12 +117,10 @@ Result<std::pair<Elf_Scn*, GElf_Shdr>> ELFParser::find_section_by_name(
                                    path_);
 }
 
-static Result<struct usdt_probe_entry> parse_usdt_probe_entry(
-    const std::string& elf_path,
-    GElf_Nhdr* nhdr,
-    const char* data,
-    size_t name_off,
-    size_t desc_off)
+static Result<struct usdt_probe_entry> parse_usdt_probe_entry(GElf_Nhdr* nhdr,
+                                                              const char* data,
+                                                              size_t name_off,
+                                                              size_t desc_off)
 {
   const char *provider, *name;
   long addrs[3];
@@ -158,7 +156,7 @@ static Result<struct usdt_probe_entry> parse_usdt_probe_entry(
   if (name >= data + len || *name == '\0') // missing or empty name
     return make_error<ELFParseError>("usdt: invalid USDT note contents");
 
-  struct usdt_probe_entry note(elf_path, provider, name, addrs[2]);
+  struct usdt_probe_entry note(provider, name, addrs[2]);
 
   return note;
 }
@@ -249,12 +247,8 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
   data = elf_getdata(notes_scn, nullptr);
   off = 0;
   while ((off = gelf_getnote(data, off, &nhdr, &name_off, &desc_off)) > 0) {
-    auto note_res = parse_usdt_probe_entry(elf_path,
-                                           &nhdr,
-                                           static_cast<const char*>(
-                                               data->d_buf),
-                                           name_off,
-                                           desc_off);
+    auto note_res = parse_usdt_probe_entry(
+        &nhdr, static_cast<const char*>(data->d_buf), name_off, desc_off);
     if (!note_res) {
       continue;
     }

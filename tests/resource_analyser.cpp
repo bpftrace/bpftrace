@@ -25,6 +25,7 @@ void test(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .put(no_types)
                 .add(ast::AllParsePasses())
                 .add(ast::CreateSemanticPass())

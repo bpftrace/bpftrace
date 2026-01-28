@@ -4,6 +4,7 @@
 
 #include "ast/passes/parser.h"
 #include "ast/passes/resolve_imports.h"
+#include "mocks.h"
 #include "util/temp.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
@@ -90,6 +91,7 @@ void test(const std::string &input,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(ast::AllParsePasses({}, std::move(import_paths)))
                 .run();
   std::stringstream out;
