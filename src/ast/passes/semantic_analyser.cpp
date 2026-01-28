@@ -1220,7 +1220,7 @@ void SemanticAnalyser::visit(Call &call)
     if (call.vargs.size() == 1) {
       if (arg.type().IsArrayTy())
         buffer_size = arg.type().GetNumElements() *
-                      arg.type().GetElementTy()->GetSize();
+                      arg.type().GetElementTy().GetSize();
       else if (is_final_pass())
         call.addError() << call.func
                         << "() expects a length argument for non-array type "
@@ -1670,13 +1670,12 @@ void SemanticAnalyser::visit(Call &call)
     };
 
     const auto &type = call.vargs.at(0).type();
-    if (!type.IsPtrTy() || !type.GetPointeeTy() ||
-        !type.GetPointeeTy()->IsCStructTy()) {
+    if (!type.IsPtrTy() || !type.GetPointeeTy().IsCStructTy()) {
       logError(type.GetTy());
       return;
     }
-    if (!type.GetPointeeTy()->IsCompatible(CreateCStruct("struct sock"))) {
-      logError("'" + type.GetPointeeTy()->GetName() + " *'");
+    if (!type.GetPointeeTy().IsCompatible(CreateCStruct("struct sock"))) {
+      logError("'" + type.GetPointeeTy().GetName() + " *'");
       return;
     }
     call.return_type = CreateUInt64();
@@ -2150,7 +2149,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
       return;
     }
 
-    if (type.IsPtrTy() && type.GetPointeeTy()->GetSize() == 0) {
+    if (type.IsPtrTy() && type.GetPointeeTy().GetSize() == 0) {
       arr.addError() << "The array index operator [] cannot be used "
                         "on a pointer to an unsized type (void *).";
     }
@@ -2177,9 +2176,9 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   }
 
   if (type.IsArrayTy())
-    arr.element_type = *type.GetElementTy();
+    arr.element_type = type.GetElementTy();
   else if (type.IsPtrTy())
-    arr.element_type = *type.GetPointeeTy();
+    arr.element_type = type.GetPointeeTy();
   else if (type.IsStringTy())
     arr.element_type = CreateInt8();
   arr.element_type.SetAS(type.GetAS());
@@ -2472,7 +2471,7 @@ void SemanticAnalyser::binop_array(Binop &binop)
         << "Only arrays of same size support comparison operators.";
   }
 
-  if (!lht.GetElementTy()->IsIntegerTy() || lht != rht) {
+  if (!lht.GetElementTy().IsIntegerTy() || lht != rht) {
     binop.addError()
         << "Only arrays of same sized integer support comparison operators.";
   }
@@ -2517,14 +2516,13 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
   if (other.IsPtrTy()) {
     if (compare) {
       if (is_final_pass()) {
-        const auto *le = lht.GetPointeeTy();
-        const auto *re = rht.GetPointeeTy();
-        if (*le != *re) {
+        const auto le = lht.GetPointeeTy();
+        const auto re = rht.GetPointeeTy();
+        if (le != re) {
           auto &warn = binop.addWarning();
-          warn << "comparison of distinct pointer types: " << *le << ", "
-               << *re;
-          warn.addContext(binop.left.loc()) << "left (" << *le << ")";
-          warn.addContext(binop.right.loc()) << "right (" << *re << ")";
+          warn << "comparison of distinct pointer types: " << le << ", " << re;
+          warn.addContext(binop.left.loc()) << "left (" << le << ")";
+          warn.addContext(binop.right.loc()) << "right (" << re << ")";
         }
       }
     } else if (!logical) {
@@ -2538,7 +2536,7 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
     if (binop.op == Operator::MINUS && !left_is_ptr)
       invalid_op();
     else if (binop.op == Operator::PLUS || binop.op == Operator::MINUS)
-      binop.result_type = CreatePointer(*ptr.GetPointeeTy(), ptr.GetAS());
+      binop.result_type = CreatePointer(ptr.GetPointeeTy(), ptr.GetAS());
     else if (!compare && !logical)
       invalid_op();
 
@@ -2708,7 +2706,7 @@ void SemanticAnalyser::visit(Unop &unop)
 
   if (unop.op == Operator::MUL) {
     if (type.IsPtrTy()) {
-      unop.result_type = SizedType(*type.GetPointeeTy());
+      unop.result_type = type.GetPointeeTy();
       if (type.IsCtxAccess())
         unop.result_type.MarkCtxAccess();
       unop.result_type.is_internal = type.is_internal;
@@ -3370,27 +3368,27 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy() &&
-      (!ty.IsPtrTy() || ty.GetElementTy()->IsIntTy() ||
-       ty.GetElementTy()->IsCStructTy()) &&
+      (!ty.IsPtrTy() || ty.GetElementTy().IsIntTy() ||
+       ty.GetElementTy().IsCStructTy()) &&
       // we support casting integers to int arrays
-      !(ty.IsArrayTy() && ty.GetElementTy()->IsBoolTy()) &&
-      !(ty.IsArrayTy() && ty.GetElementTy()->IsIntTy())) {
+      !(ty.IsArrayTy() && ty.GetElementTy().IsBoolTy()) &&
+      !(ty.IsArrayTy() && ty.GetElementTy().IsIntTy())) {
     logError();
   }
 
   if (ty.IsArrayTy()) {
     if (ty.GetNumElements() == 0) {
-      if (ty.GetElementTy()->GetSize() == 0)
+      if (ty.GetElementTy().GetSize() == 0)
         cast.addError() << "Could not determine size of the array";
       else {
-        if (rhs.GetSize() % ty.GetElementTy()->GetSize() != 0) {
+        if (rhs.GetSize() % ty.GetElementTy().GetSize() != 0) {
           cast.addError() << "Cannot determine array size: the element size is "
                              "incompatible with the cast integer size";
         }
 
         // cast to unsized array (e.g. int8[]), determine size from RHS
-        auto num_elems = rhs.GetSize() / ty.GetElementTy()->GetSize();
-        ty = CreateArray(num_elems, *ty.GetElementTy());
+        auto num_elems = rhs.GetSize() / ty.GetElementTy().GetSize();
+        ty = CreateArray(num_elems, ty.GetElementTy());
       }
     }
 
@@ -3398,11 +3396,11 @@ void SemanticAnalyser::visit(Cast &cast)
       ty.is_internal = true;
 
     if (rhs.IsIntTy()) {
-      if ((ty.GetElementTy()->IsIntegerTy() || ty.GetElementTy()->IsBoolTy())) {
+      if ((ty.GetElementTy().IsIntegerTy() || ty.GetElementTy().IsBoolTy())) {
         if ((ty.GetSize() <= 8) && (ty.GetSize() > rhs.GetSize())) {
           create_int_cast(cast.expr,
                           CreateInteger(ty.GetSize() * 8,
-                                        ty.GetElementTy()->IsSigned()));
+                                        ty.GetElementTy().IsSigned()));
         } else if (ty.GetSize() != rhs.GetSize()) {
           logError();
         }
@@ -4574,7 +4572,7 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_tuple(
       continue;
     } else if (storedElemTy.IsArrayTy()) {
       if ((storedElemTy.GetSize() != assignElemTy.GetSize()) ||
-          (*storedElemTy.GetElementTy() != *assignElemTy.GetElementTy())) {
+          (storedElemTy.GetElementTy() != assignElemTy.GetElementTy())) {
         return std::nullopt;
       }
     }
@@ -4629,7 +4627,7 @@ std::optional<SizedType> SemanticAnalyser::get_promoted_record(
       continue;
     } else if (storedElemTy.IsArrayTy()) {
       if ((storedElemTy.GetSize() != assignElemTy.GetSize()) ||
-          (*storedElemTy.GetElementTy() != *assignElemTy.GetElementTy())) {
+          (storedElemTy.GetElementTy() != assignElemTy.GetElementTy())) {
         return std::nullopt;
       }
     }
@@ -4671,21 +4669,21 @@ std::optional<SizedType> SemanticAnalyser::update_int_type(
 
 void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
 {
-  const SizedType *inner_type = &type;
+  SizedType inner_type = type;
   int pointer_level = 0;
-  while (inner_type->IsPtrTy()) {
-    inner_type = inner_type->GetPointeeTy();
+  while (inner_type.IsPtrTy()) {
+    inner_type = inner_type.GetPointeeTy();
     pointer_level++;
   }
-  if (inner_type->IsCStructTy() && !inner_type->GetStruct()) {
-    auto struct_type = bpftrace_.structs.Lookup(inner_type->GetName()).lock();
+  if (inner_type.IsCStructTy() && !inner_type.GetStruct()) {
+    auto struct_type = bpftrace_.structs.Lookup(inner_type.GetName()).lock();
     if (!struct_type) {
       // Try to find the type as something other than a struct, e.g. 'char' or
       // 'uint64_t'
-      auto stype = bpftrace_.btf_->get_stype(inner_type->GetName());
+      auto stype = bpftrace_.btf_->get_stype(inner_type.GetName());
       if (stype.IsNoneTy()) {
         node.addError() << "Cannot resolve unknown type \""
-                        << inner_type->GetName() << "\"\n";
+                        << inner_type.GetName() << "\"\n";
       } else {
         type = stype;
         while (pointer_level > 0) {
@@ -4694,7 +4692,7 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, Node &node)
         }
       }
     } else {
-      type = CreateCStruct(inner_type->GetName(), struct_type);
+      type = CreateCStruct(inner_type.GetName(), struct_type);
       while (pointer_level > 0) {
         type = CreatePointer(type);
         pointer_level--;

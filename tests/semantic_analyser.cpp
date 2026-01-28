@@ -1631,9 +1631,9 @@ TEST_F(SemanticAnalyserTest, call_uaddr)
                   ->block->stmts.at(i)
                   .as<ast::AssignVarStatement>();
     EXPECT_TRUE(v->var()->var_type.IsPtrTy());
-    EXPECT_TRUE(v->var()->var_type.GetPointeeTy()->IsIntTy());
+    EXPECT_TRUE(v->var()->var_type.GetPointeeTy().IsIntTy());
     EXPECT_EQ((unsigned long int)sizes.at(i),
-              v->var()->var_type.GetPointeeTy()->GetIntBitWidth());
+              v->var()->var_type.GetPointeeTy().GetIntBitWidth());
   }
 }
 
@@ -3789,20 +3789,20 @@ TEST_F(SemanticAnalyserTest, double_pointer_int)
   // $pp = (int8 **)1;
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsPtrTy());
+  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsPtrTy());
   ASSERT_TRUE(
-      assignment->var()->var_type.GetPointeeTy()->GetPointeeTy()->IsIntTy());
+      assignment->var()->var_type.GetPointeeTy().GetPointeeTy().IsIntTy());
   EXPECT_EQ(assignment->var()
                 ->var_type.GetPointeeTy()
-                ->GetPointeeTy()
-                ->GetIntBitWidth(),
+                .GetPointeeTy()
+                .GetIntBitWidth(),
             8ULL);
 
   // $p = *$pp;
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsIntTy());
-  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy()->GetIntBitWidth(), 8ULL);
+  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsIntTy());
+  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy().GetIntBitWidth(), 8ULL);
 
   // $val = *$p;
   assignment = stmts.at(2).as<ast::AssignVarStatement>();
@@ -3820,21 +3820,17 @@ TEST_F(SemanticAnalyserTest, double_pointer_struct)
   // $pp = (struct Foo **)1;
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsPtrTy());
-  ASSERT_TRUE(assignment->var()
-                  ->var_type.GetPointeeTy()
-                  ->GetPointeeTy()
-                  ->IsCStructTy());
-  EXPECT_EQ(
-      assignment->var()->var_type.GetPointeeTy()->GetPointeeTy()->GetName(),
-      "struct Foo");
+  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsPtrTy());
+  ASSERT_TRUE(
+      assignment->var()->var_type.GetPointeeTy().GetPointeeTy().IsCStructTy());
+  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy().GetPointeeTy().GetName(),
+            "struct Foo");
 
   // $p = *$pp;
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsCStructTy());
-  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy()->GetName(),
-            "struct Foo");
+  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsCStructTy());
+  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy().GetName(), "struct Foo");
 
   // $val = $p->x;
   assignment = stmts.at(2).as<ast::AssignVarStatement>();
@@ -5229,7 +5225,7 @@ TEST_F(SemanticAnalyserTest, variable_address)
 
   auto *assignment = stmts.at(1).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy()->IsIntTy());
+  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsIntTy());
 
   test("begin { $a = 1; $b = &$c; }", Error{ R"(
 stdin:1:23-25: ERROR: Undefined or undeclared variable: $c

@@ -215,7 +215,7 @@ TEST(clang_parser, integer_ptr)
   ASSERT_TRUE(foo->HasField("x"));
 
   EXPECT_TRUE(foo->GetField("x").type.IsPtrTy());
-  EXPECT_EQ(foo->GetField("x").type.GetPointeeTy()->GetIntBitWidth(),
+  EXPECT_EQ(foo->GetField("x").type.GetPointeeTy().GetIntBitWidth(),
             8 * sizeof(int));
   EXPECT_EQ(foo->GetField("x").offset, 0);
 }
@@ -233,9 +233,9 @@ TEST(clang_parser, string_ptr)
   ASSERT_TRUE(foo->HasField("str"));
 
   const auto &ty = foo->GetField("str").type;
-  const auto *pointee = ty.GetPointeeTy();
-  EXPECT_TRUE(pointee->IsIntTy());
-  EXPECT_EQ(pointee->GetIntBitWidth(), 8 * sizeof(char));
+  const auto pointee = ty.GetPointeeTy();
+  EXPECT_TRUE(pointee.IsIntTy());
+  EXPECT_EQ(pointee.GetIntBitWidth(), 8 * sizeof(char));
   EXPECT_EQ(foo->GetField("str").offset, 0);
 }
 
@@ -292,9 +292,9 @@ TEST(clang_parser, nested_struct_ptr_named)
 
   const auto &bar = foo->GetField("bar");
   EXPECT_TRUE(bar.type.IsPtrTy());
-  EXPECT_TRUE(bar.type.GetPointeeTy()->IsCStructTy());
-  EXPECT_EQ(bar.type.GetPointeeTy()->GetName(), "struct Bar");
-  EXPECT_EQ(bar.type.GetPointeeTy()->GetSize(), sizeof(int));
+  EXPECT_TRUE(bar.type.GetPointeeTy().IsCStructTy());
+  EXPECT_EQ(bar.type.GetPointeeTy().GetName(), "struct Bar");
+  EXPECT_EQ(bar.type.GetPointeeTy().GetSize(), sizeof(int));
   EXPECT_EQ(bar.offset, 0);
 }
 
@@ -703,11 +703,11 @@ TEST_F(clang_parser_btf, btf)
   auto foo1_field = foo3->GetField("foo1");
   auto foo2_field = foo3->GetField("foo2");
   EXPECT_TRUE(foo1_field.type.IsPtrTy());
-  EXPECT_EQ(foo1_field.type.GetPointeeTy()->GetName(), "struct Foo1");
+  EXPECT_EQ(foo1_field.type.GetPointeeTy().GetName(), "struct Foo1");
   EXPECT_EQ(foo1_field.offset, 0);
 
   EXPECT_TRUE(foo2_field.type.IsPtrTy());
-  EXPECT_EQ(foo2_field.type.GetPointeeTy()->GetName(), "struct Foo2");
+  EXPECT_EQ(foo2_field.type.GetPointeeTy().GetName(), "struct Foo2");
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
@@ -734,20 +734,16 @@ TEST_F(clang_parser_btf, DISABLED_btf_arrays_multi_dim)
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 3);
 
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsArrayTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetSize(), 8U);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetNumElements(),
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy().IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetNumElements(),
             2);
 
-  EXPECT_TRUE(arrs->GetField("multi_dim")
-                  .type.GetElementTy()
-                  ->GetElementTy()
-                  ->IsIntTy());
-  EXPECT_EQ(arrs->GetField("multi_dim")
-                .type.GetElementTy()
-                ->GetElementTy()
-                ->GetSize(),
-            4U);
+  EXPECT_TRUE(
+      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().IsIntTy());
+  EXPECT_EQ(
+      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().GetSize(),
+      4U);
 }
 
 TEST(clang_parser, btf_unresolved_typedef)
@@ -861,8 +857,8 @@ TEST(clang_parser, struct_qualifiers)
   EXPECT_EQ(SB->fields.size(), 2U);
 
   EXPECT_TRUE(SB->GetField("a").type.IsPtrTy());
-  EXPECT_TRUE(SB->GetField("a").type.GetPointeeTy()->IsCStructTy());
-  EXPECT_EQ(SB->GetField("a").type.GetPointeeTy()->GetName(), "struct a");
+  EXPECT_TRUE(SB->GetField("a").type.GetPointeeTy().IsCStructTy());
+  EXPECT_EQ(SB->GetField("a").type.GetPointeeTy().GetName(), "struct a");
 
   EXPECT_TRUE(SB->GetField("a2").type.IsCStructTy());
   EXPECT_EQ(SB->GetField("a2").type.GetName(), "struct a");

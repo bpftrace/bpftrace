@@ -124,8 +124,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
   // Automatically resolve through pointers.
   while (sized_type_.IsPtrTy()) {
-    auto tmp = *sized_type_.GetPointeeTy();
-    sized_type_ = std::move(tmp);
+    sized_type_ = sized_type_.GetPointeeTy();
     resolve_fields(sized_type_);
   }
 
@@ -158,10 +157,10 @@ void FieldAnalyser::visit(ArrayAccess &arr)
   visit(arr.indexpr);
   visit(arr.expr);
   if (sized_type_.IsPtrTy()) {
-    sized_type_ = *sized_type_.GetPointeeTy();
+    sized_type_ = sized_type_.GetPointeeTy();
     resolve_fields(sized_type_);
   } else if (sized_type_.IsArrayTy()) {
-    sized_type_ = *sized_type_.GetElementTy();
+    sized_type_ = sized_type_.GetElementTy();
     resolve_fields(sized_type_);
   }
 }
@@ -216,9 +215,7 @@ void FieldAnalyser::visit(Unop &unop)
 {
   visit(unop.expr);
   if (unop.op == Operator::MUL && sized_type_.IsPtrTy()) {
-    // Need a temporary to prevent UAF from self-referential assignment
-    auto tmp = *sized_type_.GetPointeeTy();
-    sized_type_ = std::move(tmp);
+    sized_type_ = sized_type_.GetPointeeTy();
     resolve_fields(sized_type_);
   }
 }
@@ -242,12 +239,12 @@ void FieldAnalyser::resolve_type(SizedType &type)
 {
   sized_type_ = CreateNone();
 
-  const SizedType *inner_type = &type;
-  while (inner_type->IsPtrTy())
-    inner_type = inner_type->GetPointeeTy();
-  if (!inner_type->IsCStructTy())
+  SizedType inner_type = type;
+  while (inner_type.IsPtrTy())
+    inner_type = inner_type.GetPointeeTy();
+  if (!inner_type.IsCStructTy())
     return;
-  const auto &name = inner_type->GetName();
+  const auto &name = inner_type.GetName();
 
   if (probe_) {
     for (auto &ap : probe_->attach_points)

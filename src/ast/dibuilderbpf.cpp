@@ -327,7 +327,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
     auto *subrange = getOrCreateSubrange(0, stype.GetNumElements());
     return createArrayType(stype.GetSize() * 8,
                            0,
-                           GetType(*stype.GetElementTy()),
+                           GetType(stype.GetElementTy()),
                            getOrCreateArray({ subrange }));
   }
 
@@ -344,7 +344,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
     return CreateTSeriesStructType(stype);
 
   if (stype.IsPtrTy())
-    return createPointerType(GetType(*stype.GetPointeeTy()), 64);
+    return createPointerType(GetType(stype.GetPointeeTy()), 64);
 
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {
