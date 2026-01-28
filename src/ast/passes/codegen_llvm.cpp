@@ -1370,7 +1370,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     } else {
       auto &arg = call.vargs.at(0);
       fixed_buffer_length = arg.type().GetNumElements() *
-                            arg.type().GetElementTy()->GetSize();
+                            arg.type().GetElementTy().GetSize();
       length = b_.getInt32(fixed_buffer_length);
     }
 
@@ -2075,8 +2075,8 @@ ScopedExpr CodegenLLVM::binop_integer_array(Binop &binop)
   const auto &right_array_ty = binop.right.type();
 
   assert(left_array_ty.GetNumElements() == right_array_ty.GetNumElements());
-  assert(left_array_ty.GetElementTy()->GetSize() ==
-         right_array_ty.GetElementTy()->GetSize());
+  assert(left_array_ty.GetElementTy().GetSize() ==
+         right_array_ty.GetElementTy().GetSize());
 
   return ScopedExpr(b_.CreateIntegerArrayCmp(left_array_val,
                                              right_array_val,
@@ -2258,7 +2258,7 @@ ScopedExpr CodegenLLVM::binop_ptr(Binop &binop)
     const auto &ptr_ty = leftptr ? binop.left.type() : binop.right.type();
     Value *ptr_expr = leftptr ? lhs : rhs;
     Value *other_expr = leftptr ? rhs : lhs;
-    return ScopedExpr(b_.CreateGEP(b_.GetType(*ptr_ty.GetPointeeTy()),
+    return ScopedExpr(b_.CreateGEP(b_.GetType(ptr_ty.GetPointeeTy()),
                                    ptr_expr,
                                    binop.op == Operator::PLUS
                                        ? other_expr
@@ -2285,7 +2285,7 @@ ScopedExpr CodegenLLVM::visit(Binop &binop)
     return binop_string(binop);
   } else if (type.IsBufferTy()) {
     return binop_buf(binop);
-  } else if (type.IsArrayTy() && type.GetElementTy()->IsIntegerTy()) {
+  } else if (type.IsArrayTy() && type.GetElementTy().IsIntegerTy()) {
     return binop_integer_array(binop);
   } else {
     return binop_int(binop);
@@ -2347,16 +2347,16 @@ ScopedExpr CodegenLLVM::unop_ptr(Unop &unop)
       if (unop.result_type.IsIntegerTy() || unop.result_type.IsPtrTy() ||
           unop.result_type.IsUsernameTy() || unop.result_type.IsTimestampTy() ||
           unop.result_type.IsKsymTy()) {
-        const auto *et = type.GetPointeeTy();
-        AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
+        const auto et = type.GetPointeeTy();
+        AllocaInst *dst = b_.CreateAllocaBPF(et, "deref");
         if (type.GetAS() != AddrSpace::none) {
           b_.CreateProbeRead(
-              dst, *et, scoped_expr.value(), unop.loc, type.GetAS());
+              dst, et, scoped_expr.value(), unop.loc, type.GetAS());
         } else {
-          b_.CreateStore(b_.CreateLoad(b_.GetType(*et), scoped_expr.value()),
+          b_.CreateStore(b_.CreateLoad(b_.GetType(et), scoped_expr.value()),
                          dst);
         }
-        Value *value = b_.CreateLoad(b_.GetType(*et), dst);
+        Value *value = b_.CreateLoad(b_.GetType(et), dst);
         b_.CreateLifetimeEnd(dst);
         return ScopedExpr(value);
       }
@@ -2978,7 +2978,7 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
   // since they are treated as read-only - it is sufficient to assign
   // the pointer and do the memcpy/proberead later when necessary
   if (var_type.IsArrayTy() || var_type.IsCStructTy()) {
-    const auto &pointee_type = var_type.IsArrayTy() ? *var_type.GetElementTy()
+    const auto &pointee_type = var_type.IsArrayTy() ? var_type.GetElementTy()
                                                     : var_type;
     alloca_type = CreatePointer(pointee_type, var_type.GetAS());
   }
@@ -4352,7 +4352,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
   bool is_post = (unop.op == Operator::POST_INCREMENT ||
                   unop.op == Operator::POST_DECREMENT);
   const SizedType &type = unop.expr.type();
-  uint64_t step = type.IsPtrTy() ? type.GetPointeeTy()->GetSize() : 1;
+  uint64_t step = type.IsPtrTy() ? type.GetPointeeTy().GetSize() : 1;
 
   if (auto *acc = unop.expr.as<MapAccess>()) {
     auto &map = *acc->map;
@@ -4362,7 +4362,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
                                             map.ident + "_newval");
 
     if (type.IsPtrTy()) {
-      b_.CreateStore(b_.CreateGEP(b_.GetType(*map.value_type.GetPointeeTy()),
+      b_.CreateStore(b_.CreateGEP(b_.GetType(map.value_type.GetPointeeTy()),
                                   oldval,
                                   is_increment ? b_.getInt32(1)
                                                : b_.getInt32(-1)),
@@ -4392,7 +4392,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     Value *newval;
 
     if (type.IsPtrTy()) {
-      newval = b_.CreateGEP(b_.GetType(*type.GetPointeeTy()),
+      newval = b_.CreateGEP(b_.GetType(type.GetPointeeTy()),
                             oldval,
                             is_increment ? b_.getInt32(1) : b_.getInt32(-1));
     } else {

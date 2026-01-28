@@ -356,16 +356,23 @@ public:
     return type_;
   }
 
-  const SizedType *GetElementTy() const
+  SizedType GetElementTy() const
   {
     assert(IsArrayTy());
-    return element_type_.get();
+    return *element_type_;
   }
 
-  const SizedType *GetPointeeTy() const
+  SizedType GetPointeeTy() const
   {
     assert(IsPtrTy());
-    return element_type_.get();
+    auto result = *element_type_;
+    if (as_ == AddrSpace::user) {
+      result.SetAS(AddrSpace::user);
+    }
+    if (as_ == AddrSpace::kernel && result.GetAS() != AddrSpace::none) {
+      result.SetAS(AddrSpace::kernel);
+    }
+    return result;
   }
 
   bool IsPtrTy() const

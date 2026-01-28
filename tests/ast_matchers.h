@@ -379,21 +379,13 @@ public:
                                    MatchResultListener* listener) {
       // For arrays, check element type.
       if (type_obj.IsArrayTy()) {
-        const SizedType* element_type = type_obj.GetElementTy();
-        if (!element_type) {
-          *listener << "array has no element type";
-          return false;
-        }
-        return element_matcher.MatchAndExplain(*element_type, listener);
+        const SizedType element_type = type_obj.GetElementTy();
+        return element_matcher.MatchAndExplain(element_type, listener);
       }
       // For pointers, check pointee type.
       else if (type_obj.IsPtrTy()) {
-        const SizedType* pointee_type = type_obj.GetPointeeTy();
-        if (!pointee_type) {
-          *listener << "pointer has no pointee type";
-          return false;
-        }
-        return element_matcher.MatchAndExplain(*pointee_type, listener);
+        const SizedType pointee_type = type_obj.GetPointeeTy();
+        return element_matcher.MatchAndExplain(pointee_type, listener);
       } else {
         *listener << "type is neither array nor pointer, cannot have element";
         return false;

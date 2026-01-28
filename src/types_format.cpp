@@ -139,12 +139,12 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       return s;
     }
     case Type::array: {
-      size_t elem_size = type.GetElementTy()->GetSize();
+      size_t elem_size = type.GetElementTy().GetSize();
       output::Primitive::Array array;
       for (size_t i = 0; i < type.GetNumElements(); i++) {
         auto elem_data = value.slice(i * elem_size, elem_size);
         auto val = format(
-            bpftrace, c_definitions, *type.GetElementTy(), elem_data, div);
+            bpftrace, c_definitions, type.GetElementTy(), elem_data, div);
         if (!val) {
           return val.takeError();
         }

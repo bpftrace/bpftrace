@@ -45,9 +45,9 @@ std::string typestr(const SizedType &type)
     case Type::buffer:
       return typestr(type.GetTy()) + "[" + std::to_string(type.GetSize()) + "]";
     case Type::pointer:
-      return typestr(*type.GetPointeeTy()) + " *";
+      return typestr(type.GetPointeeTy()) + " *";
     case Type::array:
-      return typestr(*type.GetElementTy()) + "[" +
+      return typestr(type.GetElementTy()) + "[" +
              std::to_string(type.GetNumElements()) + "]";
     case Type::c_struct: {
       if (!type.IsAnonTy())
@@ -139,7 +139,7 @@ bool SizedType::IsCompatible(const SizedType &t) const
     return t.GetName() == GetName();
 
   if (IsPtrTy())
-    return GetPointeeTy()->IsCompatible(*t.GetPointeeTy());
+    return GetPointeeTy().IsCompatible(t.GetPointeeTy());
 
   if (IsIntegerTy()) {
     if (IsSigned() == t.IsSigned()) {
@@ -210,13 +210,13 @@ std::strong_ordering SizedType::operator<=>(const SizedType &t) const
   }
 
   if (IsPtrTy()) {
-    return *GetPointeeTy() <=> *t.GetPointeeTy();
+    return GetPointeeTy() <=> t.GetPointeeTy();
   }
 
   if (IsArrayTy()) {
     if (auto cmp = GetNumElements() <=> t.GetNumElements(); cmp != 0)
       return cmp;
-    return *GetElementTy() <=> *t.GetElementTy();
+    return GetElementTy() <=> t.GetElementTy();
   }
 
   if (IsTupleTy()) {

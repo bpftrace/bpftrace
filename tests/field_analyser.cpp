@@ -105,11 +105,11 @@ TEST_F(field_analyser_btf, btf_types)
   auto foo1_field = foo3->GetField("foo1");
   auto foo2_field = foo3->GetField("foo2");
   EXPECT_TRUE(foo1_field.type.IsPtrTy());
-  EXPECT_EQ(foo1_field.type.GetPointeeTy()->GetName(), "struct Foo1");
+  EXPECT_EQ(foo1_field.type.GetPointeeTy().GetName(), "struct Foo1");
   EXPECT_EQ(foo1_field.offset, 0);
 
   EXPECT_TRUE(foo2_field.type.IsPtrTy());
-  EXPECT_EQ(foo2_field.type.GetPointeeTy()->GetName(), "struct Foo2");
+  EXPECT_EQ(foo2_field.type.GetPointeeTy().GetName(), "struct Foo2");
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
@@ -137,7 +137,7 @@ TEST_F(field_analyser_btf, btf_arrays)
 
   EXPECT_TRUE(arrs->GetField("int_arr").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("int_arr").type.GetNumElements(), 4);
-  EXPECT_TRUE(arrs->GetField("int_arr").type.GetElementTy()->IsIntTy());
+  EXPECT_TRUE(arrs->GetField("int_arr").type.GetElementTy().IsIntTy());
   EXPECT_EQ(arrs->GetField("int_arr").type.GetSize(), 16U);
   EXPECT_EQ(arrs->GetField("int_arr").offset, 0);
 
@@ -152,7 +152,7 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());
   EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetNumElements(), 2);
-  EXPECT_TRUE(arrs->GetField("ptr_arr").type.GetElementTy()->IsPtrTy());
+  EXPECT_TRUE(arrs->GetField("ptr_arr").type.GetElementTy().IsPtrTy());
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetSize(), 2 * sizeof(uintptr_t));
   EXPECT_EQ(arrs->GetField("ptr_arr").offset, 40);
 
@@ -161,19 +161,19 @@ TEST_F(field_analyser_btf, btf_arrays)
   // below in 'field_analyser_btf.btf_arrays_multi_dim'.
   EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 6);
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsIntTy());
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy().IsIntTy());
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
   EXPECT_EQ(arrs->GetField("multi_dim").offset, 56);
 
   EXPECT_TRUE(arrs->GetField("zero").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("zero").type.GetNumElements(), 0);
-  EXPECT_TRUE(arrs->GetField("zero").type.GetElementTy()->IsIntTy());
+  EXPECT_TRUE(arrs->GetField("zero").type.GetElementTy().IsIntTy());
   EXPECT_EQ(arrs->GetField("zero").type.GetSize(), 0U);
   EXPECT_EQ(arrs->GetField("zero").offset, 80);
 
   EXPECT_TRUE(arrs->GetField("flexible").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetNumElements(), 0);
-  EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy()->IsIntTy());
+  EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy().IsIntTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
   EXPECT_EQ(arrs->GetField("flexible").offset, 80);
 }
@@ -197,20 +197,16 @@ TEST_F(field_analyser_btf, DISABLED_btf_arrays_multi_dim)
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 3);
 
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsArrayTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetSize(), 8U);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->GetNumElements(),
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy().IsArrayTy());
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetNumElements(),
             2);
 
-  EXPECT_TRUE(arrs->GetField("multi_dim")
-                  .type.GetElementTy()
-                  ->GetElementTy()
-                  ->IsIntTy());
-  EXPECT_EQ(arrs->GetField("multi_dim")
-                .type.GetElementTy()
-                ->GetElementTy()
-                ->GetSize(),
-            4U);
+  EXPECT_TRUE(
+      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().IsIntTy());
+  EXPECT_EQ(
+      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().GetSize(),
+      4U);
 }
 
 void test_arrays_compound_data(BPFtrace &bpftrace)
@@ -229,17 +225,17 @@ void test_arrays_compound_data(BPFtrace &bpftrace)
 
   // Check that referenced types n-levels deep are all parsed from BTF
 
-  const auto &foo3_ptr_type = *data_type.GetElementTy();
+  const auto &foo3_ptr_type = data_type.GetElementTy();
   ASSERT_TRUE(foo3_ptr_type.IsPtrTy());
 
-  const auto &foo3_type = *foo3_ptr_type.GetPointeeTy();
+  const auto &foo3_type = foo3_ptr_type.GetPointeeTy();
   ASSERT_TRUE(foo3_type.IsCStructTy());
   ASSERT_TRUE(foo3_type.HasField("foo1"));
 
   const auto &foo1_ptr_type = foo3_type.GetField("foo1").type;
   ASSERT_TRUE(foo1_ptr_type.IsPtrTy());
 
-  const auto &foo1_type = *foo1_ptr_type.GetPointeeTy();
+  const auto &foo1_type = foo1_ptr_type.GetPointeeTy();
   ASSERT_TRUE(foo1_type.IsCStructTy());
   ASSERT_TRUE(foo1_type.HasField("a"));
 }
@@ -325,27 +321,27 @@ TEST_F(field_analyser_btf, btf_types_anon_structs)
   EXPECT_TRUE(typedefarray.IsArrayTy());
   EXPECT_EQ(typedefarray.GetNumElements(), 8);
   EXPECT_EQ(typedefarray.GetSize(), 32);
-  EXPECT_TRUE(typedefarray.GetElementTy()->IsCStructTy());
-  EXPECT_TRUE(typedefarray.GetElementTy()->IsAnonTy());
-  EXPECT_TRUE(typedefarray.GetElementTy()->HasField("a"));
+  EXPECT_TRUE(typedefarray.GetElementTy().IsCStructTy());
+  EXPECT_TRUE(typedefarray.GetElementTy().IsAnonTy());
+  EXPECT_TRUE(typedefarray.GetElementTy().HasField("a"));
 
   ASSERT_TRUE(anonstruct->HasField("AnonArray"));
   auto structarray = anonstruct->GetField("AnonArray").type;
   EXPECT_TRUE(typedefarray.IsArrayTy());
   EXPECT_EQ(structarray.GetSize(), 96);
   EXPECT_EQ(structarray.GetNumElements(), 4);
-  EXPECT_TRUE(structarray.GetElementTy()->IsCStructTy());
-  EXPECT_TRUE(structarray.GetElementTy()->IsAnonTy());
-  EXPECT_TRUE(structarray.GetElementTy()->HasField("a"));
-  EXPECT_TRUE(structarray.GetElementTy()->HasField("b"));
+  EXPECT_TRUE(structarray.GetElementTy().IsCStructTy());
+  EXPECT_TRUE(structarray.GetElementTy().IsAnonTy());
+  EXPECT_TRUE(structarray.GetElementTy().HasField("a"));
+  EXPECT_TRUE(structarray.GetElementTy().HasField("b"));
 
-  ASSERT_TRUE(structarray.GetElementTy()->HasField("AnonSubArray"));
-  auto subarray = structarray.GetElementTy()->GetField("AnonSubArray").type;
+  ASSERT_TRUE(structarray.GetElementTy().HasField("AnonSubArray"));
+  auto subarray = structarray.GetElementTy().GetField("AnonSubArray").type;
   EXPECT_EQ(subarray.GetNumElements(), 2);
-  EXPECT_TRUE(subarray.GetElementTy()->IsCStructTy());
-  EXPECT_TRUE(subarray.GetElementTy()->IsAnonTy());
-  EXPECT_TRUE(subarray.GetElementTy()->HasField("c"));
-  EXPECT_TRUE(subarray.GetElementTy()->HasField("d"));
+  EXPECT_TRUE(subarray.GetElementTy().IsCStructTy());
+  EXPECT_TRUE(subarray.GetElementTy().IsAnonTy());
+  EXPECT_TRUE(subarray.GetElementTy().HasField("c"));
+  EXPECT_TRUE(subarray.GetElementTy().HasField("d"));
 }
 
 TEST_F(field_analyser_btf, btf_types_bitfields)

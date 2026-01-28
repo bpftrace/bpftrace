@@ -75,8 +75,8 @@ bool can_implicit_cast(const SizedType &from, const SizedType &to)
   if (from.FitsInto(to))
     return true;
 
-  if (from.IsStringTy() && to.IsPtrTy() && to.GetPointeeTy()->IsIntTy() &&
-      to.GetPointeeTy()->GetSize() == 1) {
+  if (from.IsStringTy() && to.IsPtrTy() && to.GetPointeeTy().IsIntTy() &&
+      to.GetPointeeTy().GetSize() == 1) {
     // Allow casting from string to int8* or uint8*
     return true;
   }

@@ -377,7 +377,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   if (stype.IsByteArray() || stype.IsCStructTy()) {
     ty = ArrayType::get(getInt8Ty(), stype.GetSize());
   } else if (stype.IsArrayTy()) {
-    ty = ArrayType::get(GetType(*stype.GetElementTy()), stype.GetNumElements());
+    ty = ArrayType::get(GetType(stype.GetElementTy()), stype.GetNumElements());
   } else if (stype.IsTupleTy() || stype.IsRecordTy()) {
     std::vector<llvm::Type *> llvm_elems;
     std::string ty_name;
@@ -714,7 +714,7 @@ Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,
   // Note the 1st index is 0 because we're pointing to
   // ValueType var[MAX_CPU_ID + 1][num_elements]
   // More details on using GEP: https://llvm.org/docs/LangRef.html#id236
-  if (sized_type.GetElementTy()->GetElementTy()->IsArrayTy()) {
+  if (sized_type.GetElementTy().GetElementTy().IsArrayTy()) {
     return CreateGEP(
         GetType(sized_type),
         module_.getGlobalVariable(global_name),
@@ -1568,7 +1568,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *val1,
   //    return true;
   //  }
 
-  auto elem_type = *val1_type.GetElementTy();
+  auto elem_type = val1_type.GetElementTy();
   const size_t num = val1_type.GetNumElements();
 
   Value *val1_elem_i, *val2_elem_i, *cmp;
