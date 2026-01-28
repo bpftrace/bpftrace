@@ -11,9 +11,9 @@ std::vector<std::string> resolve_binary_path(
     const std::string &cmd,
     std::optional<int> pid = std::nullopt);
 
-// Tries to find a file in $PATH
+// Tries to find a file in $PATH.
 std::optional<std::filesystem::path> find_in_path(std::string_view name);
-// Finds a file in the same directory as running binary
+// Finds a file in the same directory as running binary.
 std::optional<std::filesystem::path> find_near_self(std::string_view name);
 
 unsigned long file_ino(const std::string &path);

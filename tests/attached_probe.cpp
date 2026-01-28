@@ -16,7 +16,7 @@ TEST(attached_probe, kprobe_empty_name_and_zero_address)
   probe.attach_point = "";
   probe.address = 0;
 
-  auto result = AttachedProbe::make(probe, prog, 0, bpftrace);
+  auto result = AttachedProbe::make(probe, prog, 0, bpftrace.safe_mode_);
   EXPECT_TRUE(!result);
 }
 

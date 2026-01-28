@@ -5,6 +5,8 @@
 
 #include "ast/ast.h"
 #include "btf.h"
+#include "util/kernel.h"
+#include "util/user.h"
 
 namespace bpftrace {
 
@@ -52,7 +54,12 @@ class BPFtrace;
 
 class ProbeMatcher {
 public:
-  explicit ProbeMatcher(BPFtrace *bpftrace) : bpftrace_(bpftrace)
+  explicit ProbeMatcher(BPFtrace *bpftrace,
+                        util::KernelFunctionInfo &kernel_func_info,
+                        util::UserFunctionInfo &user_func_info)
+      : bpftrace_(bpftrace),
+        kernel_func_info_(kernel_func_info),
+        user_func_info_(user_func_info)
   {
   }
   virtual ~ProbeMatcher() = default;
@@ -71,6 +78,8 @@ public:
   void list_structs(const std::string &search);
 
   const BPFtrace *bpftrace_;
+  util::KernelFunctionInfo &kernel_func_info_;
+  util::UserFunctionInfo &user_func_info_;
 
 private:
   std::set<std::string> get_matches_in_stream(const std::string &search_input,
@@ -86,17 +95,7 @@ private:
                                            const std::set<std::string> &set);
 
   virtual std::unique_ptr<std::istream> get_symbols_from_traceable_funcs(
-      bool with_modules = false) const;
-  virtual std::unique_ptr<std::istream> get_module_symbols_from_traceable_funcs(
-    const std::string &module_name) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_file(
-      const std::string &path) const;
-  virtual std::unique_ptr<std::istream> get_func_symbols_from_file(
-      std::optional<int> pid,
-      const std::string &path) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
-      std::optional<int> pid,
-      const std::string &target) const;
+      bool with_modules = false, std::optional<std::string> module = std::nullopt) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_list(
       const std::vector<ProbeListItem> &probes_list) const;
   virtual std::unique_ptr<std::istream> get_fentry_symbols(

@@ -20,7 +20,6 @@
 #include "driver.h"
 #include "mocks.h"
 #include "output/text.h"
-#include "tracefs/tracefs.h"
 #include "types.h"
 #include "types_format.h"
 #include "gmock/gmock-matchers.h"
@@ -63,6 +62,7 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .put(no_types)
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
@@ -236,9 +236,6 @@ TEST(bpftrace, add_bench_probes)
 TEST(bpftrace, add_probes_single)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_traceable_funcs(false))
-      .Times(1);
   parse_probe("kprobe:sys_read {}", *bpftrace);
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
@@ -249,9 +246,6 @@ TEST(bpftrace, add_probes_single)
 TEST(bpftrace, add_probes_multiple)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_traceable_funcs(false))
-      .Times(2);
   parse_probe("kprobe:sys_read,kprobe:sys_write{}", *bpftrace);
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
@@ -263,9 +257,6 @@ TEST(bpftrace, add_probes_multiple)
 TEST(bpftrace, add_probes_kernel_module)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_traceable_funcs(false))
-      .Times(1);
   parse_probe("kprobe:mod_func_1{}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -277,9 +268,6 @@ TEST(bpftrace, add_probes_kernel_module)
 TEST(bpftrace, add_probes_specify_kernel_module)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_module_symbols_from_traceable_funcs("kernel_mod_1"))
-      .Times(1);
   parse_probe("kprobe:kernel_mod_1:mod_func_1{}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -292,9 +280,6 @@ TEST(bpftrace, add_probes_offset)
 {
   auto offset = 10;
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_traceable_funcs(false))
-      .Times(1);
   parse_probe("kprobe:sys_read+10{}", *bpftrace);
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
@@ -305,9 +290,6 @@ TEST(bpftrace, add_probes_offset)
 TEST(bpftrace, add_probes_uprobe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(_, "/bin/sh"))
-      .Times(1);
   parse_probe("uprobe:/bin/sh:f {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -330,9 +312,6 @@ TEST(bpftrace, add_probes_uprobe_address)
 TEST(bpftrace, add_probes_uprobe_string_offset)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file(_, "/bin/sh"))
-      .Times(1);
   parse_probe("uprobe:/bin/sh:f+10{}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -348,9 +327,6 @@ TEST(bpftrace, add_probes_uprobe_string_offset)
 TEST(bpftrace, add_probes_usdt)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_usdt(no_pid, "/bin/sh"))
-      .Times(1);
   parse_probe("usdt:/bin/sh:prov1:tp1 {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -361,9 +337,6 @@ TEST(bpftrace, add_probes_usdt)
 TEST(bpftrace, add_probes_usdt_empty_namespace_conflict)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_usdt(no_pid, "/bin/sh"))
-      .Times(1);
 
   parse_probe("usdt:/bin/sh:tp {}", *bpftrace);
 }
@@ -372,9 +345,6 @@ TEST(bpftrace, add_probes_usdt_duplicate_markers)
 {
   auto bpftrace = get_strict_mock_bpftrace();
 
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_usdt(no_pid, "/bin/sh"))
-      .Times(1);
   parse_probe("usdt:/bin/sh:prov1:tp1 {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -385,9 +355,6 @@ TEST(bpftrace, add_probes_usdt_duplicate_markers)
 TEST(bpftrace, add_probes_tracepoint)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(tracefs::available_events()))
-      .Times(1);
   parse_probe("tracepoint:sched:sched_one {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -463,7 +430,8 @@ TEST(bpftrace, empty_attachpoint)
   // ... ah, but it doesn't really. What fails is the attachpoint parser. The
   // above is a valid program, it is just not a valid attachpoint.
   StrictMock<MockBPFtrace> bpftrace;
-  ast::AttachPointParser ap_parser(ast, bpftrace, false);
+  ast::AttachPointParser ap_parser(
+      ast, bpftrace, get_mock_function_info(), false);
   ap_parser.parse();
   EXPECT_FALSE(ast.diagnostics().ok());
 }
@@ -672,9 +640,6 @@ void check_probe(Probe &p, ProbeType type, const std::string &name)
 TEST_F(bpftrace_btf, add_probes_fentry)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-
-  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols("vmlinux"))
-      .Times(2);
   parse_probe("fentry:vmlinux:func_1,fexit:vmlinux:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
@@ -691,7 +656,6 @@ TEST_F(bpftrace_btf, add_probes_fentry)
 TEST_F(bpftrace_btf, add_probes_fentry_bpf_func)
 {
   auto bpftrace = get_mock_bpftrace();
-
   parse_probe("fentry:bpf:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
@@ -708,7 +672,6 @@ TEST_F(bpftrace_btf, add_probes_fentry_bpf_func)
 TEST_F(bpftrace_btf, add_probes_fentry_bpf_id)
 {
   auto bpftrace = get_mock_bpftrace();
-
   parse_probe("fentry:bpf:456:func_1 {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -722,27 +685,22 @@ TEST_F(bpftrace_btf, add_probes_fentry_bpf_id)
 TEST_F(bpftrace_btf, add_probes_kprobe)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_module_symbols_from_traceable_funcs("mock_vmlinux"))
-      .Times(2);
-  parse_probe("kprobe:mock_vmlinux:func_1,kretprobe:mock_vmlinux:func_1 {}",
-              *bpftrace);
+  parse_probe("kprobe:vmlinux:func_1,kretprobe:vmlinux:func_1 {}", *bpftrace);
 
   ASSERT_EQ(2U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_begin_probes().size());
 
   check_probe(bpftrace->get_probes().at(0),
               ProbeType::kprobe,
-              "kprobe:mock_vmlinux:func_1");
+              "kprobe:vmlinux:func_1");
   check_probe(bpftrace->get_probes().at(1),
               ProbeType::kretprobe,
-              "kretprobe:mock_vmlinux:func_1");
+              "kretprobe:vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_iter_task)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-
   parse_probe("iter:task {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -754,7 +712,6 @@ TEST_F(bpftrace_btf, add_probes_iter_task)
 TEST_F(bpftrace_btf, add_probes_iter_task_file)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-
   parse_probe("iter:task_file {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -766,7 +723,6 @@ TEST_F(bpftrace_btf, add_probes_iter_task_file)
 TEST_F(bpftrace_btf, add_probes_iter_task_vma)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-
   parse_probe("iter:task_vma {}", *bpftrace);
 
   ASSERT_EQ(1U, bpftrace->get_probes().size());
@@ -837,7 +793,8 @@ static std::set<std::string> list_modules(std::string_view ap)
 
   auto ok = ast::PassManager()
                 .put(ast)
-                .put(static_cast<BPFtrace &>(*bpftrace))
+                .put<BPFtrace>(*bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .run();
@@ -845,7 +802,11 @@ static std::set<std::string> list_modules(std::string_view ap)
   ast.diagnostics().emit(out);
   EXPECT_TRUE(ok && ast.diagnostics().ok()) << out.str();
 
-  return bpftrace->list_modules(ast);
+  auto &func_info = get_mock_function_info();
+  ProbeMatcher probe_matcher(bpftrace.get(),
+                             func_info.kernel_function_info(),
+                             func_info.user_function_info());
+  return bpftrace->list_modules(ast, probe_matcher);
 }
 
 // Test modules are extracted when module is not explicit in attachpoint

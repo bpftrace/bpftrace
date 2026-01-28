@@ -7,7 +7,6 @@
 #include <iostream>
 #include <linux/limits.h>
 #include <optional>
-#include <regex>
 #include <sstream>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -27,11 +26,14 @@
 #include "ast/context.h"
 #include "ast/pass_manager.h"
 #include "ast/passes/args_resolver.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "bpftrace.h"
 #include "btf.h"
 #include "log.h"
+#include "probe_matcher.h"
 #include "tracefs/tracefs.h"
 #include "types.h"
+#include "util/kernel.h"
 #include "util/strings.h"
 
 using namespace std::literals::string_view_literals;
@@ -534,10 +536,12 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   return stype;
 }
 
-Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
-                                                  bool ret,
-                                                  bool check_traceable,
-                                                  bool skip_first_arg)
+Result<std::shared_ptr<Struct>> BTF::resolve_args(
+    std::string_view func,
+    bool ret,
+    bool check_traceable,
+    bool skip_first_arg,
+    const util::KernelFunctionInfo &func_info)
 {
   if (!has_data()) {
     return make_error<ast::ArgParseError>(func, "BTF data not available");
@@ -556,21 +560,11 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
   }
 
   if (check_traceable) {
-    if (bpftrace_ && !bpftrace_->is_traceable_func(std::string(func))) {
-      // TODO: do not create stream just for not-empty check
-      if (bpftrace_->get_traceable_funcs(false)->eof()) {
-        return make_error<ast::ArgParseError>(
-            func,
-            "could not read traceable functions from " +
-                tracefs::available_filter_functions() +
-                " (is tracefs mounted?)");
-      } else {
-        return make_error<ast::ArgParseError>(
-            func,
-            "function not traceable (probably it is inlined or marked as "
-            "\"notrace\")");
-      }
-      return nullptr;
+    if (!func_info.is_traceable(std::string(func))) {
+      return make_error<ast::ArgParseError>(
+          func,
+          "function not traceable (probably it is inlined or marked as "
+          "\"notrace\")");
     }
   }
 
@@ -621,11 +615,12 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
 }
 
 Result<std::shared_ptr<Struct>> BTF::resolve_raw_tracepoint_args(
-    std::string_view func)
+    std::string_view func,
+    const util::KernelFunctionInfo &func_info)
 {
   for (const auto &prefix : RT_BTF_PREFIXES) {
     auto args = resolve_args(
-        std::string(prefix) + std::string(func), false, true, true);
+        std::string(prefix) + std::string(func), false, true, true, func_info);
     if (args) {
       return args;
     }
@@ -634,7 +629,9 @@ Result<std::shared_ptr<Struct>> BTF::resolve_raw_tracepoint_args(
       func, "BTF data for the tracepoint not found");
 }
 
-std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
+std::string BTF::get_all_traceable_funcs_from_btf(
+    const util::KernelFunctionInfo &kernel_func_info,
+    const BTFObj &btf_obj) const
 {
   std::string funcs;
 
@@ -656,8 +653,10 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
       break;
     }
 
-    if (bpftrace_ && !bpftrace_->is_traceable_func(func_name, btf_obj.name))
+    // Make sure that the kernel considers this function traceable.
+    if (!kernel_func_info.is_traceable(std::string(func_name), btf_obj.name)) {
       continue;
+    }
 
     if (btf_vlen(t) > arch::Host::arguments().size())
       continue;
@@ -668,13 +667,14 @@ std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
   return funcs;
 }
 
-std::unique_ptr<std::istream> BTF::get_all_funcs()
+std::unique_ptr<std::istream> BTF::get_all_traceable_funcs(
+    const util::KernelFunctionInfo &kernel_func_info)
 {
   if (!all_funcs_.empty()) {
     return std::make_unique<std::stringstream>(all_funcs_);
   }
   for (const auto &btf_obj : btf_objects)
-    all_funcs_ += get_all_funcs_from_btf(btf_obj);
+    all_funcs_ += get_all_traceable_funcs_from_btf(kernel_func_info, btf_obj);
   return std::make_unique<std::stringstream>(all_funcs_);
 }
 
@@ -1352,8 +1352,12 @@ SizedType BTF::get_var_type(std::string_view var_name)
 ast::Pass CreateParseBTFPass()
 {
   return ast::Pass::create(
-      "btf", []([[maybe_unused]] ast::ASTContext &ast, BPFtrace &b) {
-        b.parse_module_btf(b.list_modules(ast));
+      "btf",
+      [](ast::ASTContext &ast, BPFtrace &b, ast::FunctionInfo &func_info) {
+        ProbeMatcher probe_matcher(&b,
+                                   func_info.kernel_function_info(),
+                                   func_info.user_function_info());
+        b.parse_module_btf(b.list_modules(ast, probe_matcher));
       });
 }
 

@@ -100,7 +100,6 @@ public:
            std::unique_ptr<Config> config = std::make_unique<Config>())
       : btf_(std::make_unique<BTF>(this)),
         feature_(std::make_unique<BPFfeature>(no_feature, *btf_)),
-        probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(util::get_possible_cpus().size()),
         max_cpu_id_(util::get_max_cpu_id()),
         config_(std::move(config)),
@@ -109,6 +108,7 @@ public:
   {
   }
   ~BPFtrace() override;
+
   virtual int add_probe(const ast::AttachPoint &ap,
                         const ast::Probe &p,
                         ast::ExpansionType expansion,
@@ -161,12 +161,7 @@ public:
   size_t num_params() const;
   void request_finalize();
   std::optional<std::string> get_watchpoint_binary_path() const;
-  virtual bool is_traceable_func(const std::string &func_name,
-                                 const std::string &mod_name = "") const;
-  virtual bool is_module_loaded(const std::string &module) const;
   virtual int resume_tracee(pid_t tracee_pid);
-  virtual std::unordered_set<std::string> get_func_modules(
-      const std::string &func_name) const;
   virtual const std::optional<struct stat> &get_pidns_self_stat() const;
   // This gets the number of perf or ring buffer pages in total across all cpus
   // by first checking if the user set this manually with a config value
@@ -180,7 +175,8 @@ public:
   bool has_btf_data() const;
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
-  std::set<std::string> list_modules(const ast::ASTContext &ctx);
+  std::set<std::string> list_modules(const ast::ASTContext &ctx,
+                                     ProbeMatcher &probe_matcher);
 
   std::string cmd_;
 
@@ -198,11 +194,6 @@ public:
   FunctionRegistry functions;
   // For each helper, list of all generated call sites.
   std::map<bpf_func_id, std::vector<RuntimeErrorInfo>> helper_use_loc_;
-  std::unique_ptr<std::istream> get_traceable_funcs(bool with_modules) const;
-  std::unique_ptr<std::istream> get_module_traceable_funcs(
-      const std::string &module_name) const;
-  std::unique_ptr<std::istream> get_raw_tracepoints_from_traceable_funcs()
-      const;
   util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<int> sigusr1_prog_fds_;
@@ -220,8 +211,6 @@ public:
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
   bool need_recursion_check_ = false;
-
-  std::unique_ptr<ProbeMatcher> probe_matcher_;
 
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
@@ -275,7 +264,6 @@ private:
   struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
 
-  mutable util::TraceableFunctionsReader traceable_funcs_reader_;
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };
 
