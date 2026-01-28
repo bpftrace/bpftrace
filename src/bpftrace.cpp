@@ -316,7 +316,7 @@ Result<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
   std::optional<pid_t> pid = child_ ? std::make_optional(child_->pid())
                                     : this->pid();
 
-  auto ap = AttachedProbe::make(probe, program, pid, *this, safe_mode_);
+  auto ap = AttachedProbe::make(probe, program, pid, safe_mode_);
   if (!ap) {
     auto missing_probes = config_->missing_probes;
     auto ok = handleErrors(std::move(ap), [&](const AttachError &err) {
@@ -1347,109 +1347,9 @@ std::string BPFtrace::resolve_probe(uint64_t probe_id) const
   return resources.probe_ids[probe_id];
 }
 
-std::unique_ptr<std::istream> BPFtrace::get_traceable_funcs(
-    bool with_modules) const
-{
-  auto mod_funcs_map = traceable_funcs_reader_.get_all_funcs();
-  std::string funcs;
-
-  for (const auto &mod_funcs : mod_funcs_map) {
-    auto mod = mod_funcs.first;
-    for (const auto &fn : mod_funcs.second) {
-      if (with_modules)
-        funcs += mod + ":" + fn + "\n";
-      else
-        funcs += fn + "\n";
-    }
-  }
-
-  return std::make_unique<std::istringstream>(funcs);
-}
-
-std::unique_ptr<std::istream> BPFtrace::get_module_traceable_funcs(
-    const std::string &mod) const
-{
-  std::string funcs;
-
-  auto fn_set = traceable_funcs_reader_.get_module_funcs(mod);
-  if (!fn_set) {
-    LOG(WARNING) << fn_set.takeError();
-  } else {
-    for (const auto &fn : *fn_set)
-      funcs += mod + ":" + fn + "\n";
-  }
-
-  return std::make_unique<std::istringstream>(funcs);
-}
-// Using "available_filter_functions" here because they have the correct
-// module for the prefixed raw tracepoints e.g. in "available_events"
-// there is "kvmmmu:check_mmio_spte" but the module is actually "kvm"
-// and shows up as "__probestub_check_mmio_spte [kvm]" in
-// "available_filter_functions"
-std::unique_ptr<std::istream> BPFtrace::
-    get_raw_tracepoints_from_traceable_funcs() const
-{
-  auto mod_funcs_map = traceable_funcs_reader_.get_all_funcs();
-  std::string rts;
-
-  for (const auto &mod_funcs : mod_funcs_map) {
-    auto mod = mod_funcs.first;
-    for (const auto &fn : mod_funcs.second) {
-      for (const auto &prefix : RT_BTF_PREFIXES) {
-        if (fn.starts_with(prefix)) {
-          rts += mod + ":" + fn.substr(prefix.length()) + "\n";
-          break;
-        }
-      }
-    }
-  }
-
-  return std::make_unique<std::istringstream>(rts);
-}
-
-// TODO: Propagate errors up to ProbeMatcher (or other initial caller)
-// and print the error there
-bool BPFtrace::is_traceable_func(const std::string &func_name,
-                                 const std::string &mod_name) const
-{
-  auto ok = traceable_funcs_reader_.is_traceable_function(func_name, mod_name);
-  if (!ok) {
-    LOG(V1) << ok.takeError();
-    return false;
-  }
-
-  return *ok;
-}
-
-bool BPFtrace::is_module_loaded(const std::string &module) const
-{
-  if (module == "vmlinux") {
-    return true;
-  }
-
-  // This file lists all loaded modules
-  std::ifstream modules_file("/proc/modules");
-
-  for (std::string line; std::getline(modules_file, line);) {
-    if (line.compare(0, module.size() + 1, module + " ") == 0) {
-      modules_file.close();
-      return true;
-    }
-  }
-
-  modules_file.close();
-  return false;
-}
-
 int BPFtrace::resume_tracee(pid_t tracee_pid)
 {
   return ::kill(tracee_pid, SIGCONT);
-}
-
-std::unordered_set<std::string> BPFtrace::get_func_modules(
-    const std::string &func_name) const
-{
-  return traceable_funcs_reader_.get_func_modules(func_name);
 }
 
 const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
@@ -1590,7 +1490,8 @@ bool BPFtrace::has_btf_data() const
 // identify modules whose BTF we need to parse.
 // Currently, this is useful for fentry/fexit, k(ret)probes, tracepoints,
 // and raw tracepoints
-std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
+std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx,
+                                             ProbeMatcher &probe_matcher)
 {
   std::set<std::string> modules;
   for (const auto &probe : ctx.root->probes) {
@@ -1609,7 +1510,7 @@ std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx)
           clear_target = false;
         }
 
-        for (std::string match : probe_matcher_->get_matches_for_ap(*ap)) {
+        for (std::string match : probe_matcher.get_matches_for_ap(*ap)) {
           auto module = util::erase_prefix(match);
           modules.insert(module);
         }

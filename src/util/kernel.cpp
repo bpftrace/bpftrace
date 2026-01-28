@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
+#include <bpf/bpf.h>
+#include <bpf/btf.h>
+#include <bpf/libbpf.h>
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
@@ -9,7 +12,9 @@
 #include <glob.h>
 #include <iterator>
 #include <libelf.h>
+#include <limits>
 #include <link.h>
+#include <linux/btf.h>
 #include <linux/limits.h>
 #include <linux/version.h>
 #include <regex>
@@ -19,11 +24,15 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#include "btf.h"
 #include "debugfs/debugfs.h"
 #include "log.h"
+#include "scopeguard.h"
 #include "tracefs/tracefs.h"
+#include "util/fd.h"
 #include "util/kernel.h"
 #include "util/paths.h"
+#include "util/strings.h"
 #include "util/symbols.h"
 #include "util/wildcard.h"
 
@@ -232,6 +241,92 @@ static bool is_bad_func(const std::string &func)
   return std::ranges::any_of(bad_funcs_partial, [func](const auto &s) {
     return !std::strncmp(func.c_str(), s.c_str(), s.length());
   });
+}
+
+static ModulesFuncsMap parse_traceable_funcs()
+{
+  const std::string kprobe_path = tracefs::available_filter_functions();
+  std::ifstream available_funs(kprobe_path);
+  if (available_funs.fail()) {
+    LOG(V1) << "Error while reading traceable functions from " << kprobe_path
+            << ": " << strerror(errno);
+    return {};
+  }
+
+  ModulesFuncsMap result;
+  std::string line;
+  while (std::getline(available_funs, line)) {
+    auto func_mod = split_symbol_module(line);
+    if (func_mod.second.empty())
+      func_mod.second = "vmlinux";
+
+    if (!is_bad_func(func_mod.first))
+      result[func_mod.first].insert(func_mod.second);
+  }
+
+  // Filter out functions from the kprobe blacklist.
+  const std::string kprobes_blacklist_path = debugfs::kprobes_blacklist();
+  std::ifstream kprobes_blacklist_funs(kprobes_blacklist_path);
+  while (std::getline(kprobes_blacklist_funs, line)) {
+    auto addr_func_mod = split_addrrange_symbol_module(line);
+    if (result.contains(std::get<1>(addr_func_mod))) {
+      result.erase(std::get<1>(addr_func_mod));
+    }
+  }
+
+  return result;
+}
+
+static ModulesFuncsMap parse_rawtracepoints()
+{
+  // Using "available_filter_functions" here because they have the correct
+  // module for the prefixed raw tracepoints e.g. in "available_events"
+  // there is "kvmmmu:check_mmio_spte" but the module is actually "kvm"
+  // and shows up as "__probestub_check_mmio_spte [kvm]" in
+  // "available_filter_functions"
+  const std::string ff_path = tracefs::available_filter_functions();
+
+  std::ifstream available_funs(ff_path);
+  if (available_funs.fail()) {
+    LOG(V1) << "Error while reading traceable functions from " << ff_path
+            << ": " << strerror(errno);
+    return {};
+  }
+
+  ModulesFuncsMap result;
+  std::string line;
+  while (std::getline(available_funs, line)) {
+    auto func_mod = split_symbol_module(line);
+    if (func_mod.second.empty())
+      func_mod.second = "vmlinux";
+
+    for (const auto &prefix : RT_BTF_PREFIXES) {
+      if (func_mod.first.starts_with(prefix)) {
+        func_mod.first.erase(0, prefix.length());
+        result[func_mod.first].insert(func_mod.second);
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+static std::unordered_set<std::string> parse_modules()
+{
+  std::unordered_set<std::string> modules;
+  std::ifstream modules_file("/proc/modules");
+
+  for (std::string line; std::getline(modules_file, line);) {
+    // /proc/modules format: name size refcount deps state addr
+    // We only need the name (first space-separated field)
+    auto space_pos = line.find(' ');
+    if (space_pos != std::string::npos) {
+      modules.insert(line.substr(0, space_pos));
+    }
+  }
+
+  return modules;
 }
 
 KConfig::KConfig()
@@ -586,4 +681,174 @@ std::unordered_set<std::string> TraceableFunctionsReader::get_func_modules(
 
   return results;
 }
+
+bool KernelFunctionInfoImpl::is_traceable(const std::string &func_name) const
+{
+  const auto &funcs = get_traceable_funcs();
+  return funcs.contains(func_name);
+}
+
+std::unordered_set<std::string> KernelFunctionInfoImpl::get_modules(
+    const std::string &func_name) const
+{
+  const auto &funcs = get_traceable_funcs();
+  auto mod = funcs.find(func_name);
+  return mod != funcs.end() ? mod->second : std::unordered_set<std::string>();
+}
+
+bool KernelFunctionInfoImpl::is_module_loaded(const std::string &module) const
+{
+  if (module == "vmlinux")
+    return true;
+  if (modules_.empty())
+    modules_ = parse_modules();
+
+  return modules_.contains(module);
+}
+
+const ModulesFuncsMap &KernelFunctionInfoImpl::get_traceable_funcs() const
+{
+  if (traceable_funcs_.empty())
+    traceable_funcs_ = parse_traceable_funcs();
+
+  return traceable_funcs_;
+}
+
+const ModulesFuncsMap &KernelFunctionInfoImpl::get_raw_tracepoints() const
+{
+  if (raw_tracepoints_.empty())
+    raw_tracepoints_ = parse_rawtracepoints();
+
+  return raw_tracepoints_;
+}
+
+// Helper function for get_bpf_progs.
+static std::string get_prog_full_name(const struct bpf_prog_info *prog_info,
+                                      int prog_fd)
+{
+  const char *prog_name = prog_info->name;
+  const struct btf_type *func_type;
+  struct bpf_func_info finfo = {};
+  struct bpf_prog_info info = {};
+  __u32 info_len = sizeof(info);
+
+  std::string name = std::string(prog_name);
+
+  if (!prog_info->btf_id || prog_info->nr_func_info == 0) {
+    return name;
+  }
+
+  info.nr_func_info = 1;
+  info.func_info_rec_size = prog_info->func_info_rec_size;
+  info.func_info_rec_size = std::min<unsigned long>(info.func_info_rec_size,
+                                                    sizeof(finfo));
+  info.func_info = reinterpret_cast<__u64>(&finfo);
+
+  if (bpf_prog_get_info_by_fd(prog_fd, &info, &info_len)) {
+    return name;
+  }
+
+  struct btf *prog_btf = btf__load_from_kernel_by_id(info.btf_id);
+  if (!prog_btf) {
+    return name;
+  }
+
+  func_type = btf__type_by_id(prog_btf, finfo.type_id);
+  if (!func_type || !btf_is_func(func_type)) {
+    btf__free(prog_btf);
+    return name;
+  }
+
+  prog_name = btf__name_by_offset(prog_btf, func_type->name_off);
+  name = std::string(prog_name);
+  btf__free(prog_btf);
+  return name;
+}
+
+std::vector<std::pair<uint32_t, std::string>> KernelFunctionInfoImpl::
+    get_bpf_progs() const
+{
+  std::vector<std::pair<uint32_t, std::string>> ids_and_syms;
+  __u32 id = 0;
+  while (bpf_prog_get_next_id(id, &id) == 0) {
+    int raw_fd = bpf_prog_get_fd_by_id(id);
+
+    if (raw_fd < 0) {
+      continue;
+    }
+
+    auto fd = FD(raw_fd);
+
+    struct bpf_prog_info info = {};
+    __u32 info_len = sizeof(info);
+
+    if (bpf_obj_get_info_by_fd(fd, &info, &info_len) != 0) {
+      continue;
+    }
+
+    if (!info.btf_id) {
+      // BPF programs that don't have a BTF id won't load.
+      continue;
+    }
+
+    ids_and_syms.emplace_back(static_cast<uint32_t>(id),
+                              get_prog_full_name(&info, fd));
+
+    // Now let's look at the subprograms if they exist.
+    if (info.nr_func_info == 0) {
+      continue;
+    }
+
+    size_t nr_func_info = info.nr_func_info;
+    size_t rec_size = info.func_info_rec_size;
+
+    if (rec_size > std::numeric_limits<std::size_t>::max() / nr_func_info) {
+      continue; // This shouldn't happen.
+    }
+
+    std::vector<char> fi_mem(nr_func_info * rec_size);
+
+    struct btf *btf = btf__load_from_kernel_by_id(info.btf_id);
+    if (!btf) {
+      continue;
+    }
+
+    SCOPE_EXIT
+    {
+      btf__free(btf);
+    };
+
+    info = {};
+    info.nr_func_info = nr_func_info;
+    info.func_info_rec_size = rec_size;
+    info.func_info = reinterpret_cast<__u64>(fi_mem.data());
+
+    if (bpf_prog_get_info_by_fd(fd, &info, &info_len) != 0) {
+      continue;
+    }
+
+    auto *func_info = reinterpret_cast<struct bpf_func_info *>(fi_mem.data());
+
+    for (__u32 i = 0; i < nr_func_info; i++) {
+      const struct btf_type *t = btf__type_by_id(btf, (func_info + i)->type_id);
+      if (!t) {
+        continue;
+      }
+
+      const char *func_name = btf__name_by_offset(btf, t->name_off);
+      ids_and_syms.emplace_back(id, std::string(func_name));
+    }
+  }
+
+  return ids_and_syms;
+}
+
+std::unordered_set<std::string> KernelFunctionInfoImpl::
+    get_raw_tracepoint_modules(const std::string &name) const
+{
+  const auto &rts = get_raw_tracepoints();
+  auto mod = rts.find(name);
+  return mod != rts.end() ? mod->second : std::unordered_set<std::string>();
+}
+
 } // namespace bpftrace::util

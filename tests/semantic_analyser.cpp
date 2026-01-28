@@ -163,6 +163,7 @@ public:
     auto ok = ast::PassManager()
                   .put(ast)
                   .put(mock->bpftrace)
+                  .put(get_mock_function_info())
                   .put(types->types)
                   .add(CreateParsePass())
                   .add(ast::CreateResolveRootImportsPass())

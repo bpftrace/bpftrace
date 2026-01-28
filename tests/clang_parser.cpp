@@ -26,6 +26,7 @@ static ast::CDefinitions parse(
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateArgsResolverPass())

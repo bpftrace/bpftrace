@@ -13,6 +13,7 @@
 #include <unordered_set>
 
 #include "ast/pass_manager.h"
+#include "util/kernel.h"
 #include "util/result.h"
 
 // Taken from libbpf
@@ -111,12 +112,15 @@ public:
   FuncParamLists get_rawtracepoint_params(
       const std::set<std::string>& rawtracepoints) const;
 
-  Result<std::shared_ptr<Struct>> resolve_args(std::string_view func,
-                                               bool ret,
-                                               bool check_traceable,
-                                               bool skip_first_arg);
+  Result<std::shared_ptr<Struct>> resolve_args(
+      std::string_view func,
+      bool ret,
+      bool check_traceable,
+      bool skip_first_arg,
+      const util::KernelFunctionInfo &func_info);
   Result<std::shared_ptr<Struct>> resolve_raw_tracepoint_args(
-      std::string_view func);
+      std::string_view func,
+      const util::KernelFunctionInfo &func_info);
   void resolve_fields(const SizedType& type);
 
   int get_btf_id(std::string_view func,

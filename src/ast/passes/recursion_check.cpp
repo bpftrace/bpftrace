@@ -1,10 +1,12 @@
 #include <unordered_set>
 
 #include "ast/ast.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/recursion_check.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
+#include "probe_matcher.h"
 
 namespace bpftrace::ast {
 
@@ -28,7 +30,8 @@ bool is_recursive_func(const std::string &func_name)
 
 class RecursionCheck : public Visitor<RecursionCheck> {
 public:
-  explicit RecursionCheck(BPFtrace &bpftrace) : bpftrace_(bpftrace)
+  explicit RecursionCheck(BPFtrace &bpftrace, FunctionInfo &func_info)
+      : bpftrace_(bpftrace), func_info_(func_info)
   {
   }
 
@@ -37,6 +40,7 @@ public:
 
 private:
   BPFtrace &bpftrace_;
+  FunctionInfo &func_info_;
 };
 
 } // namespace
@@ -55,11 +59,14 @@ private:
 // probe_matcher to get the list of functions for the attach point.
 void RecursionCheck::visit(Program &program)
 {
+  ProbeMatcher probe_matcher(&bpftrace_,
+                             func_info_.kernel_function_info(),
+                             func_info_.user_function_info());
   for (auto *probe : program.probes) {
     for (auto *ap : probe->attach_points) {
       auto probe_type = probetype(ap->provider);
       if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit) {
-        auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+        auto matches = probe_matcher.get_matches_for_ap(*ap);
         for (const auto &match : matches) {
           if (is_recursive_func(match)) {
             LOG(WARNING)
@@ -77,10 +84,12 @@ void RecursionCheck::visit(Program &program)
 
 Pass CreateRecursionCheckPass()
 {
-  return Pass::create("RecursionCheck", [](ASTContext &ast, BPFtrace &b) {
-    auto recursion_check = RecursionCheck(b);
-    recursion_check.visit(ast.root);
-  });
+  return Pass::create(
+      "RecursionCheck",
+      [](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
+        auto recursion_check = RecursionCheck(b, func_info);
+        recursion_check.visit(ast.root);
+      });
 };
 
 } // namespace bpftrace::ast

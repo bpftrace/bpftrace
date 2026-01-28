@@ -37,7 +37,6 @@ add_library(runtime STATIC
   probe_types.cpp
   procmon.cpp
   run_bpftrace.cpp
-  usdt.cpp
   pcap_writer.cpp
   types_format.cpp
   ksyms.cpp
