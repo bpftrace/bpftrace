@@ -42,6 +42,7 @@
 #include "bpfprogram.h"
 #include "bpftrace.h"
 #include "btf.h"
+#include "dwunwind.h"
 #include "log.h"
 #include "output/capture.h"
 #include "output/discard.h"
@@ -441,6 +442,69 @@ int BPFtrace::run(output::Output &out,
 
   set_rlimit_nofile(resources.num_probes(), resources.maps_info.size());
 
+  /*
+   * Parse all DWARF unwind information here and buffer in RAM, so we
+   * know how much space we need in the maps. Once dynamically allocated
+   * hash maps are widely available, we can save this step and directly
+   * push to the maps in the step after loading the progs.
+   */
+  std::map<TableType, std::vector<std::vector<uint8_t>>> unwind_data;
+  std::map<uint32_t, std::vector<uint8_t>> unwind_mappings;
+  if (bytecode_.hasMap("dwunwind_mappings") && !unwind_pids_.empty()) {
+    auto unwind = DWARFUnwind([&unwind_data, &unwind_mappings]
+      (TableType t, uint32_t k, const std::vector<uint8_t> &v) {
+        if (t != TableType::Mappings) {
+          if (unwind_data.find(t) == unwind_data.end()) {
+            unwind_data[t] = std::vector<std::vector<uint8_t>>();
+          }
+          auto &table = unwind_data[t];
+          if (k < table.size()) {
+            table[k] = v;
+          } else if (k == table.size()) {
+            table.emplace_back(v);
+          } else {
+            LOG(ERROR) << "Unwind mapping key " << k
+                       << " out of order, expected " << table.size();
+            return -1;
+          }
+        } else {
+          unwind_mappings[k] = v;
+        }
+        return 0;
+    });
+    for (const auto &pid : unwind_pids_) {
+      auto ret = unwind.add_pid(pid);
+      if (ret != DWARFError::Success)
+        return -1;
+    }
+    // resize maps
+    for (auto const &t : unwind_data) {
+      Result<> ret = OK();
+      auto size = t.second.size();
+      if (t.first == TableType::UnwindTable) {
+        ret = bytecode_.getMap("dwunwind_offsetmaps").resize(size);
+      } else if (t.first == TableType::UnwindEntries) {
+        ret = bytecode_.getMap("dwunwind_cfts").resize(size);
+      } else if (t.first == TableType::Expressions) {
+        ret = bytecode_.getMap("dwunwind_expressions").resize(size);
+      } else {
+        LOG(ERROR) << "Unknown table type: " << static_cast<int>(t.first);
+        return -1;
+      }
+      if (!ret) {
+        LOG(ERROR) << "Failed to resize unwind table: " << ret.takeError();
+        return -1;
+      }
+    }
+    auto ret = bytecode_.getMap("dwunwind_mappings")
+      .resize(unwind_mappings.size());
+    if (!ret) {
+      LOG(ERROR) << "Failed to resize unwind table: " << ret.takeError();
+      return -1;
+    }
+    std::cout << "resized mappings to " << unwind_mappings.size() << std::endl;
+  }
+
   try {
     bytecode_.load_progs(resources, *btf_, *feature_, *config_);
   } catch (const HelperVerifierError &e) {
@@ -476,6 +540,40 @@ int BPFtrace::run(output::Output &out,
   } catch (const std::runtime_error &e) {
     LOG(ERROR) << e.what();
     return -1;
+  }
+
+  if (bytecode_.hasMap("dwunwind_mappings") && !unwind_pids_.empty()) {
+    // update arrays
+    for (auto const &t : unwind_data) {
+      std::string name;
+      const BpfMap *table;
+      if (t.first == TableType::UnwindTable) {
+        table = &bytecode_.getMap("dwunwind_offsetmaps");
+      } else if (t.first == TableType::UnwindEntries) {
+        table = &bytecode_.getMap("dwunwind_cfts");
+      } else if (t.first == TableType::Expressions) {
+        table = &bytecode_.getMap("dwunwind_expressions");
+      } else {
+        LOG(ERROR) << "Unknown table type: " << static_cast<int>(t.first);
+        return -1;
+      }
+      for (size_t i = 0; i < t.second.size(); i++) {
+        auto ret = table->update_elem(&i, t.second[i].data());
+        if (!ret) {
+          LOG(ERROR) << "Failed to add unwind entry: " << ret.takeError();
+          return -1;
+        }
+      }
+    }
+    // unwind mappings are indexed by pid, so they are stored in a hash map
+    auto table = bytecode_.getMap("dwunwind_mappings");
+    for (auto const &m : unwind_mappings) {
+      auto ret = table.update_elem(&m.first, m.second.data());
+      if (!ret) {
+        LOG(ERROR) << "Failed to add unwind mapping: " << ret.takeError();
+        return -1;
+      }
+    }
   }
 
   async_action::AsyncHandlers handlers(*this, c_definitions, out);

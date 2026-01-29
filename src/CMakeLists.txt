@@ -42,6 +42,8 @@ add_library(runtime STATIC
   types_format.cpp
   ksyms.cpp
   usyms.cpp
+  table.cpp
+  dwunwind.cpp
   ${BFD_DISASM_SRC}
 )
 # Ensure flex+bison outputs are built first
