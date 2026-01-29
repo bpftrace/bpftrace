@@ -302,6 +302,25 @@ BEGIN { if ($1 < 2) { fail("Expected the first positional param to be greater th
 
 
 
+### find
+- `boolean find(map m, mapkey k, mapvalue result)`
+
+Return `true` if the key exists in this map and sets the passed scratch variable (result) to the value of that map key.
+Otherwise return `false` and don't mutate result.
+Use this instead of `has_key` and a map access to avoid an additional map lookup.
+Error if called with a map that has no keys (aka scalar map).
+
+```
+kprobe:dummy {
+  @map[2] = (1, "hello");
+  let $val;
+  if (find(@map, 2, $val)) {
+    print($val); // prints (1, "hello")
+  }
+}
+```
+
+
 ### func
 - `string func()`
 - `string func`

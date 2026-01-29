@@ -337,6 +337,35 @@ macro elapsed()
 // ```
 //
 
+// :variant boolean find(map m, mapkey k, mapvalue result)
+//
+// Return `true` if the key exists in this map and sets the passed scratch variable (result) to the value of that map key.
+// Otherwise return `false` and don't mutate result.
+// Use this instead of `has_key` and a map access to avoid an additional map lookup.
+// Error if called with a map that has no keys (aka scalar map).
+//
+// ```
+// kprobe:dummy {
+//   @map[2] = (1, "hello");
+//   let $val;
+//   if (find(@map, 2, $val)) {
+//     print($val); // prints (1, "hello")
+//   }
+// }
+// ```
+macro find(@map, key, $var) {
+  import "stdlib/map/map.bpf.c";
+  check_key(@map, key, "find");
+  let $key: typeof(@map) = key;
+  $result = __lookup_elem((void *)&@map, (void *)&$key);
+  if ((bool)$result) {
+    $var = *((typeof({ $a = @map[$key]; &$a }))$result);
+    true
+  } else {
+    false
+  }
+}
+
 // :variant string func()
 // Name of the current function being traced (kprobes,uprobes,fentry)
 macro func()
@@ -396,12 +425,11 @@ macro gid()
 //     }
 // }
 // ```
-macro has_key(@map, key)
-{
+macro has_key(@map, key) {
   import "stdlib/map/map.bpf.c";
   check_key(@map, key, "has_key()");
-  let $key : typeof(@map) = key;
-  __has_key((void *)(&@map), (void *)(&$key))
+  let $key: typeof(@map) = key;
+  (bool)__lookup_elem((void *)&@map, (void *)&$key)
 }
 
 // :variant uint64 jiffies()
