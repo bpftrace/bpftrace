@@ -103,6 +103,8 @@ private:
       const std::string &mod) const;
   virtual std::unique_ptr<std::istream> get_running_bpf_programs() const;
   virtual std::unique_ptr<std::istream> get_raw_tracepoint_symbols() const;
+  virtual std::unique_ptr<std::istream> get_raw_tracepoints_from_traceable_funcs()
+      const;
 
   std::unique_ptr<std::istream> get_iter_symbols() const;
 
