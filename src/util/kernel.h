@@ -48,8 +48,8 @@ public:
 
   Result<const FunctionSet &> get_module_funcs(const std::string &mod_name);
   ModuleSet get_func_modules(const std::string &func_name);
-  bool is_traceable_function(const std::string &func_name,
-                            const std::string &mod_name);
+  Result<bool> is_traceable_function(const std::string &func_name,
+                                     const std::string &mod_name);
   const ModulesFuncsMap &get_all_funcs();
 
 private:
