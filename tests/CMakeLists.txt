@@ -5,6 +5,7 @@ add_executable(bpftrace_test
   async_action.cpp
   ast.cpp
   ast_matchers.cpp
+  attached_probe.cpp
   attachpoint_passes.cpp
   bpfbytecode.cpp
   bpftrace.cpp
