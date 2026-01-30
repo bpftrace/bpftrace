@@ -541,26 +541,22 @@ Result<const FunctionSet &> TraceableFunctionsReader::get_module_funcs(
   return empty_set_;
 }
 
-// TODO: Propagate errors up to ProbeMatcher (or other initial caller)
-// and print the error there
-bool TraceableFunctionsReader::is_traceable_function(
+Result<bool> TraceableFunctionsReader::is_traceable_function(
     const std::string &func_name,
     const std::string &mod_name)
 {
   if (mod_name.empty() || has_wildcard(mod_name)) {
     auto found_mod = search_module_for_function(func_name);
-    if (!found_mod) {
-      LOG(V1) << found_mod.takeError();
-      return false;
-    }
-    return !(*found_mod).empty();
+    if (!found_mod)
+      return found_mod.takeError();
+
+    return !found_mod->empty();
   } else {
     auto found_fn_set = get_module_funcs(mod_name);
-    if (!found_fn_set) {
-      LOG(V1) << found_fn_set.takeError();
-      return false;
-    }
-    return (*found_fn_set).contains(func_name);
+    if (!found_fn_set)
+      return found_fn_set.takeError();
+
+    return found_fn_set->contains(func_name);
   }
 }
 

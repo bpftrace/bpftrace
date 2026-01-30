@@ -1407,10 +1407,18 @@ std::unique_ptr<std::istream> BPFtrace::
   return std::make_unique<std::istringstream>(rts);
 }
 
+// TODO: Propagate errors up to ProbeMatcher (or other initial caller)
+// and print the error there
 bool BPFtrace::is_traceable_func(const std::string &func_name,
                                  const std::string &mod_name) const
 {
-  return traceable_funcs_reader_.is_traceable_function(func_name, mod_name);
+  auto ok = traceable_funcs_reader_.is_traceable_function(func_name, mod_name);
+  if (!ok) {
+    LOG(V1) << ok.takeError();
+    return false;
+  }
+
+  return *ok;
 }
 
 bool BPFtrace::is_module_loaded(const std::string &module) const
