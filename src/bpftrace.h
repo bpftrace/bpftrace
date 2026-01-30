@@ -198,11 +198,6 @@ public:
   FunctionRegistry functions;
   // For each helper, list of all generated call sites.
   std::map<bpf_func_id, std::vector<RuntimeErrorInfo>> helper_use_loc_;
-  std::unique_ptr<std::istream> get_traceable_funcs(bool with_modules) const;
-  std::unique_ptr<std::istream> get_module_traceable_funcs(
-      const std::string &module_name) const;
-  std::unique_ptr<std::istream> get_raw_tracepoints_from_traceable_funcs()
-      const;
   util::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<int> sigusr1_prog_fds_;
@@ -222,6 +217,7 @@ public:
   bool need_recursion_check_ = false;
 
   std::unique_ptr<ProbeMatcher> probe_matcher_;
+  mutable util::TraceableFunctionsReader traceable_funcs_reader_;
 
   std::unordered_set<std::string> btf_set_;
   std::unique_ptr<ChildProcBase> child_;
@@ -275,7 +271,6 @@ private:
   struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
 
-  mutable util::TraceableFunctionsReader traceable_funcs_reader_;
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };
 

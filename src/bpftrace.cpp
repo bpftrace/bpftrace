@@ -1347,66 +1347,6 @@ std::string BPFtrace::resolve_probe(uint64_t probe_id) const
   return resources.probe_ids[probe_id];
 }
 
-std::unique_ptr<std::istream> BPFtrace::get_traceable_funcs(
-    bool with_modules) const
-{
-  auto mod_funcs_map = traceable_funcs_reader_.get_all_funcs();
-  std::string funcs;
-
-  for (const auto &mod_funcs : mod_funcs_map) {
-    auto mod = mod_funcs.first;
-    for (const auto &fn : mod_funcs.second) {
-      if (with_modules)
-        funcs += mod + ":" + fn + "\n";
-      else
-        funcs += fn + "\n";
-    }
-  }
-
-  return std::make_unique<std::istringstream>(funcs);
-}
-
-std::unique_ptr<std::istream> BPFtrace::get_module_traceable_funcs(
-    const std::string &mod) const
-{
-  std::string funcs;
-
-  auto fn_set = traceable_funcs_reader_.get_module_funcs(mod);
-  if (!fn_set) {
-    LOG(WARNING) << fn_set.takeError();
-  } else {
-    for (const auto &fn : *fn_set)
-      funcs += mod + ":" + fn + "\n";
-  }
-
-  return std::make_unique<std::istringstream>(funcs);
-}
-// Using "available_filter_functions" here because they have the correct
-// module for the prefixed raw tracepoints e.g. in "available_events"
-// there is "kvmmmu:check_mmio_spte" but the module is actually "kvm"
-// and shows up as "__probestub_check_mmio_spte [kvm]" in
-// "available_filter_functions"
-std::unique_ptr<std::istream> BPFtrace::
-    get_raw_tracepoints_from_traceable_funcs() const
-{
-  auto mod_funcs_map = traceable_funcs_reader_.get_all_funcs();
-  std::string rts;
-
-  for (const auto &mod_funcs : mod_funcs_map) {
-    auto mod = mod_funcs.first;
-    for (const auto &fn : mod_funcs.second) {
-      for (const auto &prefix : RT_BTF_PREFIXES) {
-        if (fn.starts_with(prefix)) {
-          rts += mod + ":" + fn.substr(prefix.length()) + "\n";
-          break;
-        }
-      }
-    }
-  }
-
-  return std::make_unique<std::istringstream>(rts);
-}
-
 bool BPFtrace::is_traceable_func(const std::string &func_name,
                                  const std::string &mod_name) const
 {
