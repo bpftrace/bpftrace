@@ -72,10 +72,16 @@ public:
   std::set<std::string> expand_probetype_kernel(const std::string &probe_type);
   std::set<std::string> expand_probetype_userspace(
       const std::string &probe_type);
-  // Match all probes in prog and print them to stdout.
-  void list_probes(ast::Program *prog);
-  // Print definitions of structures matching search.
-  void list_structs(const std::string &search);
+  // Match all probes in prog and return them as formatted strings.
+  std::vector<std::string> get_probes_for_listing(ast::Program *prog);
+  // Get probes matching a raw pattern string (e.g., "kprobe:*", "*:*foo*").
+  // If pid is provided, userspace probes will be included even with wildcard
+  // probe types; otherwise userspace probes require explicit probe type.
+  std::vector<std::string> get_probes_for_listing(
+      const std::string &pattern,
+      std::optional<pid_t> pid = std::nullopt);
+  // Get definitions of structures matching search.
+  std::vector<std::string> get_structs_for_listing(const std::string &search);
 
   const BPFtrace *bpftrace_;
   util::KernelFunctionInfo &kernel_func_info_;
