@@ -1232,8 +1232,7 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     call.return_type = CreateArray(addr_size, CreateUInt8());
-    call.return_type.SetAS(AddrSpace::kernel);
-    call.return_type.is_internal = true;
+    call.return_type.SetAS(AddrSpace::none);
   } else if (call.func == "join") {
     call.return_type = CreateNone();
 
@@ -2064,14 +2063,13 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     arr.element_type = CreateInt8();
   arr.element_type.SetAS(type.GetAS());
 
-  // BPF verifier cannot track BTF information for double pointers so we
-  // cannot propagate is_internal for arrays of pointers and we need to reset
-  // it on the array type as well. Indexing a pointer as an array also can't
-  // be verified, so the same applies there.
+  // BPF verifier cannot track BTF information for double pointers so we reset
+  // the address space on the resulting element.
   if (arr.element_type.IsPtrTy() || type.IsPtrTy()) {
-    arr.element_type.is_internal = false;
-  } else {
-    arr.element_type.is_internal = type.is_internal;
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+      ProbeType type = probe->get_probetype();
+      arr.element_type.SetAS(find_addrspace(type));
+    }
   }
 }
 
@@ -2587,7 +2585,6 @@ void SemanticAnalyser::visit(Unop &unop)
   if (unop.op == Operator::MUL) {
     if (type.IsPtrTy()) {
       unop.result_type = type.GetPointeeTy();
-      unop.result_type.is_internal = type.is_internal;
       unop.result_type.SetAS(type.GetAS());
     } else if (type.IsCStructTy()) {
       unop.addError() << "Can not dereference struct/union of type '"
@@ -3050,7 +3047,6 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     }
 
     acc.field_type = field.type;
-    acc.field_type.is_internal = type.is_internal;
     // If we are resolving through a pointer that has an address space
     // tag, then we carry this tag over to the underlying type.
     if (acc.expr.type().GetAS() != AddrSpace::none) {
@@ -3223,9 +3219,6 @@ void SemanticAnalyser::visit(Cast &cast)
         ty = CreateArray(num_elems, ty.GetElementTy());
       }
     }
-
-    if (rhs.IsIntTy() || rhs.IsBoolTy())
-      ty.is_internal = true;
 
     if (rhs.IsIntTy()) {
       if ((ty.GetElementTy().IsIntegerTy() || ty.GetElementTy().IsBoolTy())) {
@@ -3521,7 +3514,6 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
                             << stored_ty << "'";
     } else {
       map_val_[map_ident] = assignment.expr.type();
-      map_val_[map_ident].is_internal = true;
     }
   } else if (type.IsStringTy()) {
     auto map_size = map_val_[map_ident].GetSize();
@@ -3547,9 +3539,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   } else if (type.IsArrayTy()) {
     const auto &map_type = map_val_[map_ident];
     const auto &expr_type = assignment.expr.type();
-    if (map_type == expr_type) {
-      map_val_[map_ident].is_internal = true;
-    } else {
+    if (map_type != expr_type) {
       assignment.addError()
           << "Array type mismatch: " << map_type << " != " << expr_type << ".";
     }
