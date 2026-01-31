@@ -13,6 +13,7 @@
 #include "ast/visitor.h"
 #include "probe_matcher.h"
 #include "util/int_parser.h"
+#include "util/kernel.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/system.h"
@@ -22,12 +23,8 @@ namespace bpftrace::ast {
 
 class AttachPointChecker : public Visitor<AttachPointChecker> {
 public:
-  explicit AttachPointChecker(BPFtrace &bpftrace,
-                              FunctionInfo &func_info_state,
-                              bool has_child = true)
-      : bpftrace_(bpftrace),
-        func_info_state_(func_info_state),
-        has_child_(has_child) {};
+  explicit AttachPointChecker(BPFtrace &bpftrace, FunctionInfo &func_info_state)
+      : bpftrace_(bpftrace), func_info_state_(func_info_state) {};
 
   using Visitor<AttachPointChecker>::visit;
   void visit(AttachPoint &ap);
@@ -35,7 +32,6 @@ public:
 private:
   BPFtrace &bpftrace_;
   FunctionInfo &func_info_state_;
-  bool has_child_ = false;
   std::unordered_map<std::string, Location> test_locs_;
   std::unordered_map<std::string, Location> benchmark_locs_;
 };
@@ -166,12 +162,6 @@ void AttachPointChecker::visit(AttachPoint &ap)
   } else if (ap.provider == "rawtracepoint") {
     if (ap.func.empty())
       ap.addError() << "rawtracepoint should be attached to a function";
-
-    if (!bpftrace_.has_btf_data()) {
-      ap.addError() << "rawtracepoints require kernel BTF. Try using a "
-                       "'tracepoint' instead.";
-    }
-
   } else if (ap.provider == "profile") {
     if (ap.target.empty())
       ap.addError() << "profile probe must have unit of time";
@@ -319,8 +309,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
     if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
-    if (bpftrace_.btf_->has_data() &&
-        !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
+    if (!bpftrace_.btf_->get_all_iters().contains(ap.func)) {
       ap.addError() << "iter " << ap.func
                     << " not available for your kernel version.";
     }
@@ -1030,7 +1019,7 @@ AttachPointParser::State AttachPointParser::fentry_parser()
               << ap_->func << "\'";
         return INVALID;
       }
-    } else // leave the module empty for now
+    } else // Leave the module empty for now.
       ap_->target = "*";
   }
 
@@ -1106,9 +1095,7 @@ Pass CreateCheckAttachpointsPass()
   return Pass::create(
       "check-attachpoints",
       [](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
-        AttachPointChecker ap_checker(b,
-                                      func_info,
-                                      !b.cmd_.empty() || b.child_ != nullptr);
+        AttachPointChecker ap_checker(b, func_info);
         ap_checker.visit(*ast.root);
       });
 }

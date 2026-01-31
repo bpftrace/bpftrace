@@ -1,7 +1,6 @@
-#include "ast/passes/ap_probe_expansion.h"
-
 #include <algorithm>
 
+#include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -9,7 +8,6 @@
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
-
 class ExpansionAnalyser : public Visitor<ExpansionAnalyser> {
 public:
   ExpansionAnalyser(BPFtrace &bpftrace) : bpftrace_(bpftrace)
@@ -166,7 +164,8 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
                other->attach_points[0]->func == ap->func;
       });
 
-  // If there's not exactly one match, we don't know how to do session expansion
+  // If there's not exactly one match, we don't know how to do session
+  // expansion
   if (retprobes.size() == 1)
     return retprobes[0];
 
@@ -273,6 +272,9 @@ void ProbeAndApExpander::visit(Program &prog)
 
 void ProbeAndApExpander::visit(AttachPointList &aps)
 {
+  ProbeMatcher probe_matcher(&bpftrace_,
+                             func_info_.kernel_function_info(),
+                             func_info_.user_function_info());
   const auto max_bpf_progs = bpftrace_.config_->max_bpf_progs;
 
   AttachPointList new_aps;

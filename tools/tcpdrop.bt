@@ -31,16 +31,11 @@
 // 23-Nov-2018	Dale Hamel	created this.
 // 01-Oct-2022	Rong Tao	use tracepoint:skb:kfree_skb
 
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/socket.h>
-#include <net/sock.h>
-#else
 // With BTF providing types, socket headers are not needed.
 // We only need to supply the preprocessor defines in this script.
 // AF_INET/AF_INET6 are part of the stable arch-independent Linux ABI
 #define AF_INET   2
 #define AF_INET6 10
-#endif
 
 BEGIN
 {

@@ -238,7 +238,12 @@ std::unique_ptr<ast::FunctionInfo> get_real_user_function_info()
 
 std::unique_ptr<BPFtrace> create_bpftrace()
 {
-  return std::make_unique<BPFtrace>();
+  auto result = BPFtrace::create();
+  if (!result) {
+    throw std::runtime_error("Failed to create BPFtrace for test");
+  }
+
+  return std::move(*result);
 }
 
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)
@@ -257,7 +262,7 @@ std::unique_ptr<MockBPFtrace> get_mock_bpftrace()
   auto bpftrace = std::make_unique<NiceMock<MockBPFtrace>>();
   setup_mock_bpftrace(*bpftrace);
 
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(*bpftrace->btf_, true);
 
   return bpftrace;
 }
@@ -267,7 +272,7 @@ std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace()
   auto bpftrace = std::make_unique<StrictMock<MockBPFtrace>>();
   setup_mock_bpftrace(*bpftrace);
 
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(*bpftrace->btf_, true);
 
   return bpftrace;
 }

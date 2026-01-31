@@ -26,7 +26,8 @@ static void test(const std::string &prog,
                  bool features)
 {
   auto mock_bpftrace = get_mock_bpftrace();
-  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(features);
+  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(
+      *mock_bpftrace->btf_, features);
 
   BPFtrace &bpftrace = *mock_bpftrace;
   ast::ASTContext ast("stdin", prog);
@@ -91,20 +92,16 @@ static void test_btf(const std::string &prog,
                      bool features)
 {
   auto mock_bpftrace = get_mock_bpftrace();
-  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(features);
+  mock_bpftrace->feature_ = std::make_unique<MockBPFfeature>(
+      *mock_bpftrace->btf_, features);
 
   BPFtrace &bpftrace = *mock_bpftrace;
   ast::ASTContext ast("stdin", prog);
 
-  // Use MockBtfKernelFunctionInfo for BTF tests
-  static MockBtfKernelFunctionInfo btf_kernel_func_info;
-  static MockUserFunctionInfo user_func_info;
-  static ast::FunctionInfo btf_func_info(btf_kernel_func_info, user_func_info);
-
   ast::PassManager pm;
   pm.put(ast)
       .put(bpftrace)
-      .put(btf_func_info)
+      .put(get_mock_function_info())
       .add(CreateParsePass())
       .add(ast::CreateParseAttachpointsPass())
       .add(ast::CreateProbeAndApExpansionPass());

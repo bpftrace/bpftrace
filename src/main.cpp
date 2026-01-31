@@ -203,7 +203,14 @@ static void info(BPFnofeature no_feature)
   struct utsname utsname;
   uname(&utsname);
 
-  auto btf = bpftrace::BTF();
+  // Load BTF for system information.
+  bpftrace::StructManager structs;
+  auto btf = bpftrace::BTF::load(structs);
+  if (!btf) {
+    // BTF is required, just dump the error and leave it.
+    std::cerr << "Error loading BTF: " << btf.takeError();
+    return;
+  }
 
   std::cout << "System" << std::endl
             << "  OS: " << utsname.sysname << " " << utsname.release << " "
@@ -214,7 +221,7 @@ static void info(BPFnofeature no_feature)
   std::cout << BuildInfo::report();
 
   std::cout << std::endl;
-  std::cout << BPFfeature(no_feature, btf).report();
+  std::cout << BPFfeature(no_feature, **btf).report();
 }
 
 static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
@@ -777,13 +784,20 @@ int main(int argc, char* argv[])
 
   libbpf_set_print(libbpf_print);
 
-  auto config = std::make_unique<Config>(!args.cmd_str.empty());
-  BPFtrace bpftrace(args.no_feature, std::move(config));
-
   // Create function info objects for probe matching and pass state.
   util::KernelFunctionInfoImpl kernel_func_info;
   util::UserFunctionInfoImpl user_func_info;
   ast::FunctionInfo func_info_state(kernel_func_info, user_func_info);
+
+  auto config = std::make_unique<Config>(!args.cmd_str.empty());
+
+  auto bpftrace_result = BPFtrace::create(args.no_feature, std::move(config));
+  if (!bpftrace_result) {
+    LOG(ERROR) << "Failed to create BPFtrace: " << bpftrace_result.takeError();
+    return 1;
+  }
+  auto bpftrace_ptr = std::move(*bpftrace_result);
+  auto& bpftrace = *bpftrace_ptr;
 
   // Most configuration can be applied during the configuration pass, however
   // we need to extract a few bits of configuration up front, because they may
@@ -848,17 +862,9 @@ int main(int argc, char* argv[])
           << args.search << "\' as a search pattern.";
     }
 
-    bool is_search_a_type = is_type_name(args.search);
-
-    // For struct listing or verbose probe listing, we need BTF to be loaded.
-    if (is_search_a_type || bt_verbose) {
-      // Trigger BTF loading by calling has_data().
-      bpftrace.btf_->has_data();
-    }
-
     // Use ProbeMatcher directly to list probes matching the search pattern.
     ProbeMatcher probe_matcher(&bpftrace, kernel_func_info, user_func_info);
-    if (is_search_a_type) {
+    if (is_type_name(args.search)) {
       for (const auto& s : probe_matcher.get_structs_for_listing(args.search)) {
         std::cout << s << std::endl;
       }

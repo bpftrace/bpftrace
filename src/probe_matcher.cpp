@@ -18,7 +18,6 @@
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/symbols.h"
-#include "util/system.h"
 #include "util/wildcard.h"
 
 #include <bcc/bcc_elf.h>
@@ -133,12 +132,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       symbol_stream = std::move(*result);
       break;
     }
-    // The two `has_btf_data` checks below for fentry/fexit/rawtracepoints
-    // are more about ordering than system properties.
-    // Initially, before BTF is loaded and we want to determine what modules to
-    // load BTF from we check "/sys/kernel/tracing/available_filter_functions".
-    // Then we check the BTF to filter out functions from that list that don't
-    // have any BTF definitions.
     case ProbeType::rawtracepoint: {
       symbol_stream = get_raw_tracepoint_symbols();
       break;
@@ -169,9 +162,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::iter: {
-      if (!bpftrace_->has_btf_data())
-        break;
-
       std::string ret;
       auto iters = bpftrace_->btf_->get_all_iters();
       for (const auto& iter : iters) {
@@ -247,9 +237,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
 std::unique_ptr<std::istream> ProbeMatcher::get_fentry_symbols(
     const std::string& mod) const
 {
-  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded()) {
-    return bpftrace_->btf_->get_all_funcs();
-  } else if (!mod.empty() && !util::has_wildcard(mod)) {
+  if (!mod.empty() && !util::has_wildcard(mod)) {
     return get_symbols_from_traceable_funcs(true, mod);
   } else {
     return get_symbols_from_traceable_funcs(true);
@@ -268,7 +256,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_running_bpf_programs() const
 
 std::unique_ptr<std::istream> ProbeMatcher::get_raw_tracepoint_symbols() const
 {
-  if (bpftrace_->btf_->has_data() && bpftrace_->btf_->modules_loaded()) {
+  if (bpftrace_->btf_->objects_cnt() > 1) {
     return bpftrace_->btf_->get_all_raw_tracepoints();
   } else {
     std::string rts;

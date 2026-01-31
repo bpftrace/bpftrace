@@ -48,3 +48,48 @@ macro __signal(expr, is_tid)
     }
   }
 }
+
+// :variant uint64 curtask()
+// Pointer to `struct task_struct` of the current task
+//
+// This utilizes the BPF helper `get_current_task`
+macro curtask() {
+  import "stdlib/process/task.bpf.c";
+  __get_current_task()
+}
+
+// :function pid
+// :variant uint32 pid([curr_ns|init])
+// :variant uint32 pid
+//
+// Returns the process ID of the current thread.
+// Defaults to `curr_ns`.
+//
+// * `pid(curr_ns)` - The process ID as seen from the PID namespace of bpftrace.
+// * `pid(init)` - The process ID as seen from the initial PID namespace.
+
+// :variant uint32 ppid()
+// :variant uint32 ppid(struct task_struct * task)
+// Get the pid of the parent process for the passed task or the current task if called without arguments.
+macro ppid(task)
+{
+  task.real_parent.pid
+}
+
+macro ppid()
+{
+  ppid(curtask)
+}
+
+// :variant string pcomm()
+// :variant string pcomm(struct task_struct * task)
+// Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
+macro pcomm(task)
+{
+  task.group_leader.comm
+}
+
+macro pcomm()
+{
+  pcomm(curtask)
+}
