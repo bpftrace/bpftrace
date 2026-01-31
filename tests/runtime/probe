@@ -133,7 +133,6 @@ AFTER ./testprogs/syscall read
 
 NAME kprobe_module_missing
 PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX .* ERROR: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
 EXPECT_REGEX .* ERROR: No matches for kprobe nonsense:vfs_read.
 WILL_FAIL
 

@@ -22,12 +22,8 @@ namespace bpftrace::ast {
 
 class AttachPointChecker : public Visitor<AttachPointChecker> {
 public:
-  explicit AttachPointChecker(BPFtrace &bpftrace,
-                              FunctionInfo &func_info_state,
-                              bool listing)
-      : bpftrace_(bpftrace),
-        func_info_state_(func_info_state),
-        listing_(listing) {};
+  explicit AttachPointChecker(BPFtrace &bpftrace, FunctionInfo &func_info_state)
+      : bpftrace_(bpftrace), func_info_state_(func_info_state) {};
 
   using Visitor<AttachPointChecker>::visit;
   void visit(AttachPoint &ap);
@@ -35,7 +31,6 @@ public:
 private:
   BPFtrace &bpftrace_;
   FunctionInfo &func_info_state_;
-  bool listing_;
   std::unordered_map<std::string, Location> test_locs_;
   std::unordered_map<std::string, Location> benchmark_locs_;
 };
@@ -138,20 +133,20 @@ void AttachPointChecker::visit(AttachPoint &ap)
     const auto pid = bpftrace_.pid();
     if (pid.has_value()) {
       auto ok = func_info_state_.user_function_info().usdt_probes_for_pid(*pid);
-      if (!ok && !listing_) {
+      if (!ok) {
         ap.addError() << ok.takeError();
       }
     } else if (ap.target == "*") {
       auto ok =
           func_info_state_.user_function_info().usdt_probes_for_all_pids();
-      if (!ok && !listing_) {
+      if (!ok) {
         ap.addError() << ok.takeError();
       }
     } else if (!ap.target.empty()) {
       for (auto &path : util::resolve_binary_path(ap.target)) {
         auto ok = func_info_state_.user_function_info().usdt_probes_for_path(
             path);
-        if (!ok && !listing_) {
+        if (!ok) {
           ap.addError() << ok.takeError();
         }
       }
@@ -167,7 +162,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
     if (ap.func.empty())
       ap.addError() << "rawtracepoint should be attached to a function";
 
-    if (!listing_ && !bpftrace_.has_btf_data()) {
+    if (!bpftrace_.has_btf_data()) {
       ap.addError() << "rawtracepoints require kernel BTF. Try using a "
                        "'tracepoint' instead.";
     }
@@ -175,7 +170,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
   } else if (ap.provider == "profile") {
     if (ap.target.empty())
       ap.addError() << "profile probe must have unit of time";
-    else if (!listing_) {
+    else {
       if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
       if (!ap.func.empty())
@@ -186,7 +181,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
   } else if (ap.provider == "interval") {
     if (ap.target.empty())
       ap.addError() << "interval probe must have unit of time";
-    else if (!listing_) {
+    else {
       if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
       if (!ap.func.empty())
@@ -195,9 +190,9 @@ void AttachPointChecker::visit(AttachPoint &ap)
         ap.addError() << "interval frequency should be a positive integer";
     }
   } else if (ap.provider == "software") {
-    if (ap.target.empty())
+    if (ap.target.empty()) {
       ap.addError() << "software probe must have a software event name";
-    else {
+    } else {
       if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
         bool found = false;
         for (const auto &probeListItem : SW_PROBE_LIST) {
@@ -208,21 +203,25 @@ void AttachPointChecker::visit(AttachPoint &ap)
             break;
           }
         }
-        if (!found)
+        if (!found) {
           ap.addError() << ap.target << " is not a software probe";
-      } else if (!listing_) {
+        }
+      } else if (util::has_wildcard(ap.target)) {
         ap.addError() << "wildcards are not allowed for software probe type";
       }
     }
-    if (!ap.func.empty())
+    if (!ap.func.empty()) {
       ap.addError() << "software probe can only have an integer count";
-    else if (ap.freq < 0)
+    } else if (ap.freq < 0) {
       ap.addError() << "software count should be a positive integer";
+    }
   } else if (ap.provider == "watchpoint") {
-    if (!ap.address)
+    if (!ap.address) {
       ap.addError() << "watchpoint must be attached to a non-zero address";
-    if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8)
+    }
+    if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8) {
       ap.addError() << "watchpoint length must be one of (1,2,4,8)";
+    }
     if (ap.mode.empty())
       ap.addError() << "watchpoint mode must be combination of (r,w,x)";
     std::ranges::sort(ap.mode);
@@ -249,9 +248,9 @@ void AttachPointChecker::visit(AttachPoint &ap)
       }
     }
   } else if (ap.provider == "hardware") {
-    if (ap.target.empty())
+    if (ap.target.empty()) {
       ap.addError() << "hardware probe must have a hardware event name";
-    else {
+    } else {
       if (!util::has_wildcard(ap.target) && !ap.ignore_invalid) {
         bool found = false;
         for (const auto &probeListItem : HW_PROBE_LIST) {
@@ -262,16 +261,18 @@ void AttachPointChecker::visit(AttachPoint &ap)
             break;
           }
         }
-        if (!found)
+        if (!found) {
           ap.addError() << ap.target + " is not a hardware probe";
-      } else if (!listing_) {
+        }
+      } else if (util::has_wildcard(ap.target)) {
         ap.addError() << "wildcards are not allowed for hardware probe type";
       }
     }
-    if (!ap.func.empty())
+    if (!ap.func.empty()) {
       ap.addError() << "hardware probe can only have an integer count";
-    else if (ap.freq < 0)
+    } else if (ap.freq < 0) {
       ap.addError() << "hardware frequency should be a positive integer";
+    }
   } else if (ap.provider == "begin" || ap.provider == "end") {
     if (!ap.target.empty() || !ap.func.empty()) {
       ap.addError() << "begin/end probes should not have a target";
@@ -313,7 +314,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
     if (ap.func.empty())
       ap.addError() << "fentry/fexit should specify a function";
   } else if (ap.provider == "iter") {
-    if (!listing_ && bpftrace_.btf_->has_data() &&
+    if (bpftrace_.btf_->has_data() &&
         !bpftrace_.btf_->get_all_iters().contains(ap.func)) {
       ap.addError() << "iter " << ap.func
                     << " not available for your kernel version.";
@@ -344,12 +345,8 @@ AttachPointParser::State AttachPointParser::argument_count_error(
 
 AttachPointParser::AttachPointParser(ASTContext &ctx,
                                      BPFtrace &bpftrace,
-                                     FunctionInfo &func_info_state,
-                                     bool listing)
-    : ctx_(ctx),
-      bpftrace_(bpftrace),
-      func_info_state_(func_info_state),
-      listing_(listing)
+                                     FunctionInfo &func_info_state)
+    : ctx_(ctx), bpftrace_(bpftrace), func_info_state_(func_info_state)
 {
 }
 
@@ -1021,16 +1018,12 @@ AttachPointParser::State AttachPointParser::fentry_parser()
       if (func_modules.size() == 1)
         ap_->target = *func_modules.begin();
       else if (func_modules.size() > 1) {
-        if (listing_)
-          ap_->target = "*";
-        else {
-          // Attaching to multiple functions of the same name is currently
-          // broken, ask the user to specify a module explicitly.
-          errs_ << "ambiguous attach point, please specify module containing "
-                   "the function \'"
-                << ap_->func << "\'";
-          return INVALID;
-        }
+        // Attaching to multiple functions of the same name is currently
+        // broken, ask the user to specify a module explicitly.
+        errs_ << "ambiguous attach point, please specify module containing "
+                 "the function \'"
+              << ap_->func << "\'";
+        return INVALID;
       }
     } else // leave the module empty for now
       ap_->target = "*";
@@ -1050,18 +1043,16 @@ AttachPointParser::State AttachPointParser::iter_parser()
     return INVALID;
   }
 
-  if (!listing_) {
-    if (has_iter_ap_) {
-      errs_ << ap_->provider << " probe only supports one attach point."
-            << std::endl;
-      return INVALID;
-    }
+  if (has_iter_ap_) {
+    errs_ << ap_->provider << " probe only supports one attach point."
+          << std::endl;
+    return INVALID;
+  }
 
-    if (util::has_wildcard(parts_[1]) ||
-        (parts_.size() == 3 && util::has_wildcard(parts_[2]))) {
-      errs_ << ap_->provider << " probe type does not support wildcards";
-      return INVALID;
-    }
+  if (util::has_wildcard(parts_[1]) ||
+      (parts_.size() == 3 && util::has_wildcard(parts_[2]))) {
+    errs_ << ap_->provider << " probe type does not support wildcards";
+    return INVALID;
   }
 
   ap_->func = parts_[1];
@@ -1095,23 +1086,22 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
   return OK;
 }
 
-// Note: listing changes the parsing semantics for attach points
-Pass CreateParseAttachpointsPass(bool listing)
+Pass CreateParseAttachpointsPass()
 {
   return Pass::create(
       "parse-attachpoints",
-      [listing](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
-        AttachPointParser ap_parser(ast, b, func_info, listing);
+      [](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
+        AttachPointParser ap_parser(ast, b, func_info);
         ap_parser.parse();
       });
 }
 
-Pass CreateCheckAttachpointsPass(bool listing)
+Pass CreateCheckAttachpointsPass()
 {
   return Pass::create(
       "check-attachpoints",
-      [listing](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
-        AttachPointChecker ap_checker(b, func_info, listing);
+      [](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
+        AttachPointChecker ap_checker(b, func_info);
         ap_checker.visit(*ast.root);
       });
 }

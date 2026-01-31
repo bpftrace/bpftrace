@@ -430,8 +430,7 @@ TEST(bpftrace, empty_attachpoint)
   // ... ah, but it doesn't really. What fails is the attachpoint parser. The
   // above is a valid program, it is just not a valid attachpoint.
   StrictMock<MockBPFtrace> bpftrace;
-  ast::AttachPointParser ap_parser(
-      ast, bpftrace, get_mock_function_info(), false);
+  ast::AttachPointParser ap_parser(ast, bpftrace, get_mock_function_info());
   ap_parser.parse();
   EXPECT_FALSE(ast.diagnostics().ok());
 }
