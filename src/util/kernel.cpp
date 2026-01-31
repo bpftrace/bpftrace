@@ -526,25 +526,12 @@ void KernelFunctionInfoImpl::populate_lazy(
     return;
   }
 
+  // Add everything that is loaded but missing from our set.
+  ModuleSet filtered = get_modules(mod_name);
   ModuleSet missing;
-  if (!mod_name.has_value()) {
-    // Add everything that is loaded but missing from our set.
-    for (const auto &mod : modules_loaded_) {
-      if (!modules_populated_.contains(mod)) {
-        missing.emplace(mod);
-      }
-    }
-  } else {
-    // Match all loaded modules that are not yet in the populated list.
-    bool start_wildcard, end_wildcard;
-    auto wildcard_tokens = get_wildcard_tokens(*mod_name,
-                                               start_wildcard,
-                                               end_wildcard);
-    for (const auto &mod : modules_loaded_) {
-      if (!modules_populated_.contains(mod) &&
-          wildcard_match(mod, wildcard_tokens, start_wildcard, end_wildcard)) {
-        missing.emplace(mod);
-      }
+  for (const auto &mod : filtered) {
+    if (!modules_populated_.contains(mod)) {
+      missing.emplace(mod);
     }
   }
 
@@ -613,9 +600,31 @@ ModulesFuncsMap KernelFunctionInfo::filter(
   return result;
 }
 
-const ModuleSet &KernelFunctionInfoImpl::get_modules() const
+ModuleSet KernelFunctionInfoImpl::get_modules(
+    const std::optional<std::string> &mod_name) const
 {
-  return modules_loaded_;
+  if (!mod_name.has_value()) {
+    // Add everything that is loaded.
+    return modules_loaded_;
+  } else if (!util::has_wildcard(*mod_name)) {
+    // Just return the single module.
+    ModuleSet single;
+    single.emplace(*mod_name);
+    return single;
+  } else {
+    // Match all loaded modules that are not yet in the populated list.
+    ModuleSet filtered;
+    bool start_wildcard, end_wildcard;
+    auto wildcard_tokens = get_wildcard_tokens(*mod_name,
+                                               start_wildcard,
+                                               end_wildcard);
+    for (const auto &mod : modules_loaded_) {
+      if (wildcard_match(mod, wildcard_tokens, start_wildcard, end_wildcard)) {
+        filtered.emplace(mod);
+      }
+    }
+    return filtered;
+  }
 }
 
 ModulesFuncsMap KernelFunctionInfoImpl::get_traceable_funcs(

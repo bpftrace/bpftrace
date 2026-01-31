@@ -8,7 +8,6 @@
 #include "child.h"
 #include "probe_matcher.h"
 #include "procmon.h"
-#include "util/elf_parser.h"
 #include "util/kernel.h"
 #include "util/result.h"
 #include "util/strings.h"
@@ -19,7 +18,7 @@ namespace bpftrace::test {
 
 class MockKernelFunctionInfo : public util::KernelFunctionInfoBase<MockKernelFunctionInfo> {
 public:
-  const util::ModuleSet &get_modules() const override;
+  util::ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
   util::ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
   util::ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
   util::ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;

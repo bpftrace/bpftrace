@@ -1,7 +1,9 @@
 #include <algorithm>
 #include <dirent.h>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -443,58 +445,193 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
   return params;
 }
 
-void ProbeMatcher::list_probes(ast::Program* prog)
+FuncParamLists ProbeMatcher::get_params_for_matches(
+    ProbeType probe_type,
+    const std::set<std::string>& matches)
 {
-  for (auto* probe : prog->probes) {
-    for (auto* ap : probe->attach_points) {
-      auto matches = get_matches_for_ap(*ap);
-      auto probe_type = probetype(ap->provider);
-      FuncParamLists param_lists;
-      if (bt_verbose) {
-        if (probe_type == ProbeType::tracepoint)
-          param_lists = get_tracepoints_params(matches);
-        else if (probe_type == ProbeType::fentry ||
-                 probe_type == ProbeType::fexit)
-          param_lists = bpftrace_->btf_->get_params(matches);
-        else if (probe_type == ProbeType::rawtracepoint)
-          param_lists = bpftrace_->btf_->get_rawtracepoint_params(matches);
-        else if (probe_type == ProbeType::iter)
-          param_lists = get_iters_params(matches);
-        else if (probe_type == ProbeType::uprobe)
-          param_lists = get_uprobe_params(matches);
-        else if (probe_type == ProbeType::kprobe)
-          param_lists = bpftrace_->btf_->get_kprobes_params(matches);
-        else if (probe_type == ProbeType::kretprobe)
-          param_lists = bpftrace_->btf_->get_kretprobes_params(matches);
-      }
+  if (!bt_verbose)
+    return {};
 
-      for (const auto& match : matches) {
-        std::string match_print = match;
-        if (ap->lang == "cpp") {
-          std::string target = util::erase_prefix(match_print);
-          char* demangled_name = cxxdemangle(match_print.c_str());
-          SCOPE_EXIT
-          {
-            ::free(demangled_name);
-          };
+  switch (probe_type) {
+    case ProbeType::tracepoint:
+      return get_tracepoints_params(matches);
+    case ProbeType::fentry:
+    case ProbeType::fexit:
+      return bpftrace_->btf_->get_params(matches);
+    case ProbeType::rawtracepoint:
+      return bpftrace_->btf_->get_rawtracepoint_params(matches);
+    case ProbeType::iter:
+      return get_iters_params(matches);
+    case ProbeType::uprobe:
+      return get_uprobe_params(matches);
+    case ProbeType::kprobe:
+      return bpftrace_->btf_->get_kprobes_params(matches);
+    case ProbeType::kretprobe:
+      return bpftrace_->btf_->get_kretprobes_params(matches);
+    default:
+      return {};
+  }
+}
 
-          // demangled name may contain symbols not accepted by the attach
-          // point parser, so surround it with quotes to make the entry
-          // directly usable as an attach point
-          auto func = demangled_name ? "\"" + std::string(demangled_name) + "\""
-                                     : match_print;
+void ProbeMatcher::format_matches_for_listing(
+    ProbeType probe_type,
+    const std::set<std::string>& matches,
+    const FuncParamLists& param_lists,
+    std::vector<std::string>& results,
+    const std::string& lang)
+{
+  for (const auto& match : matches) {
+    std::string match_print = match;
+    if (lang == "cpp") {
+      std::string target = util::erase_prefix(match_print);
+      char* demangled_name = cxxdemangle(match_print.c_str());
+      SCOPE_EXIT
+      {
+        ::free(demangled_name);
+      };
 
-          match_print = target + ":" + ap->lang + ":" + func;
-        }
+      // Demangled name may contain symbols not accepted by the attach
+      // point parser, so surround it with quotes to make the entry
+      // directly usable as an attach point.
+      auto func = demangled_name ? "\"" + std::string(demangled_name) + "\""
+                                 : match_print;
+      match_print = target + ":" + lang + ":" + func;
+    }
 
-        std::cout << probe_type << ":" << match_print << std::endl;
-        if (bt_verbose) {
-          for (auto& param : param_lists[match])
-            std::cout << "    " << param << std::endl;
-        }
+    std::ostringstream ss;
+    ss << probe_type << ":" << match_print;
+    results.push_back(ss.str());
+    if (bt_verbose) {
+      auto it = param_lists.find(match);
+      if (it != param_lists.end()) {
+        for (const auto& param : it->second)
+          results.push_back("    " + param);
       }
     }
   }
+}
+
+std::vector<std::string> ProbeMatcher::get_probes_for_listing(
+    ast::Program* prog)
+{
+  std::vector<std::string> results;
+  for (auto* probe : prog->probes) {
+    for (auto* ap : probe->attach_points) {
+      auto probe_type = probetype(ap->provider);
+      // Skip special probes (begin, end, self).
+      if (probe_type == ProbeType::special)
+        continue;
+
+      auto matches = get_matches_for_ap(*ap);
+      auto param_lists = get_params_for_matches(probe_type, matches);
+      format_matches_for_listing(
+          probe_type, matches, param_lists, results, ap->lang);
+    }
+  }
+  return results;
+}
+
+std::vector<std::string> ProbeMatcher::get_probes_for_listing(
+    const std::string& pattern,
+    std::optional<pid_t> pid)
+{
+  std::vector<std::string> results;
+
+  // Split the pattern by ':' to extract probe type and search components.
+  // Pattern format: "probe_type:target:func" or "probe_type:func" etc.
+  auto parts = util::split_string(pattern, ':');
+  if (parts.empty()) {
+    return results;
+  }
+
+  // Build the search input from remaining parts.
+  std::string search_suffix;
+  auto colon_pos = pattern.find(':');
+  if (colon_pos != std::string::npos) {
+    search_suffix = pattern.substr(colon_pos + 1);
+  }
+  if (search_suffix.empty() && parts.size() == 1) {
+    search_suffix = "*";
+  }
+
+  // Determine which probe types to search.
+  std::set<std::string> probe_types;
+  const auto& probe_type_pattern = parts[0];
+  // Include userspace probe types only if:
+  // 1. The probe type is explicitly specified (not wildcarded), OR
+  // 2. A PID is provided to scope the search, OR
+  // 3. A specific (non-wildcarded) target file exists to scope the search
+  bool has_specific_target = parts.size() > 1 && !parts[1].empty() &&
+                             !util::has_wildcard(parts[1]) &&
+                             std::filesystem::exists(parts[1]);
+  bool include_userspace = (!util::has_wildcard(probe_type_pattern) &&
+                            !probe_type_pattern.empty()) ||
+                           pid.has_value() || has_specific_target;
+
+  // For single-part patterns (like "*" or "kprobe"), expand probe types.
+  if (util::has_wildcard(probe_type_pattern) || parts.size() == 1) {
+    // Expand to all matching probe types.
+    auto kernel_types = expand_probetype_kernel(
+        probe_type_pattern.empty() ? "*" : probe_type_pattern);
+    probe_types.insert(kernel_types.begin(), kernel_types.end());
+    if (include_userspace) {
+      auto userspace_types = expand_probetype_userspace(
+          probe_type_pattern.empty() ? "*" : probe_type_pattern);
+      probe_types.insert(userspace_types.begin(), userspace_types.end());
+    }
+  } else {
+    probe_types.insert(expand_probe_name(probe_type_pattern));
+  }
+
+  for (const auto& probe_type_str : probe_types) {
+    auto probe_type = probetype(probe_type_str);
+    if (probe_type == ProbeType::invalid)
+      continue;
+
+    std::string target;
+    std::string search_input = search_suffix;
+
+    // For probe types that require a target, extract it from search_suffix.
+    switch (probe_type) {
+      case ProbeType::uprobe:
+      case ProbeType::uretprobe:
+      case ProbeType::usdt:
+      case ProbeType::tracepoint: {
+        // These need target:func format.
+        if (parts.size() > 2) {
+          target = parts[1];
+          search_input = search_suffix;
+        } else {
+          target = "*";
+          search_input = "*:" + search_suffix;
+        }
+        break;
+      }
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+      case ProbeType::fentry:
+      case ProbeType::fexit:
+      case ProbeType::rawtracepoint: {
+        // These can be target:func or just func.
+        if (parts.size() > 2) {
+          target = parts[1];
+        }
+        search_input = search_suffix;
+        break;
+      }
+      default:
+        // For other probe types, use search_suffix as-is.
+        search_input = search_suffix.empty() ? "*" : search_suffix;
+        break;
+    }
+
+    auto matches = get_matches_for_probetype(
+        probe_type, target, search_input, false /* demangle_symbols */);
+
+    auto param_lists = get_params_for_matches(probe_type, matches);
+    format_matches_for_listing(probe_type, matches, param_lists, results);
+  }
+  return results;
 }
 
 std::set<std::string> ProbeMatcher::get_matches_for_ap(
@@ -599,8 +736,10 @@ std::set<std::string> ProbeMatcher::expand_probetype_userspace(
     return { probe_type };
 }
 
-void ProbeMatcher::list_structs(const std::string& search)
+std::vector<std::string> ProbeMatcher::get_structs_for_listing(
+    const std::string& search)
 {
+  std::vector<std::string> results;
   auto structs = bpftrace_->btf_->get_all_structs();
 
   std::string search_input = search;
@@ -609,6 +748,7 @@ void ProbeMatcher::list_structs(const std::string& search)
     search_input += " *{*}*";
 
   for (const auto& match : get_matches_in_set(search_input, structs))
-    std::cout << match << std::endl;
+    results.push_back(match);
+  return results;
 }
 } // namespace bpftrace

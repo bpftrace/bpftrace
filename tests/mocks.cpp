@@ -10,7 +10,8 @@ using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::StrictMock;
 
-const util::ModuleSet &MockKernelFunctionInfo::get_modules() const
+util::ModuleSet MockKernelFunctionInfo::get_modules(
+    [[maybe_unused]] const std::optional<std::string> &mod_name) const
 {
   static const util::ModuleSet modules = {
     "vmlinux", "mock_vmlinux", "kernel_mod_1", "kernel_mod_2"

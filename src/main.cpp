@@ -763,23 +763,6 @@ bool is_colorize()
   }
 }
 
-static ast::ASTContext buildListProgram(const std::string& search)
-{
-  ast::ASTContext ast("listing", search);
-  auto* ap = ast.make_node<ast::AttachPoint>(ast::SourceLocation(),
-                                             search,
-                                             true);
-  auto* probe = ast.make_node<ast::Probe>(ast::SourceLocation(),
-                                          ast::AttachPointList({ ap }),
-                                          nullptr);
-  ast.root = ast.make_node<ast::Program>(ast::SourceLocation(),
-                                         ast::CStatementList(),
-                                         nullptr,
-                                         ast::RootImportList(),
-                                         ast::RootStatements({ probe }));
-  return ast;
-}
-
 int main(int argc, char* argv[])
 {
   Log::get().set_colorize(is_colorize());
@@ -878,44 +861,33 @@ int main(int argc, char* argv[])
 
     bool is_search_a_type = is_type_name(args.search);
 
-    // To list tracepoints, we construct a synthetic AST and then expand the
-    // probe. The raw contents of the program are the initial search provided.
-    ast = buildListProgram(is_search_a_type ? FULL_SEARCH : args.search);
-    ast::CDefinitions no_c_defs;       // No external C definitions may be used.
-    ast::TypeMetadata no_types;        // No external types may be used.
-    ast::MacroRegistry macro_registry; // No macros may be used.
-
-    // Parse and expand all the attachpoints. We don't need to descend into
-    // the actual driver here, since we know that the program is already
-    // formed.
-    auto pmresult = ast::PassManager()
-                        .put(ast)
-                        .put(bpftrace)
-                        .put(func_info_state)
-                        .put(no_c_defs)
-                        .put(no_types)
-                        .put(macro_registry)
-                        .add(ast::CreateParseAttachpointsPass(args.listing))
-                        .add(ast::CreateCheckAttachpointsPass(args.listing))
-                        .add(CreateParseBTFPass())
-                        .add(ast::CreateMapSugarPass())
-                        .add(ast::CreateNamedParamsPass())
-                        .add(ast::CreateTypeCheckerPass())
-                        .run();
-
-    if (!pmresult) {
-      std::cerr << pmresult.takeError() << "\n";
-      return 2;
-    } else if (!ast.diagnostics().ok()) {
-      ast.diagnostics().emit(std::cerr);
-      return 1;
+    // Ensure that BTF is loaded for all listing.
+    auto parts = util::split_string(args.search, ':');
+    if (is_search_a_type || parts.empty() || parts.size() < 3) {
+      bpftrace.btf_->load_module_btfs(kernel_func_info->get_modules());
+    } else {
+      bpftrace.btf_->load_module_btfs(kernel_func_info->get_modules(parts[1]));
     }
 
+    // Use ProbeMatcher directly to list probes matching the search pattern.
     ProbeMatcher probe_matcher(&bpftrace, *kernel_func_info, user_func_info);
     if (is_search_a_type) {
-      probe_matcher.list_structs(args.search);
+      for (const auto& s : probe_matcher.get_structs_for_listing(args.search)) {
+        std::cout << s << std::endl;
+      }
     } else {
-      probe_matcher.list_probes(ast.root);
+      // For patterns without a colon (like "*do_nanosleep*"), treat as
+      // wildcard probe type with the pattern as function match.
+      std::string search = args.search;
+      if (search.empty()) {
+        search = "*:*";
+      } else if (search.find(':') == std::string::npos) {
+        search = "*:" + search;
+      }
+      for (const auto& probe :
+           probe_matcher.get_probes_for_listing(search, bpftrace.pid())) {
+        std::cout << probe << std::endl;
+      }
     }
 
     return 0;
@@ -1025,19 +997,12 @@ int main(int argc, char* argv[])
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
 
   if (args.listing) {
-    ast::CDefinitions no_c_defs;       // See above.
-    ast::TypeMetadata no_types;        // See above.
-    ast::MacroRegistry macro_registry; // See above.
-    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)))
-        .put(no_c_defs)
-        .put(no_types)
-        .put(macro_registry)
-        .add(ast::CreateParseAttachpointsPass(args.listing))
-        .add(ast::CreateCheckAttachpointsPass(args.listing))
-        .add(CreateParseBTFPass())
-        .add(ast::CreateMapSugarPass())
-        .add(ast::CreateNamedParamsPass())
-        .add(ast::CreateTypeCheckerPass());
+    // For listing with a program, run the full parse passes (including
+    // expansion) and then use ProbeMatcher to expand and list probes.
+    for (auto& pass : ast::AllParsePasses(
+             std::move(flags), {}, bt_debug.contains(DebugStage::Parse))) {
+      pm.add(std::move(pass));
+    }
 
     auto pmresult = pm.run();
     if (!pmresult) {
@@ -1047,8 +1012,12 @@ int main(int argc, char* argv[])
       ast.diagnostics().emit(std::cerr);
       return 1;
     }
+
+    // Use ProbeMatcher to expand and list the probes.
     ProbeMatcher probe_matcher(&bpftrace, *kernel_func_info, user_func_info);
-    probe_matcher.list_probes(ast.root);
+    for (const auto& probe : probe_matcher.get_probes_for_listing(ast.root)) {
+      std::cout << probe << std::endl;
+    }
     return 0;
   }
 

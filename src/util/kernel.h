@@ -29,7 +29,7 @@ public:
   virtual ~KernelFunctionInfo() = default;
 
   // Returns the set of available modules.
-  virtual const ModuleSet &get_modules() const = 0;
+  virtual ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
   // Returns all traceable functions.
   virtual ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
@@ -95,7 +95,7 @@ public:
 
   bool is_module_loaded(const std::string &mod_name) const override {
     const auto *impl = static_cast<const T *>(this);
-    return impl->get_modules().contains(mod_name);
+    return !impl->get_modules(mod_name).empty();
   }
 };
 
@@ -109,7 +109,7 @@ public:
   KernelFunctionInfoImpl &operator=(KernelFunctionInfoImpl &&other) = default;
   ~KernelFunctionInfoImpl() override = default;
 
-  const ModuleSet &get_modules() const override;
+  ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;
