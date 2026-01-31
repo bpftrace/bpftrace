@@ -22,6 +22,8 @@ and this project adheres to
   - [Migration guide](docs/migration_guide.md##args-in-tracepoints-now-requires-btf)
 - Experimental `watchpoint:func+arg` and `asyncwatchpoint:func+arg` attach points are not supported anymore (for now, at least)
   - [#4890](https://github.com/bpftrace/bpftrace/pull/4890)
+- `get_func_ip` is now assumed, as it is in our minimum supported kernel (`5.15`)
+  - [#4887](https://github.com/bpftrace/bpftrace/pull/4887)
 #### Added
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)
