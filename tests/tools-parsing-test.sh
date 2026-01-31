@@ -30,7 +30,13 @@ function set_tooldir() {
 
 function do_test() {
   local file="$1"
-  if $BPFTRACE_EXECUTABLE --unsafe -v --dry-run "$file" 2>/dev/null >/dev/null; then
+  local probes="$($BPFTRACE_EXECUTABLE -l "$file")"
+  if [[ $? -ne 0 ]]; then
+    echo "$file    failed, unable to list probes";
+  fi
+  if [[ -z "$probes" ]]; then
+    echo "$file    skipped";
+  elif $BPFTRACE_EXECUTABLE --unsafe -v --dry-run "$file" 2>/dev/null >/dev/null; then
     echo "$file    passed"
   else
     echo "$file    failed";

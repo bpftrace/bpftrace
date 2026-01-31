@@ -11,9 +11,7 @@ namespace attachpoint_parser {
 
 using ::testing::HasSubstr;
 
-void test(const std::string& input,
-          bool listing = false,
-          const std::string& error = "")
+void test(const std::string& input, const std::string& error = "")
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
@@ -29,7 +27,7 @@ void test(const std::string& input,
                 .put(bpftrace)
                 .put(get_mock_function_info())
                 .add(CreateParsePass())
-                .add(ast::CreateParseAttachpointsPass(listing))
+                .add(ast::CreateParseAttachpointsPass())
                 .run();
 
   std::ostringstream out;
@@ -52,7 +50,7 @@ void test(const std::string& input,
 
 void test_error(const std::string& input, const std::string& error)
 {
-  test(input, false, error);
+  test(input, error);
 }
 
 void test_uprobe_lang(const std::string& input, const std::string& lang = "")
@@ -69,7 +67,7 @@ void test_uprobe_lang(const std::string& input, const std::string& lang = "")
                 .put(bpftrace)
                 .put(get_mock_function_info())
                 .add(CreateParsePass())
-                .add(ast::CreateParseAttachpointsPass(false))
+                .add(ast::CreateParseAttachpointsPass())
                 .run();
 
   ASSERT_TRUE(ok && ast.diagnostics().ok());
@@ -94,10 +92,6 @@ TEST(attachpoint_parser, iter)
              R"(iter probe type does not support wildcards)");
   test_error("iter:task, iter:task_file { 1 }",
              R"(iter probe only supports one attach point)");
-  // Listing is ok
-  test("iter:task* { 1 }", true);
-  test("iter:task:* { 1 }", true);
-  test("iter:task, iter:task_file { 1 }", true);
 }
 
 TEST(attachpoint_parser, uprobe_lang)
@@ -114,7 +108,6 @@ using ::testing::HasSubstr;
 
 void test(BPFtrace& bpftrace,
           const std::string& input,
-          bool listing = false,
           const std::string& error = "")
 {
   // The input provided here is embedded into an expression.
@@ -128,8 +121,8 @@ void test(BPFtrace& bpftrace,
                 .put(bpftrace)
                 .put(get_mock_function_info())
                 .add(CreateParsePass())
-                .add(ast::CreateParseAttachpointsPass(listing))
-                .add(ast::CreateCheckAttachpointsPass(listing))
+                .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreateCheckAttachpointsPass())
                 .run();
 
   std::ostringstream out;
@@ -149,25 +142,25 @@ void test(BPFtrace& bpftrace,
   }
 }
 
-void test(const std::string& input, bool listing = false)
+void test(const std::string& input)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
-  test(bpftrace, input, listing);
+  test(bpftrace, input);
 }
 
 void test_error(const std::string& input, std::string&& error = "ERROR")
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
-  test(bpftrace, input, false, error);
+  test(bpftrace, input, error);
 }
 
 void test_error(BPFtrace& bpftrace,
                 const std::string& input,
                 std::string&& error = "ERROR")
 {
-  test(bpftrace, input, false, error);
+  test(bpftrace, input, error);
 }
 
 TEST(attachpoint_checker, uprobe)
@@ -331,7 +324,6 @@ TEST(attachpoint_checker, hardware)
 
   // Wildcard
   test_error("hardware:*:100000000 { 1 }");
-  test("hardware:*:100000000 { 1 }", true /*listing*/);
 }
 
 TEST(attachpoint_checker, software)
@@ -341,7 +333,6 @@ TEST(attachpoint_checker, software)
 
   // Wildcard
   test_error("software:*:100000000 { 1 }");
-  test("software:*:100000000 { 1 }", true /*listing*/);
 }
 
 } // namespace attachpoint_checker

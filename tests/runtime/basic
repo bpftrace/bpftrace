@@ -204,7 +204,6 @@ NAME warning on non existent file
 RUN {{BPFTRACE}} -l non_existent_file.bt
 EXPECT WARNING: It appears that 'non_existent_file.bt' is a filename but the file does not exist. Treating 'non_existent_file.bt' as a search pattern.
 TIMEOUT 1
-WILL_FAIL
 
 NAME pid fails validation with leading non-number
 RUN {{BPFTRACE}} -p a1111 file.bt

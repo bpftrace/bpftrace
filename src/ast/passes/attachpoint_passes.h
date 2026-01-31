@@ -33,8 +33,7 @@ class AttachPointParser {
 public:
   AttachPointParser(ASTContext &ctx,
                     BPFtrace &bpftrace,
-                    FunctionInfo &func_info_state,
-                    bool listing);
+                    FunctionInfo &func_info_state);
   ~AttachPointParser() = default;
   void parse();
 
@@ -86,12 +85,11 @@ private:
   std::stringstream errs_;
   std::vector<std::string> parts_;
   AttachPointList new_attach_points;
-  bool listing_;
   bool has_iter_ap_ = false;
 };
 
 // The attachpoints are expanded in their own separate pass.
-Pass CreateParseAttachpointsPass(bool listing = false);
-Pass CreateCheckAttachpointsPass(bool listing = false);
+Pass CreateParseAttachpointsPass();
+Pass CreateCheckAttachpointsPass();
 
 } // namespace bpftrace::ast
