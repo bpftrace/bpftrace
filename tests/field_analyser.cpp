@@ -15,7 +15,10 @@ namespace bpftrace::test::field_analyser {
 
 using ::testing::_;
 
-void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
+void test(BPFtrace &bpftrace,
+          ast::FunctionInfo &func_info,
+          const std::string &input,
+          bool ok = true)
 {
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
@@ -24,6 +27,7 @@ void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
   auto result = ast::PassManager()
                     .put(ast)
                     .put(bpftrace)
+                    .put(func_info)
                     .add(CreateParsePass())
                     .add(ast::CreateParseAttachpointsPass())
                     .add(ast::CreateProbeAndApExpansionPass())
@@ -33,6 +37,11 @@ void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
   ASSERT_TRUE(bool(result)) << msg.str();
   ast.diagnostics().emit(msg);
   EXPECT_EQ(ast.diagnostics().ok(), ok) << msg.str();
+}
+
+void test(BPFtrace &bpftrace, const std::string &input, bool ok = true)
+{
+  test(bpftrace, get_mock_function_info(), input, ok);
 }
 
 void test(const std::string &input, bool ok = true)
@@ -280,8 +289,6 @@ TEST_F(field_analyser_btf, btf_types_struct_ptr)
 TEST_F(field_analyser_btf, btf_types_arr_access)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols("mock_vmlinux"))
-      .Times(1);
   test(*bpftrace,
        "fentry:func_1 {\n"
        "  @foo2 = args.foo3[0].foo2;\n"
@@ -306,8 +313,6 @@ TEST_F(field_analyser_btf, btf_types_arr_access)
 TEST_F(field_analyser_btf, btf_types_anon_structs)
 {
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_fentry_symbols("mock_vmlinux"))
-      .Times(1);
   test(*bpftrace,
        "fentry:func_anon_struct {\n"
        "  @ = args.AnonStruct->AnonArray[0];\n"
@@ -425,12 +430,13 @@ class field_analyser_dwarf : public test_dwarf {};
 
 TEST_F(field_analyser_dwarf, parse_struct)
 {
-  BPFtrace bpftrace;
+  auto bpftrace = create_bpftrace();
+  auto func_info = get_real_user_function_info();
   std::string uprobe = "uprobe:" + std::string(bin_);
-  test(bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", true);
+  test(*bpftrace, *func_info, uprobe + ":func_1 { $x = args.foo1->a; }", true);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
-  auto str = bpftrace.structs.Lookup("struct Foo1").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo1"));
+  auto str = bpftrace->structs.Lookup("struct Foo1").lock();
 
   ASSERT_TRUE(str->HasFields());
   ASSERT_EQ(str->fields.size(), 3);
@@ -453,14 +459,16 @@ TEST_F(field_analyser_dwarf, parse_struct)
 
 TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 {
-  BPFtrace bpftrace;
+  auto bpftrace = create_bpftrace();
+  auto func_info = get_real_user_function_info();
   std::string uprobe = "uprobe:" + std::string(bin_);
-  test(bpftrace,
+  test(*bpftrace,
+       *func_info,
        uprobe + ":func_1 { @ = ((struct Foo4 *)args.foo4)->pid; }",
        true);
 
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo4"));
-  auto foo4 = bpftrace.structs.Lookup("struct Foo4").lock();
+  ASSERT_TRUE(bpftrace->structs.Has("struct Foo4"));
+  auto foo4 = bpftrace->structs.Lookup("struct Foo4").lock();
 
   // clang-tidy doesn't seem to acknowledge that ASSERT_*() will
   // return from function so that these are in fact checked accesses.

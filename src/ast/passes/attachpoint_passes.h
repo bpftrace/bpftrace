@@ -7,12 +7,34 @@
 #include "ast/ast.h"
 #include "ast/pass_manager.h"
 #include "bpftrace.h"
+#include "util/kernel.h"
+#include "util/user.h"
 
 namespace bpftrace::ast {
 
+// Provides function information (kernel and user space) to AST passes.
+class FunctionInfo : public bpftrace::ast::State<"function-info"> {
+public:
+  explicit FunctionInfo(util::KernelFunctionInfo &kernel_impl,
+                        util::UserFunctionInfo &user_impl)
+      : kernel_impl_(kernel_impl), user_impl_(user_impl)
+  {
+  }
+
+  util::KernelFunctionInfo &kernel_function_info() const { return kernel_impl_; }
+  util::UserFunctionInfo &user_function_info() const { return user_impl_; }
+
+private:
+  util::KernelFunctionInfo &kernel_impl_;
+  util::UserFunctionInfo &user_impl_;
+};
+
 class AttachPointParser {
 public:
-  AttachPointParser(ASTContext &ctx, BPFtrace &bpftrace, bool listing);
+  AttachPointParser(ASTContext &ctx,
+                    BPFtrace &bpftrace,
+                    FunctionInfo &func_info_state,
+                    bool listing);
   ~AttachPointParser() = default;
   void parse();
 
@@ -59,6 +81,7 @@ private:
 
   ASTContext &ctx_;
   BPFtrace &bpftrace_;
+  FunctionInfo &func_info_state_;
   AttachPoint *ap_{ nullptr }; // Non-owning pointer
   std::stringstream errs_;
   std::vector<std::string> parts_;
