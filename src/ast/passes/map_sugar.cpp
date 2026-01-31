@@ -29,6 +29,7 @@ public:
   void visit(Map &map);
   void visit(MapAccess &acc);
   void visit(MapAddr &map_addr);
+  void visit(Program &program);
   void visit(Typeof &typeof);
   void visit(AssignScalarMapStatement &assign);
   void visit(AssignMapStatement &assign);
@@ -43,6 +44,8 @@ public:
 
 private:
   ASTContext &ast_;
+  bool first_pass_ = true;
+  std::vector<Typeof *> typeofs_;
 };
 
 class MapFunctionAliases : public Visitor<MapFunctionAliases> {
@@ -117,8 +120,15 @@ void MapDefaultKey::visit([[maybe_unused]] MapAddr &map_addr)
   // Don't desugar this into a map access, we want the map pointer
 }
 
-void MapDefaultKey::visit([[maybe_unused]] Typeof &typeof)
+void MapDefaultKey::visit(Typeof &typeof)
 {
+  if (first_pass_) {
+    // Save these off and don't evaluate them until we've walked the rest of the
+    // AST to determine if a map is a scalar or not.
+    typeofs_.emplace_back(&typeof);
+    return;
+  }
+
   if (std::holds_alternative<Expression>(typeof.record)) {
     const auto &expr = std::get<Expression>(typeof.record);
     if (auto *map = expr.as<Map>()) {
@@ -168,6 +178,19 @@ void MapDefaultKey::visit(Statement &stmt)
     auto *index = ast_.make_node<Integer>(map->loc, 0, CreateInt64());
     auto *acc = ast_.make_node<MapAccess>(map->loc, map->map, index);
     stmt.value = ast_.make_node<AssignMapStatement>(map->loc, acc, map->expr);
+  }
+}
+
+void MapDefaultKey::visit(Program &program)
+{
+  for (Subprog *subprog : program.functions)
+    visit(subprog);
+  for (Probe *probe : program.probes)
+    visit(probe);
+
+  first_pass_ = false;
+  for (auto *typeof : typeofs_) {
+    visit(*typeof);
   }
 }
 

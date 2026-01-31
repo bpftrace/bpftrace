@@ -5773,7 +5773,6 @@ fn foo($x : int64, $y : int64) : typeof($z) { return 0; }
 
 TEST_F(SemanticAnalyserTest, typeof_casts)
 {
-  // Legal casts are still legal.
   test(R"(kprobe:f { $x = (uint8)1; $y = (typeof($x))10; })");
   test(R"(kprobe:f { $x = (void*)0; $y = (typeof($x))1; })");
 
@@ -5781,7 +5780,17 @@ TEST_F(SemanticAnalyserTest, typeof_casts)
   test(R"(kprobe:f { $x = (uint8)1; $y = (typeof($x))256; })");
   test(R"(kprobe:f { $x = (uint8)1; $y = (typeof($x))-1; })");
 
-  // Illegal casts are still illegal.
+  // Map keys and values
+  test(
+      R"(kprobe:f { let $a: int8; $a = (typeof(@x))2; @x[(int8)2] = (uint32)10; })");
+  test(R"(kprobe:f { let $a: int8; $a = (typeof(@x))2; @x = (int8)10; })");
+  test(
+      R"(kprobe:f { let $a: int8; $a = (typeof(@x[1]))2; @x[(int32)2] = (int8)10; })");
+  // This is read as a scalar map access which doesn't match the map type
+  test(
+      R"(kprobe:f { let $a: int8; $a = (typeof({ @x }))2; @x[(int8)2] = (uint32)10; })",
+      Error{});
+
   test(
       R"(struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; })",
       Error{ R"(
