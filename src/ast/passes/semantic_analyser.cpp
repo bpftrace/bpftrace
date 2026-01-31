@@ -31,6 +31,7 @@
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/system.h"
+#include "util/type_name.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::ast {
@@ -140,6 +141,18 @@ struct call_spec {
   std::vector<std::variant<arg_type_spec, map_type_spec, map_key_spec>>
       arg_types = {};
   // NOLINTEND(readability-redundant-member-init)
+};
+
+template <util::TypeName name>
+class AssignMapDisallowed : public Visitor<AssignMapDisallowed<name>> {
+public:
+  explicit AssignMapDisallowed() = default;
+  using Visitor<AssignMapDisallowed>::visit;
+  void visit(AssignMapStatement &assignment)
+  {
+    assignment.addError() << "Map assignments not allowed inside of "
+                          << name.str();
+  }
 };
 
 class SemanticAnalyser : public Visitor<SemanticAnalyser> {
@@ -1848,6 +1861,8 @@ std::optional<size_t> SemanticAnalyser::check(Sizeof &szof)
 
 void SemanticAnalyser::visit(Sizeof &szof)
 {
+  AssignMapDisallowed<"sizeof">().visit(szof.record);
+
   const auto v = check(szof);
   if (!v && is_final_pass()) {
     szof.addError() << "sizeof not resolved, is type complete?";
@@ -1856,6 +1871,8 @@ void SemanticAnalyser::visit(Sizeof &szof)
 
 std::optional<size_t> SemanticAnalyser::check(Offsetof &offof)
 {
+  AssignMapDisallowed<"offsetof">().visit(offof.record);
+
   meta_depth_++;
   is_type_name_ = true;
   Visitor<SemanticAnalyser>::visit(offof);
@@ -1912,6 +1929,8 @@ void SemanticAnalyser::visit(Offsetof &offof)
 
 void SemanticAnalyser::visit(Typeof &typeof)
 {
+  AssignMapDisallowed<"typeof or typeinfo">().visit(typeof.record);
+
   meta_depth_++;
   is_type_name_ = true;
   Visitor<SemanticAnalyser>::visit(typeof);

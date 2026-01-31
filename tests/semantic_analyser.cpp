@@ -5872,6 +5872,16 @@ TEST_F(SemanticAnalyserTest, no_meta_used_warnings)
        NoWarning{ "Variable used" });
 }
 
+TEST_F(SemanticAnalyserTest, no_meta_map_assignments)
+{
+  test("begin { let $b : typeof({ @a = 1; 1 }); }", Error{});
+  test("begin { $b = typeinfo({ @a = 1; 1 }); }", Error{});
+  test("begin { print(sizeof({ @a = 1; 1 })); }", Error{});
+  test("struct Foo { int x; }  begin { let $a : struct Foo*; print(offsetof({ "
+       "@a =1; *$a}, x)); }",
+       Error{});
+}
+
 TEST_F(SemanticAnalyserTest, probe_return)
 {
   test("begin { return 1; }");
