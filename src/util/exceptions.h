@@ -5,15 +5,6 @@
 
 namespace bpftrace::util {
 
-class MountNSException : public std::exception {
-public:
-  MountNSException(std::string msg);
-  const char *what() const noexcept override;
-
-private:
-  std::string msg_;
-};
-
 class EnospcException : public std::runtime_error {
 public:
   // C++11 feature: bring base class constructor into scope to automatically

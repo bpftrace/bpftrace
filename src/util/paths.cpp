@@ -11,8 +11,8 @@
 
 #include "log.h"
 #include "scopeguard.h"
-#include "util/exceptions.h"
 #include "util/paths.h"
+#include "util/result.h"
 #include "util/strings.h"
 
 namespace bpftrace::util {
@@ -24,11 +24,9 @@ namespace bpftrace::util {
 // likely that any references to local paths will not be valid, and that paths
 // need to be made relative to the PID.
 //
-// If an invalid PID is specified or doesn't exist, it returns false.
-// True is only returned if the namespace of the target process could be read
-// and it doesn't match that of bpftrace. If there was an error reading either
-// mount namespace, it will throw an exception
-static bool pid_in_different_mountns(int pid)
+// If an invalid PID is specified or doesn't exist, it returns false. An error
+// will be returned if either mount namespace cannot be read.
+static Result<bool> pid_in_different_mountns(int pid)
 {
   if (pid <= 0)
     return false;
@@ -40,23 +38,19 @@ static bool pid_in_different_mountns(int pid)
   target_path /= "ns/mnt";
 
   if (!std::filesystem::exists(self_path, ec)) {
-    throw MountNSException(
-        "Failed to compare mount ns with PID " + std::to_string(pid) +
-        ". The error was open (/proc/self/ns/mnt): " + ec.message());
+    return make_error<SystemError>("Failed to lookup mount namespace",
+                                   ec.value());
   }
 
   if (!std::filesystem::exists(target_path, ec)) {
-    throw MountNSException(
-        "Failed to compare mount ns with PID " + std::to_string(pid) +
-        ". The error was open (/proc/<pid>/ns/mnt): " + ec.message());
+    return make_error<SystemError>("Failed to find target mount namespace",
+                                   ec.value());
   }
 
   bool result = !std::filesystem::equivalent(self_path, target_path, ec);
-
   if (ec) {
-    throw MountNSException("Failed to compare mount ns with PID " +
-                           std::to_string(pid) +
-                           ". The error was (fstat): " + ec.message());
+    return make_error<SystemError>("Failed to compare mount namespaces",
+                                   ec.value());
   }
 
   return result;
@@ -112,14 +106,15 @@ static std::optional<int> is_elf(const std::string &path)
   return ehdr.e_type;
 }
 
-static std::vector<std::string> expand_wildcard_path(const std::string &path)
+static Result<std::vector<std::string>> expand_wildcard_path(
+    const std::string &path)
 {
   glob_t glob_result;
   memset(&glob_result, 0, sizeof(glob_result));
 
   if (glob(path.c_str(), GLOB_NOCHECK, nullptr, &glob_result)) {
     globfree(&glob_result);
-    throw FatalUserException("glob() failed");
+    return make_error<SystemError>("glob() failed");
   }
 
   std::vector<std::string> matching_paths;
@@ -136,8 +131,12 @@ static std::vector<std::string> expand_wildcard_paths(
 {
   std::vector<std::string> expanded_paths;
   for (const auto &p : paths) {
+    // Ignore errors from individual expansions, just expand
+    // to all valid paths that we can find.
     auto ep = expand_wildcard_path(p);
-    expanded_paths.insert(expanded_paths.end(), ep.begin(), ep.end());
+    if (ep) {
+      expanded_paths.insert(expanded_paths.end(), ep->begin(), ep->end());
+    }
   }
   return expanded_paths;
 }
@@ -161,10 +160,21 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
   std::vector<std::string> valid_executable_paths;
   for (const auto &path : candidate_paths) {
     std::string rel_path;
-    if (pid.has_value() && pid_in_different_mountns(*pid))
-      rel_path = path_for_pid_mountns(*pid, path);
-    else
+
+    if (pid.has_value()) {
+      auto pidns_different = pid_in_different_mountns(*pid);
+      // Note that pidns_different is a Result<bool>, and we
+      // intenionally ignore errors. An error implies that we
+      // weren't able to compare the mount namespaces, and in
+      // that case we simply use the local namespace path.
+      if (pidns_different && *pidns_different) {
+        rel_path = path_for_pid_mountns(*pid, path);
+      } else {
+        rel_path = path;
+      }
+    } else {
       rel_path = path;
+    }
 
     // Both executables and shared objects are game.
     if (auto e_type = is_elf(rel_path)) {

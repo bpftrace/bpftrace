@@ -6,7 +6,6 @@ add_library(util STATIC
   cpus.cpp
   elf_parser.cpp
   env.cpp
-  exceptions.cpp
   int_parser.cpp
   io.cpp
   kernel.cpp
