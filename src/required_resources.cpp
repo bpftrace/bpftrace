@@ -38,7 +38,7 @@ std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)
 {
   switch (info.error_id) {
     case RuntimeErrorId::HELPER_ERROR: {
-      // Helper errors are handled separately in output
+      // Helper errors are handled separately in output.
       os << "";
       break;
     }
@@ -48,6 +48,18 @@ std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)
     }
     case RuntimeErrorId::ARRAY_ACCESS_OOB: {
       os << ARRAY_ACCESS_OOB_MSG;
+      break;
+    }
+    case RuntimeErrorId::CPU_COUNT_MISMATCH: {
+      os << CPU_COUNT_MISMATCH_MSG;
+      break;
+    }
+    case RuntimeErrorId::KSTACK: {
+      os << KSTACK_MSG;
+      break;
+    }
+    case RuntimeErrorId::USTACK: {
+      os << USTACK_MSG;
       break;
     }
   }

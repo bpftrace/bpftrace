@@ -31,10 +31,20 @@ static const auto ARRAY_ACCESS_OOB_MSG =
     "Array access out of bounds. This can lead to unexpected "
     "results.";
 
+static const auto CPU_COUNT_MISMATCH_MSG =
+    "CPU count mismatch; unable to find per-cpu data.";
+
+static const auto KSTACK_MSG = "Error reading kstack.";
+
+static const auto USTACK_MSG = "Error reading ustack.";
+
 enum class RuntimeErrorId {
   DIVIDE_BY_ZERO,
   HELPER_ERROR,
   ARRAY_ACCESS_OOB,
+  CPU_COUNT_MISMATCH,
+  KSTACK,
+  USTACK,
 };
 
 enum class PrintfSeverity {

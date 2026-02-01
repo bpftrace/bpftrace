@@ -207,7 +207,6 @@ public:
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int warning_level_ = 1;
-  bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
   bool need_recursion_check_ = false;
