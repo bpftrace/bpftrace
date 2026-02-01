@@ -796,12 +796,6 @@ int main(int argc, char* argv[])
   auto config = std::make_unique<Config>(!args.cmd_str.empty());
   BPFtrace bpftrace(args.no_feature, std::move(config));
 
-  // Most configuration can be applied during the configuration pass, however
-  // we need to extract a few bits of configuration up front, because they may
-  // affect the actual compilation process.
-  util::get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
-                         [&](bool x) { bpftrace.debug_output_ = x; });
-
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
   bpftrace.safe_mode_ = args.safe_mode;
   bpftrace.warning_level_ = args.warning_level;

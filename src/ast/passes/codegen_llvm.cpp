@@ -595,10 +595,9 @@ ScopedExpr CodegenLLVM::kstack(const SizedType &stype, const Location &loc)
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
 
   b_.SetInsertPoint(get_stack_fail);
-  b_.CreateDebugOutput("Failed to get kstack. Error: %d",
-                       std::vector<Value *>{ stack_size },
-                       loc);
+  b_.CreateRuntimeError(RuntimeErrorId::KSTACK, loc);
   b_.CreateBr(merge_block);
+
   b_.SetInsertPoint(get_stack_success);
 
   Value *num_frames = b_.CreateUDiv(stack_size,
@@ -647,10 +646,9 @@ ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
 
   b_.SetInsertPoint(get_stack_fail);
-  b_.CreateDebugOutput("Failed to get ustack. Error: %d",
-                       std::vector<Value *>{ stack_size },
-                       loc);
+  b_.CreateRuntimeError(RuntimeErrorId::USTACK, loc);
   b_.CreateBr(merge_block);
+
   b_.SetInsertPoint(get_stack_success);
 
   Value *num_frames = b_.CreateUDiv(stack_size,
@@ -2648,9 +2646,11 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
         "oob_cond");
 
     b_.CreateCondBr(cond, is_oob, merge);
+
     b_.SetInsertPoint(is_oob);
     b_.CreateRuntimeError(RuntimeErrorId::ARRAY_ACCESS_OOB, arr.loc);
     b_.CreateBr(merge);
+
     b_.SetInsertPoint(merge);
   }
 

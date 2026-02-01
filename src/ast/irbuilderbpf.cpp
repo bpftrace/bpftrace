@@ -883,7 +883,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
                                                        "error_failure",
                                                        error_parent);
 
-  // If the CPU is 0 and the map lookup fails it means the key doesn't exist
+  // If the CPU is 0 and the map lookup fails it means the key doesn't exist.
   Value *error_condition = CreateICmpEQ(CreateLoad(getInt32Ty(), i),
                                         getInt32(0),
                                         "error_lookup_cond");
@@ -899,11 +899,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
 
   SetInsertPoint(error_failure_block);
 
-  // This should only get triggered in the AOT case
-  CreateDebugOutput("No cpu found for cpu id: %lu",
-                    std::vector<Value *>{ CreateLoad(getInt32Ty(), i) },
-                    loc);
-
+  CreateRuntimeError(RuntimeErrorId::CPU_COUNT_MISMATCH, loc);
   CreateBr(while_end);
 
   SetInsertPoint(while_end);
@@ -1257,10 +1253,7 @@ void IRBuilderBPF::CreateCheckSetRecursion(const Location &loc,
 
   SetInsertPoint(lookup_failure_block);
 
-  CreateDebugOutput(
-      "Value for per-cpu map key 0 is null. This shouldn't happen.",
-      std::vector<Value *>{},
-      loc);
+  CreateRuntimeError(RuntimeErrorId::CPU_COUNT_MISMATCH, loc);
   CreateRet(getInt64(0));
 
   SetInsertPoint(merge_block);
@@ -1306,11 +1299,7 @@ void IRBuilderBPF::CreateUnSetRecursion(const Location &loc)
 
   SetInsertPoint(lookup_failure_block);
 
-  CreateDebugOutput(
-      "Value for per-cpu map key 0 is null. This shouldn't happen.",
-      std::vector<Value *>{},
-      loc);
-
+  CreateRuntimeError(RuntimeErrorId::CPU_COUNT_MISMATCH, loc);
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
@@ -1999,23 +1988,6 @@ void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
   CreateLifetimeEnd(value);
-}
-
-void IRBuilderBPF::CreateDebugOutput(std::string fmt_str,
-                                     const std::vector<Value *> &values,
-                                     const Location &loc)
-{
-  if (!bpftrace_.debug_output_)
-    return;
-  fmt_str = "[BPFTRACE_DEBUG_OUTPUT] " + fmt_str;
-  Constant *const_str = ConstantDataArray::getString(module_.getContext(),
-                                                     fmt_str,
-                                                     true);
-  AllocaInst *fmt = CreateAllocaBPF(
-      ArrayType::get(getInt8Ty(), fmt_str.length() + 1), "fmt_str");
-  CreateMemsetBPF(fmt, getInt8(0), fmt_str.length() + 1);
-  CreateStore(const_str, fmt);
-  CreateTracePrintk(fmt, getInt32(fmt_str.length() + 1), values, loc);
 }
 
 void IRBuilderBPF::CreateTracePrintk(Value *fmt_ptr,

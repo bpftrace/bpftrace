@@ -19,11 +19,6 @@ RUN {{BPFTRACE}} -e 'config = { bad_config=raw } begin {}'
 EXPECT stdin:1:12-26: ERROR: bad_config: not a known configuration option
 WILL_FAIL
 
-NAME env only config
-RUN {{BPFTRACE}} -e 'config = { debug_output=1 } begin {}'
-EXPECT stdin:1:12-26: ERROR: debug_output: can only be set as an environment variable
-WILL_FAIL
-
 NAME maps are printed by default
 PROG begin { @["test"] = count();  }
 EXPECT @[test]: 1

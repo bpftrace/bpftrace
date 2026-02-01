@@ -240,13 +240,6 @@ Default: None
 The path to a BTF file. By default, bpftrace searches several locations to find a BTF file.
 See src/btf.cpp for the details.
 
-==== BPFTRACE_DEBUG_OUTPUT
-
-Default: 0
-
-Outputs bpftrace's runtime debug messages to the trace_pipe. This feature can be turned on by setting
-the value of this environment variable to `1`.
-
 ==== BPFTRACE_KERNEL_BUILD
 
 Default: `/lib/modules/$(uname -r)`
