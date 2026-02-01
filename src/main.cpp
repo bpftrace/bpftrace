@@ -160,7 +160,6 @@ void usage(std::ostream& out)
   out << "    BPFTRACE_CACHE_USER_SYMBOLS       [default: auto] enable user symbol cache" << std::endl;
   out << "    BPFTRACE_COLOR                    [default: auto] enable log output colorization" << std::endl;
   out << "    BPFTRACE_CPP_DEMANGLE             [default: 1] enable C++ symbol demangling" << std::endl;
-  out << "    BPFTRACE_DEBUG_OUTPUT             [default: 0] enable bpftrace's internal debugging outputs" << std::endl;
   out << "    BPFTRACE_KERNEL_BUILD             [default: /lib/modules/$(uname -r)] kernel build directory" << std::endl;
   out << "    BPFTRACE_KERNEL_SOURCE            [default: /lib/modules/$(uname -r)] kernel headers directory" << std::endl;
   out << "    BPFTRACE_LAZY_SYMBOLICATION       [default: 0] symbolicate lazily/on-demand" << std::endl;
@@ -795,12 +794,6 @@ int main(int argc, char* argv[])
   }
   util::UserFunctionInfoImpl user_func_info;
   ast::FunctionInfo func_info_state(*kernel_func_info, user_func_info);
-
-  // Most configuration can be applied during the configuration pass, however
-  // we need to extract a few bits of configuration up front, because they may
-  // affect the actual compilation process.
-  util::get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
-                         [&](bool x) { bpftrace.debug_output_ = x; });
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
   bpftrace.safe_mode_ = args.safe_mode;
