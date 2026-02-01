@@ -242,9 +242,10 @@ static SizedType make_rw_type(size_t num_elements,
   return CreateArray(1, subtype);
 }
 
-SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
-                                     const RequiredResources &resources,
-                                     const Config &bpftrace_config) const
+Result<SizedType> GlobalVars::get_sized_type(
+    const std::string &global_var_name,
+    const RequiredResources &resources,
+    const Config &bpftrace_config) const
 {
   const auto &config = get_config(global_var_name);
 
@@ -315,7 +316,9 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
   }
 
   if (!config.type) {
-    LOG(BUG) << "Unknown global variable " << global_var_name;
+    return make_error<SystemError>("Unknown global variable '" +
+                                       global_var_name + "'",
+                                   ENOENT);
   }
 
   switch (*config.type) {
@@ -589,7 +592,11 @@ Result<> GlobalVars::update_global_vars(
     } else {
       auto ok = update_global_vars_custom_rw_section(section_name,
                                                      global_vars_map,
+<<<<<<< HEAD
                                                      *vars_and_offsets,
+=======
+                                                     vars_and_offsets,
+>>>>>>> 98e484e9 (util: remove all exceptions)
                                                      needed_global_variables,
                                                      max_cpu_id);
       if (!ok) {

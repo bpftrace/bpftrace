@@ -19,18 +19,23 @@ modify checked-in code to follow these guidelines (if/when there is time).
 
 ## Error handling and exceptions
 
-If an error is recoverable (meaning downstream callers of the code should
-be able to selectively handle, ignore, or further propagate), pass the
-error through the return value of the function.
+If an error is recoverable (meaning downstream callers of the code should be
+able to selectively handle, ignore, or further propagate), pass the error
+through the return value of the function.
 
-Appropriate language features for this include:
+The recommended mechanism for this is `Result<...>`, although in some cases
+`std::optional` may also be suitable.
 
-* `std:optional`
-* `int`
-* `bool`
+If an error is **not** recoverable, it is permissible to use `LOG(BUG)`.
+Exceptions should never be used, and all standard library methods that use
+exceptions for error propagation are forbidden. In general, these APIs also
+export variants that do not require the use of exceptions.
 
-If an error is **not** recoverable, prefer throwing `FatalUserException`.
-Exceptions **should not** be used for recoverable errors.
+Assertions may be used in cases where a static invariant check is enforced, but
+only if the condition "should not happen". That is, it should not be possible
+to trigger this assertion failure based on runtime errors. Also note that all
+assertion conditions **must** be side-effect free, as the system may be
+compiled without assertions enabled.
 
 ### Examples
 
@@ -103,8 +108,6 @@ LOG(WARNING) or LOG(ERROR).
 - `WARNING`: log info that might affect bpftrace behavior or output but allows
 the run to continue; like using stderr
 - `ERROR`: log info to indicate that the user did something invalid, which will
-(eventually) cause bpftrace to exit (via `exit(1)`); this should primarily get
-used in main.cpp after catching `FatalUserException` from deeper parts of the
-code base
+(eventually) cause bpftrace to exit (via `exit(1)`)
 - `BUG`: abort and log info to indicate that there is an internal/unexpected
 issue (not caused by invalid user program code or CLI use)
