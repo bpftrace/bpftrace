@@ -66,9 +66,9 @@ std::vector<Field> build_fields(Ts... args)
 }
 
 template <AsyncAction id, typename... Args>
-std::string handler_proxy(AsyncActionTest &test,
-                          std::string &fmt_str,
-                          [[maybe_unused]] Args... args)
+Result<std::string> handler_proxy(AsyncActionTest &test,
+                                  std::string &fmt_str,
+                                  [[maybe_unused]] Args... args)
 {
   FormatString fmt(fmt_str);
 
@@ -81,14 +81,23 @@ std::string handler_proxy(AsyncActionTest &test,
                 "Only support syscall, cat, and printf");
   if (id == AsyncAction::syscall) {
     test.bpftrace->resources.system_args.emplace_back(fmt, fields);
-    test.handlers.syscall(arg_data);
+    auto ok = test.handlers.syscall(arg_data);
+    if (!ok) {
+      return ok.takeError();
+    }
   } else if (id == AsyncAction::cat) {
     test.bpftrace->resources.cat_args.emplace_back(fmt, fields);
-    test.handlers.cat(arg_data);
+    auto ok = test.handlers.cat(arg_data);
+    if (!ok) {
+      return ok.takeError();
+    }
   } else if (id == AsyncAction::printf) {
     test.bpftrace->resources.printf_args.emplace_back(
         fmt, fields, PrintfSeverity::NONE, SourceInfo());
-    test.handlers.printf(arg_data);
+    auto ok = test.handlers.printf(arg_data);
+    if (!ok) {
+      return ok.takeError();
+    }
   }
 
   auto s = test.out.str();
@@ -110,7 +119,7 @@ TEST_F(AsyncActionTest, join)
              OpaqueValue::string("-la", bpftrace->join_argsize_) +
              OpaqueValue::string("/tmp", bpftrace->join_argsize_);
 
-  handlers.join(arg);
+  ASSERT_TRUE(bool(handlers.join(arg)));
   EXPECT_EQ("/bin/ls,-la,/tmp\n", out.str());
 }
 
@@ -123,7 +132,7 @@ TEST_F(AsyncActionTest, time)
   // The first format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 0);
-    handlers.time(OpaqueValue::from(time_event));
+    ASSERT_TRUE(bool(handlers.time(OpaqueValue::from(time_event))));
 
     std::regex pattern(R"(\d{4}-\d{2}-\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -133,7 +142,7 @@ TEST_F(AsyncActionTest, time)
   // The second format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 1);
-    handlers.time(OpaqueValue::from(time_event));
+    ASSERT_TRUE(bool(handlers.time(OpaqueValue::from(time_event))));
 
     std::regex pattern(R"(\d{2}:\d{2}:\d{2})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -143,7 +152,7 @@ TEST_F(AsyncActionTest, time)
   // The third format
   {
     AsyncEvent::Time time_event(static_cast<int>(AsyncAction::time), 2);
-    handlers.time(OpaqueValue::from(time_event));
+    ASSERT_TRUE(bool(handlers.time(OpaqueValue::from(time_event))));
 
     std::regex pattern(R"([A-Za-z]+, \d{2} [A-Za-z]+ \d{4})");
     EXPECT_TRUE(std::regex_match(out.str(), pattern));
@@ -161,12 +170,10 @@ TEST_F(AsyncActionTest, time_invalid_format)
 
   testing::internal::CaptureStderr();
 
-  handlers.time(OpaqueValue::from(time_event));
-  EXPECT_TRUE(out.str().empty());
-
-  std::string log = testing::internal::GetCapturedStderr();
-
-  EXPECT_THAT(log, testing::HasSubstr("strftime returned 0"));
+  auto out = handlers.time(OpaqueValue::from(time_event));
+  ASSERT_FALSE(bool(out));
+  EXPECT_THAT(llvm::toString(out.takeError()),
+              testing::HasSubstr("strftime returned"));
 }
 
 TEST_F(AsyncActionTest, runtime_error)
@@ -243,7 +250,7 @@ TEST_F(AsyncActionTest, runtime_error)
                                          async_id,
                                          tc.return_value);
 
-    handlers.runtime_error(OpaqueValue::from(error_event));
+    ASSERT_TRUE(bool(handlers.runtime_error(OpaqueValue::from(error_event))));
 
     auto s = out.str();
 
@@ -280,14 +287,18 @@ TEST_F(AsyncActionTest, syscall)
 
   bpftrace->safe_mode_ = false;
   for (auto &tc : test_cases) {
-    std::string out;
-    if (tc.args.has_value()) {
-      out = handler_proxy<AsyncAction::syscall>(*this, tc.cmd, tc.args.value());
-    } else {
-      out = handler_proxy<AsyncAction::syscall>(*this, tc.cmd);
-    }
+    auto out = [&]() {
+      if (tc.args.has_value()) {
+        return handler_proxy<AsyncAction::syscall>(*this,
+                                                   tc.cmd,
+                                                   tc.args.value());
+      } else {
+        return handler_proxy<AsyncAction::syscall>(*this, tc.cmd);
+      }
+    }();
 
-    EXPECT_THAT(out, testing::HasSubstr(tc.expected_substring))
+    ASSERT_TRUE(bool(out));
+    EXPECT_THAT(*out, testing::HasSubstr(tc.expected_substring))
         << "Syscall output should contain the result of 'echo test'";
   }
 }
@@ -296,21 +307,13 @@ TEST_F(AsyncActionTest, syscall_safe_mode)
 {
   auto cmd = std::string("echo test");
 
-  std::string out;
-  try {
-    out = handler_proxy<AsyncAction::syscall>(*this, cmd);
-    FAIL() << "Expected syscall_handler to throw an exception in safe mode";
-  } catch (const util::FatalUserException &ex) {
-    EXPECT_THAT(std::string(ex.what()),
-                testing::HasSubstr(
-                    "syscall() not allowed in safe mode. Use '--unsafe'."))
-        << "Exception should indicate syscall is not allowed in safe mode";
-  } catch (...) {
-    FAIL() << "Expected syscall_handler to throw a FatalUserException in safe "
-              "mode";
-  }
-
-  EXPECT_TRUE(out.empty()) << "No output should be generated in safe mode";
+  auto out = handler_proxy<AsyncAction::syscall>(*this, cmd);
+  ASSERT_FALSE(bool(out))
+      << "Expected syscall_handler to return an error in safe mode";
+  EXPECT_THAT(llvm::toString(out.takeError()),
+              testing::HasSubstr(
+                  "syscall() not allowed in safe mode. Use '--unsafe'."))
+      << "Error should indicate syscall is not allowed in safe mode";
 }
 
 TEST_F(AsyncActionTest, cat)
@@ -326,10 +329,11 @@ TEST_F(AsyncActionTest, cat)
   bpftrace->config_->max_cat_bytes = 1024;
   auto cmd = std::string("%s/%s");
   std::string basename = std::string(filename).substr(5);
-  std::string out = handler_proxy<AsyncAction::cat>(
+  auto out = handler_proxy<AsyncAction::cat>(
       *this, cmd, std::string("/tmp"), basename);
+  ASSERT_TRUE(bool(out));
 
-  EXPECT_EQ(test_content, out)
+  EXPECT_EQ(test_content, *out)
       << "cat_handler should output the file content correctly";
 
   std::remove(filename);
@@ -348,15 +352,15 @@ TEST_F(AsyncActionTest, printf)
            'a');
   std::string expected(expected_buffer);
 
-  std::string out = handler_proxy<AsyncAction::printf>(*this,
-                                                       format,
-                                                       std::string("answer"),
-                                                       42ULL,
-                                                       0xDEADBEEFULL,
-                                                       static_cast<uint64_t>(
-                                                           'a'));
+  auto out = handler_proxy<AsyncAction::printf>(*this,
+                                                format,
+                                                std::string("answer"),
+                                                42ULL,
+                                                0xDEADBEEFULL,
+                                                static_cast<uint64_t>('a'));
+  ASSERT_TRUE(bool(out));
 
-  EXPECT_EQ(expected, out)
+  EXPECT_EQ(expected, *out)
       << "printf_handler should format multiple arguments correctly";
 }
 
@@ -388,7 +392,8 @@ TEST_F(AsyncActionTest, print_non_map)
       .print_id = 0,
       .content = {},
     };
-    handlers.print_non_map(OpaqueValue::from(print_event) + tc.content);
+    ASSERT_TRUE(bool(
+        handlers.print_non_map(OpaqueValue::from(print_event) + tc.content)));
 
     EXPECT_EQ(tc.expected_output, out.str());
     out.str("");
