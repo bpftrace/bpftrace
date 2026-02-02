@@ -36,18 +36,18 @@ public:
                 output::Output &output)
       : bpftrace(bpftrace), c_definitions(c_definitions), out(&output) {};
 
-  void exit(const OpaqueValue &data);
-  void join(const OpaqueValue &data);
-  void time(const OpaqueValue &data);
-  void runtime_error(const OpaqueValue &data);
-  void print_non_map(const OpaqueValue &data);
-  void print_map(const OpaqueValue &data);
-  void zero_map(const OpaqueValue &data);
-  void clear_map(const OpaqueValue &data);
-  void skboutput(const OpaqueValue &data);
-  void syscall(const OpaqueValue &data);
-  void cat(const OpaqueValue &data);
-  void printf(const OpaqueValue &data);
+  Result<> exit(const OpaqueValue &data);
+  Result<> join(const OpaqueValue &data);
+  Result<> time(const OpaqueValue &data);
+  Result<> runtime_error(const OpaqueValue &data);
+  Result<> print_non_map(const OpaqueValue &data);
+  Result<> print_map(const OpaqueValue &data);
+  Result<> zero_map(const OpaqueValue &data);
+  Result<> clear_map(const OpaqueValue &data);
+  Result<> skboutput(const OpaqueValue &data);
+  Result<> syscall(const OpaqueValue &data);
+  Result<> cat(const OpaqueValue &data);
+  Result<> printf(const OpaqueValue &data);
 
   void change_output(output::Output &out)
   {
