@@ -18,6 +18,20 @@
 
 namespace bpftrace {
 
+char BpfLoadError::ID;
+
+void BpfLoadError::log(llvm::raw_ostream &OS) const
+{
+  OS << msg_;
+}
+
+char HelperVerifierError::ID;
+
+void HelperVerifierError::log(llvm::raw_ostream &OS) const
+{
+  OS << msg_;
+}
+
 BpfBytecode::BpfBytecode(std::span<uint8_t> elf)
     : BpfBytecode(std::as_bytes(elf))
 {
@@ -125,7 +139,6 @@ uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace, int max_cpu_id)
   return current_value;
 }
 
-namespace {
 // Searches the verifier's log for err_pattern. If a match is found, extracts
 // the name and ID of the problematic helper and throws a HelperVerifierError.
 //
@@ -137,27 +150,28 @@ namespace {
 //     [...]
 //
 //  In the above log, "bpf_d_path" is the helper's name and "147" is the ID.
-void maybe_throw_helper_verifier_error(std::string_view log,
-                                       std::string_view err_pattern,
-                                       const std::string &exception_msg_suffix)
+static Result<> check_helper_verifier_error(
+    const std::string &log,
+    const std::string &err_pattern,
+    const std::string &exception_msg_suffix)
 {
   auto err_pos = log.find(err_pattern);
   if (err_pos == std::string_view::npos)
-    return;
+    return OK();
 
   std::string_view call_pattern = " call ";
   auto call_pos = log.rfind(call_pattern, err_pos);
   if (call_pos == std::string_view::npos)
-    return;
+    return OK();
 
   auto helper_begin = call_pos + call_pattern.size();
   auto hash_pos = log.find("#", helper_begin);
   if (hash_pos == std::string_view::npos)
-    return;
+    return OK();
 
   auto eol = log.find("\n", hash_pos + 1);
   if (eol == std::string_view::npos)
-    return;
+    return OK();
 
   auto helper_name = std::string{ log.substr(helper_begin,
                                              hash_pos - helper_begin) };
@@ -166,7 +180,8 @@ void maybe_throw_helper_verifier_error(std::string_view log,
 
   std::string msg = std::string{ "helper " } + helper_name +
                     exception_msg_suffix;
-  throw HelperVerifierError(msg, static_cast<bpf_func_id>(func_id));
+  return make_error<HelperVerifierError>(msg,
+                                         static_cast<bpf_func_id>(func_id));
 }
 
 // The log should end with line:
@@ -174,17 +189,16 @@ void maybe_throw_helper_verifier_error(std::string_view log,
 // so we try to find it. If it's not there, it's very likely that the log has
 // been trimmed due to insufficient log limit. This function checks if that
 // happened.
-bool is_log_trimmed(std::string_view log)
+static bool is_log_trimmed(std::string_view log)
 {
   static const std::vector<std::string> tokens = { "processed", "insns" };
   return !util::wildcard_match(log, tokens, true, true);
 }
-} // namespace
 
-void BpfBytecode::load_progs(const RequiredResources &resources,
-                             const BTF &btf,
-                             BPFfeature &feature,
-                             const Config &config)
+Result<> BpfBytecode::load_progs(const RequiredResources &resources,
+                                 const BTF &btf,
+                                 BPFfeature &feature,
+                                 const Config &config)
 {
   std::unordered_map<std::string_view, std::vector<char>> log_bufs;
   for (auto &[name, prog] : programs_) {
@@ -213,11 +227,10 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
   }
 
   if (res == 0)
-    return;
+    return OK();
 
   // If loading of bpf_object failed, we try to give user some hints of what
   // could've gone wrong.
-  std::ostringstream err;
   for (const auto &[name, prog] : programs_) {
     if (res == 0 || prog.fd() >= 0)
       continue;
@@ -226,21 +239,28 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
     // caused the failure. It can mean that libbpf didn't even try to load it
     // b/c some other program failed to load. So, we only log program load
     // failures when the verifier log is non-empty.
-    std::string_view log(log_bufs[name].data());
+    std::string log(log_bufs[name].data());
     if (!log.empty()) {
       // These should be the only errors that may occur here which do not imply
       // a bpftrace bug so throw immediately with a proper error message.
-      maybe_throw_helper_verifier_error(log,
-                                        "helper call is not allowed in probe",
-                                        " not allowed in probe");
-      maybe_throw_helper_verifier_error(
-          log,
-          "program of this type cannot use helper",
-          " not allowed in probe");
-      maybe_throw_helper_verifier_error(
+      auto ok = check_helper_verifier_error(
+          log, "helper call is not allowed in probe", " not allowed in probe");
+      if (!ok) {
+        return ok.takeError();
+      }
+      ok = check_helper_verifier_error(log,
+                                       "program of this type cannot use helper",
+                                       " not allowed in probe");
+      if (!ok) {
+        return ok.takeError();
+      }
+      ok = check_helper_verifier_error(
           log,
           "pointer arithmetic on ptr_or_null_ prohibited, null-check it first",
           ": result needs to be null-checked before accessing fields");
+      if (!ok) {
+        return ok.takeError();
+      }
 
       std::stringstream errmsg;
       errmsg << "Error loading BPF program for " << name << ".";
@@ -258,22 +278,17 @@ void BpfBytecode::load_progs(const RequiredResources &resources,
       } else {
         errmsg << " Use -v for full kernel error log.";
       }
-      LOG(ERROR, err) << errmsg.str();
+      return make_error<BpfLoadError>(errmsg.str());
     }
   }
 
-  if (err.str().empty()) {
-    // The problem does not seem to be in program loading. It may be something
-    // else (e.g. maps failing to load) but we're not able to figure out what
-    // it is so advise user to check libbf output which should contain more
-    // information.
-    LOG(ERROR, err)
-        << "Unknown BPF object load failure. Try using the \"-d libbpf\" "
-           "option to see the full loading log.";
-  }
-
-  std::cerr << err.str();
-  throw util::FatalUserException("Loading BPF object(s) failed.");
+  // The problem does not seem to be in program loading. It may be something
+  // else (e.g. maps failing to load) but we're not able to figure out what
+  // it is so advise user to check libbf output which should contain more
+  // information.
+  return make_error<BpfLoadError>(
+      "Unknown BPF object load failure. Try using the \"-d libbpf\" "
+      "option to see the full loading log.");
 }
 
 void BpfBytecode::prepare_progs(const std::vector<Probe> &probes,
