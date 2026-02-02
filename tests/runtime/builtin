@@ -172,7 +172,7 @@ EXPECT hello
 
 NAME cat "no such file"
 PROG i:ms:1 { cat("/does/not/exist/file"); exit(); }
-EXPECT ERROR: failed to open file '/does/not/exist/file': No such file or directory
+EXPECT ERROR: failed to open file '/does/not/exist/file' (No such file or directory)
 
 NAME sizeof
 PROG struct Foo { int x; char c; } begin { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x));  }

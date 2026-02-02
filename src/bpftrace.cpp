@@ -206,7 +206,7 @@ struct PerfEventContext {
   output::Output &output;
 };
 
-void event_printer(void *cb_cookie, void *raw_data, int size)
+static Result<> event_printer(void *cb_cookie, void *raw_data, int size)
 {
   auto *ctx = static_cast<PerfEventContext *>(cb_cookie);
 
@@ -220,71 +220,66 @@ void event_printer(void *cb_cookie, void *raw_data, int size)
   // Ignore the remaining events if event_printer is called during
   // finalization stage (exit() builtin has been called)
   if (ctx->bpftrace.finalize_)
-    return;
+    return OK();
 
   if (bpftrace::BPFtrace::exitsig_recv) {
     ctx->bpftrace.request_finalize();
-    return;
+    return OK();
   }
 
   // async actions
   auto printf_id = async_action::AsyncAction(data.bitcast<uint64_t>());
   if (printf_id == async_action::AsyncAction::exit) {
-    ctx->handlers.exit(data);
-    return;
+    return ctx->handlers.exit(data);
   } else if (printf_id == async_action::AsyncAction::print) {
-    ctx->handlers.print_map(data);
-    return;
+    return ctx->handlers.print_map(data);
   } else if (printf_id == async_action::AsyncAction::print_non_map) {
-    ctx->handlers.print_non_map(data);
-    return;
+    return ctx->handlers.print_non_map(data);
   } else if (printf_id == async_action::AsyncAction::clear) {
-    ctx->handlers.clear_map(data);
-    return;
+    return ctx->handlers.clear_map(data);
   } else if (printf_id == async_action::AsyncAction::zero) {
-    ctx->handlers.zero_map(data);
-    return;
+    return ctx->handlers.zero_map(data);
   } else if (printf_id == async_action::AsyncAction::time) {
-    ctx->handlers.time(data);
-    return;
+    return ctx->handlers.time(data);
   } else if (printf_id == async_action::AsyncAction::join) {
-    ctx->handlers.join(data);
-    return;
+    return ctx->handlers.join(data);
   } else if (printf_id == async_action::AsyncAction::runtime_error) {
-    ctx->handlers.runtime_error(data);
-    return;
+    return ctx->handlers.runtime_error(data);
   } else if (printf_id == async_action::AsyncAction::skboutput) {
-    ctx->handlers.skboutput(data);
-    return;
+    return ctx->handlers.skboutput(data);
   } else if (printf_id >= async_action::AsyncAction::syscall &&
              printf_id <= async_action::AsyncAction::syscall_end) {
-    ctx->handlers.syscall(data);
-    return;
+    return ctx->handlers.syscall(data);
   } else if (printf_id >= async_action::AsyncAction::cat &&
              printf_id <= async_action::AsyncAction::cat_end) {
-    ctx->handlers.cat(data);
-    return;
+    return ctx->handlers.cat(data);
   } else if (printf_id >= async_action::AsyncAction::printf &&
              printf_id <= async_action::AsyncAction::printf_end) {
-    ctx->handlers.printf(data);
-    return;
+    return ctx->handlers.printf(data);
   } else {
     LOG(BUG) << "Unknown printf_id: " << static_cast<int64_t>(printf_id);
+    return OK(); // Unreachable.
   }
 }
 
-int ringbuf_printer(void *cb_cookie, void *data, size_t size)
+static int ringbuf_printer(void *cb_cookie, void *data, size_t size)
 {
-  event_printer(cb_cookie, data, size);
+  auto ok = event_printer(cb_cookie, data, size);
+  if (!ok) {
+    LOG(ERROR) << ok.takeError();
+  }
   return 0;
 }
 
-void skb_output_printer(void *ctx,
-                        [[maybe_unused]] int cpu,
-                        void *data,
-                        __u32 size)
+static void skb_output_printer(void *ctx,
+                               [[maybe_unused]] int cpu,
+                               void *data,
+                               __u32 size)
 {
-  event_printer(ctx, data, size);
+  auto ok = event_printer(ctx, data, size);
+  if (!ok) {
+    LOG(ERROR) << ok.takeError();
+  }
 }
 
 void skb_output_lost(void *ctx, [[maybe_unused]] int cpu, __u64 cnt)
