@@ -58,7 +58,7 @@
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
 #include "util/cpus.h"
-#include "util/exceptions.h"
+#include "util/result.h"
 
 namespace bpftrace::ast {
 
@@ -67,39 +67,37 @@ using namespace llvm;
 static constexpr char LLVMTargetTriple[] = "bpf";
 static constexpr auto LICENSE = "LICENSE";
 
-static auto getTargetMachine()
+static Result<TargetMachine *> getTargetMachine()
 {
-  static auto *target = []() {
-    std::string error_str;
-    const auto *target = llvm::TargetRegistry::lookupTarget(
+  std::string error_str;
+  const auto *target = llvm::TargetRegistry::lookupTarget(
 #if LLVM_VERSION_MAJOR >= 22
-        Triple(LLVMTargetTriple),
+      Triple(LLVMTargetTriple),
 #else
-        LLVMTargetTriple,
+      LLVMTargetTriple,
 #endif
-        error_str);
-    if (!target) {
-      throw util::FatalUserException(
-          "Could not find bpf llvm target, does your llvm support it?");
-    }
-    auto *machine = target->createTargetMachine(
+      error_str);
+  if (!target) {
+    return make_error<SystemError>("Could not find bpf llvm target: " +
+                                       error_str,
+                                   ENOENT);
+  }
+  auto *machine = target->createTargetMachine(
 #if LLVM_VERSION_MAJOR >= 21
-        Triple(LLVMTargetTriple),
+      Triple(LLVMTargetTriple),
 #else
-        LLVMTargetTriple,
+      LLVMTargetTriple,
 #endif
-        "generic",
-        "",
-        TargetOptions(),
-        std::optional<Reloc::Model>());
+      "generic",
+      "",
+      TargetOptions(),
+      std::optional<Reloc::Model>());
 #if LLVM_VERSION_MAJOR >= 18
-    machine->setOptLevel(llvm::CodeGenOptLevel::Aggressive);
+  machine->setOptLevel(llvm::CodeGenOptLevel::Aggressive);
 #else
-    machine->setOptLevel(llvm::CodeGenOpt::Aggressive);
+  machine->setOptLevel(llvm::CodeGenOpt::Aggressive);
 #endif
-    return machine;
-  }();
-  return target;
+  return machine;
 }
 
 static bool shouldForceInitPidNs(const ExpressionList &args)
@@ -202,7 +200,8 @@ private:
 
 class CodegenLLVM : public Visitor<CodegenLLVM, ScopedExpr> {
 public:
-  explicit CodegenLLVM(ASTContext &ast,
+  explicit CodegenLLVM(TargetMachine *target,
+                       ASTContext &ast,
                        BPFtrace &bpftrace,
                        CDefinitions &c_definitions,
                        NamedParamDefaults &named_param_defaults,
@@ -452,7 +451,8 @@ private:
 
 } // namespace
 
-CodegenLLVM::CodegenLLVM(ASTContext &ast,
+CodegenLLVM::CodegenLLVM(TargetMachine *target,
+                         ASTContext &ast,
                          BPFtrace &bpftrace,
                          CDefinitions &c_definitions,
                          NamedParamDefaults &named_param_defaults,
@@ -474,7 +474,7 @@ CodegenLLVM::CodegenLLVM(ASTContext &ast,
 #else
   module_->setTargetTriple(LLVMTargetTriple);
 #endif
-  module_->setDataLayout(getTargetMachine()->createDataLayout());
+  module_->setDataLayout(target->createDataLayout());
 
   debug_.createCompileUnit(dwarf::DW_LANG_C,
                            debug_.file,
@@ -1463,10 +1463,13 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                       << current_attach_point_->target << ":" << name;
     return ScopedExpr(b_.getInt64(sym.address));
   } else if (call.func == "cgroupid") {
-    uint64_t cgroupid;
     auto path = call.vargs.at(0).as<String>()->value;
-    cgroupid = util::resolve_cgroupid(path);
-    return ScopedExpr(b_.getInt64(cgroupid));
+    auto cgroupid = util::resolve_cgroupid(path);
+    if (!cgroupid) {
+      call.addError() << cgroupid.takeError();
+      return ScopedExpr(b_.getInt64(0));
+    }
+    return ScopedExpr(b_.getInt64(*cgroupid));
   } else if (call.func == "join") {
     auto found_id = bpftrace_.resources.join_args_id_map.find(&call);
     if (found_id == bpftrace_.resources.join_args_id_map.end()) {
@@ -4754,22 +4757,29 @@ Pass CreateLLVMInitPass()
 
 Pass CreateCompilePass()
 {
-  return Pass::create("compile",
-                      [](ASTContext &ast,
-                         [[maybe_unused]] ControlFlowChecked &control_flow,
-                         BPFtrace &bpftrace,
-                         CDefinitions &c_definitions,
-                         NamedParamDefaults &named_param_defaults,
-                         CompileContext &ctx,
-                         ExpansionResult &expansions) mutable {
-                        CodegenLLVM llvm(ast,
-                                         bpftrace,
-                                         c_definitions,
-                                         named_param_defaults,
-                                         *ctx.context,
-                                         expansions);
-                        return CompiledModule(llvm.compile());
-                      });
+  return Pass::create(
+      "compile",
+      [](ASTContext &ast,
+         [[maybe_unused]] ControlFlowChecked &control_flow,
+         BPFtrace &bpftrace,
+         CDefinitions &c_definitions,
+         NamedParamDefaults &named_param_defaults,
+         CompileContext &ctx,
+         ExpansionResult &expansions) mutable -> Result<CompiledModule> {
+        auto target = getTargetMachine();
+        if (!target) {
+          return target.takeError();
+        }
+
+        CodegenLLVM llvm(*target,
+                         ast,
+                         bpftrace,
+                         c_definitions,
+                         named_param_defaults,
+                         *ctx.context,
+                         expansions);
+        return CompiledModule(llvm.compile());
+      });
 }
 
 Pass CreateLinkBitcodePass()
@@ -4835,14 +4845,19 @@ Pass CreateVerifyPass()
 
 Pass CreateOptimizePass()
 {
-  return Pass::create("optimize", [](CompiledModule &cm) {
+  return Pass::create("optimize", [](CompiledModule &cm) -> Result<> {
     PipelineTuningOptions pto;
     pto.LoopUnrolling = false;
     pto.LoopInterleaving = false;
     pto.LoopVectorization = false;
     pto.SLPVectorization = false;
 
-    llvm::PassBuilder pb(getTargetMachine(), pto);
+    auto target = getTargetMachine();
+    if (!target) {
+      return target.takeError();
+    }
+
+    llvm::PassBuilder pb(*target, pto);
 
     // ModuleAnalysisManager must be destroyed first.
     llvm::LoopAnalysisManager lam;
@@ -4862,6 +4877,7 @@ Pass CreateOptimizePass()
 
     mpm.addPass(llvm::StripDeadDebugInfoPass());
     mpm.run(*cm.module, mam);
+    return OK();
   });
 }
 
@@ -4877,9 +4893,14 @@ Pass CreateDumpIRPass(std::ostream &out)
 
 Pass CreateObjectPass()
 {
-  return Pass::create("object", [](CompiledModule &cm) {
+  return Pass::create("object", [](CompiledModule &cm) -> Result<BpfObject> {
     SmallVector<char, 0> output;
     raw_svector_ostream os(output);
+
+    auto target = getTargetMachine();
+    if (!target) {
+      return target.takeError();
+    }
 
     legacy::PassManager PM;
 #if LLVM_VERSION_MAJOR >= 18
@@ -4887,7 +4908,7 @@ Pass CreateObjectPass()
 #else
     auto type = llvm::CGFT_ObjectFile;
 #endif
-    if (getTargetMachine()->addPassesToEmitFile(PM, os, nullptr, type))
+    if ((*target)->addPassesToEmitFile(PM, os, nullptr, type))
       LOG(BUG) << "Cannot emit a file of this type";
     PM.run(*cm.module);
     return BpfObject(output);

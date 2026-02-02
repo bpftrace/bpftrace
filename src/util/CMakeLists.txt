@@ -5,7 +5,6 @@ add_library(util STATIC
   cgroup.cpp
   cpus.cpp
   elf_parser.cpp
-  env.cpp
   int_parser.cpp
   kernel.cpp
   math.cpp

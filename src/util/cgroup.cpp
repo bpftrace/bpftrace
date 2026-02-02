@@ -23,7 +23,6 @@
 #include <sys/stat.h>
 
 #include "util/cgroup.h"
-#include "util/exceptions.h"
 #include "util/wildcard.h"
 
 namespace bpftrace::util {
@@ -231,16 +230,15 @@ ACTH_ASSERT_SAME_MEMBER(cgid_file_handle,
                         handle_type);
 ACTH_ASSERT_SAME_OFFSET(cgid_file_handle, cgid, file_handle, f_handle);
 
-uint64_t resolve_cgroupid(const std::string &path)
+Result<uint64_t> resolve_cgroupid(const std::string &path)
 {
   cgid_file_handle cfh;
   int mount_id;
   int err = name_to_handle_at(
       AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
   if (err < 0) {
-    char *e = std::strerror(errno);
-    throw util::FatalUserException("Failed to get `cgroupid` for path: \"" +
-                                   path + "\": " + std::string(e ? e : ""));
+    return make_error<SystemError>("Failed to get cgroupid for '" + path + "'",
+                                   err);
   }
 
   return cfh.cgid;
