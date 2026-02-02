@@ -144,7 +144,8 @@ const Field &Struct::GetField(const std::string &name) const
     if (field.name == name)
       return field;
   }
-  throw util::FatalUserException("struct has no field named " + name);
+  LOG(BUG) << "struct has no field named " << name;
+  __builtin_unreachable();
 }
 
 size_t Struct::GetFieldIdx(const std::string &name) const
@@ -153,7 +154,8 @@ size_t Struct::GetFieldIdx(const std::string &name) const
     if (fields.at(i).name == name)
       return i;
   }
-  throw util::FatalUserException("struct has no field named " + name);
+  LOG(BUG) << "struct has no field named " << name;
+  __builtin_unreachable();
 }
 
 void Struct::AddField(const std::string &field_name,
@@ -184,9 +186,10 @@ std::weak_ptr<Struct> StructManager::Add(const std::string &name,
 {
   auto [it, inserted] = struct_map_.insert(
       { name, std::make_shared<Struct>(size, allow_override) });
-  if (!inserted)
-    throw util::FatalUserException("Type redefinition: type with name \'" +
-                                   name + "\' already exists");
+  if (!inserted) {
+    LOG(BUG) << "Type redefinition: type with name \'" << name
+             << "\' already exists";
+  }
   return it->second;
 }
 
