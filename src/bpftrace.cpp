@@ -1,3 +1,4 @@
+#include "bpfbytecode.h"
 #include "types_format.h"
 #include <arpa/inet.h>
 #include <bcc/bcc_elf.h>
@@ -439,40 +440,35 @@ int BPFtrace::run(output::Output &out,
 
   set_rlimit_nofile(resources.num_probes(), resources.maps_info.size());
 
-  try {
-    bytecode_.load_progs(resources, *btf_, *feature_, *config_);
-  } catch (const HelperVerifierError &e) {
-    // To provide the most useful diagnostics, provide the error for every
-    // callsite. After all, they all must be fixed.
-    bool found = false;
-    for (const auto &info : helper_use_loc_[e.func_id]) {
-      bool first = true;
-      for (const auto &loc : info.locations) {
-        if (first) {
-          LOG(ERROR,
-              std::string(loc.source_location),
-              std::vector(loc.source_context))
-              << e.what();
-          first = false;
-        } else {
-          LOG(ERROR,
-              std::string(loc.source_location),
-              std::vector(loc.source_context))
-              << "expanded from";
+  auto ok = bytecode_.load_progs(resources, *btf_, *feature_, *config_);
+  if (!ok) {
+    auto errs = handleErrors(std::move(ok), [&](const HelperVerifierError &e) {
+      // To provide the most useful diagnostics, provide the error for every
+      // callsite. After all, they all must be fixed.
+      for (const auto &info : helper_use_loc_[e.func_id()]) {
+        bool first = true;
+        for (const auto &loc : info.locations) {
+          if (first) {
+            LOG(ERROR,
+                std::string(loc.source_location),
+                std::vector(loc.source_context))
+                << e.message();
+            first = false;
+          } else {
+            LOG(ERROR,
+                std::string(loc.source_location),
+                std::vector(loc.source_context))
+                << "expanded from";
+          }
         }
       }
-
-      found = true;
-    }
-    if (!found) {
+    });
+    if (!errs) {
       // An error occurred, but we don't have location for this helper. It may
       // be a C file or elsewhere, and we need to plumb this through somehow.
       // At least inform the user what has gone wrong in this case.
-      LOG(ERROR) << e.what();
+      LOG(ERROR) << errs.takeError();
     }
-    return -1;
-  } catch (const std::runtime_error &e) {
-    LOG(ERROR) << e.what();
     return -1;
   }
 
