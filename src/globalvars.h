@@ -94,6 +94,18 @@ private:
   std::vector<std::string> expected_;
 };
 
+class GlobalVarError : public ErrorInfo<GlobalVarError> {
+public:
+  GlobalVarError(std::string err, std::optional<std::string> section = std::nullopt, std::optional<std::string> variable = std::nullopt) : err_(std::move(err)), section_(std::move(section)), variable_(std::move(variable)) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override;
+
+private:
+  std::string err_;
+  std::optional<std::string> section_;
+  std::optional<std::string> variable_;
+};
+
 using GlobalVarValue = std::variant<std::string, int64_t, uint64_t, bool>;
 
 using GlobalVarMap = std::unordered_map<std::string, GlobalVarValue>;
@@ -202,7 +214,7 @@ public:
     return added_global_vars_;
   }
 
-  void update_global_vars(
+  Result<> update_global_vars(
       const struct bpf_object *bpf_object,
       const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
       GlobalVarMap &&global_var_vals,
@@ -211,9 +223,9 @@ public:
 
   std::unordered_set<std::string> get_global_vars_for_section(
       std::string_view target_section);
-  uint64_t *get_global_var(
+  Result<uint64_t *> get_global_var(
       const struct bpf_object *bpf_object,
-      std::string_view target_section,
+      const std::string & target_section,
       const std::unordered_map<std::string, struct bpf_map *>
           &section_name_to_global_vars_map);
 
@@ -229,7 +241,7 @@ private:
     archive(added_global_vars_, named_param_defaults_);
   }
 
-  void verify_maps_found(const std::unordered_map<std::string, struct bpf_map *>
+  Result<> verify_maps_found(const std::unordered_map<std::string, struct bpf_map *>
                              &section_name_to_global_vars_map);
 };
 
