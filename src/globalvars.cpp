@@ -28,6 +28,18 @@ void UnknownParamError::log(llvm::raw_ostream &OS) const
   OS << err();
 }
 
+char GlobalVarError::ID;
+void GlobalVarError::log(llvm::raw_ostream &OS) const
+{
+  OS << err_;
+  if (section_) {
+    OS << " in section " << *section_;
+  }
+  if (variable_) {
+    OS << " for variable " << *variable_;
+  }
+}
+
 static GlobalVarConfig::Type get_global_var_type(const GlobalVarValue &value)
 {
   if (std::holds_alternative<int64_t>(value)) {
@@ -43,28 +55,27 @@ static GlobalVarConfig::Type get_global_var_type(const GlobalVarValue &value)
   }
 }
 
-static std::map<std::string, int> find_btf_var_offsets(
+static Result<std::map<std::string, int>> find_btf_var_offsets(
     const struct bpf_object *bpf_object,
-    std::string_view section_name,
+    const std::string &section_name,
     const std::unordered_set<std::string> &needed_global_vars)
 {
   struct btf *self_btf = bpf_object__btf(bpf_object);
-
   if (!self_btf) {
-    LOG(BUG) << "Failed to get BTF from BPF object";
+    return make_error<SystemError>("Failed to get BTF from BPF object", ENOENT);
   }
 
   __s32 section_id = btf__find_by_name(self_btf,
                                        std::string(section_name).c_str());
   if (section_id < 0) {
-    LOG(BUG) << "Failed to find section " << section_name
-             << " to update global vars";
+    return make_error<SystemError>("Failed to find " + section_name, ENOENT);
   }
 
   const struct btf_type *section_type = btf__type_by_id(
       self_btf, static_cast<__u32>(section_id));
   if (!section_type) {
-    LOG(BUG) << "Failed to get BTF type for section " << section_name;
+    return make_error<SystemError>("Failed to get BTF type for " + section_name,
+                                   ENOENT);
   }
 
   // First locate the offsets of each global variable in the section with btf
@@ -98,15 +109,15 @@ static std::map<std::string, int> find_btf_var_offsets(
 
   for (const auto &[global_var, offset] : vars_and_offsets) {
     if (offset < 0) {
-      LOG(BUG) << "Global variable " << global_var
-               << " has not been added to the BPF code "
-                  "(codegen_llvm)";
+      return make_error<GlobalVarError>("Not found in BPF",
+                                        section_name,
+                                        global_var);
     }
   }
   return vars_and_offsets;
 }
 
-void update_global_vars_rodata(
+Result<> update_global_vars_rodata(
     struct bpf_map *global_vars_map,
     const std::unordered_map<std::string, GlobalVarConfig> &added_global_vars,
     const std::map<std::string, int> &vars_and_offsets,
@@ -117,7 +128,8 @@ void update_global_vars_rodata(
       bpf_map__initial_value(global_vars_map, &v_size));
 
   if (!global_vars_buf) {
-    LOG(BUG) << "Failed to get array buf for global variable map";
+    return make_error<SystemError>(
+        "Failed to get array buf for global variable map", ENOENT);
   }
 
   // Update the values for the global vars (using the above offsets)
@@ -153,9 +165,11 @@ void update_global_vars_rodata(
       }
     }
   }
+
+  return OK();
 }
 
-void update_global_vars_custom_rw_section(
+Result<> update_global_vars_custom_rw_section(
     const std::string &section_name,
     struct bpf_map *global_vars_map,
     const std::map<std::string, int> &vars_and_offsets,
@@ -163,38 +177,47 @@ void update_global_vars_custom_rw_section(
     int max_cpu_id)
 {
   if (needed_global_vars.size() > 1) {
-    LOG(BUG) << "Multiple read-write global variables are in same section "
-             << section_name;
+    return make_error<SystemError>(
+        "Multiple read-write global variables are in same section " +
+            section_name,
+        EINVAL);
   }
   auto global_var = *needed_global_vars.begin();
 
   size_t actual_size;
   auto *buf = bpf_map__initial_value(global_vars_map, &actual_size);
   if (!buf) {
-    LOG(BUG) << "Failed to get size for section " << section_name
-             << " before resizing";
+    return make_error<SystemError>("Failed to get size for section " +
+                                       section_name + " before resizing",
+                                   ENOENT);
   }
   if (actual_size == 0) {
-    LOG(BUG) << "Section " << section_name << " has size of 0 ";
+    return make_error<SystemError>("Section " + section_name +
+                                       " has size of 0 ",
+                                   EINVAL);
   }
 
   auto desired_size = (max_cpu_id + 1) * actual_size;
   auto err = bpf_map__set_value_size(global_vars_map, desired_size);
   if (err != 0) {
-    throw util::FatalUserException("Failed to set size to " +
-                                   std::to_string(desired_size) +
-                                   " for section " + section_name);
+    return make_error<SystemError>("Failed to set size to " +
+                                       std::to_string(desired_size) +
+                                       " for section " + section_name,
+                                   err);
   }
 
   buf = bpf_map__initial_value(global_vars_map, &actual_size);
   if (!buf) {
-    LOG(BUG) << "Failed to get size for section " << section_name
-             << " after resizing";
+    return make_error<SystemError>("Failed to get size for section " +
+                                       section_name + " after resizing",
+                                   errno);
   }
   if (actual_size != desired_size) {
-    throw util::FatalUserException(
-        "Failed to set size from " + std::to_string(actual_size) + " to " +
-        std::to_string(desired_size) + " for section " + section_name);
+    return make_error<SystemError>("Failed to set size from " +
+                                       std::to_string(actual_size) + " to " +
+                                       std::to_string(desired_size) +
+                                       " for section " + section_name,
+                                   EINVAL);
   }
 
   // No need to memset to zero as we memset on each usage
@@ -202,9 +225,13 @@ void update_global_vars_custom_rw_section(
   // Verify we can still find variable name via BTF and it hasn't been cleared
   // after size changes
   if (vars_and_offsets.at(global_var) != 0) {
-    LOG(BUG) << "Read-write global variable " << global_var
-             << " must be at offset 0 in section " << section_name;
+    return make_error<SystemError>("Read-write global variable " + global_var +
+                                       " must be at offset 0 in section " +
+                                       section_name,
+                                   EINVAL);
   }
+
+  return OK();
 }
 
 static SizedType make_rw_type(size_t num_elements,
@@ -368,16 +395,16 @@ const GlobalVarConfig &GlobalVars::get_config(const std::string &name) const
   return it->second;
 }
 
-void GlobalVars::verify_maps_found(
+Result<> GlobalVars::verify_maps_found(
     const std::unordered_map<std::string, struct bpf_map *>
         &section_name_to_global_vars_map)
 {
   for (const auto &[name, config] : added_global_vars_) {
     if (!section_name_to_global_vars_map.contains(config.section)) {
-      LOG(BUG) << "No map found in " << config.section
-               << " which is needed to set global variable " << name;
+      return make_error<GlobalVarError>("No map found", config.section, name);
     }
   }
+  return OK();
 }
 
 Result<GlobalVarMap> GlobalVars::get_named_param_vals(
@@ -523,7 +550,7 @@ std::unordered_set<std::string> GlobalVars::get_global_vars_for_section(
   return ret;
 }
 
-void GlobalVars::update_global_vars(
+Result<> GlobalVars::update_global_vars(
     const struct bpf_object *bpf_object,
     const std::unordered_map<std::string, struct bpf_map *>
         &section_name_to_global_vars_map,
@@ -534,7 +561,10 @@ void GlobalVars::update_global_vars(
   global_var_vals[std::string(globalvars::NUM_CPUS)] = ncpus;
   global_var_vals[std::string(globalvars::MAX_CPU_ID)] = max_cpu_id;
 
-  verify_maps_found(section_name_to_global_vars_map);
+  auto ok = verify_maps_found(section_name_to_global_vars_map);
+  if (!ok) {
+    return ok.takeError();
+  }
   for (const auto &[section_name, global_vars_map] :
        section_name_to_global_vars_map) {
     const auto needed_global_variables = get_global_vars_for_section(
@@ -542,30 +572,44 @@ void GlobalVars::update_global_vars(
     if (needed_global_variables.empty()) {
       continue;
     }
-    std::map<std::string, int> vars_and_offsets = find_btf_var_offsets(
-        bpf_object, section_name, needed_global_variables);
+    auto vars_and_offsets = find_btf_var_offsets(bpf_object,
+                                                 section_name,
+                                                 needed_global_variables);
+    if (!vars_and_offsets) {
+      return vars_and_offsets.takeError();
+    }
     if (section_name == RO_SECTION_NAME) {
-      update_global_vars_rodata(global_vars_map,
-                                added_global_vars_,
-                                vars_and_offsets,
-                                global_var_vals);
+      auto ok = update_global_vars_rodata(global_vars_map,
+                                          added_global_vars_,
+                                          *vars_and_offsets,
+                                          global_var_vals);
+      if (!ok) {
+        return ok.takeError();
+      }
     } else {
-      update_global_vars_custom_rw_section(section_name,
-                                           global_vars_map,
-                                           vars_and_offsets,
-                                           needed_global_variables,
-                                           max_cpu_id);
+      auto ok = update_global_vars_custom_rw_section(section_name,
+                                                     global_vars_map,
+                                                     *vars_and_offsets,
+                                                     needed_global_variables,
+                                                     max_cpu_id);
+      if (!ok) {
+        return ok.takeError();
+      }
     }
   }
+  return OK();
 }
 
-uint64_t *GlobalVars::get_global_var(
+Result<uint64_t *> GlobalVars::get_global_var(
     const struct bpf_object *bpf_object,
-    std::string_view target_section,
+    const std::string &target_section,
     const std::unordered_map<std::string, struct bpf_map *>
         &section_name_to_global_vars_map)
 {
-  verify_maps_found(section_name_to_global_vars_map);
+  auto ok = verify_maps_found(section_name_to_global_vars_map);
+  if (!ok) {
+    return ok.takeError();
+  }
 
   auto it = std::ranges::find_if(section_name_to_global_vars_map,
                                  [target_section](const auto &pair) {
@@ -573,7 +617,7 @@ uint64_t *GlobalVars::get_global_var(
                                  });
 
   if (it == section_name_to_global_vars_map.end()) {
-    LOG(BUG) << target_section << " not found";
+    return make_error<SystemError>(target_section + " not found", ENOENT);
   }
 
   const auto &[section_name, global_vars_map] = *it;
@@ -582,28 +626,35 @@ uint64_t *GlobalVars::get_global_var(
       section_name);
 
   if (needed_global_variables.empty()) {
-    LOG(BUG) << "No global variables found in section " << section_name;
+    return make_error<SystemError>("No global variables found in section " +
+                                       section_name,
+                                   ENOENT);
   } else if (needed_global_variables.size() > 1) {
-    LOG(BUG) << "Multiple read-write global variables are in same section "
-             << section_name;
+    return make_error<SystemError>(
+        "Multiple read-write global variables are in same section " +
+            section_name,
+        EINVAL);
   }
 
   auto global_var = *needed_global_variables.begin();
   auto vars_and_offsets = find_btf_var_offsets(bpf_object,
                                                section_name,
                                                needed_global_variables);
-
-  if (vars_and_offsets.at(global_var) != 0) {
-    LOG(BUG) << "Read-write global variable " << global_var
-             << " must be at offset 0 in section " << section_name;
+  if (!vars_and_offsets) {
+    return vars_and_offsets.takeError();
+  }
+  if (vars_and_offsets->at(global_var) != 0) {
+    return make_error<GlobalVarError>("Not at offset zero",
+                                      section_name,
+                                      global_var);
   }
 
   size_t v_size;
   auto *target_var = reinterpret_cast<uint64_t *>(
       bpf_map__initial_value(global_vars_map, &v_size));
-
   if (!target_var) {
-    LOG(BUG) << "Failed to get array buf for global variable map";
+    return make_error<SystemError>(
+        "Failed to get array buf for global variable map");
   }
 
   return target_var;
