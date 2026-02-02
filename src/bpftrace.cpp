@@ -188,8 +188,11 @@ void BPFtrace::request_finalize()
 {
   finalize_ = true;
   attached_probes_.clear();
-  if (child_)
-    child_->terminate();
+  if (child_) {
+    auto result = child_->terminate();
+    if (!result)
+      consumeError(result.takeError());
+  }
 }
 
 // PerfEventContext is our callback wrapper.
@@ -671,10 +674,9 @@ int BPFtrace::run(output::Output &out,
     }
 
     if (child_ && has_usdt_) {
-      try {
-        child_->run(true);
-      } catch (const std::exception &e) {
-        LOG(ERROR) << "Failed to setup child: " << e.what();
+      auto result = child_->run(true);
+      if (!result) {
+        LOG(ERROR) << "Failed to setup child: " << result.takeError();
         return -1;
       }
     }
@@ -728,14 +730,18 @@ int BPFtrace::run(output::Output &out,
 
     // Kick the child to execute the command.
     if (child_) {
-      try {
-        if (has_usdt_)
-          child_->resume();
-        else
-          child_->run();
-      } catch (const std::exception &e) {
-        LOG(ERROR) << "Failed to run child: " << e.what();
-        return -1;
+      if (has_usdt_) {
+        auto result = child_->resume();
+        if (!result) {
+          LOG(ERROR) << "Failed to run child: " << result.takeError();
+          return -1;
+        }
+      } else {
+        auto result = child_->run();
+        if (!result) {
+          LOG(ERROR) << "Failed to run child: " << result.takeError();
+          return -1;
+        }
       }
     }
   }

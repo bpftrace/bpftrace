@@ -241,11 +241,10 @@ int run_bpftrace(BPFtrace &bpftrace,
 
   // Kill the child, if needed.
   if (bpftrace.child_) {
-    auto val = 0;
-    if ((val = bpftrace.child_->term_signal()) > -1)
-      LOG(V1) << "Child terminated by signal: " << val;
-    if ((val = bpftrace.child_->exit_code()) > -1)
-      LOG(V1) << "Child exited with code: " << val;
+    if (auto val = bpftrace.child_->term_signal(); val.has_value())
+      LOG(V1) << "Child terminated by signal: " << *val;
+    if (auto val = bpftrace.child_->exit_code(); val.has_value())
+      LOG(V1) << "Child exited with code: " << *val;
   }
 
   // See above; return any error.

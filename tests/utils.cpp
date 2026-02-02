@@ -10,7 +10,6 @@
 
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
-#include "util/io.h"
 #include "util/kernel.h"
 #include "util/math.h"
 #include "util/paths.h"
@@ -494,53 +493,6 @@ TEST(utils, round_up_to_next_power_of_two)
   ASSERT_EQ(round_up_to_next_power_of_two(max_power_of_two - 1),
             max_power_of_two);
   ASSERT_EQ(round_up_to_next_power_of_two(max_power_of_two), max_power_of_two);
-}
-
-TEST(utils, cat_file_success)
-{
-  std::string test_content = "Hello, cat_file test!\nThis is line 2.\n";
-  char filename[] = "/tmp/bpftrace-test-cat-file-XXXXXX";
-  int fd = mkstemp(filename);
-  ASSERT_NE(fd, -1) << "Failed to create temporary file";
-  ASSERT_EQ(write(fd, test_content.c_str(), test_content.length()),
-            static_cast<ssize_t>(test_content.length()));
-  close(fd);
-
-  // Test cat_file with the temporary file
-  std::stringstream out;
-  cat_file(filename, 1024, out);
-
-  // Verify output matches the file content
-  EXPECT_EQ(test_content, out.str());
-
-  // Cleanup
-  unlink(filename);
-}
-
-TEST(utils, cat_file_nonexistent)
-{
-  // Path to a file that shouldn't exist
-  std::string nonexistent_file = "/tmp/bpftrace-nonexistent-file-test-XXXXXX";
-  int fd = mkstemp(const_cast<char *>(nonexistent_file.c_str()));
-  close(fd);
-  unlink(nonexistent_file.c_str()); // Ensure file doesn't exist
-
-  testing::internal::CaptureStderr();
-
-  // Test cat_file with nonexistent file
-  std::stringstream out;
-  cat_file(nonexistent_file.c_str(), 1024, out);
-
-  // Get captured stderr
-  std::string stderr_output = testing::internal::GetCapturedStderr();
-
-  // Verify no output was produced
-  EXPECT_TRUE(out.str().empty())
-      << "cat_file should not output anything for nonexistent files";
-
-  // Verify error message was logged
-  EXPECT_THAT(stderr_output, testing::HasSubstr("failed to open file"))
-      << "Error message should indicate file opening failure";
 }
 
 TEST(utils, similar)

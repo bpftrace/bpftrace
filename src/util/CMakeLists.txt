@@ -6,12 +6,12 @@ add_library(util STATIC
   elf_parser.cpp
   env.cpp
   int_parser.cpp
-  io.cpp
   kernel.cpp
   math.cpp
   memfd.cpp
   opaque.cpp
   paths.cpp
+  proc.cpp
   result.cpp
   strings.cpp
   symbols.cpp

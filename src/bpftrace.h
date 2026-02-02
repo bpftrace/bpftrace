@@ -22,7 +22,6 @@
 #include "bpffeature.h"
 #include "bpfprogram.h"
 #include "btf.h"
-#include "child.h"
 #include "config.h"
 #include "dwarf_parser.h"
 #include "functions.h"
@@ -30,13 +29,13 @@
 #include "output/output.h"
 #include "pcap_writer.h"
 #include "probe_matcher.h"
-#include "procmon.h"
 #include "required_resources.h"
 #include "struct.h"
 #include "types.h"
 #include "usyms.h"
 #include "util/cpus.h"
 #include "util/kernel.h"
+#include "util/proc.h"
 #include "util/result.h"
 
 namespace bpftrace {
@@ -212,8 +211,8 @@ public:
   bool need_recursion_check_ = false;
 
   std::unordered_set<std::string> btf_set_;
-  std::unique_ptr<ChildProcBase> child_;
-  std::unique_ptr<ProcMonBase> procmon_;
+  std::unique_ptr<util::ChildProc> child_;
+  std::unique_ptr<util::Proc> procmon_;
   std::optional<pid_t> pid() const
   {
     if (procmon_) {

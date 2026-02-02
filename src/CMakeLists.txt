@@ -26,7 +26,6 @@ add_library(runtime STATIC
   bpfmap.cpp
   bpfprogram.cpp
   btf.cpp
-  child.cpp
   config.cpp
   disasm.cpp
   dwarf_parser.cpp
@@ -35,7 +34,6 @@ add_library(runtime STATIC
   log.cpp
   probe_matcher.cpp
   probe_types.cpp
-  procmon.cpp
   run_bpftrace.cpp
   pcap_writer.cpp
   types_format.cpp
