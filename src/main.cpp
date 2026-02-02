@@ -40,18 +40,17 @@
 #include "bpftrace.h"
 #include "btf.h"
 #include "build_info.h"
-#include "child.h"
 #include "config.h"
 #include "globalvars.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output/buffer_mode.h"
 #include "probe_matcher.h"
-#include "procmon.h"
 #include "run_bpftrace.h"
 #include "util/env.h"
 #include "util/int_parser.h"
 #include "util/kernel.h"
+#include "util/proc.h"
 #include "util/strings.h"
 #include "util/temp.h"
 #include "util/user.h"
@@ -817,22 +816,22 @@ int main(int argc, char* argv[])
       LOG(ERROR) << "Pid out of range: " << *maybe_pid;
       exit(1);
     }
-    try {
-      bpftrace.procmon_ = std::make_unique<ProcMon>(*maybe_pid);
-    } catch (const std::exception& e) {
-      LOG(ERROR) << e.what();
+    auto proc = util::create_proc(*maybe_pid);
+    if (!proc) {
+      LOG(ERROR) << "Failed to attach to pid: " << proc.takeError();
       exit(1);
     }
+    bpftrace.procmon_ = std::move(*proc);
   }
 
   if (!args.cmd_str.empty()) {
     bpftrace.cmd_ = args.cmd_str;
-    try {
-      bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
-    } catch (const std::runtime_error& e) {
-      LOG(ERROR) << "Failed to fork child: " << e.what();
+    auto child = util::create_child(args.cmd_str);
+    if (!child) {
+      LOG(ERROR) << "Failed to fork child: " << child.takeError();
       exit(1);
     }
+    bpftrace.child_ = std::move(*child);
   }
 
   // This is our primary program AST context. Initially it is empty, i.e.

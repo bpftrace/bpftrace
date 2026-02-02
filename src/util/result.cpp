@@ -10,7 +10,7 @@ void SystemError::log(llvm::raw_ostream& OS) const
 {
   OS << msg_;
   if (err_) {
-    OS << "(" << strerror(err_) << ")";
+    OS << " (" << strerror(err_) << ")";
   }
 }
 

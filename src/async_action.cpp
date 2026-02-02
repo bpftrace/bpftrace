@@ -1,4 +1,6 @@
 #include <memory>
+
+#include <fstream>
 #include <string>
 
 #include "ast/async_event_types.h"
@@ -7,7 +9,6 @@
 #include "log.h"
 #include "types_format.h"
 #include "util/exceptions.h"
-#include "util/io.h"
 #include "util/system.h"
 
 namespace bpftrace::async_action {
@@ -196,11 +197,20 @@ void AsyncHandlers::cat(const OpaqueValue &data)
     LOG(BUG) << "Error processing cat arguments: " << vals.takeError();
   }
 
-  std::stringstream buf;
-  util::cat_file(fmt.format(*vals).c_str(),
-                 bpftrace.config_->max_cat_bytes,
-                 buf);
-  out->cat(buf.str());
+  auto filename = fmt.format(*vals);
+  auto file = std::ifstream(filename, std::ios::binary);
+  if (file.fail()) {
+    LOG(ERROR) << "failed to open file '" << filename
+               << "': " << strerror(errno);
+    return;
+  }
+
+  // Read up to the maximum bytes specified.
+  std::string str;
+  str.resize(bpftrace.config_->max_cat_bytes);
+  file.read(str.data(), bpftrace.config_->max_cat_bytes);
+  str.resize(file.gcount());
+  out->cat(str);
 }
 
 void AsyncHandlers::printf(const OpaqueValue &data)

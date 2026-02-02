@@ -9,13 +9,15 @@
 #include <sys/types.h>
 #include <system_error>
 
-#include "child.h"
-#include "childhelper.h"
+#include "util/proc.h"
+#include "llvm/Support/Error.h"
 #include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::child {
 
+using bpftrace::util::ChildProc;
+using bpftrace::util::create_child;
 using ::testing::HasSubstr;
 
 class childproc : public ::testing::Test {
@@ -43,73 +45,60 @@ protected:
 
 TEST_F(childproc, exe_does_not_exist)
 {
-  try {
-    ChildProc child("/does/not/exist/abc/fed");
-    FAIL();
-  } catch (const std::runtime_error &e) {
-    EXPECT_THAT(e.what(), HasSubstr("does not exist or is not executable"));
-  }
-}
-
-TEST_F(childproc, too_many_arguments)
-{
-  std::stringstream cmd;
-  cmd << TEST_BIN;
-  for (int i = 0; i < 280; i++)
-    cmd << " a";
-
-  try {
-    ChildProc child(cmd.str());
-    FAIL();
-  } catch (const std::runtime_error &e) {
-    EXPECT_THAT(e.what(), HasSubstr("Too many arguments"));
-  }
+  auto child = create_child("/does/not/exist/abc/fed");
+  EXPECT_FALSE(bool(child));
+  EXPECT_THAT(llvm::toString(child.takeError()),
+              HasSubstr("does not exist or is not executable"));
 }
 
 TEST_F(childproc, child_exit_success)
 {
   // Spawn a child that exits successfully
-  auto child = getChild(TEST_BIN);
+  auto child = create_child(TEST_BIN, true);
+  ASSERT_TRUE(bool(child));
 
-  child->run();
-  wait_for(child.get(), 1000);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->exit_code(), 0);
-  EXPECT_EQ(child->term_signal(), -1);
+  ASSERT_TRUE(bool((*child)->run()));
+  ASSERT_TRUE(bool((*child)->wait(1000)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_EQ((*child)->exit_code(), 0);
+  EXPECT_EQ((*child)->term_signal(), std::nullopt);
 }
 
 TEST_F(childproc, child_exit_err)
 {
   // Spawn a child that exits with an error
-  auto child = getChild(TEST_BIN_ERR);
+  auto child = create_child(TEST_BIN_ERR, true);
+  ASSERT_TRUE(bool(child));
 
-  child->run();
-  wait_for(child.get(), 1000);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_TRUE(child->exit_code() > 0);
-  EXPECT_EQ(child->term_signal(), -1);
+  ASSERT_TRUE(bool((*child)->run()));
+  ASSERT_TRUE(bool((*child)->wait(1000)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_TRUE((*child)->exit_code().value_or(0) > 0);
+  EXPECT_EQ((*child)->term_signal(), std::nullopt);
 }
 
 TEST_F(childproc, terminate)
 {
-  auto child = getChild(TEST_BIN_SLOW);
+  auto child = create_child(TEST_BIN_SLOW, true);
+  ASSERT_TRUE(bool(child));
 
-  child->run();
-  child->terminate();
-  wait_for(child.get(), 100);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->term_signal(), SIGTERM);
+  ASSERT_TRUE(bool((*child)->run()));
+  ASSERT_TRUE(bool((*child)->terminate()));
+  ASSERT_TRUE(bool((*child)->wait(100)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_EQ((*child)->term_signal(), SIGTERM);
 }
 
 TEST_F(childproc, destructor_destroy_child)
 {
   pid_t child_pid = 0;
   {
-    std::unique_ptr<ChildProc> child = getChild(TEST_BIN_SLOW);
-    child->run();
-    child_pid = child->pid();
+    auto child = create_child(TEST_BIN_SLOW, true);
+    ASSERT_TRUE(bool(child));
+    ASSERT_TRUE(bool((*child)->run()));
+    child_pid = (*child)->pid();
     // Give child a little bit of time to execve before we kill it
-    msleep(25);
+    ASSERT_TRUE(bool((*child)->wait(25)));
   }
 
   int status = 0;
@@ -124,97 +113,103 @@ TEST_F(childproc, destructor_destroy_child)
 TEST_F(childproc, child_kill_before_exec)
 {
   signal(SIGHUP, SIG_DFL);
-  auto child = getChild(TEST_BIN_SLOW);
+  auto child = create_child(TEST_BIN_SLOW, true);
+  ASSERT_TRUE(bool(child));
 
-  EXPECT_EQ(kill(child->pid(), SIGHUP), 0);
-  wait_for(child.get(), 100);
+  EXPECT_EQ(kill((*child)->pid(), SIGHUP), 0);
+  ASSERT_TRUE(bool((*child)->wait(100)));
 
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->exit_code(), -1);
-  EXPECT_EQ(child->term_signal(), SIGHUP);
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_EQ((*child)->exit_code(), std::nullopt);
+  EXPECT_EQ((*child)->term_signal(), SIGHUP);
 }
 
 TEST_F(childproc, stop_cont)
 {
   // STOP/CONT should not incorrectly mark the child
   // as dead
-  auto child = getChild(TEST_BIN_SLOW);
+  auto child = create_child(TEST_BIN_SLOW, true);
+  ASSERT_TRUE(bool(child));
   int status = 0;
 
-  child->run();
-  msleep(25);
-  EXPECT_TRUE(child->is_alive());
+  ASSERT_TRUE(bool((*child)->run()));
+  ASSERT_TRUE(bool((*child)->wait(25)));
+  EXPECT_TRUE((*child)->is_alive());
 
-  if (kill(child->pid(), SIGSTOP))
+  if (kill((*child)->pid(), SIGSTOP))
     FAIL() << "kill(SIGSTOP)";
 
-  waitpid(child->pid(), &status, WUNTRACED);
+  waitpid((*child)->pid(), &status, WUNTRACED);
   if (!WIFSTOPPED(status) || WSTOPSIG(status) != SIGSTOP)
     FAIL() << "! WIFSTOPPED";
 
-  EXPECT_TRUE(child->is_alive());
+  EXPECT_TRUE((*child)->is_alive());
 
-  if (kill(child->pid(), SIGCONT))
+  if (kill((*child)->pid(), SIGCONT))
     FAIL() << "kill(SIGCONT)";
 
-  waitpid(child->pid(), &status, WCONTINUED);
+  waitpid((*child)->pid(), &status, WCONTINUED);
   if (!WIFCONTINUED(status))
     FAIL() << "! WIFCONTINUED";
 
-  EXPECT_TRUE(child->is_alive());
+  EXPECT_TRUE((*child)->is_alive());
 
-  child->terminate();
-  wait_for(child.get(), 100);
-  EXPECT_EQ(child->exit_code(), -1);
-  EXPECT_EQ(child->term_signal(), SIGTERM);
+  ASSERT_TRUE(bool((*child)->terminate()));
+  ASSERT_TRUE(bool((*child)->wait(100)));
+  EXPECT_EQ((*child)->exit_code(), std::nullopt);
+  EXPECT_EQ((*child)->term_signal(), SIGTERM);
 }
 
 TEST_F(childproc, ptrace_child_exit_success)
 {
-  auto child = getChild(TEST_BIN);
+  auto child = create_child(TEST_BIN, true);
+  ASSERT_TRUE(bool(child));
 
-  child->run(true);
-  child->resume();
-  wait_for(child.get(), 1000);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->exit_code(), 0);
-  EXPECT_EQ(child->term_signal(), -1);
+  ASSERT_TRUE(bool((*child)->run(true)));
+  ASSERT_TRUE(bool((*child)->resume()));
+  ASSERT_TRUE(bool((*child)->wait(1000)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_EQ((*child)->exit_code(), 0);
+  EXPECT_EQ((*child)->term_signal(), std::nullopt);
 }
 
 TEST_F(childproc, ptrace_child_exit_error)
 {
-  auto child = getChild(TEST_BIN_ERR);
+  auto child = create_child(TEST_BIN_ERR, true);
+  ASSERT_TRUE(bool(child));
 
-  child->run(true);
-  child->resume();
-  wait_for(child.get(), 1000);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_TRUE(child->exit_code() > 0);
-  EXPECT_EQ(child->term_signal(), -1);
+  ASSERT_TRUE(bool((*child)->run(true)));
+  ASSERT_TRUE(bool((*child)->resume()));
+  ASSERT_TRUE(bool((*child)->wait(1000)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_TRUE((*child)->exit_code().value_or(0) > 0);
+  EXPECT_EQ((*child)->term_signal(), std::nullopt);
 }
 
 TEST_F(childproc, ptrace_child_kill_before_execve)
 {
-  auto child = getChild(TEST_BIN);
+  auto child = create_child(TEST_BIN, true);
+  ASSERT_TRUE(bool(child));
 
-  child->run(true);
-  child->terminate(true);
-  wait_for(child.get(), 1000);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->exit_code(), -1);
-  EXPECT_EQ(child->term_signal(), 9);
+  ASSERT_TRUE(bool((*child)->run(true)));
+  ASSERT_TRUE(bool((*child)->terminate(true)));
+  ASSERT_TRUE(bool((*child)->wait(1000)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_EQ((*child)->exit_code(), std::nullopt);
+  EXPECT_EQ((*child)->term_signal(), 9);
 }
 
 TEST_F(childproc, ptrace_child_term_before_execve)
 {
-  auto child = getChild(TEST_BIN);
+  auto child = create_child(TEST_BIN, true);
+  ASSERT_TRUE(bool(child));
 
-  child->run(true);
-  child->terminate();
-  wait_for(child.get(), 1000);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->exit_code(), -1);
-  EXPECT_EQ(child->term_signal(), 15);
+  ASSERT_TRUE(bool((*child)->run(true)));
+  ASSERT_TRUE(bool((*child)->terminate()));
+  ASSERT_TRUE(bool((*child)->wait(1000)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_EQ((*child)->exit_code(), std::nullopt);
+  EXPECT_EQ((*child)->term_signal(), 15);
 }
 
 TEST_F(childproc, multi_exec_match)
@@ -259,13 +254,14 @@ TEST_F(childproc, multi_exec_match)
   EXPECT_EQ(::setenv("PATH", new_path.c_str(), 1), 0);
 
   // Use the filename with ambiguity.
-  auto child = getChild(std::string(binary.filename()));
+  auto child = create_child(std::string(binary.filename()), true);
+  ASSERT_TRUE(bool(child));
 
-  child->run();
-  child->terminate();
-  wait_for(child.get(), 100);
-  EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->term_signal(), SIGTERM);
+  ASSERT_TRUE(bool((*child)->run()));
+  ASSERT_TRUE(bool((*child)->terminate()));
+  ASSERT_TRUE(bool((*child)->wait(100)));
+  EXPECT_FALSE((*child)->is_alive());
+  EXPECT_EQ((*child)->term_signal(), SIGTERM);
 
   // Cleanup
   EXPECT_EQ(::setenv("PATH", old_path, 1), 0);

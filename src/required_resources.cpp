@@ -9,7 +9,6 @@
 #include <cereal/types/vector.hpp>
 
 #include "required_resources.h"
-#include "util/io.h"
 
 namespace bpftrace {
 
@@ -25,10 +24,20 @@ void RequiredResources::load_state(std::istream &in)
   archive(*this);
 }
 
+class Membuf : public std::streambuf {
+public:
+  Membuf(uint8_t *begin, uint8_t *end)
+  {
+    auto *b = reinterpret_cast<char *>(begin);
+    auto *e = reinterpret_cast<char *>(end);
+    this->setg(b, b, e);
+  }
+};
+
 void RequiredResources::load_state(const uint8_t *ptr, size_t len)
 {
   auto *addr = const_cast<uint8_t *>(ptr);
-  util::Membuf mbuf(addr, addr + len);
+  Membuf mbuf(addr, addr + len);
   std::istream istream(&mbuf);
   cereal::BinaryInputArchive archive(istream);
   archive(*this);

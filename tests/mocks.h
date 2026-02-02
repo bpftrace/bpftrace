@@ -5,10 +5,9 @@
 #include "bpffeature.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
-#include "child.h"
 #include "probe_matcher.h"
-#include "procmon.h"
 #include "util/kernel.h"
+#include "util/proc.h"
 #include "util/result.h"
 #include "util/strings.h"
 #include "util/user.h"
@@ -177,40 +176,64 @@ public:
   bool has_features_;
 };
 
-class MockChildProc : public ChildProcBase {
+class MockChildProc : public util::ChildProc {
 public:
-  MockChildProc(std::string cmd __attribute__((unused)))
-  {
-    child_pid_ = 1337;
-  };
+  MockChildProc([[maybe_unused]] std::string cmd) : pid_(1337) {};
   ~MockChildProc() override = default;
 
-  void terminate(bool force __attribute__((unused)) = false) override {};
+  Result<> terminate([[maybe_unused]] bool force = false) override
+  {
+    return OK();
+  };
   bool is_alive() override
   {
     return true;
   };
-  void resume() override {};
-
-  void run(bool pause = false) override
+  pid_t pid() override
   {
-    (void)pause;
+    return pid_;
+  }
+  Result<int> pidfd() override
+  {
+    return make_error<SystemError>("MockChildProc does not support pidfd");
+  }
+  Result<> resume() override
+  {
+    return OK();
   };
-};
-
-class MockProcMon : public ProcMonBase {
-public:
-  MockProcMon(pid_t pid)
+  Result<> run([[maybe_unused]] bool pause = false) override
   {
-    pid_ = pid;
+    return OK();
+  };
+  Result<bool> wait([[maybe_unused]] std::optional<int> timeout_ms = std::nullopt) override
+  {
+    return false;
   }
 
+private:
+  pid_t pid_ = 0;
+};
+
+class MockProcMon : public util::Proc {
+public:
+  MockProcMon(pid_t pid) : pid_(pid) {}
   ~MockProcMon() override = default;
 
   bool is_alive() override
   {
     return pid_ > 0;
   }
+  pid_t pid() override
+  {
+    return pid_;
+  }
+  Result<int> pidfd() override
+  {
+    return make_error<SystemError>("MockProcMon does not support pidfd");
+  }
+
+private:
+  pid_t pid_ = 0;
 };
 
 } // namespace bpftrace::test
