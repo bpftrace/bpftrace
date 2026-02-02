@@ -23,7 +23,6 @@
 #include "log.h"
 #include "stdlib/stdlib.h"
 #include "types.h"
-#include "util/io.h"
 #include "util/strings.h"
 #include "util/system.h"
 
@@ -361,10 +360,6 @@ bool ClangParser::ClangParserHandler::parse_file(
     std::vector<CXUnsavedFile> &unsaved_files,
     bool bail_on_errors)
 {
-  util::StderrSilencer silencer;
-  if (!bail_on_errors)
-    silencer.silence();
-
   CXErrorCode error = parse_translation_unit(
       filename.c_str(),
       args.data(),
