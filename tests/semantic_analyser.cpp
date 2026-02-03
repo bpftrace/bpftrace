@@ -58,9 +58,6 @@ struct Mock {
 enum class UnsafeMode {
   Enable = 0, // Default is safe.
 };
-enum class Child {
-  Enable = 0, // Default is no child.
-};
 enum class NoFeatures {
   Enable = 0, // Default is full features.
 };
@@ -116,7 +113,6 @@ public:
   template <typename... Ts>
     requires((std::is_same_v<std::decay_t<Ts>, Mock> ||
               std::is_same_v<std::decay_t<Ts>, UnsafeMode> ||
-              std::is_same_v<std::decay_t<Ts>, Child> ||
               std::is_same_v<std::decay_t<Ts>, NoFeatures> ||
               std::is_same_v<std::decay_t<Ts>, Warning> ||
               std::is_same_v<std::decay_t<Ts>, NoWarning> ||
@@ -136,7 +132,6 @@ public:
     // Extract all extra arguments.
     auto mock = extract<Mock>(args...);
     auto unsafe_mode = extract<UnsafeMode>(args...);
-    auto child = extract<Child>(args...);
     auto no_features = extract<NoFeatures>(args...);
     auto warning = extract<Warning>(args...);
     auto nowarning = extract<NoWarning>(args...);
@@ -152,9 +147,6 @@ public:
     mock->bpftrace.safe_mode_ = !unsafe_mode.has_value();
     mock->bpftrace.feature_ = std::make_unique<MockBPFfeature>(
         !no_features.has_value());
-    if (child.has_value()) {
-      mock->bpftrace.cmd_ = "not-empty"; // Used by SemanticAnalyser.
-    }
     if (!types) {
       types_.emplace();
       types.emplace(*types_);
@@ -249,6 +241,7 @@ TEST_F(SemanticAnalyserTest, builtin_variables)
   test("uprobe:/bin/sh:f { func }");
   test("kprobe:f { probe }");
   test("kprobe:f { jiffies }");
+  test("kprobe:f { cpid }");
 
   test("kprobe:f { fake }", Error{ R"(
 stdin:1:12-16: ERROR: Unknown identifier: 'fake'
@@ -257,17 +250,6 @@ kprobe:f { fake }
 )" });
 
   test("fentry:f { func }", NoFeatures::Enable, Error{});
-}
-
-TEST_F(SemanticAnalyserTest, builtin_cpid)
-{
-  test(R"(i:ms:100 { printf("%d\n", cpid); })", Error{});
-  test("i:ms:100 { @=cpid }", Error{});
-  test("i:ms:100 { $a=cpid }", Error{});
-
-  test(R"(i:ms:100 { printf("%d\n", cpid); })", Child::Enable);
-  test("i:ms:100 { @=cpid }", Child::Enable);
-  test("i:ms:100 { $a=cpid }", Child::Enable);
 }
 
 TEST_F(SemanticAnalyserTest, builtin_functions)
@@ -1043,7 +1025,7 @@ TEST_F(SemanticAnalyserTest, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = "
        "5; delete(@y, (1, 2)); }",
        Error{ R"(
-stdlib/base.bt:258:3-32: ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,uint8,uint8)'
+ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,uint8,uint8)'
 )" },
        Types{ types });
 
@@ -1074,7 +1056,7 @@ ERROR: call to delete() with two arguments expects a map with explicit keys (non
 
   test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })",
        Error{ R"(
-stdlib/base.bt:258:3-32: ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(string[3],uint8)' when variable already has a type '(uint8,string[3])'
+ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(string[3],uint8)' when variable already has a type '(uint8,string[3])'
 )" },
        Types{ types });
 

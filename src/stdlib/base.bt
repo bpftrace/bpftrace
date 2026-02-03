@@ -174,11 +174,26 @@ macro comm(arg_pid)
   comm($pid)
 }
 
+// :variant bool has_cpid()
+// Returns true iff cpid is available.
+macro has_cpid()
+{
+  __builtin_cpid == 0
+}
+
 // :variant uint32 cpid()
-// Child process ID, if bpftrace is invoked with `-c`
+// Child process ID, if bpftrace is invoked with `-c`.
+//
+// If there is no child process, a runtime warning will be issued and the
+// return value will be zero.  This warning can be avoided by using `has_cpid`
+// to check if `cpid` has a value, prior to referencing `cpid`.
 macro cpid()
 {
-  __builtin_cpid
+  let $cpid = __builtin_cpid;
+  if (__builtin_cpid == 0) {
+    warnf("No child command (`-c`); cpid is zero");
+  }
+  $cpid
 }
 
 // :variant uint32 cpu()

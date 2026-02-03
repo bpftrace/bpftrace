@@ -247,10 +247,6 @@ std::optional<Expression> Builtins::visit(Builtin &builtin)
     if (arch::Host::Machine != arch::Machine::X86_64) {
       builtin.addError() << "'usermode' builtin is only supported on x86_64";
     }
-  } else if (builtin.ident == "__builtin_cpid") {
-    if (!has_child_) {
-      builtin.addError() << "cpid cannot be used without child command";
-    }
   } else if (builtin.ident == "args") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)

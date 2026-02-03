@@ -959,7 +959,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   } else if (builtin.ident == "__builtin_usermode") {
     builtin.builtin_type = CreateUInt8();
   } else if (builtin.ident == "__builtin_cpid") {
-    builtin.builtin_type = CreateUInt32();
+    builtin.builtin_type = CreateUInt64();
   } else if (builtin.ident == "args") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
