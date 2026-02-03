@@ -168,7 +168,11 @@ This utilizes the BPF helper `get_current_comm`
 - `uint32 cpid()`
 - `uint32 cpid`
 
-Child process ID, if bpftrace is invoked with `-c`
+Child process ID, if bpftrace is invoked with `-c`.
+
+If there is no child process, a runtime warning will be issued and the
+return value will be zero.  This warning can be avoided by using `has_cpid`
+to check if `cpid` has a value, prior to referencing `cpid`.
 
 
 ### cpu
@@ -360,6 +364,13 @@ You can use `--help` to see all named arguments/options.
 Group ID of the current thread, as seen from the init namespace
 
 This utilizes the BPF helper `get_current_uid_gid`
+
+
+### has_cpid
+- `bool has_cpid()`
+- `bool has_cpid`
+
+Returns true iff cpid is available.
 
 
 ### has_key

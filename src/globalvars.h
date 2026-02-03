@@ -111,6 +111,7 @@ constexpr std::string_view VARIABLE_BUFFER = "__bt__var_buf";
 constexpr std::string_view MAP_KEY_BUFFER = "__bt__map_key_buf";
 constexpr std::string_view EVENT_LOSS_COUNTER = "__bt__event_loss_counter";
 constexpr std::string_view JOIN_BUFFER = "__bt__join_buf";
+constexpr std::string_view CHILD_PID = "__bt__child_pid";
 
 // Section names
 constexpr std::string_view RO_SECTION_NAME = ".rodata";
@@ -174,6 +175,8 @@ const std::unordered_map<std::string_view, GlobalVarConfig>
         { .section = std::string(MAP_KEY_BUFFER_SECTION_NAME) } },
       { JOIN_BUFFER,
         { .section = std::string(JOIN_BUFFER_SECTION_NAME) } },
+      { CHILD_PID,
+        { .section = std::string(RO_SECTION_NAME), .type = GlobalVarConfig::opt_unsigned } },
     };
 
 class GlobalVars {
@@ -207,7 +210,8 @@ public:
       const std::unordered_map<std::string, struct bpf_map *> &global_vars_map,
       GlobalVarMap &&global_var_vals,
       uint64_t ncpus,
-      uint64_t max_cpu_id);
+      uint64_t max_cpu_id,
+      std::optional<pid_t> child_pid);
 
   std::unordered_set<std::string> get_global_vars_for_section(
       std::string_view target_section);

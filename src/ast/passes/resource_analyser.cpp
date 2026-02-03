@@ -161,6 +161,8 @@ void ResourceAnalyser::visit(Builtin &builtin)
 
   if (builtin.ident == "__builtin_ncpus") {
     resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
+  } else if (builtin.ident == "__builtin_cpid") {
+    resources_.global_vars.add_known(bpftrace::globalvars::CHILD_PID);
   } else if (builtin.ident == "ustack" || builtin.ident == "kstack") {
     if (exceeds_stack_limit(builtin.builtin_type.GetSize())) {
       resources_.call_stack_buffers++;

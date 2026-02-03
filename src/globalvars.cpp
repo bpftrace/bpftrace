@@ -529,10 +529,18 @@ void GlobalVars::update_global_vars(
         &section_name_to_global_vars_map,
     GlobalVarMap &&global_var_vals,
     uint64_t ncpus,
-    uint64_t max_cpu_id)
+    uint64_t max_cpu_id,
+    std::optional<pid_t> child_pid)
 {
   global_var_vals[std::string(globalvars::NUM_CPUS)] = ncpus;
   global_var_vals[std::string(globalvars::MAX_CPU_ID)] = max_cpu_id;
+  if (child_pid.has_value()) {
+    auto value = static_cast<uint64_t>(*child_pid);
+    global_var_vals[std::string(globalvars::CHILD_PID)] = value;
+  } else {
+    uint64_t empty_value = 0;
+    global_var_vals[std::string(globalvars::CHILD_PID)] = empty_value;
+  }
 
   verify_maps_found(section_name_to_global_vars_map);
   for (const auto &[section_name, global_vars_map] :

@@ -105,7 +105,9 @@ void BpfBytecode::update_global_vars(BPFtrace &bpftrace,
       section_names_to_global_vars_map_,
       std::move(global_var_vals),
       bpftrace.ncpus_,
-      bpftrace.max_cpu_id_);
+      bpftrace.max_cpu_id_,
+      bpftrace.child_ ? std::make_optional<pid_t>(bpftrace.child_->pid())
+                      : std::nullopt);
 }
 
 uint64_t BpfBytecode::get_event_loss_counter(BPFtrace &bpftrace, int max_cpu_id)

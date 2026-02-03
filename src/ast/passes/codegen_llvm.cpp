@@ -825,11 +825,10 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     // ctx is undocumented builtin: for debugging.
     return ScopedExpr(ctx_);
   } else if (builtin.ident == "__builtin_cpid") {
-    pid_t cpid = bpftrace_.child_->pid();
-    if (cpid < 1) {
-      LOG(BUG) << "Invalid cpid: " << cpid;
-    }
-    return ScopedExpr(b_.getInt64(cpid));
+    return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(),
+                                    module_->getGlobalVariable(std::string(
+                                        bpftrace::globalvars::CHILD_PID)),
+                                    "child_pid.cmp"));
   } else if (builtin.ident == "__builtin_jiffies") {
     return ScopedExpr(b_.CreateJiffies64(builtin.loc));
   } else {
