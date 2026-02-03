@@ -57,14 +57,19 @@ void AttachPointChecker::visit(AttachPoint &ap)
   } else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
     if (ap.target.empty())
       ap.addError() << ap.provider << " should have a target";
-    if (ap.func.empty() && ap.address == 0)
-      ap.addError() << ap.provider
-                    << " should be attached to a function and/or address";
+    if (ap.func.empty() && ap.address == 0 &&
+        (ap.source_file.empty() || ap.line_num == 0))
+      ap.addError()
+          << ap.provider
+          << " should be attached to a function, address, or source file line";
     if (!ap.lang.empty() && !is_supported_lang(ap.lang))
       ap.addError() << "unsupported language type: " << ap.lang;
 
     if (ap.provider == "uretprobe" && ap.func_offset != 0)
       ap.addError() << "uretprobes can not be attached to a function offset";
+    if (ap.provider == "uretprobe" &&
+        (!ap.source_file.empty() || ap.line_num != 0))
+      ap.addError() << "uretprobes can not be attached to source file line";
 
     auto get_paths = [&]() -> Result<std::vector<std::string>> {
       const auto pid = bpftrace_.pid();
@@ -525,18 +530,32 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
   std::string raw = ap.raw_input;
   std::vector<std::string> ret;
   bool in_quotes = false;
+  bool stmt_mapped = false;
   std::string argument;
 
   for (size_t idx = 0; idx < raw.size(); ++idx) {
-    if (raw[idx] == ':' && !in_quotes) {
+    if (!in_quotes && !stmt_mapped && (raw[idx] == ':' || raw[idx] == '@')) {
       parts_.emplace_back(std::move(argument));
       // The standard says an std::string in moved-from state is in
       // valid but unspecified state, so clear() to be safe
       argument.clear();
-    } else if (raw[idx] == '"')
+
+      // Consume the rest of the *raw* string as a single argument, including
+      // the '@' delimiter. Quotes are preserved and handled later in the
+      // uprobe parser, but positional param expansion still applies.
+      if (raw[idx] == '@') {
+        argument += raw[idx];
+        stmt_mapped = true;
+      }
+    } else if (raw[idx] == '"') {
       in_quotes = !in_quotes;
+      if (stmt_mapped)
+        argument += raw[idx];
+    }
     // Handle escaped characters in a string
     else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size())) {
+      if (stmt_mapped)
+        argument += raw[idx];
       argument += raw[idx + 1];
       ++idx;
     } else if (!in_quotes && raw[idx] == '$') {
@@ -695,7 +714,8 @@ AttachPointParser::State AttachPointParser::kretprobe_parser()
 }
 
 AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
-                                                          bool allow_abs_addr)
+                                                          bool allow_abs_addr,
+                                                          bool allow_stmt_map)
 {
   const auto pid = bpftrace_.pid();
   if (pid.has_value() &&
@@ -735,6 +755,66 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
 
   if (ap_->target.empty()) {
     ap_->target = parts_[1];
+  }
+
+  // Statement mapped attach point
+  bool stmt_mapped = (!parts_[2].empty() && parts_[2].at(0) == '@');
+
+  // Handle uprobe:/bin/foo@bar.c:100[:1] case
+  if (stmt_mapped) {
+    if (!allow_stmt_map) {
+      errs_ << "Statement to address mapping not allowed" << std::endl;
+      return INVALID;
+    }
+
+    if (util::has_wildcard(ap_->target)) {
+      errs_ << "Cannot use wildcards with statement mapped attach points"
+            << std::endl;
+      return INVALID;
+    }
+
+    std::vector<std::string> stmt_parts = util::split_string_quoted(
+        parts_.back(), ':', true);
+
+    if ((stmt_parts.size() != 2 && stmt_parts.size() != 3) ||
+        stmt_parts[0].substr(1).empty()) {
+      errs_ << "Invalid uprobe arguments, "
+            << "expected format: uprobe:TARGET@FILE:LINE[:COL]" << std::endl;
+      return INVALID;
+    }
+    ap_->source_file = stmt_parts[0].substr(1);
+
+    auto line = util::to_uint(stmt_parts[1]);
+    if (!line) {
+      errs_ << "Invalid line number: " << line.takeError() << std::endl;
+      return INVALID;
+    }
+    ap_->line_num = *line;
+
+    if (stmt_parts.size() == 3) {
+      auto col = util::to_uint(stmt_parts[2]);
+      if (!col) {
+        errs_ << "Invalid column number: " << col.takeError() << std::endl;
+        return INVALID;
+      }
+      ap_->col_num = *col;
+    }
+
+    Dwarf *dwarf = bpftrace_.get_dwarf(ap_->target);
+    if (dwarf) {
+      auto address = dwarf->line_to_addr(ap_->source_file,
+                                         ap_->line_num,
+                                         ap_->col_num);
+      if (!address) {
+        errs_ << address.takeError() << std::endl;
+        return INVALID;
+      }
+      ap_->address = *address;
+      return OK;
+    }
+
+    errs_ << "No DWARF debug info found for " << ap_->target << std::endl;
+    return INVALID;
   }
 
   const std::string &func = parts_.back();
@@ -788,7 +868,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
 
 AttachPointParser::State AttachPointParser::uretprobe_parser()
 {
-  return uprobe_parser(false);
+  return uprobe_parser(false, true, false);
 }
 
 AttachPointParser::State AttachPointParser::usdt_parser()

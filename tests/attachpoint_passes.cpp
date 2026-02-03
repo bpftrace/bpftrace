@@ -5,19 +5,21 @@
 #include "mocks.h"
 #include "gtest/gtest.h"
 
+#ifdef HAVE_LIBDW
+#include "dwarf_common.h"
+#endif // HAVE_LIBDW
+
 namespace bpftrace::test {
 
 namespace attachpoint_parser {
 
 using ::testing::HasSubstr;
 
-void test(const std::string& input,
+void test(BPFtrace& bpftrace,
+          const std::string& input,
           bool listing = false,
           const std::string& error = "")
 {
-  auto mock_bpftrace = get_mock_bpftrace();
-  BPFtrace& bpftrace = *mock_bpftrace;
-
   // The input provided here is embedded into an expression.
   ast::ASTContext ast("stdin", input);
   std::stringstream msg;
@@ -50,9 +52,25 @@ void test(const std::string& input,
   }
 }
 
-void test_error(const std::string& input, const std::string& error)
+void test(const std::string& input, bool listing = false)
 {
-  test(input, false, error);
+  auto mock_bpftrace = get_mock_bpftrace();
+  BPFtrace& bpftrace = *mock_bpftrace;
+  test(bpftrace, input, listing);
+}
+
+void test_error(const std::string& input, std::string&& error = "ERROR")
+{
+  auto mock_bpftrace = get_mock_bpftrace();
+  BPFtrace& bpftrace = *mock_bpftrace;
+  test(bpftrace, input, false, error);
+}
+
+void test_error(BPFtrace& bpftrace,
+                const std::string& input,
+                std::string&& error = "ERROR")
+{
+  test(bpftrace, input, false, error);
 }
 
 void test_uprobe_lang(const std::string& input, const std::string& lang = "")
@@ -105,6 +123,82 @@ TEST(attachpoint_parser, uprobe_lang)
   test_uprobe_lang("uprobe:main { 1 }");
   test_uprobe_lang("uprobe:cpp:main { 1 }", "cpp");
 }
+
+#ifdef HAVE_LIBDW
+
+class attachpoint_parser_dwarf : public test_dwarf {};
+
+TEST_F(attachpoint_parser_dwarf, uprobe)
+{
+  BPFtrace bpftrace;
+  // Valid executable to ensure DWARF function proceeds.
+  std::string ap = "uprobe:" + std::string(bin_);
+  // Line and/or column must be a present, valid statement within the target
+  // test executable. If the executable is subject to change, be sure to update
+  // these variables.
+  std::string dir = "data/";
+  std::string file = "data_source.c";
+  std::string line = "161";
+  std::string linecol = line + ":" + "1";
+
+  // Uprobe string formatter, e.g. uprobe:/tmp/bin@data_source.c:1
+  auto uprobe_str = [&](const std::string& file, const std::string& l) {
+    return ap + "@" + file + ":" + l + " { 1 }";
+  };
+
+  test(bpftrace, uprobe_str(file, line));
+  test(bpftrace, uprobe_str(file, linecol));
+
+  // Quoted arguments
+  test(bpftrace, uprobe_str("\"" + file + "\"", line));
+  test(bpftrace, uprobe_str(file, "\"" + line + "\""));
+  test(bpftrace, uprobe_str("\"" + file + "\"", "\"" + line + "\""));
+
+  // Might fail if data_source.c is compiled elsewhere than the data/ dir.
+  test(bpftrace, uprobe_str(dir + file, line));
+  test(bpftrace, uprobe_str(dir + file, linecol));
+
+  test_error(bpftrace,
+             "uretprobe:@" + file + ":" + line + " { 1 }",
+             R"(Statement to address mapping not allowed)");
+  test_error(bpftrace,
+             "uprobe:*@" + file + ":" + line + " { 1 }",
+             R"(Cannot use wildcards with statement mapped attach points)");
+  test_error(
+      bpftrace,
+      ap + "@ { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(
+      bpftrace,
+      ap + "@: { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(
+      bpftrace,
+      uprobe_str(file, ""),
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(
+      bpftrace,
+      uprobe_str("", line),
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(
+      bpftrace,
+      uprobe_str(file, linecol + ":2:3"),
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(bpftrace, uprobe_str(file, "invalid"), R"(Invalid line number: )");
+  test_error(bpftrace,
+             uprobe_str(file, line + ":invalid"),
+             R"(Invalid column number: )");
+
+  // Statement to address
+  test_error(bpftrace,
+             uprobe_str("notexistfile", "1"),
+             R"(No compilation unit matches notexistfile)");
+  test_error(bpftrace,
+             "uprobe:notexistfile@main:1 { 1 }",
+             R"(No DWARF debug info found for notexistfile)");
+}
+
+#endif // HAVE_LIBDW
 
 } // namespace attachpoint_parser
 
