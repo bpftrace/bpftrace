@@ -40,9 +40,6 @@ namespace {
 struct variable {
   SizedType type;
   bool can_resize;
-  // Only used during the final pass to issue warnings
-  bool was_assigned;
-  Node *top_level_node;
 };
 
 class PassTracker {
@@ -253,7 +250,6 @@ private:
   bool check_symbol(const Call &call, int arg_num);
 
   void check_stack_call(Call &call, bool kernel);
-  void check_variable_decls(Node *top_level_node);
 
   Probe *get_probe(Node &node, std::string name = "");
 
@@ -324,7 +320,6 @@ private:
   bool is_type_name_ = false;
 
   variable *find_variable(const std::string &var_ident);
-  void check_variable(Variable &var, bool check_assigned);
   Node *find_variable_scope(const std::string &var_ident, bool safe = false);
 
   std::map<Node *, std::map<std::string, variable>> variables_;
@@ -336,7 +331,6 @@ private:
   std::map<std::string, SizedType> agg_map_val_;
 
   uint32_t loop_depth_ = 0;
-  uint32_t meta_depth_ = 0; // sizeof, offsetof, etc.
 };
 
 } // namespace
@@ -1836,11 +1830,9 @@ void SemanticAnalyser::visit(Call &call)
 
 std::optional<size_t> SemanticAnalyser::check(Sizeof &szof)
 {
-  meta_depth_++;
   is_type_name_ = true;
   Visitor<SemanticAnalyser>::visit(szof);
   is_type_name_ = false;
-  meta_depth_--;
 
   if (std::holds_alternative<SizedType>(szof.record)) {
     auto &ty = std::get<SizedType>(szof.record);
@@ -1872,11 +1864,9 @@ std::optional<size_t> SemanticAnalyser::check(Offsetof &offof)
 {
   AssignMapDisallowed<"offsetof">().visit(offof.record);
 
-  meta_depth_++;
   is_type_name_ = true;
   Visitor<SemanticAnalyser>::visit(offof);
   is_type_name_ = false;
-  meta_depth_--;
 
   auto check_type = [&](SizedType cstruct) -> std::optional<size_t> {
     size_t offset = 0;
@@ -1930,11 +1920,9 @@ void SemanticAnalyser::visit(Typeof &typeof)
 {
   AssignMapDisallowed<"typeof or typeinfo">().visit(typeof.record);
 
-  meta_depth_++;
   is_type_name_ = true;
   Visitor<SemanticAnalyser>::visit(typeof);
   is_type_name_ = false;
-  meta_depth_--;
 
   if (std::holds_alternative<SizedType>(typeof.record)) {
     resolve_struct_type(std::get<SizedType>(typeof.record), typeof);
@@ -1943,9 +1931,7 @@ void SemanticAnalyser::visit(Typeof &typeof)
 
 void SemanticAnalyser::visit(Typeinfo &typeinfo)
 {
-  meta_depth_++;
   Visitor<SemanticAnalyser>::visit(typeinfo);
-  meta_depth_--;
 }
 
 void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
@@ -2006,29 +1992,6 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
     call.addError() << "'build_id' stack mode can only be used for ustack";
   }
   call.return_type = CreateStack(kernel, stack_type);
-}
-
-void SemanticAnalyser::check_variable_decls(Node *top_level_node)
-{
-  if (!is_final_pass()) {
-    return;
-  }
-  for (const auto &pair : variables_) {
-    for (const auto &[ident, var] : pair.second) {
-      if (var.was_assigned || var.top_level_node != top_level_node) {
-        continue;
-      }
-      if (auto scope = variable_decls_.find(pair.first);
-          scope != variable_decls_.end()) {
-        const auto &decl_map = scope->second;
-        if (auto decl_search = decl_map.find(ident);
-            decl_search != decl_map.end()) {
-          decl_search->second.addWarning()
-              << "Variable " << ident << " was never assigned to.";
-        }
-      }
-    }
-  }
 }
 
 Probe *SemanticAnalyser::get_probe(Node &node, std::string name)
@@ -2114,37 +2077,20 @@ void SemanticAnalyser::visit(MapAddr &map_addr)
   }
 }
 
-void SemanticAnalyser::check_variable(Variable &var, bool check_assigned)
+void SemanticAnalyser::visit(Variable &var)
 {
   if (auto *found = find_variable(var.ident)) {
     var.var_type = found->type;
-    if (is_final_pass() && !found->was_assigned && check_assigned) {
-      var.addWarning() << "Variable used before it was assigned: " << var.ident;
-    }
-    return;
   }
-
-  var.addError() << "Undefined or undeclared variable: " << var.ident;
-}
-
-void SemanticAnalyser::visit(Variable &var)
-{
-  // Warnings are suppressed when we are evaluating the variable in an
-  // expression that is not used, e.g. part of a sizeof, offsetof or a typeof.
-  check_variable(var, meta_depth_ == 0);
 }
 
 void SemanticAnalyser::visit(VariableAddr &var_addr)
 {
-  check_variable(*var_addr.var,
-                 false /* Don't warn if variable hasn't been assigned yet */);
   if (auto *found = find_variable(var_addr.var->ident)) {
+    var_addr.var->var_type = found->type;
     if (!found->type.IsNoneTy()) {
       var_addr.var_addr_type = CreatePointer(found->type, found->type.GetAS());
     }
-    // We can't know if the pointer to a scratch variable was passed
-    // to an external function for assignment so just mark it as assigned.
-    found->was_assigned = is_final_pass();
   }
   if (is_final_pass() && var_addr.var_addr_type.IsNoneTy()) {
     var_addr.addError() << "No type available for variable "
@@ -3028,10 +2974,6 @@ void SemanticAnalyser::visit(For &f)
 
   // Validate decl.
   const auto &decl_name = f.decl->ident;
-  if (find_variable(decl_name)) {
-    f.decl->addError() << "Loop declaration shadows existing variable: " +
-                              decl_name;
-  }
 
   visit(f.iterable);
 
@@ -3115,8 +3057,6 @@ void SemanticAnalyser::visit(For &f)
   variables_[scope_stack_.back()][decl_name] = {
     .type = f.decl->type(),
     .can_resize = true,
-    .was_assigned = true,
-    .top_level_node = top_level_node_,
   };
 
   loop_depth_++;
@@ -3774,9 +3714,6 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     if (is_final_pass()) {
       assignment.addError() << "Value '" << assignment.expr.type()
                             << "' cannot be assigned to a scratch variable.";
-      // A bad assignment is still an assignment
-      variables_[find_variable_scope(var_ident, true)][var_ident].was_assigned =
-          true;
     }
     return;
   }
@@ -3850,13 +3787,10 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     }
     if (type_mismatch_error) {
       if (is_final_pass()) {
-        const auto *err_segment =
-            foundVar.was_assigned
-                ? "when variable already contains a value of type"
-                : "when variable already has a type";
-        assignment.addError() << "Type mismatch for " << var_ident << ": "
-                              << "trying to assign value of type '" << assignTy
-                              << "' " << err_segment << " '" << storedTy << "'";
+        assignment.addError()
+            << "Type mismatch for " << var_ident << ": "
+            << "trying to assign value of type '" << assignTy
+            << "' when variable already has a type '" << storedTy << "'";
       }
     } else {
       // The assign type is possibly more complete than the stored type,
@@ -3869,21 +3803,14 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       foundVar.type = assignTy;
       var_scope = scope;
     }
-
-    if (is_final_pass()) {
-      foundVar.was_assigned = true;
-    }
   }
 
   if (var_scope == nullptr) {
-    variables_[scope_stack_.back()].insert(
-        { var_ident,
-          {
-              .type = assignTy,
-              .can_resize = true,
-              .was_assigned = is_final_pass(),
-              .top_level_node = top_level_node_,
-          } });
+    variables_[scope_stack_.back()].insert({ var_ident,
+                                             {
+                                                 .type = assignTy,
+                                                 .can_resize = true,
+                                             } });
     var_scope = scope_stack_.back();
   }
 
@@ -3913,28 +3840,6 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
     } else if (is_final_pass()) {
       // We couldn't resolve that specific type by now.
       decl.addError() << "Type cannot be resolved: still none";
-    }
-  }
-
-  // Only checking on the first pass for cases like this:
-  // `begin { if (1) { let $x; } else { let $x; } let $x; }`
-  // Notice how the last `let $x` is defined in the outer scope;
-  // this means on subsequent passes the first two `let $x` statements
-  // would be considered variable shadowing, when in fact, because of order,
-  // there is no ambiguity in terms of future assignment and use.
-  if (is_first_pass()) {
-    for (auto *scope : scope_stack_) {
-      // This should be the first time we're seeing this variable
-      if (auto decl_search = variable_decls_[scope].find(var_ident);
-          decl_search != variable_decls_[scope].end()) {
-        if (&decl_search->second != &decl) {
-          decl.addError()
-              << "Variable " << var_ident
-              << " was already declared. Variable shadowing is not allowed.";
-          decl_search->second.addWarning()
-              << "This is the initial declaration.";
-        }
-      }
     }
   }
 
@@ -3968,14 +3873,11 @@ void SemanticAnalyser::visit(VarDeclStatement &decl)
 
   bool can_resize = decl.var->var_type.GetSize() == 0;
 
-  variables_[scope_stack_.back()].insert(
-      { var_ident,
-        {
-            .type = decl.var->var_type,
-            .can_resize = can_resize,
-            .was_assigned = false,
-            .top_level_node = top_level_node_,
-        } });
+  variables_[scope_stack_.back()].insert({ var_ident,
+                                           {
+                                               .type = decl.var->var_type,
+                                               .can_resize = can_resize,
+                                           } });
   variable_decls_[scope_stack_.back()].insert({ var_ident, decl });
 }
 
@@ -3992,8 +3894,6 @@ void SemanticAnalyser::visit(Probe &probe)
   top_level_node_ = &probe;
   visit(probe.attach_points);
   visit(probe.block);
-
-  check_variable_decls(&probe);
 }
 
 void SemanticAnalyser::visit(Subprog &subprog)
@@ -4011,8 +3911,6 @@ void SemanticAnalyser::visit(Subprog &subprog)
                              variable{
                                  .type = ty,
                                  .can_resize = true,
-                                 .was_assigned = true,
-                                 .top_level_node = top_level_node_,
                              })
                     .first->second;
     var.type = ty; // Override in case it has changed.
@@ -4042,8 +3940,6 @@ void SemanticAnalyser::visit(Subprog &subprog)
     }
   }
   scope_stack_.pop_back();
-
-  check_variable_decls(&subprog);
 }
 
 void SemanticAnalyser::visit(Comptime &comptime)

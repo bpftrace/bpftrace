@@ -33,6 +33,7 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "ast/passes/type_system.h"
+#include "ast/passes/variable_precheck.h"
 #include "benchmark.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
@@ -344,6 +345,7 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
+  add(ast::CreateVariablePreCheckPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
 }
@@ -353,6 +355,7 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreatePortabilityPass());
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
+  add(ast::CreateVariablePreCheckPass());
   add(ast::CreateSemanticPass());
   add(ast::CreateResourcePass());
 }
