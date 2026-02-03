@@ -204,15 +204,15 @@ REQUIRES nft --help
 CLEANUP nft delete table bpftrace
 
 NAME kprobe_offset_module_error
-RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
+RUN {{BPFTRACE}} -e 'kprobe:nf_tables_newtable+0x1 { printf("hit\n"); exit(); }'
 EXPECT ERROR: Possible attachment attempt in the middle of an instruction, try a different offset.
 ARCH x86_64
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
 
 NAME kprobe_offset_module_error
-RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
-EXPECT ERROR: Unable to attach probe: kprobe:nft_trans_alloc_gfp+0x1. If this is expected, set the 'missing_probes' config variable to 'warn'.
+RUN {{BPFTRACE}} -e 'kprobe:nf_tables_newtable+0x1 { printf("hit\n"); exit(); }'
+EXPECT ERROR: Unable to attach probe: kprobe:nf_tables_newtable+0x1. If this is expected, set the 'missing_probes' config variable to 'warn'.
 ARCH aarch64|ppc64le|ppc64
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
