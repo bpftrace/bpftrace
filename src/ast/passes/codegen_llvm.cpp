@@ -1967,7 +1967,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (!func) {
       // If we don't know about this function for codegen, then it is very
       // likely something that will be linked in from the standard library.
-      // Assume that the semantic analyser has provided the types correctly,
+      // Assume that type resolution has provided the types correctly,
       // and set everything up for success.
       llvm::Type *result_type = b_.GetType(call.return_type);
       SmallVector<llvm::Type *> arg_types;
@@ -2168,7 +2168,7 @@ ScopedExpr CodegenLLVM::binop_int(Binop &binop)
     case Operator::MOD: {
       // Always do an unsigned modulo operation here even if `do_signed`
       // is true. bpf instruction set does not support signed division.
-      // We already warn in the semantic analyser that signed modulo can
+      // We already warn in an earlier pass that signed modulo can
       // lead to undefined behavior (because we will treat it as unsigned).
       return ScopedExpr(b_.CreateCheckedBinop(binop, lhs, rhs), std::move(del));
     }
@@ -2223,7 +2223,7 @@ ScopedExpr CodegenLLVM::binop_ptr(Binop &binop)
   Value *lhs = scoped_left.value();
   Value *rhs = scoped_right.value();
 
-  // note: the semantic phase blocks invalid combinations
+  // note: an earlier pass blocks invalid combinations
   if (compare) {
     // The only other type pointers can be compared to is ints
     if (!binop.left.type().IsPtrTy()) {
@@ -2423,7 +2423,8 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
   } else if (!if_expr.result_type.IsIntTy() &&
              !if_expr.result_type.IsBoolTy() &&
-             !if_expr.result_type.IsNoneTy()) {
+             !if_expr.result_type.IsNoneTy() &&
+             !if_expr.result_type.IsVoidTy()) {
     buf = b_.CreateAllocaBPF(if_expr.result_type);
     b_.CreateMemsetBPF(buf, b_.getInt8(0), if_expr.result_type.GetSize());
   }
@@ -2454,7 +2455,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
     phi->addIncoming(left_expr, left_end_block);
     phi->addIncoming(right_expr, right_end_block);
     return ScopedExpr(phi);
-  } else if (if_expr.result_type.IsNoneTy()) {
+  } else if (if_expr.result_type.IsNoneTy() || if_expr.result_type.IsVoidTy()) {
     // Type::none
     b_.SetInsertPoint(left_block);
     visit(if_expr.left);
@@ -2621,7 +2622,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
 {
   // Only allow direct reads if the element is also marked as a BTF type; this
-  // is specifically because the semantic analyzer has marked these cases to
+  // is specifically because an earlier pass has marked these cases to
   // avoid copying through two pointers.
   SizedType type = arr.expr.type();
 
@@ -2823,7 +2824,7 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
   // Validate that what we thought the struct looks like
   // and LLVM made of it are equal to avoid issues.
   //
-  // As the size is used throughout the semantic phase for
+  // As the size is used throughout type resolution for
   // sizing buffers and maps we have to abort if it doesn't
   // match.
   // But offset is only used for printing, so we can recover
@@ -4718,7 +4719,7 @@ GlobalVariable *CodegenLLVM::DeclareKernelVar(const std::string &var_name)
 
   std::string err;
   auto type = bpftrace_.btf_->get_var_type(var_name);
-  assert(!type.IsNoneTy()); // already checked in semantic analyser
+  assert(!type.IsNoneTy()); // already checked in an earlier pass
 
   auto *var = llvm::dyn_cast<GlobalVariable>(
       module_->getOrInsertGlobal(var_name, b_.GetType(type)));

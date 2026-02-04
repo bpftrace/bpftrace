@@ -561,7 +561,7 @@ void ResourceAnalyser::update_variable_info(Variable &var)
   // Note we don't check if a variable has been declared/assigned before.
   // We do this to simplify the code and make it more robust to changes
   // in other modules at the expense of memory over-allocation. Otherwise,
-  // we would need to track scopes like SemanticAnalyser and CodegenLLVM
+  // we would need to track scopes like TypeChecker and CodegenLLVM
   // and duplicate scope tracking in a third module.
   if (exceeds_stack_limit(var.var_type.GetSize())) {
     resources_.variable_buffers++;

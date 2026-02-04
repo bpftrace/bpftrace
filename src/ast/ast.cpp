@@ -413,7 +413,7 @@ SizedType ident_to_sized_type(const std::string &ident)
     // fits into a smaller int. This will also affect casts from a smaller
     // int and cause an ERROR: Integer size mismatch.
     // This could potentially be revisited or the cast relaxed
-    // if we check the variant values during semantic analysis.
+    // if we check the variant values during type resolution.
     return CreateEnum(64, enum_name);
   }
   return ident_to_c_struct(ident);

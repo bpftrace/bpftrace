@@ -1523,7 +1523,7 @@ Value *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)
     case TimestampMode::sw_tai:
       if (!bpftrace_.delta_taitime_.has_value())
         LOG(BUG)
-            << "delta_taitime_ should have been checked in semantic analysis";
+            << "delta_taitime_ should have been checked in an earlier pass";
       uint64_t delta = (bpftrace_.delta_taitime_->tv_sec * 1e9) +
                        bpftrace_.delta_taitime_->tv_nsec;
       Value *ns = CreateGetNs(TimestampMode::boot, loc);

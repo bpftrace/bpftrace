@@ -18,7 +18,8 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/resolve_imports.h"
-#include "ast/passes/semantic_analyser.h"
+#include "ast/passes/type_checker.h"
+#include "ast/passes/type_resolver.h"
 #include "ast/passes/type_system.h"
 #include "ast_matchers.h"
 #include "bpftrace.h"
@@ -27,7 +28,7 @@
 #include "mocks.h"
 #include "struct.h"
 
-namespace bpftrace::test::semantic_analyser {
+namespace bpftrace::test::type_checker {
 
 using bpftrace::test::AssignMapStatement;
 using bpftrace::test::AssignVarStatement;
@@ -108,7 +109,7 @@ std::string_view clean_prefix(std::string_view view)
 // This exists as a test fixture because the types may refer to `bpftrace`, so
 // this objects lifetime must exceed the tests lifetime. This is easier with a
 // fixture, and allows us to have a single harness.
-class SemanticAnalyserHarness {
+class TypeCheckerHarness {
 public:
   template <typename... Ts>
     requires((std::is_same_v<std::decay_t<Ts>, Mock> ||
@@ -173,7 +174,8 @@ public:
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateMapSugarPass())
                   .add(ast::CreateNamedParamsPass())
-                  .add(ast::CreateSemanticPass())
+                  .add(ast::CreateTypeResolverPass())
+                  .add(ast::CreateTypeCheckerPass())
                   .run();
     EXPECT_TRUE(bool(ok));
 
@@ -214,10 +216,9 @@ private:
   std::optional<ast::TypeMetadata> types_;
 };
 
-class SemanticAnalyserTest : public SemanticAnalyserHarness,
-                             public testing::Test {};
+class TypeCheckerTest : public TypeCheckerHarness, public testing::Test {};
 
-TEST_F(SemanticAnalyserTest, builtin_variables)
+TEST_F(TypeCheckerTest, builtin_variables)
 {
   // Just check that each one exists as a builtin or macro
   test("kprobe:f { pid }");
@@ -252,7 +253,7 @@ kprobe:f { fake }
   test("fentry:f { func }", NoFeatures::Enable, Error{});
 }
 
-TEST_F(SemanticAnalyserTest, builtin_functions)
+TEST_F(TypeCheckerTest, builtin_functions)
 {
   // Just check that each function exists.
   // Each function should also get its own test case for more thorough testing
@@ -296,7 +297,7 @@ TEST_F(SemanticAnalyserTest, builtin_functions)
   test("kprobe:f { tid() }");
 }
 
-TEST_F(SemanticAnalyserTest, undefined_map)
+TEST_F(TypeCheckerTest, undefined_map)
 {
   test("kprobe:f / @mymap == 123 / { @mymap = 0 }");
   test("kprobe:f / @mymap == 123 / { 456; }", Error{ R"(
@@ -321,19 +322,19 @@ kprobe:f { zero(@x); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, consistent_map_values)
+TEST_F(TypeCheckerTest, consistent_map_values)
 {
   test("kprobe:f { @x = 0; @x = 1; }");
   test(
       R"(begin { $a = (3, "hello"); @m[1] = $a; $a = (1,"aaaaaaaaaa"); @m[2] = $a; })");
   test("kprobe:f { @x = 0; @x = \"a\"; }", Error{ R"(
-stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already contains a value of type 'uint8'
+stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already has a type 'uint8'
 kprobe:f { @x = 0; @x = "a"; }
                    ~~~~~~~~
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, consistent_map_keys)
+TEST_F(TypeCheckerTest, consistent_map_keys)
 {
   test("begin { @x = 0; @x; }");
   test("begin { @x[1] = 0; @x[2]; }");
@@ -404,7 +405,7 @@ begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } }
       R"(begin { $a = (3, (uint8)5); $b = (4, (uint64)1234); @map[$a] = 1; @map[$b] = 2; })");
 }
 
-TEST_F(SemanticAnalyserTest, if_statements)
+TEST_F(TypeCheckerTest, if_statements)
 {
   test("kprobe:f { if(true) { 123 } }");
   test("kprobe:f { if(false) { 123 } }");
@@ -414,7 +415,7 @@ TEST_F(SemanticAnalyserTest, if_statements)
   test("kprobe:f { if((int32)pid) { 123 } }");
 }
 
-TEST_F(SemanticAnalyserTest, predicate_expressions)
+TEST_F(TypeCheckerTest, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }");
   test("kprobe:f / true / { 123 }");
@@ -431,7 +432,7 @@ kprobe:f / @mymap / { @mymap = "str" }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, ternary_expressions)
+TEST_F(TypeCheckerTest, ternary_expressions)
 {
   // There are some supported types left out of this list
   // as they don't make sense or cause other errors e.g.
@@ -486,7 +487,7 @@ TEST_F(SemanticAnalyserTest, ternary_expressions)
   // Error location is incorrect: #3063
   test("kprobe:f { $x = pid < 10000 ? 3 : cat(\"/proc/uptime\"); exit(); }",
        Error{ R"(
-stdin:1:17-54: ERROR: Branches must return the same type: have 'uint8' and 'none'
+stdin:1:17-54: ERROR: Branches must return the same type: have 'uint8' and 'void'
 kprobe:f { $x = pid < 10000 ? 3 : cat("/proc/uptime"); exit(); }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -522,88 +523,88 @@ kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, mismatched_call_types)
+TEST_F(TypeCheckerTest, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already contains a value of type 'uint8'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already has a type 'uint8'
 kprobe:f { @x = 1; @x = count(); }
                         ~~~~~~~
 )" });
   test("kprobe:f { @x = count(); @x "
        "= sum(pid); }",
        Error{ R"(
-stdin:1:31-39: ERROR: Type mismatch for @x: trying to assign value of type 'usum_t' when map already contains a value of type 'count_t'
+stdin:1:31-39: ERROR: Type mismatch for @x: trying to assign value of type 'usum_t' when map already has a type 'count_t'
 kprobe:f { @x = count(); @x = sum(pid); }
                               ~~~~~~~~
 )" });
   test("kprobe:f { @x = 1; @x = hist(0); }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already contains a value of type 'uint8'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already has a type 'uint8'
 kprobe:f { @x = 1; @x = hist(0); }
                         ~~~~~~~
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, compound_left)
+TEST_F(TypeCheckerTest, compound_left)
 {
   test("kprobe:f { $a = 0; $a <<= 1 }");
   test("kprobe:f { @a <<= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_right)
+TEST_F(TypeCheckerTest, compound_right)
 {
   test("kprobe:f { $a = 0; $a >>= 1 }");
   test("kprobe:f { @a >>= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_plus)
+TEST_F(TypeCheckerTest, compound_plus)
 {
   test("kprobe:f { $a = 0; $a += 1 }");
   test("kprobe:f { @a += 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_minus)
+TEST_F(TypeCheckerTest, compound_minus)
 {
   test("kprobe:f { $a = 0; $a -= 1 }");
   test("kprobe:f { @a -= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_mul)
+TEST_F(TypeCheckerTest, compound_mul)
 {
   test("kprobe:f { $a = 0; $a *= 1 }");
   test("kprobe:f { @a *= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_div)
+TEST_F(TypeCheckerTest, compound_div)
 {
   test("kprobe:f { $a = 0; $a /= 1 }");
   test("kprobe:f { @a /= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_mod)
+TEST_F(TypeCheckerTest, compound_mod)
 {
   test("kprobe:f { $a = 0; $a %= 1 }");
   test("kprobe:f { @a %= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_band)
+TEST_F(TypeCheckerTest, compound_band)
 {
   test("kprobe:f { $a = 0; $a &= 1 }");
   test("kprobe:f { @a &= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_bor)
+TEST_F(TypeCheckerTest, compound_bor)
 {
   test("kprobe:f { $a = 0; $a |= 1 }");
   test("kprobe:f { @a |= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, compound_bxor)
+TEST_F(TypeCheckerTest, compound_bxor)
 {
   test("kprobe:f { $a = 0; $a ^= 1 }");
   test("kprobe:f { @a ^= 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, call_hist)
+TEST_F(TypeCheckerTest, call_hist)
 {
   test("kprobe:f { @x = hist(1); }");
   test("kprobe:f { @x = hist(1, 0); }");
@@ -650,7 +651,7 @@ kprobe:f { hist() ? 0 : 1; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, call_lhist)
+TEST_F(TypeCheckerTest, call_lhist)
 {
   test("kprobe:f { @ = lhist(5, 0, 10, 1); "
        "}");
@@ -711,7 +712,7 @@ kprobe:f { lhist() ? 0 : 1; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, call_lhist_posparam)
+TEST_F(TypeCheckerTest, call_lhist_posparam)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("0");
@@ -722,7 +723,7 @@ TEST_F(SemanticAnalyserTest, call_lhist_posparam)
   test("kprobe:f { @ = lhist(5, $1, $2, $4); }", Mock{ *bpftrace }, Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_tseries)
+TEST_F(TypeCheckerTest, call_tseries)
 {
   test("kprobe:f { @ = tseries(5, 10s, 1); }");
   test("kprobe:f { @ = tseries(-5, 10s, 1); }");
@@ -815,7 +816,7 @@ kprobe:f { @ = tseries(1, 10s, 5, "stats"); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, call_tseries_posparam)
+TEST_F(TypeCheckerTest, call_tseries_posparam)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("10s");
@@ -824,7 +825,7 @@ TEST_F(SemanticAnalyserTest, call_tseries_posparam)
   test("kprobe:f { @ = tseries(5, $1, $2); }", Mock{ *bpftrace });
 }
 
-TEST_F(SemanticAnalyserTest, call_count)
+TEST_F(TypeCheckerTest, call_count)
 {
   test("kprobe:f { @x = count(); }");
   test("kprobe:f { @x = count(1); }", Error{});
@@ -835,7 +836,7 @@ TEST_F(SemanticAnalyserTest, call_count)
   test("kprobe:f { count() ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_sum)
+TEST_F(TypeCheckerTest, call_sum)
 {
   test("kprobe:f { @x = sum(123); }");
   test("kprobe:f { @x = sum(); }", Error{});
@@ -847,7 +848,7 @@ TEST_F(SemanticAnalyserTest, call_sum)
   test("kprobe:f { sum(1) ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_min)
+TEST_F(TypeCheckerTest, call_min)
 {
   test("kprobe:f { @x = min(123); }");
   test("kprobe:f { @x = min(); }", Error{});
@@ -858,7 +859,7 @@ TEST_F(SemanticAnalyserTest, call_min)
   test("kprobe:f { min(1) ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_max)
+TEST_F(TypeCheckerTest, call_max)
 {
   test("kprobe:f { @x = max(123); }");
   test("kprobe:f { @x = max(); }", Error{});
@@ -869,7 +870,7 @@ TEST_F(SemanticAnalyserTest, call_max)
   test("kprobe:f { max(1) ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_avg)
+TEST_F(TypeCheckerTest, call_avg)
 {
   test("kprobe:f { @x = avg(123); }");
   test("kprobe:f { @x = avg(); }", Error{});
@@ -880,7 +881,7 @@ TEST_F(SemanticAnalyserTest, call_avg)
   test("kprobe:f { avg(1) ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_stats)
+TEST_F(TypeCheckerTest, call_stats)
 {
   test("kprobe:f { @x = stats(123); }");
   test("kprobe:f { @x = stats(); }", Error{});
@@ -891,7 +892,7 @@ TEST_F(SemanticAnalyserTest, call_stats)
   test("kprobe:f { stats(1) ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_delete)
+TEST_F(TypeCheckerTest, call_delete)
 {
   ast::TypeMetadata types;
 
@@ -1018,7 +1019,7 @@ ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(string[
   test("kprobe:f { @x = 1; delete(@x[1]); }", Error{}, Types{ types });
 }
 
-TEST_F(SemanticAnalyserTest, call_exit)
+TEST_F(TypeCheckerTest, call_exit)
 {
   test("kprobe:f { exit(); }");
   test("kprobe:f { exit(1); }");
@@ -1042,7 +1043,7 @@ kprobe:f { $a = "1"; exit($a); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, call_print)
+TEST_F(TypeCheckerTest, call_print)
 {
   test("kprobe:f { @x = count(); print(@x); }");
   test("kprobe:f { @x = count(); print(@x, 5); }");
@@ -1065,7 +1066,7 @@ TEST_F(SemanticAnalyserTest, call_print)
        Warning{ "top and div arguments are ignored" });
 }
 
-TEST_F(SemanticAnalyserTest, call_print_map_item)
+TEST_F(TypeCheckerTest, call_print_map_item)
 {
   test(R"_(begin { @x[1] = 1; print(@x[1]); })_");
   test(R"_(begin { @x[1] = 1; @x[2] = 2; print(@x[2]); })_");
@@ -1095,7 +1096,7 @@ begin { @x[1] = hist(10); print(@x[1]); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, call_print_non_map)
+TEST_F(TypeCheckerTest, call_print_non_map)
 {
   test(R"(begin { print(1) })");
   test(R"(begin { print(comm) })");
@@ -1114,7 +1115,7 @@ TEST_F(SemanticAnalyserTest, call_print_non_map)
   test(R"(begin { print(ctx) })", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_clear)
+TEST_F(TypeCheckerTest, call_clear)
 {
   test("kprobe:f { @x = count(); clear(@x); }");
   test("kprobe:f { @x = count(); clear(@x, 1); }", Error{});
@@ -1131,7 +1132,7 @@ TEST_F(SemanticAnalyserTest, call_clear)
   test("kprobe:f { @x = count(); clear(@x) ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_zero)
+TEST_F(TypeCheckerTest, call_zero)
 {
   test("kprobe:f { @x = count(); zero(@x); }");
   test("kprobe:f { @x = count(); zero(@x, 1); }", Error{});
@@ -1148,7 +1149,7 @@ TEST_F(SemanticAnalyserTest, call_zero)
   test("kprobe:f { @x = count(); zero(@x) ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_has_key)
+TEST_F(TypeCheckerTest, call_has_key)
 {
   ast::TypeMetadata types;
 
@@ -1235,7 +1236,7 @@ kprobe:f { @a[1] = 1; has_key(@a, @a); }
 }
 
 // N.B. find uses mostly the same implementation as has_key
-TEST_F(SemanticAnalyserTest, call_find)
+TEST_F(TypeCheckerTest, call_find)
 {
   ast::TypeMetadata types;
 
@@ -1320,7 +1321,7 @@ TEST_F(SemanticAnalyserTest, call_find)
        Types{ types });
 }
 
-TEST_F(SemanticAnalyserTest, call_time)
+TEST_F(TypeCheckerTest, call_time)
 {
   test("kprobe:f { time(); }");
   test("kprobe:f { time(\"%M:%S\"); }");
@@ -1334,7 +1335,7 @@ TEST_F(SemanticAnalyserTest, call_time)
   test("kprobe:f { time() ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_strftime)
+TEST_F(TypeCheckerTest, call_strftime)
 {
   test("kprobe:f { strftime(\"%M:%S\", 1); }");
   test("kprobe:f { strftime(\"%M:%S\", nsecs); }");
@@ -1358,7 +1359,7 @@ TEST_F(SemanticAnalyserTest, call_strftime)
   test("kprobe:f { strftime(\"%M:%S\", nsecs(tai)); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_str)
+TEST_F(TypeCheckerTest, call_str)
 {
   test("kprobe:f { str(arg0); }");
   test("kprobe:f { @x = str(arg0); }");
@@ -1366,7 +1367,7 @@ TEST_F(SemanticAnalyserTest, call_str)
   test("kprobe:f { str(\"hello\"); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_str_2_lit)
+TEST_F(TypeCheckerTest, call_str_2_lit)
 {
   test("kprobe:f { str(arg0, 3); }");
   test("kprobe:f { str(arg0, -3); }", Error{});
@@ -1386,13 +1387,13 @@ TEST_F(SemanticAnalyserTest, call_str_2_lit)
   EXPECT_EQ(CreateString(4), x->var()->var_type);
 }
 
-TEST_F(SemanticAnalyserTest, call_str_2_expr)
+TEST_F(TypeCheckerTest, call_str_2_expr)
 {
   test("kprobe:f { str(arg0, arg1); }");
   test("kprobe:f { @x = str(arg0, arg1); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_str_state_leak_regression_test)
+TEST_F(TypeCheckerTest, call_str_state_leak_regression_test)
 {
   // Previously, the semantic analyser would
   // leak state in the first str() call.
@@ -1404,7 +1405,7 @@ TEST_F(SemanticAnalyserTest, call_str_state_leak_regression_test)
   test(R"PROG(kprobe:f { $x = str($1) == "asdf"; $y = str(arg0, 1) })PROG");
 }
 
-TEST_F(SemanticAnalyserTest, call_buf)
+TEST_F(TypeCheckerTest, call_buf)
 {
   test("kprobe:f { buf(arg0, 1); }");
   test("kprobe:f { buf(arg0, -1); }", Error{});
@@ -1417,19 +1418,19 @@ TEST_F(SemanticAnalyserTest, call_buf)
        "buf($foo->c); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_buf_lit)
+TEST_F(TypeCheckerTest, call_buf_lit)
 {
   test("kprobe:f { @x = buf(arg0, 3); }");
   test("kprobe:f { buf(arg0, \"hello\"); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_buf_expr)
+TEST_F(TypeCheckerTest, call_buf_expr)
 {
   test("kprobe:f { buf(arg0, arg1); }");
   test("kprobe:f { @x = buf(arg0, arg1); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_buf_posparam)
+TEST_F(TypeCheckerTest, call_buf_posparam)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("1");
@@ -1438,7 +1439,7 @@ TEST_F(SemanticAnalyserTest, call_buf_posparam)
   test("kprobe:f { buf(arg0, $2); }", Mock{ *bpftrace }, Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_ksym)
+TEST_F(TypeCheckerTest, call_ksym)
 {
   test("kprobe:f { ksym(arg0); }");
   test("kprobe:f { @x = ksym(arg0); }");
@@ -1446,7 +1447,7 @@ TEST_F(SemanticAnalyserTest, call_ksym)
   test("kprobe:f { ksym(\"hello\"); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_usym)
+TEST_F(TypeCheckerTest, call_usym)
 {
   test("kprobe:f { usym(arg0); }");
   test("kprobe:f { @x = usym(arg0); }");
@@ -1454,7 +1455,7 @@ TEST_F(SemanticAnalyserTest, call_usym)
   test("kprobe:f { usym(\"hello\"); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_ntop)
+TEST_F(TypeCheckerTest, call_ntop)
 {
   std::string structs = "struct inet { unsigned char "
                         "ipv4[4]; unsigned char "
@@ -1481,7 +1482,7 @@ TEST_F(SemanticAnalyserTest, call_ntop)
   test(structs + "kprobe:f { ntop(((struct inet*)0)->invalid); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_pton)
+TEST_F(TypeCheckerTest, call_pton)
 {
   test("kprobe:f { $addr_v4 = pton(\"127.0.0.1\"); }");
   test("kprobe:f { $addr_v4 = pton(\"127.0.0.1\"); $b1 = $addr_v4[0]; }");
@@ -1509,7 +1510,7 @@ TEST_F(SemanticAnalyserTest, call_pton)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_kaddr)
+TEST_F(TypeCheckerTest, call_kaddr)
 {
   test("kprobe:f { kaddr(\"avenrun\"); }");
   test("kprobe:f { @x = kaddr(\"avenrun\"); }");
@@ -1517,7 +1518,7 @@ TEST_F(SemanticAnalyserTest, call_kaddr)
   test("kprobe:f { kaddr(123); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_uaddr)
+TEST_F(TypeCheckerTest, call_uaddr)
 {
   test("u:/bin/sh:main { "
        "__builtin_uaddr(\"github.com/golang/"
@@ -1570,7 +1571,7 @@ TEST_F(SemanticAnalyserTest, call_uaddr)
   }
 }
 
-TEST_F(SemanticAnalyserTest, call_cgroupid)
+TEST_F(TypeCheckerTest, call_cgroupid)
 {
   // Handle args above default max-string
   // length (64)
@@ -1583,13 +1584,13 @@ TEST_F(SemanticAnalyserTest, call_cgroupid)
        "); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_probe)
+TEST_F(TypeCheckerTest, call_probe)
 {
   test("kprobe:f { @[probe] = count(); }");
   test("kprobe:f { printf(\"%s\", probe); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_cat)
+TEST_F(TypeCheckerTest, call_cat)
 {
   test("kprobe:f { cat(\"/proc/loadavg\"); }");
   test("kprobe:f { cat(\"/proc/%d/cmdline\", 1); }");
@@ -1602,7 +1603,7 @@ TEST_F(SemanticAnalyserTest, call_cat)
   test("kprobe:f { cat(\"/proc/loadavg\") ? 0 : 1; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_stack)
+TEST_F(TypeCheckerTest, call_stack)
 {
   test("kprobe:f { kstack() }");
   test("kprobe:f { ustack() }");
@@ -1664,7 +1665,7 @@ TEST_F(SemanticAnalyserTest, call_stack)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_macaddr)
+TEST_F(TypeCheckerTest, call_macaddr)
 {
   std::string structs = "struct mac { char addr[6]; }; "
                         "struct invalid { char addr[4]; }; ";
@@ -1686,7 +1687,7 @@ TEST_F(SemanticAnalyserTest, call_macaddr)
   test("kprobe:f { macaddr(\"foo\"); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_bswap)
+TEST_F(TypeCheckerTest, call_bswap)
 {
   test("kprobe:f { bswap(arg0); }");
 
@@ -1704,7 +1705,7 @@ TEST_F(SemanticAnalyserTest, call_bswap)
   test("kprobe:f { bswap(\"hello\"); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_cgroup_path)
+TEST_F(TypeCheckerTest, call_cgroup_path)
 {
   test("kprobe:f { cgroup_path(1) }");
   test("kprobe:f { cgroup_path(1, \"hello\") }");
@@ -1719,13 +1720,13 @@ TEST_F(SemanticAnalyserTest, call_cgroup_path)
   test("kprobe:f { printf(\"%d\", cgroup_path(1)) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, map_reassignment)
+TEST_F(TypeCheckerTest, map_reassignment)
 {
   test("kprobe:f { @x = 1; @x = 2; }");
   test("kprobe:f { @x = 1; @x = \"foo\"; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, variable_reassignment)
+TEST_F(TypeCheckerTest, variable_reassignment)
 {
   test("kprobe:f { $x = 1; $x = 2; }");
   test("kprobe:f { $x = 1; $x = \"foo\"; }", Error{});
@@ -1739,25 +1740,25 @@ kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = 1; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, map_use_before_assign)
+TEST_F(TypeCheckerTest, map_use_before_assign)
 {
   test("kprobe:f { @x = @y; @y = 2; }");
   test("kprobe:f { @y = 0; @y = @x; @x = 1; }");
 }
 
-TEST_F(SemanticAnalyserTest, maps_are_global)
+TEST_F(TypeCheckerTest, maps_are_global)
 {
   test("kprobe:f { @x = 1 } kprobe:func_1 { @y = @x }");
   test("kprobe:f { @x = 1 } kprobe:func_1 { @x = \"abc\" }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, variables_are_local)
+TEST_F(TypeCheckerTest, variables_are_local)
 {
   test("kprobe:f { $x = 1 } kprobe:func_1 { $x = \"abc\"; }");
   test("kprobe:f { $x = 1 } kprobe:func_1 { @y = $x }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, array_access)
+TEST_F(TypeCheckerTest, array_access)
 {
   test("kprobe:f { $s = arg0; @x = $s->y[0];}", Error{});
   test("kprobe:f { $s = 0; @x = $s->y[0];}", Error{});
@@ -1835,7 +1836,7 @@ TEST_F(SemanticAnalyserTest, array_access)
        Mock{ *bpftrace });
 }
 
-TEST_F(SemanticAnalyserTest, array_in_map)
+TEST_F(TypeCheckerTest, array_in_map)
 {
   test("struct MyStruct { int x[2]; int y[4]; } "
        "kprobe:f { @ = ((struct MyStruct *)arg0)->x; }");
@@ -1855,7 +1856,7 @@ TEST_F(SemanticAnalyserTest, array_in_map)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, array_as_map_key)
+TEST_F(TypeCheckerTest, array_as_map_key)
 {
   test("struct MyStruct { int x[2]; int y[4]; }"
        "kprobe:f { @x[((struct MyStruct *)arg0)->x] = 0; }");
@@ -1871,7 +1872,7 @@ TEST_F(SemanticAnalyserTest, array_as_map_key)
     })");
 }
 
-TEST_F(SemanticAnalyserTest, array_compare)
+TEST_F(TypeCheckerTest, array_compare)
 {
   test("#include <stdint.h>\n"
        "struct MyStruct { uint8_t x[4]; }"
@@ -1904,7 +1905,7 @@ TEST_F(SemanticAnalyserTest, array_compare)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, variable_type)
+TEST_F(TypeCheckerTest, variable_type)
 {
   auto ast = test("kprobe:f { $x = 1 }");
   auto st = CreateUInt8();
@@ -1913,7 +1914,7 @@ TEST_F(SemanticAnalyserTest, variable_type)
   EXPECT_EQ(st, assignment->var()->var_type);
 }
 
-TEST_F(SemanticAnalyserTest, unroll)
+TEST_F(TypeCheckerTest, unroll)
 {
   test(R"(kprobe:f { $i = 0; unroll(5) { printf("%d", $i); $i = $i + 1; } })");
   test(R"(kprobe:f { $i = 0; unroll(101) { printf("%d", $i); $i = $i + 1; } })",
@@ -1935,7 +1936,7 @@ TEST_F(SemanticAnalyserTest, unroll)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, map_integer_sizes)
+TEST_F(TypeCheckerTest, map_integer_sizes)
 {
   auto ast = test("kprobe:f { $x = (int32) -1; @x = $x; }");
 
@@ -1947,7 +1948,7 @@ TEST_F(SemanticAnalyserTest, map_integer_sizes)
   EXPECT_EQ(CreateInt32(), map_assignment->map_access->map->value_type);
 }
 
-TEST_F(SemanticAnalyserTest, binop_tuple)
+TEST_F(TypeCheckerTest, binop_tuple)
 {
   ast::TypeMetadata types;
 
@@ -2019,7 +2020,7 @@ TEST_F(SemanticAnalyserTest, binop_tuple)
       Types{ types });
 }
 
-TEST_F(SemanticAnalyserTest, binop_array)
+TEST_F(TypeCheckerTest, binop_array)
 {
   // These are variables so they don't get folded
   test(
@@ -2039,7 +2040,7 @@ TEST_F(SemanticAnalyserTest, binop_array)
       Error{});
 }
 
-TEST_F(SemanticAnalyserTest, unop_dereference)
+TEST_F(TypeCheckerTest, unop_dereference)
 {
   test("kprobe:f { *0; }");
   test("struct X { int n; } kprobe:f { $x = (struct X*)0; *$x; }");
@@ -2048,7 +2049,7 @@ TEST_F(SemanticAnalyserTest, unop_dereference)
   test("kprobe:f { *true; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, unop_not)
+TEST_F(TypeCheckerTest, unop_not)
 {
   std::string structs = "struct X { int x; };";
   test("kprobe:f { ~0; }");
@@ -2058,7 +2059,7 @@ TEST_F(SemanticAnalyserTest, unop_not)
   test("kprobe:f { ~true; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, unop_lnot)
+TEST_F(TypeCheckerTest, unop_lnot)
 {
   test("kprobe:f { !0; }");
   test("kprobe:f { !false; }");
@@ -2068,7 +2069,7 @@ TEST_F(SemanticAnalyserTest, unop_lnot)
   test("kprobe:f { !\"0\"; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, unop_increment_decrement)
+TEST_F(TypeCheckerTest, unop_increment_decrement)
 {
   test("kprobe:f { $x = 0; $x++; }");
   test("kprobe:f { $x = 0; $x--; }");
@@ -2087,7 +2088,7 @@ TEST_F(SemanticAnalyserTest, unop_increment_decrement)
   test("kprobe:f { --true; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf_errorf_warnf)
+TEST_F(TypeCheckerTest, printf_errorf_warnf)
 {
   std::vector<std::string> funcs = { "printf", "errorf", "warnf" };
   for (const auto &func : funcs) {
@@ -2117,7 +2118,7 @@ TEST_F(SemanticAnalyserTest, printf_errorf_warnf)
   }
 }
 
-TEST_F(SemanticAnalyserTest, debugf)
+TEST_F(TypeCheckerTest, debugf)
 {
   test("kprobe:f { debugf(\"warning\") }",
        Warning{ "The debugf() builtin is not "
@@ -2147,7 +2148,7 @@ TEST_F(SemanticAnalyserTest, debugf)
   }
 }
 
-TEST_F(SemanticAnalyserTest, system)
+TEST_F(TypeCheckerTest, system)
 {
   test("kprobe:f { system(\"ls\") }", UnsafeMode::Enable);
   test("kprobe:f { system(1234) }", UnsafeMode::Enable, Error{});
@@ -2157,7 +2158,7 @@ TEST_F(SemanticAnalyserTest, system)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf_format_int)
+TEST_F(TypeCheckerTest, printf_format_int)
 {
   test("kprobe:f { printf(\"int: %d\", 1234) }");
   test("kprobe:f { printf(\"int: %d\", pid) }");
@@ -2170,7 +2171,7 @@ TEST_F(SemanticAnalyserTest, printf_format_int)
   test("kprobe:f { printf(\"int: %X\", 1234) }");
 }
 
-TEST_F(SemanticAnalyserTest, printf_format_int_with_length)
+TEST_F(TypeCheckerTest, printf_format_int_with_length)
 {
   test("kprobe:f { printf(\"int: %d\", 1234) }");
   test("kprobe:f { printf(\"int: %u\", 1234) }");
@@ -2229,7 +2230,7 @@ TEST_F(SemanticAnalyserTest, printf_format_int_with_length)
   test("kprobe:f { printf(\"int: %tp\", 1234) }");
 }
 
-TEST_F(SemanticAnalyserTest, printf_format_string)
+TEST_F(TypeCheckerTest, printf_format_string)
 {
   test(R"(kprobe:f { printf("str: %s", "mystr") })");
   test("kprobe:f { printf(\"str: %s\", comm) }");
@@ -2242,52 +2243,52 @@ TEST_F(SemanticAnalyserTest, printf_format_string)
   test("kprobe:f { printf(\"%s\", arg0) }");
 }
 
-TEST_F(SemanticAnalyserTest, printf_bad_format_string)
+TEST_F(TypeCheckerTest, printf_bad_format_string)
 {
   test(R"(kprobe:f { printf("%d", "mystr") })", Error{});
   test("kprobe:f { printf(\"%d\", str(arg0)) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf_format_buf)
+TEST_F(TypeCheckerTest, printf_format_buf)
 {
   test(R"(kprobe:f { printf("%r", buf("mystr", 5)) })");
 }
 
-TEST_F(SemanticAnalyserTest, printf_bad_format_buf)
+TEST_F(TypeCheckerTest, printf_bad_format_buf)
 {
   test(R"(kprobe:f { printf("%r", "mystr") })", Error{});
   test("kprobe:f { printf(\"%r\", arg0) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf_format_buf_no_ascii)
+TEST_F(TypeCheckerTest, printf_format_buf_no_ascii)
 {
   test(R"(kprobe:f { printf("%rx", buf("mystr", 5)) })");
 }
 
-TEST_F(SemanticAnalyserTest, printf_bad_format_buf_no_ascii)
+TEST_F(TypeCheckerTest, printf_bad_format_buf_no_ascii)
 {
   test(R"(kprobe:f { printf("%rx", "mystr") })", Error{});
   test("kprobe:f { printf(\"%rx\", arg0) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf_format_buf_nonescaped_hex)
+TEST_F(TypeCheckerTest, printf_format_buf_nonescaped_hex)
 {
   test(R"(kprobe:f { printf("%rh", buf("mystr", 5)) })");
 }
 
-TEST_F(SemanticAnalyserTest, printf_bad_format_buf_nonescaped_hex)
+TEST_F(TypeCheckerTest, printf_bad_format_buf_nonescaped_hex)
 {
   test(R"(kprobe:f { printf("%rh", "mystr") })", Error{});
   test("kprobe:f { printf(\"%rh\", arg0) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, printf_format_multi)
+TEST_F(TypeCheckerTest, printf_format_multi)
 {
   test(R"(kprobe:f { printf("%d %d %s", 1, 2, "mystr") })");
   test(R"(kprobe:f { printf("%d %s %d", 1, 2, "mystr") })", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, join)
+TEST_F(TypeCheckerTest, join)
 {
   test("kprobe:f { join(arg0) }");
   test("kprobe:f { printf(\"%s\", join(arg0)) }", Error{});
@@ -2297,7 +2298,7 @@ TEST_F(SemanticAnalyserTest, join)
   test("kprobe:f { $x = join(arg0) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, join_delimiter)
+TEST_F(TypeCheckerTest, join_delimiter)
 {
   test("kprobe:f { join(arg0, \",\") }");
   test(R"(kprobe:f { printf("%s", join(arg0, ",")) })", Error{});
@@ -2307,7 +2308,7 @@ TEST_F(SemanticAnalyserTest, join_delimiter)
   test("kprobe:f { join(arg0, 3) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, variable_cast_types)
+TEST_F(TypeCheckerTest, variable_cast_types)
 {
   std::string structs = "struct type1 { int field; } struct "
                         "type2 { int field; }";
@@ -2318,7 +2319,7 @@ TEST_F(SemanticAnalyserTest, variable_cast_types)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, map_cast_types)
+TEST_F(TypeCheckerTest, map_cast_types)
 {
   std::string structs = "struct type1 { int field; } struct "
                         "type2 { int field; }";
@@ -2329,7 +2330,7 @@ TEST_F(SemanticAnalyserTest, map_cast_types)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, map_aggregations_implicit_cast)
+TEST_F(TypeCheckerTest, map_aggregations_implicit_cast)
 {
   // When assigning an aggregation to a map
   // containing integers, the aggregation is
@@ -2461,13 +2462,13 @@ kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                                 ~
 )" });
   test("kprobe:f { @ = count(); @ += 5 }", Error{ R"(
-stdin:1:25-31: ERROR: Type mismatch for @: trying to assign value of type 'uint64' when map already contains a value of type 'count_t'
+stdin:1:25-31: ERROR: Type mismatch for @: trying to assign value of type 'uint64' when map already has a type 'count_t'
 kprobe:f { @ = count(); @ += 5 }
                         ~~~~~~
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, map_aggregations_explicit_cast)
+TEST_F(TypeCheckerTest, map_aggregations_explicit_cast)
 {
   test("kprobe:f { @ = count(); print((1, (uint16)@)); }");
   test("kprobe:f { @ = sum(5); print((1, (uint16)@)); }");
@@ -2482,7 +2483,7 @@ kprobe:f { @ = hist(5); print((1, (uint16)@)); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, variable_casts_are_local)
+TEST_F(TypeCheckerTest, variable_casts_are_local)
 {
   std::string structs = "struct type1 { int field; } struct "
                         "type2 { int field; }";
@@ -2490,7 +2491,7 @@ TEST_F(SemanticAnalyserTest, variable_casts_are_local)
                  "kprobe:func_1 { $x = *(struct type2 *)cpu; }");
 }
 
-TEST_F(SemanticAnalyserTest, map_casts_are_global)
+TEST_F(TypeCheckerTest, map_casts_are_global)
 {
   std::string structs = "struct type1 { int field; } struct "
                         "type2 { int field; }";
@@ -2499,7 +2500,7 @@ TEST_F(SemanticAnalyserTest, map_casts_are_global)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, cast_unknown_type)
+TEST_F(TypeCheckerTest, cast_unknown_type)
 {
   test("begin { (struct faketype *)cpu }", Error{ R"(
 stdin:1:10-27: ERROR: Cannot resolve unknown type "struct faketype"
@@ -2510,13 +2511,10 @@ begin { (struct faketype *)cpu }
 stdin:1:10-18: ERROR: Cannot resolve unknown type "faketype"
 begin { (faketype)cpu }
          ~~~~~~~~
-stdin:1:9-19: ERROR: Cannot cast from "uint64" to "faketype"
-begin { (faketype)cpu }
-        ~~~~~~~~~~
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, cast_struct)
+TEST_F(TypeCheckerTest, cast_struct)
 {
   // Casting struct by value is forbidden
   test("struct mytype { int field; }\n"
@@ -2535,7 +2533,7 @@ struct mytype { int field; } begin { (struct mytype)cpu }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, cast_bool)
+TEST_F(TypeCheckerTest, cast_bool)
 {
   test("kprobe:f { $a = (bool)1; }");
   test("kprobe:f { $a = (bool)\"str\"; }");
@@ -2556,7 +2554,7 @@ kprobe:f { $a = (bool)pton("127.0.0.1"); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, cast_string)
+TEST_F(TypeCheckerTest, cast_string)
 {
   test("kprobe:f { $a = (string[10])\"hello\"; }");
 
@@ -2565,14 +2563,14 @@ TEST_F(SemanticAnalyserTest, cast_string)
   test("kprobe:f { $a = (string)5; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, field_access)
+TEST_F(TypeCheckerTest, field_access)
 {
   std::string structs = "struct type1 { int field; }";
   test(structs + "kprobe:f { $x = *(struct type1*)cpu; $x.field }");
   test(structs + "kprobe:f { @x = *(struct type1*)cpu; @x.field }");
 }
 
-TEST_F(SemanticAnalyserTest, field_access_wrong_field)
+TEST_F(TypeCheckerTest, field_access_wrong_field)
 {
   std::string structs = "struct type1 { int field; }";
   test(structs + "kprobe:f { ((struct type1 *)cpu)->blah }", Error{});
@@ -2580,13 +2578,13 @@ TEST_F(SemanticAnalyserTest, field_access_wrong_field)
   test(structs + "kprobe:f { @x = (struct type1 *)cpu; @x->blah }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, field_access_wrong_expr)
+TEST_F(TypeCheckerTest, field_access_wrong_expr)
 {
   std::string structs = "struct type1 { int field; }";
   test(structs + "kprobe:f { 1234->field }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, field_access_types)
+TEST_F(TypeCheckerTest, field_access_types)
 {
   std::string structs = "struct type1 { int field; char mystr[8]; }"
                         "struct type2 { int field; }";
@@ -2605,7 +2603,7 @@ TEST_F(SemanticAnalyserTest, field_access_types)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, field_access_pointer)
+TEST_F(TypeCheckerTest, field_access_pointer)
 {
   std::string structs = "struct type1 { int field; }";
   test(structs + "kprobe:f { ((struct type1*)0)->field }");
@@ -2613,7 +2611,7 @@ TEST_F(SemanticAnalyserTest, field_access_pointer)
   test(structs + "kprobe:f { *((struct type1*)0) }");
 }
 
-TEST_F(SemanticAnalyserTest, field_access_sub_struct)
+TEST_F(TypeCheckerTest, field_access_sub_struct)
 {
   std::string structs =
       "struct type2 { int field; } "
@@ -2631,7 +2629,7 @@ TEST_F(SemanticAnalyserTest, field_access_sub_struct)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, field_access_is_internal)
+TEST_F(TypeCheckerTest, field_access_is_internal)
 {
   BPFtrace bpftrace;
   std::string structs = "struct type1 { int x; }";
@@ -2654,7 +2652,7 @@ TEST_F(SemanticAnalyserTest, field_access_is_internal)
   }
 }
 
-TEST_F(SemanticAnalyserTest, struct_as_map_key)
+TEST_F(TypeCheckerTest, struct_as_map_key)
 {
   test("struct A { int x; } struct B { char x; } "
        "kprobe:f { @x[*((struct A *)arg0)] = 0; }");
@@ -2676,7 +2674,7 @@ stdin:4:12-13: ERROR: Argument mismatch for @x: trying to access with arguments:
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, per_cpu_map_as_map_key)
+TEST_F(TypeCheckerTest, per_cpu_map_as_map_key)
 {
   test("begin { @x = count(); @y[@x] = 1; }");
   test("begin { @x = sum(10); @y[@x] = 1; }");
@@ -2709,7 +2707,7 @@ begin { @x = stats(10); @y[@x] = 1; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, probe_short_name)
+TEST_F(TypeCheckerTest, probe_short_name)
 {
   test("t:sched:sched_one { 1 }");
   test("k:f { pid }");
@@ -2722,7 +2720,7 @@ TEST_F(SemanticAnalyserTest, probe_short_name)
   test("i:s:1 { 1 }");
 }
 
-TEST_F(SemanticAnalyserTest, positional_parameters)
+TEST_F(TypeCheckerTest, positional_parameters)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("123");
@@ -2760,14 +2758,14 @@ TEST_F(SemanticAnalyserTest, positional_parameters)
   test("kprobe:f { printf(\"%d\", $4); }", Mock{ *bpftrace }, Error{});
 }
 
-TEST_F(SemanticAnalyserTest, c_macros)
+TEST_F(TypeCheckerTest, c_macros)
 {
   test("#define A 1\nkprobe:f { printf(\"%d\", A); }");
   test("#define A A\nkprobe:f { printf(\"%d\", A); }", Error{});
   test("enum { A = 1 }\n#define A A\nkprobe:f { printf(\"%d\", A); }");
 }
 
-TEST_F(SemanticAnalyserTest, enums)
+TEST_F(TypeCheckerTest, enums)
 {
   // Anonymous enums have empty string names in libclang <= 15,
   // so this is an important test
@@ -2782,7 +2780,7 @@ TEST_F(SemanticAnalyserTest, enums)
   test("enum named { a = 1, b } kprobe:f { printf(\"%15s %-15s\", a, a); }");
 }
 
-TEST_F(SemanticAnalyserTest, enum_casts)
+TEST_F(TypeCheckerTest, enum_casts)
 {
   test("enum named { a = 1, b } kprobe:f { print((enum named)1); }");
   // We can't detect this issue because the cast expr is not a literal
@@ -2809,7 +2807,7 @@ enum named { a = 1, b } kprobe:f { $a = "str"; print((enum named)$a); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, signed_int_comparison_warnings)
+TEST_F(TypeCheckerTest, signed_int_comparison_warnings)
 {
   std::string cmp_sign = "comparison of integers of different signs";
   test("kretprobe:f /-1 < retval/ {}", Warning{ cmp_sign });
@@ -2832,7 +2830,7 @@ TEST_F(SemanticAnalyserTest, signed_int_comparison_warnings)
   test("kretprobe:f /retval < 1/ {}", NoWarning{ cmp_sign });
 }
 
-TEST_F(SemanticAnalyserTest, string_comparison)
+TEST_F(TypeCheckerTest, string_comparison)
 {
   test("struct MyStruct {char y[4]; } "
        "kprobe:f { $s = (struct MyStruct*)arg0; $s->y == \"abc\"}");
@@ -2850,7 +2848,7 @@ TEST_F(SemanticAnalyserTest, string_comparison)
        NoWarning{ msg });
 }
 
-TEST_F(SemanticAnalyserTest, string_index)
+TEST_F(TypeCheckerTest, string_index)
 {
   // String indexing produces an 8-bit signed integer.
   test("kprobe:f { $x = \"foo\"; $x[0] == 102; }");
@@ -2865,7 +2863,7 @@ kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, signed_int_arithmetic_warnings)
+TEST_F(TypeCheckerTest, signed_int_arithmetic_warnings)
 {
   // Test type warnings for arithmetic
   std::string msg = "arithmetic on integers of different signs";
@@ -2881,7 +2879,7 @@ TEST_F(SemanticAnalyserTest, signed_int_arithmetic_warnings)
   test("kprobe:f { @ = arg0 / 1 }", NoWarning{ msg });
 }
 
-TEST_F(SemanticAnalyserTest, signed_int_division_warnings)
+TEST_F(TypeCheckerTest, signed_int_division_warnings)
 {
   std::string msg = "signed operands";
   test("kprobe:f { @x = -1; @y = @x / 1 }", Warning{ msg });
@@ -2895,7 +2893,7 @@ TEST_F(SemanticAnalyserTest, signed_int_division_warnings)
   test("kprobe:f { @x = (uint64)1; @y = -(@x / 1) }", NoWarning{ msg });
 }
 
-TEST_F(SemanticAnalyserTest, signed_int_modulo_warnings)
+TEST_F(TypeCheckerTest, signed_int_modulo_warnings)
 {
   std::string msg = "signed operands";
   test("kprobe:f { @x = -1; @y = @x % 1 }", Warning{ msg });
@@ -2906,14 +2904,14 @@ TEST_F(SemanticAnalyserTest, signed_int_modulo_warnings)
   test("kprobe:f { @x = (uint64)1; @y = -(@x % 1) }", NoWarning{ msg });
 }
 
-TEST_F(SemanticAnalyserTest, map_as_lookup_table)
+TEST_F(TypeCheckerTest, map_as_lookup_table)
 {
   // Initializing a map should not lead to usage issues
   test("begin { @[0] = \"abc\"; @[1] = \"def\" } "
        "kretprobe:f { printf(\"%s\\n\", @[(int64)retval])}");
 }
 
-TEST_F(SemanticAnalyserTest, cast_sign)
+TEST_F(TypeCheckerTest, cast_sign)
 {
   // The C struct parser should set the is_signed flag on signed types
   std::string prog = "struct t { int s; unsigned int us; "
@@ -2938,7 +2936,7 @@ TEST_F(SemanticAnalyserTest, cast_sign)
   EXPECT_EQ(CreateUInt64(), ul->var()->var_type);
 }
 
-TEST_F(SemanticAnalyserTest, binop_bool_and_int)
+TEST_F(TypeCheckerTest, binop_bool_and_int)
 {
   std::string operators[] = {
     "==", "!=", "<", "<=", ">",  ">=", "&&", "||", "+",
@@ -2958,7 +2956,7 @@ TEST_F(SemanticAnalyserTest, binop_bool_and_int)
   }
 }
 
-TEST_F(SemanticAnalyserTest, binop_arithmetic)
+TEST_F(TypeCheckerTest, binop_arithmetic)
 {
   // Make sure types are correct
   std::string prog_pre = "struct t { long l; unsigned long ul }; "
@@ -3008,7 +3006,7 @@ TEST_F(SemanticAnalyserTest, binop_arithmetic)
   }
 }
 
-TEST_F(SemanticAnalyserTest, binop_compare)
+TEST_F(TypeCheckerTest, binop_compare)
 {
   std::string prog_pre = "struct t { long l }; "
                          "kprobe:f { $t = ((struct t *)0xFF); ";
@@ -3048,7 +3046,7 @@ TEST_F(SemanticAnalyserTest, binop_compare)
   }
 }
 
-TEST_F(SemanticAnalyserTest, int_cast_types)
+TEST_F(TypeCheckerTest, int_cast_types)
 {
   test("kretprobe:f { @ = (int8)retval }");
   test("kretprobe:f { @ = (int16)retval }");
@@ -3060,7 +3058,7 @@ TEST_F(SemanticAnalyserTest, int_cast_types)
   test("kretprobe:f { @ = (uint64)retval }");
 }
 
-TEST_F(SemanticAnalyserTest, int_cast_usage)
+TEST_F(TypeCheckerTest, int_cast_usage)
 {
   test("kretprobe:f /(int32) retval < 0/ {}");
   test("kprobe:f /(int32) arg0 < 0/ {}");
@@ -3071,7 +3069,7 @@ TEST_F(SemanticAnalyserTest, int_cast_usage)
   test("kprobe:f { @=avg((int32)\"abc\") }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, intptr_cast_types)
+TEST_F(TypeCheckerTest, intptr_cast_types)
 {
   test("kretprobe:f { @ = *(int8*)retval }");
   test("kretprobe:f { @ = *(int16*)retval }");
@@ -3083,7 +3081,7 @@ TEST_F(SemanticAnalyserTest, intptr_cast_types)
   test("kretprobe:f { @ = *(uint64*)retval }");
 }
 
-TEST_F(SemanticAnalyserTest, intptr_cast_usage)
+TEST_F(TypeCheckerTest, intptr_cast_usage)
 {
   test("kretprobe:f /(*(int32*) retval) < 0/ {}");
   test("kprobe:f /(*(int32*) arg0) < 0/ {}");
@@ -3096,7 +3094,7 @@ TEST_F(SemanticAnalyserTest, intptr_cast_usage)
   test("kprobe:f { @=avg(*(int32*)123) }");
 }
 
-TEST_F(SemanticAnalyserTest, intarray_cast_types)
+TEST_F(TypeCheckerTest, intarray_cast_types)
 {
   test("kprobe:f { @ = (int8[8])1 }");
   test("kprobe:f { @ = (int8[4])1 }");
@@ -3119,7 +3117,7 @@ TEST_F(SemanticAnalyserTest, intarray_cast_types)
   test("struct Foo { int x; } kprobe:f { @ = (struct Foo [2])1 }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, bool_array_cast_types)
+TEST_F(TypeCheckerTest, bool_array_cast_types)
 {
   test("kprobe:f { @ = (bool[8])1 }");
   test("kprobe:f { @ = (bool[4])1 }");
@@ -3129,7 +3127,7 @@ TEST_F(SemanticAnalyserTest, bool_array_cast_types)
   test("kprobe:f { @ = (bool[64])1 }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, intarray_cast_usage)
+TEST_F(TypeCheckerTest, intarray_cast_usage)
 {
   test("kprobe:f { $a=(int8[8])1; }");
   test("kprobe:f { @=(int8[8])1; }");
@@ -3137,7 +3135,7 @@ TEST_F(SemanticAnalyserTest, intarray_cast_usage)
   test("kprobe:f { if (((int8[8])1)[0] == 1) {} }");
 }
 
-TEST_F(SemanticAnalyserTest, intarray_to_int_cast)
+TEST_F(TypeCheckerTest, intarray_to_int_cast)
 {
   test("#include <stdint.h>\n"
        "struct Foo { uint8_t x[8]; } "
@@ -3160,7 +3158,7 @@ TEST_F(SemanticAnalyserTest, intarray_to_int_cast)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, mixed_int_var_assignments)
+TEST_F(TypeCheckerTest, mixed_int_var_assignments)
 {
   test("kprobe:f { $x = (uint64)0; $x = (uint16)1; }");
   test("kprobe:f { $x = (int8)1; $x = 5; }");
@@ -3207,7 +3205,7 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
              Jump(ast::JumpType::RETURN) })) });
 }
 
-TEST_F(SemanticAnalyserTest, mixed_int_like_map_assignments)
+TEST_F(TypeCheckerTest, mixed_int_like_map_assignments)
 {
   test("kprobe:f { @x = (uint64)0; @x = (uint16)1; }");
   test("kprobe:f { @x = (int8)1; @x = 5; }");
@@ -3232,33 +3230,33 @@ TEST_F(SemanticAnalyserTest, mixed_int_like_map_assignments)
   test("kprobe:f { @x = stats((uint32)1); @x = stats(-1); }");
 
   test("kprobe:f { @x = sum((uint64)1); @x = sum(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
 kprobe:f { @x = sum((uint64)1); @x = sum(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = min((uint64)1); @x = min(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
 kprobe:f { @x = min((uint64)1); @x = min(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = max((uint64)1); @x = max(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
 kprobe:f { @x = max((uint64)1); @x = max(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = avg((uint64)1); @x = avg(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
+stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
 kprobe:f { @x = avg((uint64)1); @x = avg(-1); }
                                      ~~~~~~~
 )" });
   test("kprobe:f { @x = stats((uint64)1); @x = stats(-1); }", Error{ R"(
-stdin:1:40-49: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already contains a value of type 'uint64'
+stdin:1:40-49: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
 kprobe:f { @x = stats((uint64)1); @x = stats(-1); }
                                        ~~~~~~~~~
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, mixed_int_map_access)
+TEST_F(TypeCheckerTest, mixed_int_map_access)
 {
   test("kprobe:f { @x[1] = 1; @x[(int16)2] }");
   test("kprobe:f { @x[-1] = 1; @x[1] }");
@@ -3289,7 +3287,7 @@ ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when 
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, mixed_int_like_binop)
+TEST_F(TypeCheckerTest, mixed_int_like_binop)
 {
   test("kprobe:f { $a = 1 == -1; }", NoWarning{ "comparison of integers" });
   test("kprobe:f { $a = 1 == (int64)-1; }",
@@ -3370,7 +3368,7 @@ TEST_F(SemanticAnalyserTest, mixed_int_like_binop)
              Jump(ast::JumpType::RETURN) })) });
 }
 
-TEST_F(SemanticAnalyserTest, signal)
+TEST_F(TypeCheckerTest, signal)
 {
   ast::TypeMetadata types;
 
@@ -3497,7 +3495,7 @@ TEST_F(SemanticAnalyserTest, signal)
   }
 }
 
-TEST_F(SemanticAnalyserTest, strncmp)
+TEST_F(TypeCheckerTest, strncmp)
 {
   // Test strncmp builtin
   test(R"(i:s:1 { $a = "bar"; strncmp("foo", $a, 1) })");
@@ -3509,7 +3507,7 @@ TEST_F(SemanticAnalyserTest, strncmp)
   test(R"(i:s:1 { strncmp("a","a","foo") })", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, strncmp_posparam)
+TEST_F(TypeCheckerTest, strncmp_posparam)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("1");
@@ -3518,7 +3516,7 @@ TEST_F(SemanticAnalyserTest, strncmp_posparam)
   test(R"(i:s:1 { strncmp("foo", "bar", $2) })", Mock{ *bpftrace }, Error{});
 }
 
-TEST_F(SemanticAnalyserTest, override)
+TEST_F(TypeCheckerTest, override)
 {
   ast::TypeMetadata types;
 
@@ -3560,7 +3558,7 @@ TEST_F(SemanticAnalyserTest, override)
   test("p:hz:1 { override(-1); }", UnsafeMode::Enable, Error{}, Types{ types });
 }
 
-TEST_F(SemanticAnalyserTest, unwatch)
+TEST_F(TypeCheckerTest, unwatch)
 {
   test("i:s:1 { unwatch(12345) }");
   test("i:s:1 { unwatch(0x1234) }");
@@ -3575,7 +3573,7 @@ TEST_F(SemanticAnalyserTest, unwatch)
   test("i:s:1 { printf(\"%d\", unwatch(2)) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, struct_member_keywords)
+TEST_F(TypeCheckerTest, struct_member_keywords)
 {
   // These are valid builtins / existing keywords in scripts, and we ensure that
   // these are not parsed in that way and are instead treated as fields.
@@ -3591,7 +3589,7 @@ TEST_F(SemanticAnalyserTest, struct_member_keywords)
   }
 }
 
-TEST_F(SemanticAnalyserTest, jumps)
+TEST_F(TypeCheckerTest, jumps)
 {
   test("i:s:1 { return; }");
   // must be used in loops
@@ -3599,7 +3597,7 @@ TEST_F(SemanticAnalyserTest, jumps)
   test("i:s:1 { continue; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, while_loop)
+TEST_F(TypeCheckerTest, while_loop)
 {
   test("i:s:1 { $a = 1; while ($a < 10) { $a++ }}");
   test("i:s:1 { $a = 1; while (1) { if($a > 50) { break } $a++ }}");
@@ -3628,7 +3626,7 @@ i:s:1 {
        Warning{ "Unreachable" });
 }
 
-TEST_F(SemanticAnalyserTest, type_ctx)
+TEST_F(TypeCheckerTest, type_ctx)
 {
   std::string structs = "struct c {char c} struct x { long a; short b[4]; "
                         "struct c c; struct c *d;}";
@@ -3700,7 +3698,7 @@ TEST_F(SemanticAnalyserTest, type_ctx)
   test("t:sched:sched_one { @ = (uint64)ctx; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, double_pointer_basic)
+TEST_F(TypeCheckerTest, double_pointer_basic)
 {
   test(R"_(begin { $pp = (int8 **)0; $p = *$pp; $val = *$p; })_");
   test(R"_(begin { $pp = (int8 **)0; $val = **$pp; })_");
@@ -3709,7 +3707,7 @@ TEST_F(SemanticAnalyserTest, double_pointer_basic)
   test(structs + R"_(begin { $pp = (struct Foo **)0; $val = (*$pp)->x; })_");
 }
 
-TEST_F(SemanticAnalyserTest, double_pointer_int)
+TEST_F(TypeCheckerTest, double_pointer_int)
 {
   auto ast = test("kprobe:f { $pp = (int8 **)1; $p = *$pp; $val = *$p; }");
   auto &stmts = ast.root->probes.at(0)->block->stmts;
@@ -3738,7 +3736,7 @@ TEST_F(SemanticAnalyserTest, double_pointer_int)
   EXPECT_EQ(assignment->var()->var_type.GetIntBitWidth(), 8ULL);
 }
 
-TEST_F(SemanticAnalyserTest, double_pointer_struct)
+TEST_F(TypeCheckerTest, double_pointer_struct)
 {
   auto ast = test(
       "struct Foo { char x; long y; }"
@@ -3766,7 +3764,7 @@ TEST_F(SemanticAnalyserTest, double_pointer_struct)
   EXPECT_EQ(assignment->var()->var_type.GetIntBitWidth(), 8ULL);
 }
 
-TEST_F(SemanticAnalyserTest, pointer_arith)
+TEST_F(TypeCheckerTest, pointer_arith)
 {
   test(R"(begin { $t = (int32*) 32; $t = $t + 1 })");
   test(R"(begin { $t = (int32*) 32; $t +=1 })");
@@ -3818,7 +3816,7 @@ TEST_F(SemanticAnalyserTest, pointer_arith)
       Error{});
 }
 
-TEST_F(SemanticAnalyserTest, pointer_compare)
+TEST_F(TypeCheckerTest, pointer_compare)
 {
   test(R"(begin { $t = (int32*) 32; $c = $t < 1 })");
   test(R"(begin { $t = (int32*) 32; $c = $t > 1 })");
@@ -3844,7 +3842,7 @@ TEST_F(SemanticAnalyserTest, pointer_compare)
 }
 
 // Basic functionality test
-TEST_F(SemanticAnalyserTest, tuple)
+TEST_F(TypeCheckerTest, tuple)
 {
   test(R"(begin { $t = (1)})");
   test(R"(begin { $t = (1, 2); $v = $t;})");
@@ -3891,7 +3889,7 @@ begin { @x[1] = hist(10); $y = (1, @x[1]); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, tuple_indexing)
+TEST_F(TypeCheckerTest, tuple_indexing)
 {
   test(R"(begin { (1,2).0 })");
   test(R"(begin { (1,2).1 })");
@@ -3904,7 +3902,7 @@ TEST_F(SemanticAnalyserTest, tuple_indexing)
 }
 
 // More in depth inspection of AST
-TEST_F(SemanticAnalyserTest, tuple_assign_var)
+TEST_F(TypeCheckerTest, tuple_assign_var)
 {
   class SizedType ty = CreateTuple(
       Struct::CreateTuple({ CreateUInt8(), CreateString(6) }));
@@ -3921,7 +3919,7 @@ TEST_F(SemanticAnalyserTest, tuple_assign_var)
 }
 
 // More in depth inspection of AST
-TEST_F(SemanticAnalyserTest, tuple_assign_map)
+TEST_F(TypeCheckerTest, tuple_assign_map)
 {
   auto ast = test(R"(begin { @ = (1, 3, 3, 7); @ = (0, 0, 0, 0); })");
   auto &stmts = ast.root->probes.at(0)->block->stmts;
@@ -3940,7 +3938,7 @@ TEST_F(SemanticAnalyserTest, tuple_assign_map)
 }
 
 // More in depth inspection of AST
-TEST_F(SemanticAnalyserTest, tuple_nested)
+TEST_F(TypeCheckerTest, tuple_nested)
 {
   class SizedType ty_inner = CreateTuple(
       Struct::CreateTuple({ CreateUInt8(), CreateUInt8() }));
@@ -3954,7 +3952,7 @@ TEST_F(SemanticAnalyserTest, tuple_nested)
   EXPECT_EQ(ty, assignment->var()->var_type);
 }
 
-TEST_F(SemanticAnalyserTest, mixed_tuple)
+TEST_F(TypeCheckerTest, mixed_tuple)
 {
   // The same resizing rules should exist for ints and strings inside tuples
   test(R"(begin { $a = ((int16)1, "hi"); $a = ((uint16)2, "hellostr"); })");
@@ -4098,7 +4096,7 @@ TEST_F(SemanticAnalyserTest, mixed_tuple)
                 Jump(ast::JumpType::RETURN) })) })) });
 }
 
-TEST_F(SemanticAnalyserTest, multi_pass_type_inference_zero_size_int)
+TEST_F(TypeCheckerTest, multi_pass_type_inference_zero_size_int)
 {
   // The first pass on processing the Unop
   // does not have enough information to
@@ -4109,7 +4107,7 @@ TEST_F(SemanticAnalyserTest, multi_pass_type_inference_zero_size_int)
   test("begin { if (!@i) { @i++; } }");
 }
 
-TEST_F(SemanticAnalyserTest, call_kptr_uptr)
+TEST_F(TypeCheckerTest, call_kptr_uptr)
 {
   test("k:f { @  = kptr((int8*) arg0); }");
   test("k:f { $a = kptr((int8*) arg0); }");
@@ -4124,7 +4122,7 @@ TEST_F(SemanticAnalyserTest, call_kptr_uptr)
   test("k:f { $a = uptr(arg0); }");
 }
 
-TEST_F(SemanticAnalyserTest, call_path)
+TEST_F(TypeCheckerTest, call_path)
 {
   test("kprobe:f { $k = path( arg0 ) }", Error{});
   test("kretprobe:f { $k = path( arg0 ) }", Error{});
@@ -4137,7 +4135,7 @@ TEST_F(SemanticAnalyserTest, call_path)
   test("end { $k = path( 1 ) }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, call_offsetof)
+TEST_F(TypeCheckerTest, call_offsetof)
 {
   test("struct Foo { int x; long l; char c; } \
         begin { @x = offsetof(struct Foo, x); }");
@@ -4208,12 +4206,12 @@ struct Foo { struct Bar { int a; } bar; }               begin { @x = offsetof(st
   test("begin { @x = offsetof(struct __notexiststruct__, x.y.z); }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, int_ident)
+TEST_F(TypeCheckerTest, int_ident)
 {
   test("begin { sizeof(int32) }");
 }
 
-TEST_F(SemanticAnalyserTest, string_size)
+TEST_F(TypeCheckerTest, string_size)
 {
   // Size of the variable should be the size of the larger string (incl. null)
   auto ast = test(R"(begin { $x = "hi"; $x = "hello"; })");
@@ -4263,7 +4261,7 @@ TEST_F(SemanticAnalyserTest, string_size)
   ASSERT_EQ(var_assign->var()->var_type.GetField(0).type.GetSize(), 6UL);
 }
 
-TEST_F(SemanticAnalyserTest, call_nsecs)
+TEST_F(TypeCheckerTest, call_nsecs)
 {
   test("begin { $ns = nsecs(); }");
   test("begin { $ns = nsecs(monotonic); }");
@@ -4277,7 +4275,7 @@ begin { $ns = nsecs(xxx); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, call_pid_tid)
+TEST_F(TypeCheckerTest, call_pid_tid)
 {
   test("begin { $i = tid(); }");
   test("begin { $i = pid(); }");
@@ -4297,7 +4295,7 @@ begin { $i = tid(1); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, subprog_return)
+TEST_F(TypeCheckerTest, subprog_return)
 {
   test("fn f(): void { return; }");
   test("fn f(): uint8 { return 1; }");
@@ -4316,7 +4314,7 @@ fn f(): int64 { return; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, subprog_arguments)
+TEST_F(TypeCheckerTest, subprog_arguments)
 {
   test("fn f($a : int64): int64 { return $a; }");
   // Error location is incorrect: #3063
@@ -4327,7 +4325,7 @@ fn f($a : int64): string { return $a; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, subprog_map)
+TEST_F(TypeCheckerTest, subprog_map)
 {
   test("fn f(): void { @a = 0; }");
   test("fn f(): uint64 { @a = 0; return @a + 1; }");
@@ -4335,14 +4333,14 @@ TEST_F(SemanticAnalyserTest, subprog_map)
   test("fn f(): uint64 { @a[0] = 0; return @a[0] + 1; }");
 }
 
-TEST_F(SemanticAnalyserTest, subprog_builtin)
+TEST_F(TypeCheckerTest, subprog_builtin)
 {
   test("fn f(): void { print(\"Hello world\"); }");
   test("fn f(): uint8 { return sizeof(int64); }");
   test("fn f(): uint64 { return nsecs; }");
 }
 
-TEST_F(SemanticAnalyserTest, subprog_builtin_disallowed)
+TEST_F(TypeCheckerTest, subprog_builtin_disallowed)
 {
   // Error location is incorrect: #3063
   test("fn f(): int64 { return func; }", Error{ R"(
@@ -4350,10 +4348,9 @@ ERROR: Builtin __builtin_func not supported outside probe
 )" });
 }
 
-class SemanticAnalyserBTFTest : public SemanticAnalyserHarness,
-                                public test_btf {};
+class TypeCheckerBTFTest : public TypeCheckerHarness, public test_btf {};
 
-TEST_F(SemanticAnalyserBTFTest, fentry)
+TEST_F(TypeCheckerBTFTest, fentry)
 {
   test("fentry:func_1 { 1 }");
   test("fexit:func_1 { 1 }");
@@ -4374,13 +4371,13 @@ fexit:func_1 { $x = args.foo; }
   test("fentry:func_1 { $x = args->a; }");
 }
 
-TEST_F(SemanticAnalyserBTFTest, short_name)
+TEST_F(TypeCheckerBTFTest, short_name)
 {
   test("f:func_1 { 1 }");
   test("fr:func_1 { 1 }");
 }
 
-TEST_F(SemanticAnalyserBTFTest, call_path)
+TEST_F(TypeCheckerBTFTest, call_path)
 {
   test("fentry:func_1 { @k = path( args.foo1 ) }");
   test("fexit:func_1 { @k = path( retval->foo1 ) }");
@@ -4389,7 +4386,7 @@ TEST_F(SemanticAnalyserBTFTest, call_path)
   test("fentry:func_1 { path(args.foo1, -1); }", Error{});
 }
 
-TEST_F(SemanticAnalyserBTFTest, call_skb_output)
+TEST_F(TypeCheckerBTFTest, call_skb_output)
 {
   test("fentry:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); "
        "}");
@@ -4427,7 +4424,7 @@ kprobe:func_1 { $ret = skboutput("one.pcap", arg1, 1500, 0); }
 )" });
 }
 
-TEST_F(SemanticAnalyserBTFTest, call_percpu_kaddr)
+TEST_F(TypeCheckerBTFTest, call_percpu_kaddr)
 {
   test("kprobe:f { percpu_kaddr(\"process_counts\"); }");
   test("kprobe:f { percpu_kaddr(\"process_counts\", 0); }");
@@ -4445,7 +4442,7 @@ kprobe:f { percpu_kaddr("nonsense"); }
 )" });
 }
 
-TEST_F(SemanticAnalyserBTFTest, call_socket_cookie)
+TEST_F(TypeCheckerBTFTest, call_socket_cookie)
 {
   test("fentry:tcp_shutdown { $ret = socket_cookie(args.sk); }");
   test("fexit:tcp_shutdown { $ret = socket_cookie(args.sk); }");
@@ -4456,7 +4453,7 @@ fentry:tcp_shutdown { $ret = socket_cookie(); }
                              ~~~~~~~~~~~~~~~
 )" });
   test("fentry:tcp_shutdown { $ret = socket_cookie(args.how); }", Error{ R"(
-stdin:1:30-53: ERROR: socket_cookie() only supports 'struct sock *' as the argument (int provided)
+stdin:1:30-53: ERROR: socket_cookie() only supports pointer arguments (int provided)
 fentry:tcp_shutdown { $ret = socket_cookie(args.how); }
                              ~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -4473,7 +4470,7 @@ kprobe:tcp_shutdown { $ret = socket_cookie((struct sock *)arg0); }
 )" });
 }
 
-TEST_F(SemanticAnalyserBTFTest, rawtracepoint)
+TEST_F(TypeCheckerBTFTest, rawtracepoint)
 {
   test("rawtracepoint:event_rt { args.first_real_arg }");
 
@@ -4485,7 +4482,7 @@ rawtracepoint:event_rt { args.bad_arg }
 }
 
 // Sanity check for kfunc/kretfunc aliases
-TEST_F(SemanticAnalyserBTFTest, kfunc)
+TEST_F(TypeCheckerBTFTest, kfunc)
 {
   test("kfunc:func_1 { 1 }");
   test("kretfunc:func_1 { 1 }");
@@ -4507,12 +4504,12 @@ kretfunc:func_1 { $x = args.foo; }
   test("kfunc:func_1 { $x = args->a; }");
 }
 
-TEST_F(SemanticAnalyserBTFTest, ntop)
+TEST_F(TypeCheckerBTFTest, ntop)
 {
   test(R"(fentry:func_arrays { printf("%s\n", ntop(args.arr.char_arr2)); })");
 }
 
-TEST_F(SemanticAnalyserTest, btf_type_tags)
+TEST_F(TypeCheckerTest, btf_type_tags)
 {
   auto bpftrace = get_mock_bpftrace();
   auto type = bpftrace->structs.Add("struct Foo", 16);
@@ -4535,7 +4532,7 @@ kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map_one_key)
+TEST_F(TypeCheckerTest, for_loop_map_one_key)
 {
   test("begin { @map[0] = 1; for ($kv : @map) { print($kv); } }",
        ExpectedAST{ Program().WithProbe(
@@ -4549,7 +4546,7 @@ TEST_F(SemanticAnalyserTest, for_loop_map_one_key)
                    Jump(ast::JumpType::RETURN) })) });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map_two_keys)
+TEST_F(TypeCheckerTest, for_loop_map_two_keys)
 {
   test("begin { @map[0,0] = 1; for ($kv : @map) { print($kv); } }",
        ExpectedAST{ Program().WithProbe(Probe(
@@ -4564,7 +4561,7 @@ TEST_F(SemanticAnalyserTest, for_loop_map_two_keys)
              Jump(ast::JumpType::RETURN) })) });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map)
+TEST_F(TypeCheckerTest, for_loop_map)
 {
   test("begin { @map[0] = 1; for ($kv : @map) { print($kv); } }");
   test("begin { @map[0] = 1; for ($kv : @map) { print($kv.0); } }");
@@ -4572,7 +4569,7 @@ TEST_F(SemanticAnalyserTest, for_loop_map)
   test("begin {@map1[@map2] = 1; @map2 = 1; for ($kv : @map1) {print($kv);}}");
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map_declared_after)
+TEST_F(TypeCheckerTest, for_loop_map_declared_after)
 {
   // Regression test: What happens with
   // @map[$kv.0] when @map hasn't been
@@ -4580,7 +4577,7 @@ TEST_F(SemanticAnalyserTest, for_loop_map_declared_after)
   test("begin { for ($kv : @map) { @map[$kv.0] } @map[0] = 1; }");
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map_no_key)
+TEST_F(TypeCheckerTest, for_loop_map_no_key)
 {
   // Error location is incorrect: #3063
   test("begin { @map = 1; for ($kv : @map) { } }", Error{ R"(
@@ -4590,7 +4587,7 @@ begin { @map = 1; for ($kv : @map) { } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map_undefined)
+TEST_F(TypeCheckerTest, for_loop_map_undefined)
 {
   // Error location is incorrect: #3063
   test("begin { for ($kv : @map) { } }", Error{ R"(
@@ -4600,7 +4597,7 @@ begin { for ($kv : @map) { } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map_undefined2)
+TEST_F(TypeCheckerTest, for_loop_map_undefined2)
 {
   // Error location is incorrect: #3063
   test("begin { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }", Error{ R"(
@@ -4610,7 +4607,7 @@ begin { @map[0] = 1; for ($kv : @undef) { @map[$kv.0]; } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_map_restricted_types)
+TEST_F(TypeCheckerTest, for_loop_map_restricted_types)
 {
   test("begin { @map[0] = hist(10); for ($kv : @map) { } }", Error{ R"(
 stdin:1:40-44: ERROR: Loop expression does not support type: hist_t
@@ -4636,7 +4633,7 @@ begin { @map[0] = stats(10); for ($kv : @map) { } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_variables_read_only)
+TEST_F(TypeCheckerTest, for_loop_variables_read_only)
 {
   test(
       R"(
@@ -4670,7 +4667,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_read_only)
           })) });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_variables_modified_during_loop)
+TEST_F(TypeCheckerTest, for_loop_variables_modified_during_loop)
 {
   test(
       R"(
@@ -4705,7 +4702,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_modified_during_loop)
           })) });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop)
+TEST_F(TypeCheckerTest, for_loop_variables_created_in_loop)
 {
   test(R"(
     begin {
@@ -4729,7 +4726,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop)
              Jump(ast::JumpType::RETURN) })) });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
+TEST_F(TypeCheckerTest, for_loop_variables_multiple)
 {
   test(
       R"(
@@ -4768,7 +4765,7 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
             Jump(ast::JumpType::RETURN) })) });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_invalid_expr)
+TEST_F(TypeCheckerTest, for_loop_invalid_expr)
 {
   // Error location is incorrect: #3063
   test("begin { for ($x : $var) { } }", Error{ R"(
@@ -4788,14 +4785,14 @@ begin { for ($x : "abc") { } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_control_flow)
+TEST_F(TypeCheckerTest, for_loop_control_flow)
 {
   test("begin { @map[0] = 1; for ($kv : @map) { break; } }");
   test("begin { @map[0] = 1; for ($kv : @map) { continue; } }");
   test("begin { @map[0] = 1; for ($kv : @map) { return; } }");
 }
 
-TEST_F(SemanticAnalyserTest, for_range_loop)
+TEST_F(TypeCheckerTest, for_range_loop)
 {
   // These are all technically valid,
   // although they may result in zero
@@ -4815,20 +4812,20 @@ TEST_F(SemanticAnalyserTest, for_range_loop)
   test(R"(begin { for ($i : ((int8)0)..((int8)5)) { printf("%d\n", $i); } })");
 }
 
-TEST_F(SemanticAnalyserTest, for_range_nested)
+TEST_F(TypeCheckerTest, for_range_nested)
 {
   test("begin { for ($i : 0..5) { "
        "for ($j : 0..$i) { printf(\"%d %d\\n\", $i, $j); } "
        "} }");
 }
 
-TEST_F(SemanticAnalyserTest, for_range_variable_use)
+TEST_F(TypeCheckerTest, for_range_variable_use)
 {
   test("begin { for ($i : 0..5) { @[$i] = "
        "$i * 2; } }");
 }
 
-TEST_F(SemanticAnalyserTest, for_range_invalid_types)
+TEST_F(TypeCheckerTest, for_range_invalid_types)
 {
   test(R"(begin { for ($i : "str"..5) { printf("%d", $i); } })", Error{ R"(
 stdin:1:23-27: ERROR: Loop range requires an integer for the start value
@@ -4843,23 +4840,20 @@ begin { for ($i : 0.."str") { printf("%d", $i); } }
 )" });
 
   test(R"(begin { for ($i : 0.0..5) { printf("%d", $i); } })", Error{ R"(
-stdin:1:21-22: ERROR: Can not access index '0' on expression of type 'uint8'
-begin { for ($i : 0.0..5) { printf("%d", $i); } }
-                    ~
 stdin:1:19-25: ERROR: Loop range requires an integer for the start value
 begin { for ($i : 0.0..5) { printf("%d", $i); } }
                   ~~~~~~
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_range_control_flow)
+TEST_F(TypeCheckerTest, for_range_control_flow)
 {
   test("begin { for ($i : 0..5) { break; } }");
   test("begin { for ($i : 0..5) { continue; } }");
   test("begin { for ($i : 0..5) { return; } }");
 }
 
-TEST_F(SemanticAnalyserTest, for_range_context_access)
+TEST_F(TypeCheckerTest, for_range_context_access)
 {
   test("kprobe:f { for ($i : 0..5) { arg0 } }", Error{ R"(
 stdin:1:30-34: ERROR: 'arg0' builtin is not allowed in a for-loop
@@ -4868,14 +4862,14 @@ kprobe:f { for ($i : 0..5) { arg0 } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_range_nested_range)
+TEST_F(TypeCheckerTest, for_range_nested_range)
 {
   test("begin { for ($i : 0..5) { for ($j : 0..$i) { "
        "printf(\"%d %d\\n\", $i, $j); "
        "} } }");
 }
 
-TEST_F(SemanticAnalyserTest, castable_map_missing_feature)
+TEST_F(TypeCheckerTest, castable_map_missing_feature)
 {
   test("k:f {  @a = count(); }", NoFeatures::Enable);
   test("k:f {  @a = count(); print(@a) }", NoFeatures::Enable);
@@ -4917,7 +4911,7 @@ begin { @a = count(); @b = 1; @b = @a; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_no_ctx_access)
+TEST_F(TypeCheckerTest, for_loop_no_ctx_access)
 {
   test("kprobe:f { @map[0] = 1; for ($kv : @map) { ctx } }", Error{ R"(
 stdin:1:44-47: ERROR: 'ctx' builtin is not allowed in a for-loop
@@ -4926,17 +4920,17 @@ kprobe:f { @map[0] = 1; for ($kv : @map) { ctx } }
 )" });
 }
 
-TEST_F(SemanticAnalyserBTFTest, args_builtin_mixed_probes)
+TEST_F(TypeCheckerBTFTest, args_builtin_mixed_probes)
 {
   test("fentry:func_1,rawtracepoint:event_rt { args }");
 }
 
-TEST_F(SemanticAnalyserBTFTest, binop_late_ptr_resolution)
+TEST_F(TypeCheckerBTFTest, binop_late_ptr_resolution)
 {
   test(R"(fentry:func_1 { if (@a[1] == args.foo1) { } @a[1] = args.foo1; })");
 }
 
-TEST_F(SemanticAnalyserBTFTest, anon_struct_resolution)
+TEST_F(TypeCheckerBTFTest, anon_struct_resolution)
 {
   test("fentry:func_anon_struct {\n"
        "  @a1 = args.AnonStruct.AnonTypedefArray[0].a;\n"
@@ -4948,7 +4942,7 @@ TEST_F(SemanticAnalyserBTFTest, anon_struct_resolution)
        "}");
 }
 
-TEST_F(SemanticAnalyserTest, buf_strlen_too_large)
+TEST_F(TypeCheckerTest, buf_strlen_too_large)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->config_->max_strlen = 9999999999;
@@ -4966,7 +4960,7 @@ uprobe:/bin/sh:f { buf(arg0) }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, variable_declarations)
+TEST_F(TypeCheckerTest, variable_declarations)
 {
   test("begin { let $a; $a = 1; }");
   test("begin { let $a: int16; $a = 1; }");
@@ -5043,7 +5037,7 @@ begin { $x = 2; if (pid) { let $x; } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, variable_address)
+TEST_F(TypeCheckerTest, variable_address)
 {
   test("begin { $a = 1; $b = &$a; @c = &$a; }");
 
@@ -5061,7 +5055,7 @@ begin { let $a; $b = &$a; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, map_address)
+TEST_F(TypeCheckerTest, map_address)
 {
   test("begin { @a = 1; @b[1] = 2; $x = &@a; $y = &@b; }");
 
@@ -5072,7 +5066,7 @@ begin { $x = &@a; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, block_scoping)
+TEST_F(TypeCheckerTest, block_scoping)
 {
   // if/else
   test("begin { $a = 1; if (pid) { $b = 2; "
@@ -5170,7 +5164,7 @@ TEST_F(SemanticAnalyserTest, block_scoping)
     })");
 }
 
-TEST_F(SemanticAnalyserTest, invalid_assignment)
+TEST_F(TypeCheckerTest, invalid_assignment)
 {
   test("begin { @a = hist(10); let $b = @a; }", Error{ R"(
 stdin:1:24-35: ERROR: Value 'hist_t' cannot be assigned to a scratch variable.
@@ -5220,7 +5214,7 @@ begin { @a = stats(10); @b = @a; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, no_maximum_passes)
+TEST_F(TypeCheckerTest, no_maximum_passes)
 {
   test("interval:s:1 { @j = @i; @i = @h; @h "
        "= @g; @g = @f; @f = @e; @e = @d; "
@@ -5229,7 +5223,7 @@ TEST_F(SemanticAnalyserTest, no_maximum_passes)
        "@a = 1; }");
 }
 
-TEST_F(SemanticAnalyserTest, block_expressions)
+TEST_F(TypeCheckerTest, block_expressions)
 {
   // Good, variable is not shadowed
   test("begin { let $x = { let $x = 1; $x }; print($x) }",
@@ -5246,7 +5240,7 @@ TEST_F(SemanticAnalyserTest, block_expressions)
            })) });
 }
 
-TEST_F(SemanticAnalyserTest, map_declarations)
+TEST_F(TypeCheckerTest, map_declarations)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->config_->unstable_map_decl = ConfigUnstable::enable;
@@ -5301,7 +5295,7 @@ HINT: Valid map types: percpulruhash, percpuhash, lruhash, hash
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, macros)
+TEST_F(TypeCheckerTest, macros)
 {
   auto bpftrace = get_mock_bpftrace();
 
@@ -5339,7 +5333,7 @@ macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, warning_for_empty_positional_parameters)
+TEST_F(TypeCheckerTest, warning_for_empty_positional_parameters)
 {
   auto bpftrace = get_mock_bpftrace();
   bpftrace->add_param("1");
@@ -5348,7 +5342,7 @@ TEST_F(SemanticAnalyserTest, warning_for_empty_positional_parameters)
        Mock{ *bpftrace });
 }
 
-TEST_F(SemanticAnalyserTest, warning_for_discared_expression_statement_value)
+TEST_F(TypeCheckerTest, warning_for_discared_expression_statement_value)
 {
   // Non exhaustive testing, just a few examples
   test("k:f { bswap(arg0); }", Warning{ "Return value discarded" });
@@ -5360,10 +5354,12 @@ TEST_F(SemanticAnalyserTest, warning_for_discared_expression_statement_value)
   test("k:f { _ = { 1 } }", NoWarning{ "Return value discarded" });
   test("k:f { print(1); }", NoWarning{ "Return value discarded" });
   test("k:f { $a = 1; }", NoWarning{ "Return value discarded" });
+  test("k:f { $a = 1; ++$a }", NoWarning{ "Return value discarded" });
+  test("k:f { $a = 1; $a++ }", NoWarning{ "Return value discarded" });
   test("k:f { @a[1] = count(); }", NoWarning{ "Return value discarded" });
 }
 
-TEST_F(SemanticAnalyserTest, external_function)
+TEST_F(TypeCheckerTest, external_function)
 {
   ast::TypeMetadata types;
 
@@ -5415,7 +5411,7 @@ kprobe:f { $x = (int32*)0; $x = foo((int32)1, (int64)2); }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, printf_str_conversion)
+TEST_F(TypeCheckerTest, printf_str_conversion)
 {
   // %s just uses the default text output representation, and therefore can
   // print any type that can be serialized.
@@ -5425,7 +5421,7 @@ TEST_F(SemanticAnalyserTest, printf_str_conversion)
   test(R"(kprobe:f { $x = "foo"; printf("%s", $x) })");
 }
 
-TEST_F(SemanticAnalyserTest, fail)
+TEST_F(TypeCheckerTest, fail)
 {
   test(R"(kprobe:f { fail("always fail"); })", Error{ R"(
 stdin:1:12-31: ERROR: always fail
@@ -5448,7 +5444,7 @@ kprobe:f { if (false) { fail("always false"); } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, typeof_decls)
+TEST_F(TypeCheckerTest, typeof_decls)
 {
   test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = 2; }");
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bar"; })");
@@ -5496,7 +5492,7 @@ kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
   test(R"(kprobe:f { let $x; let $y : typeof($x); $y = "bar"; $x = "foo"; })");
 }
 
-TEST_F(SemanticAnalyserTest, typeof_subprog)
+TEST_F(TypeCheckerTest, typeof_subprog)
 {
   // Basic subprogram arguments can be defined relatively.
   test("fn foo($x : int64, $y : typeof($x)) : int8 { return 0; }");
@@ -5506,7 +5502,7 @@ TEST_F(SemanticAnalyserTest, typeof_subprog)
   test("fn foo($x : typeof($y), $y : int64) : typeof($x) { return 0; }");
 }
 
-TEST_F(SemanticAnalyserTest, typeof_casts)
+TEST_F(TypeCheckerTest, typeof_casts)
 {
   test(R"(kprobe:f { $x = (uint8)1; $y = (typeof($x))10; })");
   test(R"(kprobe:f { $x = (void*)0; $y = (typeof($x))1; })");
@@ -5535,7 +5531,7 @@ struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, if_comptime)
+TEST_F(TypeCheckerTest, if_comptime)
 {
   test(R"(kprobe:f { @a = 1; if (comptime false) { @a[1] = 1; } })");
   test(R"(kprobe:f { @a[1] = 1; if (comptime false) { @a = 1; } })");
@@ -5554,7 +5550,7 @@ kprobe:f { @a = 1; if comptime (@a > 1) { print(1); } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, comptime)
+TEST_F(TypeCheckerTest, comptime)
 {
   test(R"(begin { comptime (1 + 1) })");
   test(R"(begin { $x = 1; comptime (sizeof($x)) })");
@@ -5574,7 +5570,7 @@ begin { @x = 0; comptime (@x + 1) }
   test(R"(begin { @x[1] = 1; comptime (@x[1] + 1) })", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, typeinfo_if_comptime)
+TEST_F(TypeCheckerTest, typeinfo_if_comptime)
 {
   // We should be able to selectively analyze specific branches. Only the
   // correct type branch will be chosen, and we will not encounted a type
@@ -5594,7 +5590,7 @@ kprobe:f { $x = 1; if comptime (typeinfo($x) == typeinfo(1)) { fail("no integers
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, no_meta_used_warnings)
+TEST_F(TypeCheckerTest, no_meta_used_warnings)
 {
   test("begin { let $a; print(sizeof($a)); $a = 1; }",
        NoWarning{ "Variable used" });
@@ -5607,7 +5603,7 @@ TEST_F(SemanticAnalyserTest, no_meta_used_warnings)
        NoWarning{ "Variable used" });
 }
 
-TEST_F(SemanticAnalyserTest, no_meta_map_assignments)
+TEST_F(TypeCheckerTest, no_meta_map_assignments)
 {
   test("begin { let $b : typeof({ @a = 1; 1 }); }", Error{});
   test("begin { $b = typeinfo({ @a = 1; 1 }); }", Error{});
@@ -5617,7 +5613,7 @@ TEST_F(SemanticAnalyserTest, no_meta_map_assignments)
        Error{});
 }
 
-TEST_F(SemanticAnalyserTest, probe_return)
+TEST_F(TypeCheckerTest, probe_return)
 {
   test("begin { return 1; }");
   test("begin { $a = 1; return $a; }");
@@ -5635,7 +5631,7 @@ TEST_F(SemanticAnalyserTest, probe_return)
   test("begin { return \"tomato\"; }", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, record)
+TEST_F(TypeCheckerTest, record)
 {
   // Variables
   test(R"(begin { $t = (a=1)})");
@@ -5712,7 +5708,7 @@ begin { @x[1] = hist(10); $y = (a=1, b=@x[1]); }
   test(R"(begin { $t = (a=1, b=2); $t = (x=3, y=4); })", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, record_field_access)
+TEST_F(TypeCheckerTest, record_field_access)
 {
   test(R"(begin { (a=1,b=2).a })");
   test(R"(begin { (a=1,b=2).b })");
@@ -5723,7 +5719,7 @@ TEST_F(SemanticAnalyserTest, record_field_access)
   test(R"(begin { (a=1,b=2).c })", Error{});
 }
 
-TEST_F(SemanticAnalyserTest, record_assign_var)
+TEST_F(TypeCheckerTest, record_assign_var)
 {
   class SizedType ty = CreateRecord(
       Struct::CreateRecord({ CreateUInt8(), CreateString(6) }, { "a", "b" }));
@@ -5742,7 +5738,7 @@ TEST_F(SemanticAnalyserTest, record_assign_var)
   EXPECT_EQ("a", assignment->expr.as<ast::Record>()->elems[1]->name);
 }
 
-TEST_F(SemanticAnalyserTest, record_mixed_types)
+TEST_F(TypeCheckerTest, record_mixed_types)
 {
   // The same resizing rules should exist for ints, strings, and tuples inside
   // records
@@ -5889,4 +5885,4 @@ TEST_F(SemanticAnalyserTest, record_mixed_types)
             Jump(ast::JumpType::RETURN) })) });
 }
 
-} // namespace bpftrace::test::semantic_analyser
+} // namespace bpftrace::test::type_checker

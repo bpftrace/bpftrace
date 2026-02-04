@@ -814,7 +814,7 @@ public:
   const SizedType &type() const
   {
     // This must always be resolved inline, and when used as an expression will
-    // be replaced during semantic analysis with a suitable tuple.
+    // be replaced during type resolution with a suitable tuple.
     static SizedType none = CreateNone();
     return none;
   }
@@ -1391,7 +1391,7 @@ public:
 
 // Scalar map assignment is purely syntactic sugar that is removed by the pass
 // returned by`CreateMapSugarPass`. This is replaced by the expansion of
-// default keys, so that later steps (semantic analysis, code generation),
+// default keys, so that later steps (type resolution, code generation),
 // don't need to worry about this. Maps whose accesses are bound to a single
 // key will be automatically collapsed into scalar values on the output side.
 class AssignScalarMapStatement : public Node {
