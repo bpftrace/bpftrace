@@ -51,6 +51,7 @@ add_executable(bpftrace_test
   type_system.cpp
   unstable_feature.cpp
   utils.cpp
+  variable_precheck.cpp
 )
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")

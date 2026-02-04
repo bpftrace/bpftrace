@@ -545,110 +545,60 @@ kprobe:f { @x = 1; @x = hist(0); }
 
 TEST_F(SemanticAnalyserTest, compound_left)
 {
-  test("kprobe:f { $a <<= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a <<= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a <<= 1 }");
   test("kprobe:f { @a <<= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_right)
 {
-  test("kprobe:f { $a >>= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a >>= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a >>= 1 }");
   test("kprobe:f { @a >>= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_plus)
 {
-  test("kprobe:f { $a += 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a += 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a += 1 }");
   test("kprobe:f { @a += 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_minus)
 {
-  test("kprobe:f { $a -= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a -= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a -= 1 }");
   test("kprobe:f { @a -= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_mul)
 {
-  test("kprobe:f { $a *= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a *= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a *= 1 }");
   test("kprobe:f { @a *= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_div)
 {
-  test("kprobe:f { $a /= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a /= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a /= 1 }");
   test("kprobe:f { @a /= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_mod)
 {
-  test("kprobe:f { $a %= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a %= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a %= 1 }");
   test("kprobe:f { @a %= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_band)
 {
-  test("kprobe:f { $a &= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a &= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a &= 1 }");
   test("kprobe:f { @a &= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_bor)
 {
-  test("kprobe:f { $a |= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a |= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a |= 1 }");
   test("kprobe:f { @a |= 1 }");
 }
 
 TEST_F(SemanticAnalyserTest, compound_bxor)
 {
-  test("kprobe:f { $a ^= 0 }", Error{ R"(
-stdin:1:12-14: ERROR: Undefined or undeclared variable: $a
-kprobe:f { $a ^= 0 }
-           ~~
-)" });
   test("kprobe:f { $a = 0; $a ^= 1 }");
   test("kprobe:f { @a ^= 1 }");
 }
@@ -1783,7 +1733,7 @@ TEST_F(SemanticAnalyserTest, variable_reassignment)
 
   test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = 1; })",
        Error{ R"(
-stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'uint8' when variable already contains a value of type 'string[3]'
+stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'uint8' when variable already has a type 'string[3]'
 kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = 1; }
                       ~~~~~~~
 )" });
@@ -1793,11 +1743,6 @@ TEST_F(SemanticAnalyserTest, map_use_before_assign)
 {
   test("kprobe:f { @x = @y; @y = 2; }");
   test("kprobe:f { @y = 0; @y = @x; @x = 1; }");
-}
-
-TEST_F(SemanticAnalyserTest, variable_use_before_assign)
-{
-  test("kprobe:f { @x = $y; $y = 2; }", Error{});
 }
 
 TEST_F(SemanticAnalyserTest, maps_are_global)
@@ -3235,7 +3180,7 @@ TEST_F(SemanticAnalyserTest, mixed_int_var_assignments)
   test("begin { $a = -1; $a = 9223372036854775808; }", Error{});
   test("begin { $a = 9223372036854775807; $a = -2147483648 }", Error{});
   test("kprobe:f { $x = -1; $x = 10223372036854775807; }", Error{ R"(
-stdin:1:21-46: ERROR: Type mismatch for $x: trying to assign value of type 'uint64' when variable already contains a value of type 'int8'
+stdin:1:21-46: ERROR: Type mismatch for $x: trying to assign value of type 'uint64' when variable already has a type 'int8'
 kprobe:f { $x = -1; $x = 10223372036854775807; }
                     ~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -3930,7 +3875,7 @@ TEST_F(SemanticAnalyserTest, tuple)
 
   test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); })",
        Error{ R"(
-stdin:1:33-57: ERROR: Type mismatch for $t: trying to assign value of type '(uint8,(uint64,uint8))' when variable already contains a value of type '(uint8,(int8,uint8))'
+stdin:1:33-57: ERROR: Type mismatch for $t: trying to assign value of type '(uint8,(uint64,uint8))' when variable already has a type '(uint8,(int8,uint8))'
 begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); }
                                 ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -4691,21 +4636,6 @@ begin { @map[0] = stats(10); for ($kv : @map) { } }
 )" });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_shadowed_decl)
-{
-  test(R"(
-    begin {
-      $kv = 1;
-      @map[0] = 1;
-      for ($kv : @map) { }
-    })",
-       Error{ R"(
-stdin:4:12-15: ERROR: Loop declaration shadows existing variable: $kv
-      for ($kv : @map) { }
-           ~~~
-)" });
-}
-
 TEST_F(SemanticAnalyserTest, for_loop_variables_read_only)
 {
   test(
@@ -4838,37 +4768,6 @@ TEST_F(SemanticAnalyserTest, for_loop_variables_multiple)
             Jump(ast::JumpType::RETURN) })) });
 }
 
-TEST_F(SemanticAnalyserTest, for_loop_variables_created_in_loop_used_after)
-{
-  test(R"(
-    begin {
-      @map[0] = 1;
-      for ($kv : @map) {
-        $var = 2;
-      }
-      print($var);
-    })",
-       Error{ R"(
-stdin:6:13-17: ERROR: Undefined or undeclared variable: $var
-      print($var);
-            ~~~~
-)" });
-
-  test(R"(
-    begin {
-      @map[0] = 1;
-      for ($kv : @map) {
-        print($kv);
-      }
-      print($kv);
-    })",
-       Error{ R"(
-stdin:6:13-16: ERROR: Undefined or undeclared variable: $kv
-      print($kv);
-            ~~~
-)" });
-}
-
 TEST_F(SemanticAnalyserTest, for_loop_invalid_expr)
 {
   // Error location is incorrect: #3063
@@ -4886,22 +4785,6 @@ begin { for ($x : 1+2) { } }
 stdin:1:24-25: ERROR: syntax error, unexpected ), expecting [ or . or ->
 begin { for ($x : "abc") { } }
                        ~
-)" });
-}
-
-TEST_F(SemanticAnalyserTest, for_loop_multiple_errors)
-{
-  // Error location is incorrect: #3063
-  test(R"(
-    begin {
-      $kv = 1;
-      @map[0] = 1;
-      for ($kv : @map) { }
-    })",
-       Error{ R"(
-stdin:4:12-15: ERROR: Loop declaration shadows existing variable: $kv
-      for ($kv : @map) { }
-           ~~~
 )" });
 }
 
@@ -4945,15 +4828,6 @@ TEST_F(SemanticAnalyserTest, for_range_variable_use)
        "$i * 2; } }");
 }
 
-TEST_F(SemanticAnalyserTest, for_range_shadowing)
-{
-  test(R"(begin { $i = 10; for ($i : 0..5) { printf("%d", $i); } })", Error{ R"(
-stdin:1:23-25: ERROR: Loop declaration shadows existing variable: $i
-begin { $i = 10; for ($i : 0..5) { printf("%d", $i); } }
-                      ~~
-)" });
-}
-
 TEST_F(SemanticAnalyserTest, for_range_invalid_types)
 {
   test(R"(begin { for ($i : "str"..5) { printf("%d", $i); } })", Error{ R"(
@@ -4983,16 +4857,6 @@ TEST_F(SemanticAnalyserTest, for_range_control_flow)
   test("begin { for ($i : 0..5) { break; } }");
   test("begin { for ($i : 0..5) { continue; } }");
   test("begin { for ($i : 0..5) { return; } }");
-}
-
-TEST_F(SemanticAnalyserTest, for_range_out_of_scope)
-{
-  test(R"(begin { for ($i : 0..5) { printf("%d", $i); } printf("%d", $i); })",
-       Error{ R"(
-stdin:1:60-62: ERROR: Undefined or undeclared variable: $i
-begin { for ($i : 0..5) { printf("%d", $i); } printf("%d", $i); }
-                                                           ~~
-)" });
 }
 
 TEST_F(SemanticAnalyserTest, for_range_context_access)
@@ -5124,26 +4988,6 @@ TEST_F(SemanticAnalyserTest, variable_declarations)
   test("begin { if (pid) { let $x; } $x = 2; }");
   test("begin { if (pid) { let $x; } else { let $x; } let $x; }");
 
-  // https://github.com/bpftrace/bpftrace/pull/3668#issuecomment-2596432923
-  test("begin { let $a; print($a); $a = 1; }",
-       Warning{ "Variable used before it was assigned:" });
-
-  test("begin { let $a; if comptime (probetype == \"special\") { $a = 1; } "
-       "print($a); }",
-       NoWarning{ "Variable used before it was assigned:" });
-
-  test("begin { let $a; let $a; }",
-       Error{ R"(
-stdin:1:17-23: ERROR: Variable $a was already declared. Variable shadowing is not allowed.
-begin { let $a; let $a; }
-                ~~~~~~
-)" },
-       Warning{ R"(
-stdin:1:9-15: WARNING: This is the initial declaration.
-begin { let $a; let $a; }
-        ~~~~~~
-)" });
-
   test("begin { let $a: uint16; $a = -1; }", Error{ R"(
 stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already has a type 'uint16'
 begin { let $a: uint16; $a = -1; }
@@ -5151,13 +4995,13 @@ begin { let $a: uint16; $a = -1; }
 )" });
 
   test("begin { let $a: uint8 = 1; $a = 10000; }", Error{ R"(
-stdin:1:28-38: ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already contains a value of type 'uint8'
+stdin:1:28-38: ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already has a type 'uint8'
 begin { let $a: uint8 = 1; $a = 10000; }
                            ~~~~~~~~~~
 )" });
 
   test("begin { let $a: int8 = 1; $a = -10000; }", Error{ R"(
-stdin:1:27-38: ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already contains a value of type 'int8'
+stdin:1:27-38: ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already has a type 'int8'
 begin { let $a: int8 = 1; $a = -10000; }
                           ~~~~~~~~~~~
 )" });
@@ -5209,12 +5053,6 @@ TEST_F(SemanticAnalyserTest, variable_address)
   auto *assignment = stmts.at(1).as<ast::AssignVarStatement>();
   ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
   ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsIntTy());
-
-  test("begin { $a = 1; $b = &$c; }", Error{ R"(
-stdin:1:23-25: ERROR: Undefined or undeclared variable: $c
-begin { $a = 1; $b = &$c; }
-                      ~~
-)" });
 
   test("begin { let $a; $b = &$a; }", Error{ R"(
 stdin:1:22-25: ERROR: No type available for variable $a
@@ -5330,47 +5168,6 @@ TEST_F(SemanticAnalyserTest, block_scoping)
         }
       }
     })");
-
-  // if/else
-  test("begin { if (pid) { $a = 1; } print(($a)); }", Error{ R"(
-stdin:1:37-39: ERROR: Undefined or undeclared variable: $a
-begin { if (pid) { $a = 1; } print(($a)); }
-                                    ~~
-)" });
-  test("begin { if (pid) { $a = 1; } else { print(($a)); } }", Error{ R"(
-stdin:1:44-46: ERROR: Undefined or undeclared variable: $a
-begin { if (pid) { $a = 1; } else { print(($a)); } }
-                                           ~~
-)" });
-  test("begin { if (pid) { $b = 1; } else { $b = 2; } print(($b)); }",
-       Error{ R"(
-stdin:1:54-56: ERROR: Undefined or undeclared variable: $b
-begin { if (pid) { $b = 1; } else { $b = 2; } print(($b)); }
-                                                     ~~
-)" });
-
-  // for loops
-  test("kprobe:f { @map[0] = 1; for ($kv : @map) { $a = 1; } "
-       "print(($a)); }",
-       Error{ R"(
-stdin:1:61-63: ERROR: Undefined or undeclared variable: $a
-kprobe:f { @map[0] = 1; for ($kv : @map) { $a = 1; } print(($a)); }
-                                                            ~~
-)" });
-
-  // while loops
-  test("begin { while (1) { $a = 1; } print(($a)); }", Error{ R"(
-stdin:1:38-40: ERROR: Undefined or undeclared variable: $a
-begin { while (1) { $a = 1; } print(($a)); }
-                                     ~~
-)" });
-
-  // unroll
-  test("begin { unroll(1) { $a = 1; } print(($a)); }", Error{ R"(
-stdin:1:38-40: ERROR: Undefined or undeclared variable: $a
-begin { unroll(1) { $a = 1; } print(($a)); }
-                                     ~~
-)" });
 }
 
 TEST_F(SemanticAnalyserTest, invalid_assignment)
@@ -5434,13 +5231,6 @@ TEST_F(SemanticAnalyserTest, no_maximum_passes)
 
 TEST_F(SemanticAnalyserTest, block_expressions)
 {
-  // Illegal, check that variable is not available
-  test("begin { let $x = { let $y = $x; $y }; print($x) }", Error{ R"(
-stdin:1:29-31: ERROR: Undefined or undeclared variable: $x
-begin { let $x = { let $y = $x; $y }; print($x) }
-                            ~~
-)" });
-
   // Good, variable is not shadowed
   test("begin { let $x = { let $x = 1; $x }; print($x) }",
        ExpectedAST{ Program().WithProbe(Probe(
@@ -5518,7 +5308,7 @@ TEST_F(SemanticAnalyserTest, macros)
   test("macro set($x) { $x = 1; $x } begin { $a = \"string\"; set($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'uint8' when variable already contains a value of type 'string[7]'
+stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'uint8' when variable already has a type 'string[7]'
 macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
                 ~~~~~~
 stdin:1:53-60: ERROR: expanded from
@@ -5573,29 +5363,6 @@ TEST_F(SemanticAnalyserTest, warning_for_discared_expression_statement_value)
   test("k:f { @a[1] = count(); }", NoWarning{ "Return value discarded" });
 }
 
-TEST_F(SemanticAnalyserTest, warning_for_never_assigned_to)
-{
-  test("k:f { $a = { let $x = 1; $x + 1 }; }",
-       NoWarning{ "Variable $x was never assigned to" });
-  test("begin { print(1); } k:f { $a = { let $x = 1; $x + 1 }; }",
-       NoWarning{ "Variable $x was never assigned to" });
-  test("fn foo($a : int64) : int8 { return 0; } begin { let $x; $x = 1; }",
-       NoWarning{ "Variable $x was never assigned to" });
-  test("fn foo($a : int64) : int8 { return 0; } fn bar($a : int64) : int8 { "
-       "let $x; $x = 2; return 0; }",
-       NoWarning{ "Variable $x was never assigned to" });
-
-  test("k:f { let $x; }", Warning{ "Variable $x was never assigned to" });
-  test("k:f { let $x; if comptime (false) { $x = 1; } }",
-       Warning{ "Variable $x was never assigned to" });
-  test("fn foo($a : int64) : int8 { let $x; return 0; } begin { let $x; $x = "
-       "1; }",
-       Warning{ "Variable $x was never assigned to" });
-  test("fn foo($a : int64) : int8 { let $y; return 0; } begin { let $x; $x = "
-       "1; }",
-       Warning{ "Variable $y was never assigned to" });
-}
-
 TEST_F(SemanticAnalyserTest, external_function)
 {
   ast::TypeMetadata types;
@@ -5642,7 +5409,7 @@ kprobe:f { foo((int64)1, (int64)2); }
   test("kprobe:f { $x = (int32*)0; $x = foo((int32)1, (int64)2); }",
        Types{ types },
        Error{ R"(
-stdin:1:28-56: ERROR: Type mismatch for $x: trying to assign value of type 'int32' when variable already contains a value of type 'int32 *'
+stdin:1:28-56: ERROR: Type mismatch for $x: trying to assign value of type 'int32' when variable already has a type 'int32 *'
 kprobe:f { $x = (int32*)0; $x = foo((int32)1, (int64)2); }
                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -5737,21 +5504,6 @@ TEST_F(SemanticAnalyserTest, typeof_subprog)
   test("fn foo($x : typeof($y), $y : int64) : typeof($x) { return (int64)0; }");
   test("fn foo($x : typeof($y), $y : int64) : typeof($y) { return (int64)0; }");
   test("fn foo($x : typeof($y), $y : int64) : typeof($x) { return 0; }");
-
-  test("fn foo($x : typeof($y), $y : int64) : int64 { return (uint64)0; }",
-       Error{});
-
-  // But we can't define using non-existent variables.
-  test("fn foo($x : int64, $y : typeof($z)) : int64 { return 0; }", Error{ R"(
-stdin:1:32-34: ERROR: Undefined or undeclared variable: $z
-fn foo($x : int64, $y : typeof($z)) : int64 { return 0; }
-                               ~~
-)" });
-  test("fn foo($x : int64, $y : int64) : typeof($z) { return 0; }", Error{ R"(
-stdin:1:41-43: ERROR: Undefined or undeclared variable: $z
-fn foo($x : int64, $y : int64) : typeof($z) { return 0; }
-                                        ~~
-)" });
 }
 
 TEST_F(SemanticAnalyserTest, typeof_casts)
@@ -5944,7 +5696,7 @@ TEST_F(SemanticAnalyserTest, record)
   test(
       R"(begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(int64)5, y="hi")); })",
       Error{ R"(
-stdin:1:35-69: ERROR: Type mismatch for $t: trying to assign value of type 'record { .a = uint8, .b = record { .x = int64, .y = string[3] } }' when variable already contains a value of type 'record { .a = uint8, .b = record { .x = uint8, .y = uint8 } }'
+stdin:1:35-69: ERROR: Type mismatch for $t: trying to assign value of type 'record { .a = uint8, .b = record { .x = int64, .y = string[3] } }' when variable already has a type 'record { .a = uint8, .b = record { .x = uint8, .y = uint8 } }'
 begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(int64)5, y="hi")); }
                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
