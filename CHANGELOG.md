@@ -84,6 +84,8 @@ and this project adheres to
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
 #### Fixed
+- Fix interval probe attachment when CPU 0 is offline
+  - [#4987](https://github.com/bpftrace/bpftrace/pull/4987)
 - Respect `missing_probes` config for bad `args` if the probe will be pruned
   - [#4915](https://github.com/bpftrace/bpftrace/pull/4915)
 - Improved tuple binop comparison
