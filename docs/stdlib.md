@@ -366,6 +366,21 @@ Group ID of the current thread, as seen from the init namespace
 This utilizes the BPF helper `get_current_uid_gid`
 
 
+### globmatch
+- `bool globmatch(string str, string pat)`
+
+Returns whether the string `str` matches the glob pattern `pat`.
+`pat` may consist of literal characters, `?` to match any single character,
+`*` to match any sequence of zero or more characters, and character classes
+listing individual characters (`[abc]`) or ranges (`[a-z]`), with support
+for negation (`[!abc]`).
+
+Note that, unlike POSIX/shell globbing, this function matches the pattern
+against the entire string, with no special handling of path components or the
+`/` character.
+
+
+
 ### has_cpid
 - `bool has_cpid()`
 - `bool has_cpid`

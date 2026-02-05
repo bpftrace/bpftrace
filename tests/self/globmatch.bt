@@ -1,0 +1,75 @@
+test:literals_match {
+  if !globmatch("a", "a") { return 1; }
+}
+
+test:literals_no_match {
+  if globmatch("a", "b") { return 1; }
+}
+
+test:single_char_wildcard_match {
+  if !globmatch("abc", "a?c") { return 1; }
+}
+
+test:single_char_wildcard_no_match_wrong_char {
+  if globmatch("abx", "a?c") { return 1; }
+}
+
+test:single_char_wildcard_no_match_short {
+  if globmatch("ab", "a?c") { return 1; }
+}
+
+test:pattern_prefix_no_match {
+  if globmatch("abc", "a") { return 1; }
+}
+
+test:pattern_prefix_wildcard_match {
+  if !globmatch("abc", "a*") { return 1; }
+}
+
+test:pattern_suffix_wildcard_match {
+  if !globmatch("abc", "*bc") { return 1; }
+}
+
+test:pattern_prefix_and_suffix_wildcard match {
+  if !globmatch("abc", "a*c") { return 1; }
+}
+
+test:wildcard_zero_length_match {
+  if !globmatch("abc", "a*bc") { return 1; }
+}
+
+test:wildcard_backtracking_match {
+  if !globmatch("ababc", "a*abc") { return 1; }
+}
+
+test:class_match {
+  if !globmatch("abc", "a[xyzabc]c") { return 1; }
+}
+
+test:class_no_match {
+  if globmatch("abc", "a[xyz]c") { return 1; }
+}
+
+test:class_range_match {
+  if !globmatch("abc", "a[a-z]c") { return 1; }
+}
+
+test:class_range_no_match {
+  if globmatch("abc", "a[0-9]c") { return 1; }
+}
+
+test:class_inverted_match {
+  if !globmatch("abc", "a[!xyz]c") { return 1; }
+}
+
+test:class_inverted_no_match {
+  if globmatch("abc", "a[!abc]c") { return 1; }
+}
+
+test:class_range_containing_bracket {
+  if !globmatch("a_c", "a[]-a]c") { return 1; }
+}
+
+test:class_range_containing_bracket_inverted {
+  if globmatch("a_c", "a[!]-a]c") { return 1; }
+}
