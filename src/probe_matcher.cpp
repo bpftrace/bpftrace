@@ -14,8 +14,8 @@
 #include "log.h"
 #include "probe_matcher.h"
 #include "scopeguard.h"
+#include "symbols/kernel.h"
 #include "tracefs/tracefs.h"
-#include "util/kernel.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/symbols.h"
@@ -122,7 +122,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
             return *pid_symbols;
           }
         }
-        return util::BinaryFuncMap();
+        return symbols::BinaryFuncMap();
       }();
       // Expand to the full set of possible matching paths.
       auto paths = util::resolve_binary_path(target, bpftrace_->pid());
@@ -183,7 +183,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
             return *pid_symbols;
           }
         }
-        return util::BinaryUSDTMap();
+        return symbols::BinaryUSDTMap();
       }();
       // Like the uprobe case above, we expand to the full set of paths.
       auto paths = util::resolve_binary_path(target, bpftrace_->pid());

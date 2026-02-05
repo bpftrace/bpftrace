@@ -6,32 +6,33 @@
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "probe_matcher.h"
-#include "util/kernel.h"
 #include "util/proc.h"
+#include "symbols/kernel.h"
 #include "util/result.h"
 #include "util/strings.h"
-#include "util/user.h"
+#include "symbols/user.h"
 #include "gmock/gmock-function-mocker.h"
 
 namespace bpftrace::test {
 
-class MockKernelFunctionInfo : public util::KernelFunctionInfoBase<MockKernelFunctionInfo> {
+class MockKernelInfo : public symbols::KernelInfoBase<MockKernelInfo> {
 public:
-  util::ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
-  util::ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
-  util::ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
-  util::ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;
+  symbols::ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
+  symbols::ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
+  symbols::ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
+  symbols::ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;
+  Result<btf::Types> load_btf(const std::string &mod_name) const override;
   std::vector<std::pair<__u32, std::string>> get_bpf_progs() const override;
 };
 
-class MockUserFunctionInfo : public util::UserFunctionInfo {
+class MockUserInfo : public symbols::UserInfo {
 public:
- Result<util::BinaryFuncMap> func_symbols_for_pid(int pid) const override;
- Result<util::FunctionSet> func_symbols_for_path(
+ Result<symbols::BinaryFuncMap> func_symbols_for_pid(int pid) const override;
+ Result<symbols::FunctionSet> func_symbols_for_path(
     const std::string &path) const override;
-  Result<util::BinaryUSDTMap> usdt_probes_for_pid(int pid) const override;
-  Result<util::BinaryUSDTMap> usdt_probes_for_all_pids() const override;
-  Result<util::USDTSet> usdt_probes_for_path(
+  Result<symbols::BinaryUSDTMap> usdt_probes_for_pid(int pid) const override;
+  Result<symbols::BinaryUSDTMap> usdt_probes_for_all_pids() const override;
+  Result<symbols::USDTSet> usdt_probes_for_path(
       const std::string &path) const override;
 };
 
@@ -138,7 +139,7 @@ ast::FunctionInfo& get_mock_function_info();
 
 // Returns a FunctionInfo with mock kernel info but real user function info.
 // This is useful for tests that need to read actual binaries (e.g., DWARF tests).
-std::unique_ptr<ast::FunctionInfo> get_real_user_function_info();
+std::unique_ptr<ast::FunctionInfo> get_real_user_info();
 
 // Helper to create a real BPFtrace for tests.
 //

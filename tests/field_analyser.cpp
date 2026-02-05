@@ -431,7 +431,7 @@ class field_analyser_dwarf : public test_dwarf {};
 TEST_F(field_analyser_dwarf, parse_struct)
 {
   auto bpftrace = create_bpftrace();
-  auto func_info = get_real_user_function_info();
+  auto func_info = get_real_user_info();
   std::string uprobe = "uprobe:" + std::string(bin_);
   test(*bpftrace, *func_info, uprobe + ":func_1 { $x = args.foo1->a; }", true);
 
@@ -460,7 +460,7 @@ TEST_F(field_analyser_dwarf, parse_struct)
 TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 {
   auto bpftrace = create_bpftrace();
-  auto func_info = get_real_user_function_info();
+  auto func_info = get_real_user_info();
   std::string uprobe = "uprobe:" + std::string(bin_);
   test(*bpftrace,
        *func_info,

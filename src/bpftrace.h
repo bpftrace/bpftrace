@@ -34,7 +34,7 @@
 #include "types.h"
 #include "usyms.h"
 #include "util/cpus.h"
-#include "util/kernel.h"
+#include "symbols/kernel.h"
 #include "util/proc.h"
 #include "util/result.h"
 
@@ -193,7 +193,7 @@ public:
   FunctionRegistry functions;
   // For each helper, list of all generated call sites.
   std::map<bpf_func_id, std::vector<RuntimeErrorInfo>> helper_use_loc_;
-  util::KConfig kconfig;
+  symbols::KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<int> sigusr1_prog_fds_;
 

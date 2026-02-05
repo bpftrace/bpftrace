@@ -28,15 +28,15 @@
 #include "debugfs/debugfs.h"
 #include "log.h"
 #include "scopeguard.h"
+#include "symbols/kernel.h"
 #include "tracefs/tracefs.h"
 #include "util/fd.h"
-#include "util/kernel.h"
 #include "util/paths.h"
 #include "util/strings.h"
 #include "util/symbols.h"
 #include "util/wildcard.h"
 
-namespace bpftrace::util {
+namespace bpftrace::symbols {
 
 // Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.
 static uint32_t _find_version_note(unsigned long base)
@@ -168,8 +168,9 @@ const struct vmlinux_location vmlinux_locs[] = {
   {},
 };
 
-std::optional<std::string> find_vmlinux(struct vmlinux_location const *locs,
-                                        struct symbol *sym)
+static std::optional<std::string> find_vmlinux(
+    struct vmlinux_location const *locs,
+    struct util::symbol *sym)
 {
   for (size_t i = 0; !locs[i].path.empty(); ++i) {
     const auto &loc = locs[i];
@@ -182,8 +183,8 @@ std::optional<std::string> find_vmlinux(struct vmlinux_location const *locs,
     if (sym == nullptr) {
       return loc.path;
     } else {
-      bcc_elf_symcb callback = !sym->name.empty() ? sym_name_cb
-                                                  : sym_address_cb;
+      bcc_elf_symcb callback = !sym->name.empty() ? util::sym_name_cb
+                                                  : util::sym_address_cb;
       struct bcc_symbol_option options = {
         .use_debug_file = 0,
         .check_debug_file_crc = 0,
@@ -208,7 +209,7 @@ std::optional<std::string> find_vmlinux(struct vmlinux_location const *locs,
 
 // find vmlinux file.
 // if sym is not null, check vmlinux contains the given symbol information
-std::optional<std::string> find_vmlinux(struct symbol *sym)
+std::optional<std::string> find_vmlinux(struct util::symbol *sym)
 {
   const char *path = std::getenv("BPFTRACE_VMLINUX");
   if (path != nullptr) {
@@ -279,7 +280,7 @@ static Result<ModulesFuncsMap> parse_tracepoints()
   ModulesFuncsMap result;
   for (std::string line; std::getline(tracepoints_file, line);) {
     // Events format is simple `category:name`.
-    line = trim(line);
+    line = util::trim(line);
     auto colon_pos = line.find(':');
     if (colon_pos != std::string::npos) {
       auto category = line.substr(0, colon_pos);
@@ -292,6 +293,51 @@ static Result<ModulesFuncsMap> parse_tracepoints()
     }
   }
 
+  return result;
+}
+
+static Result<std::map<std::string, btf::Types>> parse_btf()
+{
+  std::map<std::string, btf::Types> result;
+
+  // Load the vmlnux BTF.
+  auto *vmlinux_btf = btf__load_vmlinux_btf();
+  if (!vmlinux_btf) {
+    return make_error<SystemError>("failed to load vmlinux BTF");
+  }
+  btf::Types vmlinux(vmlinux_btf);
+  result.emplace("vmlinux", vmlinux);
+
+  // Load all available BTFs from the host kernel.
+  char name[64];
+  struct bpf_btf_info info = {};
+  info.name = reinterpret_cast<uintptr_t>(&name[0]);
+  info.name_len = sizeof(name);
+  __u32 id = 0, info_len = sizeof(info);
+
+  while (true) {
+    int err = bpf_btf_get_next_id(id, &id);
+    if (err != 0 && errno == ENOENT) {
+      break;
+    } else if (err != 0) {
+      return make_error<SystemError>("bpf_btf_get_next_id failed");
+    }
+    int fd = bpf_btf_get_fd_by_id(id);
+    if (fd < 0) {
+      return make_error<SystemError>("bpf_btf_get_fd_by_id failed");
+    }
+    if (bpf_obj_get_info_by_fd(fd, &info, &info_len) != 0) {
+      return make_error<SystemError>("bpf_obj_get_info_by_fd failed");
+    }
+    if (info.kernel_btf) {
+      auto *mod_btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf);
+      if (!mod_btf) {
+        return make_error<SystemError>("failed to load module BTF");
+      }
+      result.emplace(std::string(reinterpret_cast<const char *>(&name[0])),
+                     btf::Types(mod_btf, vmlinux));
+    }
+  }
   return result;
 }
 
@@ -384,8 +430,8 @@ bool get_kernel_dirs(const struct utsname &utsname,
 
   // if one of source/ or build/ is not present - try to use the other one for
   // both.
-  auto has_ksrc = is_dir(ksrc);
-  auto has_kobj = is_dir(kobj);
+  auto has_ksrc = util::is_dir(ksrc);
+  auto has_kobj = util::is_dir(kobj);
   if (!has_ksrc && !has_kobj) {
     return false;
   }
@@ -483,8 +529,8 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   return cflags;
 }
 
-void KernelFunctionInfoImpl::add_function(const std::string &func_name,
-                                          const std::string &mod_name) const
+void KernelInfoImpl::add_function(const std::string &func_name,
+                                  const std::string &mod_name) const
 {
   // Check to see if this is blocked.
   auto blocklist_it = blocklist_.find(mod_name);
@@ -519,7 +565,7 @@ void KernelFunctionInfoImpl::add_function(const std::string &func_name,
   module_it->second->insert(func_name);
 }
 
-void KernelFunctionInfoImpl::populate_lazy(
+void KernelInfoImpl::populate_lazy(
     const std::optional<std::string> &mod_name) const
 {
   if (available_filter_functions_.eof()) {
@@ -542,14 +588,14 @@ void KernelFunctionInfoImpl::populate_lazy(
     } else {
       // N.B. we didn't insert on the last iteration, so this needs
       // be inserted now as the first symbol for this module.
-      auto func_mod = split_symbol_module(last_checked_line_);
+      auto func_mod = util::split_symbol_module(last_checked_line_);
       module = func_mod.second;
       add_function(func_mod.first, module);
     }
 
     std::string line;
     while (std::getline(available_filter_functions_, line)) {
-      auto func_mod = split_symbol_module(line);
+      auto func_mod = util::split_symbol_module(line);
 
       // Continue reading until we get all the module functions.
       // Stop when encounter line with the next module.
@@ -567,9 +613,8 @@ void KernelFunctionInfoImpl::populate_lazy(
   }
 }
 
-ModulesFuncsMap KernelFunctionInfo::filter(
-    const ModulesFuncsMap &source,
-    const std::optional<std::string> &mod_name)
+ModulesFuncsMap KernelInfo::filter(const ModulesFuncsMap &source,
+                                   const std::optional<std::string> &mod_name)
 {
   if (!mod_name.has_value()) {
     return source; // Not a deep copy, the pointers.
@@ -588,11 +633,11 @@ ModulesFuncsMap KernelFunctionInfo::filter(
   // Copy all the filtered modules.
   ModulesFuncsMap result;
   bool start_wildcard, end_wildcard;
-  auto wildcard_tokens = get_wildcard_tokens(*mod_name,
-                                             start_wildcard,
-                                             end_wildcard);
+  auto wildcard_tokens = util::get_wildcard_tokens(*mod_name,
+                                                   start_wildcard,
+                                                   end_wildcard);
   for (const auto &mod : source) {
-    if (wildcard_match(
+    if (util::wildcard_match(
             mod.first, wildcard_tokens, start_wildcard, end_wildcard)) {
       result.emplace(mod.first, mod.second);
     }
@@ -600,7 +645,7 @@ ModulesFuncsMap KernelFunctionInfo::filter(
   return result;
 }
 
-ModuleSet KernelFunctionInfoImpl::get_modules(
+ModuleSet KernelInfoImpl::get_modules(
     const std::optional<std::string> &mod_name) const
 {
   if (!mod_name.has_value()) {
@@ -615,11 +660,12 @@ ModuleSet KernelFunctionInfoImpl::get_modules(
     // Match all loaded modules that are not yet in the populated list.
     ModuleSet filtered;
     bool start_wildcard, end_wildcard;
-    auto wildcard_tokens = get_wildcard_tokens(*mod_name,
-                                               start_wildcard,
-                                               end_wildcard);
+    auto wildcard_tokens = util::get_wildcard_tokens(*mod_name,
+                                                     start_wildcard,
+                                                     end_wildcard);
     for (const auto &mod : modules_loaded_) {
-      if (wildcard_match(mod, wildcard_tokens, start_wildcard, end_wildcard)) {
+      if (util::wildcard_match(
+              mod, wildcard_tokens, start_wildcard, end_wildcard)) {
         filtered.emplace(mod);
       }
     }
@@ -627,29 +673,49 @@ ModuleSet KernelFunctionInfoImpl::get_modules(
   }
 }
 
-ModulesFuncsMap KernelFunctionInfoImpl::get_traceable_funcs(
+ModulesFuncsMap KernelInfoImpl::get_traceable_funcs(
     const std::optional<std::string> &mod_name) const
 {
   populate_lazy(mod_name);
   return filter(modules_, mod_name);
 }
 
-ModulesFuncsMap KernelFunctionInfoImpl::get_raw_tracepoints(
+ModulesFuncsMap KernelInfoImpl::get_raw_tracepoints(
     const std::optional<std::string> &mod_name) const
 {
   populate_lazy(mod_name);
   return filter(raw_tracepoints_, mod_name);
 }
 
-ModulesFuncsMap KernelFunctionInfoImpl::get_tracepoints(
+ModulesFuncsMap KernelInfoImpl::get_tracepoints(
     const std::optional<std::string> &category_name) const
 {
   return filter(tracepoints_, category_name);
 }
 
-Result<KernelFunctionInfoImpl> KernelFunctionInfoImpl::open()
+Result<btf::Types> KernelInfoImpl::load_btf(const std::string &mod_name) const
 {
-  KernelFunctionInfoImpl info;
+  // We only load once, because they will all be split BTFs.
+  if (btf_.empty()) {
+    auto result = parse_btf();
+    if (!result) {
+      return result.takeError();
+    }
+    btf_ = std::move(*result);
+  }
+
+  // Check to see if this BTF exists.
+  auto it = btf_.find(mod_name);
+  if (it == btf_.end()) {
+    return make_error<SystemError>("no BTF available", ENOENT);
+  }
+
+  return it->second;
+}
+
+Result<KernelInfoImpl> KernelInfoImpl::open()
+{
+  KernelInfoImpl info;
 
   // Load the list of available modules.
   auto modules = parse_modules();
@@ -678,7 +744,7 @@ Result<KernelFunctionInfoImpl> KernelFunctionInfoImpl::open()
     std::string line;
 
     while (std::getline(blocklist_funcs, line)) {
-      auto addr_func_mod = split_addrrange_symbol_module(line);
+      auto addr_func_mod = util::split_addrrange_symbol_module(line);
       const std::string &fn = std::get<1>(addr_func_mod);
       const std::string &mod = std::get<2>(addr_func_mod);
 
@@ -737,8 +803,8 @@ static std::string get_prog_full_name(const struct bpf_prog_info *prog_info,
   return name;
 }
 
-std::vector<std::pair<uint32_t, std::string>> KernelFunctionInfoImpl::
-    get_bpf_progs() const
+std::vector<std::pair<uint32_t, std::string>> KernelInfoImpl::get_bpf_progs()
+    const
 {
   std::vector<std::pair<uint32_t, std::string>> ids_and_syms;
   __u32 id = 0;
@@ -749,7 +815,7 @@ std::vector<std::pair<uint32_t, std::string>> KernelFunctionInfoImpl::
       continue;
     }
 
-    auto fd = FD(raw_fd);
+    auto fd = util::FD(raw_fd);
 
     struct bpf_prog_info info = {};
     __u32 info_len = sizeof(info);
@@ -815,4 +881,4 @@ std::vector<std::pair<uint32_t, std::string>> KernelFunctionInfoImpl::
   return ids_and_syms;
 }
 
-} // namespace bpftrace::util
+} // namespace bpftrace::symbols

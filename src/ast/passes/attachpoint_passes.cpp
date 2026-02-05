@@ -12,6 +12,7 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/visitor.h"
 #include "probe_matcher.h"
+#include "symbols/kernel.h"
 #include "util/int_parser.h"
 #include "util/paths.h"
 #include "util/strings.h"
@@ -43,7 +44,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
     // Warn if user tries to attach to a non-traceable function
     if (bpftrace_.config_->missing_probes != ConfigMissingProbes::ignore &&
         !util::has_wildcard(ap.func) &&
-        !func_info_state_.kernel_function_info().is_traceable(ap.func)) {
+        !func_info_state_.kernel_info().is_traceable(ap.func)) {
       ap.addWarning() << ap.func
                       << " is not traceable (either non-existing, inlined, "
                          "or marked as "
@@ -132,20 +133,18 @@ void AttachPointChecker::visit(AttachPoint &ap)
 
     const auto pid = bpftrace_.pid();
     if (pid.has_value()) {
-      auto ok = func_info_state_.user_function_info().usdt_probes_for_pid(*pid);
+      auto ok = func_info_state_.user_info().usdt_probes_for_pid(*pid);
       if (!ok) {
         ap.addError() << ok.takeError();
       }
     } else if (ap.target == "*") {
-      auto ok =
-          func_info_state_.user_function_info().usdt_probes_for_all_pids();
+      auto ok = func_info_state_.user_info().usdt_probes_for_all_pids();
       if (!ok) {
         ap.addError() << ok.takeError();
       }
     } else if (!ap.target.empty()) {
       for (auto &path : util::resolve_binary_path(ap.target)) {
-        auto ok = func_info_state_.user_function_info().usdt_probes_for_path(
-            path);
+        auto ok = func_info_state_.user_info().usdt_probes_for_path(path);
         if (!ok) {
           ap.addError() << ok.takeError();
         }
@@ -436,8 +435,8 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     // (contains '/'), use userspace probe types.
     // Otherwise, use kernel probe types.
     ProbeMatcher probe_matcher(&bpftrace_,
-                               func_info_state_.kernel_function_info(),
-                               func_info_state_.user_function_info());
+                               func_info_state_.kernel_info(),
+                               func_info_state_.user_info());
     if (bpftrace_.pid().has_value() ||
         (parts_.size() >= 2 && parts_[1].find('/') != std::string::npos)) {
       probe_types = probe_matcher.expand_probetype_userspace(probetype_query);
@@ -1013,8 +1012,8 @@ AttachPointParser::State AttachPointParser::fentry_parser()
   } else {
     ap_->func = parts_[1];
     if (!util::has_wildcard(ap_->func)) {
-      auto func_modules =
-          func_info_state_.kernel_function_info().get_func_modules(ap_->func);
+      auto func_modules = func_info_state_.kernel_info().get_func_modules(
+          ap_->func);
       if (func_modules.size() == 1)
         ap_->target = *func_modules.begin();
       else if (func_modules.size() > 1) {

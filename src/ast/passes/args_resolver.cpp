@@ -66,10 +66,10 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
                                           probe_type == ProbeType::fexit,
                                           true,
                                           false,
-                                          func_info_.kernel_function_info());
+                                          func_info_.kernel_info());
     case ProbeType::rawtracepoint:
       return bpftrace_.btf_->resolve_raw_tracepoint_args(
-          ap.func, func_info_.kernel_function_info());
+          ap.func, func_info_.kernel_info());
     case ProbeType::tracepoint: {
       TracepointFormatParser parser(ap.target, ap.func, bpftrace_);
       auto ok = parser.parse_format_file();

@@ -16,15 +16,15 @@
 #include "bpf_assembler.h"
 #include "btf.h"
 #include "dwarf_parser.h"
+#include "symbols/kernel.h"
 #include "tracefs/tracefs.h"
-#include "util/kernel.h"
 #include "util/strings.h"
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 namespace bpftrace {
 
-using util::KernelVersionMethod;
+using symbols::KernelVersionMethod;
 
 int BPFnofeature::parse(const char* str)
 {
