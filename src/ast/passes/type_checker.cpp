@@ -1066,6 +1066,7 @@ void TypeChecker::visit(Call &call)
     // check that they are exactly equal.
     auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
     if (!maybe_func) {
+      consumeError(std::move(maybe_func));
       if (call.return_type.IsNoneTy()) {
         LOG(BUG) << "Unknown builtin function " << call.func;
       }
@@ -1075,6 +1076,7 @@ void TypeChecker::visit(Call &call)
     const auto &func = *maybe_func;
     auto proto = func.type();
     if (!proto) {
+      consumeError(std::move(proto));
       return;
     }
 

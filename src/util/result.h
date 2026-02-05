@@ -131,6 +131,14 @@ Result<> handleErrors(Result<T>&& ok, Ts&&... args)
   return llvmErr;
 }
 
+// Silently swallow an error. This method should be used only when an error can
+// be considered a reasonable and expected return value.
+template <typename T>
+void consumeError(Result<T> result)
+{
+  llvm::consumeError(result.takeError());
+}
+
 }; // namespace bpftrace
 
 namespace llvm {

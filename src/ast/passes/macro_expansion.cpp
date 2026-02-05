@@ -63,6 +63,7 @@ MacroRegistry MacroRegistry::create(ASTContext &ast)
       err.addContext((*exists)->loc) << "This is the original definition.";
       continue; // Skip this macro.
     }
+    consumeError(std::move(exists));
     if (!validate(macro)) {
       continue;
     }
