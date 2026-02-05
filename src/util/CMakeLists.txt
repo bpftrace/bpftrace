@@ -3,10 +3,8 @@ add_library(util STATIC
   bpf_names.cpp
   cgroup.cpp
   cpus.cpp
-  elf_parser.cpp
   env.cpp
   int_parser.cpp
-  kernel.cpp
   math.cpp
   memfd.cpp
   opaque.cpp
@@ -19,7 +17,6 @@ add_library(util STATIC
   temp.cpp
   time.cpp
   tseries.cpp
-  user.cpp
   wildcard.cpp
   )
 

@@ -101,9 +101,9 @@ target_link_options(bpftrace BEFORE PRIVATE
 )
 
 
-target_link_libraries(runtime debugfs output tracefs util)
+target_link_libraries(runtime debugfs output symbols tracefs util)
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
-target_link_libraries(libbpftrace parser runtime aot ast arch util cxxdemangler_llvm)
+target_link_libraries(libbpftrace parser runtime symbols aot ast arch util cxxdemangler_llvm)
 
 if(LIBPCAP_FOUND)
   target_link_libraries(libbpftrace ${LIBPCAP_LIBRARIES})
@@ -223,5 +223,6 @@ add_subdirectory(cxxdemangler)
 add_subdirectory(debugfs)
 add_subdirectory(output)
 add_subdirectory(stdlib)
+add_subdirectory(symbols)
 add_subdirectory(tracefs)
 add_subdirectory(util)

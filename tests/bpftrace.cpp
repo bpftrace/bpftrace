@@ -803,8 +803,8 @@ static std::set<std::string> list_modules(std::string_view ap)
 
   auto &func_info = get_mock_function_info();
   ProbeMatcher probe_matcher(bpftrace.get(),
-                             func_info.kernel_function_info(),
-                             func_info.user_function_info());
+                             func_info.kernel_info(),
+                             func_info.user_info());
   return bpftrace->list_modules(ast, probe_matcher);
 }
 

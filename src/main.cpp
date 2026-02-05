@@ -47,13 +47,13 @@
 #include "output/buffer_mode.h"
 #include "probe_matcher.h"
 #include "run_bpftrace.h"
+#include "symbols/kernel.h"
+#include "symbols/user.h"
 #include "util/env.h"
 #include "util/int_parser.h"
-#include "util/kernel.h"
 #include "util/proc.h"
 #include "util/strings.h"
 #include "util/temp.h"
-#include "util/user.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -295,7 +295,7 @@ std::vector<std::string> extra_flags(
   struct utsname utsname;
   std::vector<std::string> extra_flags;
   uname(&utsname);
-  bool found_kernel_headers = util::get_kernel_dirs(utsname, ksrc, kobj);
+  bool found_kernel_headers = symbols::get_kernel_dirs(utsname, ksrc, kobj);
 
   if (found_kernel_headers)
     extra_flags = get_kernel_cflags(
@@ -785,13 +785,13 @@ int main(int argc, char* argv[])
   BPFtrace bpftrace(args.no_feature, std::move(config));
 
   // Create function info objects for probe matching and pass state.
-  auto kernel_func_info = util::KernelFunctionInfoImpl::open();
+  auto kernel_func_info = symbols::KernelInfoImpl::open();
   if (!kernel_func_info) {
     LOG(ERROR) << "Failed to open kernel function info: "
                << kernel_func_info.takeError();
     return 1;
   }
-  util::UserFunctionInfoImpl user_func_info;
+  symbols::UserInfoImpl user_func_info;
   ast::FunctionInfo func_info_state(*kernel_func_info, user_func_info);
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;

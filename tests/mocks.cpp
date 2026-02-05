@@ -1,6 +1,7 @@
 #include "mocks.h"
-#include "util/elf_parser.h"
-#include "util/kernel.h"
+#include "data/data_source_btf.h"
+#include "symbols/elf_parser.h"
+#include "symbols/kernel.h"
 #include "gmock/gmock-nice-strict.h"
 
 namespace bpftrace::test {
@@ -10,20 +11,20 @@ using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::StrictMock;
 
-util::ModuleSet MockKernelFunctionInfo::get_modules(
+symbols::ModuleSet MockKernelInfo::get_modules(
     [[maybe_unused]] const std::optional<std::string> &mod_name) const
 {
-  static const util::ModuleSet modules = {
+  static const symbols::ModuleSet modules = {
     "vmlinux", "mock_vmlinux", "kernel_mod_1", "kernel_mod_2"
   };
   return modules;
 }
 
-static util::ModulesFuncsMap make_mock_functions()
+static symbols::ModulesFuncsMap make_mock_functions()
 {
-  util::ModulesFuncsMap result;
+  symbols::ModulesFuncsMap result;
   result.emplace("vmlinux",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "f",
                                              "func_1",
                                              "func_2",
@@ -42,80 +43,89 @@ static util::ModulesFuncsMap make_mock_functions()
                                              "bpf_iter_task_vma",
                                              "__probestub_event_rt" })));
   result.emplace("kernel_mod_1",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "mod_func_1", "mod_func_2" })));
   result.emplace("kernel_mod_2",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "mod_func_1" })));
   return result;
 }
 
-static util::ModulesFuncsMap make_mock_raw_tracepoints()
+static symbols::ModulesFuncsMap make_mock_raw_tracepoints()
 {
-  util::ModulesFuncsMap result;
+  symbols::ModulesFuncsMap result;
   result.emplace("vmlinux",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "event_rt", "sched_switch" })));
   result.emplace("module",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "event" })));
   return result;
 }
 
-static util::ModulesFuncsMap make_mock_tracepoints()
+static symbols::ModulesFuncsMap make_mock_tracepoints()
 {
-  util::ModulesFuncsMap result;
+  symbols::ModulesFuncsMap result;
   result.emplace("vmlinux",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "event_rt" })));
   result.emplace("category",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "event" })));
   result.emplace("sched",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "sched_one", "sched_two" })));
   result.emplace("sched_extra",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "sched_extra" })));
   result.emplace("notsched",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "bar" })));
   result.emplace("file",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "filename" })));
   result.emplace("tcp",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "some_tcp_tp" })));
   result.emplace("btf",
-                 std::make_shared<util::FunctionSet>(
+                 std::make_shared<symbols::FunctionSet>(
                      std::set<std::string>({ "tag" })));
   return result;
 }
 
-util::ModulesFuncsMap MockKernelFunctionInfo::get_traceable_funcs(
+symbols::ModulesFuncsMap MockKernelInfo::get_traceable_funcs(
     const std::optional<std::string> &mod_name) const
 {
-  static const util::ModulesFuncsMap funcs_map = make_mock_functions();
+  static const symbols::ModulesFuncsMap funcs_map = make_mock_functions();
   return filter(funcs_map, mod_name);
 }
 
-util::ModulesFuncsMap MockKernelFunctionInfo::get_raw_tracepoints(
+symbols::ModulesFuncsMap MockKernelInfo::get_raw_tracepoints(
     const std::optional<std::string> &mod_name) const
 {
-  static const util::ModulesFuncsMap raw_tracepoints_map =
+  static const symbols::ModulesFuncsMap raw_tracepoints_map =
       make_mock_raw_tracepoints();
   return filter(raw_tracepoints_map, mod_name);
 }
 
-util::ModulesFuncsMap MockKernelFunctionInfo::get_tracepoints(
+symbols::ModulesFuncsMap MockKernelInfo::get_tracepoints(
     const std::optional<std::string> &category_name) const
 {
-  static const util::ModulesFuncsMap tracepoints_map = make_mock_tracepoints();
+  static const symbols::ModulesFuncsMap tracepoints_map =
+      make_mock_tracepoints();
   return filter(tracepoints_map, category_name);
 }
 
-std::vector<std::pair<__u32, std::string>> MockKernelFunctionInfo::
-    get_bpf_progs() const
+Result<btf::Types> MockKernelInfo::load_btf(const std::string &mod_name) const
+{
+  if (mod_name == "vmlinux") {
+    return btf::Types::parse(reinterpret_cast<const char *>(btf_data),
+                             sizeof(btf_data));
+  }
+  return btf::Types();
+}
+
+std::vector<std::pair<__u32, std::string>> MockKernelInfo::get_bpf_progs() const
 {
   return {
     { 123, "func_1" },
@@ -124,79 +134,78 @@ std::vector<std::pair<__u32, std::string>> MockKernelFunctionInfo::
   };
 }
 
-Result<util::FunctionSet> MockUserFunctionInfo::func_symbols_for_path(
+Result<symbols::FunctionSet> MockUserInfo::func_symbols_for_path(
     const std::string &path) const
 {
   if (path == "/bin/sh") {
-    return util::FunctionSet({ "f",
-                               "first_open",
-                               "main",
-                               "readline",
-                               "second_open",
-                               "cpp_mangled",
-                               "_Z11cpp_mangledi",
-                               "_Z11cpp_mangledv",
-                               "_Z18cpp_mangled_suffixv" });
+    return symbols::FunctionSet({ "f",
+                                  "first_open",
+                                  "main",
+                                  "readline",
+                                  "second_open",
+                                  "cpp_mangled",
+                                  "_Z11cpp_mangledi",
+                                  "_Z11cpp_mangledv",
+                                  "_Z18cpp_mangled_suffixv" });
   } else if (path == "/bin/bash") {
-    return util::FunctionSet({ "f",
-                               "first_open",
-                               "main",
-                               "readline",
-                               "cpp_mangled",
-                               "_Z11cpp_mangledi",
-                               "_Z11cpp_mangledv",
-                               "_Z18cpp_mangled_suffixv" });
+    return symbols::FunctionSet({ "f",
+                                  "first_open",
+                                  "main",
+                                  "readline",
+                                  "cpp_mangled",
+                                  "_Z11cpp_mangledi",
+                                  "_Z11cpp_mangledv",
+                                  "_Z18cpp_mangled_suffixv" });
   }
-  return util::FunctionSet();
+  return symbols::FunctionSet();
 }
 
-Result<util::BinaryFuncMap> MockUserFunctionInfo::func_symbols_for_pid(
+Result<symbols::BinaryFuncMap> MockUserInfo::func_symbols_for_pid(
     [[maybe_unused]] int pid) const
 {
-  return util::BinaryFuncMap();
+  return symbols::BinaryFuncMap();
 }
 
-Result<util::BinaryUSDTMap> MockUserFunctionInfo::usdt_probes_for_pid(
+Result<symbols::BinaryUSDTMap> MockUserInfo::usdt_probes_for_pid(
     [[maybe_unused]] int pid) const
 {
-  return util::BinaryUSDTMap();
+  return symbols::BinaryUSDTMap();
 }
 
-Result<util::BinaryUSDTMap> MockUserFunctionInfo::usdt_probes_for_all_pids()
-    const
+Result<symbols::BinaryUSDTMap> MockUserInfo::usdt_probes_for_all_pids() const
 {
-  return util::BinaryUSDTMap();
+  return symbols::BinaryUSDTMap();
 }
 
-Result<util::USDTSet> MockUserFunctionInfo::usdt_probes_for_path(
+Result<symbols::USDTSet> MockUserInfo::usdt_probes_for_path(
     const std::string &path) const
 {
   if (path == "/bin/sh") {
-    return util::USDTSet({ util::usdt_probe_entry("prov1", "tp1"),
-                           util::usdt_probe_entry("prov1", "tp2"),
-                           util::usdt_probe_entry("prov2", "tp"),
-                           util::usdt_probe_entry("prov2", "notatp"),
-                           util::usdt_probe_entry("nahprov", "tp") });
+    return symbols::USDTSet({ symbols::usdt_probe_entry("prov1", "tp1"),
+                              symbols::usdt_probe_entry("prov1", "tp2"),
+                              symbols::usdt_probe_entry("prov2", "tp"),
+                              symbols::usdt_probe_entry("prov2", "notatp"),
+                              symbols::usdt_probe_entry("nahprov", "tp") });
   } else if (path == "/bin/bash") {
-    return util::USDTSet({ util::usdt_probe_entry("prov1", "tp3") });
+    return symbols::USDTSet({ symbols::usdt_probe_entry("prov1", "tp3") });
   }
-  return util::USDTSet();
+  return symbols::USDTSet();
 }
 
 ast::FunctionInfo &get_mock_function_info()
 {
-  static MockKernelFunctionInfo kernel_func_info;
-  static MockUserFunctionInfo user_func_info;
+  static MockKernelInfo kernel_func_info;
+  static MockUserInfo user_func_info;
   static ast::FunctionInfo func_info_state(kernel_func_info, user_func_info);
   return func_info_state;
 }
 
-std::unique_ptr<ast::FunctionInfo> get_real_user_function_info()
+std::unique_ptr<ast::FunctionInfo> get_real_user_info()
 {
   // Use a static mock kernel function info (same as mock function info)
   // but with a real user function info that can read actual binaries.
-  static MockKernelFunctionInfo kernel_func_info;
-  static util::UserFunctionInfoImpl user_func_info;
+  static MockKernelInfo kernel_func_info;
+  static symbols::UserInfoImpl user_func_info;
   return std::make_unique<ast::FunctionInfo>(kernel_func_info, user_func_info);
 }
 

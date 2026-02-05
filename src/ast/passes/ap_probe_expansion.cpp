@@ -221,8 +221,8 @@ public:
         func_info_(func_info),
         result_(result),
         probe_matcher_(&bpftrace,
-                       func_info.kernel_function_info(),
-                       func_info.user_function_info())
+                       func_info.kernel_info(),
+                       func_info.user_info())
   {
   }
 
@@ -341,7 +341,7 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
           const std::string &funcname = ap->func;
           const std::string &modname = ap->target;
           if ((!modname.empty()) && modname != "vmlinux") {
-            if (!func_info_.kernel_function_info().is_module_loaded(modname)) {
+            if (!func_info_.kernel_info().is_module_loaded(modname)) {
               ap->addError() << "specified module " + modname + " in probe " +
                                     ap->provider + ":" + modname + ":" +
                                     funcname + " is not loaded.";

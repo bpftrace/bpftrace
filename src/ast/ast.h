@@ -15,8 +15,7 @@
 #include "diagnostic.h"
 #include "probe_types.h"
 #include "types.h"
-#include "util/elf_parser.h"
-#include "util/strings.h"
+#include "symbols/elf_parser.h"
 
 namespace bpftrace::ast {
 
@@ -1924,8 +1923,7 @@ public:
   std::string ns;
   std::string func;
   std::string pin;
-  util::usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with
-                         // wildcard matches
+  symbols::usdt_probe_entry usdt; // resolved USDT entry
   int64_t freq = 0;
   uint64_t len = 0;   // for watchpoint probes, the width of watched addr
   std::string mode;   // for watchpoint probes, the watch mode

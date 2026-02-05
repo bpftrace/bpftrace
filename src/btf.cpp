@@ -31,9 +31,9 @@
 #include "btf.h"
 #include "log.h"
 #include "probe_matcher.h"
+#include "symbols/kernel.h"
 #include "tracefs/tracefs.h"
 #include "types.h"
-#include "util/kernel.h"
 #include "util/strings.h"
 
 using namespace std::literals::string_view_literals;
@@ -541,7 +541,7 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
     bool ret,
     bool check_traceable,
     bool skip_first_arg,
-    const util::KernelFunctionInfo &func_info)
+    const symbols::KernelInfo &func_info)
 {
   if (!has_data()) {
     return make_error<ast::ArgParseError>(func, "BTF data not available");
@@ -616,7 +616,7 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
 
 Result<std::shared_ptr<Struct>> BTF::resolve_raw_tracepoint_args(
     std::string_view func,
-    const util::KernelFunctionInfo &func_info)
+    const symbols::KernelInfo &func_info)
 {
   for (const auto &prefix : RT_BTF_PREFIXES) {
     auto args = resolve_args(
@@ -630,7 +630,7 @@ Result<std::shared_ptr<Struct>> BTF::resolve_raw_tracepoint_args(
 }
 
 std::string BTF::get_all_traceable_funcs_from_btf(
-    const util::KernelFunctionInfo &kernel_func_info,
+    const symbols::KernelInfo &kernel_func_info,
     const BTFObj &btf_obj) const
 {
   std::string funcs;
@@ -668,7 +668,7 @@ std::string BTF::get_all_traceable_funcs_from_btf(
 }
 
 std::unique_ptr<std::istream> BTF::get_all_traceable_funcs(
-    const util::KernelFunctionInfo &kernel_func_info)
+    const symbols::KernelInfo &kernel_func_info) const
 {
   if (!all_funcs_.empty()) {
     return std::make_unique<std::stringstream>(all_funcs_);
@@ -1355,8 +1355,8 @@ ast::Pass CreateParseBTFPass()
       "btf",
       [](ast::ASTContext &ast, BPFtrace &b, ast::FunctionInfo &func_info) {
         ProbeMatcher probe_matcher(&b,
-                                   func_info.kernel_function_info(),
-                                   func_info.user_function_info());
+                                   func_info.kernel_info(),
+                                   func_info.user_info());
         b.parse_module_btf(b.list_modules(ast, probe_matcher));
       });
 }

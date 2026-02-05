@@ -24,10 +24,10 @@
 #include "bpftrace.h"
 #include "disasm.h"
 #include "log.h"
+#include "symbols/kernel.h"
 #include "util/bpf_names.h"
 #include "util/cpus.h"
 #include "util/exceptions.h"
-#include "util/kernel.h"
 #include "util/symbols.h"
 
 namespace bpftrace {
@@ -149,7 +149,7 @@ Result<uint64_t> resolve_offset_kprobe(Probe &probe)
   else
     sym.address = probe.address;
 
-  auto path = find_vmlinux(&sym);
+  auto path = symbols::find_vmlinux(&sym);
   if (!path.has_value()) {
     if (!is_symbol_kprobe) {
       return make_error<AttachError>("Could not resolve address: " +

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/result.h"
-
 #include <cstdint>
 #include <fstream>
 #include <optional>
@@ -10,12 +8,16 @@
 #include <set>
 #include <vector>
 
-namespace bpftrace::util {
+#include "util/result.h"
+#include "util/symbols.h"
+#include "btf/btf.h"
+
+namespace bpftrace::symbols {
 
 enum KernelVersionMethod { vDSO, UTS, File, None };
 uint32_t kernel_version(KernelVersionMethod method);
 
-std::optional<std::string> find_vmlinux(struct symbol *sym = nullptr);
+std::optional<std::string> find_vmlinux(struct util::symbol *sym = nullptr);
 
 using FunctionSet = std::set<std::string>;
 using ModuleSet = std::set<std::string>;
@@ -24,9 +26,9 @@ using ModulesFuncsMap = std::map<std::string, std::shared_ptr<FunctionSet>>;
 // Interface for checking if kernel functions are traceable.
 //
 // This is effectively the top-level abstraction over the system itself.
-class KernelFunctionInfo {
+class KernelInfo {
 public:
-  virtual ~KernelFunctionInfo() = default;
+  virtual ~KernelInfo() = default;
 
   // Returns the set of available modules.
   virtual ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
@@ -47,6 +49,9 @@ public:
   // Returns the set of modules (or "vmlinux") where the function appears.
   virtual ModuleSet get_func_modules(
       const std::string &func_name, const std::optional<std::string> &mod_name = std::nullopt) const = 0;
+
+  // Loads the BTF for the given modules.
+  virtual Result<btf::Types> load_btf(const std::string &mod_name) const = 0;
 
   // Returns true if the given function is traceable.
   //
@@ -69,7 +74,7 @@ public:
 //
 // Derivations of this class need only provide the core functions.
 template <typename T>
-class KernelFunctionInfoBase : public KernelFunctionInfo {
+class KernelInfoBase : public KernelInfo {
 public:
   ModuleSet get_func_modules(
     const std::string &func_name, const std::optional<std::string> &mod_name = std::nullopt) const override
@@ -100,24 +105,25 @@ public:
 };
 
 // Implementation that reads available functions from the kernel.
-class KernelFunctionInfoImpl : public KernelFunctionInfoBase<KernelFunctionInfoImpl> {
+class KernelInfoImpl : public KernelInfoBase<KernelInfoImpl> {
 public:
-  static Result<KernelFunctionInfoImpl> open();
-  KernelFunctionInfoImpl(const KernelFunctionInfoImpl &other) = delete;
-  KernelFunctionInfoImpl &operator=(const KernelFunctionInfoImpl &other) = delete;
-  KernelFunctionInfoImpl(KernelFunctionInfoImpl &&other) = default;
-  KernelFunctionInfoImpl &operator=(KernelFunctionInfoImpl &&other) = default;
-  ~KernelFunctionInfoImpl() override = default;
+  static Result<KernelInfoImpl> open();
+  KernelInfoImpl(const KernelInfoImpl &other) = delete;
+  KernelInfoImpl &operator=(const KernelInfoImpl &other) = delete;
+  KernelInfoImpl(KernelInfoImpl &&other) = default;
+  KernelInfoImpl &operator=(KernelInfoImpl &&other) = default;
+  ~KernelInfoImpl() override = default;
 
   ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;
+  Result<btf::Types> load_btf(const std::string &mod_name) const override;
 
   std::vector<std::pair<uint32_t, std::string>> get_bpf_progs() const override;
 
 private:
-  KernelFunctionInfoImpl() = default;
+  KernelInfoImpl() = default;
 
   void add_function(const std::string &func_name, const std::string &mod_name) const;
   void populate_lazy(const std::optional<std::string> &mod_name = std::nullopt) const;
@@ -131,6 +137,7 @@ private:
   mutable ModuleSet modules_populated_;
   mutable ModulesFuncsMap modules_;
   mutable ModulesFuncsMap raw_tracepoints_;
+  mutable std::map<std::string, btf::Types> btf_;
   ModulesFuncsMap blocklist_;
 };
 
@@ -154,4 +161,4 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &kobj,
                                            const KConfig &kconfig);
 
-} // namespace bpftrace::util
+} // namespace bpftrace::symbols

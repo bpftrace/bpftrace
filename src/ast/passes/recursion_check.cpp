@@ -60,8 +60,8 @@ private:
 void RecursionCheck::visit(Program &program)
 {
   ProbeMatcher probe_matcher(&bpftrace_,
-                             func_info_.kernel_function_info(),
-                             func_info_.user_function_info());
+                             func_info_.kernel_info(),
+                             func_info_.user_info());
   for (auto *probe : program.probes) {
     for (auto *ap : probe->attach_points) {
       auto probe_type = probetype(ap->provider);
