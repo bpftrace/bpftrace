@@ -8,10 +8,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "symbols/kernel.h"
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
 #include "util/io.h"
-#include "util/kernel.h"
 #include "util/math.h"
 #include "util/paths.h"
 #include "util/similar.h"
@@ -25,6 +25,7 @@
 namespace bpftrace::test::utils {
 
 using namespace bpftrace::util;
+using namespace bpftrace::symbols;
 
 TEST(utils, split_string)
 {

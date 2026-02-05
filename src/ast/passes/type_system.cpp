@@ -1,5 +1,6 @@
 #include "ast/passes/type_system.h"
 #include "ast/context.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/printer.h"
 
@@ -7,14 +8,21 @@ namespace bpftrace::ast {
 
 Pass CreateTypeSystemPass()
 {
-  auto fn = [](ASTContext &ast, BitcodeModules &bm) -> Result<TypeMetadata> {
+  auto fn = [](ASTContext &ast,
+               FunctionInfo &func_info,
+               BitcodeModules &bm) -> Result<TypeMetadata> {
     TypeMetadata result;
 
     // For now, we simply build a single type system that covers all the
-    // external imports and standard library. In theory, this should be rebased
-    // on top of the individual probe type system (coming from the kernel,
-    // module or user binary).
+    // external imports and standard library. For now, we load in all the
+    // kernel types, but in theory this should load in a base type system
+    // that is different for each of the probes.
     std::optional<btf::Types> aggregate;
+    auto kernel_types = func_info.kernel_info().load_btf("vmlinux");
+    if (kernel_types) {
+      aggregate.emplace(std::move(*kernel_types));
+    }
+
     for (const auto &module : bm.modules) {
       auto btf = btf::Types::parse(static_cast<const void *>(
                                        module.object.data()),

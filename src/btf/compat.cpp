@@ -1,5 +1,6 @@
 #include "btf/compat.h"
 #include "btf/btf.h"
+#include "log.h"
 #include "struct.h"
 #include "types.h"
 
@@ -238,10 +239,39 @@ Result<SizedType> getCompatType([[maybe_unused]] const DataSection &type,
   return CreatePointer(CreateVoid());
 }
 
-Result<SizedType> getCompatType([[maybe_unused]] const ForwardDecl &type,
-                                [[maybe_unused]] CompatTypeCache &type_cache)
+Result<SizedType> getCompatType(const ForwardDecl &type,
+                                CompatTypeCache &type_cache)
 {
-  return CreateVoid();
+  // Attempt to resolve the forward declaration by looking up
+  // the type name in the existing type system.
+  auto kind = type.kind();
+  auto name = type.name();
+  auto types = Types(type.handle());
+  switch (kind) {
+    case ForwardDecl::Struct: {
+      auto struct_type = types.lookup<Struct>(name);
+      if (!struct_type) {
+        return CreatePointer(CreateVoid());
+      }
+      return getCompatType(*struct_type, type_cache);
+    }
+    case ForwardDecl::Union: {
+      auto union_type = types.lookup<Union>(name);
+      if (!union_type) {
+        return CreatePointer(CreateVoid());
+      }
+      return getCompatType(*union_type, type_cache);
+    }
+    case ForwardDecl::Enum: {
+      auto enum_type = types.lookup<Enum>(name);
+      if (!enum_type) {
+        return CreatePointer(CreateVoid());
+      }
+      return getCompatType(*enum_type, type_cache);
+    }
+    default:
+      return CreatePointer(CreateVoid());
+  }
 }
 
 } // namespace bpftrace::btf

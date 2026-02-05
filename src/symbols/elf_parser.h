@@ -11,7 +11,7 @@
 
 #include "util/result.h"
 
-namespace bpftrace::util {
+namespace bpftrace::symbols {
 
 constexpr short USDT_NOTE_TYPE = 3;
 constexpr std::string_view USDT_NOTE_SEC = ".note.stapsdt";
@@ -136,4 +136,4 @@ private:
 
 Result<USDTProbeEnumerator> make_usdt_probe_enumerator(const std::string& path);
 
-} // namespace bpftrace::util
+} // namespace bpftrace::symbols
