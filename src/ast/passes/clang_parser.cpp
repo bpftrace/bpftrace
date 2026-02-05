@@ -805,6 +805,7 @@ static void query_clang_include_dirs(std::vector<std::string> &result)
   auto check = util::exec_system(args);
   if (!check) {
     // Exec failed, ignore and move on.
+    consumeError(std::move(check));
     return;
   }
   std::istringstream lines(*check);
