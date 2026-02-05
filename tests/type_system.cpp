@@ -3,7 +3,7 @@
 #include "ast/ast.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/type_system.h"
-#include "data/data_source_btf.h"
+#include "mocks.h"
 
 namespace bpftrace::test::type_system {
 
@@ -11,19 +11,12 @@ TEST(TypeSystemTest, basic)
 {
   ast::ASTContext ast;
 
-  // Use our synthetic BTF as the object.
-  ast::BitcodeModules bm;
-  bm.modules.emplace_back(ast::BitcodeModules::Result{
-      .module = nullptr,
-      .object = std::string(reinterpret_cast<const char *>(btf_data),
-                            sizeof(btf_data)),
-      .loc = nullptr,
-  });
-
   // Run the pass and extract the types.
+  ast::BitcodeModules bm;
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bm)
+                .put(get_mock_function_info())
                 .add(ast::CreateTypeSystemPass())
                 .run();
   ASSERT_TRUE(bool(ok));

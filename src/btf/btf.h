@@ -821,8 +821,11 @@ private:
 class Types {
 public:
   Types() : handle_(std::make_shared<detail::Handle>()) {};
+  Types(HandleRef &&handle) : handle_(std::move(handle)) {};
   Types(const Types &base)
       : handle_(std::make_shared<detail::Handle>(base.handle_)) {};
+  Types(struct btf *btf) : handle_(std::make_shared<detail::Handle>(btf)) {};
+  Types(struct btf *btf, const Types &base) : handle_(std::make_shared<detail::Handle>(btf, base.handle_)) {};
   Types(Types &&other) = default;
   Types &operator=(Types &&other) = default;
 
@@ -876,7 +879,6 @@ public:
   Result<> emit_decl(std::ostream &out) const;
 
 private:
-  Types(HandleRef &&handle) : handle_(std::move(handle)) {};
   HandleRef handle_;
 };
 
