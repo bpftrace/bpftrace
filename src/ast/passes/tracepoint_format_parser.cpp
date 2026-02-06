@@ -180,12 +180,6 @@ Result<Field> TracepointFormatParser::parse_field(const std::string &line,
 Result<std::shared_ptr<Struct>> TracepointFormatParser::get_tracepoint_struct(
     std::istream &format_file)
 {
-  if (!bpftrace_.has_btf_data()) {
-    return make_error<ArgParseError>(
-        category_ + ":" + event_,
-        "BTF is required for parsing tracepoint arguments");
-  }
-
   auto result = std::make_shared<Struct>(0, false);
 
   for (std::string line; getline(format_file, line);) {

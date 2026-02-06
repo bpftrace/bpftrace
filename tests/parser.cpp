@@ -13,6 +13,7 @@
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::parser {
+using ::bpftrace::test::create_bpftrace;
 
 using bpftrace::test::AssignMapStatement;
 using bpftrace::test::AssignScalarMapStatement;
@@ -71,8 +72,8 @@ void test_parse_failure(BPFtrace &bpftrace,
 void test_parse_failure(const std::string &input,
                         std::string_view expected_error)
 {
-  BPFtrace bpftrace;
-  test_parse_failure(bpftrace, input, expected_error);
+  auto bpftrace = create_bpftrace();
+  test_parse_failure(*bpftrace, input, expected_error);
 }
 
 void test_macro_parse_failure(BPFtrace &bpftrace,
@@ -84,6 +85,7 @@ void test_macro_parse_failure(BPFtrace &bpftrace,
   auto ok = ast::PassManager()
                 .put(ast)
                 .put(bpftrace)
+                .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateCMacroExpansionPass())
@@ -103,8 +105,8 @@ void test_macro_parse_failure(BPFtrace &bpftrace,
 void test_macro_parse_failure(const std::string &input,
                               std::string_view expected_error)
 {
-  BPFtrace bpftrace;
-  test_macro_parse_failure(bpftrace, input, expected_error);
+  auto bpftrace = create_bpftrace();
+  test_macro_parse_failure(*bpftrace, input, expected_error);
 }
 
 template <typename MatcherT>
@@ -145,8 +147,8 @@ void test(BPFtrace &bpftrace,
 template <typename MatcherT>
 void test(const std::string &input, const MatcherT &matcher)
 {
-  BPFtrace bpftrace;
-  test(bpftrace, input, matcher);
+  auto bpftrace = create_bpftrace();
+  test(*bpftrace, input, matcher);
 }
 
 TEST(Parser, builtin_variables)
@@ -256,67 +258,67 @@ TEST(Parser, positional_param_count)
 
 TEST(Parser, positional_param_attachpoint)
 {
-  BPFtrace bpftrace;
-  bpftrace.add_param("foo");
-  bpftrace.add_param("bar");
-  bpftrace.add_param("baz");
+  auto bpftrace = create_bpftrace();
+  bpftrace->add_param("foo");
+  bpftrace->add_param("bar");
+  bpftrace->add_param("baz");
 
-  test(bpftrace,
+  test(*bpftrace,
        "kprobe:$1 { 1 }",
        Program().WithProbe(
            Probe({ "kprobe:foo" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(kprobe:$1"here" { 1 })PROG",
        Program().WithProbe(
            Probe({ "kprobe:foohere" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:zzzzzzz:$2 { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:zzzzzzz:bar" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:/$1/bash:readline { 1 })PROG",
        Program().WithProbe(Probe({ "uprobe:/foo/bash:readline" },
                                  { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:$1:$2 { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:foo:bar" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:$2:$1 { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:bar:foo" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:"zz"$2"zz":"aa"$1 { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:zzbarzz:aafoo" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:$2:"aa"$1"aa" { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:bar:aafooaa" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:"$1":$2 { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:$1:bar" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:aa$1aa:$2 { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:aafooaa:bar" }, { ExprStatement(Integer(1)) })));
 
-  test(bpftrace,
+  test(*bpftrace,
        R"PROG(uprobe:$1:$2func$4 { 1 })PROG",
        Program().WithProbe(
            Probe({ "uprobe:foo:barfunc" }, { ExprStatement(Integer(1)) })));
 
-  test_parse_failure(bpftrace, R"(uprobe:/bin/bash:$0 { 1 })", R"(
+  test_parse_failure(*bpftrace, R"(uprobe:/bin/bash:$0 { 1 })", R"(
 stdin:1:1-20: ERROR: invalid trailing character for positional param: 0. Try quoting this entire part if this is intentional e.g. "$0".
 uprobe:/bin/bash:$0 { 1 }
 ~~~~~~~~~~~~~~~~~~~
@@ -325,7 +327,7 @@ uprobe:/bin/bash:$0 { 1 }
 ~~~~~~~~~~~~~~~~~~~
 )");
 
-  test_parse_failure(bpftrace, R"(uprobe:/bin/bash:$a { 1 })", R"(
+  test_parse_failure(*bpftrace, R"(uprobe:/bin/bash:$a { 1 })", R"(
 stdin:1:1-20: ERROR: invalid trailing character for positional param: a. Try quoting this entire part if this is intentional e.g. "$a".
 uprobe:/bin/bash:$a { 1 }
 ~~~~~~~~~~~~~~~~~~~
@@ -334,7 +336,7 @@ uprobe:/bin/bash:$a { 1 }
 ~~~~~~~~~~~~~~~~~~~
 )");
 
-  test_parse_failure(bpftrace,
+  test_parse_failure(*bpftrace,
                      R"(uprobe:f:$999999999999999999999999 { 1 })",
                      R"(
 stdin:1:1-35: ERROR: positional parameter is not valid: overflow error, maximum value is 18446744073709551615: 999999999999999999999999

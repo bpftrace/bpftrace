@@ -111,7 +111,7 @@ PROG begin { let $a; $a = 10; printf("a=%d\n", $a); }
 EXPECT a=10
 
 NAME variable declaration with builtin
-PROG begin { let $f: struct task_struct *; $f = curtask; print($f.pid); }
+PROG begin { let $f; $f = curtask; print($f.pid); }
 EXPECT_REGEX [0-9]+
 
 NAME variable declaration with unresolved type

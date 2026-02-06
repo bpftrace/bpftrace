@@ -16,7 +16,8 @@ void test(const std::string& input,
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(features);
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(*mock_bpftrace->btf_,
+                                                       features);
 
   // The input provided here is embedded into an expression.
   ast::ASTContext ast("stdin", input);
