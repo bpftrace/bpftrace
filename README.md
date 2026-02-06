@@ -47,7 +47,6 @@ Get started with bpftrace in just a few minutes! To build from source, see the [
   </tr>
   <tr>
     <td valign="middle">
-    <a href="https://packages.fedoraproject.org/pkgs/bpftrace/bpftrace/fedora-41-updates.html"><img src="https://repology.org/badge/version-for-repo/fedora_41/bpftrace.svg" alt="Fedora 41"/></a>
     <a href="https://packages.fedoraproject.org/pkgs/bpftrace/bpftrace/fedora-42-updates.html"><img src="https://repology.org/badge/version-for-repo/fedora_42/bpftrace.svg" alt="Fedora 42"/></a>
     <a href="https://packages.fedoraproject.org/pkgs/bpftrace/bpftrace/fedora-43.html"><img src="https://repology.org/badge/version-for-repo/fedora_43/bpftrace.svg" alt="Fedora 43"/></a>
     <a href="https://packages.fedoraproject.org/pkgs/bpftrace/bpftrace/fedora-rawhide.html"><img src="https://repology.org/badge/version-for-repo/fedora_rawhide/bpftrace.svg" alt="Fedora Rawhide"/></a>
