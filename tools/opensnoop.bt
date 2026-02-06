@@ -44,6 +44,8 @@ BEGIN
 {
   printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
   printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
+
+  @max_path_depth = getopt("depth", 35);
 }
 
 tracepoint:syscalls:sys_enter_open,
@@ -53,16 +55,14 @@ tracepoint:syscalls:sys_enter_openat2
   @filename[tid] = args.filename;
 }
 
-macro getcwd(@paths)
+macro getcwd(@paths, @depth)
 {
   $dentry = curtask.fs.pwd.dentry;
   $vfsmnt = curtask.fs.pwd.mnt;
   $mnt = (struct mount *)(((uint64)$vfsmnt) - offsetof(struct mount, mnt));
   $mnt_root = $vfsmnt.mnt_root;
 
-  $max_path_depth = getopt("depth", 35);
-
-  for $j : ((uint64)0)..((uint64)$max_path_depth) {
+  for $j : ((uint64)0)..((uint64)@depth) {
 
     @paths[tid,$j] = str($dentry.d_name.name);
     $parent_dentry = $dentry.d_parent;
@@ -86,12 +86,10 @@ macro getcwd(@paths)
   }
 }
 
-macro printcwd(@paths)
+macro printcwd(@paths, @depth)
 {
-  $max_path_depth = getopt("depth", 35);
-
-  for $j : ((uint64)0)..((uint64)$max_path_depth) {
-    let $key = (tid,((((uint64)$max_path_depth) - $j) - 1));
+  for $j : ((uint64)0)..((uint64)@depth) {
+    let $key = (tid,((((uint64)@depth) - $j) - 1));
     let $name = @paths[$key];
     // If it is a mount point, there will be a '/', because
     // the '/' will be added below, so just skip this '/'.
@@ -107,13 +105,13 @@ macro printcwd(@paths)
   printf("/");
 }
 
-macro sys_exit(ret, @filename, @paths)
+macro sys_exit(ret, @filename, @paths, @depth)
 {
   $ret = ret;
   $fd = ($ret >= 0) ? $ret : (-1);
   $errno = ($ret >= 0) ? 0 : (-$ret);
 
-  getcwd(@paths);
+  getcwd(@paths, @depth);
 
   $path = str(@filename[tid]);
 
@@ -121,7 +119,7 @@ macro sys_exit(ret, @filename, @paths)
 
   // Skip display cwd if path start with '/'.
   if ($path[0] != "/"[0]) {
-    printcwd(@paths);
+    printcwd(@paths, @depth);
   }
   printf("%s\n", str(@filename[tid]));
   delete(@filename, tid);
@@ -132,11 +130,12 @@ tracepoint:syscalls:sys_exit_openat,
 tracepoint:syscalls:sys_exit_openat2
 /@filename[tid]/
 {
-  sys_exit(args.ret, @filename, @paths);
+  sys_exit(args.ret, @filename, @paths, @max_path_depth);
 }
 
 END
 {
   clear(@filename);
   clear(@paths);
+  clear(@max_path_depth);
 }
