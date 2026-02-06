@@ -132,48 +132,6 @@ macro cgroup()
 // }
 // ```
 
-// :variant string comm()
-// :variant string comm(uint32 pid)
-// Name of the current thread or the process with the specified PID
-//
-// This utilizes the BPF helper `get_current_comm`
-macro comm()
-{
-  __builtin_comm
-}
-
-macro comm($pid)
-{
-  import "stdlib/task/task.bpf.c";
-  if comptime (!is_integer($pid)) {
-    fail("Only integer supported for comm()'s pid");
-  }
-
-  let $name : string[64];
-  if comptime kfunc_allowed("bpf_task_from_pid") {
-    let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
-    // EOPNOTSUPP: Operation not supported
-    if ($ret == ((int32)(-95))) {
-      warnf(
-        "'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system."
-      );
-      $name = "[unknown]"; // ESRCH: No such process
-    } else if ($ret == ((int32)(-3))) {
-      warnf("No such process (pid=%d)", $pid);
-      $name = "N/A";
-    }
-  } else {
-    fail("Syntax comm(PID) is not supported in this probe type yet. Type: %s", probetype);
-  }
-  $name
-}
-
-macro comm(arg_pid)
-{
-  let $pid = arg_pid;
-  comm($pid)
-}
-
 // :variant bool has_cpid()
 // Returns true iff cpid is available.
 macro has_cpid()
@@ -370,13 +328,6 @@ macro find(@map, key, $var) {
   } else {
     false
   }
-}
-
-// :variant string func()
-// Name of the current function being traced (kprobes,uprobes,fentry)
-macro func()
-{
-  __builtin_func
 }
 
 // :function getopt
@@ -1338,15 +1289,6 @@ macro uid()
 // Marks `ptr` as a user address space pointer.
 // See the address-spaces section for more information on address-spaces.
 // The pointer type is left unchanged.
-
-// :variant uint8 usermode()
-// Returns 1 if the current process is in user mode, 0 otherwise
-//
-// Currently only available on x86_64.
-macro usermode()
-{
-  __builtin_usermode
-}
 
 // :variant string username()
 // Get the current username

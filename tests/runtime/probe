@@ -49,7 +49,6 @@ NAME fentry func builtin
 PROG fentry:vfs_read { printf("func: %s\n", func); exit(); }
 EXPECT func: vfs_read
 REQUIRES_FEATURE btf
-REQUIRES_FEATURE get_func_ip
 AFTER ./testprogs/syscall read
 
 NAME fexit large args

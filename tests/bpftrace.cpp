@@ -3,10 +3,10 @@
 #include <cstring>
 
 #include "ast/passes/ap_probe_expansion.h"
-#include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/control_flow_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/macro_expansion.h"
@@ -71,7 +71,7 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
                 .add(ast::CreateControlFlowPass())
                 .add(ast::CreateProbeAndApExpansionPass())
                 .add(ast::CreateMacroExpansionPass())
-                .add(ast::CreateArgsResolverPass())
+                .add(ast::CreateContextResolverPass())
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateClangParsePass())
                 .add(ast::CreateMapSugarPass())
