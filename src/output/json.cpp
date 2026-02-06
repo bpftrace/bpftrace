@@ -527,7 +527,7 @@ void JsonOutput::benchmark_result(const std::vector<std::string> &all_benches,
 {
   Primitive::Record result;
   result.fields.emplace_back("average", average.count());
-  result.fields.emplace_back("iters", iters);
+  result.fields.emplace_back("iters", static_cast<uint64_t>(iters));
   emit_data(out_, "benchmark_result", all_benches[index], result);
 }
 
