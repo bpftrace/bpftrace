@@ -5,9 +5,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <gelf.h>
-#include <iostream>
 #include <libelf.h>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <unistd.h>
@@ -15,10 +13,10 @@
 #include <vector>
 
 #include "log.h"
-#include "util/elf_parser.h"
+#include "symbols/elf_parser.h"
 #include "util/hash.h"
 
-namespace bpftrace::util {
+namespace bpftrace::symbols {
 
 using namespace std::string_literals;
 
@@ -33,8 +31,8 @@ struct PairHash {
   std::size_t operator()(const std::pair<std::string, std::string>& p) const
   {
     std::size_t seed = 0;
-    hash_combine(seed, p.first);
-    hash_combine(seed, p.second);
+    util::hash_combine(seed, p.first);
+    util::hash_combine(seed, p.second);
     return seed;
   }
 };
@@ -289,4 +287,4 @@ Result<std::vector<usdt_probe_entry>> USDTProbeEnumerator::enumerate_probes()
   return probes;
 }
 
-} // namespace bpftrace::util
+} // namespace bpftrace::symbols

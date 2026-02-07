@@ -1,14 +1,13 @@
 #pragma once
 
-#include <optional>
 #include <set>
 #include <string>
 #include <map>
 
-#include "util/elf_parser.h"
+#include "symbols/elf_parser.h"
 #include "util/result.h"
 
-namespace bpftrace::util {
+namespace bpftrace::symbols {
 
 using FunctionSet = std::set<std::string>;
 using USDTSet = std::set<usdt_probe_entry>;
@@ -19,9 +18,9 @@ using BinaryFuncMap = std::map<std::string, FunctionSet>;
 //
 // This abstraction allows components to query user-space symbols without
 // performing direct file I/O, enabling mocking in tests.
-class UserFunctionInfo {
+class UserInfo {
 public:
-  virtual ~UserFunctionInfo() = default;
+  virtual ~UserInfo() = default;
 
   // Get function symbols for a specific PID.
   //
@@ -61,10 +60,10 @@ public:
 //
 // This opens files on the local system and parsing ELF for symbol
 // and USDT information about the specific binaries.
-class UserFunctionInfoImpl : public UserFunctionInfo {
+class UserInfoImpl : public UserInfo {
 public:
-  UserFunctionInfoImpl() = default;
-  ~UserFunctionInfoImpl() override = default;
+  UserInfoImpl() = default;
+  ~UserInfoImpl() override = default;
 
  Result<BinaryFuncMap> func_symbols_for_pid(int pid) const override;
  Result<FunctionSet> func_symbols_for_path(
@@ -88,4 +87,4 @@ private:
   mutable BinaryUSDTMap path_to_usdt_;
 };
 
-} // namespace bpftrace::util
+} // namespace bpftrace::symbols

@@ -12,8 +12,8 @@
 #include "output/json.h"
 #include "output/text.h"
 #include "run_bpftrace.h"
+#include "symbols/kernel.h"
 #include "types_format.h"
-#include "util/kernel.h"
 #include "version.h"
 
 using namespace bpftrace;
@@ -148,7 +148,7 @@ int run_bpftrace(BPFtrace &bpftrace,
 {
   int err;
 
-  auto k_version = util::kernel_version(util::KernelVersionMethod::UTS);
+  auto k_version = symbols::kernel_version(symbols::KernelVersionMethod::UTS);
   auto min_k_version = static_cast<uint32_t>(
       KERNEL_VERSION(MIN_KERNEL_VERSION_MAJOR,
                      MIN_KERNEL_VERSION_MINOR,

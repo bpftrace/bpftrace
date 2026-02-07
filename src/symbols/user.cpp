@@ -1,18 +1,14 @@
-#include <algorithm>
-#include <cerrno>
-#include <cstring>
-#include <set>
-#include <unordered_map>
-
-#include "util/elf_parser.h"
-#include "util/system.h"
-#include "util/user.h"
-
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
+#include <cerrno>
+#include <cstring>
 #include <elf.h>
 
-namespace bpftrace::util {
+#include "symbols/elf_parser.h"
+#include "symbols/user.h"
+#include "util/system.h"
+
+namespace bpftrace::symbols {
 
 static int add_symbol(const char* symname,
                       uint64_t /*start*/,
@@ -24,12 +20,12 @@ static int add_symbol(const char* symname,
   return 0;
 }
 
-Result<> UserFunctionInfoImpl::read_probes_for_pid(int pid) const
+Result<> UserInfoImpl::read_probes_for_pid(int pid) const
 {
   if (pid_to_paths_.contains(pid))
     return OK();
 
-  auto result = get_mapped_paths_for_pid(pid);
+  auto result = util::get_mapped_paths_for_pid(pid);
   if (!result) {
     return result.takeError();
   }
@@ -51,8 +47,7 @@ Result<> UserFunctionInfoImpl::read_probes_for_pid(int pid) const
   return OK();
 }
 
-Result<> UserFunctionInfoImpl::read_probes_for_path(
-    const std::string& path) const
+Result<> UserInfoImpl::read_probes_for_path(const std::string& path) const
 {
   if (path_to_symbols_.contains(path)) {
     return OK();
@@ -96,7 +91,7 @@ Result<> UserFunctionInfoImpl::read_probes_for_path(
   return OK();
 }
 
-Result<BinaryFuncMap> UserFunctionInfoImpl::func_symbols_for_pid(int pid) const
+Result<BinaryFuncMap> UserInfoImpl::func_symbols_for_pid(int pid) const
 {
   auto ok = read_probes_for_pid(pid);
   if (!ok) {
@@ -110,7 +105,7 @@ Result<BinaryFuncMap> UserFunctionInfoImpl::func_symbols_for_pid(int pid) const
   return funcs;
 }
 
-Result<FunctionSet> UserFunctionInfoImpl::func_symbols_for_path(
+Result<FunctionSet> UserInfoImpl::func_symbols_for_path(
     const std::string& path) const
 {
   auto ok = read_probes_for_path(path);
@@ -121,7 +116,7 @@ Result<FunctionSet> UserFunctionInfoImpl::func_symbols_for_path(
   return path_to_symbols_[path];
 }
 
-Result<BinaryUSDTMap> UserFunctionInfoImpl::usdt_probes_for_pid(int pid) const
+Result<BinaryUSDTMap> UserInfoImpl::usdt_probes_for_pid(int pid) const
 {
   auto ok = read_probes_for_pid(pid);
   if (!ok) {
@@ -135,9 +130,9 @@ Result<BinaryUSDTMap> UserFunctionInfoImpl::usdt_probes_for_pid(int pid) const
   return probes;
 }
 
-Result<BinaryUSDTMap> UserFunctionInfoImpl::usdt_probes_for_all_pids() const
+Result<BinaryUSDTMap> UserInfoImpl::usdt_probes_for_all_pids() const
 {
-  auto pids = get_all_running_pids();
+  auto pids = util::get_all_running_pids();
   if (!pids) {
     return pids.takeError();
   }
@@ -150,7 +145,7 @@ Result<BinaryUSDTMap> UserFunctionInfoImpl::usdt_probes_for_all_pids() const
   return path_to_usdt_;
 }
 
-Result<USDTSet> UserFunctionInfoImpl::usdt_probes_for_path(
+Result<USDTSet> UserInfoImpl::usdt_probes_for_path(
     const std::string& path) const
 {
   auto ok = read_probes_for_path(path);
@@ -161,4 +156,4 @@ Result<USDTSet> UserFunctionInfoImpl::usdt_probes_for_path(
   return path_to_usdt_[path];
 }
 
-} // namespace bpftrace::util
+} // namespace bpftrace::symbols
