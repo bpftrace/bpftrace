@@ -593,8 +593,7 @@ std::vector<Field> &SizedType::GetFields() const
 Field &SizedType::GetField(ssize_t n) const
 {
   assert(IsTupleTy() || IsCStructTy() || IsRecordTy());
-  if (n >= GetFieldCount())
-    throw util::FatalUserException("Getfield(): out of bounds");
+  assert(n >= 0 && n < GetFieldCount());
   return inner_struct()->fields[n];
 }
 
