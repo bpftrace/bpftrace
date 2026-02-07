@@ -993,6 +993,9 @@ Result<std::unique_ptr<AttachedIntervalProbe>> AttachedIntervalProbe::make(
 {
   int group_fd = -1;
   int cpu = 0;
+  std::vector<int> cpus = util::get_online_cpus();
+  if (!cpus.empty())
+    cpu = cpus[0];
 
   uint64_t period = 0, freq = 0;
   if (probe.path == "s") {
