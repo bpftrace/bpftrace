@@ -53,6 +53,11 @@ tracepoint:syscalls:sys_enter_openat2
   @filename[tid] = args.filename;
 }
 
+macro max_path_depth()
+{
+  getopt("depth", 35)
+}
+
 macro getcwd(@paths)
 {
   $dentry = curtask.fs.pwd.dentry;
@@ -60,9 +65,7 @@ macro getcwd(@paths)
   $mnt = (struct mount *)(((uint64)$vfsmnt) - offsetof(struct mount, mnt));
   $mnt_root = $vfsmnt.mnt_root;
 
-  $max_path_depth = getopt("depth", 35);
-
-  for $j : ((uint64)0)..((uint64)$max_path_depth) {
+  for $j : ((uint64)0)..((uint64)max_path_depth) {
 
     @paths[tid,$j] = str($dentry.d_name.name);
     $parent_dentry = $dentry.d_parent;
@@ -88,10 +91,8 @@ macro getcwd(@paths)
 
 macro printcwd(@paths)
 {
-  $max_path_depth = getopt("depth", 35);
-
-  for $j : ((uint64)0)..((uint64)$max_path_depth) {
-    let $key = (tid,((((uint64)$max_path_depth) - $j) - 1));
+  for $j : ((uint64)0)..((uint64)max_path_depth) {
+    let $key = (tid,((((uint64)max_path_depth) - $j) - 1));
     let $name = @paths[$key];
     // If it is a mount point, there will be a '/', because
     // the '/' will be added below, so just skip this '/'.
