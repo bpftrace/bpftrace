@@ -14,6 +14,13 @@ namespace bpftrace {
 
 void RequiredResources::save_state(std::ostream &out) const
 {
+  for (const auto &[name, info] : maps_info) {
+    if (info.key_type.IsTupleTy()) {
+        auto struct_ptr = info.key_type.GetStruct();
+        auto locked = struct_ptr.lock();
+    }
+  }
+
   cereal::BinaryOutputArchive archive(out);
   archive(*this);
 }
@@ -41,6 +48,24 @@ void RequiredResources::load_state(const uint8_t *ptr, size_t len)
   std::istream istream(&mbuf);
   cereal::BinaryInputArchive archive(istream);
   archive(*this);
+
+  // Immediately after archive, collect all Struct pointers while cereal
+  // still has them as valid shared_ptrs
+  for (const auto &[name, info] : maps_info) {
+    if (info.key_type.IsTupleTy() || info.key_type.IsRecordTy()) {
+      auto ptr = info.key_type.GetStruct().lock();
+      if (ptr) {
+        struct_storage_.push_back(std::const_pointer_cast<Struct>(ptr));
+      }
+    }
+
+    if (info.value_type.IsTupleTy() || info.value_type.IsRecordTy()) {
+      auto ptr = info.value_type.GetStruct().lock();
+      if (ptr) {
+        struct_storage_.push_back(std::const_pointer_cast<Struct>(ptr));
+      }
+    }
+  }
 }
 
 std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)

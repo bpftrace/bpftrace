@@ -252,6 +252,12 @@ public:
   // List of probes using userspace symbol resolution
   std::unordered_set<const ast::Probe *> probes_using_usym;
 
+  // Storage for Struct objects to keep weak_ptrs alive after AOT
+  // deserialization When cereal deserailizes weak_ptr<Struct>, it creates a
+  // temporary shared pointer that is destroyed after the load completes. We
+  // must keep those alive
+  std::vector<std::shared_ptr<Struct>> struct_storage_;
+
 private:
   friend class cereal::access;
   template <typename Archive>
