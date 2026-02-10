@@ -246,6 +246,11 @@ std::strong_ordering SizedType::operator<=>(const SizedType &t) const
     return std::strong_ordering::equal;
   }
 
+  if (IsStack()) {
+    if (auto cmp = stack_type <=> t.stack_type; cmp != 0)
+      return cmp;
+  }
+
   if (auto cmp = GetSize() <=> t.GetSize(); cmp != 0)
     return cmp;
 

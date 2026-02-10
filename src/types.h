@@ -125,7 +125,18 @@ struct StackType {
 
   bool operator==(const StackType &obj) const
   {
-    return limit == obj.limit && mode == obj.mode && kernel == obj.kernel;
+    return (*this <=> obj) == 0;
+  }
+
+  std::strong_ordering operator<=>(const StackType &obj) const
+  {
+    if (auto cmp = limit <=> obj.limit; cmp != 0)
+      return cmp;
+
+    if (auto cmp = mode <=> obj.mode; cmp != 0)
+      return cmp;
+
+    return kernel <=> obj.kernel;
   }
 
   std::string name() const
