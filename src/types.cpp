@@ -139,7 +139,7 @@ bool SizedType::IsCompatible(const SizedType &t) const
     return t.GetName() == GetName();
 
   if (IsPtrTy())
-    return GetPointeeTy().IsCompatible(t.GetPointeeTy());
+    return GetPointeeTy() == t.GetPointeeTy();
 
   if (IsIntegerTy()) {
     if (IsSigned() == t.IsSigned()) {

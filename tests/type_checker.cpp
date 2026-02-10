@@ -2317,6 +2317,10 @@ TEST_F(TypeCheckerTest, variable_cast_types)
   test(structs +
            "kprobe:f { $x = (struct type1*)cpu; $x = (struct type2*)cpu; }",
        Error{});
+
+  test("begin { $x = (int16)5; $y = (int32)6; $p1 = &$x; $p2 = "
+       "(typeof(&$y))$p1; }",
+       Error{});
 }
 
 TEST_F(TypeCheckerTest, map_cast_types)

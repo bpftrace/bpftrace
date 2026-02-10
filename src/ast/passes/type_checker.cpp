@@ -1541,6 +1541,12 @@ void TypeChecker::visit(Cast &cast)
     return;
   }
 
+  if (ty.IsPtrTy() && rhs.IsPtrTy()) {
+    if (!ty.IsCompatible(rhs)) {
+      logError();
+    }
+  }
+
   if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy() &&
       (!ty.IsPtrTy() || ty.GetElementTy().IsIntTy() ||
        ty.GetElementTy().IsCStructTy()) &&
