@@ -26,10 +26,10 @@ void test_named_param_error(globalvars::GlobalVars& global_vars,
 TEST(GlobalVars, get_named_param_vals)
 {
   auto global_vars = globalvars::GlobalVars();
-  global_vars.add_named_param("hello", "bye");
-  global_vars.add_named_param("is_true", true);
-  global_vars.add_named_param("will_be_true", false);
-  global_vars.add_named_param("number", 5);
+  global_vars.add_named_param("hello", "bye", "Bye");
+  global_vars.add_named_param("is_true", true, "Flag");
+  global_vars.add_named_param("will_be_true", false, "Will");
+  global_vars.add_named_param("number", 5, "Number of values");
 
   auto good_values1 = global_vars.get_named_param_vals(
       { "hello=low", "number=10", "will_be_true" });

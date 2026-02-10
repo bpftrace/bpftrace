@@ -369,18 +369,32 @@ EXPECT_REGEX .*ERROR: Invalid value for license. Found: Potato. Valid values: Du
 WILL_FAIL
 
 NAME named command line params
-RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 20), getopt("bb", -1), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' -- --dd --aa=0xffffffffffffffff --bb=-10 --cc=False
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 20), getopt("bb", -1), getopt("cc", true), getopt("dd", false), getopt("ee", "hello")));  }' -- --dd --aa=0xffffffffffffffff --bb=-10 --cc=False
 EXPECT (18446744073709551615, -10, false, true, hello)
 TIMEOUT 1
 
 NAME named and positional params
-RUN {{BPFTRACE}} -e 'begin { print(($1, getopt("aa", 10), getopt("bb", -1), $2, getopt("cc", "hello"), getopt("dd")));  }' pos1 -- --aa=20 --bb=5 --cc=bye pos2 --dd
+RUN {{BPFTRACE}} -e 'begin { print(($1, getopt("aa", 10), getopt("bb", -1), $2, getopt("cc", "hello"), getopt("dd", false)));  }' pos1 -- --aa=20 --bb=5 --cc=bye pos2 --dd
 EXPECT (pos1, 20, 5, pos2, bye, true)
 TIMEOUT 1
 
+NAME named params with description
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10, "AA"), getopt("bb", 1))); }' -- --aa=22 --bb=2
+EXPECT (22, 2)
+TIMEOUT 1
+
+NAME named params with description help
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10, "This argument is a description of aa"), getopt("bb", 1), getopt("cc"))); }' -- --help
+EXPECT HINT: expected program options:
+EXPECT --cc: 
+EXPECT --bb: 
+EXPECT --aa: This argument is a description of aa
+TIMEOUT 1
+WILL_FAIL
+
 # Can't run through the standard AOT path because we need to pass CLI args
 NAME named command line params aot
-RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' --aot /tmp/tmpprog.btaot && /tmp/tmpprog.btaot -- --dd --aa=20 --cc=False
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10), getopt("cc", true), getopt("dd", false), getopt("ee", "hello")));  }' --aot /tmp/tmpprog.btaot && /tmp/tmpprog.btaot -- --dd --aa=20 --cc=False
 EXPECT (20, false, true, hello)
 TIMEOUT 1
 
@@ -403,6 +417,7 @@ WILL_FAIL
 NAME unexpected named command line params
 RUN {{BPFTRACE}} -e 'begin { print(getopt("aa", 10));  }' -- --bb
 EXPECT ERROR: unexpected program command line options: --bb
-EXPECT HINT: expected program options: --aa
+EXPECT HINT: expected program options:
+EXPECT --aa:
 EXPECT_NONE USAGE:
 WILL_FAIL

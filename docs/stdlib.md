@@ -334,13 +334,13 @@ Name of the current function being traced (kprobes,uprobes,fentry)
 
 ### getopt
 - `bool getopt(string arg_name)`
-- `string getopt(string arg_name, string default_value)`
-- `int getopt(string arg_name, int default_value)`
-- `bool getopt(string arg_name, bool default_value)`
+- `bool getopt(string arg_name, bool default_value, [string description])`
+- `int getopt(string arg_name, int default_value, [string description])`
+- `string getopt(string arg_name, string default_value, [string description])`
 
 Get the named command line argument/option e.g.
 ```
-# bpftrace -e 'BEGIN { print(getopt("hello", 1)); }' -- --hello=5
+# bpftrace -e 'BEGIN { print(getopt("hello", 1, "This argument is a description of hello")); }' -- --hello=5
 
 ```
 
@@ -348,11 +348,12 @@ Get the named command line argument/option e.g.
 If no default type is provided, the option is treated like a boolean arg e.g. `getopt("hello")` would evaluate to `false` if `--hello` is not specified on the command line or `true` if `--hello` is passed or set to one of the following values: `true`, `1`.
 Additionally, boolean args accept the following false values: `0`, `false` e.g. `--hello=false`.
 If the arg is not set on the command line, the default value is used.
+Parameter description field is optional, a boolean without a default value cannot have its description field set. If a description field needs to be set, a default value must be provided.
 
 You can use `--help` to see all named arguments/options.
 
 ```
-# bpftrace -e 'BEGIN { print((getopt("aa", 10), getopt("bb", "hello"), getopt("cc"), getopt("dd", false))); }' -- --cc --bb=bye
+# bpftrace -e 'BEGIN { print((getopt("aa", 10, "This argument is a description of aa"), getopt("bb", "hello"), getopt("cc"), getopt("dd", false))); }' -- --cc --bb=bye
 
 ```
 
