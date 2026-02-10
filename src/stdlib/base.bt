@@ -390,13 +390,13 @@ macro func()
 
 // :function getopt
 // :variant bool getopt(string arg_name)
-// :variant string getopt(string arg_name, string default_value)
-// :variant int getopt(string arg_name, int default_value)
-// :variant bool getopt(string arg_name, bool default_value)
+// :variant bool getopt(string arg_name, bool default_value, [string description])
+// :variant int getopt(string arg_name, int default_value, [string description])
+// :variant string getopt(string arg_name, string default_value, [string description])
 //
 // Get the named command line argument/option e.g.
 // ```
-// # bpftrace -e 'BEGIN { print(getopt("hello", 1)); }' -- --hello=5
+// # bpftrace -e 'BEGIN { print(getopt("hello", 1, "Description of hello")); }' -- --hello=5
 //
 // ```
 //
@@ -404,11 +404,12 @@ macro func()
 // If no default type is provided, the option is treated like a boolean arg e.g. `getopt("hello")` would evaluate to `false` if `--hello` is not specified on the command line or `true` if `--hello` is passed or set to one of the following values: `true`, `1`.
 // Additionally, boolean args accept the following false values: `0`, `false` e.g. `--hello=false`.
 // If the arg is not set on the command line, the default value is used.
+// `getopt` calls may optionally specify a string with the argument description (except for a boolean arg without a default value).
 //
 // You can use `--help` to see all named arguments/options.
 //
 // ```
-// # bpftrace -e 'BEGIN { print((getopt("aa", 10), getopt("bb", "hello"), getopt("cc"), getopt("dd", false))); }' -- --cc --bb=bye
+// # bpftrace -e 'BEGIN { print((getopt("aa", 10, "Description of aa"), getopt("bb", "hello"), getopt("cc"), getopt("dd", false))); }' -- --cc --bb=bye
 //
 // ```
 
