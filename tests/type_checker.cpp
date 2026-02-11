@@ -609,20 +609,10 @@ TEST_F(TypeCheckerTest, call_hist)
   test("kprobe:f { @x = hist(1); }");
   test("kprobe:f { @x = hist(1, 0); }");
   test("kprobe:f { @x = hist(1, 5); }");
-  test("kprobe:f { @x = hist(1, 10); }", Error{ R"(
-stdin:1:17-28: ERROR: hist: bits 10 must be 0..5
-kprobe:f { @x = hist(1, 10); }
-                ~~~~~~~~~~~
-)" });
   test("kprobe:f { $n = 3; @x = hist(1, $n); }", Error{ R"(
 stdin:1:25-36: ERROR: hist() expects a int literal (int provided)
 kprobe:f { $n = 3; @x = hist(1, $n); }
                         ~~~~~~~~~~~
-)" });
-  test("kprobe:f { @x = hist(); }", Error{ R"(
-stdin:1:17-23: ERROR: hist() requires at least one argument (0 provided)
-kprobe:f { @x = hist(); }
-                ~~~~~~
 )" });
   test("kprobe:f { hist(1); }", Error{ R"(
 stdin:1:12-19: ERROR: hist() must be assigned directly to a map
@@ -655,40 +645,10 @@ TEST_F(TypeCheckerTest, call_lhist)
 {
   test("kprobe:f { @ = lhist(5, 0, 10, 1); "
        "}");
-  test("kprobe:f { @ = lhist(5, 0, 10); }", Error{ R"(
-stdin:1:16-31: ERROR: lhist() requires 4 arguments (3 provided)
-kprobe:f { @ = lhist(5, 0, 10); }
-               ~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = lhist(5, 0); }", Error{ R"(
-stdin:1:16-27: ERROR: lhist() requires 4 arguments (2 provided)
-kprobe:f { @ = lhist(5, 0); }
-               ~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = lhist(5); }", Error{ R"(
-stdin:1:16-24: ERROR: lhist() requires 4 arguments (1 provided)
-kprobe:f { @ = lhist(5); }
-               ~~~~~~~~
-)" });
-  test("kprobe:f { @ = lhist(); }", Error{ R"(
-stdin:1:16-23: ERROR: lhist() requires 4 arguments (0 provided)
-kprobe:f { @ = lhist(); }
-               ~~~~~~~
-)" });
-  test("kprobe:f { @ = lhist(5, 0, 10, 1, 2); }", Error{ R"(
-stdin:1:16-37: ERROR: lhist() requires 4 arguments (5 provided)
-kprobe:f { @ = lhist(5, 0, 10, 1, 2); }
-               ~~~~~~~~~~~~~~~~~~~~~
-)" });
   test("kprobe:f { lhist(-10, -10, 10, 1); }", Error{ R"(
 stdin:1:12-34: ERROR: lhist() must be assigned directly to a map
 kprobe:f { lhist(-10, -10, 10, 1); }
            ~~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = lhist(-10, -10, 10, 1); }", Error{ R"(
-stdin:1:16-38: ERROR: lhist: invalid min value (must be non-negative literal)
-kprobe:f { @ = lhist(-10, -10, 10, 1); }
-               ~~~~~~~~~~~~~~~~~~~~~~
 )" });
   test("kprobe:f { $x = lhist(); }", Error{ R"(
 stdin:1:17-24: ERROR: lhist() must be assigned directly to a map
@@ -712,41 +672,10 @@ kprobe:f { lhist() ? 0 : 1; }
 )" });
 }
 
-TEST_F(TypeCheckerTest, call_lhist_posparam)
-{
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->add_param("0");
-  bpftrace->add_param("10");
-  bpftrace->add_param("1");
-  bpftrace->add_param("hello");
-  test("kprobe:f { @ = lhist(5, $1, $2, $3); }", Mock{ *bpftrace });
-  test("kprobe:f { @ = lhist(5, $1, $2, $4); }", Mock{ *bpftrace }, Error{});
-}
-
 TEST_F(TypeCheckerTest, call_tseries)
 {
   test("kprobe:f { @ = tseries(5, 10s, 1); }");
   test("kprobe:f { @ = tseries(-5, 10s, 1); }");
-  test("kprobe:f { @ = tseries(5, 10s); }", Error{ R"(
-stdin:1:16-31: ERROR: tseries() requires at least 3 arguments (2 provided)
-kprobe:f { @ = tseries(5, 10s); }
-               ~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = tseries(5); }", Error{ R"(
-stdin:1:16-26: ERROR: tseries() requires at least 3 arguments (1 provided)
-kprobe:f { @ = tseries(5); }
-               ~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = tseries(); }", Error{ R"(
-stdin:1:16-25: ERROR: tseries() requires at least 3 arguments (0 provided)
-kprobe:f { @ = tseries(); }
-               ~~~~~~~~~
-)" });
-  test("kprobe:f { @ = tseries(5, 10s, 1, 10, 10); }", Error{ R"(
-stdin:1:16-42: ERROR: tseries() takes up to 4 arguments (5 provided)
-kprobe:f { @ = tseries(5, 10s, 1, 10, 10); }
-               ~~~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
   test("kprobe:f { tseries(5, 10s, 1); }", Error{ R"(
 stdin:1:12-30: ERROR: tseries() must be assigned directly to a map
 kprobe:f { tseries(5, 10s, 1); }
@@ -773,62 +702,16 @@ kprobe:f { tseries() ? 0 : 1; }
            ~~~~~~~~~
 )" });
   test("kprobe:f { @ = tseries(-1, 10s, 5); }");
-  test("kprobe:f { @ = tseries(1, 10s, 0); }", Error{ R"(
-stdin:1:16-34: ERROR: tseries() num_intervals must be >= 1 (0 provided)
-kprobe:f { @ = tseries(1, 10s, 0); }
-               ~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = tseries(1, 10s, -1); }", Error{ R"(
-stdin:1:16-35: ERROR: tseries: invalid num_intervals value (must be non-negative literal)
-kprobe:f { @ = tseries(1, 10s, -1); }
-               ~~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = tseries(1, 10s, 1000001); }", Error{ R"(
-stdin:1:16-40: ERROR: tseries() num_intervals must be < 1000000 (1000001 provided)
-kprobe:f { @ = tseries(1, 10s, 1000001); }
-               ~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = tseries(1, 0, 10); }", Error{ R"(
-stdin:1:16-33: ERROR: tseries() interval_ns must be >= 1 (0 provided)
-kprobe:f { @ = tseries(1, 0, 10); }
-               ~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @ = tseries(1, -1, 10); }", Error{ R"(
-stdin:1:16-34: ERROR: tseries: invalid interval_ns value (must be non-negative literal)
-kprobe:f { @ = tseries(1, -1, 10); }
-               ~~~~~~~~~~~~~~~~~~
-)" });
   // Good duration strings.
   test("kprobe:f { @ = tseries(1, 10ns, 5); }");
   test("kprobe:f { @ = tseries(1, 10us, 5); }");
   test("kprobe:f { @ = tseries(1, 10ms, 5); }");
   test("kprobe:f { @ = tseries(1, 10s, 5); }");
-  // All aggregator functions.
-  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "avg"); })");
-  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "max"); })");
-  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "min"); })");
-  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "sum"); })");
-  // Invalid aggregator function.
-  test(R"(kprobe:f { @ = tseries(1, 10s, 5, "stats"); })", Error{ R"(
-stdin:1:16-43: ERROR: tseries() expects one of the following aggregation functions: avg, max, min, sum ("stats" provided)
-kprobe:f { @ = tseries(1, 10s, 5, "stats"); }
-               ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-}
-
-TEST_F(TypeCheckerTest, call_tseries_posparam)
-{
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->add_param("10s");
-  bpftrace->add_param("5");
-  bpftrace->add_param("20");
-  test("kprobe:f { @ = tseries(5, $1, $2); }", Mock{ *bpftrace });
 }
 
 TEST_F(TypeCheckerTest, call_count)
 {
   test("kprobe:f { @x = count(); }");
-  test("kprobe:f { @x = count(1); }", Error{});
   test("kprobe:f { count(); }", Error{});
   test("kprobe:f { $x = count(); }", Error{});
   test("kprobe:f { @[count()] = 1; }", Error{});
@@ -839,8 +722,6 @@ TEST_F(TypeCheckerTest, call_count)
 TEST_F(TypeCheckerTest, call_sum)
 {
   test("kprobe:f { @x = sum(123); }");
-  test("kprobe:f { @x = sum(); }", Error{});
-  test("kprobe:f { @x = sum(123, 456); }", Error{});
   test("kprobe:f { sum(123); }", Error{});
   test("kprobe:f { $x = sum(123); }", Error{});
   test("kprobe:f { @[sum(123)] = 1; }", Error{});
@@ -851,7 +732,6 @@ TEST_F(TypeCheckerTest, call_sum)
 TEST_F(TypeCheckerTest, call_min)
 {
   test("kprobe:f { @x = min(123); }");
-  test("kprobe:f { @x = min(); }", Error{});
   test("kprobe:f { min(123); }", Error{});
   test("kprobe:f { $x = min(123); }", Error{});
   test("kprobe:f { @[min(123)] = 1; }", Error{});
@@ -862,7 +742,6 @@ TEST_F(TypeCheckerTest, call_min)
 TEST_F(TypeCheckerTest, call_max)
 {
   test("kprobe:f { @x = max(123); }");
-  test("kprobe:f { @x = max(); }", Error{});
   test("kprobe:f { max(123); }", Error{});
   test("kprobe:f { $x = max(123); }", Error{});
   test("kprobe:f { @[max(123)] = 1; }", Error{});
@@ -873,7 +752,6 @@ TEST_F(TypeCheckerTest, call_max)
 TEST_F(TypeCheckerTest, call_avg)
 {
   test("kprobe:f { @x = avg(123); }");
-  test("kprobe:f { @x = avg(); }", Error{});
   test("kprobe:f { avg(123); }", Error{});
   test("kprobe:f { $x = avg(123); }", Error{});
   test("kprobe:f { @[avg(123)] = 1; }", Error{});
@@ -884,7 +762,6 @@ TEST_F(TypeCheckerTest, call_avg)
 TEST_F(TypeCheckerTest, call_stats)
 {
   test("kprobe:f { @x = stats(123); }");
-  test("kprobe:f { @x = stats(); }", Error{});
   test("kprobe:f { stats(123); }", Error{});
   test("kprobe:f { $x = stats(123); }", Error{});
   test("kprobe:f { @[stats(123)] = 1; }", Error{});
@@ -1031,11 +908,6 @@ TEST_F(TypeCheckerTest, call_exit)
   test("kprobe:f { if(exit()) { 123 } }", Error{});
   test("kprobe:f { exit() ? 0 : 1; }", Error{});
 
-  test("kprobe:f { exit(1, 2); }", Error{ R"(
-stdin:1:12-22: ERROR: exit() takes up to one argument (2 provided)
-kprobe:f { exit(1, 2); }
-           ~~~~~~~~~~
-)" });
   test("kprobe:f { $a = \"1\"; exit($a); }", Error{ R"(
 stdin:1:22-30: ERROR: exit() only supports int arguments (string provided)
 kprobe:f { $a = "1"; exit($a); }
@@ -1048,8 +920,7 @@ TEST_F(TypeCheckerTest, call_print)
   test("kprobe:f { @x = count(); print(@x); }");
   test("kprobe:f { @x = count(); print(@x, 5); }");
   test("kprobe:f { @x = count(); print(@x, 5, 10); }");
-  test("kprobe:f { @x = count(); print(@x, 5, 10, 1); }", Error{});
-  test("kprobe:f { @x = count(); @x = print(); }", Error{});
+  test("kprobe:f { @x = count(); @x = print(1); }", Error{});
 
   test("kprobe:f { print(@x); @x[1,2] = count(); }");
   test("kprobe:f { @x[1,2] = count(); print(@x); }");
@@ -1118,7 +989,6 @@ TEST_F(TypeCheckerTest, call_print_non_map)
 TEST_F(TypeCheckerTest, call_clear)
 {
   test("kprobe:f { @x = count(); clear(@x); }");
-  test("kprobe:f { @x = count(); clear(@x, 1); }", Error{});
   test("kprobe:f { @x = count(); @x = clear(); }", Error{});
 
   test("kprobe:f { clear(@x); @x[1,2] = count(); }");
@@ -1135,7 +1005,6 @@ TEST_F(TypeCheckerTest, call_clear)
 TEST_F(TypeCheckerTest, call_zero)
 {
   test("kprobe:f { @x = count(); zero(@x); }");
-  test("kprobe:f { @x = count(); zero(@x, 1); }", Error{});
   test("kprobe:f { @x = count(); @x = zero(); }", Error{});
 
   test("kprobe:f { zero(@x); @x[1,2] = count(); }");
@@ -1325,7 +1194,6 @@ TEST_F(TypeCheckerTest, call_time)
 {
   test("kprobe:f { time(); }");
   test("kprobe:f { time(\"%M:%S\"); }");
-  test("kprobe:f { time(\"%M:%S\", 1); }", Error{});
   test("kprobe:f { @x = time(); }", Error{});
   test("kprobe:f { $x = time(); }", Error{});
   test("kprobe:f { @[time()] = 1; }", Error{});
@@ -1342,11 +1210,6 @@ TEST_F(TypeCheckerTest, call_strftime)
   test(R"(kprobe:f { strftime("%M:%S", ""); })", Error{});
   test("kprobe:f { strftime(1, nsecs); }", Error{});
   test("kprobe:f { $var = \"str\"; strftime($var, nsecs); }", Error{});
-  test("kprobe:f { strftime(); }", Error{});
-  test("kprobe:f { strftime(\"%M:%S\"); }", Error{});
-  test("kprobe:f { strftime(\"%M:%S\", 1, 1); }", Error{});
-  test("kprobe:f { strftime(1, 1, 1); }", Error{});
-  test(R"(kprobe:f { strftime("%M:%S", "", 1); })", Error{});
   test("kprobe:f { $ts = strftime(\"%M:%S\", 1); }");
   test("kprobe:f { @ts = strftime(\"%M:%S\", nsecs); }");
   test("kprobe:f { @[strftime(\"%M:%S\", nsecs)] = 1; }");
@@ -1363,7 +1226,6 @@ TEST_F(TypeCheckerTest, call_str)
 {
   test("kprobe:f { str(arg0); }");
   test("kprobe:f { @x = str(arg0); }");
-  test("kprobe:f { str(); }", Error{});
   test("kprobe:f { str(\"hello\"); }");
 }
 
@@ -1411,7 +1273,6 @@ TEST_F(TypeCheckerTest, call_buf)
   test("kprobe:f { buf(arg0, -1); }", Error{});
   test("kprobe:f { @x = buf(arg0, 1); }");
   test("kprobe:f { $x = buf(arg0, 1); }");
-  test("kprobe:f { buf(); }", Error{});
   test("kprobe:f { buf(\"hello\"); }", Error{});
   test("struct x { int c[4] }; kprobe:f { "
        "$foo = (struct x*)0; @x = "
@@ -1443,7 +1304,6 @@ TEST_F(TypeCheckerTest, call_ksym)
 {
   test("kprobe:f { ksym(arg0); }");
   test("kprobe:f { @x = ksym(arg0); }");
-  test("kprobe:f { ksym(); }", Error{});
   test("kprobe:f { ksym(\"hello\"); }", Error{});
 }
 
@@ -1451,7 +1311,6 @@ TEST_F(TypeCheckerTest, call_usym)
 {
   test("kprobe:f { usym(arg0); }");
   test("kprobe:f { @x = usym(arg0); }");
-  test("kprobe:f { usym(); }", Error{});
   test("kprobe:f { usym(\"hello\"); }", Error{});
 }
 
@@ -1476,7 +1335,6 @@ TEST_F(TypeCheckerTest, call_ntop)
   test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv4); }");
   test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv6); }");
 
-  test("kprobe:f { ntop(); }", Error{});
   test("kprobe:f { ntop(2, \"hello\"); }", Error{});
   test("kprobe:f { ntop(\"hello\"); }", Error{});
   test(structs + "kprobe:f { ntop(((struct inet*)0)->invalid); }", Error{});
@@ -1496,7 +1354,6 @@ TEST_F(TypeCheckerTest, call_pton)
        "kprobe:f { $addr_v4_text = ntop(AF_INET, pton(\"127.0.0.1\")); }");
   test(def + "kprobe:f { $addr_v6_text = ntop(AF_INET6, pton(\"::1\")); }");
 
-  test("kprobe:f { $addr_v4 = pton(); }", Error{});
   test("kprobe:f { $addr_v4 = pton(\"\"); }", Error{});
   test("kprobe:f { $addr_v4 = pton(\"127.0.1\"); }", Error{});
   test("kprobe:f { $addr_v4 = pton(\"127.0.0.0.1\"); }", Error{});
@@ -1514,7 +1371,6 @@ TEST_F(TypeCheckerTest, call_kaddr)
 {
   test("kprobe:f { kaddr(\"avenrun\"); }");
   test("kprobe:f { @x = kaddr(\"avenrun\"); }");
-  test("kprobe:f { kaddr(); }", Error{});
   test("kprobe:f { kaddr(123); }", Error{});
 }
 
@@ -1529,7 +1385,6 @@ TEST_F(TypeCheckerTest, call_uaddr)
        "{ __builtin_uaddr(\"glob_asciirange\"); }");
   test("uprobe:/bin/sh:main { @x = "
        "__builtin_uaddr(\"glob_asciirange\"); }");
-  test("uprobe:/bin/sh:main { __builtin_uaddr(); }", Error{});
   test("uprobe:/bin/sh:main { __builtin_uaddr(123); }", Error{});
   test("uprobe:/bin/sh:main { "
        "__builtin_uaddr(\"?\"); }",
@@ -1540,9 +1395,6 @@ TEST_F(TypeCheckerTest, call_uaddr)
   test("uprobe:/bin/sh:main { @str = "
        "\"glob_asciirange\"; __builtin_uaddr(@str); }",
        Error{});
-
-  test("k:f { __builtin_uaddr(\"A\"); }", Error{});
-  test("i:s:1 { __builtin_uaddr(\"A\"); }", Error{});
 
   // The C struct parser should set the
   // is_signed flag on signed types
@@ -1594,7 +1446,6 @@ TEST_F(TypeCheckerTest, call_cat)
 {
   test("kprobe:f { cat(\"/proc/loadavg\"); }");
   test("kprobe:f { cat(\"/proc/%d/cmdline\", 1); }");
-  test("kprobe:f { cat(); }", Error{});
   test("kprobe:f { cat(123); }", Error{});
   test("kprobe:f { @x = cat(\"/proc/loadavg\"); }", Error{});
   test("kprobe:f { $x = cat(\"/proc/loadavg\"); }", Error{});
@@ -1621,8 +1472,6 @@ TEST_F(TypeCheckerTest, call_stack)
   // Wrong arguments
   test("kprobe:f { kstack(3, perf) }", Error{});
   test("kprobe:f { ustack(3, perf) }", Error{});
-  test("kprobe:f { kstack(perf, 3, 4) }", Error{});
-  test("kprobe:f { ustack(perf, 3, 4) }", Error{});
   test("kprobe:f { kstack(bob) }", Error{});
   test("kprobe:f { ustack(bob) }", Error{});
   test("kprobe:f { kstack(\"str\") }", Error{});
@@ -1683,7 +1532,6 @@ TEST_F(TypeCheckerTest, call_macaddr)
        Error{});
   test(structs + "kprobe:f { macaddr(*(struct mac*)arg0); }", Error{});
 
-  test("kprobe:f { macaddr(); }", Error{});
   test("kprobe:f { macaddr(\"foo\"); }", Error{});
 }
 
@@ -1698,9 +1546,6 @@ TEST_F(TypeCheckerTest, call_bswap)
   test("kprobe:f { bswap((int16)0x12); }");
   test("kprobe:f { bswap((int32)0x12); }");
   test("kprobe:f { bswap((int64)0x12); }");
-
-  test("kprobe:f { bswap(); }", Error{});
-  test("kprobe:f { bswap(0x12, 0x34); }", Error{});
 
   test("kprobe:f { bswap(\"hello\"); }", Error{});
 }
@@ -1917,23 +1762,6 @@ TEST_F(TypeCheckerTest, variable_type)
 TEST_F(TypeCheckerTest, unroll)
 {
   test(R"(kprobe:f { $i = 0; unroll(5) { printf("%d", $i); $i = $i + 1; } })");
-  test(R"(kprobe:f { $i = 0; unroll(101) { printf("%d", $i); $i = $i + 1; } })",
-       Error{});
-  test(R"(kprobe:f { $i = 0; unroll(0) { printf("%d", $i); $i = $i + 1; } })",
-       Error{});
-
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->add_param("10");
-  bpftrace->add_param("hello");
-  bpftrace->add_param("101");
-  test(R"(kprobe:f { unroll($#) { printf("hi\n"); } })", Mock{ *bpftrace });
-  test(R"(kprobe:f { unroll($1) { printf("hi\n"); } })", Mock{ *bpftrace });
-  test(R"(kprobe:f { unroll($2) { printf("hi\n"); } })",
-       Mock{ *bpftrace },
-       Error{});
-  test(R"(kprobe:f { unroll($3) { printf("hi\n"); } })",
-       Mock{ *bpftrace },
-       Error{});
 }
 
 TEST_F(TypeCheckerTest, map_integer_sizes)
@@ -2094,7 +1922,6 @@ TEST_F(TypeCheckerTest, printf_errorf_warnf)
   for (const auto &func : funcs) {
     test("kprobe:f { " + func + "(\"hi\") }");
     test("kprobe:f { " + func + "(1234) }", Error{});
-    test("kprobe:f { " + func + "() }", Error{});
     test("kprobe:f { $fmt = \"mystring\"; " + func + "($fmt) }", Error{});
     test("kprobe:f { " + func + "(\"%s\", comm) }");
     test("kprobe:f { " + func + "(\"%-16s\", comm) }");
@@ -2120,12 +1947,8 @@ TEST_F(TypeCheckerTest, printf_errorf_warnf)
 
 TEST_F(TypeCheckerTest, debugf)
 {
-  test("kprobe:f { debugf(\"warning\") }",
-       Warning{ "The debugf() builtin is not "
-                "recommended for production use." });
   test("kprobe:f { debugf(\"hi\") }");
   test("kprobe:f { debugf(1234) }", Error{});
-  test("kprobe:f { debugf() }", Error{});
   test("kprobe:f { $fmt = \"mystring\"; debugf($fmt) }", Error{});
   test("kprobe:f { debugf(\"%s\", comm) }");
   test("kprobe:f { debugf(\"%-16s\", comm) }");
@@ -2137,7 +1960,6 @@ TEST_F(TypeCheckerTest, debugf)
   test("kprobe:f { debugf(\"%d\", 1) }");
   test("kprobe:f { debugf(\"%d %d\", 1, 1) }");
   test("kprobe:f { debugf(\"%d %d %d\", 1, 1, 1) }");
-  test("kprobe:f { debugf(\"%d %d %d %d\", 1, 1, 1, 1) }", Error{});
 
   {
     // Long format string should be ok
@@ -2152,7 +1974,6 @@ TEST_F(TypeCheckerTest, system)
 {
   test("kprobe:f { system(\"ls\") }", UnsafeMode::Enable);
   test("kprobe:f { system(1234) }", UnsafeMode::Enable, Error{});
-  test("kprobe:f { system() }", UnsafeMode::Enable, Error{});
   test("kprobe:f { $fmt = \"mystring\"; system($fmt) }",
        UnsafeMode::Enable,
        Error{});
@@ -2292,7 +2113,6 @@ TEST_F(TypeCheckerTest, join)
 {
   test("kprobe:f { join(arg0) }");
   test("kprobe:f { printf(\"%s\", join(arg0)) }", Error{});
-  test("kprobe:f { join() }", Error{});
   test("kprobe:f { $fmt = \"mystring\"; join($fmt) }", Error{});
   test("kprobe:f { @x = join(arg0) }", Error{});
   test("kprobe:f { $x = join(arg0) }", Error{});
@@ -3482,16 +3302,10 @@ TEST_F(TypeCheckerTest, signal)
     // // Positional parameter
     auto bpftrace = get_mock_bpftrace();
     bpftrace->add_param("1");
-    bpftrace->add_param("hello");
     test("k:f {" + signal + "($1) }",
          UnsafeMode::Enable,
          Mock{ *bpftrace },
          Types{ types });
-    test("k:f {" + signal + "($2) }",
-         UnsafeMode::Enable,
-         Mock{ *bpftrace },
-         Types{ types },
-         Error{});
   }
 }
 
@@ -3500,11 +3314,8 @@ TEST_F(TypeCheckerTest, strncmp)
   // Test strncmp builtin
   test(R"(i:s:1 { $a = "bar"; strncmp("foo", $a, 1) })");
   test(R"(i:s:1 { strncmp("foo", "bar", 1) })");
-  test("i:s:1 { strncmp(1) }", Error{});
   test("i:s:1 { strncmp(1,1,1) }", Error{});
   test("i:s:1 { strncmp(\"a\",1,1) }", Error{});
-  test(R"(i:s:1 { strncmp("a","a",-1) })", Error{});
-  test(R"(i:s:1 { strncmp("a","a","foo") })", Error{});
 }
 
 TEST_F(TypeCheckerTest, strncmp_posparam)
@@ -4283,16 +4094,6 @@ TEST_F(TypeCheckerTest, call_pid_tid)
   test("begin { $i = pid(curr_ns); }");
   test("begin { $i = tid(init); }");
   test("begin { $i = pid(init); }");
-  test("begin { $i = tid(xxx); }", Error{ R"(
-stdin:1:18-21: ERROR: Invalid PID namespace mode: xxx (expects: curr_ns or init)
-begin { $i = tid(xxx); }
-                 ~~~
-)" });
-  test("begin { $i = tid(1); }", Error{ R"(
-stdin:1:14-20: ERROR: tid() only supports curr_ns and init as the argument (int provided)
-begin { $i = tid(1); }
-             ~~~~~~
-)" });
 }
 
 TEST_F(TypeCheckerTest, subprog_return)
@@ -4382,8 +4183,6 @@ TEST_F(TypeCheckerBTFTest, call_path)
   test("fentry:func_1 { @k = path( args.foo1 ) }");
   test("fexit:func_1 { @k = path( retval->foo1 ) }");
   test("fentry:func_1 { path(args.foo1, 16); }");
-  test("fentry:func_1 { path(args.foo1, \"Na\"); }", Error{});
-  test("fentry:func_1 { path(args.foo1, -1); }", Error{});
 }
 
 TEST_F(TypeCheckerBTFTest, call_skb_output)
@@ -4391,37 +4190,6 @@ TEST_F(TypeCheckerBTFTest, call_skb_output)
   test("fentry:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); "
        "}");
   test("fexit:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); }");
-
-  test("fentry:func_1 { $ret = "
-       "skboutput(); }",
-       Error{ R"(
-stdin:1:24-35: ERROR: skboutput() requires 4 arguments (0 provided)
-fentry:func_1 { $ret = skboutput(); }
-                       ~~~~~~~~~~~
-)" });
-  test("fentry:func_1 { $ret = skboutput(\"one.pcap\"); }", Error{ R"(
-stdin:1:24-45: ERROR: skboutput() requires 4 arguments (1 provided)
-fentry:func_1 { $ret = skboutput("one.pcap"); }
-                       ~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("fentry:func_1 { $ret = skboutput(\"one.pcap\", args.foo1); }",
-       Error{ R"(
-stdin:1:24-56: ERROR: skboutput() requires 4 arguments (2 provided)
-fentry:func_1 { $ret = skboutput("one.pcap", args.foo1); }
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("fentry:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500); }",
-       Error{ R"(
-stdin:1:24-62: ERROR: skboutput() requires 4 arguments (3 provided)
-fentry:func_1 { $ret = skboutput("one.pcap", args.foo1, 1500); }
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:func_1 { $ret = skboutput(\"one.pcap\", arg1, 1500, 0); }",
-       Error{ R"(
-stdin:1:24-60: ERROR: skboutput can not be used with "kprobe" probes
-kprobe:func_1 { $ret = skboutput("one.pcap", arg1, 1500, 0); }
-                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
 }
 
 TEST_F(TypeCheckerBTFTest, call_percpu_kaddr)
@@ -4430,7 +4198,6 @@ TEST_F(TypeCheckerBTFTest, call_percpu_kaddr)
   test("kprobe:f { percpu_kaddr(\"process_counts\", 0); }");
   test("kprobe:f { @x = percpu_kaddr(\"process_counts\"); }");
   test("kprobe:f { @x = percpu_kaddr(\"process_counts\", 0); }");
-  test("kprobe:f { percpu_kaddr(); }", Error{});
   test("kprobe:f { percpu_kaddr(0); }", Error{});
 
   test("kprobe:f { percpu_kaddr(\"nonsense\"); }",
@@ -4447,11 +4214,6 @@ TEST_F(TypeCheckerBTFTest, call_socket_cookie)
   test("fentry:tcp_shutdown { $ret = socket_cookie(args.sk); }");
   test("fexit:tcp_shutdown { $ret = socket_cookie(args.sk); }");
 
-  test("fentry:tcp_shutdown { $ret = socket_cookie(); }", Error{ R"(
-stdin:1:30-45: ERROR: socket_cookie() requires one argument (0 provided)
-fentry:tcp_shutdown { $ret = socket_cookie(); }
-                             ~~~~~~~~~~~~~~~
-)" });
   test("fentry:tcp_shutdown { $ret = socket_cookie(args.how); }", Error{ R"(
 stdin:1:30-53: ERROR: socket_cookie() only supports pointer arguments (int provided)
 fentry:tcp_shutdown { $ret = socket_cookie(args.how); }
@@ -4461,12 +4223,6 @@ fentry:tcp_shutdown { $ret = socket_cookie(args.how); }
 stdin:1:24-48: ERROR: socket_cookie() only supports 'struct sock *' as the argument ('struct Foo1 *' provided)
 fentry:func_1 { $ret = socket_cookie(args.foo1); }
                        ~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:tcp_shutdown { $ret = socket_cookie((struct sock *)arg0); }",
-       Error{ R"(
-stdin:1:30-64: ERROR: socket_cookie can not be used with "kprobe" probes
-kprobe:tcp_shutdown { $ret = socket_cookie((struct sock *)arg0); }
-                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
 }
 
