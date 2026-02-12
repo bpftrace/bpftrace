@@ -32,10 +32,16 @@ enum CompatibleBPFLicense {
 
 static const auto UNSTABLE_IMPORT = "unstable_import";
 static const auto UNSTABLE_IMPORT_STATEMENT = "unstable_import_statement";
-static const auto UNSTABLE_MAP_DECL = "unstable_map_decl";
 static const auto UNSTABLE_TSERIES = "unstable_tseries";
 static const auto UNSTABLE_ADDR = "unstable_addr";
 static const auto UNSTABLE_TYPEINFO = "unstable_typeinfo";
+
+static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
+  "symbol_source",
+  "max_type_res_iterations",
+  "unstable_macro",
+  "unstable_map_decl"
+};
 
 class Config {
 public:
@@ -57,7 +63,6 @@ public:
   bool cpp_demangle = true;
   bool lazy_symbolication = true;
   bool print_maps_on_exit = true;
-  ConfigUnstable unstable_map_decl = ConfigUnstable::warn;
   ConfigUnstable unstable_import = ConfigUnstable::warn;
   ConfigUnstable unstable_import_statement = ConfigUnstable::error;
   ConfigUnstable unstable_tseries = ConfigUnstable::warn;
