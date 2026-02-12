@@ -28,13 +28,13 @@
 #include "ast/passes/parser.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
+#include "ast/passes/pre_type_check.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/type_checker.h"
 #include "ast/passes/type_resolver.h"
 #include "ast/passes/type_system.h"
-#include "ast/passes/variable_precheck.h"
 #include "benchmark.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
@@ -344,7 +344,7 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
 {
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
-  add(ast::CreateVariablePreCheckPass());
+  add(ast::CreatePreTypeCheckPass());
   add(ast::CreateTypeResolverPass());
   add(ast::CreateTypeCheckerPass());
   add(ast::CreateResourcePass());
@@ -355,7 +355,7 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreatePortabilityPass());
   add(ast::CreateClangBuildPass());
   add(ast::CreateTypeSystemPass());
-  add(ast::CreateVariablePreCheckPass());
+  add(ast::CreatePreTypeCheckPass());
   add(ast::CreateTypeResolverPass());
   add(ast::CreateTypeCheckerPass());
   add(ast::CreateResourcePass());

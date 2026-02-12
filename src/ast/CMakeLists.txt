@@ -21,6 +21,7 @@ add_library(ast STATIC
   passes/attachpoint_passes.cpp
   passes/builtins.cpp
   passes/c_macro_expansion.cpp
+  passes/pre_type_check.cpp
   passes/clang_parser.cpp
   passes/clang_build.cpp
   passes/named_param.cpp
@@ -49,7 +50,6 @@ add_library(ast STATIC
   passes/type_system.cpp
   passes/unstable_feature.cpp
   passes/usdt_arguments.cpp
-  passes/variable_precheck.cpp
 )
 
 add_dependencies(ast parser)

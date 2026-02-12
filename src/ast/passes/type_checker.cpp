@@ -8,11 +8,9 @@
 #include <string>
 #include <sys/stat.h>
 
-#include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/async_event_types.h"
 #include "ast/context.h"
-#include "ast/helpers.h"
 #include "ast/integer_types.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
@@ -26,7 +24,6 @@
 #include "config.h"
 #include "log.h"
 #include "probe_matcher.h"
-#include "probe_types.h"
 #include "types.h"
 #include "util/paths.h"
 #include "util/strings.h"
@@ -46,14 +43,6 @@ struct arg_type_spec {
   bool skip_check = false;
 };
 
-struct call_spec {
-  size_t min_args = 0;
-  size_t max_args = 0;
-  // NOLINTBEGIN(readability-redundant-member-init)
-  std::vector<arg_type_spec> arg_types = {};
-  // NOLINTEND(readability-redundant-member-init)
-};
-
 class TypeChecker : public Visitor<TypeChecker> {
 public:
   explicit TypeChecker(ASTContext &ctx,
@@ -70,7 +59,6 @@ public:
   }
 
   using Visitor<TypeChecker>::visit;
-  void visit(String &string);
   void visit(Identifier &identifier);
   void visit(Call &call);
   void visit(Sizeof &szof);
@@ -115,10 +103,6 @@ private:
                                size_t index,
                                const arg_type_spec &spec);
   [[nodiscard]] bool check_call(Call &call);
-  [[nodiscard]] bool check_nargs(const Call &call, size_t expected_nargs);
-  [[nodiscard]] bool check_varargs(const Call &call,
-                                   size_t min_nargs,
-                                   size_t max_nargs);
 
   bool check_arg(Call &call,
                  Type type,
@@ -158,293 +142,109 @@ private:
 
 } // namespace
 
-static const std::map<std::string, call_spec> CALL_SPEC = {
-  { "avg",
-    { .min_args = 3,
-      .max_args = 3,
-      .arg_types = { arg_type_spec{ .skip_check=true },
-                     arg_type_spec{ .skip_check=true },
-                     arg_type_spec{ .type = Type::integer } } } },
-  { "bswap", { .min_args = 1, .max_args = 1 } },
-  { "buf",
-    { .min_args=1,
-      .max_args=2,
-
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer } } } },
-  { "cat",
-    { .min_args=1,
-      .max_args=128,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "cgroupid",
-    { .min_args=1,
-      .max_args=1,
-
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "cgroup_path",
-    { .min_args=1,
-      .max_args=2,
-
-      .arg_types={
-        arg_type_spec{ .type=Type::integer },
-        arg_type_spec{ .type=Type::string } } } },
-  { "clear",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={}
-      } },
-  { "count",
-    { .min_args=2,
-      .max_args=2,
-      .arg_types={}
-       } },
-  { "debugf",
-    { .min_args=1,
-      .max_args=128,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "errorf",
-    { .min_args=1,
-      .max_args=128,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "exit",
-    { .min_args=0,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::integer } } } },
-  { "hist",
-    { .min_args=3,
-      .max_args=4,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer },
-        arg_type_spec{ .type=Type::integer, .literal=true } } } },
-  { "join",
-    { .min_args=1,
-      .max_args=2,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "kaddr",
-    { .min_args=1,
-      .max_args=1,
-
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "kptr",
-    { .min_args=1,
-      .max_args=1,
-       } },
-  { "kstack",
-    { .min_args=0,
-      .max_args=2,
-       } },
-  { "ksym",
-    { .min_args=1,
-      .max_args=1,
-       } },
-  { "stack_len",
-    { .min_args=1,
-      .max_args=1,
-
-    } },
-  { "lhist",
-    { .min_args=6,
-      .max_args=6,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer },
-        arg_type_spec{ .type=Type::integer, .literal=true },
-        arg_type_spec{ .type=Type::integer, .literal=true },
-        arg_type_spec{ .type=Type::integer, .literal=true } } } },
-  { "tseries",
-    { .min_args=5,
-      .max_args=6,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer },
-        arg_type_spec{ .type=Type::integer, .literal=true },
-        arg_type_spec{ .type=Type::integer, .literal=true },
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "macaddr",
-    { .min_args=1,
-      .max_args=1,
-       } },
-  { "max",
-    { .min_args=3,
-      .max_args=3,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer } } } },
-  { "min",
-    { .min_args=3,
-      .max_args=3,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer } } } },
-  { "nsecs",
-    { .min_args=0,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::timestamp_mode } } } },
-  { "ntop",
-    { .min_args=1,
-      .max_args=2,
-       } },
-  { "offsetof",
-    { .min_args=2,
-      .max_args=2,
-       } },
-  { "path",
-    { .min_args=1,
-      .max_args=2,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer, .literal=true } } } },
-  { "percpu_kaddr",
-    { .min_args=1,
-      .max_args=2,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true },
-        arg_type_spec{ .type=Type::integer } } } },
-  { "print",
-    { .min_args=1,
-      .max_args=3,
-      .arg_types={
-        // This may be a pure map or not.
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer, .literal=true },
-        arg_type_spec{ .type=Type::integer, .literal=true } } } },
-
-  { "printf",
-    { .min_args=1,
-      .max_args=128,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "pton",
-    { .min_args=1,
-      .max_args=1,
-       } },
-  { "reg",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "sizeof",
-    { .min_args=1,
-      .max_args=1,
-       } },
-  { "skboutput",
-    { .min_args=4,
-      .max_args=4,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true }, // pcap file name
-        arg_type_spec{ .type=Type::pointer },      // *skb
-        arg_type_spec{ .type=Type::integer },      // cap length
-        // cap offset, default is 0
-        // some tracepoints like dev_queue_xmit will output ethernet header,
-        // set offset to 14 bytes can exclude this header
-        arg_type_spec{ .type=Type::integer } } } },
-  { "stats",
-    { .min_args=3,
-      .max_args=3,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer } } } },
-  { "str",
-    { .min_args=1,
-      .max_args=2,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer } } } },
-  { "strftime",
-    { .min_args=2,
-      .max_args=2,
-      .arg_types={
-          arg_type_spec{ .type=Type::string, .literal=true },
-          arg_type_spec{ .type=Type::integer } } } },
-  { "strncmp",
-    { .min_args=3,
-      .max_args=3,
-      .arg_types={
-          arg_type_spec{ .type=Type::string },
-          arg_type_spec{ .type=Type::string },
-          arg_type_spec{ .type=Type::integer, .literal=true } } } },
-  { "sum",
-    { .min_args=3,
-      .max_args=3,
-      .arg_types={
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .skip_check=true },
-        arg_type_spec{ .type=Type::integer } } } },
-  { "system",
-    { .min_args=1,
-      .max_args=128,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "time",
-    { .min_args=0,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "__builtin_uaddr",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "unwatch",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::integer } } } },
-  { "uptr",
-    { .min_args=1,
-      .max_args=1,
-       } },
-  { "ustack",
-    { .min_args=0,
-      .max_args=2,
-       } },
-  { "usym",
-    { .min_args=1,
-      .max_args=1,
-       } },
-  { "warnf",
-    { .min_args=1,
-      .max_args=128,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true } } } },
-  { "zero",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={} } },
-  { "pid",
-    { .min_args=0,
-      .max_args=1 },
-  },
-  { "socket_cookie",
-    { .min_args=1,
-      .max_args=1,
-      .arg_types={
-        arg_type_spec{ .type=Type::pointer }, // struct sock *
-      } } },
-  { "fail",
-    { .min_args=1,
-      .max_args=128,
-      .arg_types={
-        arg_type_spec{ .type=Type::string, .literal=true },
-      } } },
-};
+static const std::map<std::string, std::vector<arg_type_spec>>
+    CALL_ARG_TYPE_SPEC = {
+      { "avg",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "buf",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "cat", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "cgroupid",
+        { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "cgroup_path",
+        { arg_type_spec{ .type = Type::integer },
+          arg_type_spec{ .type = Type::string } } },
+      { "debugf", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "errorf", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "exit", { arg_type_spec{ .type = Type::integer } } },
+      { "hist",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer },
+          arg_type_spec{ .type = Type::integer, .literal = true } } },
+      { "join",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "kaddr", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "lhist",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer },
+          arg_type_spec{ .type = Type::integer, .literal = true },
+          arg_type_spec{ .type = Type::integer, .literal = true },
+          arg_type_spec{ .type = Type::integer, .literal = true } } },
+      { "tseries",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer },
+          arg_type_spec{ .type = Type::integer, .literal = true },
+          arg_type_spec{ .type = Type::integer, .literal = true },
+          arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "max",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "min",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "nsecs", { arg_type_spec{ .type = Type::timestamp_mode } } },
+      { "path",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer, .literal = true } } },
+      { "percpu_kaddr",
+        { arg_type_spec{ .type = Type::string, .literal = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "print",
+        { // This may be a pure map or not.
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer, .literal = true },
+          arg_type_spec{ .type = Type::integer, .literal = true } } },
+      { "printf", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "reg", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "skboutput",
+        { arg_type_spec{ .type = Type::string, .literal = true }, // pcap file
+                                                                  // name
+          arg_type_spec{ .type = Type::pointer },                 // *skb
+          arg_type_spec{ .type = Type::integer },                 // cap length
+                                                  // cap offset, default is 0
+                                                  // some tracepoints like
+                                                  // dev_queue_xmit will output
+                                                  // ethernet header, set offset
+                                                  // to 14 bytes can exclude
+                                                  // this header
+          arg_type_spec{ .type = Type::integer } } },
+      { "stats",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "str",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "strftime",
+        { arg_type_spec{ .type = Type::string, .literal = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "strncmp",
+        { arg_type_spec{ .type = Type::string },
+          arg_type_spec{ .type = Type::string },
+          arg_type_spec{ .type = Type::integer, .literal = true } } },
+      { "sum",
+        { arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .skip_check = true },
+          arg_type_spec{ .type = Type::integer } } },
+      { "system", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "time", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "__builtin_uaddr",
+        { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "unwatch", { arg_type_spec{ .type = Type::integer } } },
+      { "warnf", { arg_type_spec{ .type = Type::string, .literal = true } } },
+      { "socket_cookie", { arg_type_spec{ .type = Type::pointer } } }, // struct
+                                                                       // sock *
+      { "fail", { arg_type_spec{ .type = Type::string, .literal = true } } },
+    };
 // clang-format on
 
 // These are types which aren't valid for scratch variables
@@ -502,47 +302,20 @@ bool IsValidPtrOp(Operator op)
   }
 }
 
-void TypeChecker::visit(String &string)
-{
-  if ((func_ == "printf" || func_ == "errorf" || func_ == "warnf") &&
-      func_arg_idx_ == 0)
-    return;
-
-  const auto str_len = bpftrace_.config_->max_strlen;
-  if (!is_compile_time_func(func_) && string.value.size() > str_len - 1) {
-    string.addError() << "String is too long (over " << str_len
-                      << " bytes): " << string.value;
-  }
-}
-
 void TypeChecker::visit(Identifier &identifier)
 {
-  if (func_ == "pid" || func_ == "tid") {
-    if (identifier.ident != "curr_ns" && identifier.ident != "init") {
-      identifier.addError()
-          << "Invalid PID namespace mode: " << identifier.ident
-          << " (expects: curr_ns or init)";
-    }
-  } else if (func_ == "signal") {
-    if (identifier.ident != "current_pid" &&
-        identifier.ident != "current_tid") {
-      identifier.addError() << "Invalid signal target: " << identifier.ident
-                            << " (expects: current_pid or current_tid)";
-    }
-  } else if (identifier.ident_type.IsNoneTy()) {
+  // These are used in function arguments and don't have types
+  if (identifier.ident == "curr_ns" || identifier.ident == "init" ||
+      identifier.ident == "current_pid" || identifier.ident == "current_tid") {
+    return;
+  }
+  if (identifier.ident_type.IsNoneTy()) {
     identifier.addError() << "Unknown identifier: '" + identifier.ident + "'";
   }
 }
 
 void TypeChecker::visit(Call &call)
 {
-  // Check for unsafe-ness first. It is likely the most pertinent issue
-  // (and should be at the top) for any function call.
-  if (bpftrace_.safe_mode_ && is_unsafe_func(call.func)) {
-    call.addError() << call.func
-                    << "() is an unsafe function being used in safe mode";
-  }
-
   struct func_setter {
     func_setter(TypeChecker &analyser, const std::string &s)
         : analyser_(analyser), old_func_(analyser_.func_)
@@ -568,15 +341,6 @@ void TypeChecker::visit(Call &call)
     visit(call.vargs.at(i));
   }
 
-  if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-    for (auto *ap : probe->attach_points) {
-      if (!ap->check_available(call.func)) {
-        call.addError() << call.func << " can not be used with \""
-                        << ap->provider << "\" probes";
-      }
-    }
-  }
-
   if (!check_call(call)) {
     return;
   }
@@ -586,120 +350,10 @@ void TypeChecker::visit(Call &call)
       call.vargs.emplace_back(ctx_.make_node<Integer>(call.loc, 0)); // default
                                                                      // bits is
                                                                      // 0
-    } else {
-      const auto *bits = call.vargs.at(3).as<Integer>();
-      if (!bits) {
-        // Bug here as the validity of the integer literal is already checked by
-        // check_arg above.
-        LOG(BUG) << call.func << ": invalid bits value, need integer literal";
-      } else if (bits->value > 5) {
-        call.addError() << call.func << ": bits " << bits->value
-                        << " must be 0..5";
-      }
     }
 
     call.return_type = CreateHist();
-  } else if (call.func == "lhist") {
-    Expression &min_arg = call.vargs.at(3);
-    Expression &max_arg = call.vargs.at(4);
-    Expression &step_arg = call.vargs.at(5);
-    auto *min = min_arg.as<Integer>();
-    auto *max = max_arg.as<Integer>();
-    auto *step = step_arg.as<Integer>();
-
-    if (!min) {
-      call.addError() << call.func
-                      << ": invalid min value (must be non-negative literal)";
-      return;
-    }
-    if (!max) {
-      call.addError() << call.func
-                      << ": invalid max value (must be non-negative literal)";
-      return;
-    }
-    if (!step) {
-      call.addError() << call.func << ": invalid step value";
-      return;
-    }
-
-    if (step->value <= 0) {
-      call.addError() << "lhist() step must be >= 1 (" << step->value
-                      << " provided)";
-    } else {
-      int buckets = (max->value - min->value) / step->value;
-      if (buckets > 1000) {
-        call.addError()
-            << "lhist() too many buckets, must be <= 1000 (would need "
-            << buckets << ")";
-      }
-    }
-    if (min->value > max->value) {
-      call.addError() << "lhist() min must be less than max (provided min "
-                      << min->value << " and max " << max->value << ")";
-    }
-    if ((max->value - min->value) < step->value) {
-      call.addError()
-          << "lhist() step is too large for the given range (provided step "
-          << step->value << " for range " << (max->value - min->value) << ")";
-    }
   } else if (call.func == "tseries") {
-    const static std::set<std::string> ALLOWED_AGG_FUNCS = {
-      "avg",
-      "sum",
-      "max",
-      "min",
-    };
-    Expression &interval_ns_arg = call.vargs.at(3);
-    Expression &num_intervals_arg = call.vargs.at(4);
-
-    auto *interval_ns = interval_ns_arg.as<Integer>();
-    auto *num_intervals = num_intervals_arg.as<Integer>();
-
-    if (!interval_ns) {
-      call.addError()
-          << call.func
-          << ": invalid interval_ns value (must be non-negative literal)";
-      return;
-    }
-    if (!num_intervals) {
-      call.addError()
-          << call.func
-          << ": invalid num_intervals value (must be non-negative literal)";
-      return;
-    }
-
-    if (interval_ns->value <= 0) {
-      call.addError() << "tseries() interval_ns must be >= 1 ("
-                      << interval_ns->value << " provided)";
-      return;
-    }
-
-    if (num_intervals->value <= 0) {
-      call.addError() << "tseries() num_intervals must be >= 1 ("
-                      << num_intervals->value << " provided)";
-      return;
-    } else if (num_intervals->value > 1000000) {
-      call.addError() << "tseries() num_intervals must be < 1000000 ("
-                      << num_intervals->value << " provided)";
-    }
-
-    if (call.vargs.size() == 6) {
-      auto &aggregator = *call.vargs.at(5).as<String>();
-      if (!ALLOWED_AGG_FUNCS.contains(aggregator.value)) {
-        auto &err = call.addError();
-        err << "tseries() expects one of the following aggregation "
-               "functions: ";
-        size_t i = 0;
-        for (const std::string &agg : ALLOWED_AGG_FUNCS) {
-          err << agg;
-          if (i++ != ALLOWED_AGG_FUNCS.size() - 1) {
-            err << ", ";
-          }
-        }
-        err << " (\"" << aggregator.value << "\" provided)";
-      }
-    }
-
     call.return_type = CreateVoid();
   } else if (call.func == "str") {
     auto &arg = call.vargs.at(0);
@@ -803,14 +457,6 @@ void TypeChecker::visit(Call &call)
       call.addError() << "() only supports int or pointer arguments" << " ("
                       << arg.type().GetTy() << " provided)";
     }
-  } else if (call.func == "reg") {
-    auto reg_name = call.vargs.at(0).as<String>()->value;
-    auto offset = arch::Host::register_to_pt_regs_offset(reg_name);
-    if (!offset) {
-      call.addError() << "'" << reg_name
-                      << "' is not a valid register on this architecture"
-                      << " (" << arch::Host::Machine << ")";
-    }
   } else if (call.func == "percpu_kaddr") {
     const auto &symbol = call.vargs.at(0).as<String>()->value;
     if (bpftrace_.btf_->get_var_type(symbol).IsNoneTy()) {
@@ -834,16 +480,6 @@ void TypeChecker::visit(Call &call)
     // checks. We've already validate the basic counts, etc. but we need to
     // apply these additional constraints which includes a limited surface.
     if (call.func == "debugf") {
-      call.addWarning()
-          << "The debugf() builtin is not recommended for production use. "
-             "For more information see bpf_trace_printk in bpf-helpers(7).";
-      // bpf_trace_printk cannot use more than three arguments, see
-      // bpf-helpers(7).
-      constexpr int PRINTK_MAX_ARGS = 3;
-      if (args.size() > PRINTK_MAX_ARGS) {
-        call.addError() << "cannot use more than " << PRINTK_MAX_ARGS
-                        << " conversion specifiers";
-      }
       for (size_t i = 0; i < args.size(); i++) {
         // bpf_trace_printk_format_types is a subset of printf_format_types
         // that contains valid types for bpf_trace_printk() see iovisor/bcc
@@ -942,24 +578,6 @@ void TypeChecker::visit(Call &call)
       call.addError() << "path() only supports pointer or record argument ("
                       << arg.type().GetTy() << " provided)";
     }
-
-    if (call.vargs.size() == 2) {
-      if (!call.vargs.at(1).is<Integer>()) {
-        call.addError() << call.func
-                        << ": invalid size value, need non-negative literal";
-      }
-    }
-
-    ProbeType type = probe->get_probetype();
-    if (type != ProbeType::fentry && type != ProbeType::fexit &&
-        type != ProbeType::iter) {
-      call.addError() << "The path function can only be used with "
-                      << "'fentry', 'fexit', 'iter' probes";
-    }
-  } else if (call.func == "strncmp") {
-    if (!call.vargs.at(2).is<Integer>()) {
-      call.addError() << "Builtin strncmp requires a non-negative literal";
-    }
   } else if (call.func == "kptr" || call.func == "uptr") {
     // kptr should accept both integer or pointer. Consider case: kptr($1)
     auto &arg = call.vargs.at(0);
@@ -1000,15 +618,6 @@ void TypeChecker::visit(Call &call)
       call.addError() << "Failed to initialize sw_tai in "
                          "userspace. This is very unexpected.";
     }
-  } else if (call.func == "pid" || call.func == "tid") {
-    if (call.vargs.size() == 1) {
-      auto &arg = call.vargs.at(0);
-      if (!(arg.as<Identifier>())) {
-        call.addError() << call.func
-                        << "() only supports curr_ns and init as the argument ("
-                        << arg.type().GetTy() << " provided)";
-      }
-    }
   } else if (call.func == "socket_cookie") {
     auto logError = [&]<typename T>(T name) {
       call.addError() << call.func
@@ -1025,9 +634,9 @@ void TypeChecker::visit(Call &call)
       logError("'" + type.GetPointeeTy().GetName() + " *'");
       return;
     }
+  } else if (call.func == "exit") {
+    // OK
   } else if (call.func == "fail") {
-    // This is basically a static_assert failure. It will halt the compilation.
-    // We expect to hit this path only when using the `typeof` folds.
     bool fail_valid = true;
     std::vector<output::Primitive> args;
     for (size_t i = 0; i < call.vargs.size(); ++i) {
@@ -1058,8 +667,6 @@ void TypeChecker::visit(Call &call)
       FormatString fs(call.vargs[0].as<String>()->value);
       call.addError() << fs.format(args);
     }
-  } else if (call.func == "exit") {
-    // OK
   } else {
     // Check here if this corresponds to an external function. We convert the
     // external type metadata into the internal `SizedType` representation and
@@ -1373,19 +980,6 @@ void TypeChecker::visit(IfExpr &if_expr)
 void TypeChecker::visit(Unroll &unroll)
 {
   visit(unroll.expr);
-
-  auto *integer = unroll.expr.as<Integer>();
-  if (!integer) {
-    unroll.addError() << "invalid unroll value";
-    return;
-  }
-
-  if (integer->value > static_cast<uint64_t>(100)) {
-    unroll.addError() << "unroll maximum value is 100";
-  } else if (integer->value < static_cast<uint64_t>(1)) {
-    unroll.addError() << "unroll minimum value is 1";
-  }
-
   visit(unroll.block);
 }
 
@@ -1799,93 +1393,17 @@ bool TypeChecker::check_arg(Call &call, size_t index, const arg_type_spec &spec)
 
 bool TypeChecker::check_call(Call &call)
 {
-  auto spec = CALL_SPEC.find(call.func);
-  if (spec == CALL_SPEC.end()) {
+  auto spec = CALL_ARG_TYPE_SPEC.find(call.func);
+  if (spec == CALL_ARG_TYPE_SPEC.end()) {
     return true;
   }
 
   auto ret = true;
-  if (spec->second.min_args != spec->second.max_args) {
-    ret = check_varargs(call, spec->second.min_args, spec->second.max_args);
-  } else {
-    ret = check_nargs(call, spec->second.min_args);
-  }
-
-  if (!ret) {
-    return ret;
-  }
-
-  for (size_t i = 0; i < spec->second.arg_types.size() && i < call.vargs.size();
-       ++i) {
-    ret = check_arg(call, i, spec->second.arg_types.at(i));
+  for (size_t i = 0; i < spec->second.size() && i < call.vargs.size(); ++i) {
+    ret = check_arg(call, i, spec->second.at(i));
   }
 
   return ret;
-}
-
-// Checks the number of arguments passed to a function is correct.
-bool TypeChecker::check_nargs(const Call &call, size_t expected_nargs)
-{
-  std::stringstream err;
-  auto nargs = call.vargs.size();
-  assert(nargs >= call.injected_args);
-  assert(expected_nargs >= call.injected_args);
-  nargs -= call.injected_args;
-  expected_nargs -= call.injected_args;
-
-  if (nargs != expected_nargs) {
-    if (expected_nargs == 0)
-      err << call.func << "() requires no arguments";
-    else if (expected_nargs == 1)
-      err << call.func << "() requires one argument";
-    else
-      err << call.func << "() requires " << expected_nargs << " arguments";
-
-    err << " (" << nargs << " provided)";
-    call.addError() << err.str();
-    return false;
-  }
-  return true;
-}
-
-// Checks the number of arguments passed to a function is within a specified
-// range.
-bool TypeChecker::check_varargs(const Call &call,
-                                size_t min_nargs,
-                                size_t max_nargs)
-{
-  std::stringstream err;
-  auto nargs = call.vargs.size();
-  assert(nargs >= call.injected_args);
-  assert(min_nargs >= call.injected_args);
-  assert(max_nargs >= call.injected_args);
-  nargs -= call.injected_args;
-  min_nargs -= call.injected_args;
-  max_nargs -= call.injected_args;
-
-  if (nargs < min_nargs) {
-    if (min_nargs == 1)
-      err << call.func << "() requires at least one argument";
-    else
-      err << call.func << "() requires at least " << min_nargs << " arguments";
-
-    err << " (" << nargs << " provided)";
-    call.addError() << err.str();
-    return false;
-  } else if (nargs > max_nargs) {
-    if (max_nargs == 0)
-      err << call.func << "() requires no arguments";
-    else if (max_nargs == 1)
-      err << call.func << "() takes up to one argument";
-    else
-      err << call.func << "() takes up to " << max_nargs << " arguments";
-
-    err << " (" << nargs << " provided)";
-    call.addError() << err.str();
-    return false;
-  }
-
-  return true;
 }
 
 // Checks an argument passed to a function is of the correct type.
