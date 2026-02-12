@@ -4,6 +4,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
+#include "types.h"
 
 namespace bpftrace::ast {
 
@@ -179,7 +180,7 @@ void MapDefaultKey::visit(Statement &stmt)
   // Replace with a statement that has the default index, in the same way as
   // above. This will be type-checked in a later pass.
   if (auto *map = stmt.as<AssignScalarMapStatement>()) {
-    auto *index = ast_.make_node<Integer>(map->loc, 0, CreateInt64());
+    auto *index = ast_.make_node<Integer>(map->loc, 0);
     auto *acc = ast_.make_node<MapAccess>(map->loc, map->map, index);
     stmt.value = ast_.make_node<AssignMapStatement>(map->loc, acc, map->expr);
   }

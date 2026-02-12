@@ -101,6 +101,8 @@ public:
   }
   R visit([[maybe_unused]] MapDeclStatement &decl)
   {
+    // This isn't a regular expression, and therefore the call
+    // will not be visited unless specifically overrden.
     return default_value();
   }
   R visit([[maybe_unused]] Map &map)

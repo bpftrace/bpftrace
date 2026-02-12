@@ -341,6 +341,7 @@ Name of the current function being traced (kprobes,uprobes,fentry)
 Get the named command line argument/option e.g.
 ```
 # bpftrace -e 'BEGIN { print(getopt("hello", 1)); }' -- --hello=5
+# bpftrace -e 'let @hello = getopt("hello", 1); BEGIN { print(@hello); }' -- --hello=5
 
 ```
 

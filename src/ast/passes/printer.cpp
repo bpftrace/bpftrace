@@ -517,16 +517,14 @@ Buffer Formatter::visit(Typeinfo& typeinfo)
 
 Buffer Formatter::visit(MapDeclStatement& decl)
 {
-  std::stringstream bpf_type;
-  bpf_type << decl.bpf_type;
+  auto expr = format(
+      *decl.call, metadata, max_width - 8 - decl.ident.size(), true);
   return Buffer()
       .text("let ")
       .text(decl.ident)
       .text(" = ")
-      .text(bpf_type.str())
-      .text("(")
-      .text(std::to_string(decl.max_entries))
-      .text(");");
+      .append(std::move(expr))
+      .text(";");
 }
 
 Buffer Formatter::visit(Map& map)
