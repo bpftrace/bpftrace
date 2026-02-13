@@ -41,7 +41,6 @@ public:
   explicit UnstableFeature(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<UnstableFeature>::visit;
-  void visit(MapDeclStatement &decl);
   void visit(MapAddr &map_addr);
   void visit(VariableAddr &var_addr);
   void visit(RootImport &imp);
@@ -63,19 +62,6 @@ private:
 // as this also prints the code location which is overly noisy. We just
 // want to notify users they're using an unstable feature. For errors it's ok to
 // print the location because the script is going to fail anyway.
-
-void UnstableFeature::visit(MapDeclStatement &decl)
-{
-  if (bpftrace_.config_->unstable_map_decl == ConfigUnstable::error) {
-    decl.addError() << get_error(MAP_DECL, UNSTABLE_MAP_DECL);
-    return;
-  }
-  if (bpftrace_.config_->unstable_map_decl == ConfigUnstable::warn &&
-      !warned_features.contains(UNSTABLE_MAP_DECL)) {
-    LOG(WARNING) << get_warning(MAP_DECL, UNSTABLE_MAP_DECL);
-    warned_features.insert(UNSTABLE_MAP_DECL);
-  }
-}
 
 void UnstableFeature::visit(StatementImport &imp)
 {

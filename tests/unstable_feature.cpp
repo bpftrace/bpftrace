@@ -44,12 +44,6 @@ void test_error(const std::string& input, const std::string& error)
 
 TEST(unstable_feature, check_error)
 {
-  test_error("config = { unstable_map_decl=0 } let @a = lruhash(5); begin { "
-             "@a[0] = 0; }",
-             "map declarations feature is not enabled by default. To enable "
-             "this unstable "
-             "feature, "
-             "set the config flag to enable. unstable_map_decl=enable");
   test("config = { unstable_tseries=warn } begin { @ = tseries(4, 1s, 10); }");
   test_error(
       "config = { unstable_tseries=error } begin { @ = tseries(4, 1s, 10); }",

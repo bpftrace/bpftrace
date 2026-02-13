@@ -371,7 +371,6 @@ Controls whether maps are printed on exit. Set to `false` in order to change the
 ### unstable features
 
 These are the list of unstable features:
-- `unstable_map_decl` - feature flag for map declarations
 - `unstable_tseries` - feature flag for time series map type
 - `unstable_addr` - feature flag for address of operator (&)
 

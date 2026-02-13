@@ -4998,52 +4998,36 @@ TEST_F(TypeCheckerTest, block_expressions)
 
 TEST_F(TypeCheckerTest, map_declarations)
 {
-  auto bpftrace = get_mock_bpftrace();
-  bpftrace->config_->unstable_map_decl = ConfigUnstable::enable;
-
-  test("let @a = hash(2); begin { @a = 1; }", Mock{ *bpftrace });
-  test("let @a = lruhash(2); begin { @a = 1; }", Mock{ *bpftrace });
-  test("let @a = percpuhash(2); begin { @a[1] = count(); }", Mock{ *bpftrace });
-  test("let @a = percpulruhash(2); begin { @a[1] = count(); }",
-       Mock{ *bpftrace });
-  test("let @a = percpulruhash(2); begin { @a[1] = count(); }",
-       Mock{ *bpftrace });
+  test("let @a = hash(2); begin { @a = 1; }");
+  test("let @a = lruhash(2); begin { @a = 1; }");
+  test("let @a = percpuhash(2); begin { @a[1] = count(); }");
+  test("let @a = percpulruhash(2); begin { @a[1] = count(); }");
+  test("let @a = percpulruhash(2); begin { @a[1] = count(); }");
 
   test("let @a = hash(2); begin { print(1); }",
-       Mock{ *bpftrace },
        Warning{ "WARNING: Unused map: @a" });
 
-  test("let @a = percpuhash(2); begin { @a = 1; }",
-       Mock{ *bpftrace },
-       Error{ R"(
+  test("let @a = percpuhash(2); begin { @a = 1; }", Error{ R"(
 stdin:1:33-35: ERROR: Incompatible map types. Type from declaration: percpuhash. Type from value/key type: hash
 let @a = percpuhash(2); begin { @a = 1; }
                                 ~~
 )" });
-  test("let @a = percpulruhash(2); begin { @a = 1; }",
-       Mock{ *bpftrace },
-       Error{ R"(
+  test("let @a = percpulruhash(2); begin { @a = 1; }", Error{ R"(
 stdin:1:36-38: ERROR: Incompatible map types. Type from declaration: percpulruhash. Type from value/key type: hash
 let @a = percpulruhash(2); begin { @a = 1; }
                                    ~~
 )" });
-  test("let @a = hash(2); begin { @a = count(); }",
-       Mock{ *bpftrace },
-       Error{ R"(
+  test("let @a = hash(2); begin { @a = count(); }", Error{ R"(
 stdin:1:27-29: ERROR: Incompatible map types. Type from declaration: hash. Type from value/key type: percpuhash
 let @a = hash(2); begin { @a = count(); }
                           ~~
 )" });
-  test("let @a = lruhash(2); begin { @a = count(); }",
-       Mock{ *bpftrace },
-       Error{ R"(
+  test("let @a = lruhash(2); begin { @a = count(); }", Error{ R"(
 stdin:1:30-32: ERROR: Incompatible map types. Type from declaration: lruhash. Type from value/key type: percpuhash
 let @a = lruhash(2); begin { @a = count(); }
                              ~~
 )" });
-  test("let @a = potato(2); begin { @a[1] = count(); }",
-       Mock{ *bpftrace },
-       Error{ R"(
+  test("let @a = potato(2); begin { @a[1] = count(); }", Error{ R"(
 stdin:1:1-20: ERROR: Invalid bpf map type: potato
 let @a = potato(2); begin { @a[1] = count(); }
 ~~~~~~~~~~~~~~~~~~~

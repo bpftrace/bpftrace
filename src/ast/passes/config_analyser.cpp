@@ -24,12 +24,6 @@ private:
 
 } // namespace
 
-static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
-  "symbol_source",
-  "max_type_res_iterations",
-  "unstable_macro"
-};
-
 void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
 {
   // If this is deprecated, just emit a warning and move on. This is done here
