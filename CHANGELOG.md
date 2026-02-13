@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- `getopt()` add description argument
+  - [#4998](https://github.com/bpftrace/bpftrace/pull/4998)
 - `exit()` is no longer allowed inside loops. `return` was always disallowed, and `exit()` implicitly returns, which may result in undefined behavior.
   - [#4587](https://github.com/bpftrace/bpftrace/pull/4587)
 - Restrict bpftrace script licenses to those that are GPL compatible
