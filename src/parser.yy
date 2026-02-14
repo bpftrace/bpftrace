@@ -617,7 +617,7 @@ assign_stmt:
         ;
 
 map_decl_stmt:
-                LET MAP ASSIGN IDENT LPAREN integer RPAREN ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, $2, $4, $6->value); }
+                LET MAP ASSIGN call_expr ";" { $$ = driver.ctx.make_node<ast::MapDeclStatement>(@$, $2, $4); }
         ;
 
 var_decl_stmt:

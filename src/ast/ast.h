@@ -859,38 +859,32 @@ class MapDeclStatement : public Node {
 public:
   explicit MapDeclStatement(ASTContext &ctx,
                             Location &&loc,
-                            std::string ident,
-                            std::string bpf_type,
-                            int max_entries)
+                            std::string  ident,
+                            Call *call)
       : Node(ctx, std::move(loc)),
         ident(std::move(ident)),
-        bpf_type(std::move(bpf_type)),
-        max_entries(max_entries) {};
+        call(call) {};
   explicit MapDeclStatement(ASTContext &ctx,
                             const Location &loc,
                             const MapDeclStatement &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
-        bpf_type(other.bpf_type),
-        max_entries(other.max_entries) {};
+        call(clone(ctx, loc, other.call)) {};
 
   bool operator==(const MapDeclStatement &other) const
   {
-    return ident == other.ident && bpf_type == other.bpf_type &&
-           max_entries == other.max_entries;
+    return ident == other.ident && *call == *other.call;
   }
   std::strong_ordering operator<=>(const MapDeclStatement &other) const
   {
-    if (auto cmp = ident <=> other.ident; cmp != 0)
+    if (auto cmp = ident <=> other.ident; cmp != 0) {
       return cmp;
-    if (auto cmp = bpf_type <=> other.bpf_type; cmp != 0)
-      return cmp;
-    return max_entries <=> other.max_entries;
+    }
+    return *call <=> *other.call;
   }
 
   const std::string ident;
-  const std::string bpf_type;
-  const int max_entries;
+  Call *call;
 };
 using MapDeclList = std::vector<MapDeclStatement *>;
 

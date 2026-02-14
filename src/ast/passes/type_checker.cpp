@@ -788,16 +788,10 @@ Probe *TypeChecker::get_probe()
 
 void TypeChecker::visit(MapDeclStatement &decl)
 {
-  const auto bpf_type = get_bpf_map_type(decl.bpf_type);
-  if (!bpf_type) {
-    auto &err = decl.addError();
-    err << "Invalid bpf map type: " << decl.bpf_type;
-    auto &hint = err.addHint();
-    add_bpf_map_types_hint(hint);
-  } else {
-    bpf_map_type_.insert({ decl.ident, *bpf_type });
-  }
-
+  // N.B. We do not specifically visit the call for this
+  // map declaration, as this will be done later on by the
+  // resource analyser pass (which instantiates the map).
+  // The only thing we check for is unreferenced maps.
   map_decls_.insert({ decl.ident, &decl });
 }
 

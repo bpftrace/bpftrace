@@ -117,6 +117,12 @@ Here `getopt("aa", 1)` would evaluate to `20` and `getopt("bb")` would evaluate 
 
 Named parameters require the `=` to set their value unless they are boolean parameters (like 'bb' above). The supported types are string, number, and boolean.
 
+Named parameters can also be used in map declarations, e.g.,
+```
+# bpftrace -e 'let @a = getopt("aa", 1); begin { print(@a); }' -- --aa
+```
+Here, `@a` will have the constant value `true`, and can be used anywhere in the program.
+
 ### Positional Parameters
 
 Positional parameters can be accessed in a bpftrace program via, what looks like, a numbered scratch variable, e.g. `$1`, `$2`, ..., `$N`. So `$1` would be the first positional parameter and so on.

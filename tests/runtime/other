@@ -389,6 +389,11 @@ RUN {{BPFTRACE}} runtime/scripts/named_params.bt -- --aa=20
 EXPECT 20
 TIMEOUT 1
 
+NAME named command line params with map decl
+RUN {{BPFTRACE}} -e 'let @a = getopt("foo", false); begin { print(@a); }' -- --foo
+EXPECT true
+TIMEOUT 1
+
 NAME named command line params before double dash
 RUN {{BPFTRACE}} -e 'begin {  }' --aa=20
 EXPECT USAGE:

@@ -426,14 +426,27 @@ void ResourceAnalyser::visit(Call &call)
 
 void ResourceAnalyser::visit(MapDeclStatement &decl)
 {
-  Visitor<ResourceAnalyser>::visit(decl);
-
-  auto bpf_type = get_bpf_map_type(decl.bpf_type);
+  // N.B. previous passes may have resolved the maps to a different types.
+  // We require that the call here is a simple BPF map type and a fixed size.
+  const auto &func = decl.call->func;
+  auto bpf_type = get_bpf_map_type(func);
   if (!bpf_type) {
-    LOG(BUG) << "No bpf type from string: " << decl.bpf_type;
+    auto &err = decl.addError();
+    err << "Invalid bpf map type: " << func;
+    auto &hint = err.addHint();
+    add_bpf_map_types_hint(hint);
     return;
   }
-  map_decls_.insert({ decl.ident, { *bpf_type, decl.max_entries } });
+  if (decl.call->vargs.size() != 1) {
+    decl.addError() << "Map declaration must have exactly one argument";
+    return;
+  }
+  if (!decl.call->vargs.at(0).is<Integer>()) {
+    decl.call->vargs.at(0).node().addError() << "Map size must be an integer";
+    return;
+  }
+  auto size = static_cast<int>(decl.call->vargs.at(0).as<Integer>()->value);
+  map_decls_.insert({ decl.ident, { *bpf_type, size } });
 }
 
 void ResourceAnalyser::visit(Map &map)
@@ -603,6 +616,14 @@ void ResourceAnalyser::update_map_info(Map &map)
 
   auto decl = map_decls_.find(map.ident);
   if (decl != map_decls_.end()) {
+    if (!bpf_map_types_compatible(map_info.value_type, decl->second.first)) {
+      auto map_type = get_bpf_map_type(map.value_type);
+      map.addError() << "Incompatible map types. Type from declaration: "
+                     << get_bpf_map_type_str(decl->second.first)
+                     << ". Type from value/key type: "
+                     << get_bpf_map_type_str(map_type);
+    }
+
     map_info.bpf_type = decl->second.first;
     map_info.max_entries = decl->second.second;
   } else {
