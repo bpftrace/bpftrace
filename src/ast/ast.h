@@ -959,7 +959,9 @@ public:
   explicit MapAddr(ASTContext &ctx, Location &&loc, Map *map)
       : Node(ctx, std::move(loc)), map(map) {};
   explicit MapAddr(ASTContext &ctx, const Location &loc, const MapAddr &other)
-      : Node(ctx, loc + other.loc), map(clone(ctx, loc, other.map)) {};
+      : Node(ctx, loc + other.loc),
+        map(clone(ctx, loc, other.map)),
+        map_addr_type(other.map_addr_type) {};
 
   const SizedType &type() const
   {
@@ -1031,7 +1033,8 @@ public:
   explicit Unop(ASTContext &ctx, const Location &loc, const Unop &other)
       : Node(ctx, loc + other.loc),
         expr(clone(ctx, loc, other.expr)),
-        op(other.op) {};
+        op(other.op),
+        result_type(other.result_type) {};
 
   const SizedType &type() const
   {
@@ -1112,7 +1115,8 @@ public:
                        const ArrayAccess &other)
       : Node(ctx, loc + other.loc),
         expr(clone(ctx, loc, other.expr)),
-        indexpr(clone(ctx, loc, other.indexpr)) {};
+        indexpr(clone(ctx, loc, other.indexpr)),
+        element_type(other.element_type) {};
 
   const SizedType &type() const
   {
@@ -1245,7 +1249,9 @@ public:
   explicit Tuple(ASTContext &ctx, Location &&loc, ExpressionList &&elems)
       : Node(ctx, std::move(loc)), elems(std::move(elems)) {};
   explicit Tuple(ASTContext &ctx, const Location &loc, const Tuple &other)
-      : Node(ctx, loc + other.loc), elems(clone(ctx, loc, other.elems)) {};
+      : Node(ctx, loc + other.loc),
+        elems(clone(ctx, loc, other.elems)),
+        tuple_type(other.tuple_type) {};
 
   const SizedType &type() const
   {
@@ -1304,7 +1310,8 @@ public:
       : Node(ctx, std::move(loc)), elems(std::move(named_args)) {};
   explicit Record(ASTContext &ctx, const Location &loc, const Record &other)
       : Node(ctx, loc + other.loc),
-        elems(clone(ctx, loc, other.elems)) {};
+        elems(clone(ctx, loc, other.elems)),
+        record_type(other.record_type) {};
 
   const SizedType &type() const
   {
@@ -1790,7 +1797,8 @@ public:
       : Node(ctx, loc + other.loc),
         decl(clone(ctx, loc, other.decl)),
         iterable(clone(ctx, loc, other.iterable)),
-        block(clone(ctx, loc, other.block)) {};
+        block(clone(ctx, loc, other.block)),
+        ctx_type(other.ctx_type) {};
 
   bool operator==(const For &other) const
   {

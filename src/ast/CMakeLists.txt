@@ -25,6 +25,7 @@ add_library(ast STATIC
   passes/clang_parser.cpp
   passes/clang_build.cpp
   passes/named_param.cpp
+  passes/cast_creator.cpp
   passes/config_analyser.cpp
   passes/control_flow_analyser.cpp
   passes/deprecated.cpp
@@ -42,6 +43,7 @@ add_library(ast STATIC
   passes/probe_prune.cpp
   passes/resource_analyser.cpp
   passes/type_checker.cpp
+  passes/type_graph.cpp
   passes/codegen_llvm.cpp
   passes/resolve_imports.cpp
   passes/recursion_check.cpp

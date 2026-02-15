@@ -8,6 +8,7 @@
 #include <compare>
 #include <map>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <sys/types.h>
@@ -518,6 +519,12 @@ public:
     return type_ == Type::count_t || type_ == Type::sum_t ||
            type_ == Type::max_t || type_ == Type::min_t || type_ == Type::avg_t;
   }
+
+  bool IsAggIntMapTy() const
+  {
+    return IsCastableMapTy() || type_ == Type::stats_t;
+  }
+
   bool IsMapIterableTy() const
   {
     if (IsMultiKeyMapTy()) {
@@ -606,6 +613,15 @@ SizedType CreateTimestamp();
 SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
 SizedType CreateTimestampMode();
+
+std::optional<SizedType> get_promoted_int(const SizedType &currentType,
+                                          const SizedType &newType);
+std::optional<SizedType> get_promoted_tuple(const SizedType &currentType,
+                                            const SizedType &newType);
+std::optional<SizedType> get_promoted_record(const SizedType &currentType,
+                                             const SizedType &newType);
+std::optional<SizedType> get_promoted_type(const SizedType &currentType,
+                                           const SizedType &newType);
 
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
