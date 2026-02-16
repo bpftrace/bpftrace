@@ -638,8 +638,6 @@ void TypeResolver::visit(Call &call)
     }
 
     call.return_type = CreateArray(addr_size, CreateUInt8());
-    call.return_type.SetAS(AddrSpace::kernel);
-    call.return_type.is_internal = true;
   } else if (call.func == "kaddr") {
     call.return_type = CreateUInt64();
     call.return_type.SetAS(AddrSpace::kernel);
@@ -812,7 +810,8 @@ std::optional<size_t> TypeResolver::check(Offsetof &offof)
     // Check if all sub-fields are present.
     for (const auto &field : offof.field) {
       if (!cstruct.IsCStructTy()) {
-        offof.addError() << "'" << cstruct << "' " << "is not a c_struct type.";
+        offof.addError() << "'" << cstruct << "' "
+                         << "is not a c_struct type.";
         return std::nullopt;
       } else if (!bpftrace_.structs.Has(cstruct.GetName())) {
         offof.addError() << "'" << cstruct.GetName() << "' does not exist.";
@@ -1044,14 +1043,13 @@ void TypeResolver::visit(ArrayAccess &arr)
     arr.element_type = CreateInt8();
   arr.element_type.SetAS(type.GetAS());
 
-  // BPF verifier cannot track BTF information for double pointers so we
-  // cannot propagate is_internal for arrays of pointers and we need to reset
-  // it on the array type as well. Indexing a pointer as an array also can't
-  // be verified, so the same applies there.
+  // BPF verifier cannot track BTF information for double pointers so we reset
+  // the address space on the resulting element.
   if (arr.element_type.IsPtrTy() || type.IsPtrTy()) {
-    arr.element_type.is_internal = false;
-  } else {
-    arr.element_type.is_internal = type.is_internal;
+    if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
+      ProbeType probe_type = probe->get_probetype();
+      arr.element_type.SetAS(find_addrspace(probe_type));
+    }
   }
 }
 
@@ -1496,7 +1494,6 @@ void TypeResolver::visit(Unop &unop)
   if (unop.op == Operator::MUL) {
     if (type.IsPtrTy()) {
       unop.result_type = type.GetPointeeTy();
-      unop.result_type.is_internal = type.is_internal;
       // The verifier does not always track the BTF type past the
       // first level of indirection. We need to use explicit reads
       // past this point, so we default to the kernel address space.
@@ -1537,15 +1534,15 @@ void TypeResolver::visit(Unop &unop)
 
 void TypeResolver::visit(IfExpr &if_expr)
 {
-  // In order to evaluate literals and resolved type operators, we need to fold
-  // the condition. This is handled in the `Expression` visitor. Branches that
-  // are always `false` are exempted from semantic checks. If after folding the
-  // condition still has unresolved `comptime` operators, then we are not able
-  // to visit yet. These branches are also not allowed to contain information
-  // necessary to resolve types, that is a cycle in the dependency graph, the
-  // `if` condition must be resolvable first. If the condition *is* resolvable
-  // and is a constant, then we prune the dead code paths and will never use
-  // them.
+  // In order to evaluate literals and resolved type operators, we need to
+  // fold the condition. This is handled in the `Expression` visitor. Branches
+  // that are always `false` are exempted from semantic checks. If after
+  // folding the condition still has unresolved `comptime` operators, then we
+  // are not able to visit yet. These branches are also not allowed to contain
+  // information necessary to resolve types, that is a cycle in the dependency
+  // graph, the `if` condition must be resolvable first. If the condition *is*
+  // resolvable and is a constant, then we prune the dead code paths and will
+  // never use them.
   if (auto *comptime = if_expr.cond.as<Comptime>()) {
     visit(comptime->expr);
     if (is_final_pass()) {
@@ -1929,7 +1926,8 @@ void TypeResolver::visit(FieldAccess &acc)
     }
 
     acc.field_type = field.type;
-    acc.field_type.is_internal = type.is_internal;
+    acc.field_type.SetAS(acc.expr.type().GetAS());
+
     // If we are resolving through a pointer that has an address space
     // tag, then we carry this tag over to the underlying type.
     if (acc.expr.type().GetAS() != AddrSpace::none) {
@@ -2064,9 +2062,6 @@ void TypeResolver::visit(Cast &cast)
       }
     }
 
-    if (rhs.IsIntTy() || rhs.IsBoolTy())
-      ty.is_internal = true;
-
     if (rhs.IsIntTy()) {
       if ((ty.GetElementTy().IsIntegerTy() || ty.GetElementTy().IsBoolTy())) {
         if ((ty.GetSize() <= 8) && (ty.GetSize() > rhs.GetSize())) {
@@ -2092,8 +2087,8 @@ void TypeResolver::visit(Cast &cast)
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
   if (ty.GetAS() == AddrSpace::none) {
     if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
-      ProbeType type = probe->get_probetype();
-      ty.SetAS(find_addrspace(type));
+      ProbeType probe_type = probe->get_probetype();
+      ty.SetAS(find_addrspace(probe_type));
     } else {
       // Assume kernel space for data in subprogs.
       ty.SetAS(AddrSpace::kernel);
@@ -2308,7 +2303,6 @@ void TypeResolver::visit(AssignMapStatement &assignment)
           << "' when map already has a type '" << stored_ty << "'";
     } else {
       map_val_[map_ident] = assignment.expr.type();
-      map_val_[map_ident].is_internal = true;
     }
   } else if (type.IsStringTy()) {
     auto map_size = map_val_[map_ident].GetSize();
@@ -2334,9 +2328,7 @@ void TypeResolver::visit(AssignMapStatement &assignment)
   } else if (type.IsArrayTy()) {
     const auto &map_type = map_val_[map_ident];
     const auto &expr_type = assignment.expr.type();
-    if (map_type == expr_type) {
-      map_val_[map_ident].is_internal = true;
-    } else {
+    if (map_type != expr_type) {
       assignment.addError()
           << "Array type mismatch: " << map_type << " != " << expr_type << ".";
     }
@@ -2497,8 +2489,8 @@ void TypeResolver::visit(VarDeclStatement &decl)
       } else if (is_final_pass()) {
         if (!decl.typeof || (decl.typeof->type().IsNoneTy() ||
                              decl.typeof->type().GetSize() == 0)) {
-          // Update the declaration type if it was either not set e.g. `let $a;`
-          // or the type is ambiguous or resizable e.g. `let $a: string;`
+          // Update the declaration type if it was either not set e.g. `let
+          // $a;` or the type is ambiguous or resizable e.g. `let $a: string;`
           decl.var->var_type = foundVar.type;
         } else {
           foundVar.type = decl.var->var_type;
