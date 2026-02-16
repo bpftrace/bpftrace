@@ -1,18 +1,24 @@
 #include <cstring>
 #include <fstream>
 #include <glob.h>
-#include <unordered_set>
 
-#include "ast/ast.h"
-#include "ast/passes/args_resolver.h"
-#include "ast/visitor.h"
 #include "bpftrace.h"
-#include "config.h"
-#include "log.h"
 #include "tracefs/tracefs.h"
 #include "tracepoint_format_parser.h"
 
 namespace bpftrace::ast {
+
+char ArgParseError::ID;
+
+void ArgParseError::log(llvm::raw_ostream &OS) const
+{
+  if (arg_name_.empty()) {
+    OS << "Could not parse arguments of \"" << probe_name_ << "\": " << detail_;
+  } else {
+    OS << "Could not parse argument \"" << arg_name_ << "\" of \""
+       << probe_name_ << "\": " << detail_;
+  }
+}
 
 char TracepointFormatFileError::ID;
 
@@ -164,8 +170,10 @@ Result<Field> TracepointFormatParser::parse_field(const std::string &line,
       if (field_type == "char") {
         // See src/btf.cpp for why this is converted to a string
         field.type = CreateString(*array_size);
+        field.type.SetAS(type.GetAS());
       } else {
         field.type = CreateArray(*array_size, type);
+        field.type.SetAS(type.GetAS());
       }
     } else {
       field.type = type;

@@ -174,7 +174,6 @@ public:
     has_kprobe_session_ = std::make_optional<bool>(has_features);
     has_uprobe_multi_ = std::make_optional<bool>(has_features);
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
-    has_get_func_ip_ = std::make_optional<bool>(has_features);
     has_map_lookup_percpu_elem_ = std::make_optional<bool>(has_features);
     has_loop_ = std::make_optional<bool>(has_features);
   };

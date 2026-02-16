@@ -81,6 +81,48 @@ macro ppid()
   ppid(curtask)
 }
 
+// :variant string comm()
+// :variant string comm(uint32 pid)
+// Name of the current thread or the process with the specified PID
+//
+// This utilizes the BPF helper `get_current_comm`
+macro comm()
+{
+  str(curtask.comm)
+}
+
+macro comm($pid)
+{
+  import "stdlib/task/task.bpf.c";
+  if comptime (!is_integer($pid)) {
+    fail("Only integer supported for comm()'s pid");
+  }
+
+  let $name : string[16];
+  if comptime kfunc_allowed("bpf_task_from_pid") {
+    let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
+    // EOPNOTSUPP: Operation not supported
+    if ($ret == ((int32)(-95))) {
+      warnf(
+        "'bpf_task_from_pid kfunc', which is used for getting the process comm, is not supported on your system."
+      );
+      $name = "[unknown]"; // ESRCH: No such process
+    } else if ($ret == ((int32)(-3))) {
+      warnf("No such process (pid=%d)", $pid);
+      $name = "N/A";
+    }
+  } else {
+    fail("Syntax comm(PID) is not supported in this probe type yet. Type: %s", probetype);
+  }
+  $name
+}
+
+macro comm(arg_pid)
+{
+  let $pid = arg_pid;
+  comm($pid)
+}
+
 // :variant string pcomm()
 // :variant string pcomm(struct task_struct * task)
 // Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).

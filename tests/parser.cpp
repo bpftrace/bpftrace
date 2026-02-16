@@ -197,10 +197,6 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("ctx")) })));
 
-  test("kprobe:f { __builtin_comm }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_comm")) })));
-
   test("kprobe:f { kstack }",
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("kstack")) })));
@@ -216,10 +212,6 @@ TEST(Parser, builtin_variables)
   test("kprobe:f { __builtin_retval }",
        Program().WithProbe(Probe(
            { "kprobe:f" }, { ExprStatement(Builtin("__builtin_retval")) })));
-
-  test("kprobe:f { __builtin_func }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_func")) })));
 
   test("kprobe:f { __builtin_probe }",
        Program().WithProbe(Probe(
@@ -680,7 +672,7 @@ TEST(Parser, predicate_containing_division)
 TEST(Parser, expressions)
 {
   test(
-      "kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || __builtin_comm "
+      "kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || __builtin_cpid "
       "== "
       "\"string\" /\n"
       "{\n"
@@ -697,7 +689,7 @@ TEST(Parser, expressions)
                                 Binop(Operator::MINUS, Integer(9), Integer(4)),
                                 Binop(Operator::MUL, Integer(5), Integer(10))),
                           Unop(Operator::BNOT, Integer(0)))),
-              Binop(Operator::EQ, Builtin("__builtin_comm"), String("string"))),
+              Binop(Operator::EQ, Builtin("__builtin_cpid"), String("string"))),
           { ExprStatement(Integer(1)) })));
 }
 

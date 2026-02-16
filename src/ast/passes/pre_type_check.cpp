@@ -5,15 +5,11 @@
 #include <string>
 #include <variant>
 
-#include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/helpers.h"
 #include "ast/visitor.h"
-#include "bpfmap.h"
 #include "bpftrace.h"
-#include "format_string.h"
 #include "log.h"
-#include "output/output.h"
 #include "probe_types.h"
 
 namespace bpftrace::ast {
@@ -317,10 +313,7 @@ const std::map<std::string, nargs_spec> CALL_NARGS = {
 
 class CallPreCheck : public Visitor<CallPreCheck> {
 public:
-  explicit CallPreCheck(ASTContext &ctx, BPFtrace &bpftrace)
-      : ctx_(ctx), bpftrace_(bpftrace)
-  {
-  }
+  explicit CallPreCheck(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<CallPreCheck>::visit;
 
@@ -335,7 +328,6 @@ private:
   bool check_nargs(const Call &call, size_t expected_nargs);
   bool check_varargs(const Call &call, size_t min_nargs, size_t max_nargs);
 
-  ASTContext &ctx_;
   BPFtrace &bpftrace_;
   std::string func_;
   int func_arg_idx_ = -1;
@@ -574,14 +566,6 @@ void CallPreCheck::visit(Call &call)
         err << " (\"" << aggregator.value << "\" provided)";
       }
     }
-  } else if (call.func == "reg") {
-    auto reg_name = call.vargs.at(0).as<String>()->value;
-    auto offset = arch::Host::register_to_pt_regs_offset(reg_name);
-    if (!offset) {
-      call.addError() << "'" << reg_name
-                      << "' is not a valid register on this architecture"
-                      << " (" << arch::Host::Machine << ")";
-    }
   } else if (call.func == "debugf") {
     call.addWarning()
         << "The debugf() builtin is not recommended for production use. "
@@ -700,7 +684,7 @@ Pass CreatePreTypeCheckPass()
       VariablePreCheck().visit(probe);
     }
 
-    CallPreCheck call_checker(ast, bpftrace);
+    CallPreCheck call_checker(bpftrace);
     call_checker.visit(ast.root);
   });
 }

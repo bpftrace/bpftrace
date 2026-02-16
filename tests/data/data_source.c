@@ -9,6 +9,14 @@ unsigned long long ullong_;
 typedef unsigned long size_t;
 size_t sizet_;
 
+// We include a stub definition for pt_regs, to allow
+// for mocked tests to expand the context for kprobes, etc.
+struct pt_regs {
+  unsigned long si;
+  unsigned long di;
+};
+struct pt_regs pt_regs_;
+
 struct Foo1 {
   int a;
   char b;

@@ -722,28 +722,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
       return ScopedExpr(b_.CreateLShr(uidgid, 32));
     }
     __builtin_unreachable();
-  } else if (builtin.ident == "__builtin_usermode") {
-    if (arch::Host::Machine == arch::Machine::X86_64) {
-      auto cs_offset = arch::Host::register_to_pt_regs_offset("cs");
-      if (!cs_offset) {
-        builtin.addError() << "No CS register?";
-        return ScopedExpr(b_.getInt64(0));
-      }
-      Value *cs = b_.CreateRegisterRead(ctx_, cs_offset.value(), "reg_cs");
-      Value *mask = b_.getInt64(0x3);
-      Value *is_usermode = b_.CreateICmpEQ(b_.CreateAnd(cs, mask),
-                                           b_.getInt64(3),
-                                           "is_usermode");
-      Value *expr = b_.CreateZExt(is_usermode,
-                                  b_.GetType(builtin.builtin_type),
-                                  "usermode_result");
-      return ScopedExpr(expr);
-    } else {
-      // We lack an implementation.
-      builtin.addError() << "not supported on architecture "
-                         << arch::Host::Machine;
-      return ScopedExpr(b_.getInt64(0));
-    }
   } else if (builtin.ident == "__builtin_cpu") {
     Value *cpu = b_.CreateGetCpuId(builtin.loc);
     return ScopedExpr(b_.CreateZExt(cpu, b_.getInt64Ty()));
@@ -762,63 +740,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     b_.CreateMemsetBPF(buf, b_.getInt8(0), builtin.builtin_type.GetSize());
     b_.CreateGetCurrentComm(buf, builtin.builtin_type.GetSize(), builtin.loc);
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (builtin.ident == "__builtin_func") {
-    // fentry/fexit probes do not have access to registers, so require use of
-    // the get_func_ip helper to get the instruction pointer.
-    //
-    // For [ku]retprobes, the IP register will not be pointing to the function
-    // we want to trace. It may point to a kernel trampoline, or it may point to
-    // the caller of the traced function, as it fires after the "ret"
-    // instruction has executed.
-    //
-    // The get_func_ip helper resolves these issues for us.
-    //
-    // But do not use the it for non-ret [ku]probes (which can be used with
-    // offsets), as the helper will fail for probes placed within a function
-    // (not at the entry).
-    Value *value = nullptr;
-    auto probe_type = probetype(current_attach_point_->provider);
-    if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
-        probe_type == ProbeType::kretprobe ||
-        probe_type == ProbeType::uretprobe) {
-      value = b_.CreateGetFuncIp(ctx_, builtin.loc);
-    } else {
-      value = b_.CreateRegisterRead(ctx_, builtin.ident);
-    }
-
-    if (builtin.builtin_type.IsUsymTy()) {
-      value = b_.CreateUSym(value, get_probe_id(), builtin.loc);
-      return ScopedExpr(value,
-                        [this, value]() { b_.CreateLifetimeEnd(value); });
-    }
-    return ScopedExpr(value);
-  } else if (builtin.is_argx() || builtin.ident == "__builtin_retval") {
-    auto probe_type = probetype(current_attach_point_->provider);
-
-    if (builtin.builtin_type.is_funcarg) {
-      return ScopedExpr(
-          b_.CreateKFuncArg(ctx_, builtin.builtin_type, builtin.ident));
-    }
-
-    Value *value = nullptr;
-    if (builtin.is_argx() && probe_type == ProbeType::rawtracepoint)
-      value = b_.CreateRawTracepointArg(ctx_, builtin.ident);
-    else
-      value = b_.CreateRegisterRead(ctx_, builtin.ident);
-
-    if (builtin.builtin_type.IsUsymTy()) {
-      value = b_.CreateUSym(value, get_probe_id(), builtin.loc);
-      return ScopedExpr(value,
-                        [this, value]() { b_.CreateLifetimeEnd(value); });
-    }
-    return ScopedExpr(value);
-
-  } else if (builtin.ident == "args" &&
-             probetype(current_attach_point_->provider) == ProbeType::uprobe) {
-    // uprobe args record is built on stack
-    return ScopedExpr(b_.CreateUprobeArgsRecord(ctx_, builtin.builtin_type));
-  } else if (builtin.ident == "args" || builtin.ident == "ctx") {
-    // ctx is undocumented builtin: for debugging.
+  } else if (builtin.ident == "ctx") {
     return ScopedExpr(ctx_);
   } else if (builtin.ident == "__builtin_cpid") {
     return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(),
@@ -1563,19 +1485,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     }
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "reg") {
-    auto reg_name = call.vargs.at(0).as<String>()->value;
-    auto offset = arch::Host::register_to_pt_regs_offset(reg_name);
-    if (!offset) {
-      call.addError() << "register " << reg_name
-                      << " not available on architecture "
-                      << arch::Host::Machine;
-      return ScopedExpr(b_.getInt64(0));
-    }
-
-    return ScopedExpr(b_.CreateRegisterRead(ctx_,
-                                            offset.value(),
-                                            call.func + "_" + reg_name));
   } else if (call.func == "printf") {
     // We overload printf call for iterator probe's seq_printf helper.
     if (!inside_subprog_ &&
@@ -2378,8 +2287,7 @@ ScopedExpr CodegenLLVM::visit(Unop &unop)
     Value *zero_value = Constant::getNullValue(b_.getInt1Ty());
     Value *expr = b_.CreateICmpEQ(scoped_expr.value(), zero_value);
     return ScopedExpr(expr);
-  } else if (type.IsPtrTy() || type.IsCtxAccess()) // allow dereferencing args
-  {
+  } else if (type.IsPtrTy()) {
     return unop_ptr(unop);
   } else {
     LOG(BUG) << "invalid type (" << type << ") passed to unary operator \""
@@ -2515,22 +2423,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
                                   type.GetFieldIdx(acc.field));
   }
 
-  if (type.is_funcarg) {
-    auto probe_type = probetype(current_attach_point_->provider);
-    if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
-        probe_type == ProbeType::rawtracepoint)
-      return ScopedExpr(b_.CreateKFuncArg(ctx_, acc.field_type, acc.field),
-                        std::move(scoped_arg));
-    else if (probe_type == ProbeType::uprobe) {
-      llvm::Type *args_type = b_.UprobeArgsType(type);
-      return readDatastructElemFromStack(std::move(scoped_arg),
-                                         b_.getInt32(
-                                             acc.field_type.funcarg_idx),
-                                         args_type,
-                                         acc.field_type);
-    }
-  }
-
   const auto &field = type.GetField(acc.field);
 
   if (inBpfMemory(type)) {
@@ -2544,34 +2436,23 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
       if (field.bitfield.has_value()) {
         Value *raw;
         auto *field_type = b_.GetType(field.type);
-        if (type.IsCtxAccess()) {
-          // The offset is specified in absolute terms here; and the load
-          // will implicitly convert to the intended field_type.
-          Value *src = b_.CreateSafeGEP(b_.getPtrTy(),
-                                        scoped_arg.value(),
-                                        b_.getInt64(field.offset));
-          raw = b_.CreateLoad(field_type, src, true /*volatile*/);
-        } else {
-          // Since `src` is treated as a offset for a constructed probe read,
-          // we are not constrained in the same way.
-          Value *src = b_.CreateSafeGEP(b_.GetType(type),
-                                        scoped_arg.value(),
-                                        { b_.getInt64(0),
-                                          b_.getInt64(field.offset) });
-          AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                               type.GetName() + "." +
-                                                   acc.field);
-          // memset so verifier doesn't complain about reading uninitialized
-          // stack
-          b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
-          b_.CreateProbeRead(dst,
-                             b_.getInt32(field.bitfield->read_bytes),
-                             src,
-                             type.GetAS(),
-                             acc.loc);
-          raw = b_.CreateLoad(field_type, dst);
-          b_.CreateLifetimeEnd(dst);
-        }
+        // Since `src` is treated as a offset for a constructed probe read,
+        // we are not constrained in the same way.
+        Value *src = b_.CreateSafeGEP(b_.GetType(type),
+                                      scoped_arg.value(),
+                                      { b_.getInt64(0),
+                                        b_.getInt64(field.offset) });
+        AllocaInst *dst = b_.CreateAllocaBPF(field.type,
+                                             type.GetName() + "." + acc.field);
+        // memset so verifier doesn't complain about uninitialized stack.
+        b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
+        b_.CreateProbeRead(dst,
+                           b_.getInt32(field.bitfield->read_bytes),
+                           src,
+                           type.GetAS(),
+                           acc.loc);
+        raw = b_.CreateLoad(field_type, dst);
+        b_.CreateLifetimeEnd(dst);
         size_t rshiftbits;
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         rshiftbits = field.bitfield->access_rshift;
@@ -2583,9 +2464,6 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
         Value *masked = b_.CreateAnd(shifted, field.bitfield->mask);
         return ScopedExpr(masked);
       } else {
-        // `is_data_loc` should only be set if field access is on `args` which
-        // has to be a ctx access
-        assert(type.IsCtxAccess());
         // Parser needs to have rewritten field to be a u64
         assert(field.type.IsIntTy());
         assert(field.type.GetIntBitWidth() == 64);
@@ -2758,7 +2636,8 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     if (cast.expr.type().IsArrayTy()) {
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
-      if (cast.expr.type().is_internal || cast.expr.type().IsCtxAccess()) {
+      if (cast.expr.type().is_internal ||
+          cast.expr.type().GetAS() == AddrSpace::none) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
           array = b_.CreateIntToPtr(array, b_.getPtrTy());
@@ -4244,7 +4123,7 @@ ScopedExpr CodegenLLVM::readDatastructElemFromStack(ScopedExpr &&scoped_src,
   if (src_data->getType()->isIntegerTy())
     src_data = b_.CreateIntToPtr(src_data, b_.getPtrTy());
 
-  Value *src = b_.CreateGEP(data_type, src_data, { b_.getInt32(0), index });
+  Value *src = b_.CreateSafeGEP(data_type, src_data, { b_.getInt32(0), index });
 
   if (elem_type.IsIntegerTy() || elem_type.IsPtrTy() || elem_type.IsBoolTy()) {
     // Load the correct type from src
@@ -4305,12 +4184,11 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(dst, [this, dst]() { b_.CreateLifetimeEnd(dst); });
   } else {
     // Read data onto stack
-    if (data_type.IsCtxAccess()) {
+    if (data_type.GetAS() == AddrSpace::none) {
       // Types have already been suitably casted; just do the access.
       Value *expr = b_.CreateDatastructElemLoad(elem_type, src);
       // check context access for iter probes (required by kernel)
-      if (data_type.IsCtxAccess() &&
-          probetype(current_attach_point_->provider) == ProbeType::iter) {
+      if (probetype(current_attach_point_->provider) == ProbeType::iter) {
         llvm::Function *parent = b_.GetInsertBlock()->getParent();
         BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(),
                                                           "pred_false",

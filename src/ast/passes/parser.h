@@ -2,7 +2,7 @@
 
 #include "ast/pass_manager.h"
 #include "ast/passes/ap_probe_expansion.h"
-#include "ast/passes/args_resolver.h"
+#include "ast/passes/context_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/c_macro_expansion.h"
@@ -54,7 +54,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateParseBTFPass());
   passes.emplace_back(CreateProbeAndApExpansionPass());
   passes.emplace_back(CreateProbePrunePass());
-  passes.emplace_back(CreateArgsResolverPass());
+  passes.emplace_back(CreateContextResolverPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
   passes.emplace_back(CreateFoldLiteralsPass());

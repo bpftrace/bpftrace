@@ -1785,24 +1785,6 @@ CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
   return call;
 }
 
-CallInst *IRBuilderBPF::CreateGetFuncIp(Value *ctx, const Location &loc)
-{
-  // u64 bpf_get_func_ip(void *ctx)
-  // Return:
-  // 		Address of the traced function for kprobe.
-  //		0 for kprobes placed within the function (not at the entry).
-  //		Address of the probe for uprobe and return uprobe.
-  FunctionType *getfuncip_func_type = FunctionType::get(getInt64Ty(),
-                                                        { getPtrTy() },
-                                                        false);
-  return CreateHelperCall(BPF_FUNC_get_func_ip,
-                          getfuncip_func_type,
-                          { ctx },
-                          true,
-                          "get_func_ip",
-                          loc);
-}
-
 CallInst *IRBuilderBPF::CreatePerCpuPtr(Value *var,
                                         Value *cpu,
                                         const Location &loc)
@@ -2060,114 +2042,6 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
                               { skb, map_ptr, flags, data, size_val },
                               "skb_output");
   return call;
-}
-
-Value *IRBuilderBPF::CreateKFuncArg(Value *ctx,
-                                    SizedType &type,
-                                    std::string &name)
-{
-  assert(type.IsIntTy() || type.IsPtrTy() || type.IsBoolTy());
-  Value *expr = CreateLoad(
-      GetType(type),
-      CreateSafeGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),
-      true, /*volatile*/
-      name);
-  return expr;
-}
-
-Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,
-                                            const std::string &builtin)
-{
-  // argX
-  int offset = atoi(builtin.substr(3).c_str());
-  llvm::Type *type = getInt64Ty();
-
-  // All arguments are coerced into Int64.
-  Value *expr = CreateLoad(type,
-                           CreateSafeGEP(type, ctx, getInt64(offset)),
-                           builtin);
-
-  return expr;
-}
-
-Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
-                                            const SizedType &args_type)
-{
-  assert(args_type.IsCStructTy());
-
-  auto *args_t = UprobeArgsType(args_type);
-  AllocaInst *result = CreateAllocaBPF(args_t, "args");
-
-  for (auto &arg : args_type.GetFields()) {
-    assert(arg.type.is_funcarg);
-    Value *arg_read = CreateRegisterRead(
-        ctx, "arg" + std::to_string(arg.type.funcarg_idx));
-    if (arg.type.GetSize() != 8)
-      arg_read = CreateTrunc(arg_read, GetType(arg.type));
-    CreateStore(arg_read,
-                CreateGEP(args_t,
-                          result,
-                          { getInt64(0), getInt32(arg.type.funcarg_idx) }));
-  }
-  return result;
-}
-
-llvm::Type *IRBuilderBPF::UprobeArgsType(const SizedType &args_type)
-{
-  auto type_name = args_type.GetName();
-  type_name.erase(0, strlen("struct "));
-
-  std::vector<llvm::Type *> arg_types;
-  for (auto &arg : args_type.GetFields())
-    arg_types.push_back(GetType(arg.type));
-  return GetStructType(type_name, arg_types, false);
-}
-
-Value *IRBuilderBPF::CreateRegisterRead(Value *ctx, const std::string &builtin)
-{
-  std::optional<std::string> reg;
-  if (builtin == "__builtin_retval") {
-    reg = arch::Host::return_value();
-  } else if (builtin == "__builtin_func") {
-    reg = arch::Host::pc_value();
-  } else if (builtin.starts_with("arg")) {
-    size_t n = static_cast<size_t>(atoi(builtin.substr(3).c_str()));
-    const auto &arguments = arch::Host::arguments();
-    if (n < arguments.size()) {
-      reg = arguments[n];
-    }
-  }
-  if (!reg.has_value()) {
-    LOG(BUG) << "unknown builtin: " << builtin;
-    __builtin_unreachable();
-  }
-
-  auto offset = arch::Host::register_to_pt_regs_offset(reg.value());
-  if (!offset.has_value()) {
-    LOG(BUG) << "invalid register `" << reg.value()
-             << " for builtin: " << builtin;
-    __builtin_unreachable();
-  }
-
-  return CreateRegisterRead(ctx, offset.value(), builtin);
-}
-
-Value *IRBuilderBPF::CreateRegisterRead(Value *ctx,
-                                        size_t offset,
-                                        const std::string &name)
-{
-  // Bitwidth of register values in struct pt_regs is the same as the kernel
-  // pointer width on all supported architectures.
-  //
-  // FIXME(#3873): Not clear if this applies as a general rule, best to allow
-  // these to be resolved via field names and BTF directly in the future.
-  llvm::Type *registerTy = getPointerStorageTy();
-
-  Value *result = CreateLoad(registerTy,
-                             CreateSafeGEP(getInt8Ty(), ctx, getInt64(offset)),
-                             true, /*volatile*/
-                             name);
-  return result;
 }
 
 static bool return_zero_if_err(bpf_func_id func_id)

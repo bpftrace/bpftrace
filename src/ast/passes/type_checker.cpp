@@ -959,8 +959,8 @@ void TypeChecker::visit(Unop &unop)
   // and context (we allow args->field for backwards compatibility)
   if (type.IsBoolTy()) {
     invalid = unop.op != Operator::LNOT;
-  } else if (!type.IsIntegerTy() && !((type.IsPtrTy() || type.IsCtxAccess()) &&
-                                      IsValidPtrOp(unop.op))) {
+  } else if (!type.IsIntegerTy() &&
+             !(type.IsPtrTy() && IsValidPtrOp(unop.op))) {
     invalid = true;
   }
   if (invalid) {
@@ -1034,17 +1034,6 @@ void TypeChecker::visit(For &f)
       range->addError() << "Loop range requires an integer for the end value";
     }
   }
-
-  // Currently, we do not pass BPF context to the callback so disable builtins
-  // which require ctx access.
-  CollectNodes<Builtin> builtins;
-  builtins.visit(f.block);
-  for (const Builtin &builtin : builtins.nodes()) {
-    if (builtin.builtin_type.IsCtxAccess()) {
-      builtin.addError() << "'" << builtin.ident
-                         << "' builtin is not allowed in a for-loop";
-    }
-  }
 }
 
 void TypeChecker::visit(FieldAccess &acc)
@@ -1070,11 +1059,6 @@ void TypeChecker::visit(MapAccess &acc)
 
   // Validate map key type
   const auto &key_type = acc.key.type();
-  if (key_type.IsPtrTy() && key_type.IsCtxAccess()) {
-    // map functions only accepts a pointer to a element in the stack
-    acc.key.node().addError() << "context cannot be part of a map key";
-  }
-
   if (key_type.IsHistTy() || key_type.IsLhistTy() || key_type.IsStatsTy() ||
       key_type.IsTSeriesTy()) {
     acc.key.node().addError() << key_type << " cannot be part of a map key";
@@ -1087,9 +1071,6 @@ void TypeChecker::visit(MapAccess &acc)
   // For tuple keys, validate each element
   if (key_type.IsTupleTy()) {
     for (const auto &field : key_type.GetFields()) {
-      if (field.type.IsPtrTy() && field.type.IsCtxAccess()) {
-        acc.key.node().addError() << "context cannot be part of a map key";
-      }
       if (field.type.IsHistTy() || field.type.IsLhistTy() ||
           field.type.IsStatsTy() || field.type.IsTSeriesTy()) {
         acc.key.node().addError()
@@ -1192,8 +1173,7 @@ void TypeChecker::visit(Cast &cast)
       logError();
     }
 
-    if (ty.IsIntTy() && !rhs.IsBoolTy() && !rhs.IsCtxAccess() &&
-        !rhs.IsArrayTy()) {
+    if (ty.IsIntTy() && !rhs.IsBoolTy() && !rhs.IsArrayTy()) {
       logError();
     }
   }
