@@ -262,15 +262,18 @@ TEST(attachpoint_checker, rawtracepoint)
 TEST(attachpoint_checker, watchpoint_invalid_modes)
 {
   if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
+      arch::Host::Machine != arch::X86_64 &&
+      arch::Host::Machine != arch::PPC64) {
+    GTEST_SKIP()
+        << "Watchpoint tests are only supported on ARM64, X86_64 and PPC64";
   }
 
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
   bpftrace.procmon_ = std::make_unique<MockProcMon>(123);
 
-  if (arch::Host::Machine == arch::ARM64) {
+  if (arch::Host::Machine == arch::ARM64 ||
+      arch::Host::Machine == arch::PPC64) {
     test(bpftrace, "watchpoint:0x1234:8:r { 1 }");
   } else {
     test_error(bpftrace, "watchpoint:0x1234:8:r { 1 }");
@@ -286,8 +289,10 @@ TEST(attachpoint_checker, watchpoint_invalid_modes)
 TEST(attachpoint_checker, watchpoint_absolute)
 {
   if (arch::Host::Machine != arch::ARM64 &&
-      arch::Host::Machine != arch::X86_64) {
-    GTEST_SKIP() << "Watchpoint tests are only supported on ARM64 and X86_64";
+      arch::Host::Machine != arch::X86_64 &&
+      arch::Host::Machine != arch::PPC64) {
+    GTEST_SKIP()
+        << "Watchpoint tests are only supported on ARM64, X86_64 and PPC64";
   }
 
   auto mock_bpftrace = get_mock_bpftrace();
