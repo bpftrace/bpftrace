@@ -18,6 +18,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/resource_analyser.h"
 #include "ast/passes/type_checker.h"
 #include "ast/passes/type_resolver.h"
 #include "ast/passes/type_system.h"
@@ -176,6 +177,7 @@ public:
                   .add(ast::CreateNamedParamsPass())
                   .add(ast::CreateTypeResolverPass())
                   .add(ast::CreateTypeCheckerPass())
+                  .add(ast::CreateResourcePass())
                   .run();
     EXPECT_TRUE(bool(ok));
 
@@ -5008,6 +5010,7 @@ TEST_F(TypeCheckerTest, map_declarations)
        Mock{ *bpftrace });
   test("let @a = percpulruhash(2); begin { @a[1] = count(); }",
        Mock{ *bpftrace });
+  test(R"(let @a = getopt("foo", false); begin { print(@a); })");
 
   test("let @a = hash(2); begin { print(1); }",
        Mock{ *bpftrace },
@@ -5048,6 +5051,21 @@ stdin:1:1-20: ERROR: Invalid bpf map type: potato
 let @a = potato(2); begin { @a[1] = count(); }
 ~~~~~~~~~~~~~~~~~~~
 HINT: Valid map types: percpulruhash, percpuhash, lruhash, hash
+)" });
+  test("let @a = hash(); begin { $x; }", Error{ R"(
+stdin:1:1-17: ERROR: Map declaration must have exactly one argument
+let @a = hash(); begin { $x; }
+~~~~~~~~~~~~~~~~
+)" });
+  test(R"(let @a = getopt("a", false); begin { print(@a[2]); })", Error{ R"(
+stdin:1:44-49: ERROR: getopt map access must be scalar
+let @a = getopt("a", false); begin { print(@a[2]); }
+                                           ~~~~~
+)" });
+  test(R"(let @a = getopt("a", false); begin { @a = true; })", Error{ R"(
+stdin:1:38-47: ERROR: getopt map is immutable
+let @a = getopt("a", false); begin { @a = true; }
+                                     ~~~~~~~~~
 )" });
 }
 

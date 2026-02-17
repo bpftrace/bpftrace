@@ -1261,28 +1261,20 @@ inline StatementImportMatcher StatementImport(const std::string& name)
 class MapDeclStatementMatcher
     : public NodeMatcher<MapDeclStatementMatcher, ast::MapDeclStatement> {
 public:
-  MapDeclStatementMatcher& WithBpfType(const std::string& bpf_type)
+  MapDeclStatementMatcher& WithCall(const Matcher<const ast::Call&>& call_matcher)
   {
-    return Where(
-        CheckField(&ast::MapDeclStatement::bpf_type, bpf_type, "BPF type"));
-  }
-
-  MapDeclStatementMatcher& WithMaxEntries(int max_entries)
-  {
-    return Where(CheckField(&ast::MapDeclStatement::max_entries,
-                            max_entries,
-                            "max entries"));
+    return Where([call_matcher](const ast::MapDeclStatement& node) {
+      return MatchWith(node, call_matcher, *node.call);
+    });
   }
 };
 
 inline MapDeclStatementMatcher MapDeclStatement(const std::string& ident,
-                                                const std::string& bpf_type,
-                                                int max_entries)
+                                                const Matcher<const ast::Call&>& call_matcher)
 {
   return MapDeclStatementMatcher()
       .WithIdent(ident)
-      .WithBpfType(bpf_type)
-      .WithMaxEntries(max_entries);
+      .WithCall(call_matcher);
 }
 
 class MacroMatcher : public NodeMatcher<MacroMatcher, ast::Macro> {

@@ -2567,7 +2567,8 @@ TEST(Parser, prog_body_items)
   test("i:s:1 {} macro add_one() {} fn f1(): void {} let @a = hash(5); i:s:1 "
        "{} fn f2(): void {} macro add_two() {}",
        Program()
-           .WithMapDecls({ MapDeclStatement("@a", "hash", 5) })
+           .WithMapDecls(
+               { MapDeclStatement("@a", Call("hash", { Integer(5) })) })
            .WithFunctions(
                { Subprog("f1", Typeof(SizedType(Type::voidtype)), {}, {}),
                  Subprog("f2", Typeof(SizedType(Type::voidtype)), {}, {}) })
@@ -2934,25 +2935,21 @@ TEST(Parser, map_declarations)
 {
   test("let @a = hash(5); begin { $x; }",
        Program()
-           .WithMapDecls({ MapDeclStatement("@a", "hash", 5) })
+           .WithMapDecls(
+               { MapDeclStatement("@a", Call("hash", { Integer(5) })) })
            .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
 
   test("let @a = hash(2); let @b = per__cpuhash(7); begin { $x; }",
        Program()
-           .WithMapDecls({ MapDeclStatement("@a", "hash", 2),
-                           MapDeclStatement("@b", "per__cpuhash", 7) })
+           .WithMapDecls(
+               { MapDeclStatement("@a", Call("hash", { Integer(2) })),
+                 MapDeclStatement("@b", Call("per__cpuhash", { Integer(7) })) })
            .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
 
   test_parse_failure("@a = hash(); begin { $x; }", R"(
 stdin:1:1-3: ERROR: syntax error, unexpected map
 @a = hash(); begin { $x; }
 ~~
-)");
-
-  test_parse_failure("let @a = hash(); begin { $x; }", R"(
-stdin:1:15-16: ERROR: syntax error, unexpected ), expecting integer
-let @a = hash(); begin { $x; }
-              ~
 )");
 }
 
