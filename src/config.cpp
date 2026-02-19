@@ -328,14 +328,13 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { "show_debug_info", CONFIG_FIELD_PARSER(show_debug_info) },
   { UNSTABLE_IMPORT, CONFIG_FIELD_PARSER(unstable_import) },
   { UNSTABLE_IMPORT_STATEMENT, CONFIG_FIELD_PARSER(unstable_import_statement) },
-  { UNSTABLE_MAP_DECL, CONFIG_FIELD_PARSER(unstable_map_decl) },
   { UNSTABLE_TSERIES, CONFIG_FIELD_PARSER(unstable_tseries) },
   { UNSTABLE_ADDR, CONFIG_FIELD_PARSER(unstable_addr) },
   { UNSTABLE_TYPEINFO, CONFIG_FIELD_PARSER(unstable_typeinfo) },
 };
 
 // These symbols are deprecated, and have been remapped elsewhere.
-const std::map<std::string, std::string> DEPRECATED = {
+const std::map<std::string, std::string> RENAMED = {
   { "strlen", "max_strlen" },
   { "no_cpp_demangle", "cpp_demangle" },
   { "cat_bytes_max", "max_cat_bytes" },
@@ -369,8 +368,8 @@ static Result<AnyParser> lookup(const std::string &original_key)
   auto key = restore(original_key);
   auto it = CONFIG_KEY_MAP.find(key);
   if (it == CONFIG_KEY_MAP.end()) {
-    auto dep = DEPRECATED.find(key);
-    if (dep != DEPRECATED.end()) {
+    auto dep = RENAMED.find(key);
+    if (dep != RENAMED.end()) {
       return make_error<RenameError>(dep->second);
     }
     auto env = ENV_ONLY.find(key);

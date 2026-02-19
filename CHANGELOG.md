@@ -79,6 +79,8 @@ and this project adheres to
   - [#4818](https://github.com/bpftrace/bpftrace/pull/4818)
 - Warn on all discarded expressions
   - [#4836](https://github.com/bpftrace/bpftrace/pull/4836)
+- Stabilize map declarations (remove 'unstable_map_decl' flag)
+  - [#5005](https://github.com/bpftrace/bpftrace/pull/5005)
 #### Deprecated
 - `while` is now deprecated in favor of range-based for loops
   - [#4886](https://github.com/bpftrace/bpftrace/pull/4886)
