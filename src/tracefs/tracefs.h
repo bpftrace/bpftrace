@@ -18,11 +18,6 @@ inline std::string events()
   return path("events");
 }
 
-inline std::string available_filter_functions()
-{
-  return path("available_filter_functions");
-}
-
 std::string event_format_file(const std::string &category,
                               const std::string &event);
 

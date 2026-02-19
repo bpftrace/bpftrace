@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <zlib.h>
 
+#include "util/strings.h"
 #include "util/symbols.h"
 
 namespace bpftrace::util {
@@ -54,12 +55,15 @@ std::pair<std::string, std::string> split_symbol_module(
   if (symbol[symbol.size() - 1] != ']')
     return { symbol, "vmlinux" };
 
-  size_t idx = symbol.rfind(" [");
+  // The module name in brackets is separated by a tab (in kallsyms) or a space
+  // (in available_filter_functions); make sure we handle both cases correctly.
+  size_t idx = symbol.rfind("[");
   assert(idx != std::string::npos);
 
-  return { symbol.substr(0, idx),
-           symbol.substr(idx + strlen(" ["),
-                         symbol.length() - idx - strlen(" []")) };
+  std::string name = symbol.substr(0, idx);
+  return { rtrim(name),
+           symbol.substr(idx + strlen("["),
+                         symbol.length() - idx - strlen("[]")) };
 }
 
 // Usually the /sys/kernel/debug/kprobes/blacklist file.
@@ -90,6 +94,11 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
 {
   return !sym_name.rfind("_Z", 0) || !sym_name.rfind("____Z", 0);
+}
+
+bool kallsyms_is_function_type(char sym_type)
+{
+  return std::tolower(sym_type) == 't' || std::tolower(sym_type) == 'w';
 }
 
 } // namespace bpftrace::util

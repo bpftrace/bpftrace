@@ -568,7 +568,7 @@ void KernelInfoImpl::add_function(const std::string &func_name,
 void KernelInfoImpl::populate_lazy(
     const std::optional<std::string> &mod_name) const
 {
-  if (available_filter_functions_.eof()) {
+  if (kallsyms_.eof()) {
     return;
   }
 
@@ -581,28 +581,36 @@ void KernelInfoImpl::populate_lazy(
     }
   }
 
-  while (!missing.empty() && !available_filter_functions_.eof()) {
+  while (!missing.empty() && (!kallsyms_.eof() || last_func_mod_.has_value())) {
     std::string module;
-    if (last_checked_line_.empty()) {
+    if (!last_func_mod_.has_value()) {
       module = "vmlinux";
     } else {
       // N.B. we didn't insert on the last iteration, so this needs
       // be inserted now as the first symbol for this module.
-      auto func_mod = util::split_symbol_module(last_checked_line_);
-      module = func_mod.second;
-      add_function(func_mod.first, module);
+      module = last_func_mod_->second;
+      add_function(last_func_mod_->first, module);
+      last_func_mod_.reset();
     }
 
     std::string line;
-    while (std::getline(available_filter_functions_, line)) {
-      auto func_mod = util::split_symbol_module(line);
+    while (std::getline(kallsyms_, line)) {
+      // Expected format: "%px %c %s\t[%s]\n" (see kernel/kallsyms.c)
+      auto pos = line.find(' '); // first space after the address
+      if (pos == std::string::npos || pos + 3 >= line.size() ||
+          line[pos + 2] != ' ' ||
+          !util::kallsyms_is_function_type(line[pos + 1])) {
+        continue;
+      }
+
+      auto func_mod = util::split_symbol_module(line.substr(pos + 3));
 
       // Continue reading until we get all the module functions.
       // Stop when encounter line with the next module.
       if (func_mod.second != module) {
         missing.erase(module);
         modules_populated_.insert(module);
-        last_checked_line_ = line;
+        last_func_mod_ = std::move(func_mod);
         break;
       }
 
@@ -731,11 +739,15 @@ Result<KernelInfoImpl> KernelInfoImpl::open()
   }
   info.tracepoints_ = std::move(*tracepoints);
 
-  // Open the filter file.
-  const std::string path = tracefs::available_filter_functions();
-  info.available_filter_functions_.open(path);
-  if (info.available_filter_functions_.fail()) {
-    return make_error<SystemError>("Could not read functions from " + path);
+  // Read `kallsyms` to get the list of kernel symbols. This allows us to reject
+  // invalid probes and load BTF data for corresponding modules. We use kallsyms
+  // instead of `available_filter_functions`, which requires dynamic ftrace (may
+  // not be enabled on all systems) and can result in false negatives on kernels
+  // configured to allow probing `notrace` functions.
+  info.kallsyms_.open("/proc/kallsyms");
+  if (info.kallsyms_.fail()) {
+    return make_error<SystemError>(
+        "Could not read functions from /proc/kallsyms");
   }
 
   // Load the blocklist if the file is available, otherwise ignore.

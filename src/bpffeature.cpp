@@ -109,13 +109,6 @@ bool BPFfeature::try_load(enum bpf_prog_type prog_type,
     btf_id = btf_.get_btf_id(name, "vmlinux");
   }
 
-  if (prog_type == BPF_PROG_TYPE_TRACING) {
-    // List of available functions must be readable
-    std::ifstream traceable_funcs(tracefs::available_filter_functions());
-    if (!traceable_funcs.good())
-      return false;
-  }
-
   return try_load_(name,
                    prog_type,
                    attach_type,

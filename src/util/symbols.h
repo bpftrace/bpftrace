@@ -70,4 +70,6 @@ std::pair<std::string, std::string> split_symbol_module(
 std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
     const std::string &symbol);
 
+bool kallsyms_is_function_type(char sym_type);
+
 } // namespace bpftrace::util
