@@ -25,6 +25,8 @@ and this project adheres to
 - `BPFTRACE_DEBUG_OUTPUT` is removed, and errors are now propagated via the runtime error path
   - [#4976](https://github.com/bpftrace/bpftrace/pull/4976)
 #### Added
+- Add `--probe-filter` CLI flag to selectively run probes matching a regex
+  - [#5011](https://github.com/bpftrace/bpftrace/pull/5011)
 - Add `comm()` support for PID parameters.
   - [#4799](https://github.com/bpftrace/bpftrace/pull/4799)
 - Add `syscall_name()` to convert system call numbers into names.

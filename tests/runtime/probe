@@ -645,3 +645,35 @@ RUN {{BPFTRACE}} runtime/scripts/bpf_attach.bt & sleep 3 && {{BPFTRACE}} -e 'fen
 EXPECT_REGEX fentry:bpf:[0-9]+:interval_us_100000_1
 EXPECT_REGEX fentry:bpf:[0-9]+:interval_us_100000_2
 TIMEOUT 10
+
+NAME probe_filter matches specific probe
+RUN {{BPFTRACE}} --probe-filter ':200' -e 'interval:ms:100 { printf("bad\n"); exit(); } interval:ms:200 { printf("hit\n"); exit(); }'
+EXPECT hit
+EXPECT_NONE bad
+TIMEOUT 5
+
+NAME probe_filter no match will fail
+RUN {{BPFTRACE}} --probe-filter 'nonexistent_probe_xyz_42' -e 'kprobe:vfs_read { exit(); }'
+EXPECT No probes to attach
+TIMEOUT 5
+WILL_FAIL
+
+NAME probe_filter preserves begin end
+RUN {{BPFTRACE}} --probe-filter ':200' -e 'BEGIN { printf("begin\n"); } interval:ms:200 { printf("hit\n"); exit(); } END { printf("end\n"); }'
+EXPECT begin
+EXPECT hit
+EXPECT end
+TIMEOUT 5
+
+NAME probe_filter matches multiple probes
+RUN {{BPFTRACE}} --probe-filter 'interval:ms:(200|300)' -e 'interval:ms:100 { printf("bad\n"); exit(); } interval:ms:200 { printf("a\n"); } interval:ms:300 { printf("b\n"); exit(); }'
+EXPECT a
+EXPECT b
+EXPECT_NONE bad
+TIMEOUT 5
+
+NAME probe_filter invalid regex
+RUN {{BPFTRACE}} --probe-filter '[invalid' -e 'kprobe:vfs_read { exit(); }'
+EXPECT_REGEX Invalid --probe-filter regex
+TIMEOUT 5
+WILL_FAIL
