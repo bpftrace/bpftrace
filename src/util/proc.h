@@ -38,6 +38,12 @@ public:
   // Only valid when run() has been called with pause=true.
   virtual Result<> resume() = 0;
 
+  // Continue a paused child until it reaches its entry point (after dynamic
+  // linking completes). This ensures all shared libraries are loaded and
+  // /proc/pid/maps is fully populated. Only valid when run() has been called
+  // with pause=true. The child remains paused after this call.
+  virtual Result<> run_until_entry() = 0;
+
   // Terminate the child process.
   //
   // \param force Forcefully kill the child (SIGKILL).

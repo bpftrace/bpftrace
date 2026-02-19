@@ -1,0 +1,5 @@
+NAME dwunwind full stack trace without frame pointers
+RUN {{BPFTRACE}} -u -e 'config = { show_debug_info=0 } u:./testprogs/uprobe_nofp:funcD { printf("%s\n", ustack()); exit(); }' -c ./testprogs/uprobe_nofp
+EXPECT_REGEX funcD\+[0-9]+\s+funcC\+[0-9]+\s+funcB\+[0-9]+\s+funcA\+[0-9]+\s+main\+[0-9]+
+REQUIRES_FEATURE dwunwind
+TIMEOUT 5

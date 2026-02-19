@@ -1478,6 +1478,21 @@ macro username()
 // ```
 //
 // Note that for these examples to work, bash had to be recompiled with frame pointers.
+macro ustack(mode, limit) {
+  import "stdlib/stack/dwunwind.bpf.c";
+  __builtin_ustack(mode, limit)
+}
+
+macro ustack(mode) {
+  import "stdlib/stack/dwunwind.bpf.c";
+  __builtin_ustack(mode)
+}
+
+macro ustack() {
+  import "stdlib/stack/dwunwind.bpf.c";
+  __builtin_ustack
+}
+
 
 // :function usym
 // :variant usym_t usym(uint64 * addr)

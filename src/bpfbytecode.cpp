@@ -322,6 +322,11 @@ bool BpfBytecode::all_progs_loaded()
   });
 }
 
+bool BpfBytecode::hasMap(const std::string &name) const
+{
+  return maps_.contains(name);
+}
+
 bool BpfBytecode::hasMap(MapType internal_type) const
 {
   return maps_.contains(to_string(internal_type));

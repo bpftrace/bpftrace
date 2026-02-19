@@ -163,7 +163,7 @@ void ResourceAnalyser::visit(Builtin &builtin)
     resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
   } else if (builtin.ident == "__builtin_cpid") {
     resources_.global_vars.add_known(bpftrace::globalvars::CHILD_PID);
-  } else if (builtin.ident == "ustack" || builtin.ident == "kstack") {
+  } else if (builtin.ident == "__builtin_ustack" || builtin.ident == "kstack") {
     if (exceeds_stack_limit(builtin.builtin_type.GetSize())) {
       resources_.call_stack_buffers++;
       resources_.max_call_stack_size = std::max(resources_.max_call_stack_size,
@@ -326,7 +326,7 @@ void ResourceAnalyser::visit(Call &call)
     } else {
       call.addError() << "Different tseries bounds in a single map unsupported";
     }
-  } else if (call.func == "ustack" || call.func == "kstack") {
+  } else if (call.func == "__builtin_ustack" || call.func == "kstack") {
     if (exceeds_stack_limit(call.return_type.GetSize())) {
       resources_.call_stack_buffers++;
       resources_.max_call_stack_size = std::max(resources_.max_call_stack_size,

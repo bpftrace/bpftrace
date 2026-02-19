@@ -45,6 +45,12 @@ endfunction()
 testprog_compile(FALSE)
 testprog_compile(TRUE)
 
+# uprobe_nofp must be compiled without frame pointers so that only
+# DWARF-based stack unwinding can produce a full stack trace.
+foreach(prog uprobe_nofp uprobe_nofp-pie)
+  set_target_properties(${prog} PROPERTIES COMPILE_FLAGS "-g -O1 -fomit-frame-pointer -fno-optimize-sibling-calls")
+endforeach()
+
 find_program(GO_EXECUTABLE go)
 if(GO_EXECUTABLE)
   file(GLOB testprog_go_sources CONFIGURE_DEPENDS *.go)

@@ -83,6 +83,7 @@ public:
   Result<> clear() const;
   Result<> update_elem(const void *key, const void *value) const;
   Result<> lookup_elem(const void *key, void *value) const;
+  Result<> resize(uint32_t new_size) const;
 
 private:
   struct bpf_map *bpf_map_;

@@ -462,7 +462,7 @@ void TypeResolver::visit(Builtin &builtin)
       builtin.builtin_type = CreateStack(
           true, StackType{ .mode = bpftrace_.config_->stack_mode });
     }
-  } else if (builtin.ident == "ustack") {
+  } else if (builtin.ident == "__builtin_ustack") {
     builtin.builtin_type = CreateStack(
         false, StackType{ .mode = bpftrace_.config_->stack_mode });
   } else if (builtin.ident == "__builtin_comm") {
@@ -792,7 +792,7 @@ void TypeResolver::visit(Call &call)
     call.return_type = CreateTimestamp();
   } else if (call.func == "kstack") {
     check_stack_call(call, true);
-  } else if (call.func == "ustack") {
+  } else if (call.func == "__builtin_ustack") {
     check_stack_call(call, false);
   } else if (call.func == "path") {
     auto call_type_size = bpftrace_.config_->max_strlen;
