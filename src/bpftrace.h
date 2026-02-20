@@ -225,6 +225,7 @@ public:
   std::unique_ptr<Config> config_;
   bool run_tests_ = false;
   bool run_benchmarks_ = false;
+  std::string probe_filter_;
 
 private:
   Ksyms ksyms_;

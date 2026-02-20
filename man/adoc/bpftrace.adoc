@@ -152,6 +152,13 @@ Disable use of detected features, valid values are::
 
 Suppress all warning messages created by bpftrace.
 
+=== *--probe-filter* _REGEX_
+
+Only attach and run probes whose name matches the regular expression _REGEX_.
+Probes that do not match are not loaded into the kernel.
+Special probes (`BEGIN` and `END`) are not affected by this filter.
+If no probes match, bpftrace exits with an error.
+
 === *-o* _FILENAME_
 
 Write bpftrace tracing output to _FILENAME_ instead of stdout.

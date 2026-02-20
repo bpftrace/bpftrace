@@ -95,6 +95,7 @@ enum Options {
   MODE,
   OUTPUT,
   PID,
+  PROBE_FILTER,
   QUIET,
   TEST, // Alias for --mode=test.
   UNSAFE,
@@ -144,6 +145,8 @@ void usage(std::ostream& out)
   out << "                   ('codegen', 'compiler-bench', 'bench', 'test', 'format')" << std::endl;
   out << "    --test         run all test: probes (same as --mode test)" << std::endl;
   out << "    --bench        run all bench: probes (same as --mode bench)" << std::endl;
+  out << "    --probe-filter REGEX" << std::endl;
+  out << "                   only run probes whose name matches REGEX" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    -v, --verbose           verbose messages" << std::endl;
@@ -338,6 +341,7 @@ struct Args {
   std::vector<std::string> params;
   std::vector<std::string> debug_stages;
   std::vector<std::string> named_params;
+  std::string probe_filter;
 };
 
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
@@ -465,6 +469,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::PID },
+    option{ .name = "probe-filter",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::PROBE_FILTER },
     option{ .name = "quiet",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -623,6 +631,9 @@ Args parse_args(int argc, char* argv[])
       case 'p':
       case Options::PID:
         args.pid_str = optarg;
+        break;
+      case Options::PROBE_FILTER:
+        args.probe_filter = optarg;
         break;
       case 'I':
         args.include_dirs.emplace_back(optarg);
@@ -801,6 +812,7 @@ int main(int argc, char* argv[])
   bpftrace.delta_taitime_ = get_delta_taitime();
   bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
+  bpftrace.probe_filter_ = args.probe_filter;
 
   if (!args.pid_str.empty()) {
     auto maybe_pid = util::to_uint(args.pid_str);

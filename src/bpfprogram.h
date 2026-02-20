@@ -25,6 +25,7 @@ public:
                          const BTF &btf,
                          const Config &config);
   void set_no_autoattach();
+  void set_no_autoload();
 
   int fd() const;
   struct bpf_program *bpf_prog() const;

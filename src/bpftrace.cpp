@@ -431,12 +431,39 @@ int BPFtrace::run(output::Output &out,
                   const ast::CDefinitions &c_definitions,
                   BpfBytecode bytecode)
 {
+  bytecode_ = std::move(bytecode);
+  bytecode_.set_map_ids(resources);
+
+  if (!probe_filter_.empty()) {
+    std::regex filter_re;
+    try {
+      filter_re = std::regex(probe_filter_);
+    } catch (const std::regex_error &e) {
+      LOG(ERROR) << "Invalid --probe-filter regex '" << probe_filter_
+                 << "': " << e.what();
+      return -1;
+    }
+
+    auto filter = [&](std::vector<Probe> &probes) {
+      std::erase_if(probes, [&](const Probe &probe) {
+        if (!std::regex_search(probe.name, filter_re)) {
+          auto &prog = bytecode_.getProgramForProbe(probe);
+          prog.set_no_autoload();
+          return true;
+        }
+        return false;
+      });
+    };
+
+    filter(resources.probes);
+    filter(resources.test_probes);
+    filter(resources.benchmark_probes);
+    filter(resources.watchpoint_probes);
+  }
+
   int err = prerun();
   if (err)
     return err;
-
-  bytecode_ = std::move(bytecode);
-  bytecode_.set_map_ids(resources);
 
   set_rlimit_nofile(resources.num_probes(), resources.maps_info.size());
 

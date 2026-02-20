@@ -119,6 +119,11 @@ void BpfProgram::set_no_autoattach()
   bpf_program__set_autoattach(bpf_prog_, false);
 }
 
+void BpfProgram::set_no_autoload()
+{
+  bpf_program__set_autoload(bpf_prog_, false);
+}
+
 struct bpf_program *BpfProgram::bpf_prog() const
 {
   return bpf_prog_;
