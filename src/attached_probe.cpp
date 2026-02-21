@@ -283,11 +283,14 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
         std::stringstream ss;
         ss << "0x" << std::hex << probe.address;
         return make_error<AttachError>(
-            "Could not resolve address: " + probe.path + ":" + ss.str());
+            "Could not resolve address: " + probe.path + ":" + ss.str() +
+            " (binary is possibly stripped). Misaligned probes can lead to tracee "
+            "crashes!" +
+            std::string{ hint_unsafe });
       } else {
         LOG(WARNING) << "Could not determine instruction boundary for "
                      << probe.name
-                     << " (binary appears stripped). Misaligned probes "
+                     << " (binary is possibly stripped). Misaligned probes "
                         "can lead to tracee crashes!";
         return probe.address;
       }
