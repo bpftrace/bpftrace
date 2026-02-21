@@ -3,6 +3,7 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/field_analyser.h"
 #include "ast_matchers.h"
+#include "btf_common.h"
 #include "driver.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -17,6 +18,8 @@ using bpftrace::test::Program;
 
 using ::testing::_;
 using ::testing::HasSubstr;
+
+class pid_filter_pass : public test_btf {};
 
 void test(const std::string& attach_points,
           bool has_pid,
@@ -64,15 +67,15 @@ void test(const std::string& attach_points,
   EXPECT_THAT(ast, Program().WithProbes(matchers));
 }
 
-TEST(pid_filter_pass, add_filter)
+TEST_F(pid_filter_pass, add_filter)
 {
   std::vector<std::string> filter_probes = {
     "kprobe:f",
     "kretprobe:f",
-    "fentry:f",
-    "fexit:f",
+    "fentry:func_1",
+    "fexit:func_1",
     "tracepoint:category:event",
-    "rawtracepoint:module:event",
+    "rawtracepoint:vmlinux:event_rt",
   };
 
   for (auto& probe : filter_probes) {
@@ -80,7 +83,7 @@ TEST(pid_filter_pass, add_filter)
   }
 }
 
-TEST(pid_filter_pass, no_add_filter)
+TEST_F(pid_filter_pass, no_add_filter)
 {
   // Sanity check: no pid, no filter
   test("kprobe:f", false, { false });

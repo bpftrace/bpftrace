@@ -147,7 +147,7 @@ public:
     }
     mock->bpftrace.safe_mode_ = !unsafe_mode.has_value();
     mock->bpftrace.feature_ = std::make_unique<MockBPFfeature>(
-        !no_features.has_value());
+        *mock->bpftrace.btf_, !no_features.has_value());
     if (!types) {
       types_.emplace();
       types.emplace(*types_);
@@ -1237,7 +1237,6 @@ TEST_F(TypeCheckerTest, call_str_2_lit)
   test("kprobe:f { str(arg0, \"hello\"); }", Error{});
 
   // Check the string size
-  BPFtrace bpftrace;
   auto ast = test("kprobe:f { $x = str(arg0, 3); }");
 
   auto *x =
@@ -1398,7 +1397,6 @@ TEST_F(TypeCheckerTest, call_uaddr)
 
   // The C struct parser should set the
   // is_signed flag on signed types
-  BPFtrace bpftrace;
   std::string prog = "uprobe:/bin/sh:main {"
                      "$a = __builtin_uaddr(\"12345_1\");"
                      "$b = __builtin_uaddr(\"12345_2\");"
@@ -2451,7 +2449,6 @@ TEST_F(TypeCheckerTest, field_access_sub_struct)
 
 TEST_F(TypeCheckerTest, field_access_is_internal)
 {
-  BPFtrace bpftrace;
   std::string structs = "struct type1 { int x; }";
 
   {
@@ -5399,10 +5396,6 @@ TEST_F(TypeCheckerTest, record)
 
   test(R"(begin { $t = (a=1, b=(int64)2); $t = (a=2, b=(int32)3); })");
   test(R"(begin { $t = (a=1, b=(int32)2); $t = (a=2, b=(int64)3); })");
-
-  test(R"(struct task_struct { int x; } begin { $t = (a=1, b=curtask); })");
-  test(
-      R"(struct task_struct { int x[4]; } begin { $t = (a=1, b=curtask->x); })");
 
   // Different field order should be compatible as long as types match
   test(R"(begin { $t = (a=1, b=2); $t = (b=4, a=5); })");

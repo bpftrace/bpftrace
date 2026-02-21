@@ -16,6 +16,14 @@
 #include "symbols/kernel.h"
 #include "util/result.h"
 
+// Forward declarations.
+struct btf;
+struct btf_type;
+
+namespace bpftrace {
+
+class StructManager;
+
 // Taken from libbpf
 #define BTF_INFO_ENC(kind, kind_flag, vlen)                                    \
   ((!!(kind_flag) << 31) | ((kind) << 24) | ((vlen) & BTF_MAX_VLEN))
@@ -26,11 +34,6 @@
   BTF_TYPE_ENC(name, BTF_INFO_ENC(BTF_KIND_INT, 0, 0), sz),                    \
       BTF_INT_ENC(encoding, bits_offset, bits)
 #define BTF_PARAM_ENC(name, type) (name), (type)
-
-struct btf;
-struct btf_type;
-
-namespace bpftrace {
 
 // Note: there are several prefixes for raw tracepoint BTF functions.
 // "__probestub_" seems to be the most accurate in terms of getting the params
@@ -56,40 +59,48 @@ constexpr std::string_view BTF_ANON_STRUCT_PREFIX = "__bpftrace_btf_anon_";
 using FuncParamLists = std::map<std::string, std::vector<std::string>>;
 
 class BTF {
-  enum state {
-    INIT,
-    ERROR,
-    VMLINUX_LOADED,
-    VMLINUX_AND_MODULES_LOADED,
-  };
-
   // BTF object for vmlinux or a kernel module.
   // We're currently storing its name and BTF id.
   struct BTFObj {
-    struct btf* btf;
+    struct btf* btf = nullptr;
     std::string name;
   };
 
   // It is often necessary to store a BTF id along with the BTF data containing
   // its definition.
   struct BTFId {
-    struct btf* btf;
-    __u32 id;
+    struct btf* btf = nullptr;
+    __u32 id = 0;
   };
 
 public:
-  BTF();
-  BTF(BPFtrace* bpftrace);
+  // Static constructor to load BTF data.
+  // Returns a BTF object with vmlinux BTF loaded.
+  // Modules can be loaded separately via load_modules().
+  //
+  // Parameters:
+  // - structs: StructManager to use for resolving struct types (required)
+  static Result<std::unique_ptr<BTF>> load(StructManager& structs);
+
+  // Destructor.
   ~BTF();
 
-  bool has_data();
+  // BTF is moveable but not copyable.
+  BTF(BTF&&) = default;
+  BTF& operator=(BTF&&) = delete;
+  BTF(const BTF&) = delete;
+  BTF& operator=(const BTF&) = delete;
+
+  // Loads BTF data for the specified kernel modules.
+  // This operation is idempotent - calling it multiple times with the
+  // same modules is safe.
+  Result<> load_modules(const std::set<std::string>& modules);
+
   bool has_module_btf();
-  bool modules_loaded() const;
   size_t objects_cnt() const
   {
     return btf_objects.size();
   }
-  void load_module_btfs(const std::set<std::string>& modules);
   std::string type_of(std::string_view name, std::string_view field);
   std::string type_of(const BTFId& type_id, std::string_view field);
   SizedType get_stype(std::string_view type_name);
@@ -104,7 +115,7 @@ public:
   std::set<std::string> get_all_structs() const;
   std::unique_ptr<std::istream> get_all_traceable_funcs(const symbols::KernelInfo &kernel_func_info) const;
   std::unordered_set<std::string> get_all_iters() const;
-  std::unique_ptr<std::istream> get_all_raw_tracepoints();
+  std::unique_ptr<std::istream> get_all_raw_tracepoints() const;
   FuncParamLists get_params(const std::set<std::string>& funcs) const;
   FuncParamLists get_kprobes_params(const std::set<std::string>& funcs) const;
   FuncParamLists get_kretprobes_params(
@@ -128,8 +139,14 @@ public:
                  __u32 kind = BTF_KIND_FUNC) const;
 
 private:
-  void load_vmlinux_btf();
+  BTF(StructManager& structs);
+
+  Result<> load_vmlinux_btf();
+
   SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
+  SizedType get_stype(const BTFId& btf_id,
+                      StructManager& structs,
+                      bool resolve_structs = true);
   void resolve_fields(const BTFId& type_id,
                       std::shared_ptr<Struct> record,
                       __u32 start_offset);
@@ -172,26 +189,14 @@ private:
 
   struct btf* vmlinux_btf = nullptr;
   __u32 vmlinux_btf_size;
-  // BTF objects for vmlinux and modules
+  // BTF objects for vmlinux and modules.
   std::vector<BTFObj> btf_objects;
-  enum state state = INIT;
-  BPFtrace* bpftrace_ = nullptr;
+  StructManager& structs_;
   mutable std::string all_funcs_;
-  std::string all_rawtracepoints_;
+  mutable std::string all_rawtracepoints_;
   std::optional<bool> has_module_btf_;
+  std::set<std::string> loaded_modules_;
 };
-
-inline bool BTF::has_data()
-{
-  // This can be called multiple times and won't reload vmlinux
-  load_vmlinux_btf();
-  return state == VMLINUX_LOADED || state == VMLINUX_AND_MODULES_LOADED;
-}
-
-inline bool BTF::modules_loaded() const
-{
-  return state == VMLINUX_AND_MODULES_LOADED;
-}
 
 ast::Pass CreateParseBTFPass();
 

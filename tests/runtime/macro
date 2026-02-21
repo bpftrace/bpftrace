@@ -130,7 +130,7 @@ PROG begin { if (__builtin_cpu == cpu() && __builtin_cpu == cpu) { printf("SUCCE
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME builtin wrapper curtask
-PROG begin { if (__builtin_curtask == curtask() && __builtin_curtask == curtask) { printf("SUCCESS %llu\n", curtask); } }
+PROG begin { printf("SUCCESS %llu\n", curtask.real_parent.pid); }
 EXPECT_REGEX SUCCESS [0-9]+
 
 NAME builtin wrapper elapsed

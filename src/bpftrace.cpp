@@ -114,6 +114,36 @@ static void set_rlimit_nofile(size_t num_probes, size_t num_maps)
         << "\"ulimit -n\" to fix the problem";
 }
 
+BPFtrace::BPFtrace(std::unique_ptr<Config> config)
+    : ncpus_(util::get_possible_cpus().size()),
+      max_cpu_id_(util::get_max_cpu_id()),
+      config_(std::move(config)),
+      ksyms_(*config_),
+      usyms_(*config_)
+{
+}
+
+Result<std::unique_ptr<BPFtrace>> BPFtrace::create(
+    BPFnofeature no_feature,
+    std::unique_ptr<Config> config)
+{
+  // Create BPFtrace first.
+  auto bpftrace = std::unique_ptr<BPFtrace>(new BPFtrace(std::move(config)));
+
+  // Now load BTF with reference to the StructManager.
+  auto btf_result = BTF::load(bpftrace->structs);
+  if (!btf_result) {
+    return btf_result.takeError();
+  }
+  bpftrace->btf_ = std::move(*btf_result);
+
+  // Initialize BPFfeature with the BTF.
+  bpftrace->feature_ = std::make_unique<BPFfeature>(no_feature,
+                                                    *bpftrace->btf_);
+
+  return bpftrace;
+}
+
 BPFtrace::~BPFtrace()
 {
   close_pcaps();
@@ -1500,14 +1530,9 @@ bool BPFtrace::write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt)
   return writer->write(ns, pkt.data(), pkt.size());
 }
 
-void BPFtrace::parse_module_btf(const std::set<std::string> &modules)
+Result<> BPFtrace::parse_module_btf(const std::set<std::string> &modules)
 {
-  btf_->load_module_btfs(modules);
-}
-
-bool BPFtrace::has_btf_data() const
-{
-  return btf_->has_data();
+  return btf_->load_modules(modules);
 }
 
 // Retrieves the list of kernel modules for all attachpoints. Will be used to

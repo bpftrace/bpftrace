@@ -628,42 +628,39 @@ bool ClangParser::parse(ast::Program *program,
   // Push the generated BTF header into input files.
   // The header must be the last file in the vector since the following
   // methods count on it. If BTF is not available, the header is empty.
-  input_files.emplace_back(bpftrace.has_btf_data()
-                               ? get_btf_generated_header(bpftrace)
-                               : get_empty_btf_generated_header());
+  input_files.emplace_back(get_btf_generated_header(bpftrace));
 
   bool btf_conflict = false;
   ClangParserHandler handler;
-  if (bpftrace.has_btf_data()) {
-    // We set these args early because some systems may not have
-    // <linux/types.h> (containers) and fully rely on BTF.
+  // We set these args early because some systems may not have
+  // <linux/types.h> (containers) and fully rely on BTF.
 
-    // Prevent BTF generated header from redefining stuff found
-    // in <linux/types.h>
-    args.push_back("-D_LINUX_TYPES_H");
-    // Let script know we have BTF -- this is useful for prewritten tools to
-    // conditionally include headers if BTF isn't available.
-    args.push_back("-DBPFTRACE_HAVE_BTF");
+  // Prevent BTF generated header from redefining stuff found
+  // in <linux/types.h>
+  args.push_back("-D_LINUX_TYPES_H");
+  // Let script know we have BTF. This used to be optional, but
+  // is now provided unilaterally only for legacy scripts that used
+  // this switch to determine their behavior.
+  args.push_back("-DBPFTRACE_HAVE_BTF");
+
+  if (handler.parse_file("definitions.h", args, input_files, false) &&
+      handler.has_redefinition_error())
+    btf_conflict = true;
+
+  if (!btf_conflict) {
+    resolve_incomplete_types_from_btf(bpftrace);
 
     if (handler.parse_file("definitions.h", args, input_files, false) &&
         handler.has_redefinition_error())
       btf_conflict = true;
+  }
 
-    if (!btf_conflict) {
-      resolve_incomplete_types_from_btf(bpftrace);
+  if (!btf_conflict) {
+    resolve_unknown_typedefs_from_btf(bpftrace);
 
-      if (handler.parse_file("definitions.h", args, input_files, false) &&
-          handler.has_redefinition_error())
-        btf_conflict = true;
-    }
-
-    if (!btf_conflict) {
-      resolve_unknown_typedefs_from_btf(bpftrace);
-
-      if (handler.parse_file("definitions.h", args, input_files, false) &&
-          handler.has_redefinition_error())
-        btf_conflict = true;
-    }
+    if (handler.parse_file("definitions.h", args, input_files, false) &&
+        handler.has_redefinition_error())
+      btf_conflict = true;
   }
 
   if (btf_conflict) {

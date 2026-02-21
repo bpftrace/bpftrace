@@ -44,10 +44,6 @@
 // 15-Nov-2017	Brendan Gregg	Created this.
 // 11-Sep-2018	   "     "	Switched to use join().
 
-#ifndef BPFTRACE_HAVE_BTF
-#include <linux/sched.h>
-#endif
-
 BEGIN
 {
   printf("%-15s %-7s %-7s %s\n", "TIME", "PID", "PPID", "ARGS");
