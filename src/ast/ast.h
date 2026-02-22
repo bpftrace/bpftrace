@@ -1933,6 +1933,13 @@ public:
   uint64_t bpf_prog_id = 0;
   bool ignore_invalid = false;
 
+  // Used for attaching probes to statements in userspace programs via DWARF,
+  // specified with source file, line and optionally column.
+  // e.g. uprobe:/dir/foo@main.c:line:[col].
+  std::string source_file;
+  size_t line_num = 0;
+  size_t col_num = 0;
+
   std::string name() const;
 
   AttachPoint *create_expansion_copy(ASTContext &ctx,

@@ -2485,9 +2485,9 @@ config = { exit(); } i:s:1 { exit(); }
 )");
 
   test_parse_failure("config = { @start = nsecs; } i:s:1 { exit(); }", R"(
-stdin:1:12-18: ERROR: syntax error, unexpected map, expecting } or identifier
+stdin:1:12-13: ERROR: syntax error, unexpected @, expecting } or identifier
 config = { @start = nsecs; } i:s:1 { exit(); }
-           ~~~~~~
+           ~
 )");
 
   test_parse_failure("begin { @start = nsecs; } config = { "
@@ -2729,9 +2729,9 @@ begin { for ($kv : @map) print($kv); }
 
   // Map for decl
   test_parse_failure("begin { for (@kv : @map) { } }", R"(
-stdin:1:14-17: ERROR: syntax error, unexpected map, expecting variable
+stdin:1:14-15: ERROR: syntax error, unexpected @, expecting variable
 begin { for (@kv : @map) { } }
-             ~~~
+             ~
 )");
 }
 
@@ -2944,9 +2944,9 @@ TEST(Parser, map_declarations)
            .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
 
   test_parse_failure("@a = hash(); begin { $x; }", R"(
-stdin:1:1-3: ERROR: syntax error, unexpected map
+stdin:1:4-5: ERROR: syntax error, unexpected =, expecting {
 @a = hash(); begin { $x; }
-~~
+   ~
 )");
 
   test_parse_failure("let @a = hash(); begin { $x; }", R"(

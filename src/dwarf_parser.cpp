@@ -4,11 +4,19 @@
 
 #include "bpftrace.h"
 #include "log.h"
+#include "util/paths.h"
 
 #include <dwarf.h>
 #include <elfutils/libdw.h>
 
 namespace bpftrace {
+
+char DwarfParseError::ID;
+
+void DwarfParseError::log(llvm::raw_ostream &OS) const
+{
+  OS << msg_;
+}
 
 struct FuncInfo {
   std::string name;
@@ -413,6 +421,122 @@ ssize_t Dwarf::get_bitfield_size(Dwarf_Die &field_die)
       return static_cast<ssize_t>(value);
   }
   return 0;
+}
+
+std::optional<std::filesystem::path> Dwarf::resolve_cu_path(
+    std::string_view cu_name,
+    std::string_view cu_comp_dir)
+{
+  if (cu_name.empty())
+    return std::nullopt;
+
+  // If CU name is relative. According to the DWARF standard, source
+  // file path name should be locatable by combining DW_AT_comp_dir with the
+  // relative CU path name. https://wiki.dwarfstd.org/Best_Practices.md
+  if (cu_name[0] != '/' && !cu_comp_dir.empty())
+    return std::filesystem::path(cu_comp_dir) / std::filesystem::path(cu_name);
+
+  // If CU name is already an absolute path to the source file. Also used as
+  // a fallback, when DW_AT_comp_dir string is empty.
+  return std::filesystem::path(cu_name);
+}
+
+Result<Dwarf::CuInfo> Dwarf::get_cu_info(const std::string &source_file) const
+{
+  Dwarf_Die *cudie = nullptr;
+  Dwarf_Die *matched_cu = nullptr;
+  std::filesystem::path matched_cu_path;
+  Dwarf_Addr cubias;
+
+  while ((cudie = dwfl_nextcu(dwfl, cudie, &cubias)) != nullptr) {
+    const char *cu_name = dwarf_diename(cudie);
+    if (!cu_name) {
+      continue;
+    }
+
+    std::string_view cu_comp_dir;
+    Dwarf_Attribute attr;
+    if (dwarf_attr(cudie, DW_AT_comp_dir, &attr)) {
+      if (const char *dir_str = dwarf_formstring(&attr)) {
+        cu_comp_dir = dir_str;
+      }
+    }
+
+    // Resolve the CU's source file location path.
+    auto cu_path = resolve_cu_path(cu_name, cu_comp_dir);
+    if (!cu_path) {
+      continue;
+    }
+
+    if (util::path_ends_with(*cu_path, source_file)) {
+      if (!matched_cu) {
+        matched_cu = cudie;
+        matched_cu_path = *cu_path;
+      } else {
+        return make_error<DwarfParseError>(
+            "Ambiguous source path, matches multiple files: " +
+            matched_cu_path.string() + ", " + cu_path->string());
+      }
+    }
+  }
+
+  if (!matched_cu) {
+    return make_error<DwarfParseError>("No compilation unit matches " +
+                                       source_file);
+  }
+
+  return CuInfo{ .source = std::move(matched_cu_path), .die = matched_cu };
+}
+
+Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
+                                     size_t line_num,
+                                     size_t col_num) const
+{
+  auto cu = get_cu_info(source_file);
+  if (!cu) {
+    return cu.takeError();
+  }
+
+  Dwarf_Lines *lines = nullptr;
+  size_t num_lines = 0;
+
+  if (dwarf_getsrclines(cu->die, &lines, &num_lines) != 0) {
+    return make_error<DwarfParseError>(
+        "Failed to get compilation unit source lines");
+  }
+
+  for (size_t i = 0; i < num_lines; i++) {
+    Dwarf_Line *line = dwarf_onesrcline(lines, i);
+    if (!line) {
+      continue;
+    }
+
+    int lineno, linecol;
+    if (dwarf_lineno(line, &lineno) != 0 ||
+        dwarf_linecol(line, &linecol) != 0) {
+      continue;
+    }
+
+    const char *linesrc = dwarf_linesrc(line, nullptr, nullptr);
+    if (!linesrc) {
+      continue;
+    }
+
+    // Check if the line source matches the CU's source path, to avoid
+    // unintentionally accessing statements from included files.
+    if (util::path_ends_with(linesrc, cu->source) &&
+        line_num == static_cast<size_t>(lineno) &&
+        (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
+      Dwarf_Addr addr;
+      if (dwarf_lineaddr(line, &addr) == 0) {
+        return addr;
+      }
+    }
+  }
+
+  return make_error<DwarfParseError>(
+      "Unable to map '" + source_file + ":" + std::to_string(line_num) +
+      (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address");
 }
 
 } // namespace bpftrace

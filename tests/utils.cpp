@@ -508,4 +508,23 @@ TEST(utils, similar)
   EXPECT_TRUE(is_similar("foobar", "fobar"));
 }
 
+TEST(utils, path_ends_with)
+{
+  EXPECT_TRUE(path_ends_with("", ""));
+  EXPECT_TRUE(path_ends_with("/", "/"));
+  EXPECT_TRUE(path_ends_with("/a", "/a"));
+  EXPECT_TRUE(path_ends_with("/a/b/c", "c"));
+  EXPECT_TRUE(path_ends_with("/a/b/c", "b/c"));
+  EXPECT_TRUE(path_ends_with("/a/b/c", "a/b/c"));
+  EXPECT_TRUE(path_ends_with("/a/b/c", "/a/b/c"));
+  EXPECT_TRUE(path_ends_with("/lib64/libbpf.so", "libbpf.so"));
+  EXPECT_FALSE(path_ends_with("/", ""));
+  EXPECT_FALSE(path_ends_with("", "/a"));
+  EXPECT_FALSE(path_ends_with("/a/b/c", "x"));
+  EXPECT_FALSE(path_ends_with("/a/b/c", "x/c"));
+  EXPECT_FALSE(path_ends_with("/a/b/c", "x/b/c"));
+  EXPECT_FALSE(path_ends_with("/a/b/c", "/a/x/c"));
+  EXPECT_FALSE(path_ends_with("/lib64/libbpf.so", ""));
+}
+
 } // namespace bpftrace::test::utils

@@ -21,8 +21,14 @@ public:
   {
   }
 
-  symbols::KernelInfo &kernel_info() const { return kernel_impl_; }
-  symbols::UserInfo &user_info() const { return user_impl_; }
+  symbols::KernelInfo &kernel_info() const
+  {
+    return kernel_impl_;
+  }
+  symbols::UserInfo &user_info() const
+  {
+    return user_impl_;
+  }
 
 private:
   symbols::KernelInfo &kernel_impl_;
@@ -58,7 +64,9 @@ private:
   State benchmark_parser();
   State kprobe_parser(bool allow_offset = true);
   State kretprobe_parser();
-  State uprobe_parser(bool allow_offset = true, bool allow_abs_addr = true);
+  State uprobe_parser(bool allow_offset = true,
+                      bool allow_abs_addr = true,
+                      bool allow_src_loc = true);
   State uretprobe_parser();
   State usdt_parser();
   State tracepoint_parser();

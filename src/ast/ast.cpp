@@ -189,6 +189,9 @@ AttachPoint *AttachPoint::create_expansion_copy(ASTContext &ctx,
   ap->mode = mode;
   ap->address = address;
   ap->func_offset = func_offset;
+  ap->source_file = source_file;
+  ap->line_num = line_num;
+  ap->col_num = col_num;
 
   switch (probetype(ap->provider)) {
     case ProbeType::kprobe:
