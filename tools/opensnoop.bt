@@ -55,7 +55,7 @@ tracepoint:syscalls:sys_enter_openat2
 
 macro max_path_depth()
 {
-  getopt("depth", 35)
+  getopt("depth", 35, "Maximum depth of full path")
 }
 
 macro getcwd(@paths)

@@ -40,7 +40,7 @@ private:
 class UnknownParamError : public ErrorInfo<UnknownParamError> {
 public:
   UnknownParamError(std::vector<std::string> &&unexpected,
-                    std::vector<std::string> &&expected)
+                    std::vector<std::pair<std::string, std::string>> &&expected)
       : unexpected_(std::move(unexpected)), expected_(std::move(expected)) {};
   static char ID;
   void log(llvm::raw_ostream &OS) const override;
@@ -49,20 +49,20 @@ public:
   {
     std::string err = "unexpected program command line options: ";
     size_t i;
-    bool has_help = false, has_err = false;
+    bool has_err = false;
     for (i = 0; i < unexpected_.size(); ++i) {
       if (unexpected_[i] == "help") {
-        has_help = true;
-      } else {
-        has_err = true;
-        err += "--";
-        err += unexpected_[i];
-        if (i != unexpected_.size() - 1) {
-          err += ", ";
-        }
+        continue;
+      }
+
+      has_err = true;
+      err += "--";
+      err += unexpected_[i];
+      if (i != unexpected_.size() - 1) {
+        err += ", ";
       }
     }
-    if (has_help && !has_err) {
+    if (!has_err) {
       return {};
     } else {
       return err;
@@ -71,19 +71,28 @@ public:
 
   std::string hint() const
   {
-    std::string hint = "expected program options: ";
+    std::string hint = "expected program options:";
 
     size_t j;
+    bool help_mode = std::ranges::any_of(unexpected_, [](const auto &i) {
+      return i == "help";
+    });
 
     if (expected_.empty()) {
       return "no custom program options defined.";
     }
 
+    hint += help_mode ? "\n" : " ";
+
     for (j = 0; j < expected_.size(); ++j) {
       hint += "--";
-      hint += expected_[j];
+      hint += expected_[j].first;
+      if (help_mode && !expected_[j].second.empty()) {
+        hint += ": ";
+        hint += expected_[j].second;
+      }
       if (j != expected_.size() - 1) {
-        hint += ", ";
+        hint += help_mode ? "\n" : ": ";
       }
     }
     return hint;
@@ -91,12 +100,25 @@ public:
 
 private:
   std::vector<std::string> unexpected_;
-  std::vector<std::string> expected_;
+  std::vector<std::pair<std::string, std::string>> expected_;
 };
 
 using GlobalVarValue = std::variant<std::string, int64_t, uint64_t, bool>;
 
 using GlobalVarMap = std::unordered_map<std::string, GlobalVarValue>;
+
+struct GlobalVarInfo {
+  GlobalVarValue value;
+  std::string description;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(value, description);
+  }
+};
 
 // Known global variables
 constexpr std::string_view NUM_CPUS = "__bt__num_cpus";
@@ -183,15 +205,16 @@ class GlobalVars {
 public:
   GlobalVars() = default;
   GlobalVars(std::unordered_map<std::string, GlobalVarConfig> global_var_map,
-             std::unordered_map<std::string, GlobalVarValue> default_values)
+             std::unordered_map<std::string, GlobalVarInfo> default_values)
       : added_global_vars_(std::move(global_var_map)),
-        named_param_defaults_(std::move(default_values))
+        named_param_info_(std::move(default_values))
   {
   }
 
   void add_known(const std::string_view &name);
   void add_named_param(const std::string &name,
-                       const GlobalVarValue &default_value);
+                       const GlobalVarValue &default_value,
+                       const std::string &description);
   Result<GlobalVarMap> get_named_param_vals(
       std::vector<std::string> raw_named_params) const;
   const GlobalVarConfig &get_config(const std::string &name) const;
@@ -223,14 +246,14 @@ public:
 
 protected:
   std::unordered_map<std::string, GlobalVarConfig> added_global_vars_;
-  std::unordered_map<std::string, GlobalVarValue> named_param_defaults_;
+  std::unordered_map<std::string, GlobalVarInfo> named_param_info_;
 
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(added_global_vars_, named_param_defaults_);
+    archive(added_global_vars_, named_param_info_);
   }
 
   void verify_maps_found(const std::unordered_map<std::string, struct bpf_map *>

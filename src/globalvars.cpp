@@ -347,7 +347,8 @@ void GlobalVars::add_known(const std::string_view &name)
 }
 
 void GlobalVars::add_named_param(const std::string &name,
-                                 const GlobalVarValue &default_val)
+                                 const GlobalVarValue &default_val,
+                                 const std::string &description)
 {
   if (added_global_vars_.contains(name)) {
     return;
@@ -356,7 +357,10 @@ void GlobalVars::add_named_param(const std::string &name,
       .section = std::string(RO_SECTION_NAME),
       .type = get_global_var_type(default_val),
   });
-  named_param_defaults_[name] = default_val;
+  named_param_info_[name] = GlobalVarInfo({
+      .value = default_val,
+      .description = description,
+  });
 }
 
 const GlobalVarConfig &GlobalVars::get_config(const std::string &name) const
@@ -405,9 +409,9 @@ Result<GlobalVarMap> GlobalVars::get_named_param_vals(
   }
 
   if (!unexpected_params.empty()) {
-    std::vector<std::string> expected_params;
-    for (const auto &[name, _] : named_param_defaults_) {
-      expected_params.push_back(name);
+    std::vector<std::pair<std::string, std::string>> expected_params;
+    for (const auto &[name, info] : named_param_info_) {
+      expected_params.emplace_back(name, info.description);
     }
 
     return make_error<UnknownParamError>(std::move(unexpected_params),
@@ -416,7 +420,7 @@ Result<GlobalVarMap> GlobalVars::get_named_param_vals(
 
   GlobalVarMap named_param_vals;
 
-  for (const auto &[name, default_val] : named_param_defaults_) {
+  for (const auto &[name, info] : named_param_info_) {
     const auto &config = added_global_vars_.at(name);
     if (!config.type) {
       LOG(BUG) << "No type set for global variable.";
@@ -427,16 +431,16 @@ Result<GlobalVarMap> GlobalVars::get_named_param_vals(
     if (it == named_params.end()) {
       switch (*config.type) {
         case GlobalVarConfig::opt_signed:
-          named_param_vals[name] = std::get<int64_t>(default_val);
+          named_param_vals[name] = std::get<int64_t>(info.value);
           break;
         case GlobalVarConfig::opt_unsigned:
-          named_param_vals[name] = std::get<uint64_t>(default_val);
+          named_param_vals[name] = std::get<uint64_t>(info.value);
           break;
         case GlobalVarConfig::opt_bool:
-          named_param_vals[name] = std::get<bool>(default_val);
+          named_param_vals[name] = std::get<bool>(info.value);
           break;
         case GlobalVarConfig::opt_string:
-          named_param_vals[name] = std::get<std::string>(default_val);
+          named_param_vals[name] = std::get<std::string>(info.value);
           break;
       }
       continue;

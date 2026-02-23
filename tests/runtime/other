@@ -378,6 +378,20 @@ RUN {{BPFTRACE}} -e 'begin { print(($1, getopt("aa", 10), getopt("bb", -1), $2, 
 EXPECT (pos1, 20, 5, pos2, bye, true)
 TIMEOUT 1
 
+NAME named params with description
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10, "AA"), getopt("bb", 1))); }' -- --aa=22 --bb=2
+EXPECT (22, 2)
+TIMEOUT 1
+
+NAME named params with description help
+RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10, "Description of aa"), getopt("bb", 1), getopt("cc"))); }' -- --help
+EXPECT HINT: expected program options:
+EXPECT --cc
+EXPECT --bb
+EXPECT --aa: Description of aa
+TIMEOUT 1
+WILL_FAIL
+
 # Can't run through the standard AOT path because we need to pass CLI args
 NAME named command line params aot
 RUN {{BPFTRACE}} -e 'begin { print((getopt("aa", 10), getopt("cc", true), getopt("dd"), getopt("ee", "hello")));  }' --aot /tmp/tmpprog.btaot && /tmp/tmpprog.btaot -- --dd --aa=20 --cc=False
@@ -401,7 +415,7 @@ EXPECT_NONE USAGE:
 WILL_FAIL
 
 NAME unexpected named command line params
-RUN {{BPFTRACE}} -e 'begin { print(getopt("aa", 10));  }' -- --bb
+RUN {{BPFTRACE}} -e 'begin { print(getopt("aa", 10)); }' -- --bb
 EXPECT ERROR: unexpected program command line options: --bb
 EXPECT HINT: expected program options: --aa
 EXPECT_NONE USAGE:

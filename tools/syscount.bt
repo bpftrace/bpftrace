@@ -82,7 +82,7 @@ BEGIN
 
 macro sysname()
 {
-  getopt("sysname")
+  getopt("sysname", false, "Show syscall name instead of syscall number")
 }
 
 tracepoint:raw_syscalls:sys_enter

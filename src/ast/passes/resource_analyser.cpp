@@ -442,8 +442,10 @@ void ResourceAnalyser::visit(Map &map)
 
   auto it = named_param_defaults_.defaults.find(map.ident);
   if (it != named_param_defaults_.defaults.end()) {
-    resources_.global_vars.add_named_param(map.ident, it->second);
-    if (std::holds_alternative<std::string>(it->second)) {
+    resources_.global_vars.add_named_param(map.ident,
+                                           it->second.value,
+                                           it->second.description);
+    if (std::holds_alternative<std::string>(it->second.value)) {
       const auto max_strlen = bpftrace_.config_->max_strlen;
       if (exceeds_stack_limit(max_strlen))
         resources_.str_buffers++;
