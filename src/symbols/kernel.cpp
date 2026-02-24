@@ -496,8 +496,12 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   cflags.push_back("-I" + ksrc + "/include/uapi");
   cflags.push_back("-I" + kobj + "/include/generated/uapi");
 
-  cflags.emplace_back("-include");
-  cflags.push_back(ksrc + "/include/linux/kconfig.h");
+  auto kconfig_path = ksrc + "/include/linux/kconfig.h";
+  if (access(kconfig_path.c_str(), R_OK) == 0) {
+    cflags.emplace_back("-include");
+    cflags.push_back(kconfig_path);
+  }
+
   cflags.emplace_back("-D__KERNEL__");
   cflags.emplace_back("-D__BPF_TRACING__");
   cflags.emplace_back("-D__HAVE_BUILTIN_BSWAP16__");
