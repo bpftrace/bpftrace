@@ -683,3 +683,15 @@ RUN {{BPFTRACE}} --traceable-functions /dev/null -e 'kprobe:vfs_read {}'
 EXPECT_REGEX .* ERROR: No matches for kprobe vfs_read.
 TIMEOUT 5
 WILL_FAIL
+
+NAME traceable_functions_empty_unsafe
+RUN {{BPFTRACE}} --traceable-functions /dev/null --unsafe -e 'kprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }'
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+AFTER ./testprogs/syscall read
+TIMEOUT 5
+
+NAME unsafe_bad
+RUN {{BPFTRACE}} --unsafe -e 'k:nonsense {}'
+EXPECT ERROR: Unable to attach probe: kprobe:nonsense. If this is expected, set the 'missing_probes' config variable to 'warn'.
+TIMEOUT 5
+WILL_FAIL

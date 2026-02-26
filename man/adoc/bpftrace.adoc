@@ -189,6 +189,10 @@ Keep messages quiet.
 Some calls, like 'system', are marked as unsafe as they can have dangerous side effects ('system("rm -rf")') and are disabled by default.
 This flag allows their use.
 
+In addition, it makes certain probe checks less restrictive. It can be used to probe functions that
+bpftrace reports as not traceable, but are supported by kprobes (e.g. if the kernel is configured to
+allow probing notrace functions).
+
 === *--usdt-file-activation*
 
 Activate usdt semaphores based on file path.
