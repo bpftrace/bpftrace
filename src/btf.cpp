@@ -536,12 +536,9 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   return stype;
 }
 
-Result<std::shared_ptr<Struct>> BTF::resolve_args(
-    std::string_view func,
-    bool ret,
-    bool check_traceable,
-    bool skip_first_arg,
-    const symbols::KernelInfo &func_info)
+Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
+                                                  bool ret,
+                                                  bool skip_first_arg)
 {
   if (!has_data()) {
     return make_error<ast::ArgParseError>(func, "BTF data not available");
@@ -557,15 +554,6 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
   t = btf__type_by_id(func_id.btf, t->type);
   if (!t || !btf_is_func_proto(t)) {
     return make_error<ast::ArgParseError>(func, "not a function");
-  }
-
-  if (check_traceable) {
-    if (!func_info.is_traceable(std::string(func))) {
-      return make_error<ast::ArgParseError>(
-          func,
-          "function not traceable (probably it is inlined or marked as "
-          "\"notrace\")");
-    }
   }
 
   const struct btf_param *p = btf_params(t);
@@ -615,12 +603,12 @@ Result<std::shared_ptr<Struct>> BTF::resolve_args(
 }
 
 Result<std::shared_ptr<Struct>> BTF::resolve_raw_tracepoint_args(
-    std::string_view func,
-    const symbols::KernelInfo &func_info)
+    std::string_view func)
 {
   for (const auto &prefix : RT_BTF_PREFIXES) {
-    auto args = resolve_args(
-        std::string(prefix) + std::string(func), false, true, true, func_info);
+    auto args = resolve_args(std::string(prefix) + std::string(func),
+                             false,
+                             true);
     if (args) {
       return args;
     }

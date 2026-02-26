@@ -30,8 +30,7 @@ namespace {
 
 class ArgsResolver : public Visitor<ArgsResolver> {
 public:
-  explicit ArgsResolver(BPFtrace &bpftrace, FunctionInfo &func_info)
-      : bpftrace_(bpftrace), func_info_(func_info) {};
+  explicit ArgsResolver(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<ArgsResolver>::visit;
   void visit(Builtin &builtin);
@@ -42,7 +41,6 @@ private:
   Result<std::shared_ptr<Struct>> resolve_args(const AttachPoint &ap);
 
   BPFtrace &bpftrace_;
-  FunctionInfo &func_info_;
   Probe *probe_ = nullptr;
 };
 
@@ -64,12 +62,9 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
     case ProbeType::fexit:
       return bpftrace_.btf_->resolve_args(ap.func,
                                           probe_type == ProbeType::fexit,
-                                          true,
-                                          false,
-                                          func_info_.kernel_info());
+                                          false);
     case ProbeType::rawtracepoint:
-      return bpftrace_.btf_->resolve_raw_tracepoint_args(
-          ap.func, func_info_.kernel_info());
+      return bpftrace_.btf_->resolve_raw_tracepoint_args(ap.func);
     case ProbeType::tracepoint: {
       TracepointFormatParser parser(ap.target, ap.func, bpftrace_);
       auto ok = parser.parse_format_file();
@@ -130,8 +125,8 @@ void ArgsResolver::visit(Probe &probe)
 
 Pass CreateArgsResolverPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b, FunctionInfo &func_info) {
-    ArgsResolver resolver(b, func_info);
+  auto fn = [](ASTContext &ast, BPFtrace &b) {
+    ArgsResolver resolver(b);
     resolver.visit(ast.root);
   };
 
