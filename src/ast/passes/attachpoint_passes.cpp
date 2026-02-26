@@ -44,6 +44,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
     // Warn if user tries to attach to a non-traceable function
     if (bpftrace_.config_->missing_probes != ConfigMissingProbes::ignore &&
         !util::has_wildcard(ap.func) &&
+        func_info_state_.kernel_info().has_traceable_funcs() &&
         !func_info_state_.kernel_info().is_traceable(ap.func)) {
       ap.addWarning() << ap.func
                       << " is not traceable (either non-existing, inlined, "

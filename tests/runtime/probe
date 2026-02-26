@@ -133,7 +133,7 @@ AFTER ./testprogs/syscall read
 
 NAME kprobe_module_missing
 PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX .* ERROR: No matches for kprobe nonsense:vfs_read.
+EXPECT_REGEX .* ERROR: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
 WILL_FAIL
 
 NAME kprobe_wildcard_all_leading_underscore
@@ -153,8 +153,8 @@ EXPECT 0
 
 NAME kprobe_func_missing
 PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX .* ERROR: No matches for kprobe vmlinux:nonsense.
 EXPECT_REGEX .* WARNING: nonsense is not traceable \(either non-existing, inlined, or marked as "notrace"\); attaching to it will likely fail
+EXPECT_REGEX .*ERROR: Unable to attach probe: kprobe:vmlinux:nonsense. .*
 WILL_FAIL
 
 NAME kprobe_multi_wildcard
@@ -603,9 +603,8 @@ EXPECT_REGEX .* ERROR: No matches for tracepoint syscalls:nonsense.
 WILL_FAIL
 
 NAME missing_probes_multiple_attach_points_default_error
-PROG kprobe:vfs_read, kprobe:bad { exit(); }
-EXPECT_REGEX .* ERROR: No matches for kprobe bad.
-EXPECT_REGEX .* WARNING: bad is not traceable \(either non-existing, inlined, or marked as "notrace"\); attaching to it will likely fail
+PROG fentry:vfs_read, fentry:bad { exit(); }
+EXPECT_REGEX .* ERROR: No matches for fentry bad.
 WILL_FAIL
 
 NAME some_missing_probes_warn
@@ -622,9 +621,8 @@ PROG config = { missing_probes=ignore } kprobe:vfs_read { exit(); } t:syscalls:n
 EXPECT_NONE WARNING: Unable to attach probe: tracepoint:syscalls:nonsense. Skipping.
 
 NAME all_missing_probes_warn
-PROG config = { missing_probes=warn } kprobe:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
-EXPECT_REGEX .* WARNING: nonsense is not traceable \(either non-existing, inlined, or marked as "notrace"\); attaching to it will likely fail
-EXPECT_REGEX .* WARNING: No matches for kprobe nonsense. Skipping.
+PROG config = { missing_probes=warn } fentry:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+EXPECT_REGEX .* WARNING: No matches for fentry nonsense. Skipping.
 EXPECT_REGEX .* WARNING: No matches for tracepoint syscalls:nonsense. Skipping.
 EXPECT_REGEX .* WARNING: No matches for uprobe ./testprogs/uprobe_test:uprobeFunction3. Skipping.
 EXPECT_REGEX .* WARNING: Probe has no valid attach points. It is being removed which may cause issues with program behavior.
@@ -633,8 +631,14 @@ EXPECT_REGEX .* WARNING: Probe has no valid attach points. It is being removed w
 WILL_FAIL
 
 NAME all_missing_probes_ignore
-PROG config = { missing_probes=ignore } kprobe:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
+PROG config = { missing_probes=ignore } fentry:nonsense { exit(); } t:syscalls:nonsense { exit(); } uprobe:./testprogs/uprobe_test:uprobeFunction3 { exit(); }
 EXPECT No probes to attach
+WILL_FAIL
+
+# This is because the source of truth (available_filter_functions) is not entireley correct about what kprobes we can attach to
+NAME no_prune_untraceable_kprobes
+PROG config = { missing_probes=ignore } kprobe:nonsense { exit(); }
+EXPECT ERROR: Attachment failed for all probes.
 WILL_FAIL
 
 # This is hacky because we can't easily run a separate bpftrace program in BEFORE
@@ -679,7 +683,7 @@ TIMEOUT 5
 WILL_FAIL
 
 NAME traceable_functions_empty
-RUN {{BPFTRACE}} --traceable-functions /dev/null -e 'kprobe:vfs_read {}'
-EXPECT_REGEX .* ERROR: No matches for kprobe vfs_read.
-TIMEOUT 5
-WILL_FAIL
+RUN {{BPFTRACE}} --traceable-functions /dev/null -e 'begin { exit(); }kprobe:vfs_read {}'
+EXPECT_REGEX .*WARNING: vfs_read is not traceable
+EXPECT Attached 2 probes
+TIMEOUT 1

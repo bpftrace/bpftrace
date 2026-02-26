@@ -100,6 +100,11 @@ symbols::ModulesFuncsMap MockKernelInfo::get_traceable_funcs(
   return filter(funcs_map, mod_name);
 }
 
+bool MockKernelInfo::has_traceable_funcs() const
+{
+  return true;
+}
+
 symbols::ModulesFuncsMap MockKernelInfo::get_raw_tracepoints(
     const std::optional<std::string> &mod_name) const
 {

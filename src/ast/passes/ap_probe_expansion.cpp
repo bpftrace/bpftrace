@@ -347,10 +347,21 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
                                     funcname + " is not loaded.";
             }
           }
+          // N.B. we issue a warning in a later pass if we detect this function
+          // doesn't exist or isn't traceable
+          new_aps.push_back(ap);
+          break;
         }
 
+        // We do this pre-filtering primarily for probes where we have to look
+        // up `args` or `retval` in BTF (or Dwarf for uprobes/uretprobes) as we
+        // fail hard if those `args` aren't available as we can't resolve the
+        // type and continue with type resolution. In order not to fail hard and
+        // respsect the missing_probes config we filter out early - notice
+        // (above) how this doesn't apply to kprobes/kretprobes which utilize
+        // available_filter_functions and may not be available on all systems
+        // or even be accurate for attaching to some kernel functions.
         auto matches = probe_matcher_.get_matches_for_ap(*ap);
-        // Filter out unnecessary probes, as they may not be missing.
         if (matches.empty() && (pt != ProbeType::watchpoint)) {
           const auto missing_probes = bpftrace_.config_->missing_probes;
           std::string msg = "No matches for " +

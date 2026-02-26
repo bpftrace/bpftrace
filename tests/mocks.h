@@ -19,6 +19,7 @@ class MockKernelInfo : public symbols::KernelInfoBase<MockKernelInfo> {
 public:
   symbols::ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
   symbols::ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
+  bool has_traceable_funcs() const override;
   symbols::ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
   symbols::ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;
   Result<btf::Types> load_btf(const std::string &mod_name) const override;
