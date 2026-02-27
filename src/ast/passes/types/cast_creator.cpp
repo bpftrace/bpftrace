@@ -1,19 +1,22 @@
 #include "ast/passes/types/cast_creator.h"
 #include "ast/ast.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "types.h"
 
 #include <functional>
 #include <optional>
+#include <variant>
 
 namespace bpftrace::ast {
 
-std::optional<SizedType> try_expression_cast(ASTContext &ctx,
-                                             Expression &expr,
-                                             const SizedType &expr_type,
-                                             const SizedType &target_type);
+static std::optional<SizedType> try_expression_cast(
+    ASTContext &ctx,
+    Expression &expr,
+    const SizedType &expr_type,
+    const SizedType &target_type);
 
 std::optional<SizedType> try_tuple_cast(ASTContext &ctx,
                                         Expression &exp,
@@ -126,10 +129,10 @@ std::optional<SizedType> try_record_cast(ASTContext &ctx,
   return record_type;
 }
 
-std::optional<SizedType> try_int_cast(ASTContext &ctx,
-                                      Expression &exp,
-                                      const SizedType &expr_type,
-                                      const SizedType &target_type)
+static std::optional<SizedType> try_int_cast(ASTContext &ctx,
+                                             Expression &exp,
+                                             const SizedType &expr_type,
+                                             const SizedType &target_type)
 {
   // We don't need a cast if it's a literal
   if (auto *integer = exp.as<Integer>()) {
@@ -178,10 +181,10 @@ std::optional<SizedType> try_int_cast(ASTContext &ctx,
   return target_type;
 }
 
-std::optional<SizedType> try_string_cast(ASTContext &ctx,
-                                         Expression &exp,
-                                         const SizedType &expr_type,
-                                         const SizedType &target_type)
+static std::optional<SizedType> try_string_cast(ASTContext &ctx,
+                                                Expression &exp,
+                                                const SizedType &expr_type,
+                                                const SizedType &target_type)
 {
   if (exp.type().GetSize() == target_type.GetSize()) {
     return target_type;
@@ -198,10 +201,11 @@ std::optional<SizedType> try_string_cast(ASTContext &ctx,
   return target_type;
 }
 
-std::optional<SizedType> try_expression_cast(ASTContext &ctx,
-                                             Expression &expr,
-                                             const SizedType &expr_type,
-                                             const SizedType &target_type)
+static std::optional<SizedType> try_expression_cast(
+    ASTContext &ctx,
+    Expression &expr,
+    const SizedType &expr_type,
+    const SizedType &target_type)
 {
   if (expr_type == target_type) {
     return target_type;
@@ -241,6 +245,32 @@ std::optional<SizedType> try_expression_cast(ASTContext &ctx,
 
   return std::nullopt;
 }
+
+namespace {
+
+class CastCreator : public Visitor<CastCreator> {
+public:
+  explicit CastCreator(ASTContext &ast, BPFtrace &bpftrace);
+
+  using Visitor<CastCreator>::visit;
+  void visit(AssignMapStatement &assignment);
+  void visit(AssignVarStatement &assignment);
+  void visit(Binop &binop);
+  void visit(BlockExpr &block);
+  void visit(Call &call);
+  void visit(Cast &cast);
+  void visit(For &f);
+  void visit(IfExpr &if_expr);
+  void visit(Jump &jump);
+  void visit(MapAccess &acc);
+  void visit(Probe &probe);
+  void visit(Subprog &subprog);
+
+private:
+  ASTContext &ctx_;
+  BPFtrace &bpftrace_;
+  std::variant<std::monostate, Probe *, Subprog *> top_level_node_;
+};
 
 CastCreator::CastCreator(ASTContext &ast, BPFtrace &bpftrace)
     : ctx_(ast), bpftrace_(bpftrace)
@@ -476,6 +506,13 @@ void CastCreator::visit(Subprog &subprog)
 
   visit(subprog.block);
   visit(subprog.return_type);
+}
+
+} // namespace
+
+void RunCastCreator(ASTContext &ast, BPFtrace &bpftrace)
+{
+  CastCreator(ast, bpftrace).visit(ast.root);
 }
 
 } // namespace bpftrace::ast

@@ -1,7 +1,46 @@
 #include "ast/passes/types/type_applicator.h"
 #include "ast/ast.h"
+#include "ast/visitor.h"
 
 namespace bpftrace::ast {
+
+namespace {
+
+class TypeApplicator : public Visitor<TypeApplicator> {
+public:
+  explicit TypeApplicator(const ResolvedTypes &resolved_types)
+      : resolved_types_(resolved_types) {};
+
+  using Visitor<TypeApplicator>::visit;
+
+  void visit(ArrayAccess &arr);
+  void visit(Binop &binop);
+  void visit(Builtin &builtin);
+  void visit(Call &call);
+  void visit(Cast &cast);
+  void visit(FieldAccess &acc);
+  void visit(Identifier &identifier);
+  void visit(IfExpr &if_expr);
+  void visit(Map &map);
+  void visit(MapAddr &map_addr);
+  void visit(Record &record);
+  void visit(Tuple &tuple);
+  void visit(TupleAccess &acc);
+  void visit(Unop &unop);
+  void visit(Variable &var);
+  void visit(VariableAddr &var_addr);
+
+private:
+  const ResolvedTypes &resolved_types_;
+
+  void apply(Node &node, SizedType &target)
+  {
+    auto it = resolved_types_.find(&node);
+    if (it != resolved_types_.end()) {
+      target = it->second;
+    }
+  }
+};
 
 void TypeApplicator::visit(ArrayAccess &arr)
 {
@@ -117,6 +156,13 @@ void TypeApplicator::visit(VariableAddr &var_addr)
 {
   Visitor<TypeApplicator>::visit(var_addr);
   apply(var_addr, var_addr.var_addr_type);
+}
+
+} // namespace
+
+void RunTypeApplicator(ASTContext &ast, const ResolvedTypes &resolved_types)
+{
+  TypeApplicator(resolved_types).visit(ast.root);
 }
 
 } // namespace bpftrace::ast

@@ -2,10 +2,56 @@
 #include "ast/ast.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/types/cast_creator.h"
+#include "ast/visitor.h"
 #include "struct.h"
 #include "types.h"
 
+#include <optional>
+
 namespace bpftrace::ast {
+
+namespace {
+
+class AstTransformer
+    : public Visitor<AstTransformer, std::optional<Expression>> {
+public:
+  AstTransformer(ASTContext &ast,
+                 const MacroRegistry &macro_registry,
+                 const ResolvedTypes &resolved_types)
+      : ast_(ast),
+        macro_registry_(macro_registry),
+        resolved_types_(resolved_types) {};
+
+  using Visitor<AstTransformer, std::optional<Expression>>::visit;
+
+  std::optional<Expression> visit(Expression &expr);
+  std::optional<Expression> visit(Binop &binop);
+  std::optional<Expression> visit(Offsetof &offof);
+  std::optional<Expression> visit(Sizeof &szof);
+  std::optional<Expression> visit(Typeinfo &typeinfo);
+  std::optional<Expression> visit(FieldAccess &acc);
+
+  bool had_transforms() const
+  {
+    return had_transforms_;
+  }
+
+private:
+  ASTContext &ast_;
+  const MacroRegistry &macro_registry_;
+  const ResolvedTypes &resolved_types_;
+  bool had_transforms_ = false;
+
+  const SizedType &get_type(const TypeVariable &node) const
+  {
+    auto it = resolved_types_.find(node);
+    if (it != resolved_types_.end()) {
+      return it->second;
+    }
+    static SizedType none = CreateNone();
+    return none;
+  }
+};
 
 std::optional<Expression> AstTransformer::visit(Binop &binop)
 {
@@ -191,6 +237,17 @@ std::optional<Expression> AstTransformer::visit(Typeinfo &typeinfo)
   record->record_type = record_type;
 
   return record;
+}
+
+} // namespace
+
+bool RunAstTransformer(ASTContext &ast,
+                       const MacroRegistry &macro_registry,
+                       const ResolvedTypes &resolved_types)
+{
+  AstTransformer transformer(ast, macro_registry, resolved_types);
+  transformer.visit(ast.root);
+  return transformer.had_transforms();
 }
 
 } // namespace bpftrace::ast

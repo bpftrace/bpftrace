@@ -2665,8 +2665,9 @@ Pass CreateTypeResolverPass()
 
           // Create literals from expressions like `typeinfo`, `offsetof`, etc.
           // Also handles AST transformations like tuple/record comparisons.
-          AstTransformer transformer(ast, macro_registry, resolved_types);
-          transformer.visit(ast.root);
+          bool had_transforms = RunAstTransformer(ast,
+                                                  macro_registry,
+                                                  resolved_types);
 
           // Fold literals like `comptime (typeof($a).base_ty == "int")` that
           // relied on type information to resolve
@@ -2679,7 +2680,7 @@ Pass CreateTypeResolverPass()
           // Check if we haven't made progress resolving comptime expressions
           auto next_comptimes = tr_collector.get_unresolved_comptimes();
           if (!next_comptimes.empty() && prev_comptimes == next_comptimes &&
-              !transformer.had_transforms()) {
+              !had_transforms) {
             for (auto *comptime : next_comptimes) {
               comptime->addError() << "Unable to resolve comptime expression";
             }
@@ -2691,16 +2692,15 @@ Pass CreateTypeResolverPass()
 
           // Check if there are unresolved comptime expressions or there were
           // AST transformations, if so we need to re-run everything above
-          should_rerun = !prev_comptimes.empty() ||
-                         transformer.had_transforms();
+          should_rerun = !prev_comptimes.empty() || had_transforms;
         }
 
         // Add the types to the AST nodes themselves
-        TypeApplicator(resolved_types).visit(ast.root);
+        RunTypeApplicator(ast, resolved_types);
 
         // Apply casts in parts of the AST where we want the left and right
         // sides to have the same type
-        CastCreator(ast, b).visit(ast.root);
+        RunCastCreator(ast, b);
 
         // Run type checking as the final step
         RunTypeChecker(ast, b, c_definitions, types);
