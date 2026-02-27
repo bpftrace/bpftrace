@@ -341,6 +341,13 @@ combined with `-e` or filename args to see all the probes that a program would a
 The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:
 
 ----
+# bpftrace -lv kprobe:vfs_read
+kprobe:vfs_read
+    struct file * arg0
+    char * arg1
+    size_t arg2
+    loff_t * arg3
+
 # bpftrace -l 'fexit:tcp_reset,tracepoint:syscalls:sys_enter_openat' -v
 fexit:tcp_reset
     struct sock * sk
