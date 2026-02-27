@@ -18,3 +18,5 @@ tests/**/*.bc
 
 result
 ignored/
+
+.claude/
