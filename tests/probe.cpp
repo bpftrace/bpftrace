@@ -9,7 +9,6 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/resolve_imports.h"
 #include "ast/passes/resource_analyser.h"
-#include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_system.h"
 #include "bpftrace.h"
 #include "btf.h"
@@ -53,7 +52,6 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateClangBuildPass())
                 .add(ast::CreateTypeSystemPass())
-                .add(ast::CreateTypeCheckerPass())
                 .add(ast::CreateResourcePass())
                 .add(ast::AllCompilePasses())
                 .run();

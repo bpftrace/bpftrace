@@ -6,7 +6,6 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
-#include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_resolver.h"
 #include "ast/passes/types/type_system.h"
 #include "btf_common.h"
@@ -44,7 +43,6 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
                 .add(ast::CreateFieldAnalyserPass())
                 .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateTypeResolverPass())
-                .add(ast::CreateTypeCheckerPass())
                 .add(ast::CreatePortabilityPass())
                 .run();
   ASSERT_TRUE(bool(ok));

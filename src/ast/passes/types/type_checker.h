@@ -1,9 +1,18 @@
 #pragma once
 
-#include "ast/pass_manager.h"
+namespace bpftrace {
+class BPFtrace;
+}
 
 namespace bpftrace::ast {
 
-Pass CreateTypeCheckerPass();
+class ASTContext;
+struct CDefinitions;
+struct TypeMetadata;
+
+void RunTypeChecker(ASTContext &ast,
+                    BPFtrace &b,
+                    CDefinitions &c_definitions,
+                    TypeMetadata &types);
 
 } // namespace bpftrace::ast
