@@ -10,6 +10,7 @@
 #include "ast/passes/types/ast_transformer.h"
 #include "ast/passes/types/cast_creator.h"
 #include "ast/passes/types/type_applicator.h"
+#include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_system.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -2598,11 +2599,12 @@ Node *TypeRuleCollector::find_variable_scope(const std::string &var_ident,
   return nullptr;
 }
 
-// This pass consists of 4 visitors:
+// This pass consists of 5 visitors:
 // - TypeRuleCollector
 // - AstTransformer
 // - TypeApplicator
 // - CastCreator
+// - TypeChecker
 // Read more about how all this works in type_resolution.md
 Pass CreateTypeResolverPass()
 {
@@ -2699,6 +2701,9 @@ Pass CreateTypeResolverPass()
         // Apply casts in parts of the AST where we want the left and right
         // sides to have the same type
         CastCreator(ast, b).visit(ast.root);
+
+        // Run type checking as the final step
+        RunTypeChecker(ast, b, c_definitions, types);
       });
 };
 

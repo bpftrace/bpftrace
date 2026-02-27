@@ -1191,17 +1191,13 @@ bool TypeChecker::check_arg(Call &call,
   return true;
 }
 
-Pass CreateTypeCheckerPass()
+void RunTypeChecker(ASTContext &ast,
+                    BPFtrace &b,
+                    CDefinitions &c_definitions,
+                    TypeMetadata &types)
 {
-  auto fn = [](ASTContext &ast,
-               BPFtrace &b,
-               CDefinitions &c_definitions,
-               TypeMetadata &types) {
-    TypeChecker checker(ast, b, c_definitions, types);
-    checker.visit(ast.root);
-  };
-
-  return Pass::create("TypeChecker", fn);
-};
+  TypeChecker checker(ast, b, c_definitions, types);
+  checker.visit(ast.root);
+}
 
 } // namespace bpftrace::ast

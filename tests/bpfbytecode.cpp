@@ -2,7 +2,6 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/parser.h"
-#include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_system.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
@@ -23,7 +22,6 @@ BpfBytecode codegen(const std::string &input)
                 .add(ast::CreateLLVMInitPass())
                 .add(ast::CreateClangBuildPass())
                 .add(ast::CreateTypeSystemPass())
-                .add(ast::CreateTypeCheckerPass())
                 .add(ast::AllCompilePasses())
                 .run();
   if (!ok) {

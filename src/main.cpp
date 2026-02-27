@@ -32,7 +32,6 @@
 #include "ast/passes/recursion_check.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/types/pre_type_check.h"
-#include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_resolver.h"
 #include "ast/passes/types/type_system.h"
 #include "benchmark.h"
@@ -354,7 +353,6 @@ void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateTypeSystemPass());
   add(ast::CreatePreTypeCheckPass());
   add(ast::CreateTypeResolverPass());
-  add(ast::CreateTypeCheckerPass());
   add(ast::CreateResourcePass());
 }
 
@@ -365,7 +363,6 @@ void CreateAotPasses(std::function<void(ast::Pass&& pass)> add)
   add(ast::CreateTypeSystemPass());
   add(ast::CreatePreTypeCheckPass());
   add(ast::CreateTypeResolverPass());
-  add(ast::CreateTypeCheckerPass());
   add(ast::CreateResourcePass());
 }
 

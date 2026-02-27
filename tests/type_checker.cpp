@@ -18,7 +18,6 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/resolve_imports.h"
-#include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_resolver.h"
 #include "ast/passes/types/type_system.h"
 #include "ast_matchers.h"
@@ -175,7 +174,6 @@ public:
                   .add(ast::CreateMapSugarPass())
                   .add(ast::CreateNamedParamsPass())
                   .add(ast::CreateTypeResolverPass())
-                  .add(ast::CreateTypeCheckerPass())
                   .run();
     EXPECT_TRUE(bool(ok));
 
