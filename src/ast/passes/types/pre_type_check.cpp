@@ -1,4 +1,4 @@
-#include "ast/passes/pre_type_check.h"
+#include "ast/passes/types/pre_type_check.h"
 
 #include <regex>
 #include <set>

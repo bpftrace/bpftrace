@@ -7,7 +7,7 @@
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
-#include "ast/passes/pre_type_check.h"
+#include "ast/passes/types/pre_type_check.h"
 #include "driver.h"
 #include "mocks.h"
 

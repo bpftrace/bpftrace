@@ -1,7 +1,7 @@
-#include "ast/passes/ast_transformer.h"
+#include "ast/passes/types/ast_transformer.h"
 #include "ast/ast.h"
-#include "ast/passes/cast_creator.h"
 #include "ast/passes/macro_expansion.h"
+#include "ast/passes/types/cast_creator.h"
 #include "struct.h"
 #include "types.h"
 

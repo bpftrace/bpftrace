@@ -1,4 +1,4 @@
-#include "ast/passes/type_system.h"
+#include "ast/passes/types/type_system.h"
 #include "ast/context.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
