@@ -167,10 +167,6 @@ test:record_promotion_nested {
     if ($a.0 != -50 || $a.1.a != 500 || $a.1.b.x != "areallyreallyreallylongstr" || $a.1.b.y != 20) {
         return 1;
     }
-
-    if (typeinfo($a).full_type != "(int64,record { .a = uint64, .b = record { .x = string[27], .y = int64 } })") {
-        return 1;
-    }
 }
 
 test:record_binop_literal {

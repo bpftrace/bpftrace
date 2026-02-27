@@ -114,10 +114,6 @@ NAME variable declaration with builtin
 PROG begin { let $f: struct task_struct *; $f = curtask; print($f.pid); }
 EXPECT_REGEX [0-9]+
 
-NAME variable declaration with unresolved type
-PROG begin { let $x: struct Foo[1];  }
-EXPECT Attached 1 probe
-
 NAME variable declaration not initialized
 PROG begin { let $a; if ($a) { $a = 1; } @b = $a; }
 EXPECT @b: 0

@@ -1,21 +1,12 @@
-#include <algorithm>
-#include <arpa/inet.h>
 #include <bpf/bpf.h>
-#include <cstring>
 #include <optional>
-#include <regex>
 #include <set>
 #include <string>
-#include <sys/stat.h>
 
 #include "ast/ast.h"
 #include "ast/async_event_types.h"
 #include "ast/context.h"
 #include "ast/integer_types.h"
-#include "ast/passes/fold_literals.h"
-#include "ast/passes/macro_expansion.h"
-#include "ast/passes/map_sugar.h"
-#include "ast/passes/named_param.h"
 #include "ast/passes/type_checker.h"
 #include "ast/passes/type_system.h"
 #include "bpftrace.h"
@@ -23,12 +14,8 @@
 #include "collect_nodes.h"
 #include "config.h"
 #include "log.h"
-#include "probe_matcher.h"
 #include "types.h"
-#include "util/paths.h"
 #include "util/strings.h"
-#include "util/system.h"
-#include "util/wildcard.h"
 
 namespace bpftrace::ast {
 
@@ -48,29 +35,21 @@ public:
   explicit TypeChecker(ASTContext &ctx,
                        BPFtrace &bpftrace,
                        CDefinitions &c_definitions,
-                       TypeMetadata &type_metadata,
-                       bool has_child = true)
+                       TypeMetadata &type_metadata)
       : ctx_(ctx),
         bpftrace_(bpftrace),
         c_definitions_(c_definitions),
-        type_metadata_(type_metadata),
-        has_child_(has_child)
+        type_metadata_(type_metadata)
   {
   }
 
   using Visitor<TypeChecker>::visit;
   void visit(Identifier &identifier);
   void visit(Call &call);
-  void visit(Sizeof &szof);
-  void visit(Offsetof &offof);
-  void visit(Typeof &typeof);
-  void visit(Typeinfo &typeinfo);
   void visit(Map &map);
-  void visit(MapAddr &map_addr);
   void visit(MapDeclStatement &decl);
   void visit(VariableAddr &var_addr);
   void visit(Binop &binop);
-  void visit(Unop &unop);
   void visit(While &while_block);
   void visit(For &f);
   void visit(Jump &jump);
@@ -82,14 +61,10 @@ public:
   void visit(Cast &cast);
   void visit(Tuple &tuple);
   void visit(Record &record);
-  void visit(Expression &expr);
   void visit(ExprStatement &expr);
-  void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
-  void visit(Unroll &unroll);
   void visit(Probe &probe);
-  void visit(BlockExpr &block);
   void visit(Subprog &subprog);
   void visit(Program &program);
 
@@ -109,10 +84,6 @@ private:
                  size_t index,
                  bool want_literal = false);
 
-  Probe *get_probe();
-
-  Node *find_variable_scope(const std::string &var_ident);
-
   bool in_loop()
   {
     return loop_depth_ > 0;
@@ -120,20 +91,9 @@ private:
 
   Node *top_level_node_ = nullptr;
 
-  // Holds the function currently being visited by this
-  // TypeChecker.
-  std::string func_;
-  // Holds the function argument index currently being
-  // visited by this TypeChecker.
-  int func_arg_idx_ = -1;
   std::map<std::string, bpf_map_type> bpf_map_type_;
 
   uint32_t loop_depth_ = 0;
-  bool has_child_ = false;
-
-  // Track variable assignment state for "use before assign" warnings
-  std::vector<Node *> scope_stack_;
-  std::map<Node *, std::map<std::string, bool>> variables_used_;
 
   // Track map declarations for "unused map" warnings
   std::map<std::string, MapDeclStatement *> map_decls_;
@@ -144,10 +104,6 @@ private:
 
 static const std::map<std::string, std::vector<arg_type_spec>>
     CALL_ARG_TYPE_SPEC = {
-      { "avg",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "buf",
         { arg_type_spec{ .skip_check = true },
           arg_type_spec{ .type = Type::integer } } },
@@ -183,14 +139,6 @@ static const std::map<std::string, std::vector<arg_type_spec>>
           arg_type_spec{ .type = Type::integer, .literal = true },
           arg_type_spec{ .type = Type::integer, .literal = true },
           arg_type_spec{ .type = Type::string, .literal = true } } },
-      { "max",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
-      { "min",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "nsecs", { arg_type_spec{ .type = Type::timestamp_mode } } },
       { "path",
         { arg_type_spec{ .skip_check = true },
@@ -217,10 +165,6 @@ static const std::map<std::string, std::vector<arg_type_spec>>
                                                   // to 14 bytes can exclude
                                                   // this header
           arg_type_spec{ .type = Type::integer } } },
-      { "stats",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "str",
         { arg_type_spec{ .skip_check = true },
           arg_type_spec{ .type = Type::integer } } },
@@ -231,10 +175,6 @@ static const std::map<std::string, std::vector<arg_type_spec>>
         { arg_type_spec{ .type = Type::string },
           arg_type_spec{ .type = Type::string },
           arg_type_spec{ .type = Type::integer, .literal = true } } },
-      { "sum",
-        { arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .skip_check = true },
-          arg_type_spec{ .type = Type::integer } } },
       { "system", { arg_type_spec{ .type = Type::string, .literal = true } } },
       { "time", { arg_type_spec{ .type = Type::string, .literal = true } } },
       { "__builtin_uaddr",
@@ -288,20 +228,6 @@ static bool IsValidVarDeclType(const SizedType &ty)
   return false; // unreachable
 }
 
-bool IsValidPtrOp(Operator op)
-{
-  switch (op) {
-    case Operator::PRE_INCREMENT:
-    case Operator::PRE_DECREMENT:
-    case Operator::POST_INCREMENT:
-    case Operator::POST_DECREMENT:
-    case Operator::MUL:
-      return true;
-    default:
-      return false;
-  }
-}
-
 void TypeChecker::visit(Identifier &identifier)
 {
   // These are used in function arguments and don't have types
@@ -316,29 +242,8 @@ void TypeChecker::visit(Identifier &identifier)
 
 void TypeChecker::visit(Call &call)
 {
-  struct func_setter {
-    func_setter(TypeChecker &analyser, const std::string &s)
-        : analyser_(analyser), old_func_(analyser_.func_)
-    {
-      analyser_.func_ = s;
-    }
-
-    ~func_setter()
-    {
-      analyser_.func_ = old_func_;
-      analyser_.func_arg_idx_ = -1;
-    }
-
-  private:
-    TypeChecker &analyser_;
-    std::string old_func_;
-  };
-
-  func_setter scope_bound_func_setter{ *this, call.func };
-
-  for (size_t i = 0; i < call.vargs.size(); ++i) {
-    func_arg_idx_ = i;
-    visit(call.vargs.at(i));
+  for (auto &varg : call.vargs) {
+    visit(varg);
   }
 
   if (!check_call(call)) {
@@ -364,25 +269,7 @@ void TypeChecker::visit(Call &call)
           << "() expects a string, integer or a pointer type as first "
           << "argument (" << t << " provided)";
     }
-    auto strlen = bpftrace_.config_->max_strlen;
-    if (call.vargs.size() == 2) {
-      if (auto *integer = call.vargs.at(1).as<Integer>()) {
-        if (integer->value + 1 > strlen) {
-          call.addWarning() << "length param (" << integer->value
-                            << ") is too long and will be shortened to "
-                            << strlen << " bytes (see BPFTRACE_MAX_STRLEN)";
-        } else {
-          strlen = integer->value + 1; // Storage for NUL byte.
-        }
-      }
-
-      if (auto *integer = dynamic_cast<NegativeInteger *>(
-              call.vargs.at(1).as<NegativeInteger>())) {
-        call.addError() << call.func << "cannot use negative length ("
-                        << integer->value << ")";
-      }
-    }
-    call.return_type = CreateString(strlen);
+    call.return_type = CreateString(call.type().GetSize());
     call.return_type.SetAS(AddrSpace::kernel);
   } else if (call.func == "buf") {
     const uint64_t max_strlen = bpftrace_.config_->max_strlen;
@@ -510,21 +397,17 @@ void TypeChecker::visit(Call &call)
     if (auto *map = call.vargs.at(0).as<Map>()) {
       // N.B. that print is parameteric in the type, so this is not checked
       // by `check_arg` as there is no spec for the first argument.
-      if (map->type().IsNoneTy()) {
-        map->addError() << "Undefined map: " + map->ident;
-      } else {
-        if (in_loop()) {
-          call.addWarning() << "Due to it's asynchronous nature using "
-                               "'print()' in a loop can "
-                               "lead to unexpected behavior. The map will "
-                               "likely be updated "
-                               "before the runtime can 'print' it.";
-        }
-        if (map->value_type.IsStatsTy() && call.vargs.size() > 1) {
-          call.addWarning()
-              << "print()'s top and div arguments are ignored when used on "
-                 "stats() maps.";
-        }
+      if (in_loop()) {
+        call.addWarning() << "Due to it's asynchronous nature using "
+                             "'print()' in a loop can "
+                             "lead to unexpected behavior. The map will "
+                             "likely be updated "
+                             "before the runtime can 'print' it.";
+      }
+      if (map->value_type.IsStatsTy() && call.vargs.size() > 1) {
+        call.addWarning()
+            << "print()'s top and div arguments are ignored when used on "
+               "stats() maps.";
       }
     }
     // Note that IsPrintableTy() is somewhat disingenuous here. Printing a
@@ -558,10 +441,6 @@ void TypeChecker::visit(Call &call)
       call.addError() << "strftime() can not take a monotonic timestamp";
     }
   } else if (call.func == "path") {
-    auto *probe = get_probe();
-    if (probe == nullptr)
-      return;
-
     if (!bpftrace_.feature_->has_d_path()) {
       call.addError()
           << "BPF_FUNC_d_path not available for your kernel version";
@@ -760,32 +639,6 @@ void TypeChecker::visit(Call &call)
   }
 }
 
-void TypeChecker::visit(Sizeof &szof)
-{
-  visit(szof.record);
-}
-
-void TypeChecker::visit(Offsetof &offof)
-{
-  visit(offof.record);
-}
-
-void TypeChecker::visit(Typeof &typeof)
-{
-  visit(typeof.record);
-}
-
-void TypeChecker::visit(Typeinfo &typeinfo)
-{
-  Visitor<TypeChecker>::visit(typeinfo);
-}
-
-Probe *TypeChecker::get_probe()
-{
-  auto *probe = dynamic_cast<Probe *>(top_level_node_);
-  return probe;
-}
-
 void TypeChecker::visit(MapDeclStatement &decl)
 {
   const auto bpf_type = get_bpf_map_type(decl.bpf_type);
@@ -818,21 +671,12 @@ void TypeChecker::visit(Map &map)
     }
   }
 }
-void TypeChecker::visit(MapAddr &map_addr)
-{
-  visit(map_addr.map);
-}
 
 void TypeChecker::visit(VariableAddr &var_addr)
 {
   if (var_addr.var_addr_type.IsNoneTy()) {
     var_addr.addError() << "No type available for variable "
                         << var_addr.var->ident;
-  }
-  // We can't know if the pointer to a scratch variable was passed
-  // to an external function for assignment so just mark it as assigned.
-  if (auto *scope = find_variable_scope(var_addr.var->ident)) {
-    variables_used_[scope][var_addr.var->ident] = true;
   }
 }
 
@@ -842,13 +686,6 @@ void TypeChecker::visit(ArrayAccess &arr)
   visit(arr.indexpr);
 
   const SizedType &type = arr.expr.type();
-
-  if (!type.IsArrayTy() && !type.IsPtrTy() && !type.IsStringTy()) {
-    arr.addError() << "The array index operator [] can only be "
-                      "used on arrays and pointers, found "
-                   << type.GetTy() << ".";
-    return;
-  }
 
   if (type.IsPtrTy() && type.GetPointeeTy().GetSize() == 0) {
     arr.addError() << "The array index operator [] cannot be used "
@@ -939,48 +776,18 @@ void TypeChecker::visit(Binop &binop)
   }
 }
 
-void TypeChecker::visit(Unop &unop)
-{
-  if (unop.op == Operator::PRE_INCREMENT ||
-      unop.op == Operator::PRE_DECREMENT ||
-      unop.op == Operator::POST_INCREMENT ||
-      unop.op == Operator::POST_DECREMENT) {
-    if (!unop.expr.is<Variable>() && !unop.expr.is<MapAccess>()) {
-      unop.addError() << "The " << opstr(unop)
-                      << " operator must be applied to a map or variable";
-    }
-  }
-
-  visit(unop.expr);
-
-  const SizedType &type = unop.expr.type();
-  bool invalid = false;
-  // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
-  // and context (we allow args->field for backwards compatibility)
-  if (type.IsBoolTy()) {
-    invalid = unop.op != Operator::LNOT;
-  } else if (!type.IsIntegerTy() && !((type.IsPtrTy() || type.IsCtxAccess()) &&
-                                      IsValidPtrOp(unop.op))) {
-    invalid = true;
-  }
-  if (invalid) {
-    unop.addError() << "The " << opstr(unop)
-                    << " operator can not be used on expressions of type '"
-                    << type << "'";
-  }
-}
-
 void TypeChecker::visit(IfExpr &if_expr)
 {
   visit(if_expr.cond);
   visit(if_expr.left);
   visit(if_expr.right);
-}
 
-void TypeChecker::visit(Unroll &unroll)
-{
-  visit(unroll.expr);
-  visit(unroll.block);
+  const Type &cond = if_expr.cond.type().GetTy();
+
+  if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean) {
+    if_expr.addError() << "Invalid condition: " << cond;
+    return;
+  }
 }
 
 void TypeChecker::visit(Jump &jump)
@@ -1016,24 +823,9 @@ void TypeChecker::visit(For &f)
 
   visit(f.iterable);
 
-  // Create scope for the loop and mark loop variable as assigned
-  scope_stack_.push_back(&f);
-  variables_used_[scope_stack_.back()][f.decl->ident] = true;
-
   loop_depth_++;
   visit(f.block);
   loop_depth_--;
-
-  scope_stack_.pop_back();
-
-  if (auto *range = f.iterable.as<Range>()) {
-    if (!range->start.type().IsIntTy()) {
-      range->addError() << "Loop range requires an integer for the start value";
-    }
-    if (!range->end.type().IsIntTy()) {
-      range->addError() << "Loop range requires an integer for the end value";
-    }
-  }
 
   // Currently, we do not pass BPF context to the callback so disable builtins
   // which require ctx access.
@@ -1051,7 +843,24 @@ void TypeChecker::visit(FieldAccess &acc)
 {
   visit(acc.expr);
 
-  const auto &record = acc.expr.type().GetStruct();
+  SizedType type = acc.expr.type();
+  while (type.IsPtrTy()) {
+    type = type.GetPointeeTy();
+  }
+
+  if (!type.IsCStructTy() && !type.IsTupleTy() && !type.IsRecordTy()) {
+    return;
+  }
+
+  const auto &record = type.GetStruct();
+  if (!record) {
+    return;
+  }
+
+  if (!record->HasField(acc.field)) {
+    return;
+  }
+
   const auto &field = record->GetField(acc.field);
 
   if (record->is_tracepoint_args && field.offset < 8)
@@ -1229,11 +1038,6 @@ void TypeChecker::visit(Record &record)
   }
 }
 
-void TypeChecker::visit(Expression &expr)
-{
-  Visitor<TypeChecker>::visit(expr);
-}
-
 void TypeChecker::visit(ExprStatement &expr)
 {
   visit(expr.expr);
@@ -1257,24 +1061,6 @@ void TypeChecker::visit(ExprStatement &expr)
   }
 }
 
-static const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
-  { Type::count_t, "count()" },
-  { Type::sum_t, "sum(retval)" },
-  { Type::min_t, "min(retval)" },
-  { Type::max_t, "max(retval)" },
-  { Type::avg_t, "avg(retval)" },
-  { Type::hist_t, "hist(retval)" },
-  { Type::lhist_t, "lhist(rand %10, 0, 10, 1)" },
-  { Type::tseries_t, "tseries(rand %10, 10s, 1)" },
-  { Type::stats_t, "stats(arg2)" },
-};
-
-void TypeChecker::visit(AssignMapStatement &assignment)
-{
-  visit(assignment.map_access);
-  visit(assignment.expr);
-}
-
 void TypeChecker::visit(AssignVarStatement &assignment)
 {
   visit(assignment.expr);
@@ -1287,12 +1073,6 @@ void TypeChecker::visit(AssignVarStatement &assignment)
 
   if (assignment.var()->var_type.IsNoneTy()) {
     assignment.addError() << "Invalid expression for assignment";
-  }
-
-  // Mark variable as assigned
-  const auto &var_ident = assignment.var()->ident;
-  if (auto *scope = find_variable_scope(var_ident)) {
-    variables_used_[scope][var_ident] = true;
   }
 }
 
@@ -1313,44 +1093,18 @@ void TypeChecker::visit(VarDeclStatement &decl)
       decl.addError() << "Type cannot be resolved: still none";
     }
   }
-
-  // Register variable in current scope as not yet assigned
-  if (!scope_stack_.empty()) {
-    const std::string &var_ident = decl.var->ident;
-    variables_used_[scope_stack_.back()].insert({ var_ident, false });
-  }
-}
-
-void TypeChecker::visit(BlockExpr &block)
-{
-  scope_stack_.push_back(&block);
-  visit(block.stmts);
-  visit(block.expr);
-  scope_stack_.pop_back();
 }
 
 void TypeChecker::visit(Probe &probe)
 {
   top_level_node_ = &probe;
-  variables_used_.clear();
   visit(probe.attach_points);
   visit(probe.block);
 }
 
 void TypeChecker::visit(Subprog &subprog)
 {
-  // Note that we visit the subprogram and process arguments *after*
-  // constructing the stack with the variable states. This is because the
-  // arguments, etc. may have types defined in terms of the arguments
-  // themselves. We already handle detecting circular dependencies.
-  variables_used_.clear();
-  scope_stack_.push_back(&subprog);
   top_level_node_ = &subprog;
-
-  // Mark args as assigned (they come from the caller)
-  for (SubprogArg *arg : subprog.args) {
-    variables_used_[scope_stack_.back()].insert({ arg->var->ident, true });
-  }
 
   // Validate that arguments are set.
   visit(subprog.args);
@@ -1369,7 +1123,6 @@ void TypeChecker::visit(Subprog &subprog)
     subprog.return_type->addError()
         << "Unable to resolve suitable return type.";
   }
-  scope_stack_.pop_back();
 }
 
 void TypeChecker::visit(Program &program)
@@ -1438,25 +1191,13 @@ bool TypeChecker::check_arg(Call &call,
   return true;
 }
 
-Node *TypeChecker::find_variable_scope(const std::string &var_ident)
-{
-  for (auto *scope : scope_stack_) {
-    if (auto search_val = variables_used_[scope].find(var_ident);
-        search_val != variables_used_[scope].end()) {
-      return scope;
-    }
-  }
-  return nullptr;
-}
-
 Pass CreateTypeCheckerPass()
 {
   auto fn = [](ASTContext &ast,
                BPFtrace &b,
                CDefinitions &c_definitions,
                TypeMetadata &types) {
-    TypeChecker checker(
-        ast, b, c_definitions, types, !b.cmd_.empty() || b.child_ != nullptr);
+    TypeChecker checker(ast, b, c_definitions, types);
     checker.visit(ast.root);
   };
 

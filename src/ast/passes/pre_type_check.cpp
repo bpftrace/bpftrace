@@ -1,5 +1,6 @@
 #include "ast/passes/pre_type_check.h"
 
+#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -8,6 +9,7 @@
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/helpers.h"
+#include "ast/passes/map_sugar.h"
 #include "ast/visitor.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
@@ -253,6 +255,27 @@ void VariablePreCheck::visit(VariableAddr &var_addr)
   }
 }
 
+bool check_symbol(const Call &call)
+{
+  auto *arg = call.vargs.at(0).as<String>();
+  if (!arg) {
+    call.addError() << call.func
+                    << "() expects a string literal as the first argument";
+    return false;
+  }
+
+  std::string re = "^[a-zA-Z0-9./_-]+$";
+  bool is_valid = std::regex_match(arg->value, std::regex(re));
+  if (!is_valid) {
+    call.addError() << call.func
+                    << "() expects a string that is a valid symbol (" << re
+                    << ") as input (\"" << arg << "\" provided)";
+    return false;
+  }
+
+  return true;
+}
+
 struct nargs_spec {
   size_t min_args = 0;
   size_t max_args = 0;
@@ -314,6 +337,43 @@ const std::map<std::string, nargs_spec> CALL_NARGS = {
   { "zero",           { .min_args=1, .max_args=1 } },
 };
 // clang-format on
+
+template <util::TypeName name>
+class AssignMapDisallowed : public Visitor<AssignMapDisallowed<name>> {
+public:
+  explicit AssignMapDisallowed() = default;
+  using Visitor<AssignMapDisallowed>::visit;
+  void visit(AssignMapStatement &assignment)
+  {
+    assignment.addError() << "Map assignments not allowed inside of "
+                          << name.str();
+  }
+};
+
+class MapCheck : public Visitor<MapCheck> {
+public:
+  explicit MapCheck() = default;
+
+  using Visitor<MapCheck>::visit;
+  void visit(Offsetof &offof);
+  void visit(Sizeof &szof);
+  void visit(Typeof &typeof);
+};
+
+void MapCheck::visit(Offsetof &offof)
+{
+  AssignMapDisallowed<"offsetof">().visit(offof.record);
+}
+
+void MapCheck::visit(Sizeof &szof)
+{
+  AssignMapDisallowed<"sizeof">().visit(szof.record);
+}
+
+void MapCheck::visit(Typeof &typeof)
+{
+  AssignMapDisallowed<"typeof or typeinfo">().visit(typeof.record);
+}
 
 class CallPreCheck : public Visitor<CallPreCheck> {
 public:
@@ -461,6 +521,13 @@ void CallPreCheck::visit(Call &call)
   for (size_t i = 0; i < call.vargs.size(); ++i) {
     func_arg_idx_ = i;
     visit(call.vargs.at(i));
+  }
+
+  if (getRawMapArgFuncs().contains(call.func) && !call.vargs.empty()) {
+    if (call.func != "print" && !call.vargs.at(0).is<Map>()) {
+      call.vargs.at(0).node().addError()
+          << call.func << "() expects a map argument";
+    }
   }
 
   // Per-function literal/structural checks
@@ -623,6 +690,8 @@ void CallPreCheck::visit(Call &call)
                         << "() only supports curr_ns and init as the argument";
       }
     }
+  } else if (call.func == "__builtin_uaddr") {
+    check_symbol(call);
   }
 }
 
@@ -699,6 +768,8 @@ Pass CreatePreTypeCheckPass()
     for (auto &probe : ast.root->probes) {
       VariablePreCheck().visit(probe);
     }
+
+    MapCheck().visit(ast.root);
 
     CallPreCheck call_checker(ast, bpftrace);
     call_checker.visit(ast.root);

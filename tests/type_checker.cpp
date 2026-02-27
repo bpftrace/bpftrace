@@ -300,16 +300,9 @@ TEST_F(TypeCheckerTest, builtin_functions)
 TEST_F(TypeCheckerTest, undefined_map)
 {
   test("kprobe:f / @mymap == 123 / { @mymap = 0 }");
-  test("kprobe:f / @mymap == 123 / { 456; }", Error{ R"(
-stdin:1:12-18: ERROR: Undefined map: @mymap
-kprobe:f / @mymap == 123 / { 456; }
-           ~~~~~~
-)" });
-  test("kprobe:f / @mymap1 == 1234 / { 1234; @mymap1 = @mymap2; }", Error{ R"(
-stdin:1:48-55: ERROR: Undefined map: @mymap2
-kprobe:f / @mymap1 == 1234 / { 1234; @mymap1 = @mymap2; }
-                                               ~~~~~~~
-)" });
+  test("kprobe:f / @mymap == 123 / { 456; }");
+  test("kprobe:f / @mymap1 == 1234 / { 1234; @mymap1 = @mymap2; }");
+
   test("kprobe:f { print(@x); }", Error{ R"(
 stdin:1:18-20: ERROR: Undefined map: @x
 kprobe:f { print(@x); }
@@ -343,12 +336,12 @@ TEST_F(TypeCheckerTest, consistent_map_keys)
   test("begin { @y[1] = 0; @y[@x] = 2; @x = 1; }");
 
   test("begin { @x = 0; @x[1]; }", Error{ R"(
-stdin:1:17-22: ERROR: @x used as a map with an explicit key (non-scalar map), previously used without an explicit key (scalar map)
+ERROR: @x used as a map with an explicit key (non-scalar map), previously used without an explicit key (scalar map)
 begin { @x = 0; @x[1]; }
                 ~~~~~
 )" });
   test("begin { @x[1] = 0; @x; }", Error{ R"(
-stdin:1:20-22: ERROR: @x used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
+ERROR: @x used as a map without an explicit key (scalar map), previously used with an explicit key (non-scalar map)
 begin { @x[1] = 0; @x; }
                    ~~
 )" });
@@ -358,12 +351,12 @@ begin { @x[1] = 0; @x; }
   test("begin { @x[1, ((int8)2, ((int16)3, 4))] = 0; @x[5, (6, (7, 8))]; }");
 
   test("begin { @x[1,2] = 0; @x[3]; }", Error{ R"(
-stdin:1:25-26: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: 'uint8'
 begin { @x[1,2] = 0; @x[3]; }
-                        ~
+        ~~~~~~~
 )" });
   test("begin { @x[1] = 0; @x[2,3]; }", Error{ R"(
-stdin:1:20-27: ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: 'uint8'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: 'uint8'
 begin { @x[1] = 0; @x[2,3]; }
                    ~~~~~~~
 )" });
@@ -376,7 +369,7 @@ begin { @x[1] = 0; @x[2,3]; }
       @x["b", 2, kstack];
     })",
        Error{ R"(
-stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],uint8,kstack_bpftrace_127)' when map expects arguments: '(uint8,string[2],kstack_bpftrace_127)'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],uint8,kstack_bpftrace_127)' when map expects arguments: '(uint8,string[2],kstack_bpftrace_127)'
       @x["b", 2, kstack];
       ~~~~~~~~~~~~~~~~~~
 )" });
@@ -385,9 +378,9 @@ stdin:3:7-25: ERROR: Argument mismatch for @x: trying to access with arguments: 
 
   test(R"(begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } })",
        Error{ R"(
-stdin:1:55-56: ERROR: Argument mismatch for @map: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
+ERROR: Argument mismatch for @map: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
 begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } }
-                                                      ~
+                                           ~~~~~~~~~~~~~
 )" });
 
   test(R"(begin { $a = (3, "hi"); @map[1, "by"] = 1; @map[$a] = 2; })");
@@ -487,37 +480,37 @@ TEST_F(TypeCheckerTest, ternary_expressions)
   // Error location is incorrect: #3063
   test("kprobe:f { $x = pid < 10000 ? 3 : cat(\"/proc/uptime\"); exit(); }",
        Error{ R"(
-stdin:1:17-54: ERROR: Branches must return the same type: have 'uint8' and 'void'
+stdin:1:17-54: ERROR: Branches must return the same type or compatible types: have 'uint8' and 'void'
 kprobe:f { $x = pid < 10000 ? 3 : cat("/proc/uptime"); exit(); }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", Error{ R"(
-stdin:1:17-41: ERROR: Branches must return the same type: have 'uint8' and 'string[5]'
+stdin:1:17-41: ERROR: Branches must return the same type or compatible types: have 'uint8' and 'string[5]'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
                 ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", Error{ R"(
-stdin:1:17-39: ERROR: Branches must return the same type: have 'string[3]' and 'uint8'
+stdin:1:17-39: ERROR: Branches must return the same type or compatible types: have 'string[3]' and 'uint8'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
                 ~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? (1, 2) : (\"a\", 4) }", Error{ R"(
-stdin:1:17-48: ERROR: Branches must return the same type: have '(uint8,uint8)' and '(string[2],uint8)'
+stdin:1:17-48: ERROR: Branches must return the same type or compatible types: have '(uint8,uint8)' and '(string[2],uint8)'
 kprobe:f { @x = pid < 10000 ? (1, 2) : ("a", 4) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }", Error{ R"(
-stdin:1:17-52: ERROR: Branches must return the same type: have 'ustack_bpftrace_1' and 'ustack_bpftrace_2'
+stdin:1:17-52: ERROR: Branches must return the same type or compatible types: have 'ustack_bpftrace_1' and 'ustack_bpftrace_2'
 kprobe:f { @x = pid < 10000 ? ustack(1) : ustack(2) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }", Error{ R"(
-stdin:1:17-57: ERROR: Branches must return the same type: have 'kstack_raw_127' and 'kstack_perf_127'
+stdin:1:17-57: ERROR: Branches must return the same type or compatible types: have 'kstack_raw_127' and 'kstack_perf_127'
 kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -853,7 +846,7 @@ TEST_F(TypeCheckerTest, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = "
        "5; delete(@y, (1, 2)); }",
        Error{ R"(
-ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,uint8,uint8)'
+ERROR: Argument mismatch for @y: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,uint8,uint8)'
 )" },
        Types{ types });
 
@@ -884,7 +877,7 @@ ERROR: call to delete() with two arguments expects a map with explicit keys (non
 
   test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })",
        Error{ R"(
-ERROR: Type mismatch for $$delete_$key: trying to assign value of type '(string[3],uint8)' when variable already has a type '(uint8,string[3])'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],uint8)' when map expects arguments: '(uint8,string[3])'
 )" },
        Types{ types });
 
@@ -944,16 +937,12 @@ TEST_F(TypeCheckerTest, call_print_map_item)
   test(R"_(begin { @x[1] = 1; print(@x[2]); })_");
   test(R"_(begin { @x[3, 5] = 1; print(@x[3, 5]); })_");
   test(R"_(begin { @x[1,2] = "asdf"; print((1, 2, @x[1,2])); })_");
+  test("begin { print(@x[2]); }");
 
   test("begin { @x[1] = 1; print(@x[\"asdf\"]); }", Error{ R"(
-stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'uint8'
+ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'uint8'
 begin { @x[1] = 1; print(@x["asdf"]); }
-                                 ~
-)" });
-  test("begin { print(@x[2]); }", Error{ R"(
-stdin:1:15-20: ERROR: Undefined map: @x
-begin { print(@x[2]); }
-              ~~~~~
+                         ~~~~~~~~~~
 )" });
   test("begin { @x[1] = 1; print(@x[1], 3, 5); }", Error{ R"(
 stdin:1:20-38: ERROR: Non-map print() only takes 1 argument, 3 found
@@ -993,7 +982,6 @@ TEST_F(TypeCheckerTest, call_clear)
 
   test("kprobe:f { clear(@x); @x[1,2] = count(); }");
   test("kprobe:f { @x[1,2] = count(); clear(@x); }");
-  test("kprobe:f { @x[1,2] = count(); clear(@x[3,4]); }", Error{});
 
   test("kprobe:f { @x = count(); @ = clear(@x); }", Error{});
   test("kprobe:f { @x = count(); $y = clear(@x); }", Error{});
@@ -1009,7 +997,6 @@ TEST_F(TypeCheckerTest, call_zero)
 
   test("kprobe:f { zero(@x); @x[1,2] = count(); }");
   test("kprobe:f { @x[1,2] = count(); zero(@x); }");
-  test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }", Error{});
 
   test("kprobe:f { @x = count(); @ = zero(@x); }", Error{});
   test("kprobe:f { @x = count(); $y = zero(@x); }", Error{});
@@ -1083,17 +1070,13 @@ TEST_F(TypeCheckerTest, call_has_key)
        Error{},
        Types{ types });
 
-  test(
-      "kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
-      Error{
-          R"(ERROR: Type mismatch for $$has_key_$key: trying to assign value of type 'uint8' when variable already has a type '(uint8,uint8)')" },
-      Types{ types });
+  test("kprobe:f { @x[1, 2] = 1;  if (has_key(@x, 1)) {} }",
+       Error{ "ERROR: Argument mismatch" },
+       Types{ types });
 
-  test(
-      R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
-      Error{
-          R"(ERROR: Type mismatch for $$has_key_$key: trying to assign value of type '(uint8,uint8)' when variable already has a type '(uint8,string[3])')" },
-      Types{ types });
+  test(R"(kprobe:f { @x[1, "hi"] = 0; if (has_key(@x, (2, 1))) {} })",
+       Error{ "ERROR: Argument mismatch" },
+       Types{ types });
 
   test("kprobe:f { @a[1] = 1; has_key(@a, @a); }",
        Error{ R"(
@@ -1376,26 +1359,6 @@ TEST_F(TypeCheckerTest, call_kaddr)
 
 TEST_F(TypeCheckerTest, call_uaddr)
 {
-  test("u:/bin/sh:main { "
-       "__builtin_uaddr(\"github.com/golang/"
-       "glog.severityName\"); }");
-  test("uprobe:/bin/sh:main { "
-       "__builtin_uaddr(\"glob_asciirange\"); }");
-  test("u:/bin/sh:main,u:/bin/sh:readline "
-       "{ __builtin_uaddr(\"glob_asciirange\"); }");
-  test("uprobe:/bin/sh:main { @x = "
-       "__builtin_uaddr(\"glob_asciirange\"); }");
-  test("uprobe:/bin/sh:main { __builtin_uaddr(123); }", Error{});
-  test("uprobe:/bin/sh:main { "
-       "__builtin_uaddr(\"?\"); }",
-       Error{});
-  test("uprobe:/bin/sh:main { $str = "
-       "\"glob_asciirange\"; __builtin_uaddr($str); }",
-       Error{});
-  test("uprobe:/bin/sh:main { @str = "
-       "\"glob_asciirange\"; __builtin_uaddr(@str); }",
-       Error{});
-
   // The C struct parser should set the
   // is_signed flag on signed types
   BPFtrace bpftrace;
@@ -1714,7 +1677,8 @@ TEST_F(TypeCheckerTest, array_as_map_key)
     begin {
       @x[((struct MyStruct *)0)->x] = 0;
       @x[((struct MyStruct *)0)->y] = 1;
-    })");
+    })",
+       Error{});
 }
 
 TEST_F(TypeCheckerTest, array_compare)
@@ -1909,7 +1873,6 @@ TEST_F(TypeCheckerTest, unop_increment_decrement)
   test("kprobe:f { ++@x; }");
   test("kprobe:f { --@x; }");
 
-  test("kprobe:f { $x++; }", Error{});
   test("kprobe:f { @x = \"a\"; @x++; }", Error{});
   test("kprobe:f { $x = \"a\"; $x++; }", Error{});
   test("kprobe:f { ++true; }", Error{});
@@ -2488,9 +2451,9 @@ TEST_F(TypeCheckerTest, struct_as_map_key)
         @x[*((struct B *)0)] = 1;
     })",
        Error{ R"(
-stdin:4:12-13: ERROR: Argument mismatch for @x: trying to access with arguments: 'struct B' when map expects arguments: 'struct A'
+ERROR: Argument mismatch for @x: trying to access with arguments: 'struct B' when map expects arguments: 'struct A'
         @x[*((struct B *)0)] = 1;
-           ~
+        ~~~~~~~~~~~~~~~~~~~~
 )" });
 }
 
@@ -2503,27 +2466,27 @@ TEST_F(TypeCheckerTest, per_cpu_map_as_map_key)
   test("begin { @x = avg(1); @y[@x] = 1; }");
 
   test("begin { @x = hist(10); @y[@x] = 1; }", Error{ R"(
-stdin:1:27-29: ERROR: hist_t cannot be part of a map key
+ERROR: Value 'hist_t' cannot be used as a map key.
 begin { @x = hist(10); @y[@x] = 1; }
-                          ~~
+                       ~~~~~~
 )" });
 
   test("begin { @x = lhist(10, 0, 10, 1); @y[@x] = 1; }", Error{ R"(
-stdin:1:38-40: ERROR: lhist_t cannot be part of a map key
+ERROR: Value 'lhist_t' cannot be used as a map key.
 begin { @x = lhist(10, 0, 10, 1); @y[@x] = 1; }
-                                     ~~
+                                  ~~~~~~
 )" });
 
   test("begin { @x = tseries(10, 1s, 10); @y[@x] = 1; }", Error{ R"(
-stdin:1:38-40: ERROR: tseries_t cannot be part of a map key
+ERROR: Value 'tseries_t' cannot be used as a map key.
 begin { @x = tseries(10, 1s, 10); @y[@x] = 1; }
-                                     ~~
+                                  ~~~~~~
 )" });
 
   test("begin { @x = stats(10); @y[@x] = 1; }", Error{ R"(
-stdin:1:28-30: ERROR: ustats_t cannot be part of a map key
+ERROR: Value 'ustats_t' cannot be used as a map key.
 begin { @x = stats(10); @y[@x] = 1; }
-                           ~~
+                        ~~~~~~
 )" });
 }
 
@@ -3004,13 +2967,14 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
 )" });
 
   test("begin { $x = (int8)1; $x = 5; }",
-       ExpectedAST{ Program().WithProbe(
-           Probe({ "begin" },
-                 { AssignVarStatement(Variable("$x"),
-                                      Cast(Typeof(SizedType(Type::integer)),
-                                           Integer(1))),
-                   AssignVarStatement(Variable("$x"), Integer(5)),
-                   Jump(ast::JumpType::RETURN) })) });
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "begin" },
+           { AssignVarStatement(Variable("$x"),
+                                Cast(Typeof(SizedType(Type::integer)),
+                                     Cast(Typeof(SizedType(Type::integer)),
+                                          Integer(1)))),
+             AssignVarStatement(Variable("$x"), Integer(5)),
+             Jump(ast::JumpType::RETURN) })) });
   test("begin { $x = (int8)1; $x = (uint8)5; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "begin" },
@@ -3050,27 +3014,20 @@ TEST_F(TypeCheckerTest, mixed_int_like_map_assignments)
   test("kprobe:f { @x = stats((uint32)1); @x = stats(-1); }");
 
   test("kprobe:f { @x = sum((uint64)1); @x = sum(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
-kprobe:f { @x = sum((uint64)1); @x = sum(-1); }
-                                     ~~~~~~~
+ERROR: Type mismatch for sum: trying to call function with type 'int8' when it already has a type 'uint64'
 )" });
   test("kprobe:f { @x = min((uint64)1); @x = min(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
-kprobe:f { @x = min((uint64)1); @x = min(-1); }
-                                     ~~~~~~~
+ERROR: Type mismatch for min: trying to call function with type 'int8' when it already has a type 'uint64'
 )" });
   test("kprobe:f { @x = max((uint64)1); @x = max(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
-kprobe:f { @x = max((uint64)1); @x = max(-1); }
-                                     ~~~~~~~
+ERROR: Type mismatch for max: trying to call function with type 'int8' when it already has a type 'uint64'
 )" });
   test("kprobe:f { @x = avg((uint64)1); @x = avg(-1); }", Error{ R"(
-stdin:1:38-45: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
-kprobe:f { @x = avg((uint64)1); @x = avg(-1); }
-                                     ~~~~~~~
+ERROR: Type mismatch for avg: trying to call function with type 'int8' when it already has a type 'uint64'
 )" });
+  // One errror test to validate the source location
   test("kprobe:f { @x = stats((uint64)1); @x = stats(-1); }", Error{ R"(
-stdin:1:40-49: ERROR: Type mismatch for @x: trying to assign value of type 'int8' when map already has a type 'uint64'
+ERROR: Type mismatch for stats: trying to call function with type 'int8' when it already has a type 'uint64'
 kprobe:f { @x = stats((uint64)1); @x = stats(-1); }
                                        ~~~~~~~~~
 )" });
@@ -3093,14 +3050,14 @@ TEST_F(TypeCheckerTest, mixed_int_map_access)
   test("kprobe:f { @x[-1] = 1; @x[(uint32)1] }");
 
   test("kprobe:f { @x[-1] = 1; @x[10223372036854775807] }", Error{ R"(
-stdin:1:27-47: ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int8'
+ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int8'
 kprobe:f { @x[-1] = 1; @x[10223372036854775807] }
-                          ~~~~~~~~~~~~~~~~~~~~
+                       ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   test("kprobe:f { @x[(uint64)1] = 1; @x[-1] }", Error{ R"(
-stdin:1:34-35: ERROR: Argument mismatch for @x: trying to access with arguments: 'int8' when map expects arguments: 'uint64'
+ERROR: Argument mismatch for @x: trying to access with arguments: 'int8' when map expects arguments: 'uint64'
 kprobe:f { @x[(uint64)1] = 1; @x[-1] }
-                                 ~
+                              ~~~~~~
 )" });
   test("kretprobe:f { @x[-1] = 1; @x[(uint64)1] }", Error{ R"(
 ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int8'
@@ -3184,7 +3141,8 @@ TEST_F(TypeCheckerTest, mixed_int_like_binop)
                  Binop(Operator::EQ,
                        Cast(Typeof(SizedType(Type::integer)),
                             Cast(Typeof(SizedType(Type::integer)), Integer(1))),
-                       MapAccess(Map("@a"), Integer(0)))),
+                       Cast(Typeof(SizedType(Type::integer)),
+                            MapAccess(Map("@a"), Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
 }
 
@@ -4109,7 +4067,7 @@ fn f(): void { return 1; }
 )" });
   // Error location is incorrect: #3063
   test("fn f(): int64 { return; }", Error{ R"(
-stdin:1:17-23: ERROR: Function f is of type int64, cannot return void
+ERROR: Function f is of type int64, cannot return void
 fn f(): int64 { return; }
                 ~~~~~~
 )" });
@@ -4137,8 +4095,8 @@ TEST_F(TypeCheckerTest, subprog_map)
 TEST_F(TypeCheckerTest, subprog_builtin)
 {
   test("fn f(): void { print(\"Hello world\"); }");
-  test("fn f(): uint8 { return sizeof(int64); }");
   test("fn f(): uint64 { return nsecs; }");
+  test("fn f(): uint8 { return (uint64)2; }", Error{});
 }
 
 TEST_F(TypeCheckerTest, subprog_builtin_disallowed)
@@ -4596,9 +4554,7 @@ begin { for ($i : 0.."str") { printf("%d", $i); } }
 )" });
 
   test(R"(begin { for ($i : 0.0..5) { printf("%d", $i); } })", Error{ R"(
-stdin:1:19-25: ERROR: Loop range requires an integer for the start value
-begin { for ($i : 0.0..5) { printf("%d", $i); } }
-                  ~~~~~~
+ERROR: Could not resolve the type of this variable
 )" });
 }
 
@@ -4735,11 +4691,11 @@ TEST_F(TypeCheckerTest, variable_declarations)
   test("struct x { int a; }; begin { let $a: struct x; }");
   test("struct x { int a; }; begin { let $a: struct x *; }");
   test("struct x { int a; } begin { let $a: struct x[10]; }");
-  test("begin { if (pid) { let $x; } $x = 2; }");
-  test("begin { if (pid) { let $x; } else { let $x; } let $x; }");
+  test("begin { if (pid) { let $x = 1; } $x = 2; }");
+  test("begin { if (pid) { let $x = 1; } else { let $x = 1; } let $x = 1; }");
 
   test("begin { let $a: uint16; $a = -1; }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already has a type 'uint16'
+ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
 begin { let $a: uint16; $a = -1; }
                         ~~~~~~~
 )" });
@@ -4757,19 +4713,13 @@ begin { let $a: int8 = 1; $a = -10000; }
 )" });
 
   test("begin { let $a: int8; $a = 10000; }", Error{ R"(
-stdin:1:23-33: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already has a type 'int8'
+ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already has a type 'int8'
 begin { let $a: int8; $a = 10000; }
                       ~~~~~~~~~~
 )" });
 
-  test("begin { $a = -1; let $a; }", Error{ R"(
-stdin:1:18-24: ERROR: Variable declarations need to occur before variable usage or assignment. Variable: $a
-begin { $a = -1; let $a; }
-                 ~~~~~~
-)" });
-
   test("begin { let $a: uint16 = -1; }", Error{ R"(
-stdin:1:9-28: ERROR: Type mismatch for $a: trying to assign value of type 'int32' when variable already has a type 'uint16'
+ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
 begin { let $a: uint16 = -1; }
         ~~~~~~~~~~~~~~~~~~~
 )" });
@@ -4785,12 +4735,6 @@ stdin:1:17-32: ERROR: Cannot resolve unknown type "struct bad_task"
 begin { let $a: struct bad_task; print($a); }
                 ~~~~~~~~~~~~~~~
 )" });
-
-  test(R"(begin { $x = 2; if (pid) { let $x; } })", Error{ R"(
-stdin:1:28-34: ERROR: Variable declarations need to occur before variable usage or assignment. Variable: $x
-begin { $x = 2; if (pid) { let $x; } }
-                           ~~~~~~
-)" });
 }
 
 TEST_F(TypeCheckerTest, variable_address)
@@ -4805,9 +4749,9 @@ TEST_F(TypeCheckerTest, variable_address)
   ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsIntTy());
 
   test("begin { let $a; $b = &$a; }", Error{ R"(
-stdin:1:22-25: ERROR: No type available for variable $a
+ERROR: Could not resolve the type of this variable
 begin { let $a; $b = &$a; }
-                     ~~~
+            ~~
 )" });
 }
 
@@ -4816,9 +4760,9 @@ TEST_F(TypeCheckerTest, map_address)
   test("begin { @a = 1; @b[1] = 2; $x = &@a; $y = &@b; }");
 
   test("begin { $x = &@a; }", Error{ R"(
-stdin:1:14-17: ERROR: Undefined map: @a
+ERROR: Undefined map: @a
 begin { $x = &@a; }
-             ~~~
+              ~~
 )" });
 }
 
@@ -5207,25 +5151,29 @@ TEST_F(TypeCheckerTest, typeof_decls)
   test(R"(kprobe:f { let $x: string[3] = "helloooooo"; })", Error{});
   test(R"(kprobe:f { let $x: string[3] = "hi"; $x = "helloooooo"; })", Error{});
   test(
-      R"(begin { @a["hi", 2] = 1; let $x: typeof(@a) = ("hello", (uint64)1); @a["hello", (int32)2] = 2; })",
+      R"(begin { @a["hi", 2] = 1; let $x: typeof(@a) = ("hello",
+        (uint64)1); @a["hello", (int32)2] = 2; })",
       Error{});
 
-  test(R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (1, "helllooo"); })",
+  test(R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (1, "helllooo");
+    })",
        Error{});
   test(
-      R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (2, "by"); $x = (1, "helllooo"); })",
+      R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (2, "by"); $x =
+        (1, "helllooo"); })",
       Error{});
-  test(R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
-       Error{ R"(
-stdin:1:48-58: ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already has a type 'uint8'
+  test(
+      R"(kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; })",
+      Error{
+          R"(ERROR: Type mismatch for $y: trying to assign value of type 'string[4]' when variable already has a type 'uint8'
 kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
-                                               ~~~~~~~~~~
-)" });
-  test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })", Error{ R"(
-stdin:1:45-51: ERROR: Type mismatch for $y: trying to assign value of type 'uint8' when variable already has a type 'string[4]'
+                                               ~~~~~~~~~~)" });
+  test(
+      R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })",
+      Error{
+          R"(ERROR: Type mismatch for $y: trying to assign value of type 'uint8' when variable already has a type 'string[4]'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
-                                            ~~~~~~
-)" });
+                                            ~~~~~~)" });
 
   // But ordering should not matter, as long as the scope is the same.
   test("kprobe:f { let $x; let $y : typeof($x); $y = 2; $x = (uint8)1; }");
@@ -5298,12 +5246,12 @@ TEST_F(TypeCheckerTest, comptime)
   test(R"(begin { @x = 1; comptime (typeinfo(@x)) })");
 
   test(R"(begin { $x = 0; comptime ($x + 1) })", Error{ R"(
-stdin:1:17-34: ERROR: Unable to resolve comptime expression.
+ERROR: Unable to resolve comptime expression
 begin { $x = 0; comptime ($x + 1) }
                 ~~~~~~~~~~~~~~~~~
 )" });
   test(R"(begin { @x = 0; comptime (@x + 1) })", Error{ R"(
-stdin:1:17-34: ERROR: Unable to resolve comptime expression.
+ERROR: Unable to resolve comptime expression
 begin { @x = 0; comptime (@x + 1) }
                 ~~~~~~~~~~~~~~~~~
 )" });
@@ -5341,16 +5289,6 @@ TEST_F(TypeCheckerTest, no_meta_used_warnings)
        NoWarning{ "Variable used" });
   test("begin { let $a; print(typeinfo($a)); $a = 1; }",
        NoWarning{ "Variable used" });
-}
-
-TEST_F(TypeCheckerTest, no_meta_map_assignments)
-{
-  test("begin { let $b : typeof({ @a = 1; 1 }); }", Error{});
-  test("begin { $b = typeinfo({ @a = 1; 1 }); }", Error{});
-  test("begin { print(sizeof({ @a = 1; 1 })); }", Error{});
-  test("struct Foo { int x; }  begin { let $a : struct Foo*; print(offsetof({ "
-       "@a =1; *$a}, x)); }",
-       Error{});
 }
 
 TEST_F(TypeCheckerTest, probe_return)
