@@ -115,12 +115,9 @@ public:
   Result<std::shared_ptr<Struct>> resolve_args(
       std::string_view func,
       bool ret,
-      bool check_traceable,
-      bool skip_first_arg,
-      const symbols::KernelInfo &func_info);
+      bool skip_first_arg);
   Result<std::shared_ptr<Struct>> resolve_raw_tracepoint_args(
-      std::string_view func,
-      const symbols::KernelInfo &func_info);
+      std::string_view func);
   void resolve_fields(const SizedType& type);
 
   int get_btf_id(std::string_view func,
