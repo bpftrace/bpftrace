@@ -98,6 +98,7 @@ enum Options {
   PROBE_FILTER,
   QUIET,
   TEST, // Alias for --mode=test.
+  TRACEABLE_FUNCTIONS,
   UNSAFE,
   USDT_SEMAPHORE,
   VERBOSE,
@@ -147,6 +148,8 @@ void usage(std::ostream& out)
   out << "    --bench        run all bench: probes (same as --mode bench)" << std::endl;
   out << "    --probe-filter REGEX" << std::endl;
   out << "                   only run probes whose name matches REGEX" << std::endl;
+  out << "    --traceable-functions FILE" << std::endl;
+  out << "                   load the list of traceable kernel functions from FILE" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    -v, --verbose           verbose messages" << std::endl;
@@ -342,6 +345,7 @@ struct Args {
   std::vector<std::string> debug_stages;
   std::vector<std::string> named_params;
   std::string probe_filter;
+  std::string traceable_functions_file;
 };
 
 void CreateDynamicPasses(std::function<void(ast::Pass&& pass)> add)
@@ -509,6 +513,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::WARNINGS },
+    option{ .name = "traceable-functions",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::TRACEABLE_FUNCTIONS },
     option{ .name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0 }, // Must
                                                                         // be
                                                                         // last
@@ -680,6 +688,9 @@ Args parse_args(int argc, char* argv[])
         }
         args.warning_level = 2;
         break;
+      case Options::TRACEABLE_FUNCTIONS:
+        args.traceable_functions_file = optarg;
+        break;
       default:
         usage(std::cerr);
         exit(1);
@@ -796,7 +807,8 @@ int main(int argc, char* argv[])
   BPFtrace bpftrace(args.no_feature, std::move(config));
 
   // Create function info objects for probe matching and pass state.
-  auto kernel_func_info = symbols::KernelInfoImpl::open();
+  auto kernel_func_info = symbols::KernelInfoImpl::open(
+      args.traceable_functions_file);
   if (!kernel_func_info) {
     LOG(ERROR) << "Failed to open kernel function info: "
                << kernel_func_info.takeError();

@@ -107,7 +107,7 @@ public:
 // Implementation that reads available functions from the kernel.
 class KernelInfoImpl : public KernelInfoBase<KernelInfoImpl> {
 public:
-  static Result<KernelInfoImpl> open();
+  static Result<KernelInfoImpl> open(const std::string &traceable_functions_file);
   KernelInfoImpl(const KernelInfoImpl &other) = delete;
   KernelInfoImpl &operator=(const KernelInfoImpl &other) = delete;
   KernelInfoImpl(KernelInfoImpl &&other) = default;

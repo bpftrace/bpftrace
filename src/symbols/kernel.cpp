@@ -717,7 +717,8 @@ Result<btf::Types> KernelInfoImpl::load_btf(const std::string &mod_name) const
   return it->second;
 }
 
-Result<KernelInfoImpl> KernelInfoImpl::open()
+Result<KernelInfoImpl> KernelInfoImpl::open(
+    const std::string &traceable_functions_file)
 {
   KernelInfoImpl info;
 
@@ -735,11 +736,17 @@ Result<KernelInfoImpl> KernelInfoImpl::open()
   }
   info.tracepoints_ = std::move(*tracepoints);
 
-  // Open the filter file.
-  const std::string path = tracefs::available_filter_functions();
+  // Open the filter file. Use the file provided by the user, otherwise fall
+  // back to tracefs.
+  const std::string path = !traceable_functions_file.empty()
+                               ? traceable_functions_file
+                               : tracefs::available_filter_functions();
   info.available_filter_functions_.open(path);
   if (info.available_filter_functions_.fail()) {
-    return make_error<SystemError>("Could not read functions from " + path);
+    return make_error<SystemError>(
+        "Could not read functions from " + path +
+        ". If this is expected, use --traceable-functions to set this path "
+        "manually.");
   }
 
   // Load the blocklist if the file is available, otherwise ignore.

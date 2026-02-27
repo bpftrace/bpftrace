@@ -159,6 +159,13 @@ Probes that do not match are not loaded into the kernel.
 Special probes (`BEGIN` and `END`) are not affected by this filter.
 If no probes match, bpftrace exits with an error.
 
+=== *--traceable-functions* _FILENAME_
+
+Specify the file containing the list of traceable kernel functions. If not set,
+bpftrace uses `/sys/kernel/tracing/available_filter_functions`, which depends on
+dynamic ftrace. The format is the same as in `available_filter_functions`: each
+line is either "symbol" or "symbol [module]".
+
 === *-o* _FILENAME_
 
 Write bpftrace tracing output to _FILENAME_ instead of stdout.

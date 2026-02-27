@@ -677,3 +677,9 @@ RUN {{BPFTRACE}} --probe-filter '[invalid' -e 'kprobe:vfs_read { exit(); }'
 EXPECT_REGEX Invalid --probe-filter regex
 TIMEOUT 5
 WILL_FAIL
+
+NAME traceable_functions_empty
+RUN {{BPFTRACE}} --traceable-functions /dev/null -e 'kprobe:vfs_read {}'
+EXPECT_REGEX .* ERROR: No matches for kprobe vfs_read.
+TIMEOUT 5
+WILL_FAIL
