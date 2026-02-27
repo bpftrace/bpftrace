@@ -572,7 +572,7 @@ void KernelInfoImpl::add_function(const std::string &func_name,
 void KernelInfoImpl::populate_lazy(
     const std::optional<std::string> &mod_name) const
 {
-  if (available_filter_functions_.eof()) {
+  if (available_filter_functions_.eof() || available_filter_functions_.fail()) {
     return;
   }
 
@@ -656,10 +656,13 @@ ModuleSet KernelInfoImpl::get_modules(
     // Add everything that is loaded.
     return modules_loaded_;
   } else if (!util::has_wildcard(*mod_name)) {
-    // Just return the single module.
-    ModuleSet single;
-    single.emplace(*mod_name);
-    return single;
+    ModuleSet filtered;
+    for (const auto &mod : modules_loaded_) {
+      if (mod == *mod_name) {
+        filtered.emplace(mod);
+      }
+    }
+    return filtered;
   } else {
     // Match all loaded modules that are not yet in the populated list.
     ModuleSet filtered;
@@ -682,6 +685,15 @@ ModulesFuncsMap KernelInfoImpl::get_traceable_funcs(
 {
   populate_lazy(mod_name);
   return filter(modules_, mod_name);
+}
+
+bool KernelInfoImpl::has_traceable_funcs() const
+{
+  auto path = filter_functions_path_;
+  if (path.empty()) {
+    path = tracefs::available_filter_functions();
+  }
+  return access(path.c_str(), R_OK) == 0;
 }
 
 ModulesFuncsMap KernelInfoImpl::get_raw_tracepoints(
@@ -738,15 +750,27 @@ Result<KernelInfoImpl> KernelInfoImpl::open(
 
   // Open the filter file. Use the file provided by the user, otherwise fall
   // back to tracefs.
-  const std::string path = !traceable_functions_file.empty()
-                               ? traceable_functions_file
-                               : tracefs::available_filter_functions();
-  info.available_filter_functions_.open(path);
+  bool has_user_provided_file = !traceable_functions_file.empty();
+  info.filter_functions_path_ = has_user_provided_file
+                                    ? traceable_functions_file
+                                    : tracefs::available_filter_functions();
+
+  info.available_filter_functions_.open(info.filter_functions_path_);
+
   if (info.available_filter_functions_.fail()) {
-    return make_error<SystemError>(
-        "Could not read functions from " + path +
-        ". If this is expected, use --traceable-functions to set this path "
-        "manually.");
+    std::string msg = "Could not read functions from " +
+                      info.filter_functions_path_ + ".";
+
+    if (!has_user_provided_file) {
+      msg += " If this is expected, use --traceable-functions to set this path "
+             "manually.";
+    }
+
+    if (info.has_traceable_funcs() || has_user_provided_file) {
+      return make_error<SystemError>(msg);
+    } else {
+      LOG(WARNING) << msg;
+    }
   }
 
   // Load the blocklist if the file is available, otherwise ignore.

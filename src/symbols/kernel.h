@@ -36,6 +36,9 @@ public:
   // Returns all traceable functions.
   virtual ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
+  // Checks if the kernel has available_filter_functions file (dynamic ftrace enabled)
+  virtual bool has_traceable_funcs() const = 0;
+
   // Returns all raw tracepoints.
   virtual ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
@@ -116,6 +119,7 @@ public:
 
   ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
+  bool has_traceable_funcs() const override;
   ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
   ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;
   Result<btf::Types> load_btf(const std::string &mod_name) const override;
@@ -129,6 +133,7 @@ private:
   void populate_lazy(const std::optional<std::string> &mod_name = std::nullopt) const;
   ModulesFuncsMap filter_funcs(const ModulesFuncsMap &source, const std::optional<std::string> &mod_name = std::nullopt) const;
 
+  mutable std::string filter_functions_path_;
   mutable std::ifstream available_filter_functions_;
   mutable std::string last_checked_line_;
 
