@@ -2,8 +2,8 @@
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/parser.h"
-#include "ast/passes/type_checker.h"
-#include "ast/passes/type_system.h"
+#include "ast/passes/types/type_checker.h"
+#include "ast/passes/types/type_system.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
 

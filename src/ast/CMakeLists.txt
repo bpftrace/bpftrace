@@ -21,12 +21,12 @@ add_library(ast STATIC
   passes/attachpoint_passes.cpp
   passes/builtins.cpp
   passes/c_macro_expansion.cpp
-  passes/pre_type_check.cpp
+  passes/types/pre_type_check.cpp
   passes/clang_parser.cpp
   passes/clang_build.cpp
   passes/named_param.cpp
-  passes/ast_transformer.cpp
-  passes/cast_creator.cpp
+  passes/types/ast_transformer.cpp
+  passes/types/cast_creator.cpp
   passes/config_analyser.cpp
   passes/control_flow_analyser.cpp
   passes/deprecated.cpp
@@ -43,14 +43,14 @@ add_library(ast STATIC
   passes/args_resolver.cpp
   passes/probe_prune.cpp
   passes/resource_analyser.cpp
-  passes/type_applicator.cpp
-  passes/type_checker.cpp
-  passes/type_resolver.cpp
+  passes/types/type_applicator.cpp
+  passes/types/type_checker.cpp
+  passes/types/type_resolver.cpp
   passes/codegen_llvm.cpp
   passes/resolve_imports.cpp
   passes/recursion_check.cpp
   passes/tracepoint_format_parser.cpp
-  passes/type_system.cpp
+  passes/types/type_system.cpp
   passes/unstable_feature.cpp
   passes/usdt_arguments.cpp
 )

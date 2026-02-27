@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ast/passes/type_resolver.h"
+#include "ast/passes/types/type_resolver.h"
 #include "ast/visitor.h"
 
 namespace bpftrace::ast {

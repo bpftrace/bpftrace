@@ -1,4 +1,4 @@
-#include "ast/passes/type_applicator.h"
+#include "ast/passes/types/type_applicator.h"
 #include "ast/ast.h"
 
 namespace bpftrace::ast {
