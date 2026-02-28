@@ -13,6 +13,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix listing multi-probes error
+  - [#5022](https://github.com/bpftrace/bpftrace/pull/5022)
 #### Security
 #### Docs
 #### Tools
