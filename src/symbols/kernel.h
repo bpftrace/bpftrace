@@ -129,7 +129,7 @@ private:
   void populate_lazy(const std::optional<std::string> &mod_name = std::nullopt) const;
   ModulesFuncsMap filter_funcs(const ModulesFuncsMap &source, const std::optional<std::string> &mod_name = std::nullopt) const;
 
-  mutable std::ifstream available_filter_functions_;
+  mutable std::optional<std::ifstream> available_filter_functions_;
   mutable std::string last_checked_line_;
 
   ModuleSet modules_loaded_;

@@ -572,7 +572,7 @@ void KernelInfoImpl::add_function(const std::string &func_name,
 void KernelInfoImpl::populate_lazy(
     const std::optional<std::string> &mod_name) const
 {
-  if (available_filter_functions_.eof()) {
+  if (!available_filter_functions_ || available_filter_functions_->eof()) {
     return;
   }
 
@@ -585,7 +585,7 @@ void KernelInfoImpl::populate_lazy(
     }
   }
 
-  while (!missing.empty() && !available_filter_functions_.eof()) {
+  while (!missing.empty() && !available_filter_functions_->eof()) {
     std::string module;
     if (last_checked_line_.empty()) {
       module = "vmlinux";
@@ -598,7 +598,7 @@ void KernelInfoImpl::populate_lazy(
     }
 
     std::string line;
-    while (std::getline(available_filter_functions_, line)) {
+    while (std::getline(*available_filter_functions_, line)) {
       auto func_mod = util::split_symbol_module(line);
 
       // Continue reading until we get all the module functions.
@@ -741,12 +741,14 @@ Result<KernelInfoImpl> KernelInfoImpl::open(
   const std::string path = !traceable_functions_file.empty()
                                ? traceable_functions_file
                                : tracefs::available_filter_functions();
-  info.available_filter_functions_.open(path);
-  if (info.available_filter_functions_.fail()) {
-    return make_error<SystemError>(
-        "Could not read functions from " + path +
-        ". If this is expected, use --traceable-functions to set this path "
-        "manually.");
+  std::ifstream filter_file(path);
+  if (filter_file.fail()) {
+    LOG(WARNING) << "Could not read functions from " << path
+                 << ". Some features/scripts may not work. If this is "
+                    "expected, use --traceable-functions to set this path "
+                    "manually.";
+  } else {
+    info.available_filter_functions_ = std::move(filter_file);
   }
 
   // Load the blocklist if the file is available, otherwise ignore.

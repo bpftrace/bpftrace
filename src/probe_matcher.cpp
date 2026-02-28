@@ -102,7 +102,14 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
   switch (probe_type) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe: {
-      if (target.empty()) {
+      if (!bpftrace_->safe_mode_ && !util::has_wildcard(search_input)) {
+        // For non-wildcard probes, we'll skip is-traceable checks in unsafe
+        // mode or if available_filter_functions (provided by dynamic ftrace) is
+        // not available, and defer to the kernel to determine if the function
+        // can be probed. This avoids false negatives for functions that can be
+        // traced via kprobes but not ftrace.
+        symbol_stream = std::make_unique<std::istringstream>(search_input);
+      } else if (target.empty()) {
         symbol_stream = get_symbols_from_traceable_funcs(false);
       } else if (!util::has_wildcard(target)) {
         symbol_stream = get_symbols_from_traceable_funcs(true, target);
