@@ -1446,8 +1446,10 @@ Dwarf *BPFtrace::get_dwarf(const std::string &filename)
 {
   auto dwarf = dwarves_.find(filename);
   if (dwarf == dwarves_.end()) {
-    dwarf =
-        dwarves_.emplace(filename, Dwarf::GetFromBinary(this, filename)).first;
+    dwarf = dwarves_
+                .emplace(filename,
+                         Dwarf::GetFromBinary(this, filename, debuginfo_path_))
+                .first;
   }
   return dwarf->second.get();
 }

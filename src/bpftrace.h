@@ -31,10 +31,10 @@
 #include "probe_matcher.h"
 #include "required_resources.h"
 #include "struct.h"
+#include "symbols/kernel.h"
 #include "types.h"
 #include "usyms.h"
 #include "util/cpus.h"
-#include "symbols/kernel.h"
 #include "util/proc.h"
 #include "util/result.h"
 
@@ -226,6 +226,7 @@ public:
   bool run_tests_ = false;
   bool run_benchmarks_ = false;
   std::string probe_filter_;
+  std::string debuginfo_path_;
 
 private:
   Ksyms ksyms_;

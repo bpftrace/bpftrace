@@ -80,6 +80,18 @@ For example, you could add the predicate `/pid == cpid/` to probes with userspac
 Enable debug mode.
 For more details see the <<Debug Output>> section.
 
+=== *--debuginfo* _DIR_
+
+Add the directory DIR to the search path for DWARF debug information.
+Paths may be absolute or relative to the traced binary's location.
+Multiple paths can be specified by separating them with a colon (`:`), for example `--debuginfo=/bin/debug:./debug:..`.
+Files found in these paths are validated using the build ID.
+Alternatively, CRC32 checksum validation can be enabled by prefixing a path with `+`.
+Files that do not match are skipped.
+By default, bpftrace searches standard debug paths or attempts to query available debuginfod servers.
+
+Split debuginfo format (`.dwo`, `.dwp`) is not yet supported for this option, but continues to work with the default probe binary path.
+
 === *--dry-run*
 
 Terminate execution right after attaching all the probes. Useful for testing
