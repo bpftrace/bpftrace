@@ -18,6 +18,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_resolver.h"
 #include "ast/passes/types/type_system.h"
 #include "ast_matchers.h"
@@ -51,6 +52,11 @@ using bpftrace::test::Typeof;
 using bpftrace::test::Variable;
 using ::testing::_;
 using ::testing::HasSubstr;
+
+struct TestResult {
+  ast::ASTContext ast;
+  ast::TypeMap type_map;
+};
 
 struct Mock {
   BPFtrace &bpftrace;
@@ -120,7 +126,7 @@ public:
               std::is_same_v<std::decay_t<Ts>, ExpectedAST> ||
               std::is_same_v<std::decay_t<Ts>, Types>) &&
              ...)
-  ast::ASTContext test(std::string_view input, Ts &&...args)
+  TestResult test(std::string_view input, Ts &&...args)
   {
     ast::ASTContext ast("stdin", std::string(clean_prefix(input)));
 
@@ -206,7 +212,12 @@ public:
       EXPECT_THAT(ast, expected_ast->matcher);
     }
 
-    return ast;
+    ast::TypeMap type_map(ast::ResolvedTypes{});
+    if (ok && ast.diagnostics().ok()) {
+      type_map = std::move(ok->template get<ast::TypeMap>());
+    }
+
+    return TestResult{ .ast = std::move(ast), .type_map = std::move(type_map) };
   }
 
 private:
@@ -1221,15 +1232,16 @@ TEST_F(TypeCheckerTest, call_str_2_lit)
 
   // Check the string size
   BPFtrace bpftrace;
-  auto ast = test("kprobe:f { $x = str(arg0, 3); }");
+  auto result = test("kprobe:f { $x = str(arg0, 3); }");
 
-  auto *x =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
+  auto *x = result.ast.root->probes.at(0)
+                ->block->stmts.at(0)
+                .as<ast::AssignVarStatement>();
 
   // N.B. the string buffer is 1 larger than the parameter passed to the `str`
   // function, since it needs to be capable of signalling well-formedness to
   // the runtime while having a string of length 3.
-  EXPECT_EQ(CreateString(4), x->var()->var_type);
+  EXPECT_EQ(CreateString(4), result.type_map.type(x->var()));
 }
 
 TEST_F(TypeCheckerTest, call_str_2_expr)
@@ -1371,18 +1383,18 @@ TEST_F(TypeCheckerTest, call_uaddr)
                      "$f = __builtin_uaddr(\"12345_33\");"
                      "}";
 
-  auto ast = test(prog);
+  auto result = test(prog);
 
   std::vector<int> sizes = { 8, 16, 32, 64, 64, 64 };
 
   for (size_t i = 0; i < sizes.size(); i++) {
-    auto *v = ast.root->probes.at(0)
+    auto *v = result.ast.root->probes.at(0)
                   ->block->stmts.at(i)
                   .as<ast::AssignVarStatement>();
-    EXPECT_TRUE(v->var()->var_type.IsPtrTy());
-    EXPECT_TRUE(v->var()->var_type.GetPointeeTy().IsIntTy());
+    EXPECT_TRUE(result.type_map.type(v->var()).IsPtrTy());
+    EXPECT_TRUE(result.type_map.type(v->var()).GetPointeeTy().IsIntTy());
     EXPECT_EQ((unsigned long int)sizes.at(i),
-              v->var()->var_type.GetPointeeTy().GetIntBitWidth());
+              result.type_map.type(v->var()).GetPointeeTy().GetIntBitWidth());
   }
 }
 
@@ -1594,36 +1606,42 @@ TEST_F(TypeCheckerTest, array_access)
        "kprobe:f { $s = (struct MyStruct *) "
        "arg0; @x = $s->y[5];}",
        Error{});
-  auto ast = test("struct MyStruct { int y[4]; } "
-                  "kprobe:f { $s = (struct MyStruct *) "
-                  "arg0; @x = $s->y[0];}");
-  auto *assignment =
-      ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignMapStatement>();
-  EXPECT_EQ(CreateInt32(), assignment->map_access->map->value_type);
+  auto result = test("struct MyStruct { int y[4]; } "
+                     "kprobe:f { $s = (struct MyStruct *) "
+                     "arg0; @x = $s->y[0];}");
+  auto *assignment = result.ast.root->probes.at(0)
+                         ->block->stmts.at(1)
+                         .as<ast::AssignMapStatement>();
+  EXPECT_EQ(CreateInt32(),
+            result.type_map.map_value_type(assignment->map_access->map->ident));
 
-  ast = test("struct MyStruct { int y[4]; "
-             "} kprobe:f { $s = ((struct "
-             "MyStruct *) "
-             "arg0)->y; @x = $s[0];}");
-  auto *array_var_assignment =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
+  result = test("struct MyStruct { int y[4]; "
+                "} kprobe:f { $s = ((struct "
+                "MyStruct *) "
+                "arg0)->y; @x = $s[0];}");
+  auto *array_var_assignment = result.ast.root->probes.at(0)
+                                   ->block->stmts.at(0)
+                                   .as<ast::AssignVarStatement>();
   EXPECT_EQ(CreateArray(4, CreateInt32()),
-            array_var_assignment->var()->var_type);
+            result.type_map.type(array_var_assignment->var()));
 
-  ast = test("struct MyStruct { int y[4]; "
-             "} kprobe:f { @a[0] = "
-             "((struct MyStruct *) "
-             "arg0)->y; @x = @a[0][0];}");
-  auto *array_map_assignment =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignMapStatement>();
+  result = test("struct MyStruct { int y[4]; "
+                "} kprobe:f { @a[0] = "
+                "((struct MyStruct *) "
+                "arg0)->y; @x = @a[0][0];}");
+  auto *array_map_assignment = result.ast.root->probes.at(0)
+                                   ->block->stmts.at(0)
+                                   .as<ast::AssignMapStatement>();
   EXPECT_EQ(CreateArray(4, CreateInt32()),
-            array_map_assignment->map_access->map->value_type);
+            result.type_map.map_value_type(
+                array_map_assignment->map_access->map->ident));
 
-  ast = test("kprobe:f { $s = (int32 *) "
-             "arg0; $x = $s[0]; }");
-  auto *var_assignment =
-      ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignVarStatement>();
-  EXPECT_EQ(CreateInt32(), var_assignment->var()->var_type);
+  result = test("kprobe:f { $s = (int32 *) "
+                "arg0; $x = $s[0]; }");
+  auto *var_assignment = result.ast.root->probes.at(0)
+                             ->block->stmts.at(1)
+                             .as<ast::AssignVarStatement>();
+  EXPECT_EQ(CreateInt32(), result.type_map.type(var_assignment->var()));
 
   // Positional parameter as index
   auto bpftrace = get_mock_bpftrace();
@@ -1716,11 +1734,12 @@ TEST_F(TypeCheckerTest, array_compare)
 
 TEST_F(TypeCheckerTest, variable_type)
 {
-  auto ast = test("kprobe:f { $x = 1 }");
+  auto result = test("kprobe:f { $x = 1 }");
   auto st = CreateUInt8();
-  auto *assignment =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_EQ(st, assignment->var()->var_type);
+  auto *assignment = result.ast.root->probes.at(0)
+                         ->block->stmts.at(0)
+                         .as<ast::AssignVarStatement>();
+  EXPECT_EQ(st, result.type_map.type(assignment->var()));
 }
 
 TEST_F(TypeCheckerTest, unroll)
@@ -1730,14 +1749,18 @@ TEST_F(TypeCheckerTest, unroll)
 
 TEST_F(TypeCheckerTest, map_integer_sizes)
 {
-  auto ast = test("kprobe:f { $x = (int32) -1; @x = $x; }");
+  auto result = test("kprobe:f { $x = (int32) -1; @x = $x; }");
 
-  auto *var_assignment =
-      ast.root->probes.at(0)->block->stmts.at(0).as<ast::AssignVarStatement>();
-  auto *map_assignment =
-      ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignMapStatement>();
-  EXPECT_EQ(CreateInt32(), var_assignment->var()->var_type);
-  EXPECT_EQ(CreateInt32(), map_assignment->map_access->map->value_type);
+  auto *var_assignment = result.ast.root->probes.at(0)
+                             ->block->stmts.at(0)
+                             .as<ast::AssignVarStatement>();
+  auto *map_assignment = result.ast.root->probes.at(0)
+                             ->block->stmts.at(1)
+                             .as<ast::AssignMapStatement>();
+  EXPECT_EQ(CreateInt32(), result.type_map.type(var_assignment->var()));
+  EXPECT_EQ(CreateInt32(),
+            result.type_map.map_value_type(
+                map_assignment->map_access->map->ident));
 }
 
 TEST_F(TypeCheckerTest, binop_tuple)
@@ -2426,20 +2449,22 @@ TEST_F(TypeCheckerTest, field_access_is_internal)
   std::string structs = "struct type1 { int x; }";
 
   {
-    auto ast = test(structs + "kprobe:f { $x = (*(struct type1*)0).x }");
-    auto &stmts = ast.root->probes.at(0)->block->stmts;
+    auto result = test(structs + "kprobe:f { $x = (*(struct type1*)0).x }");
+    auto &stmts = result.ast.root->probes.at(0)->block->stmts;
     auto *var_assignment1 = stmts.at(0).as<ast::AssignVarStatement>();
-    EXPECT_FALSE(var_assignment1->var()->var_type.is_internal);
+    EXPECT_FALSE(result.type_map.type(var_assignment1->var()).is_internal);
   }
 
   {
-    auto ast = test(structs +
-                    "kprobe:f { @type1 = *(struct type1*)0; $x = @type1.x }");
-    auto &stmts = ast.root->probes.at(0)->block->stmts;
+    auto result = test(
+        structs + "kprobe:f { @type1 = *(struct type1*)0; $x = @type1.x }");
+    auto &stmts = result.ast.root->probes.at(0)->block->stmts;
     auto *map_assignment = stmts.at(0).as<ast::AssignMapStatement>();
     auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
-    EXPECT_TRUE(map_assignment->map_access->map->value_type.is_internal);
-    EXPECT_TRUE(var_assignment2->var()->var_type.is_internal);
+    EXPECT_TRUE(
+        result.type_map.map_value_type(map_assignment->map_access->map->ident)
+            .is_internal);
+    EXPECT_TRUE(result.type_map.type(var_assignment2->var()).is_internal);
   }
 }
 
@@ -2711,20 +2736,24 @@ TEST_F(TypeCheckerTest, cast_sign)
                      "  $t = ((struct t *)0xFF);"
                      "  $s = $t->s; $us = $t->us; $l = "
                      "$t->l; $lu = $t->ul; }";
-  auto ast = test(prog);
+  auto result = test(prog);
 
-  auto *s =
-      ast.root->probes.at(0)->block->stmts.at(1).as<ast::AssignVarStatement>();
-  auto *us =
-      ast.root->probes.at(0)->block->stmts.at(2).as<ast::AssignVarStatement>();
-  auto *l =
-      ast.root->probes.at(0)->block->stmts.at(3).as<ast::AssignVarStatement>();
-  auto *ul =
-      ast.root->probes.at(0)->block->stmts.at(4).as<ast::AssignVarStatement>();
-  EXPECT_EQ(CreateInt32(), s->var()->var_type);
-  EXPECT_EQ(CreateUInt32(), us->var()->var_type);
-  EXPECT_EQ(CreateInt64(), l->var()->var_type);
-  EXPECT_EQ(CreateUInt64(), ul->var()->var_type);
+  auto *s = result.ast.root->probes.at(0)
+                ->block->stmts.at(1)
+                .as<ast::AssignVarStatement>();
+  auto *us = result.ast.root->probes.at(0)
+                 ->block->stmts.at(2)
+                 .as<ast::AssignVarStatement>();
+  auto *l = result.ast.root->probes.at(0)
+                ->block->stmts.at(3)
+                .as<ast::AssignVarStatement>();
+  auto *ul = result.ast.root->probes.at(0)
+                 ->block->stmts.at(4)
+                 .as<ast::AssignVarStatement>();
+  EXPECT_EQ(CreateInt32(), result.type_map.type(s->var()));
+  EXPECT_EQ(CreateUInt32(), result.type_map.type(us->var()));
+  EXPECT_EQ(CreateInt64(), result.type_map.type(l->var()));
+  EXPECT_EQ(CreateUInt64(), result.type_map.type(ul->var()));
 }
 
 TEST_F(TypeCheckerTest, binop_bool_and_int)
@@ -2772,28 +2801,28 @@ TEST_F(TypeCheckerTest, binop_arithmetic)
                        " true; "
                        "}";
 
-    auto ast = test(prog);
-    auto *varA = ast.root->probes.at(0)
+    auto result = test(prog);
+    auto *varA = result.ast.root->probes.at(0)
                      ->block->stmts.at(1)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateInt64(), varA->var()->var_type);
-    auto *varB = ast.root->probes.at(0)
+    EXPECT_EQ(CreateInt64(), result.type_map.type(varA->var()));
+    auto *varB = result.ast.root->probes.at(0)
                      ->block->stmts.at(2)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateInt64(), varB->var()->var_type);
-    auto *varC = ast.root->probes.at(0)
+    EXPECT_EQ(CreateInt64(), result.type_map.type(varB->var()));
+    auto *varC = result.ast.root->probes.at(0)
                      ->block->stmts.at(3)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateUInt64(), varC->var()->var_type);
-    auto *varD = ast.root->probes.at(0)
+    EXPECT_EQ(CreateUInt64(), result.type_map.type(varC->var()));
+    auto *varD = result.ast.root->probes.at(0)
                      ->block->stmts.at(4)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateUInt64(), varD->var()->var_type);
+    EXPECT_EQ(CreateUInt64(), result.type_map.type(varD->var()));
     // This one is not like the others
-    auto *varE = ast.root->probes.at(0)
+    auto *varE = result.ast.root->probes.at(0)
                      ->block->stmts.at(5)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateBool(), varE->var()->var_type);
+    EXPECT_EQ(CreateBool(), result.type_map.type(varE->var()));
   }
 }
 
@@ -2817,23 +2846,23 @@ TEST_F(TypeCheckerTest, binop_compare)
                        " $t; "
                        "}";
 
-    auto ast = test(prog);
-    auto *varA = ast.root->probes.at(0)
+    auto result = test(prog);
+    auto *varA = result.ast.root->probes.at(0)
                      ->block->stmts.at(1)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateBool(), varA->var()->var_type);
-    auto *varB = ast.root->probes.at(0)
+    EXPECT_EQ(CreateBool(), result.type_map.type(varA->var()));
+    auto *varB = result.ast.root->probes.at(0)
                      ->block->stmts.at(2)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateBool(), varB->var()->var_type);
-    auto *varC = ast.root->probes.at(0)
+    EXPECT_EQ(CreateBool(), result.type_map.type(varB->var()));
+    auto *varC = result.ast.root->probes.at(0)
                      ->block->stmts.at(3)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateBool(), varC->var()->var_type);
-    auto *varD = ast.root->probes.at(0)
+    EXPECT_EQ(CreateBool(), result.type_map.type(varC->var()));
+    auto *varD = result.ast.root->probes.at(0)
                      ->block->stmts.at(4)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateBool(), varD->var()->var_type);
+    EXPECT_EQ(CreateBool(), result.type_map.type(varD->var()));
   }
 }
 
@@ -3414,36 +3443,36 @@ TEST_F(TypeCheckerTest, type_ctx)
 {
   std::string structs = "struct c {char c} struct x { long a; short b[4]; "
                         "struct c c; struct c *d;}";
-  auto ast = test(structs + "kprobe:f { $x = (struct x*)ctx; $a "
-                            "= $x->a; $b = $x->b[0]; "
-                            "$c = $x->c.c; $d = $x->d->c;}");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto result = test(structs + "kprobe:f { $x = (struct x*)ctx; $a "
+                               "= $x->a; $b = $x->b[0]; "
+                               "$c = $x->c.c; $d = $x->d->c;}");
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   // $x = (struct x*)ctx;
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_TRUE(assignment->var()->var_type.IsPtrTy());
+  EXPECT_TRUE(result.type_map.type(assignment->var()).IsPtrTy());
 
   // $a = $x->a;
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
-  EXPECT_EQ(CreateInt64(), assignment->var()->var_type);
+  EXPECT_EQ(CreateInt64(), result.type_map.type(assignment->var()));
   auto *fieldaccess = assignment->expr.as<ast::FieldAccess>();
-  EXPECT_EQ(CreateInt64(), fieldaccess->field_type);
+  EXPECT_EQ(CreateInt64(), result.type_map.type(fieldaccess));
   auto *unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
+  EXPECT_TRUE(result.type_map.type(unop).IsCtxAccess());
   auto *var = unop->expr.as<ast::Variable>();
-  EXPECT_TRUE(var->var_type.IsPtrTy());
+  EXPECT_TRUE(result.type_map.type(var).IsPtrTy());
 
   // $b = $x->b[0];
   assignment = stmts.at(2).as<ast::AssignVarStatement>();
-  EXPECT_EQ(CreateInt16(), assignment->var()->var_type);
+  EXPECT_EQ(CreateInt16(), result.type_map.type(assignment->var()));
   auto *arrayaccess = assignment->expr.as<ast::ArrayAccess>();
-  EXPECT_EQ(CreateInt16(), arrayaccess->element_type);
+  EXPECT_EQ(CreateInt16(), result.type_map.type(arrayaccess));
   fieldaccess = arrayaccess->expr.as<ast::FieldAccess>();
-  EXPECT_TRUE(fieldaccess->field_type.IsCtxAccess());
+  EXPECT_TRUE(result.type_map.type(fieldaccess).IsCtxAccess());
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
+  EXPECT_TRUE(result.type_map.type(unop).IsCtxAccess());
   var = unop->expr.as<ast::Variable>();
-  EXPECT_TRUE(var->var_type.IsPtrTy());
+  EXPECT_TRUE(result.type_map.type(var).IsPtrTy());
 
   class SizedType chartype;
   if (arch::Host::Machine == arch::Machine::X86_64) {
@@ -3454,29 +3483,29 @@ TEST_F(TypeCheckerTest, type_ctx)
 
   // $c = $x->c.c;
   assignment = stmts.at(3).as<ast::AssignVarStatement>();
-  EXPECT_EQ(chartype, assignment->var()->var_type);
+  EXPECT_EQ(chartype, result.type_map.type(assignment->var()));
   fieldaccess = assignment->expr.as<ast::FieldAccess>();
-  EXPECT_EQ(chartype, fieldaccess->field_type);
+  EXPECT_EQ(chartype, result.type_map.type(fieldaccess));
   fieldaccess = fieldaccess->expr.as<ast::FieldAccess>();
-  EXPECT_TRUE(fieldaccess->field_type.IsCtxAccess());
+  EXPECT_TRUE(result.type_map.type(fieldaccess).IsCtxAccess());
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
+  EXPECT_TRUE(result.type_map.type(unop).IsCtxAccess());
   var = unop->expr.as<ast::Variable>();
-  EXPECT_TRUE(var->var_type.IsPtrTy());
+  EXPECT_TRUE(result.type_map.type(var).IsPtrTy());
 
   // $d = $x->d->c;
   assignment = stmts.at(4).as<ast::AssignVarStatement>();
-  EXPECT_EQ(chartype, assignment->var()->var_type);
+  EXPECT_EQ(chartype, result.type_map.type(assignment->var()));
   fieldaccess = assignment->expr.as<ast::FieldAccess>();
-  EXPECT_EQ(chartype, fieldaccess->field_type);
+  EXPECT_EQ(chartype, result.type_map.type(fieldaccess));
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCStructTy());
+  EXPECT_TRUE(result.type_map.type(unop).IsCStructTy());
   fieldaccess = unop->expr.as<ast::FieldAccess>();
-  EXPECT_TRUE(fieldaccess->field_type.IsPtrTy());
+  EXPECT_TRUE(result.type_map.type(fieldaccess).IsPtrTy());
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(unop->result_type.IsCtxAccess());
+  EXPECT_TRUE(result.type_map.type(unop).IsCtxAccess());
   var = unop->expr.as<ast::Variable>();
-  EXPECT_TRUE(var->var_type.IsPtrTy());
+  EXPECT_TRUE(result.type_map.type(var).IsPtrTy());
 
   test("k:f, kr:f { @ = (uint64)ctx; }");
   test("t:sched:sched_one { @ = (uint64)ctx; }", Error{});
@@ -3493,59 +3522,70 @@ TEST_F(TypeCheckerTest, double_pointer_basic)
 
 TEST_F(TypeCheckerTest, double_pointer_int)
 {
-  auto ast = test("kprobe:f { $pp = (int8 **)1; $p = *$pp; $val = *$p; }");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto result = test("kprobe:f { $pp = (int8 **)1; $p = *$pp; $val = *$p; }");
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   // $pp = (int8 **)1;
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
-  ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsPtrTy());
-  ASSERT_TRUE(
-      assignment->var()->var_type.GetPointeeTy().GetPointeeTy().IsIntTy());
-  EXPECT_EQ(assignment->var()
-                ->var_type.GetPointeeTy()
+  ASSERT_TRUE(result.type_map.type(assignment->var()).IsPtrTy());
+  ASSERT_TRUE(result.type_map.type(assignment->var()).GetPointeeTy().IsPtrTy());
+  ASSERT_TRUE(result.type_map.type(assignment->var())
+                  .GetPointeeTy()
+                  .GetPointeeTy()
+                  .IsIntTy());
+  EXPECT_EQ(result.type_map.type(assignment->var())
+                .GetPointeeTy()
                 .GetPointeeTy()
                 .GetIntBitWidth(),
             8ULL);
 
   // $p = *$pp;
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
-  ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsIntTy());
-  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy().GetIntBitWidth(), 8ULL);
+  ASSERT_TRUE(result.type_map.type(assignment->var()).IsPtrTy());
+  ASSERT_TRUE(result.type_map.type(assignment->var()).GetPointeeTy().IsIntTy());
+  EXPECT_EQ(
+      result.type_map.type(assignment->var()).GetPointeeTy().GetIntBitWidth(),
+      8ULL);
 
   // $val = *$p;
   assignment = stmts.at(2).as<ast::AssignVarStatement>();
-  ASSERT_TRUE(assignment->var()->var_type.IsIntTy());
-  EXPECT_EQ(assignment->var()->var_type.GetIntBitWidth(), 8ULL);
+  ASSERT_TRUE(result.type_map.type(assignment->var()).IsIntTy());
+  EXPECT_EQ(result.type_map.type(assignment->var()).GetIntBitWidth(), 8ULL);
 }
 
 TEST_F(TypeCheckerTest, double_pointer_struct)
 {
-  auto ast = test(
+  auto result = test(
       "struct Foo { char x; long y; }"
       "kprobe:f { $pp = (struct Foo **)1; $p = *$pp; $val = $p->x; }");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   // $pp = (struct Foo **)1;
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
-  ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsPtrTy());
-  ASSERT_TRUE(
-      assignment->var()->var_type.GetPointeeTy().GetPointeeTy().IsCStructTy());
-  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy().GetPointeeTy().GetName(),
+  ASSERT_TRUE(result.type_map.type(assignment->var()).IsPtrTy());
+  ASSERT_TRUE(result.type_map.type(assignment->var()).GetPointeeTy().IsPtrTy());
+  ASSERT_TRUE(result.type_map.type(assignment->var())
+                  .GetPointeeTy()
+                  .GetPointeeTy()
+                  .IsCStructTy());
+  EXPECT_EQ(result.type_map.type(assignment->var())
+                .GetPointeeTy()
+                .GetPointeeTy()
+                .GetName(),
             "struct Foo");
 
   // $p = *$pp;
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
-  ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsCStructTy());
-  EXPECT_EQ(assignment->var()->var_type.GetPointeeTy().GetName(), "struct Foo");
+  ASSERT_TRUE(result.type_map.type(assignment->var()).IsPtrTy());
+  ASSERT_TRUE(
+      result.type_map.type(assignment->var()).GetPointeeTy().IsCStructTy());
+  EXPECT_EQ(result.type_map.type(assignment->var()).GetPointeeTy().GetName(),
+            "struct Foo");
 
   // $val = $p->x;
   assignment = stmts.at(2).as<ast::AssignVarStatement>();
-  ASSERT_TRUE(assignment->var()->var_type.IsIntTy());
-  EXPECT_EQ(assignment->var()->var_type.GetIntBitWidth(), 8ULL);
+  ASSERT_TRUE(result.type_map.type(assignment->var()).IsIntTy());
+  EXPECT_EQ(result.type_map.type(assignment->var()).GetIntBitWidth(), 8ULL);
 }
 
 TEST_F(TypeCheckerTest, pointer_arith)
@@ -3690,35 +3730,37 @@ TEST_F(TypeCheckerTest, tuple_assign_var)
 {
   class SizedType ty = CreateTuple(
       Struct::CreateTuple({ CreateUInt8(), CreateString(6) }));
-  auto ast = test(R"(begin { $t = (1, "str"); $t = (4, "other"); })");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto result = test(R"(begin { $t = (1, "str"); $t = (4, "other"); })");
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, "str");
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_EQ(ty, assignment->var()->var_type);
+  EXPECT_EQ(ty, result.type_map.type(assignment->var()));
 
   // $t = (4, "other");
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
-  EXPECT_EQ(ty, assignment->var()->var_type);
+  EXPECT_EQ(ty, result.type_map.type(assignment->var()));
 }
 
 // More in depth inspection of AST
 TEST_F(TypeCheckerTest, tuple_assign_map)
 {
-  auto ast = test(R"(begin { @ = (1, 3, 3, 7); @ = (0, 0, 0, 0); })");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto result = test(R"(begin { @ = (1, 3, 3, 7); @ = (0, 0, 0, 0); })");
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, 3, 3, 7);
   auto *assignment = stmts.at(0).as<ast::AssignMapStatement>();
   class SizedType ty = CreateTuple(Struct::CreateTuple(
       { CreateUInt8(), CreateUInt8(), CreateUInt8(), CreateUInt8() }));
-  EXPECT_EQ(ty, assignment->map_access->map->value_type);
+  EXPECT_EQ(ty,
+            result.type_map.map_value_type(assignment->map_access->map->ident));
 
   // $t = (0, 0, 0, 0);
   assignment = stmts.at(1).as<ast::AssignMapStatement>();
   ty = CreateTuple(Struct::CreateTuple(
       { CreateUInt8(), CreateUInt8(), CreateUInt8(), CreateUInt8() }));
-  EXPECT_EQ(ty, assignment->map_access->map->value_type);
+  EXPECT_EQ(ty,
+            result.type_map.map_value_type(assignment->map_access->map->ident));
 }
 
 // More in depth inspection of AST
@@ -3728,12 +3770,12 @@ TEST_F(TypeCheckerTest, tuple_nested)
       Struct::CreateTuple({ CreateUInt8(), CreateUInt8() }));
   class SizedType ty = CreateTuple(
       Struct::CreateTuple({ CreateUInt8(), ty_inner }));
-  auto ast = test(R"(begin { $t = (1,(1,2)); })");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto result = test(R"(begin { $t = (1,(1,2)); })");
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   // $t = (1, "str");
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_EQ(ty, assignment->var()->var_type);
+  EXPECT_EQ(ty, result.type_map.type(assignment->var()));
 }
 
 TEST_F(TypeCheckerTest, mixed_tuple)
@@ -4009,51 +4051,63 @@ TEST_F(TypeCheckerTest, int_ident)
 TEST_F(TypeCheckerTest, string_size)
 {
   // Size of the variable should be the size of the larger string (incl. null)
-  auto ast = test(R"(begin { $x = "hi"; $x = "hello"; })");
-  auto stmt = ast.root->probes.at(0)->block->stmts.at(0);
+  auto result = test(R"(begin { $x = "hi"; $x = "hello"; })");
+  auto stmt = result.ast.root->probes.at(0)->block->stmts.at(0);
   auto *var_assign = stmt.as<ast::AssignVarStatement>();
   ASSERT_TRUE(var_assign->expr.is<ast::Cast>());
-  ASSERT_TRUE(var_assign->var()->var_type.IsStringTy());
-  ASSERT_EQ(var_assign->var()->var_type.GetSize(), 6UL);
+  ASSERT_TRUE(result.type_map.type(var_assign->var()).IsStringTy());
+  ASSERT_EQ(result.type_map.type(var_assign->var()).GetSize(), 6UL);
 
-  ast = test(R"(k:func_1 {@ = "hi";} k:func_2 {@ = "hello";})");
-  stmt = ast.root->probes.at(0)->block->stmts.at(0);
+  result = test(R"(k:func_1 {@ = "hi";} k:func_2 {@ = "hello";})");
+  stmt = result.ast.root->probes.at(0)->block->stmts.at(0);
   auto *map_assign = stmt.as<ast::AssignMapStatement>();
   ASSERT_TRUE(map_assign->expr.is<ast::Cast>());
-  ASSERT_TRUE(map_assign->map_access->map->value_type.IsStringTy());
-  ASSERT_EQ(map_assign->map_access->map->value_type.GetSize(), 6UL);
+  ASSERT_TRUE(result.type_map.map_value_type(map_assign->map_access->map->ident)
+                  .IsStringTy());
+  ASSERT_EQ(result.type_map.map_value_type(map_assign->map_access->map->ident)
+                .GetSize(),
+            6UL);
 
-  ast = test(R"(k:func_1 {@["hi"] = 0;} k:func_2 {@["hello"] = 1;})");
-  stmt = ast.root->probes.at(0)->block->stmts.at(0);
+  result = test(R"(k:func_1 {@["hi"] = 0;} k:func_2 {@["hello"] = 1;})");
+  stmt = result.ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
   ASSERT_TRUE(map_assign->map_access->key.is<ast::Cast>());
-  ASSERT_TRUE(map_assign->map_access->key.type().IsStringTy());
-  ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 6UL);
-  ASSERT_EQ(map_assign->map_access->map->key_type.GetSize(), 6UL);
+  ASSERT_TRUE(result.type_map.map_key_type(map_assign->map_access->map->ident)
+                  .IsStringTy());
+  ASSERT_EQ(result.type_map.map_key_type(map_assign->map_access->map->ident)
+                .GetSize(),
+            6UL);
 
-  ast = test(R"(k:func_1 {@["hi", 0] = 0;} k:func_2 {@["hello", 1] = 1;})");
-  stmt = ast.root->probes.at(0)->block->stmts.at(0);
+  result = test(R"(k:func_1 {@["hi", 0] = 0;} k:func_2 {@["hello", 1] = 1;})");
+  stmt = result.ast.root->probes.at(0)->block->stmts.at(0);
   map_assign = stmt.as<ast::AssignMapStatement>();
   ASSERT_TRUE(map_assign->map_access->key.as<ast::Tuple>()
                   ->elems.at(0)
                   .is<ast::Cast>());
-  ASSERT_TRUE(map_assign->map_access->key.type().IsTupleTy());
-  ASSERT_TRUE(map_assign->map_access->key.type().GetField(0).type.IsStringTy());
-  ASSERT_EQ(map_assign->map_access->key.type().GetField(0).type.GetSize(), 6UL);
-  ASSERT_EQ(map_assign->map_access->map->key_type.GetField(0).type.GetSize(),
+  ASSERT_TRUE(result.type_map.map_key_type(map_assign->map_access->map->ident)
+                  .IsTupleTy());
+  ASSERT_TRUE(result.type_map.map_key_type(map_assign->map_access->map->ident)
+                  .GetField(0)
+                  .type.IsStringTy());
+  ASSERT_EQ(result.type_map.map_key_type(map_assign->map_access->map->ident)
+                .GetField(0)
+                .type.GetSize(),
             6UL);
-  ASSERT_EQ(map_assign->map_access->key.type().GetSize(), 7UL);
-  ASSERT_EQ(map_assign->map_access->map->key_type.GetSize(), 7UL);
+  ASSERT_EQ(result.type_map.map_key_type(map_assign->map_access->map->ident)
+                .GetSize(),
+            7UL);
 
-  ast = test(R"(k:func_1 {$x = ("hello", 0);} k:func_2 {$x = ("hi", 0); })");
-  stmt = ast.root->probes.at(0)->block->stmts.at(0);
+  result = test(R"(k:func_1 {$x = ("hello", 0);} k:func_2 {$x = ("hi", 0); })");
+  stmt = result.ast.root->probes.at(0)->block->stmts.at(0);
   var_assign = stmt.as<ast::AssignVarStatement>();
-  ASSERT_TRUE(var_assign->var()->var_type.IsTupleTy());
-  ASSERT_TRUE(var_assign->var()->var_type.GetField(0).type.IsStringTy());
-  ASSERT_EQ(var_assign->var()->var_type.GetSize(),
+  ASSERT_TRUE(result.type_map.type(var_assign->var()).IsTupleTy());
+  ASSERT_TRUE(
+      result.type_map.type(var_assign->var()).GetField(0).type.IsStringTy());
+  ASSERT_EQ(result.type_map.type(var_assign->var()).GetSize(),
             7UL); // tuples are not
                   // packed
-  ASSERT_EQ(var_assign->var()->var_type.GetField(0).type.GetSize(), 6UL);
+  ASSERT_EQ(result.type_map.type(var_assign->var()).GetField(0).type.GetSize(),
+            6UL);
 }
 
 TEST_F(TypeCheckerTest, call_nsecs)
@@ -4769,12 +4823,12 @@ TEST_F(TypeCheckerTest, variable_address)
 {
   test("begin { $a = 1; $b = &$a; @c = &$a; }");
 
-  auto ast = test("begin { $a = 1; $b = &$a; }");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto result = test("begin { $a = 1; $b = &$a; }");
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   auto *assignment = stmts.at(1).as<ast::AssignVarStatement>();
-  ASSERT_TRUE(assignment->var()->var_type.IsPtrTy());
-  ASSERT_TRUE(assignment->var()->var_type.GetPointeeTy().IsIntTy());
+  ASSERT_TRUE(result.type_map.type(assignment->var()).IsPtrTy());
+  ASSERT_TRUE(result.type_map.type(assignment->var()).GetPointeeTy().IsIntTy());
 
   test("begin { let $a; $b = &$a; }", Error{ R"(
 ERROR: Could not resolve the type of this variable
@@ -5428,17 +5482,18 @@ TEST_F(TypeCheckerTest, record_assign_var)
 {
   class SizedType ty = CreateRecord(
       Struct::CreateRecord({ CreateUInt8(), CreateString(6) }, { "a", "b" }));
-  auto ast = test(R"(begin { $t = (a=1, b="str"); $t = (b="other", a=4); })");
-  auto &stmts = ast.root->probes.at(0)->block->stmts;
+  auto result = test(
+      R"(begin { $t = (a=1, b="str"); $t = (b="other", a=4); })");
+  auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
   // The field order of both assignments are preserved
   auto *assignment = stmts.at(0).as<ast::AssignVarStatement>();
-  EXPECT_EQ(ty, assignment->var()->var_type);
+  EXPECT_EQ(ty, result.type_map.type(assignment->var()));
   EXPECT_EQ("a", assignment->expr.as<ast::Record>()->elems[0]->name);
   EXPECT_EQ("b", assignment->expr.as<ast::Record>()->elems[1]->name);
 
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
-  EXPECT_EQ(ty, assignment->var()->var_type);
+  EXPECT_EQ(ty, result.type_map.type(assignment->var()));
   EXPECT_EQ("b", assignment->expr.as<ast::Record>()->elems[0]->name);
   EXPECT_EQ("a", assignment->expr.as<ast::Record>()->elems[1]->name);
 }
