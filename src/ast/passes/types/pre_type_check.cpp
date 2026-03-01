@@ -532,6 +532,11 @@ void CallPreCheck::visit(Call &call)
 
   // Per-function literal/structural checks
   if (call.func == "hist") {
+    // Inject default bits argument (0) if not provided, so that downstream
+    // passes always see 4 arguments.
+    if (call.vargs.size() == 3) {
+      call.vargs.emplace_back(ctx_.make_node<Integer>(call.loc, 0));
+    }
     if (call.vargs.size() == 4) {
       const auto *bits = call.vargs.at(3).as<Integer>();
       if (!bits) {
