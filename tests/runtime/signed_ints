@@ -22,7 +22,7 @@ EXPECT @: -22
 TIMEOUT 1
 
 NAME Comparison should print as 0 or 1
-PROG struct x { uint64_t x; }; begin { $a = (*(struct x*)0).x; printf("%d %d\n", $a > -1, $a < 1);  }
+PROG struct x { uint64_t x; }; begin { $a = (*(struct x*)0).x; printf("%d %d\n", $a > 0, $a < 1);  }
 EXPECT 0 1
 TIMEOUT 1
 

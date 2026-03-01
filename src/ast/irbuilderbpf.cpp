@@ -726,16 +726,9 @@ Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,
                    { getInt64(0), bounded_cpu_id, getInt64(key) });
 }
 
-Value *IRBuilderBPF::CreateMapLookupElem(Map &map,
-                                         Value *key,
-                                         const Location &loc)
-{
-  return CreateMapLookupElem(map.ident, key, map.value_type, loc);
-}
-
 Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
                                          Value *key,
-                                         SizedType &type,
+                                         const SizedType &type,
                                          const Location &loc)
 {
   CallInst *call = createMapLookup(map_name, key);
@@ -1937,23 +1930,24 @@ void IRBuilderBPF::CreateIncEventLossCounter(const Location &loc)
   CreateStore(CreateAdd(CreateLoad(getInt64Ty(), value), getInt64(1)), value);
 }
 
-void IRBuilderBPF::CreatePerCpuMapElemInit(Map &map,
+void IRBuilderBPF::CreatePerCpuMapElemInit(const std::string &map_ident,
                                            Value *key,
                                            Value *val,
                                            const Location &loc)
 {
   AllocaInst *initValue = CreateAllocaBPF(val->getType(), "initial_value");
   CreateStore(val, initValue);
-  CreateMapUpdateElem(map.ident, key, initValue, loc, BPF_ANY);
+  CreateMapUpdateElem(map_ident, key, initValue, loc, BPF_ANY);
   CreateLifetimeEnd(initValue);
 }
 
-void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
+void IRBuilderBPF::CreatePerCpuMapElemAdd(const std::string &map_ident,
                                           Value *key,
                                           Value *val,
+                                          const SizedType &value_type,
                                           const Location &loc)
 {
-  CallInst *call = CreateMapLookup(map, key);
+  CallInst *call = createMapLookup(map_ident, key);
 
   llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
@@ -1966,7 +1960,7 @@ void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
                                                       "lookup_merge",
                                                       parent);
 
-  AllocaInst *value = CreateAllocaBPF(map.value_type, "lookup_elem_val");
+  AllocaInst *value = CreateAllocaBPF(value_type, "lookup_elem_val");
   Value *condition = CreateICmpNE(CreateIntCast(call, getPtrTy(), true),
                                   GetNull(),
                                   "map_lookup_cond");
@@ -1983,7 +1977,7 @@ void IRBuilderBPF::CreatePerCpuMapElemAdd(Map &map,
 
   SetInsertPoint(lookup_failure_block);
 
-  CreatePerCpuMapElemInit(map, key, val, loc);
+  CreatePerCpuMapElemInit(map_ident, key, val, loc);
 
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
@@ -2076,7 +2070,7 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
 }
 
 Value *IRBuilderBPF::CreateKFuncArg(Value *ctx,
-                                    SizedType &type,
+                                    const SizedType &type,
                                     std::string &name)
 {
   assert(type.IsIntTy() || type.IsPtrTy() || type.IsBoolTy());

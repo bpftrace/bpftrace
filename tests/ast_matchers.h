@@ -1020,13 +1020,6 @@ public:
     });
   }
 
-  ForMatcher& WithContext(
-      const Matcher<const class SizedType&>& context_matcher)
-  {
-    return Where([context_matcher](const ast::For& node) {
-      return MatchWith(node, context_matcher, node.ctx_type);
-    });
-  }
 };
 
 inline ForMatcher For(

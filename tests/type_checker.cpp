@@ -4429,7 +4429,7 @@ begin { @map[0] = stats(10); for ($kv : @map) { } }
 
 TEST_F(TypeCheckerTest, for_loop_variables_read_only)
 {
-  test(
+  auto result = test(
       R"(
     begin {
       $var = 0;
@@ -4448,22 +4448,26 @@ TEST_F(TypeCheckerTest, for_loop_variables_read_only)
                   Map("@map"),
                   { ExprStatement(Block(
                       { ExprStatement(Call("print", { Variable("$var") })),
-                        Jump(ast::JumpType::CONTINUE) })) })
-                  .WithContext(
-                      bpftrace::test::SizedType(Type::c_struct)
-                          .WithField("$var",
-                                     bpftrace::test::SizedType(Type::pointer)
-                                         .WithElement(bpftrace::test::SizedType(
-                                             Type::integer)))),
+                        Jump(ast::JumpType::CONTINUE) })) }),
               ExprStatement(
                   Block({ ExprStatement(Call("print", { Variable("$var") })),
                           Jump(ast::JumpType::RETURN) })),
           })) });
+
+  auto *for_node =
+      result.ast.root->probes.at(0)->block->stmts.at(2).as<ast::For>();
+  ASSERT_NE(for_node, nullptr);
+  const auto &ctx_type = result.type_map.type(for_node);
+  EXPECT_TRUE(ctx_type.IsCStructTy());
+  ASSERT_EQ(ctx_type.GetFields().size(), 1U);
+  EXPECT_EQ(ctx_type.GetFields()[0].name, "$var");
+  EXPECT_TRUE(ctx_type.GetFields()[0].type.IsPtrTy());
+  EXPECT_TRUE(ctx_type.GetFields()[0].type.GetPointeeTy().IsIntTy());
 }
 
 TEST_F(TypeCheckerTest, for_loop_variables_modified_during_loop)
 {
-  test(
+  auto result = test(
       R"(
     begin {
       $var = 0;
@@ -4473,34 +4477,39 @@ TEST_F(TypeCheckerTest, for_loop_variables_modified_during_loop)
       }
       print($var);
     })",
-      ExpectedAST{ Program().WithProbe(Probe(
-          { "begin" },
-          {
-              AssignVarStatement(Variable("$var"),
-                                 Cast(Typeof(SizedType(Type::integer)),
-                                      Integer(0))),
-              AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
-              For(Variable("$kv"),
-                  Map("@map"),
-                  { ExprStatement(
-                      Block({ ExprStatement(Unop(Operator::POST_INCREMENT,
-                                                 Variable("$var"))),
-                              Jump(ast::JumpType::CONTINUE) })) })
-                  .WithContext(
-                      bpftrace::test::SizedType(Type::c_struct)
-                          .WithField("$var",
-                                     bpftrace::test::SizedType(Type::pointer)
-                                         .WithElement(bpftrace::test::SizedType(
-                                             Type::integer)))),
-              ExprStatement(
-                  Block({ ExprStatement(Call("print", { Variable("$var") })),
+      ExpectedAST{ Program().WithProbe(
+          Probe({ "begin" },
+                {
+                    AssignVarStatement(Variable("$var"),
+                                       Cast(Typeof(SizedType(Type::integer)),
+                                            Integer(0))),
+                    AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+                    For(Variable("$kv"),
+                        Map("@map"),
+                        { ExprStatement(
+                            Block({ ExprStatement(Unop(Operator::POST_INCREMENT,
+                                                       Variable("$var"))),
+                                    Jump(ast::JumpType::CONTINUE) })) }),
+                    ExprStatement(Block(
+                        { ExprStatement(Call("print", { Variable("$var") })),
                           Jump(ast::JumpType::RETURN) })),
-          })) });
+                })) });
+
+  auto *for_node =
+      result.ast.root->probes.at(0)->block->stmts.at(2).as<ast::For>();
+  ASSERT_NE(for_node, nullptr);
+  const auto &ctx_type = result.type_map.type(for_node);
+  EXPECT_TRUE(ctx_type.IsCStructTy());
+  ASSERT_EQ(ctx_type.GetFields().size(), 1U);
+  EXPECT_EQ(ctx_type.GetFields()[0].name, "$var");
+  EXPECT_TRUE(ctx_type.GetFields()[0].type.IsPtrTy());
+  EXPECT_TRUE(ctx_type.GetFields()[0].type.GetPointeeTy().IsIntTy());
 }
 
 TEST_F(TypeCheckerTest, for_loop_variables_created_in_loop)
 {
-  test(R"(
+  auto result = test(
+      R"(
     begin {
       @map[0] = 1;
       for ($kv : @map) {
@@ -4508,23 +4517,30 @@ TEST_F(TypeCheckerTest, for_loop_variables_created_in_loop)
         print($var);
       }
     })",
-       ExpectedAST{ Program().WithProbe(Probe(
-           { "begin" },
-           { AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
-             For(Variable("$kv"),
-                 Map("@map"),
-                 { AssignVarStatement(Variable("$var"), Integer(2)),
-                   ExprStatement(Block(
-                       { ExprStatement(Call("print", { Variable("$var") })),
-                         Jump(ast::JumpType::CONTINUE) })) })
-                 .WithContext(testing::Not(
-                     SizedType(Type::c_struct).WithField("$var", _))),
-             Jump(ast::JumpType::RETURN) })) });
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          { AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+            For(Variable("$kv"),
+                Map("@map"),
+                { AssignVarStatement(Variable("$var"), Integer(2)),
+                  ExprStatement(Block(
+                      { ExprStatement(Call("print", { Variable("$var") })),
+                        Jump(ast::JumpType::CONTINUE) })) }),
+            Jump(ast::JumpType::RETURN) })) });
+
+  auto *for_node =
+      result.ast.root->probes.at(0)->block->stmts.at(1).as<ast::For>();
+  ASSERT_NE(for_node, nullptr);
+  const auto &ctx_type = result.type_map.type(for_node);
+  // $var is created inside the loop, so it should NOT be in the context
+  for (const auto &field : ctx_type.GetFields()) {
+    EXPECT_NE(field.name, "$var");
+  }
 }
 
 TEST_F(TypeCheckerTest, for_loop_variables_multiple)
 {
-  test(
+  auto result = test(
       R"(
     begin {
       @map[0] = 1;
@@ -4547,18 +4563,21 @@ TEST_F(TypeCheckerTest, for_loop_variables_multiple)
                 { AssignVarStatement(Variable("$var1"), Integer(100)),
                   ExprStatement(Block(
                       { ExprStatement(Call("print", { Variable("$var3") })),
-                        Jump(ast::JumpType::CONTINUE) })) })
-                .WithContext(
-                    bpftrace::test::SizedType(Type::c_struct)
-                        .WithField("$var1",
-                                   SizedType(Type::pointer)
-                                       .WithElement(bpftrace::test::SizedType(
-                                           Type::integer)))
-                        .WithField("$var3",
-                                   SizedType(Type::pointer)
-                                       .WithElement(bpftrace::test::SizedType(
-                                           Type::string)))),
+                        Jump(ast::JumpType::CONTINUE) })) }),
             Jump(ast::JumpType::RETURN) })) });
+
+  auto *for_node =
+      result.ast.root->probes.at(0)->block->stmts.at(4).as<ast::For>();
+  ASSERT_NE(for_node, nullptr);
+  const auto &ctx_type = result.type_map.type(for_node);
+  EXPECT_TRUE(ctx_type.IsCStructTy());
+  ASSERT_EQ(ctx_type.GetFields().size(), 2U);
+  EXPECT_EQ(ctx_type.GetFields()[0].name, "$var1");
+  EXPECT_TRUE(ctx_type.GetFields()[0].type.IsPtrTy());
+  EXPECT_TRUE(ctx_type.GetFields()[0].type.GetPointeeTy().IsIntTy());
+  EXPECT_EQ(ctx_type.GetFields()[1].name, "$var3");
+  EXPECT_TRUE(ctx_type.GetFields()[1].type.IsPtrTy());
+  EXPECT_TRUE(ctx_type.GetFields()[1].type.GetPointeeTy().IsStringTy());
 }
 
 TEST_F(TypeCheckerTest, for_loop_invalid_expr)
