@@ -12,6 +12,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
+#include "ast/passes/types/type_resolver.h"
 #include "ast/passes/types/type_system.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
@@ -75,6 +76,7 @@ static auto parse_probe(const std::string &str, BPFtrace &bpftrace)
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreateNamedParamsPass())
                 .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateTypeResolverPass())
                 .add(ast::CreateCompilePass())
                 .run();
   ASSERT_TRUE(ok && ast.diagnostics().ok());
