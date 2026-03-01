@@ -1,6 +1,7 @@
 #include "ast/passes/types/type_resolver.h"
 #include "ast/ast.h"
 #include "ast/async_event_types.h"
+#include "ast/integer_types.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/collect_nodes.h"
 #include "ast/passes/fold_literals.h"
@@ -11,6 +12,7 @@
 #include "ast/passes/types/cast_creator.h"
 #include "ast/passes/types/type_applicator.h"
 #include "ast/passes/types/type_checker.h"
+#include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_system.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
@@ -54,11 +56,15 @@ std::unordered_map<std::string, SizedType (*)()> SIMPLE_BUILTIN_TYPES = {
 };
 
 std::unordered_map<std::string, SizedType (*)()> SIMPLE_CALL_TYPES = {
-  { "ksym", CreateKSym },          { "usym", CreateUSym },
-  { "cgroupid", CreateUInt64 },    { "cgroup_path", CreateCgroupPath },
-  { "stack_len", CreateInt64 },    { "strftime", CreateTimestamp },
-  { "macaddr", CreateMacAddress }, { "skboutput", CreateUInt32 },
-  { "strncmp", CreateUInt64 },     { "socket_cookie", CreateUInt64 },
+  { "ksym", CreateKSym },
+  { "usym", CreateUSym },
+  { "cgroupid", CreateUInt64 },
+  { "cgroup_path", CreateCgroupPath },
+  { "stack_len", CreateInt64 },
+  { "macaddr", CreateMacAddress },
+  { "skboutput", CreateUInt32 },
+  { "strncmp", CreateUInt64 },
+  { "socket_cookie", CreateUInt64 },
 };
 
 const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
@@ -399,7 +405,7 @@ private:
                             const std::string &name);
   Probe *get_probe();
   Probe *get_probe(Node &node, std::string name = "");
-  void check_stack_call(Call &call, bool kernel);
+  SizedType get_stack_type(Call &call, bool kernel);
 };
 
 SizedType binop_ptr(Binop &binop, const SizedType &lht, const SizedType &rht)
@@ -1199,11 +1205,9 @@ void TypeRuleCollector::visit(Call &call)
 
       return_type = CreatePointer(CreateInt(pointee_size), AddrSpace::user);
     } else if (call.func == "kstack") {
-      check_stack_call(call, true);
-      return_type = call.return_type;
+      return_type = get_stack_type(call, true);
     } else if (call.func == "ustack") {
-      check_stack_call(call, false);
-      return_type = call.return_type;
+      return_type = get_stack_type(call, false);
     } else if (call.func == "path") {
       auto call_type_size = bpftrace_.config_->max_strlen;
       if (call.vargs.size() == 2) {
@@ -1261,6 +1265,18 @@ void TypeRuleCollector::visit(Call &call)
         return_type = CreateUInt64();
         return_type.ts_mode = TimestampMode::boot;
       }
+    } else if (call.func == "strftime") {
+      resolver_.add_type_rule({
+          .output = &call,
+          .inputs = { &call.vargs.at(1).node() },
+          .resolve =
+              [this, &call](const std::vector<SizedType> &inputs) -> SizedType {
+            auto ret_type = CreateTimestamp();
+            ret_type.ts_mode = inputs[0].ts_mode;
+            return ret_type;
+          },
+      });
+      return;
     } else if (auto bit = SIMPLE_BUILTIN_TYPES.find(call.func);
                bit != SIMPLE_BUILTIN_TYPES.end()) {
       return_type = bit->second();
@@ -1335,7 +1351,7 @@ void TypeRuleCollector::visit(BlockExpr &block)
 
 void TypeRuleCollector::visit(Boolean &boolean)
 {
-  resolver_.set_type(&boolean, boolean.type());
+  resolver_.set_type(&boolean, CreateBool());
 }
 
 SizedType update_cast_expr(const SizedType &cast_ty,
@@ -1761,7 +1777,7 @@ void TypeRuleCollector::visit(IfExpr &if_expr)
 
 void TypeRuleCollector::visit(Integer &integer)
 {
-  resolver_.set_type(&integer, integer.type());
+  resolver_.set_type(&integer, get_integer_type(integer.value));
 }
 
 void TypeRuleCollector::visit(Jump &jump)
@@ -1857,7 +1873,7 @@ void TypeRuleCollector::visit(MapAddr &map_addr)
 
 void TypeRuleCollector::visit(NegativeInteger &integer)
 {
-  resolver_.set_type(&integer, integer.type());
+  resolver_.set_type(&integer, get_signed_integer_type(integer.value));
 }
 
 void TypeRuleCollector::visit(PositionalParameter &param)
@@ -1958,7 +1974,7 @@ void TypeRuleCollector::visit(Sizeof &szof)
 
 void TypeRuleCollector::visit(String &str)
 {
-  auto type = str.type();
+  auto type = CreateString(str.value.size() + 1);
   type.SetAS(AddrSpace::kernel);
   resolver_.set_type(&str, type);
 }
@@ -1979,6 +1995,7 @@ void TypeRuleCollector::visit(Subprog &subprog)
       auto &ty = std::get<SizedType>(arg->typeof->record);
       if (resolve_struct_type(ty, *arg->typeof)) {
         resolver_.set_type(scoped_var, ty);
+        resolver_.set_type(arg->typeof, ty);
         if (ty.GetSize() != 0) {
           sized_decl_vars_.insert(scoped_var);
         }
@@ -2267,6 +2284,7 @@ void TypeRuleCollector::visit(VarDeclStatement &decl)
       return;
     }
     resolver_.set_type(scoped_var, ty);
+    resolver_.set_type(decl.typeof, ty);
     // Some declared types like 'string' have no size so we can factor in the
     // size of the assignment
     if (ty.GetSize() != 0) {
@@ -2516,9 +2534,9 @@ Probe *TypeRuleCollector::get_probe(Node &node, std::string name)
   return probe_;
 }
 
-void TypeRuleCollector::check_stack_call(Call &call, bool kernel)
+SizedType TypeRuleCollector::get_stack_type(Call &call, bool kernel)
 {
-  call.return_type = CreateStack(kernel);
+  auto return_type = CreateStack(kernel);
   StackType stack_type;
   stack_type.mode = bpftrace_.config_->stack_mode;
 
@@ -2558,7 +2576,7 @@ void TypeRuleCollector::check_stack_call(Call &call, bool kernel)
   if (stack_type.mode == StackMode::build_id && kernel) {
     call.addError() << "'build_id' stack mode can only be used for ustack";
   }
-  call.return_type = CreateStack(kernel, stack_type);
+  return CreateStack(kernel, stack_type);
 }
 
 LockedNodes TypeRuleCollector::get_locked_nodes()
@@ -2606,6 +2624,7 @@ Node *TypeRuleCollector::find_variable_scope(const std::string &var_ident,
 // - CastCreator
 // - TypeChecker
 // Read more about how all this works in type_resolution.md
+
 Pass CreateTypeResolverPass()
 {
   return Pass::create(
@@ -2616,11 +2635,10 @@ Pass CreateTypeResolverPass()
          CDefinitions &c_definitions,
          NamedParamDefaults &named_param_defaults,
          TypeMetadata &types,
-         MacroRegistry &macro_registry) {
+         MacroRegistry &macro_registry) -> TypeMap {
         // Fold up front
         fold(ast);
 
-        // Passed to TypeApplicator when all runs are complete
         ResolvedTypes resolved_types;
 
         std::vector<Comptime *> prev_comptimes;
@@ -2637,7 +2655,7 @@ Pass CreateTypeResolverPass()
                 << "Type resolution exceeded maximum iterations ("
                 << MAX_ITERATIONS
                 << "); possible infinite loop in comptime expressions";
-            return;
+            return TypeMap(std::move(resolved_types));
           }
 
           TypeResolver resolver;
@@ -2658,7 +2676,7 @@ Pass CreateTypeResolverPass()
           resolver.resolve(tr_collector.get_map_value_names());
 
           if (!ast.diagnostics().ok()) {
-            return;
+            return TypeMap(std::move(resolved_types));
           }
 
           resolved_types = resolver.get_resolved_types();
@@ -2674,7 +2692,7 @@ Pass CreateTypeResolverPass()
           fold(ast);
 
           if (!ast.diagnostics().ok()) {
-            return;
+            return TypeMap(std::move(resolved_types));
           }
 
           // Check if we haven't made progress resolving comptime expressions
@@ -2684,7 +2702,7 @@ Pass CreateTypeResolverPass()
             for (auto *comptime : next_comptimes) {
               comptime->addError() << "Unable to resolve comptime expression";
             }
-            return;
+            return TypeMap(ResolvedTypes{});
           }
 
           prev_comptimes = next_comptimes;
@@ -2695,15 +2713,42 @@ Pass CreateTypeResolverPass()
           should_rerun = !prev_comptimes.empty() || had_transforms;
         }
 
-        // Add the types to the AST nodes themselves
-        RunTypeApplicator(ast, resolved_types);
+        TypeMap type_map(std::move(resolved_types));
 
         // Apply casts in parts of the AST where we want the left and right
-        // sides to have the same type
-        RunCastCreator(ast, b);
+        // sides to have the same type.
+        RunCastCreator(ast, b, type_map);
+
+        // Re-resolve types for nodes created by CastCreator. This is just
+        // easier than having CastCreator update resolved_types
+        {
+          TypeResolver resolver;
+          auto collector = TypeRuleCollector(ast,
+                                             b,
+                                             mm,
+                                             c_definitions,
+                                             named_param_defaults,
+                                             types,
+                                             macro_registry,
+                                             resolver,
+                                             locked_nodes);
+          collector.visit(ast.root);
+          resolver.resolve(collector.get_map_value_names());
+          resolved_types = resolver.get_resolved_types();
+          type_map = TypeMap(std::move(resolved_types));
+        }
+
+        // Add the types to the AST nodes themselves
+        RunTypeApplicator(ast, type_map);
+
+        if (!ast.diagnostics().ok()) {
+          return TypeMap(ResolvedTypes{});
+        }
 
         // Run type checking as the final step
-        RunTypeChecker(ast, b, c_definitions, types);
+        RunTypeChecker(ast, b, c_definitions, types, type_map);
+
+        return type_map;
       });
 };
 

@@ -464,16 +464,18 @@ TEST_F(TypeCheckerTest, ternary_expressions)
        "Foo*)arg1 }");
   test(
       R"(kprobe:f { pid < 10000 ? ("a", "hellolongstr") : ("hellolongstr", "b") })",
-      ExpectedAST{ Program().WithProbe(
-          Probe({ "kprobe:f" },
-                { ExprStatement(
-                    If(Binop(Operator::LT, Builtin("pid"), Integer(10000)),
-                       Block({ ExprStatement(Tuple(
-                                   { String("a"), String("hellolongstr") })),
-                               Jump(ast::JumpType::RETURN) }),
-                       Block({ ExprStatement(Tuple(
-                                   { String("hellolongstr"), String("b") })),
-                               Jump(ast::JumpType::RETURN) }))) })) });
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "kprobe:f" },
+          { ExprStatement(
+              If(Binop(Operator::LT,
+                       Builtin("pid"),
+                       Cast(Typeof(SizedType(Type::integer)), Integer(10000))),
+                 Block({ ExprStatement(
+                             Tuple({ String("a"), String("hellolongstr") })),
+                         Jump(ast::JumpType::RETURN) }),
+                 Block({ ExprStatement(
+                             Tuple({ String("hellolongstr"), String("b") })),
+                         Jump(ast::JumpType::RETURN) }))) })) });
 
   // Error location is incorrect: #3063
   test("kprobe:f { $x = pid < 10000 ? 3 : cat(\"/proc/uptime\"); exit(); }",
@@ -2116,60 +2118,68 @@ TEST_F(TypeCheckerTest, map_aggregations_implicit_cast)
   // When assigning an aggregation to a map
   // containing integers, the aggregation is
   // implicitly cast to an integer.
+  auto CastInt = [](auto &&expr) {
+    return Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
+                std::forward<decltype(expr)>(expr));
+  };
   test("kprobe:f { @x = 1; @y = count(); @x = @y; }",
-       ExpectedAST{ Program().WithProbe(
-           Probe({ "kprobe:f" },
-                 { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-                   DiscardExpr(Call("count", { Map("@y"), Integer(0) })),
-                   AssignMapStatement(
-                       Map("@x"),
-                       Integer(0),
-                       Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
-                            MapAccess(Map("@y"), Integer(0)))),
-                   Jump(ast::JumpType::RETURN) })) });
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { AssignMapStatement(
+                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+             DiscardExpr(Call("count", { Map("@y"), CastInt(Integer(0)) })),
+             AssignMapStatement(Map("@x"),
+                                CastInt(Integer(0)),
+                                CastInt(
+                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
+             Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             DiscardExpr(Call("sum", { Map("@y"), Integer(0), Integer(5) })),
-             AssignMapStatement(
-                 Map("@x"),
-                 Integer(0),
-                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
-                      MapAccess(Map("@y"), Integer(0)))),
+           { AssignMapStatement(
+                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+             DiscardExpr(
+                 Call("sum", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+             AssignMapStatement(Map("@x"),
+                                CastInt(Integer(0)),
+                                CastInt(
+                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = min(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             DiscardExpr(Call("min", { Map("@y"), Integer(0), Integer(5) })),
-             AssignMapStatement(
-                 Map("@x"),
-                 Integer(0),
-                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
-                      MapAccess(Map("@y"), Integer(0)))),
+           { AssignMapStatement(
+                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+             DiscardExpr(
+                 Call("min", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+             AssignMapStatement(Map("@x"),
+                                CastInt(Integer(0)),
+                                CastInt(
+                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = max(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             DiscardExpr(Call("max", { Map("@y"), Integer(0), Integer(5) })),
-             AssignMapStatement(
-                 Map("@x"),
-                 Integer(0),
-                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
-                      MapAccess(Map("@y"), Integer(0)))),
+           { AssignMapStatement(
+                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+             DiscardExpr(
+                 Call("max", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+             AssignMapStatement(Map("@x"),
+                                CastInt(Integer(0)),
+                                CastInt(
+                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(Map("@x"), Integer(0), Integer(1)),
-             DiscardExpr(Call("avg", { Map("@y"), Integer(0), Integer(5) })),
-             AssignMapStatement(
-                 Map("@x"),
-                 Integer(0),
-                 Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
-                      MapAccess(Map("@y"), Integer(0)))),
+           { AssignMapStatement(
+                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+             DiscardExpr(
+                 Call("avg", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+             AssignMapStatement(Map("@x"),
+                                CastInt(Integer(0)),
+                                CastInt(
+                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
 
   // Assigning to a newly declared map
@@ -2971,7 +2981,9 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
                                 Cast(Typeof(SizedType(Type::integer)),
                                      Cast(Typeof(SizedType(Type::integer)),
                                           Integer(1)))),
-             AssignVarStatement(Variable("$x"), Integer(5)),
+             AssignVarStatement(Variable("$x"),
+                                Cast(Typeof(SizedType(Type::integer)),
+                                     Integer(5))),
              Jump(ast::JumpType::RETURN) })) });
   test("begin { $x = (int8)1; $x = (uint8)5; }",
        ExpectedAST{ Program().WithProbe(Probe(
@@ -3133,14 +3145,19 @@ TEST_F(TypeCheckerTest, mixed_int_like_binop)
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { DiscardExpr(
-                 Call("sum", { Map("@a"), Integer(0), NegativeInteger(-1) })),
+                 Call("sum",
+                      { Map("@a"),
+                        Cast(Typeof(SizedType(Type::integer)), Integer(0)),
+                        NegativeInteger(-1) })),
              AssignVarStatement(
                  Variable("$a"),
                  Binop(Operator::EQ,
                        Cast(Typeof(SizedType(Type::integer)),
                             Cast(Typeof(SizedType(Type::integer)), Integer(1))),
                        Cast(Typeof(SizedType(Type::integer)),
-                            MapAccess(Map("@a"), Integer(0))))),
+                            MapAccess(Map("@a"),
+                                      Cast(Typeof(SizedType(Type::integer)),
+                                           Integer(0)))))),
              Jump(ast::JumpType::RETURN) })) });
 }
 
@@ -3818,7 +3835,7 @@ TEST_F(TypeCheckerTest, mixed_tuple)
           { "begin" },
           { AssignMapStatement(
                 Map("@a"),
-                Integer(0),
+                Cast(Typeof(SizedType(Type::integer)), Integer(0)),
                 Tuple(
                     { Cast(Typeof(SizedType(Type::integer)
                                       .WithSize(4)
@@ -3826,17 +3843,25 @@ TEST_F(TypeCheckerTest, mixed_tuple)
                            Cast(Typeof(SizedType(Type::integer)), Integer(1))),
                       Cast(Typeof(SizedType(Type::string).WithSize(9)),
                            String("hi")) })),
-            AssignMapStatement(Map("@b"),
-                               Integer(0),
-                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
-                                            Integer(2)),
-                                       String("hellostr") })),
+            AssignMapStatement(
+                Map("@b"),
+                Cast(Typeof(SizedType(Type::integer)), Integer(0)),
+                Tuple({ Cast(Typeof(SizedType(Type::integer)), Integer(2)),
+                        String("hellostr") })),
             AssignMapStatement(
                 Map("@a"),
-                Integer(0),
+                Cast(Typeof(SizedType(Type::integer)), Integer(0)),
                 Tuple({ Cast(Typeof(SizedType(Type::integer)),
-                             TupleAccess(MapAccess(Map("@b"), Integer(0)), 0)),
-                        TupleAccess(MapAccess(Map("@b"), Integer(0)), 1) })),
+                             TupleAccess(MapAccess(Map("@b"),
+                                                   Cast(Typeof(SizedType(
+                                                            Type::integer)),
+                                                        Integer(0))),
+                                         0)),
+                        TupleAccess(
+                            MapAccess(Map("@b"),
+                                      Cast(Typeof(SizedType(Type::integer)),
+                                           Integer(0))),
+                            1) })),
             Jump(ast::JumpType::RETURN) })) });
   test(
       R"(begin { print(if (pid == 1) { ((int16)1, "hi") } else { ((uint16)2, "hellostr") }); })",
@@ -3845,7 +3870,10 @@ TEST_F(TypeCheckerTest, mixed_tuple)
           { ExprStatement(Block(
               { ExprStatement(Call(
                     "print",
-                    { If(Binop(Operator::EQ, Builtin("pid"), Integer(1)),
+                    { If(Binop(Operator::EQ,
+                               Builtin("pid"),
+                               Cast(Typeof(SizedType(Type::integer)),
+                                    Integer(1))),
                          Tuple(
                              { Cast(Typeof(SizedType(Type::integer)
                                                .WithSize(4)
@@ -4394,7 +4422,9 @@ TEST_F(TypeCheckerTest, for_loop_variables_modified_during_loop)
       ExpectedAST{ Program().WithProbe(Probe(
           { "begin" },
           {
-              AssignVarStatement(Variable("$var"), Integer(0)),
+              AssignVarStatement(Variable("$var"),
+                                 Cast(Typeof(SizedType(Type::integer)),
+                                      Integer(0))),
               AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
               For(Variable("$kv"),
                   Map("@map"),

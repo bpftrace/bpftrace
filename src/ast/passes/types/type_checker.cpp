@@ -9,6 +9,7 @@
 #include "ast/integer_types.h"
 #include "ast/passes/collect_nodes.h"
 #include "ast/passes/types/type_checker.h"
+#include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_system.h"
 #include "bpftrace.h"
 #include "btf/compat.h"
@@ -35,11 +36,13 @@ public:
   explicit TypeChecker(ASTContext &ctx,
                        BPFtrace &bpftrace,
                        CDefinitions &c_definitions,
-                       TypeMetadata &type_metadata)
+                       TypeMetadata &type_metadata,
+                       const TypeMap &type_map)
       : ctx_(ctx),
         bpftrace_(bpftrace),
         c_definitions_(c_definitions),
-        type_metadata_(type_metadata)
+        type_metadata_(type_metadata),
+        type_map_(type_map)
   {
   }
 
@@ -73,6 +76,7 @@ private:
   BPFtrace &bpftrace_;
   const CDefinitions &c_definitions_;
   const TypeMetadata &type_metadata_;
+  const TypeMap &type_map_;
 
   [[nodiscard]] bool check_arg(Call &call,
                                size_t index,
@@ -235,7 +239,7 @@ void TypeChecker::visit(Identifier &identifier)
       identifier.ident == "current_pid" || identifier.ident == "current_tid") {
     return;
   }
-  if (identifier.ident_type.IsNoneTy()) {
+  if (type_map_.type(&identifier).IsNoneTy()) {
     identifier.addError() << "Unknown identifier: '" + identifier.ident + "'";
   }
 }
@@ -250,27 +254,15 @@ void TypeChecker::visit(Call &call)
     return;
   }
 
-  if (call.func == "hist") {
-    if (call.vargs.size() == 3) {
-      call.vargs.emplace_back(ctx_.make_node<Integer>(call.loc, 0)); // default
-                                                                     // bits is
-                                                                     // 0
-    }
-
-    call.return_type = CreateHist();
-  } else if (call.func == "tseries") {
-    call.return_type = CreateVoid();
-  } else if (call.func == "str") {
+  if (call.func == "str") {
     auto &arg = call.vargs.at(0);
-    const auto &t = arg.type();
+    const auto &t = type_map_.type(arg);
     if (!t.IsStringTy() && !t.IsIntegerTy() && !t.IsPtrTy()) {
       call.addError()
           << call.func
           << "() expects a string, integer or a pointer type as first "
           << "argument (" << t << " provided)";
     }
-    call.return_type = CreateString(call.type().GetSize());
-    call.return_type.SetAS(AddrSpace::kernel);
   } else if (call.func == "buf") {
     const uint64_t max_strlen = bpftrace_.config_->max_strlen;
     if (max_strlen >
@@ -281,19 +273,20 @@ void TypeChecker::visit(Call &call)
     }
 
     auto &arg = call.vargs.at(0);
-    if (!(arg.type().IsIntTy() || arg.type().IsStringTy() ||
-          arg.type().IsPtrTy() || arg.type().IsArrayTy())) {
+    const auto &arg_type = type_map_.type(arg);
+    if (!(arg_type.IsIntTy() || arg_type.IsStringTy() || arg_type.IsPtrTy() ||
+          arg_type.IsArrayTy())) {
       call.addError()
           << call.func
           << "() expects an integer, string, or array argument but saw "
-          << typestr(arg.type().GetTy());
+          << typestr(arg_type.GetTy());
     }
 
     if (call.vargs.size() == 1) {
-      if (!arg.type().IsArrayTy()) {
+      if (!arg_type.IsArrayTy()) {
         call.addError() << call.func
                         << "() expects a length argument for non-array type "
-                        << typestr(arg.type().GetTy());
+                        << typestr(arg_type.GetTy());
       }
     } else {
       if (auto *integer = call.vargs.at(1).as<NegativeInteger>()) {
@@ -304,7 +297,7 @@ void TypeChecker::visit(Call &call)
   } else if (call.func == "ksym" || call.func == "usym") {
     // allow symbol lookups on casts (eg, function pointers)
     auto &arg = call.vargs.at(0);
-    const auto &type = arg.type();
+    const auto &type = type_map_.type(arg);
     if (!type.IsIntegerTy() && !type.IsPtrTy()) {
       call.addError() << call.func
                       << "() expects an integer or pointer argument";
@@ -317,11 +310,11 @@ void TypeChecker::visit(Call &call)
     }
 
     auto &arg = call.vargs.at(index);
-    if (!arg.type().IsIntTy() && !arg.type().IsStringTy() &&
-        !arg.type().IsArrayTy())
+    const auto &arg_type = type_map_.type(arg);
+    if (!arg_type.IsIntTy() && !arg_type.IsStringTy() && !arg_type.IsArrayTy())
       call.addError() << call.func
                       << "() expects an integer or array argument, got "
-                      << arg.type().GetTy();
+                      << arg_type.GetTy();
 
     // Kind of:
     //
@@ -332,17 +325,18 @@ void TypeChecker::visit(Call &call)
     //     char[16] inet6;
     //   }
     // }
-    auto type = arg.type();
+    auto type = arg_type;
 
-    if ((arg.type().IsArrayTy() || arg.type().IsStringTy()) &&
+    if ((arg_type.IsArrayTy() || arg_type.IsStringTy()) &&
         type.GetSize() != 4 && type.GetSize() != 16)
       call.addError() << call.func
                       << "() argument must be 4 or 16 bytes in size";
   } else if (call.func == "join") {
     auto &arg = call.vargs.at(0);
-    if (!(arg.type().IsIntTy() || arg.type().IsPtrTy())) {
+    const auto &arg_type = type_map_.type(arg);
+    if (!(arg_type.IsIntTy() || arg_type.IsPtrTy())) {
       call.addError() << "() only supports int or pointer arguments" << " ("
-                      << arg.type().GetTy() << " provided)";
+                      << arg_type.GetTy() << " provided)";
     }
   } else if (call.func == "percpu_kaddr") {
     const auto &symbol = call.vargs.at(0).as<String>()->value;
@@ -356,7 +350,7 @@ void TypeChecker::visit(Call &call)
     const auto &fmt = call.vargs.at(0).as<String>()->value;
     std::vector<SizedType> args;
     for (size_t i = 1; i < call.vargs.size(); i++) {
-      args.push_back(call.vargs[i].type());
+      args.push_back(type_map_.type(call.vargs[i]));
     }
     FormatString fs(fmt);
     auto ok = fs.check(args);
@@ -404,7 +398,8 @@ void TypeChecker::visit(Call &call)
                              "likely be updated "
                              "before the runtime can 'print' it.";
       }
-      if (map->value_type.IsStatsTy() && call.vargs.size() > 1) {
+      if (type_map_.map_value_type(map->ident).IsStatsTy() &&
+          call.vargs.size() > 1) {
         call.addWarning()
             << "print()'s top and div arguments are ignored when used on "
                "stats() maps.";
@@ -417,27 +412,28 @@ void TypeChecker::visit(Call &call)
     //
     // We rely on the fact that type checking enforces types like count(),
     // min(), max(), etc. to be assigned directly to a map.
-    else if (call.vargs.at(0).type().IsMultiKeyMapTy()) {
-      call.addError()
-          << "Map type " << call.vargs.at(0).type()
-          << " cannot print the value of individual keys. You must print "
-             "the whole map.";
-    } else if (call.vargs.at(0).type().IsPrintableTy()) {
-      if (call.vargs.size() != 1)
-        call.addError() << "Non-map print() only takes 1 argument, "
-                        << call.vargs.size() << " found";
-    } else {
-      call.addError() << call.vargs.at(0).type() << " type passed to "
-                      << call.func << "() is not printable";
+    else {
+      const auto &varg_type = type_map_.type(call.vargs.at(0));
+      if (varg_type.IsMultiKeyMapTy()) {
+        call.addError()
+            << "Map type " << varg_type
+            << " cannot print the value of individual keys. You must print "
+               "the whole map.";
+      } else if (varg_type.IsPrintableTy()) {
+        if (call.vargs.size() != 1)
+          call.addError() << "Non-map print() only takes 1 argument, "
+                          << call.vargs.size() << " found";
+      } else {
+        call.addError() << varg_type << " type passed to " << call.func
+                        << "() is not printable";
+      }
     }
   } else if (call.func == "stack_len") {
-    if (!call.vargs.at(0).type().IsStack()) {
+    if (!type_map_.type(call.vargs.at(0)).IsStack()) {
       call.addError() << "len() expects a map or stack to be provided";
     }
   } else if (call.func == "strftime") {
-    auto &arg = call.vargs.at(1);
-    call.return_type.ts_mode = arg.type().ts_mode;
-    if (call.return_type.ts_mode == TimestampMode::monotonic) {
+    if (type_map_.type(&call).ts_mode == TimestampMode::monotonic) {
       call.addError() << "strftime() can not take a monotonic timestamp";
     }
   } else if (call.func == "path") {
@@ -452,27 +448,30 @@ void TypeChecker::visit(Call &call)
     // It's record when it's referenced as object pointer
     // member, like: path(args.filp->f_path))
     auto &arg = call.vargs.at(0);
-    if (arg.type().GetTy() != Type::c_struct &&
-        arg.type().GetTy() != Type::pointer) {
+    const auto &arg_type = type_map_.type(arg);
+    if (arg_type.GetTy() != Type::c_struct &&
+        arg_type.GetTy() != Type::pointer) {
       call.addError() << "path() only supports pointer or record argument ("
-                      << arg.type().GetTy() << " provided)";
+                      << arg_type.GetTy() << " provided)";
     }
   } else if (call.func == "kptr" || call.func == "uptr") {
     // kptr should accept both integer or pointer. Consider case: kptr($1)
     auto &arg = call.vargs.at(0);
-    if (!arg.type().IsIntTy() && !arg.type().IsPtrTy()) {
+    const auto &arg_type = type_map_.type(arg);
+    if (!arg_type.IsIntTy() && !arg_type.IsPtrTy()) {
       call.addError() << call.func << "() only supports "
-                      << "integer or pointer arguments (" << arg.type().GetTy()
+                      << "integer or pointer arguments (" << arg_type.GetTy()
                       << " provided)";
       return;
     }
   } else if (call.func == "macaddr") {
     auto &arg = call.vargs.at(0);
-    if (!arg.type().IsIntTy() && !arg.type().IsArrayTy() &&
-        !arg.type().IsByteArray() && !arg.type().IsPtrTy())
+    const auto &arg_type = type_map_.type(arg);
+    if (!arg_type.IsIntTy() && !arg_type.IsArrayTy() &&
+        !arg_type.IsByteArray() && !arg_type.IsPtrTy())
       call.addError() << call.func
                       << "() only supports array or pointer arguments" << " ("
-                      << arg.type().GetTy() << " provided)";
+                      << arg_type.GetTy() << " provided)";
 
     if (arg.is<String>())
       call.addError() << call.func
@@ -481,18 +480,19 @@ void TypeChecker::visit(Call &call)
     // N.B. When converting from BTF, we can treat string types as 7 bytes in
     // order to signal to userspace that they are well-formed. However, we can
     // convert from anything as long as there are at least 6 bytes to read.
-    const auto &type = arg.type();
-    if ((type.IsArrayTy() || type.IsByteArray()) && type.GetSize() < 6) {
+    if ((arg_type.IsArrayTy() || arg_type.IsByteArray()) &&
+        arg_type.GetSize() < 6) {
       call.addError() << call.func
                       << "() argument must be at least 6 bytes in size";
     }
   } else if (call.func == "nsecs") {
-    if (call.return_type.ts_mode == TimestampMode::tai &&
+    const auto &nsecs_type = type_map_.type(&call);
+    if (nsecs_type.ts_mode == TimestampMode::tai &&
         !bpftrace_.feature_->has_helper_ktime_get_tai_ns()) {
       call.addError()
           << "Kernel does not support tai timestamp, please try sw_tai";
     }
-    if (call.return_type.ts_mode == TimestampMode::sw_tai &&
+    if (nsecs_type.ts_mode == TimestampMode::sw_tai &&
         !bpftrace_.delta_taitime_.has_value()) {
       call.addError() << "Failed to initialize sw_tai in "
                          "userspace. This is very unexpected.";
@@ -504,7 +504,7 @@ void TypeChecker::visit(Call &call)
                       << name << " provided)";
     };
 
-    const auto &type = call.vargs.at(0).type();
+    const auto &type = type_map_.type(call.vargs.at(0));
     if (!type.IsPtrTy() || !type.GetPointeeTy().IsCStructTy()) {
       logError(type.GetTy());
       return;
@@ -553,7 +553,7 @@ void TypeChecker::visit(Call &call)
     auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
     if (!maybe_func) {
       consumeError(std::move(maybe_func));
-      if (call.return_type.IsNoneTy()) {
+      if (type_map_.type(&call).IsNoneTy()) {
         LOG(BUG) << "Unknown builtin function " << call.func;
       }
       return;
@@ -583,18 +583,19 @@ void TypeChecker::visit(Call &call)
     std::vector<std::pair<std::string, SizedType>> args;
     for (size_t i = 0; i < argument_types->size(); i++) {
       const auto &[name, type] = argument_types->at(i);
+      const auto &varg_type = type_map_.type(call.vargs[i]);
       auto compat_arg_type = getCompatType(type);
       if (!compat_arg_type) {
         // If the required type is a **pointer**, and the provided type is
         // a **pointer**, then we let it slide. Just assume the user knows
         // what they are doing. The verifier will catch them out otherwise.
-        if (type.is<btf::Pointer>() && call.vargs[i].type().IsPtrTy()) {
-          args.emplace_back(name, call.vargs[i].type());
+        if (type.is<btf::Pointer>() && varg_type.IsPtrTy()) {
+          args.emplace_back(name, varg_type);
           continue;
         }
         call.addError() << "Unable to convert argument type, "
                         << "function requires '" << type << "', " << "found '"
-                        << typestr(call.vargs[i].type())
+                        << typestr(varg_type)
                         << "': " << compat_arg_type.takeError();
         continue;
       }
@@ -607,15 +608,15 @@ void TypeChecker::visit(Call &call)
     bool ok = true;
     for (size_t i = 0; i < args.size(); i++) {
       const auto &[name, type] = args[i];
-      if (type != call.vargs[i].type()) {
+      const auto &varg_type = type_map_.type(call.vargs[i]);
+      if (type != varg_type) {
         if (!name.empty()) {
           call.vargs[i].node().addError()
               << "Expected " << typestr(type) << " for argument `" << name
-              << "` got " << typestr(call.vargs[i].type());
+              << "` got " << typestr(varg_type);
         } else {
           call.vargs[i].node().addError()
-              << "Expected " << typestr(type) << " got "
-              << typestr(call.vargs[i].type());
+              << "Expected " << typestr(type) << " got " << typestr(varg_type);
         }
         ok = false;
       }
@@ -662,8 +663,9 @@ void TypeChecker::visit(Map &map)
   // is applied to the node at the `MapAccess` level.
   auto found_kind = bpf_map_type_.find(map.ident);
   if (found_kind != bpf_map_type_.end()) {
-    if (!bpf_map_types_compatible(map.value_type, found_kind->second)) {
-      auto map_type = get_bpf_map_type(map.value_type);
+    const auto &value_type = type_map_.map_value_type(map.ident);
+    if (!bpf_map_types_compatible(value_type, found_kind->second)) {
+      auto map_type = get_bpf_map_type(value_type);
       map.addError() << "Incompatible map types. Type from declaration: "
                      << get_bpf_map_type_str(found_kind->second)
                      << ". Type from value/key type: "
@@ -674,7 +676,7 @@ void TypeChecker::visit(Map &map)
 
 void TypeChecker::visit(VariableAddr &var_addr)
 {
-  if (var_addr.var_addr_type.IsNoneTy()) {
+  if (type_map_.type(&var_addr).IsNoneTy()) {
     var_addr.addError() << "No type available for variable "
                         << var_addr.var->ident;
   }
@@ -685,7 +687,7 @@ void TypeChecker::visit(ArrayAccess &arr)
   visit(arr.expr);
   visit(arr.indexpr);
 
-  const SizedType &type = arr.expr.type();
+  const SizedType &type = type_map_.type(arr.expr);
 
   if (type.IsPtrTy() && type.GetPointeeTy().GetSize() == 0) {
     arr.addError() << "The array index operator [] cannot be used "
@@ -706,17 +708,20 @@ void TypeChecker::visit(ArrayAccess &arr)
       arr.addError() << "the index " << integer->value
                      << " is out of bounds for array of size " << num;
     }
-  } else if (!arr.indexpr.type().IsIntTy() || arr.indexpr.type().IsSigned()) {
-    arr.addError() << "The array index operator [] only "
-                      "accepts positive (unsigned) integer indices. Got: "
-                   << arr.indexpr.type();
+  } else {
+    const auto &idx_type = type_map_.type(arr.indexpr);
+    if (!idx_type.IsIntTy() || idx_type.IsSigned()) {
+      arr.addError() << "The array index operator [] only "
+                        "accepts positive (unsigned) integer indices. Got: "
+                     << idx_type;
+    }
   }
 }
 
 void TypeChecker::visit(TupleAccess &acc)
 {
   visit(acc.expr);
-  const SizedType &type = acc.expr.type();
+  const SizedType &type = type_map_.type(acc.expr);
 
   if (!type.IsTupleTy()) {
     acc.addError() << "Can not access index '" << acc.index
@@ -735,8 +740,8 @@ void TypeChecker::visit(Binop &binop)
   visit(binop.left);
   visit(binop.right);
 
-  const auto &lht = binop.left.type();
-  const auto &rht = binop.right.type();
+  const auto &lht = type_map_.type(binop.left);
+  const auto &rht = type_map_.type(binop.right);
   bool is_int_binop = (lht.IsCastableMapTy() || lht.IsIntTy() ||
                        lht.IsBoolTy()) &&
                       (rht.IsCastableMapTy() || rht.IsIntTy() ||
@@ -782,7 +787,7 @@ void TypeChecker::visit(IfExpr &if_expr)
   visit(if_expr.left);
   visit(if_expr.right);
 
-  const Type &cond = if_expr.cond.type().GetTy();
+  const Type &cond = type_map_.type(if_expr.cond).GetTy();
 
   if (cond != Type::integer && cond != Type::pointer && cond != Type::boolean) {
     if_expr.addError() << "Invalid condition: " << cond;
@@ -796,7 +801,7 @@ void TypeChecker::visit(Jump &jump)
     visit(jump.return_value);
     if (dynamic_cast<Probe *>(top_level_node_)) {
       if (jump.return_value.has_value()) {
-        const auto &ty = jump.return_value->type();
+        const auto &ty = type_map_.type(*jump.return_value);
         if (!ty.IsIntegerTy()) {
           jump.addError() << "Probe return values can only be integers. Found "
                           << ty;
@@ -831,8 +836,8 @@ void TypeChecker::visit(For &f)
   // which require ctx access.
   CollectNodes<Builtin> builtins;
   builtins.visit(f.block);
-  for (const Builtin &builtin : builtins.nodes()) {
-    if (builtin.builtin_type.IsCtxAccess()) {
+  for (Builtin &builtin : builtins.nodes()) {
+    if (type_map_.type(&builtin).IsCtxAccess()) {
       builtin.addError() << "'" << builtin.ident
                          << "' builtin is not allowed in a for-loop";
     }
@@ -843,7 +848,7 @@ void TypeChecker::visit(FieldAccess &acc)
 {
   visit(acc.expr);
 
-  SizedType type = acc.expr.type();
+  SizedType type = type_map_.type(acc.expr);
   while (type.IsPtrTy()) {
     type = type.GetPointeeTy();
   }
@@ -872,13 +877,13 @@ void TypeChecker::visit(MapAccess &acc)
   visit(acc.map);
   visit(acc.key);
 
-  if (acc.map->type().IsCastableMapTy() &&
+  if (type_map_.map_value_type(acc.map->ident).IsCastableMapTy() &&
       !bpftrace_.feature_->has_helper_map_lookup_percpu_elem()) {
     acc.addError() << "Missing required kernel feature: map_lookup_percpu_elem";
   }
 
   // Validate map key type
-  const auto &key_type = acc.key.type();
+  const auto &key_type = type_map_.type(acc.key);
   if (key_type.IsPtrTy() && key_type.IsCtxAccess()) {
     // map functions only accepts a pointer to a element in the stack
     acc.key.node().addError() << "context cannot be part of a map key";
@@ -913,19 +918,18 @@ void TypeChecker::visit(Cast &cast)
   visit(cast.expr);
   visit(cast.typeof);
 
-  const auto &resolved_ty = cast.type();
+  const auto &resolved_ty = type_map_.type(&cast);
   if (resolved_ty.IsNoneTy()) {
     cast.addError() << "Incomplete cast, unknown type";
     return;
   }
 
-  auto rhs = cast.expr.type();
+  auto rhs = type_map_.type(cast.expr);
   if (rhs.IsCStructTy()) {
-    cast.addError() << "Cannot cast from struct type \"" << cast.expr.type()
-                    << "\"";
+    cast.addError() << "Cannot cast from struct type \"" << rhs << "\"";
     return;
   } else if (rhs.IsNoneTy()) {
-    cast.addError() << "Cannot cast from \"" << cast.expr.type() << "\" type";
+    cast.addError() << "Cannot cast from \"" << rhs << "\" type";
     return;
   }
 
@@ -1018,9 +1022,10 @@ void TypeChecker::visit(Tuple &tuple)
     visit(elem);
 
     // If elem type is none that means that the tuple is not yet resolved.
-    if (elem.type().IsMultiKeyMapTy()) {
+    const auto &elem_type = type_map_.type(elem);
+    if (elem_type.IsMultiKeyMapTy()) {
       elem.node().addError()
-          << "Map type " << elem.type() << " cannot exist inside a tuple.";
+          << "Map type " << elem_type << " cannot exist inside a tuple.";
     }
   }
 }
@@ -1031,9 +1036,10 @@ void TypeChecker::visit(Record &record)
     auto &elem = named_arg->expr;
     visit(elem);
 
-    if (elem.type().IsMultiKeyMapTy()) {
+    const auto &elem_type = type_map_.type(elem);
+    if (elem_type.IsMultiKeyMapTy()) {
       elem.node().addError()
-          << "Map type " << elem.type() << " cannot exist inside a record.";
+          << "Map type " << elem_type << " cannot exist inside a record.";
     }
   }
 }
@@ -1052,7 +1058,8 @@ void TypeChecker::visit(ExprStatement &expr)
     }
   }
 
-  if (expr.expr.type().IsNoneTy() || expr.expr.type().IsVoidTy()) {
+  const auto &expr_type = type_map_.type(expr.expr);
+  if (expr_type.IsNoneTy() || expr_type.IsVoidTy()) {
     warn_discarded = false;
   }
 
@@ -1071,7 +1078,7 @@ void TypeChecker::visit(AssignVarStatement &assignment)
     visit(assignment.var_decl);
   }
 
-  if (assignment.var()->var_type.IsNoneTy()) {
+  if (type_map_.type(assignment.var()).IsNoneTy()) {
     assignment.addError() << "Invalid expression for assignment";
   }
 }
@@ -1081,12 +1088,10 @@ void TypeChecker::visit(VarDeclStatement &decl)
   visit(decl.typeof);
 
   if (decl.typeof) {
-    const auto &ty = decl.typeof->type();
+    const auto &ty = type_map_.type(decl.typeof);
     if (!ty.IsNoneTy()) {
       if (!IsValidVarDeclType(ty)) {
         decl.addError() << "Invalid variable declaration type: " << ty;
-      } else {
-        decl.var->var_type = ty;
       }
     } else {
       // We couldn't resolve that specific type by now.
@@ -1109,7 +1114,7 @@ void TypeChecker::visit(Subprog &subprog)
   // Validate that arguments are set.
   visit(subprog.args);
   for (SubprogArg *arg : subprog.args) {
-    if (arg->typeof->type().IsNoneTy()) {
+    if (type_map_.type(arg->typeof).IsNoneTy()) {
       arg->addError() << "Unable to resolve argument type.";
     }
   }
@@ -1119,7 +1124,7 @@ void TypeChecker::visit(Subprog &subprog)
 
   // Validate that the return type is valid.
   visit(subprog.return_type);
-  if (subprog.return_type->type().IsNoneTy()) {
+  if (type_map_.type(subprog.return_type).IsNoneTy()) {
     subprog.return_type->addError()
         << "Unable to resolve suitable return type.";
   }
@@ -1170,10 +1175,11 @@ bool TypeChecker::check_arg(Call &call,
                             bool want_literal)
 {
   const auto &arg = call.vargs.at(index);
+  const auto &arg_type = type_map_.type(arg);
 
-  if (want_literal && (!arg.is_literal() || arg.type().GetTy() != type)) {
+  if (want_literal && (!arg.is_literal() || arg_type.GetTy() != type)) {
     call.addError() << call.func << "() expects a " << type << " literal ("
-                    << arg.type().GetTy() << " provided)";
+                    << arg_type.GetTy() << " provided)";
     if (type == Type::string) {
       // If the call requires a string literal and a positional parameter is
       // given, tell user to use str()
@@ -1183,9 +1189,9 @@ bool TypeChecker::check_arg(Call &call,
                               << pos_param->n << " as a string";
     }
     return false;
-  } else if (arg.type().GetTy() != type) {
+  } else if (arg_type.GetTy() != type) {
     call.addError() << call.func << "() only supports " << type
-                    << " arguments (" << arg.type().GetTy() << " provided)";
+                    << " arguments (" << arg_type.GetTy() << " provided)";
     return false;
   }
   return true;
@@ -1194,9 +1200,10 @@ bool TypeChecker::check_arg(Call &call,
 void RunTypeChecker(ASTContext &ast,
                     BPFtrace &b,
                     CDefinitions &c_definitions,
-                    TypeMetadata &types)
+                    TypeMetadata &types,
+                    const TypeMap &type_map)
 {
-  TypeChecker checker(ast, b, c_definitions, types);
+  TypeChecker checker(ast, b, c_definitions, types, type_map);
   checker.visit(ast.root);
 }
 

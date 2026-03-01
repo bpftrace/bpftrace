@@ -12,6 +12,7 @@ namespace bpftrace::ast {
 
 class ASTContext;
 class Expression;
+class TypeMap;
 struct Program;
 
 std::optional<SizedType> try_tuple_cast(ASTContext &ctx,
@@ -24,6 +25,8 @@ std::optional<SizedType> try_record_cast(ASTContext &ctx,
                                          const SizedType &expr_type,
                                          const SizedType &target_type);
 
-void RunCastCreator(ASTContext &ast, BPFtrace &bpftrace);
+void RunCastCreator(ASTContext &ast,
+                    BPFtrace &bpftrace,
+                    const TypeMap &type_map);
 
 } // namespace bpftrace::ast
