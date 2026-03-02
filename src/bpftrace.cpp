@@ -1534,9 +1534,13 @@ std::set<std::string> BPFtrace::list_modules(const ast::ASTContext &ctx,
           clear_target = false;
         }
 
-        for (std::string match : probe_matcher.get_matches_for_ap(*ap)) {
-          auto module = util::erase_prefix(match);
-          modules.insert(module);
+        if (util::has_wildcard(ap->target)) {
+          for (std::string match : probe_matcher.get_matches_for_ap(*ap)) {
+            auto module = util::erase_prefix(match);
+            modules.insert(module);
+          }
+        } else {
+          modules.insert(ap->target);
         }
 
         if (clear_target)
