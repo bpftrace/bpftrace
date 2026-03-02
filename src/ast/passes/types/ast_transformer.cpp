@@ -1,5 +1,6 @@
 #include "ast/passes/types/ast_transformer.h"
 #include "ast/ast.h"
+#include "ast/passes/fold_literals.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/types/cast_creator.h"
 #include "ast/visitor.h"
@@ -24,6 +25,8 @@ public:
 
   using Visitor<AstTransformer, std::optional<Expression>>::visit;
 
+  std::optional<Expression> visit(ArrayAccess &acc);
+  std::optional<Expression> visit(Cast &cast);
   std::optional<Expression> visit(Expression &expr);
   std::optional<Expression> visit(Binop &binop);
   std::optional<Expression> visit(Offsetof &offof);
@@ -52,6 +55,25 @@ private:
     return none;
   }
 };
+
+std::optional<Expression> AstTransformer::visit(ArrayAccess &acc)
+{
+  visit(acc.expr);
+  visit(acc.indexpr);
+
+  if (get_type(&acc.expr.node()).IsTupleTy()) {
+    if (auto *index = acc.indexpr.as<Integer>()) {
+      return ast_.make_node<TupleAccess>(acc.loc,
+                                         acc.expr,
+                                         static_cast<ssize_t>(index->value));
+    } else {
+      acc.addError()
+          << "Array-style access for tuples only valid for integer literals";
+    }
+  }
+
+  return std::nullopt;
+}
 
 std::optional<Expression> AstTransformer::visit(Binop &binop)
 {
@@ -125,6 +147,15 @@ std::optional<Expression> AstTransformer::visit(Binop &binop)
   } else {
     return ast_.make_node<Unop>(binop.loc, cast, Operator::LNOT);
   }
+}
+
+std::optional<Expression> AstTransformer::visit(Cast &cast)
+{
+  visit(cast.expr);
+  if (get_type(&cast).IsBoolTy() && cast.expr.is_literal()) {
+    return ast_.make_node<Boolean>(cast.expr.loc(), eval_bool(cast.expr));
+  }
+  return std::nullopt;
 }
 
 std::optional<Expression> AstTransformer::visit(Expression &expr)

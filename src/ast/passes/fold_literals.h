@@ -14,6 +14,8 @@ void fold(ASTContext &ast, Expression &expr);
 // Re-visit the whole ast and re-fold
 void fold(ASTContext &ast);
 
+bool eval_bool(Expression expr);
+
 // Fold all nodes.
 Pass CreateFoldLiteralsPass();
 
