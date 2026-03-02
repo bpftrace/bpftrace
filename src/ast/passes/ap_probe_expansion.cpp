@@ -332,8 +332,9 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
       }
       case ExpansionType::NONE: {
         auto pt = probetype(ap->provider);
+        bool is_kprobe = pt == ProbeType::kprobe || pt == ProbeType::kretprobe;
 
-        if (pt == ProbeType::kprobe || pt == ProbeType::kretprobe) {
+        if (is_kprobe) {
           // Construct a string containing "module:function."
           // Also log a warning or throw an error if the module doesn't exist,
           // before attempting to attach.
@@ -349,9 +350,21 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
           }
         }
 
+        // We do this pre-filtering primarily for probes where we have to look
+        // up `args` or `retval` in BTF (or Dwarf for uprobes/uretprobes) as we
+        // fail hard if those `args` aren't available as we can't resolve the
+        // type and continue with type resolution. In order not to fail hard and
+        // respsect the missing_probes config we filter out early - notice
+        // kprobes/kretprobes can bypass this by utilizing `--unsafe` for
+        // situations when the user wants to ignore the
+        // available_filter_functions file or it doesn't exist on the system
         auto matches = probe_matcher_.get_matches_for_ap(*ap);
-        // Filter out unnecessary probes, as they may not be missing.
         if (matches.empty() && (pt != ProbeType::watchpoint)) {
+          if (is_kprobe && !bpftrace_.safe_mode_) {
+            new_aps.push_back(ap);
+            break;
+          }
+
           const auto missing_probes = bpftrace_.config_->missing_probes;
           std::string msg = "No matches for " +
                             probetypeName(probetype(ap->provider)) + " " +
