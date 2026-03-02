@@ -5,14 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     nix-appimage = {
-      # We're maintaining a fork b/c upstream is missing support for unstable
-      # and has also dropped the following feature we depend on:
-      #   https://github.com/ralismark/nix-appimage/pull/9
-      #
-      # Also b/c appimage-runtime (which nix-appimage depends on) has a bug
-      # that's being fixed in:
-      #   https://github.com/AppImageCrafters/appimage-runtime/pull/14
-      url = "github:danobi/nix-appimage/74e44691812b4f220e84fd89895931ff4f904a03";
+      url = "github:ralismark/nix-appimage";
       # Avoid multiple copies of the same dependency
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
@@ -37,28 +30,30 @@
           pkgs = import nixpkgs { inherit system; };
 
           # The default LLVM version is the latest supported release
-          defaultLlvmVersion = 21;
+          defaultLlvmVersion = 22;
 
           # Override to specify the bcc build we want.
-          # We need a specific patch in BCC which resolves a build failure with
-          # LLVM 21 and is not a part of any official release, yet.
-          # commit: "8c5c96ad3beeed2fa827017f451a952306826974"
-          #
-          # Updated to BCC commit enabling versioned SONAME support in uprobes
-          # (supports attachpoints like uprobe:libssl.so.3:SSL_write)
-          bccVersion = "beb1fe40e1183a9068c93640e4687342d822c4e3";
+          # We need specific patches in BCC which resolve build failures with
+          # LLVM 22 and are not a part of any official release, yet.
+          bccVersion = "2cc6d1ade647db5bf1dab91be3b18569868779ce";
           bcc = (pkgs.bcc.override {
             llvmPackages = pkgs."llvmPackages_${toString defaultLlvmVersion}";
-          }).overridePythonAttrs {
+          }).overridePythonAttrs (oldAttrs: {
             version = bccVersion;
             src = pkgs.fetchFromGitHub {
               owner = "iovisor";
               repo = "bcc";
               rev = "${bccVersion}";
               # See above
-              sha256 = "sha256-9BapcFFVn+4zCDBlt15Wmiwnaj0RAqCOfuByu2n6GAs=";
+              sha256 = "sha256-eHPhNGjtFXOGHLGCANsyl+MrUhsCVvQ2lOKI/lcbd/8=";
             };
-          };
+            # Use shared libclang-cpp.so instead of individual static libs.
+            # New LLVM 22 static libs (e.g. clangAnalysisLifetimeSafety) are
+            # linked into libclang-cpp.so and not meant to be used directly.
+            cmakeFlags = oldAttrs.cmakeFlags ++ [
+              (pkgs.lib.cmakeBool "ENABLE_LLVM_SHARED" true)
+            ];
+          });
 
           # gtest-parallel for running tests
           gtest_parallel = pkgs.stdenv.mkDerivation {
@@ -263,17 +258,16 @@
             default = self.packages.${system}."bpftrace-llvm${toString defaultLlvmVersion}";
 
             # Support matrix of llvm versions
+            bpftrace-llvm22 = mkBpftrace 22;
             bpftrace-llvm21 = mkBpftrace 21;
             bpftrace-llvm20 = mkBpftrace 20;
             bpftrace-llvm19 = mkBpftrace 19;
             bpftrace-llvm18 = mkBpftrace 18;
-            bpftrace-llvm17 = mkBpftrace 17;
 
             # Self-contained static binary with all dependencies
-            appimage = nix-appimage.mkappimage.${system} {
-              drv = default;
-              entrypoint = pkgs.lib.getExe default;
-              name = default.name;
+            appimage = nix-appimage.lib.${system}.mkAppImage {
+              program = pkgs.lib.getExe default;
+              name = "${default.name}.AppImage";
 
               # Exclude the following groups to reduce appimage size:
               #
@@ -285,18 +279,23 @@
               # The basic process to identify large and useless files is to:
               #
               # ```
-              # $ nix build .#appimage
+              # $ nix build .?submodules=1#appimage
               # $ ./result --appimage-mount
               # $ cd /tmp/.mount_resultXXXX    # in new terminal
               # $ fd -S +1m -l
               # ```
-              exclude = [
-                "... *.a"
-                "... *.h"
-                "... *.py"
-                "... *.pyc"
-                "... *.whl"
-                "... libLLVM-11.so"
+              # Patterns are wrapped in single quotes because mkAppImage.nix
+              # uses concatStringsSep to build the mksquashfs command, which
+              # causes unquoted multi-word patterns like "... *.a" to be
+              # word-split by bash into separate args, breaking the exclude.
+              squashfsArgs = [
+                "-wildcards" "-e"
+                "'... *.a'"
+                "'... *.h'"
+                "'... *.py'"
+                "'... *.pyc'"
+                "'... *.whl'"
+                "'... libLLVM-11.so'"
               ];
             };
 
@@ -313,11 +312,11 @@
           devShells = rec {
             default = self.devShells.${system}."bpftrace-llvm${toString defaultLlvmVersion}";
 
+            bpftrace-llvm22 = mkBpftraceDevShell 22;
             bpftrace-llvm21 = mkBpftraceDevShell 21;
             bpftrace-llvm20 = mkBpftraceDevShell 20;
             bpftrace-llvm19 = mkBpftraceDevShell 19;
             bpftrace-llvm18 = mkBpftraceDevShell 18;
-            bpftrace-llvm17 = mkBpftraceDevShell 17;
 
             # Note that we depend on LLVM 18 explicitly for the fuzz shell, and
             # this is managed separately. The version of LLVM used to build the
