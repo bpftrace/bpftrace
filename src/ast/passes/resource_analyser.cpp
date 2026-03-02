@@ -31,7 +31,7 @@ class ResourceAnalyser : public Visitor<ResourceAnalyser> {
 public:
   ResourceAnalyser(BPFtrace &bpftrace,
                    MapMetadata &mm,
-                   NamedParamDefaults &named_param_defaults,
+                   NamedParamInfo &named_param_info,
                    const TypeMap &type_map);
 
   using Visitor<ResourceAnalyser>::visit;
@@ -70,7 +70,7 @@ private:
   RequiredResources resources_;
   BPFtrace &bpftrace_;
   MapMetadata map_metadata_;
-  NamedParamDefaults &named_param_defaults_;
+  NamedParamInfo &named_param_info_;
   const TypeMap &type_map_;
 
   // Current probe we're analysing
@@ -84,11 +84,11 @@ private:
 
 ResourceAnalyser::ResourceAnalyser(BPFtrace &bpftrace,
                                    MapMetadata &mm,
-                                   NamedParamDefaults &named_param_defaults,
+                                   NamedParamInfo &named_param_info,
                                    const TypeMap &type_map)
     : bpftrace_(bpftrace),
       map_metadata_(mm),
-      named_param_defaults_(named_param_defaults),
+      named_param_info_(named_param_info),
       type_map_(type_map)
 {
 }
@@ -448,8 +448,8 @@ void ResourceAnalyser::visit(Map &map)
 {
   Visitor<ResourceAnalyser>::visit(map);
 
-  auto it = named_param_defaults_.defaults.find(map.ident);
-  if (it != named_param_defaults_.defaults.end()) {
+  auto it = named_param_info_.defaults.find(map.ident);
+  if (it != named_param_info_.defaults.end()) {
     resources_.global_vars.add_named_param(map.ident,
                                            it->second.value,
                                            it->second.description);
@@ -655,9 +655,9 @@ Pass CreateResourcePass()
   auto fn = [](ASTContext &ast,
                BPFtrace &b,
                MapMetadata &mm,
-               NamedParamDefaults &named_param_defaults,
+               NamedParamInfo &named_param_info,
                TypeMap &type_map) {
-    ResourceAnalyser analyser(b, mm, named_param_defaults, type_map);
+    ResourceAnalyser analyser(b, mm, named_param_info, type_map);
     analyser.visit(ast.root);
     b.resources = analyser.resources();
   };

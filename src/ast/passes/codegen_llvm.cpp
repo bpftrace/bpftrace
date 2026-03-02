@@ -206,7 +206,7 @@ public:
   explicit CodegenLLVM(ASTContext &ast,
                        BPFtrace &bpftrace,
                        CDefinitions &c_definitions,
-                       NamedParamDefaults &named_param_defaults,
+                       NamedParamInfo &named_param_info,
                        LLVMContext &llvm_ctx,
                        ExpansionResult &expansions,
                        const TypeMap &type_map);
@@ -405,7 +405,7 @@ private:
   ASTContext &ast_;
   BPFtrace &bpftrace_;
   CDefinitions &c_definitions_;
-  NamedParamDefaults &named_param_defaults_;
+  NamedParamInfo &named_param_info_;
   LLVMContext &llvm_ctx_;
   ExpansionResult &expansions_;
   const TypeMap &type_map_;
@@ -458,14 +458,14 @@ private:
 CodegenLLVM::CodegenLLVM(ASTContext &ast,
                          BPFtrace &bpftrace,
                          CDefinitions &c_definitions,
-                         NamedParamDefaults &named_param_defaults,
+                         NamedParamInfo &named_param_info,
                          LLVMContext &llvm_ctx,
                          ExpansionResult &expansions,
                          const TypeMap &type_map)
     : ast_(ast),
       bpftrace_(bpftrace),
       c_definitions_(c_definitions),
-      named_param_defaults_(named_param_defaults),
+      named_param_info_(named_param_info),
       llvm_ctx_(llvm_ctx),
       expansions_(expansions),
       type_map_(type_map),
@@ -2754,7 +2754,7 @@ ScopedExpr CodegenLLVM::visit(TupleAccess &acc)
 
 ScopedExpr CodegenLLVM::visit(MapAccess &acc)
 {
-  if (named_param_defaults_.defaults.contains(acc.map->ident)) {
+  if (named_param_info_.defaults.contains(acc.map->ident)) {
     const auto &val_type = type_map_.map_value_type(acc.map->ident);
     if (val_type.IsStringTy()) {
       const auto max_strlen = bpftrace_.config_->max_strlen;
@@ -4829,14 +4829,14 @@ Pass CreateCompilePass()
                          [[maybe_unused]] ControlFlowChecked &control_flow,
                          BPFtrace &bpftrace,
                          CDefinitions &c_definitions,
-                         NamedParamDefaults &named_param_defaults,
+                         NamedParamInfo &named_param_info,
                          CompileContext &ctx,
                          ExpansionResult &expansions,
                          TypeMap &type_map) mutable {
                         CodegenLLVM llvm(ast,
                                          bpftrace,
                                          c_definitions,
-                                         named_param_defaults,
+                                         named_param_info,
                                          *ctx.context,
                                          expansions,
                                          type_map);
