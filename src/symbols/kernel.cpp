@@ -572,7 +572,7 @@ void KernelInfoImpl::add_function(const std::string &func_name,
 void KernelInfoImpl::populate_lazy(
     const std::optional<std::string> &mod_name) const
 {
-  if (available_filter_functions_.eof()) {
+  if (available_filter_functions_.eof() || available_filter_functions_.fail()) {
     return;
   }
 
@@ -741,15 +741,25 @@ Result<KernelInfoImpl> KernelInfoImpl::open(
 
   // Open the filter file. Use the file provided by the user, otherwise fall
   // back to tracefs.
-  const std::string path = !traceable_functions_file.empty()
+  bool has_user_provided_file = !traceable_functions_file.empty();
+  const std::string path = has_user_provided_file
                                ? traceable_functions_file
                                : tracefs::available_filter_functions();
+
   info.available_filter_functions_.open(path);
+
   if (info.available_filter_functions_.fail()) {
-    return make_error<SystemError>(
-        "Could not read functions from " + path +
-        ". If this is expected, use --traceable-functions to set this path "
-        "manually.");
+    std::string msg = "Could not read functions from " + path + ".";
+
+    if (has_user_provided_file) {
+      return make_error<SystemError>(msg);
+    } else {
+      msg +=
+          " If this is expected, use --traceable-functions to set this path "
+          "manually. This file is needed in order to determine which functions "
+          "can safely be traced without causing issues in the kernel.";
+      LOG(WARNING) << msg;
+    }
   }
 
   // Load the blocklist if the file is available, otherwise ignore.
