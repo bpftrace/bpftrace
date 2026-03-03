@@ -1934,10 +1934,12 @@ void TypeRuleCollector::visit(Record &record)
 
 void TypeRuleCollector::visit(Sizeof &szof)
 {
+  // This type will change later depending on what integer literal it resolves
+  // to for now set it to the smallest uint
   if (std::holds_alternative<SizedType>(szof.record)) {
     auto &ty = std::get<SizedType>(szof.record);
     resolve_struct_type(ty, szof);
-    resolver_.set_type(&szof, ty);
+    resolver_.set_type(&szof, CreateUInt8());
   } else {
     auto &expr = std::get<Expression>(szof.record);
     ++introspection_level_;
@@ -1947,9 +1949,6 @@ void TypeRuleCollector::visit(Sizeof &szof)
         .output = &szof,
         .inputs = { &expr.node() },
         .resolve = [&szof](const std::vector<SizedType> &) -> SizedType {
-          // This will change later depending on
-          // what integer literal it resolves to
-          // for now set it to the smallest uint
           return CreateUInt8();
         },
     });
