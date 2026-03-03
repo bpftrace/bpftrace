@@ -258,7 +258,7 @@ public:
                              BPFtrace &bpftrace,
                              MapMetadata &map_metadata,
                              CDefinitions &c_definitions,
-                             NamedParamDefaults &named_param_defaults,
+                             NamedParamInfo &named_param_info,
                              TypeMetadata &type_metadata,
                              const MacroRegistry &macro_registry,
                              TypeResolver &resolver,
@@ -267,7 +267,7 @@ public:
         bpftrace_(bpftrace),
         map_metadata_(map_metadata),
         c_definitions_(c_definitions),
-        named_param_defaults_(named_param_defaults),
+        named_param_info_(named_param_info),
         type_metadata_(type_metadata),
         macro_registry_(macro_registry),
         resolver_(resolver),
@@ -331,7 +331,7 @@ private:
   BPFtrace &bpftrace_;
   MapMetadata &map_metadata_;
   CDefinitions &c_definitions_;
-  NamedParamDefaults &named_param_defaults_;
+  NamedParamInfo &named_param_info_;
   TypeMetadata &type_metadata_;
   const MacroRegistry &macro_registry_;
   TypeResolver &resolver_;
@@ -1806,12 +1806,10 @@ void TypeRuleCollector::visit(Map &map)
 
   // Named param maps (from getopt()) are read-only and have their types pre-set
   // by the NamedParamsPass.
-  // TODO: consider passing these values in NamedParamDefaults instead of
-  // setting them on the AST
-  if (named_param_defaults_.defaults.contains(map.ident) &&
-      !map.value_type.IsNoneTy()) {
-    resolver_.set_type(value_name, map.value_type);
-    resolver_.set_type(key_name, map.key_type);
+  auto it = named_param_info_.map_val_types.find(map.ident);
+  if (it != named_param_info_.map_val_types.end()) {
+    resolver_.set_type(value_name, it->second);
+    resolver_.set_type(key_name, CreateInt64());
   }
 
   if (introspection_level_ > 0) {
@@ -2630,7 +2628,7 @@ Pass CreateTypeResolverPass()
          BPFtrace &b,
          MapMetadata &mm,
          CDefinitions &c_definitions,
-         NamedParamDefaults &named_param_defaults,
+         NamedParamInfo &named_param_info,
          TypeMetadata &types,
          MacroRegistry &macro_registry) -> TypeMap {
         // Fold up front
@@ -2660,7 +2658,7 @@ Pass CreateTypeResolverPass()
                                                 b,
                                                 mm,
                                                 c_definitions,
-                                                named_param_defaults,
+                                                named_param_info,
                                                 types,
                                                 macro_registry,
                                                 resolver,
@@ -2724,7 +2722,7 @@ Pass CreateTypeResolverPass()
                                              b,
                                              mm,
                                              c_definitions,
-                                             named_param_defaults,
+                                             named_param_info,
                                              types,
                                              macro_registry,
                                              resolver,

@@ -15,7 +15,7 @@ public:
   void visit(Expression &expr);
 
   std::unordered_map<std::string, globalvars::GlobalVarInfo> used_args;
-  NamedParamDefaults defaults;
+  NamedParamInfo defaults;
 
 private:
   ASTContext &ast_;
@@ -71,29 +71,31 @@ void NamedParamPass::visit(Expression &expr)
   globalvars::GlobalVarValue np_default;
 
   auto *map_node = ast_.make_node<Map>(call->loc, arg_name->value);
-  map_node->key_type = CreateInt64();
 
+  SizedType val_type;
   if (call->vargs.size() == 1) {
     // boolean
-    map_node->value_type = CreateBool();
+    val_type = CreateBool();
     np_default = false;
   } else if (auto *default_value = call->vargs.at(1).as<Boolean>()) {
     // boolean
-    map_node->value_type = CreateBool();
+    val_type = CreateBool();
     np_default = default_value->value;
   } else if (auto *default_value = call->vargs.at(1).as<String>()) {
     // string
-    map_node->value_type = CreateString(bpftrace_.config_->max_strlen);
+    val_type = CreateString(bpftrace_.config_->max_strlen);
     np_default = default_value->value;
   } else if (auto *default_value = call->vargs.at(1).as<Integer>()) {
     // unsigned integer
-    map_node->value_type = CreateUInt64();
+    val_type = CreateUInt64();
     np_default = default_value->value;
   } else if (auto *default_value = call->vargs.at(1).as<NegativeInteger>()) {
     // signed integer
-    map_node->value_type = CreateInt64();
+    val_type = CreateInt64();
     np_default = default_value->value;
   }
+
+  defaults.map_val_types[arg_name->value] = std::move(val_type);
 
   if (used_args.contains(arg_name->value)) {
     if (used_args.at(arg_name->value).value != np_default) {
@@ -154,7 +156,7 @@ void NamedParamPass::visit(Expression &expr)
 
 Pass CreateNamedParamsPass()
 {
-  auto fn = [](ASTContext &ast, BPFtrace &b) -> Result<NamedParamDefaults> {
+  auto fn = [](ASTContext &ast, BPFtrace &b) -> Result<NamedParamInfo> {
     NamedParamPass np_pass(ast, b);
     np_pass.visit(ast.root);
 

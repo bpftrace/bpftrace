@@ -5,9 +5,10 @@
 
 namespace bpftrace::ast {
 
-class NamedParamDefaults : public ast::State<"named_params_defaults"> {
+class NamedParamInfo : public ast::State<"named_param_info"> {
 public:
   std::unordered_map<std::string, globalvars::GlobalVarInfo> defaults;
+  std::unordered_map<std::string, SizedType> map_val_types;
 };
 
 Pass CreateNamedParamsPass();
