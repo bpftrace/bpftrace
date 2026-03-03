@@ -316,9 +316,25 @@ TEST(utils, sanitiseBPFProgramName)
       "this_is_a_very_long_function_name_which_exceeds_the_KSYM_NAME_LEN_"
       "limit_of_BPF_program_name";
   const std::string long_sanitised = sanitise_bpf_program_name(long_name);
-  ASSERT_EQ(long_sanitised,
-            "uretprobe__this_is_a_very_long_path_to_a_binary_executable_this_"
-            "is_a_very_long_function_name_which_exceeds_the_ba30ddc67a52bad2");
+
+  // Check that the sanitized name:
+  // - is truncated to 127 characters
+  // - starts with an expected prefix
+  // - ends with a hash separated by an underscore
+  // We can't check for the exact string match since the hash may differ across
+  // architectures (some arches use different implementation of std::hash).
+  ASSERT_EQ(long_sanitised.size(), 127U);
+
+  const std::string expected_prefix =
+      "uretprobe__this_is_a_very_long_path_to_a_binary_executable_this_"
+      "is_a_very_long_function_name_which_exceeds_the";
+  ASSERT_EQ(long_sanitised.substr(0, expected_prefix.size()), expected_prefix);
+
+  std::string suffix = long_sanitised.substr(expected_prefix.size());
+  ASSERT_EQ(suffix[0], '_');
+  for (size_t i = 1; i < suffix.size(); ++i) {
+    ASSERT_TRUE(isxdigit(suffix[i]));
+  }
 }
 
 // Run a function with environment var set to specific value.
