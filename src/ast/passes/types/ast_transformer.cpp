@@ -125,9 +125,7 @@ std::optional<Expression> AstTransformer::visit(Binop &binop)
       updated_rht = *updated;
     }
   }
-  auto *size = ast_.make_node<Integer>(binop.loc,
-                                       updatedTy->GetSize(),
-                                       CreateUInt64());
+  auto *size = ast_.make_node<Integer>(binop.loc, updatedTy->GetSize());
   // N.B. if the types aren't equal at this point it means that
   // we're dealing with record types that are same except for
   // their fields are in a different order so we need to use a

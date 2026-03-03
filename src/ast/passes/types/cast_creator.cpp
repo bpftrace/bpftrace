@@ -1,5 +1,6 @@
 #include "ast/passes/types/cast_creator.h"
 #include "ast/ast.h"
+#include "ast/integer_types.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/types/type_map.h"
 #include "ast/visitor.h"
@@ -132,7 +133,7 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
 {
   if (auto *integer = exp.as<Integer>()) {
     if (target_type.IsSigned()) {
-      auto signed_ty = ast::get_signed_integer_type(integer->value);
+      auto signed_ty = get_signed_integer_type(integer->value);
       if (!signed_ty || !signed_ty->FitsInto(target_type)) {
         // The integer is too large
         return std::nullopt;
@@ -149,7 +150,7 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
       return std::nullopt;
     }
 
-    auto signed_ty = ast::get_signed_integer_type(negative_integer->value);
+    auto signed_ty = get_signed_integer_type(negative_integer->value);
     if (!signed_ty.FitsInto(target_type)) {
       // The integer is too large
       return std::nullopt;
