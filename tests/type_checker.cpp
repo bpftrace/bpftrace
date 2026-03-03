@@ -5668,4 +5668,21 @@ TEST_F(TypeCheckerTest, record_mixed_types)
             Jump(ast::JumpType::RETURN) })) });
 }
 
+TEST_F(TypeCheckerTest, literals_casted_to_bool)
+{
+  auto expected = [](bool value) {
+    return ExpectedAST{ Program().WithProbe(
+        Probe({ "kprobe:f" },
+              { ExprStatement(Block({ ExprStatement(Boolean(value)),
+                                      Jump(ast::JumpType::RETURN) })) })) };
+  };
+  test("kprobe:f { (bool)0 }", expected(false));
+  test("kprobe:f { (bool)\"\" }", expected(false));
+  test("kprobe:f { (bool)false }", expected(false));
+  test("kprobe:f { (bool)1 }", expected(true));
+  test("kprobe:f { (bool)-1 }", expected(true));
+  test("kprobe:f { (bool)\"str\" }", expected(true));
+  test("kprobe:f { (bool)true }", expected(true));
+}
+
 } // namespace bpftrace::test::type_checker

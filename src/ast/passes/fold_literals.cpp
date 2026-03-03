@@ -21,7 +21,6 @@ public:
 
   using Visitor<LiteralFolder, std::optional<Expression>>::visit;
 
-  std::optional<Expression> visit(Cast &cast);
   std::optional<Expression> visit(Unop &op);
   std::optional<Expression> visit(Binop &op);
   std::optional<Expression> visit(IfExpr &if_expr);
@@ -54,24 +53,6 @@ private:
 };
 
 } // namespace
-
-static bool eval_bool(Expression expr)
-{
-  if (auto *integer = expr.as<Integer>()) {
-    return integer->value != 0;
-  }
-  if (expr.is<NegativeInteger>()) {
-    return true;
-  }
-  if (auto *str = expr.as<String>()) {
-    return !str->value.empty();
-  }
-  if (auto *boolean = expr.as<Boolean>()) {
-    return boolean->value;
-  }
-  LOG(BUG) << "Expression is not a literal";
-  return false;
-}
 
 template <typename T>
 static Expression make_boolean(ASTContext &ast, T left, T right, Binop &op)
@@ -399,15 +380,6 @@ static std::optional<std::variant<uint64_t, int64_t>> eval_binop(T left,
   }
   LOG(BUG) << "Unexpected binary operator: " << static_cast<int>(op);
   __builtin_unreachable();
-}
-
-std::optional<Expression> LiteralFolder::visit(Cast &cast)
-{
-  visit(cast.expr);
-  if (cast.type().IsBoolTy() && cast.expr.is_literal()) {
-    return ast_.make_node<Boolean>(cast.expr.loc(), eval_bool(cast.expr));
-  }
-  return std::nullopt;
 }
 
 std::optional<Expression> LiteralFolder::visit(Unop &op)
@@ -879,15 +851,6 @@ std::optional<Expression> LiteralFolder::visit(ArrayAccess &acc)
       return ast_.make_node<Integer>(acc.loc,
                                      static_cast<uint64_t>(s[index->value]));
     }
-  } else if (acc.expr.type().IsTupleTy()) {
-    if (auto *index = acc.indexpr.as<Integer>()) {
-      return ast_.make_node<TupleAccess>(acc.loc,
-                                         acc.expr,
-                                         static_cast<ssize_t>(index->value));
-    } else {
-      acc.addError()
-          << "Array-style access for tuples only valid for integer literals";
-    }
   }
 
   return std::nullopt;
@@ -938,6 +901,24 @@ std::optional<Expression> LiteralFolder::visit(Comptime &comptime)
     return nested->expr; // Prune redundant comptime.
   }
   return std::nullopt;
+}
+
+bool eval_bool(Expression expr)
+{
+  if (auto *integer = expr.as<Integer>()) {
+    return integer->value != 0;
+  }
+  if (expr.is<NegativeInteger>()) {
+    return true;
+  }
+  if (auto *str = expr.as<String>()) {
+    return !str->value.empty();
+  }
+  if (auto *boolean = expr.as<Boolean>()) {
+    return boolean->value;
+  }
+  LOG(BUG) << "Expression is not a literal";
+  return false;
 }
 
 void fold(ASTContext &ast, Expression &expr)
