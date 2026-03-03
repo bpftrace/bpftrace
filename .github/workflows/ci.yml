@@ -90,6 +90,8 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm21
           NIX_TARGET_KERNEL: .#kernel-6_14
           TOOLS_TEST_DISABLE: runqlen.bt # Need host 6.14 kernel
+          # This test causes soft lockups in the VM
+          RUNTIME_TESTS_FILTER: "-basic.parallel map access"
         - NAME: AOT (LLVM 21 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm21
