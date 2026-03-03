@@ -40,10 +40,9 @@ public:
   CallInst *CreateMapLookup(Map &map,
                             Value *key,
                             const std::string &name = "lookup_elem");
-  Value *CreateMapLookupElem(Map &map, Value *key, const Location &loc);
   Value *CreateMapLookupElem(const std::string &map_name,
                              Value *key,
-                             SizedType &type,
+                             const SizedType &type,
                              const Location &loc);
   Value *CreatePerCpuMapAggElems(Map &map,
                                  Value *key,
@@ -157,13 +156,14 @@ public:
   void CreateGetCurrentComm(AllocaInst *buf, size_t size, const Location &loc);
   void CreateOutput(Value *data, size_t size, const Location &loc);
   void CreateIncEventLossCounter(const Location &loc);
-  void CreatePerCpuMapElemInit(Map &map,
+  void CreatePerCpuMapElemInit(const std::string &map_ident,
                                Value *key,
                                Value *val,
                                const Location &loc);
-  void CreatePerCpuMapElemAdd(Map &map,
+  void CreatePerCpuMapElemAdd(const std::string &map_ident,
                               Value *key,
                               Value *val,
+                              const SizedType &value_type,
                               const Location &loc);
   void CreateTracePrintk(Value *fmt,
                          Value *fmt_size,
@@ -187,7 +187,7 @@ public:
   AllocaInst *CreateUSym(Value *val, int probe_id, const Location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, size_t offset, const std::string &name);
-  Value *CreateKFuncArg(Value *ctx, SizedType &type, std::string &name);
+  Value *CreateKFuncArg(Value *ctx, const SizedType &type, std::string &name);
   Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
   Value *CreateUprobeArgsRecord(Value *ctx, const SizedType &args_type);
   llvm::Type *UprobeArgsType(const SizedType &args_type);
