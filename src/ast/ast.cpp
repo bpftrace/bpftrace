@@ -20,13 +20,6 @@ Diagnostic &Node::addWarning() const
   return state_.diagnostics_->addWarning(loc);
 }
 
-const SizedType &Expression::type() const
-{
-  return std::visit(
-      [](const auto *expr) -> const SizedType & { return expr->type(); },
-      value);
-}
-
 bool Expression::is_literal() const
 {
   if (is<Integer>() || is<NegativeInteger>() || is<String>() || is<Boolean>()) {

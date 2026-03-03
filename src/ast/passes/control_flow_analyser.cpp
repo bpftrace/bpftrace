@@ -292,16 +292,6 @@ void ExitReturn::visit(Expression &expr)
 
 void ControlFlowInjector::visit(Subprog &subprog)
 {
-  bool has_return = ControlFlowAnalyser<JumpType::RETURN>(ast_).visit(
-      subprog.block);
-  if (!has_return) {
-    if (subprog.return_type->type().IsVoidTy()) {
-      inject_jump<JumpType::RETURN>(ast_, *subprog.block);
-    } else {
-      subprog.addError() << "Not all code paths returned a value";
-    }
-  }
-
   // Recurse to check loops, etc.
   visit(subprog.block);
 }
