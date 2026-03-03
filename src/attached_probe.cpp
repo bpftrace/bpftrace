@@ -489,7 +489,12 @@ Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
   // additional checking here because this has already been verified during
   // attachpoint verification. We will automatically propagate any failures
   // to attach form the libbpf layer in the future.
-  std::string funcname = probe.attach_point;
+  std::string funcname;
+  if (!probe.path.empty() && probe.path != "vmlinux") {
+    funcname = probe.path + ":" + probe.attach_point;
+  } else {
+    funcname = probe.attach_point;
+  }
 
   // The kprobe can either be defined by a symbol+offset or an address:
   // For symbol+offset kprobe, we need to check the validity of the offset.
