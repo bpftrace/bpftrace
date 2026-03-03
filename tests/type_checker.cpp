@@ -4850,9 +4850,12 @@ TEST_F(TypeCheckerTest, variable_address)
   ASSERT_TRUE(result.type_map.type(assignment->var()).GetPointeeTy().IsIntTy());
 
   test("begin { let $a; $b = &$a; }", Error{ R"(
-ERROR: Could not resolve the type of this variable
+stdin:1:22-25: ERROR: No type available for variable $a
 begin { let $a; $b = &$a; }
-            ~~
+                     ~~~
+stdin:1:17-25: ERROR: Invalid expression for assignment
+begin { let $a; $b = &$a; }
+                ~~~~~~~~
 )" });
 }
 

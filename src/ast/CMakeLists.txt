@@ -43,7 +43,6 @@ add_library(ast STATIC
   passes/args_resolver.cpp
   passes/probe_prune.cpp
   passes/resource_analyser.cpp
-  passes/types/type_applicator.cpp
   passes/types/type_checker.cpp
   passes/types/type_resolver.cpp
   passes/codegen_llvm.cpp
