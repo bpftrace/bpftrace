@@ -55,8 +55,8 @@ class BPFtrace;
 class ProbeMatcher {
 public:
   explicit ProbeMatcher(BPFtrace *bpftrace,
-                        symbols::KernelInfo &kernel_func_info,
-                        symbols::UserInfo &user_func_info)
+                        const symbols::KernelInfo &kernel_func_info,
+                        const symbols::UserInfo &user_func_info)
       : bpftrace_(bpftrace),
         kernel_func_info_(kernel_func_info),
         user_func_info_(user_func_info)
@@ -84,8 +84,8 @@ public:
   std::vector<std::string> get_structs_for_listing(const std::string &search);
 
   const BPFtrace *bpftrace_;
-  symbols::KernelInfo &kernel_func_info_;
-  symbols::UserInfo &user_func_info_;
+  const symbols::KernelInfo &kernel_func_info_;
+  const symbols::UserInfo &user_func_info_;
 
 private:
   std::set<std::string> get_matches_in_stream(const std::string &search_input,
