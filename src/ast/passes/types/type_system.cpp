@@ -3,6 +3,7 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/types/type_map.h"
 
 namespace bpftrace::ast {
 
@@ -66,7 +67,7 @@ Pass CreateTypeSystemPass()
 
 Pass CreateDumpTypesPass(std::ostream &out)
 {
-  auto fn = [&out](ASTContext &ast, TypeMetadata &tm) {
+  auto fn = [&out](ASTContext &ast, TypeMetadata &tm, TypeMap &type_map) {
     out << "// Functions\n";
     for (const auto &type : tm.global) {
       if (!type.is<btf::Function>()) {
@@ -82,7 +83,11 @@ Pass CreateDumpTypesPass(std::ostream &out)
       out << "// " << type.as<btf::Var>() << "\n";
     }
     out << "// Program\n";
-    ast::Printer printer(ast, out, ast::FormatMode::Debug);
+    ast::Printer printer(ast,
+                         out,
+                         ast::FormatMode::Debug,
+                         ast::Printer::kDefaultWidth,
+                         &type_map);
     printer.visit(ast.root);
   };
   return Pass::create("DumpTypes", fn);

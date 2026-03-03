@@ -6,6 +6,7 @@
 
 #include "ast/ast.h"
 #include "ast/passes/printer.h"
+#include "ast/passes/types/type_map.h"
 #include "types.h"
 #include "util/strings.h"
 
@@ -1355,8 +1356,9 @@ Buffer Formatter::visit(Expression& expr)
         format(expr.value, local_metadata, local_width, true));
   }
   if (mode == FormatMode::Debug) {
+    assert(type_map != nullptr);
     // Don't count this in the width; it's debug mode.
-    buffer = buffer.comment(typestr(expr.type()));
+    buffer = buffer.comment(typestr(type_map->type(expr)));
   }
   if (bare_okay) {
     return buffer;

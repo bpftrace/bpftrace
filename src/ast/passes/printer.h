@@ -7,6 +7,8 @@
 
 namespace bpftrace::ast {
 
+class TypeMap;
+
 // BufferState is an internal type.
 struct BufferState;
 
@@ -52,8 +54,13 @@ public:
   Formatter(FormatMode mode,
             MetadataIndex &metadata,
             size_t max_width,
-            bool bare = false)
-      : mode(mode), metadata(metadata), max_width(max_width), bare(bare) {};
+            bool bare = false,
+            const TypeMap *type_map = nullptr)
+      : mode(mode),
+        metadata(metadata),
+        max_width(max_width),
+        bare(bare),
+        type_map(type_map) {};
 
   using Visitor<Formatter, Buffer>::visit;
   Buffer visit(Integer &integer);
@@ -122,7 +129,7 @@ private:
                 size_t max_width,
                 bool bare = false)
   {
-    return Formatter(mode, metadata, max_width, bare).visit(value);
+    return Formatter(mode, metadata, max_width, bare, type_map).visit(value);
   }
 
   template <typename U>
@@ -136,6 +143,7 @@ private:
   MetadataIndex &metadata;
   size_t max_width;
   bool bare;
+  const TypeMap *type_map;
 };
 
 // Printer is a class to format AST nodes of type T.
@@ -145,14 +153,19 @@ public:
   Printer(const ASTContext &ast,
           std::ostream &out,
           FormatMode mode = FormatMode::Minimal,
-          size_t max_width = kDefaultWidth)
-      : ast_(ast), out_(out), mode_(mode), max_width_(max_width) {};
+          size_t max_width = kDefaultWidth,
+          const TypeMap *type_map = nullptr)
+      : ast_(ast),
+        out_(out),
+        mode_(mode),
+        max_width_(max_width),
+        type_map_(type_map) {};
 
   template <typename T>
   void visit(T &value)
   {
     MetadataIndex metadata = ast_.metadata();
-    out_ << Formatter(mode_, metadata, max_width_, true).visit(value);
+    out_ << Formatter(mode_, metadata, max_width_, true, type_map_).visit(value);
   }
 
 private:
@@ -160,6 +173,7 @@ private:
   std::ostream &out_;
   FormatMode mode_;
   size_t max_width_;
+  const TypeMap *type_map_;
 };
 
 } // namespace bpftrace::ast
