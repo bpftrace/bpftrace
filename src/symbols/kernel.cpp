@@ -656,10 +656,13 @@ ModuleSet KernelInfoImpl::get_modules(
     // Add everything that is loaded.
     return modules_loaded_;
   } else if (!util::has_wildcard(*mod_name)) {
-    // Just return the single module.
-    ModuleSet single;
-    single.emplace(*mod_name);
-    return single;
+    ModuleSet filtered;
+    for (const auto &mod : modules_loaded_) {
+      if (mod == *mod_name) {
+        filtered.emplace(mod);
+      }
+    }
+    return filtered;
   } else {
     // Match all loaded modules that are not yet in the populated list.
     ModuleSet filtered;
