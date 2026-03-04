@@ -39,11 +39,11 @@ private:
 void AttachPointChecker::visit(AttachPoint &ap)
 {
   if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
-    if (ap.func.empty())
-      ap.addError() << "kprobes should be attached to a function";
+    if (ap.func.empty() && ap.address == 0)
+      ap.addError() << "kprobes should be attached to a function or an address";
     // Warn if user tries to attach to a non-traceable function
     if (bpftrace_.config_->missing_probes != ConfigMissingProbes::ignore &&
-        !util::has_wildcard(ap.func) &&
+        !util::has_wildcard(ap.func) && !ap.func.empty() &&
         !func_info_state_.kernel_info().is_traceable(ap.func)) {
       ap.addWarning() << ap.func
                       << " is not traceable (either non-existing, inlined, "
@@ -677,9 +677,21 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
     }
     ap_->func_offset = *res;
   }
-  // Default case (eg kprobe:func)
+  // Default case (eg "kprobe:(addr|func)")
   else {
-    ap_->func = parts_[func_idx];
+    auto res = util::to_uint(parts_[func_idx]);
+    if (res) {
+      // We don't check whether the address is valid (it's passed directly to
+      // the kernel), so allow this only in unsafe mode.
+      if (bpftrace_.safe_mode_) {
+        errs_ << "Probing by address requires --unsafe" << std::endl;
+        return INVALID;
+      }
+      ap_->address = *res;
+    } else {
+      ap_->func = parts_[func_idx];
+      consumeError(std::move(res)); // ignore the parse error
+    }
   }
 
   return OK;

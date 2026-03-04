@@ -1235,7 +1235,9 @@ fexit:fget {
 
 * `kprobe[:module]:fn`
 * `kprobe[:module]:fn+offset`
+* `kprobe:addr`
 * `kretprobe[:module]:fn`
+* `kretprobe:addr`
 
 **short names**
 
@@ -1299,7 +1301,7 @@ kprobe:kvm:x86_emulate_insn
 
 See [BTF Support](#btf-support) for more details.
 
-`kprobe` s are not limited to function entry, they can be attached to any instruction in a function by specifying an offset from the start of the function.
+`kprobe` s are not limited to function entry, they can be attached to any instruction in a function by specifying an offset from the start of the function or by providing the bare address of the function, which is useful if there are multiple functions with the same name. The bare address variant `kprobe:addr` requires the `--unsafe` flag.
 
 `kretprobe` s trigger on the return from a kernel function.
 Return probes do not have access to the function (input) arguments, only to the return value (through `retval`).
