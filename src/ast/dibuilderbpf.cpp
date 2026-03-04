@@ -343,8 +343,14 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
   else if (stype.IsTSeriesTy())
     return CreateTSeriesStructType(stype);
 
-  if (stype.IsPtrTy())
+  if (stype.IsPtrTy()) {
+    // We shouldn't need to handle bare void types as they can't be assigned to
+    // variables or be used as map keys/values
+    if (stype.GetPointeeTy().IsVoidTy()) {
+      return createPointerType(nullptr, 64);
+    }
     return createPointerType(GetType(stype.GetPointeeTy()), 64);
+  }
 
   // Integer types and builtin types represented by integers
   switch (stype.GetSize()) {

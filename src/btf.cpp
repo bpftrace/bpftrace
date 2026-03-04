@@ -470,8 +470,13 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     id.id = t->type;
   }
 
-  if (!t)
+  if (!t) {
+    // BTF type id 0 represents void
+    if (id.id == 0) {
+      return CreateVoid();
+    }
     return CreateNone();
+  }
 
   auto stype = CreateNone();
 
@@ -531,6 +536,12 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     } else {
       stype = CreateArray(array->nelems, elem_type);
     }
+  } else if (btf_is_void(t) || btf_is_func_proto(t)) {
+    // We treat func_proto as void because there are no callable functions in
+    // bpftrace that can be assigned to scratch variables or maps, however
+    // bpftrace does support pointers to functions. Builtins like `ksym` can be
+    // used on these function pointers.
+    return CreateVoid();
   }
 
   return stype;
@@ -1320,6 +1331,9 @@ SizedType BTF::get_stype(std::string_view type_name)
     auto pos = type_name.rfind(" long");
     return get_stype("long " + std::string(type_name.substr(0, pos)));
   }
+
+  if (type_name == "void")
+    return CreateVoid();
 
   return CreateNone();
 }
