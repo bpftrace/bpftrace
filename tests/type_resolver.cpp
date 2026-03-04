@@ -1002,6 +1002,10 @@ TEST_F(TypeResolverTest, binop)
     EXPECT_EQ(var_type(ast, "$a"), CreateInt64());
   }
   {
+    auto ast = test(R"(begin { $a = (uint8)1 * sizeof(uint64 *); })");
+    EXPECT_EQ(var_type(ast, "$a"), CreateUInt64());
+  }
+  {
     auto ast = test(R"(begin { $a = ((uint32)1 == (uint32)2); })");
     EXPECT_EQ(var_type(ast, "$a"), CreateBool());
   }
