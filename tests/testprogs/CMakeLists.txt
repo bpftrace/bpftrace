@@ -1,13 +1,12 @@
 set_property(GLOBAL APPEND_STRING PROPERTY testprog_cflags "-g -O0")
 
 # Check and add CFLAG to testprog_cflags
+include(CheckCCompilerFlag)
 function(test_and_add_testprog_cflag flag)
-  try_compile(FLAG_AVAILABLE
-    ${CMAKE_CURRENT_BINARY_DIR}
-    SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/simple_struct.c
-    LINK_OPTIONS ${flag}
-  )
-  if(${FLAG_AVAILABLE})
+  # We need unique variable name since check_c_compiler_flag caches results
+  string(MAKE_C_IDENTIFIER "HAVE_FLAG_${flag}" flag_var)
+  check_c_compiler_flag("${flag}" ${flag_var})
+  if(${${flag_var}})
     set_property(GLOBAL APPEND_STRING PROPERTY testprog_cflags " ${flag}")
   else()
     message(STATUS "${CMAKE_C_COMPILER} does not support ${flag}")
