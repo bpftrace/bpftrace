@@ -395,7 +395,9 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   } else if (stype.IsPtrTy()) {
     ty = getPtrTy();
   } else if (stype.IsVoidTy()) {
-    ty = getVoidTy();
+    // Use i8 instead of void because void is unsized in LLVM and cannot be
+    // used in GEPs. This matches C's treatment of void* arithmetic as char*.
+    ty = getInt8Ty();
   } else if (stype.IsBoolTy()) {
     ty = getInt1Ty();
   } else {
