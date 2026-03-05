@@ -119,4 +119,22 @@ bool is_str_bool_falsy(const std::string &value)
   return val == "0" || val == "false" || val == "off" || val == "no";
 }
 
+// Replace any number of consecutive spaces at any position in a string with a
+// single space, while removing all leading and trailing spaces.
+// This function will create a new string.
+std::string normalize_whitespace(const std::string &input)
+{
+  std::string copy = input;
+
+  trim(copy);
+
+  auto unique_end =
+      std::ranges::unique(copy.begin(), copy.end(), [](char l, char r) {
+        return std::isspace(l) && std::isspace(r);
+      }).begin();
+  copy.erase(unique_end, copy.end());
+
+  return copy;
+}
+
 } // namespace bpftrace::util
