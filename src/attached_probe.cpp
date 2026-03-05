@@ -142,40 +142,22 @@ Result<uint64_t> resolve_offset_kprobe(Probe &probe)
   if (is_symbol_kprobe && probe.func_offset == 0)
     return offset;
 
-  // Setup the symbol to resolve, either using the address or the name.
+  // To validate an arbitrary address, we'd need to check symtabs of vmlinux
+  // and all modules, as well as know their load addresses. Since we support
+  // address probes only in unsafe mode anyway, validation is deferred to the
+  // kernel. This function is only called for sym+offset kprobes.
+  assert(is_symbol_kprobe);
+
   struct symbol sym = {};
-  if (is_symbol_kprobe)
-    sym.name = probe.attach_point;
-  else
-    sym.address = probe.address;
+  sym.name = probe.attach_point;
 
   auto path = symbols::find_vmlinux(&sym);
   if (!path.has_value()) {
-    if (!is_symbol_kprobe) {
-      return make_error<AttachError>("Could not resolve address: " +
-                                     std::to_string(probe.address));
-    }
-
     LOG(V1) << "Could not resolve symbol " << probe.attach_point
             << ". Skipping usermode offset checking.";
     LOG(V1) << "The kernel will verify the safety of the location but "
                "will also allow the offset to be in a different symbol.";
     return offset;
-  }
-
-  // Populate probe_ fields according to the resolved symbol.
-  if (is_symbol_kprobe) {
-    probe.address = sym.start + probe.func_offset;
-  } else {
-    probe.attach_point = std::move(sym.name);
-    if (__builtin_sub_overflow(probe.address, sym.start, &probe.func_offset))
-      LOG(BUG) << "Offset before the function bounds ('" << probe.attach_point
-               << "' address is " << std::to_string(sym.start) << ")";
-    offset = probe.func_offset;
-    // Set the name of the probe to the resolved symbol+offset, so that failure
-    // to attach can be ignored if the user set ConfigMissingProbes::warn.
-    probe.name = "kprobe:" + probe.attach_point + "+" +
-                 std::to_string(probe.func_offset);
   }
 
   if (probe.func_offset >= sym.size) {
@@ -496,25 +478,37 @@ Result<std::unique_ptr<AttachedKprobeProbe>> AttachedKprobeProbe::make(
     funcname = probe.attach_point;
   }
 
+  const char *kprobe_func;
+  uint64_t offset;
+
   // The kprobe can either be defined by a symbol+offset or an address:
   // For symbol+offset kprobe, we need to check the validity of the offset.
-  // For address kprobe, we need to resolve into the symbol+offset and
-  // populate `funcname` with the results stored back in the probe.
+  // Address kprobes are only allowed in unsafe mode so no validation is
+  // performed -- the kernel will reject invalid probes.
   bool is_symbol_kprobe = !probe.attach_point.empty();
-  auto offset_res = resolve_offset_kprobe(probe);
-  if (!offset_res) {
-    return offset_res.takeError();
+  if (is_symbol_kprobe) {
+    auto offset_res = resolve_offset_kprobe(probe);
+    if (!offset_res) {
+      return offset_res.takeError();
+    }
+    kprobe_func = funcname.c_str();
+    offset = *offset_res;
+  } else {
+    if (probe.address == 0) {
+      return make_error<AttachError>("Probe address not set");
+    }
+    // The kernel interprets the offset as the absolute address if the symbol
+    // name is null; see alloc_trace_kprobe() in kernel/trace/trace_kprobe.c
+    kprobe_func = nullptr;
+    offset = probe.address;
   }
-  uint64_t offset = *offset_res;
-  if (!is_symbol_kprobe)
-    funcname += probe.attach_point;
 
   DECLARE_LIBBPF_OPTS(bpf_kprobe_opts, opts);
   opts.offset = offset;
   opts.retprobe = probe.type == ProbeType::kretprobe;
 
   auto *link = bpf_program__attach_kprobe_opts(prog.bpf_prog(),
-                                               funcname.c_str(),
+                                               kprobe_func,
                                                &opts);
   if (!link) {
     if (errno == EILSEQ)

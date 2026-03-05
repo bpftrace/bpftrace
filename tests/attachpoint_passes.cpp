@@ -195,6 +195,16 @@ TEST(attachpoint_checker, kprobe)
   test("kretprobe:f { 1 }");
 }
 
+TEST(attachpoint_checker, kprobe_addr)
+{
+  test_error("kprobe:0x12345678 { 1 }",
+             "ERROR: Probing by address requires --unsafe");
+
+  auto unsafe_bpftrace = get_mock_bpftrace();
+  unsafe_bpftrace->safe_mode_ = false;
+  test(*unsafe_bpftrace, "kprobe:0x12345678 { 1 }");
+}
+
 TEST(attachpoint_checker, usdt)
 {
   test("usdt:/bin/sh:probe { 1 }");
