@@ -792,7 +792,9 @@ void list_probes(BPFtrace& bpftrace,
                  << search << "\' as a search pattern.";
   }
 
-  for (auto& probe : util::split_string(search, ',')) {
+  for (auto& rawprobe : util::split_string(search, ',')) {
+    std::string probe = util::normalize_whitespace(rawprobe);
+
     bool is_search_a_type = is_type_name(probe);
 
     // Ensure that BTF is loaded for all listing.
