@@ -348,6 +348,11 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
                                     funcname + " is not loaded.";
             }
           }
+
+          if (ap->address != 0) {
+            new_aps.push_back(ap); // skip pre-filtering if probing by address
+            break;
+          }
         }
 
         // We do this pre-filtering primarily for probes where we have to look
