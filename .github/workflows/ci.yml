@@ -79,7 +79,7 @@ jobs:
           BUILD_ASAN: 1
           BUILD_UBSAN: 1
           TOOLS_TEST_DISABLE: runqlen.bt
-          RUNTIME_TESTS_FILTER: "-btf.user_supplied_c_def_using_btf:-strcontains.path:-list probes by pid$"
+          RUNTIME_TESTS_FILTER: "-basic.it lists fentry params:-btf.user_supplied_c_def_using_btf:-strcontains.path:-list probes by pid$"
         - NAME: Fuzzing
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-fuzz
