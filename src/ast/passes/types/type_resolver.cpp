@@ -1382,17 +1382,18 @@ void TypeRuleCollector::visit(Cast &cast)
 {
   visit(cast.expr);
 
+  auto *probe = get_probe();
   // Account for the race condition whereby the expression type may resolve
   // before the cast type even though they both need resolution to determine the
   // final cast type, e.g. `@ = (int8[])"hello"`
   resolver_.add_type_rule({
       .output = &cast,
       .inputs = { &cast.expr.node() },
-      .resolve = [this,
-                  &cast](const std::vector<SizedType> &inputs) -> SizedType {
+      .resolve = [this, &cast, probe](
+                     const std::vector<SizedType> &inputs) -> SizedType {
         const auto &expr_ty = inputs[0];
         const auto &cast_ty = resolver_.get_type(&cast);
-        return update_cast_expr(cast_ty, expr_ty, probe_);
+        return update_cast_expr(cast_ty, expr_ty, probe);
       },
   });
 
@@ -1403,7 +1404,7 @@ void TypeRuleCollector::visit(Cast &cast)
     }
     const auto &expr_ty = resolver_.get_type(&cast.expr.node());
     if (!expr_ty.IsNoneTy()) {
-      ty = update_cast_expr(ty, expr_ty, probe_);
+      ty = update_cast_expr(ty, expr_ty, probe);
     }
     resolver_.set_type(&cast, ty);
   } else {
@@ -1411,13 +1412,13 @@ void TypeRuleCollector::visit(Cast &cast)
     resolver_.add_type_rule({
         .output = &cast,
         .inputs = { cast.typeof },
-        .resolve = [this,
-                    &cast](const std::vector<SizedType> &inputs) -> SizedType {
+        .resolve = [this, &cast, probe](
+                       const std::vector<SizedType> &inputs) -> SizedType {
           const auto &cast_ty = inputs[0];
           const auto &expr_ty = resolver_.get_type(&cast.expr.node());
 
           if (!expr_ty.IsNoneTy()) {
-            return update_cast_expr(cast_ty, expr_ty, probe_);
+            return update_cast_expr(cast_ty, expr_ty, probe);
           }
           return cast_ty;
         },
@@ -1440,11 +1441,12 @@ void TypeRuleCollector::visit(FieldAccess &acc)
 {
   visit(acc.expr);
 
+  auto *probe = get_probe();
   resolver_.add_type_rule({
       .output = &acc,
       .inputs = { &acc.expr.node() },
-      .resolve = [this,
-                  &acc](const std::vector<SizedType> &inputs) -> SizedType {
+      .resolve = [this, &acc, probe](
+                     const std::vector<SizedType> &inputs) -> SizedType {
         const auto &expr_type_in = inputs[0];
         // FieldAccesses will automatically resolve through any number of
         // pointer dereferences. For now, we inject the `Unop` operator
@@ -1467,7 +1469,6 @@ void TypeRuleCollector::visit(FieldAccess &acc)
         }
 
         if (expr_type.is_funcarg) {
-          auto *probe = get_probe();
           if (probe == nullptr) {
             return CreateNone();
           }

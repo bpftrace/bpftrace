@@ -154,3 +154,9 @@ NAME stack modes and size
 PROG begin { $a = (1, ustack); $b = (1, ustack(build_id)); $c = (1, ustack(build_id, 30)); $d = (1, kstack); $e = (1, kstack(raw)); $f = (1, kstack(raw, 30)); }
 EXPECT Attached 1 probe
 TIMEOUT 1
+
+# https://github.com/bpftrace/bpftrace/issues/5044
+NAME probe specific arguments
+PROG fentry:vmlinux:vfs_write { print(args.file); exit(); } t:syscalls:sys_enter_execve { print(args.filename); exit(); }
+EXPECT Attached 2 probes
+TIMEOUT 1
