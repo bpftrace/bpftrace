@@ -9,6 +9,9 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+#### Added
+- Add printf specifier `%gr` to print GFP flags in human readable format
+  - [#4832](https://github.com/bpftrace/bpftrace/issues/4832)
 #### Changed
 #### Deprecated
 #### Removed
