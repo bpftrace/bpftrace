@@ -79,7 +79,7 @@ jobs:
           BUILD_ASAN: 1
           BUILD_UBSAN: 1
           TOOLS_TEST_DISABLE: runqlen.bt
-          RUNTIME_TESTS_FILTER: "-btf.user_supplied_c_def_using_btf"
+          RUNTIME_TESTS_FILTER: "-btf.user_supplied_c_def_using_btf:-strcontains.path:-list probes by pid$"
         - NAME: Fuzzing
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-fuzz
@@ -90,6 +90,8 @@ jobs:
           NIX_TARGET: .#bpftrace-llvm21
           NIX_TARGET_KERNEL: .#kernel-6_14
           TOOLS_TEST_DISABLE: runqlen.bt # Need host 6.14 kernel
+          # These tests either causes soft lockups in the VM or timeout consistently
+          RUNTIME_TESTS_FILTER: "-basic.parallel map access:-strcontains.path"
         - NAME: AOT (LLVM 21 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm21

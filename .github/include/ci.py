@@ -293,7 +293,10 @@ def run_runtime_tests():
     """Runs runtime tests, under a controlled kernel if requested"""
     cmd = ["./tests/runtime-tests.sh"]
     if RUNTIME_TESTS_FILTER:
-        cmd.append(f"--filter=\"{RUNTIME_TESTS_FILTER}\"")
+        if NIX_TARGET_KERNEL:
+            cmd.append(f"--filter='{RUNTIME_TESTS_FILTER}'")
+        else:
+            cmd.append(f"--filter={RUNTIME_TESTS_FILTER}")
     run_with_kernel(cmd)
 
 
