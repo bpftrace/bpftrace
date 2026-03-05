@@ -65,6 +65,8 @@ and this project adheres to
   - [#4984](https://github.com/bpftrace/bpftrace/pull/4984)
 - Add `--traceable-functions` to allow the user to provide the list of kernel functions that can be probed
   - [#5014](https://github.com/bpftrace/bpftrace/pull/5014)
+- Add support for address kprobes
+  - [#5041](https://github.com/bpftrace/bpftrace/pull/5041)
 #### Changed
 - Add helpers to check if a kfunc exists and is supported for particular probe types.
   - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)
