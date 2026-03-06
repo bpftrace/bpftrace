@@ -4973,7 +4973,6 @@ let @a = lruhash(2); begin { @a = count(); }
 stdin:1:1-20: ERROR: Invalid bpf map type: potato
 let @a = potato(2); begin { @a[1] = count(); }
 ~~~~~~~~~~~~~~~~~~~
-HINT: Valid map types: percpulruhash, percpuhash, lruhash, hash
 )" });
 }
 
