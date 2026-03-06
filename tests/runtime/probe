@@ -133,7 +133,7 @@ AFTER ./testprogs/syscall read
 
 NAME kprobe_module_missing
 PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT_REGEX .* ERROR: No matches for kprobe nonsense:vfs_read.
+EXPECT_REGEX .* ERROR: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
 WILL_FAIL
 
 NAME kprobe_wildcard_all_leading_underscore
@@ -155,6 +155,13 @@ NAME kprobe_func_missing
 PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT_REGEX .* ERROR: No matches for kprobe vmlinux:nonsense.
 EXPECT_REGEX .* WARNING: nonsense is not traceable \(either non-existing, inlined, or marked as "notrace"\); attaching to it will likely fail
+WILL_FAIL
+
+# We attempt to attach if --unsafe is specified
+NAME kprobe_func_missing_unsafe
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }'
+EXPECT_REGEX .* WARNING: nonsense is not traceable \(either non-existing, inlined, or marked as "notrace"\); attaching to it will likely fail
+EXPECT_REGEX .*ERROR: Unable to attach probe: kprobe:vmlinux:nonsense.*
 WILL_FAIL
 
 NAME kprobe_multi_wildcard
@@ -679,7 +686,12 @@ TIMEOUT 5
 WILL_FAIL
 
 NAME traceable_functions_empty
-RUN {{BPFTRACE}} --traceable-functions /dev/null -e 'kprobe:vfs_read {}'
-EXPECT_REGEX .* ERROR: No matches for kprobe vfs_read.
-TIMEOUT 5
+RUN {{BPFTRACE}} --traceable-functions /dev/null -e 'begin { exit(); } kprobe:vfs_read {}'
+EXPECT_REGEX .*ERROR: No matches for kprobe vfs_read
 WILL_FAIL
+
+NAME traceable_functions_empty_unsafe
+RUN {{BPFTRACE}} --unsafe --traceable-functions /dev/null -e 'begin { exit(); } kprobe:vfs_read {}'
+EXPECT_REGEX .*WARNING: vfs_read is not traceable
+EXPECT Attached 2 probes
+TIMEOUT 1

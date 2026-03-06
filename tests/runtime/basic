@@ -41,6 +41,13 @@ EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
+NAME it lists multiple kprobes in verbose mode
+RUN {{BPFTRACE}} -lv kprobe:vfs_read,kprobe:vfs_write
+EXPECT kprobe:vfs_read
+EXPECT kprobe:vfs_write
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME it lists tracepoints
 RUN {{BPFTRACE}} -l | grep tracepoint
 EXPECT_REGEX tracepoint:.*
@@ -194,11 +201,24 @@ RUN {{BPFTRACE}} -lv 'struct task_struct'
 EXPECT struct task_struct {
 TIMEOUT 2
 
+NAME it lists multiple struct definitions
+RUN {{BPFTRACE}} -lv 'struct task_struct,struct file,struct fd'
+EXPECT struct task_struct {
+EXPECT struct file {
+EXPECT struct fd {
+TIMEOUT 2
+
 NAME it lists probes in a given file
 RUN {{BPFTRACE}} -l runtime/scripts/interval_order.bt
 EXPECT interval:ms:
 EXPECT interval:s:
 EXPECT interval:us:
+
+NAME it lists misc in verbose mode
+RUN {{BPFTRACE}} -lv 'kprobe:vfs_read,struct file'
+EXPECT kprobe:vfs_read
+EXPECT struct file {
+TIMEOUT 2
 
 NAME warning on non existent file
 RUN {{BPFTRACE}} -l non_existent_file.bt

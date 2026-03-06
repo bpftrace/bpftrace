@@ -104,6 +104,8 @@ and this project adheres to
   - [#4948](https://github.com/bpftrace/bpftrace/pull/4948)
 - Fix missing lines in stack resolution
   - [#4953] (https://github.com/bpftrace/bpftrace/pull/4953)
+- Fix listing multi-probes error
+  - [#5022](https://github.com/bpftrace/bpftrace/pull/5022)
 #### Security
 #### Docs
 #### Tools

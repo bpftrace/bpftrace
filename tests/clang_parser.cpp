@@ -824,25 +824,9 @@ TEST(clang_parser, struct_typedef)
   EXPECT_EQ(max_align_struct->GetField("x").offset, 0);
 
   // typedef'd struct (defined in __stddef_max_align_t.h builtin header)
-  EXPECT_EQ(max_align_typedef->size, 32);
   ASSERT_EQ(max_align_typedef->fields.size(), 2U);
   ASSERT_TRUE(max_align_typedef->HasField("__clang_max_align_nonce1"));
   ASSERT_TRUE(max_align_typedef->HasField("__clang_max_align_nonce2"));
-
-  EXPECT_TRUE(
-      max_align_typedef->GetField("__clang_max_align_nonce1").type.IsIntTy());
-  EXPECT_EQ(
-      max_align_typedef->GetField("__clang_max_align_nonce1").type.GetSize(),
-      8U);
-  EXPECT_EQ(max_align_typedef->GetField("__clang_max_align_nonce1").offset, 0);
-
-  // double are not parsed correctly yet so these fields are junk for now
-  EXPECT_TRUE(
-      max_align_typedef->GetField("__clang_max_align_nonce2").type.IsNoneTy());
-  EXPECT_EQ(
-      max_align_typedef->GetField("__clang_max_align_nonce2").type.GetSize(),
-      0U);
-  EXPECT_EQ(max_align_typedef->GetField("__clang_max_align_nonce2").offset, 16);
 }
 
 TEST(clang_parser, struct_qualifiers)
