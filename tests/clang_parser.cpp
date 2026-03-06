@@ -508,7 +508,11 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("a").offset, 0);
   ASSERT_TRUE(foo->GetField("a").bitfield.has_value());
   EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
+#else
+  EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 7U);
+#endif
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0x1U);
 
   EXPECT_TRUE(foo->GetField("b").type.IsIntTy());
@@ -516,7 +520,11 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("b").offset, 0);
   ASSERT_TRUE(foo->GetField("b").bitfield.has_value());
   EXPECT_EQ(foo->GetField("b").bitfield->read_bytes, 1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 1U);
+#else
+  EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 6U);
+#endif
   EXPECT_EQ(foo->GetField("b").bitfield->mask, 0x1U);
 
   EXPECT_TRUE(foo->GetField("c").type.IsIntTy());
@@ -524,7 +532,11 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("c").offset, 0);
   ASSERT_TRUE(foo->GetField("c").bitfield.has_value());
   EXPECT_EQ(foo->GetField("c").bitfield->read_bytes, 1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo->GetField("c").bitfield->access_rshift, 2U);
+#else
+  EXPECT_EQ(foo->GetField("c").bitfield->access_rshift, 3U);
+#endif
   EXPECT_EQ(foo->GetField("c").bitfield->mask, 0x7U);
 
   EXPECT_TRUE(foo->GetField("d").type.IsIntTy());
@@ -532,7 +544,11 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("d").offset, 0);
   ASSERT_TRUE(foo->GetField("d").bitfield.has_value());
   EXPECT_EQ(foo->GetField("d").bitfield->read_bytes, 4U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo->GetField("d").bitfield->access_rshift, 5U);
+#else
+  EXPECT_EQ(foo->GetField("d").bitfield->access_rshift, 7U);
+#endif
   EXPECT_EQ(foo->GetField("d").bitfield->mask, 0xFFFFFU);
 
   EXPECT_TRUE(foo->GetField("e").type.IsIntTy());
@@ -540,7 +556,11 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("e").offset, 3);
   ASSERT_TRUE(foo->GetField("e").bitfield.has_value());
   EXPECT_EQ(foo->GetField("e").bitfield->read_bytes, 1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo->GetField("e").bitfield->access_rshift, 1U);
+#else
+  EXPECT_EQ(foo->GetField("e").bitfield->access_rshift, 0U);
+#endif
   EXPECT_EQ(foo->GetField("e").bitfield->mask, 0x7FU);
   // NOLINTEND(bugprone-unchecked-optional-access)
 }
@@ -569,7 +589,11 @@ TEST(clang_parser, bitfields_with_padding)
   EXPECT_EQ(foo->GetField("a").offset, 4);
   ASSERT_TRUE(foo->GetField("a").bitfield.has_value());
   EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 4U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
+#else
+  EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 4U);
+#endif
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0xFFFFFFFU);
 
   EXPECT_TRUE(foo->GetField("b").type.IsIntTy());
@@ -577,7 +601,11 @@ TEST(clang_parser, bitfields_with_padding)
   EXPECT_EQ(foo->GetField("b").offset, 7);
   ASSERT_TRUE(foo->GetField("b").bitfield.has_value());
   EXPECT_EQ(foo->GetField("b").bitfield->read_bytes, 1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 4U);
+#else
+  EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 0U);
+#endif
   EXPECT_EQ(foo->GetField("b").bitfield->mask, 0xFU);
   // NOLINTEND(bugprone-unchecked-optional-access)
 }
