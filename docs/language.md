@@ -1535,6 +1535,8 @@ stack: frame={sp:0xc00008cf60, fp:0xc00008cfd0} stack=[0xc00008c000,0xc00008d000
 fatal error: unknown caller pc
 ```
 
+Uprobe targets are expected to be valid ELF binaries. Unsafe mode (`--unsafe`) allows probing arbitrary files containing executable code.
+
 ### usdt
 
 **variants**

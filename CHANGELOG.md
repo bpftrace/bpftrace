@@ -80,6 +80,8 @@ and this project adheres to
   - [#5014](https://github.com/bpftrace/bpftrace/pull/5014)
 - Add support for address kprobes
   - [#5041](https://github.com/bpftrace/bpftrace/pull/5041)
+- Allow probing arbitrary files with --unsafe
+  - [#5053](https://github.com/bpftrace/bpftrace/pull/5053)
 #### Changed
 - Add helpers to check if a kfunc exists and is supported for particular probe types.
   - [#4857](https://github.com/bpftrace/bpftrace/pull/4857)

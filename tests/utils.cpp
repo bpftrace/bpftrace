@@ -188,6 +188,7 @@ TEST(utils, resolve_binary_path)
   std::vector<std::string> paths_one_executable = { path + "/executable" };
   std::vector<std::string> paths_all_executables = { path + "/executable",
                                                      path + "/executable2" };
+  std::vector<std::string> paths_nonexecutable = { path + "/nonexecutable" };
 
   EXPECT_EQ(resolve_binary_path(path + "/does/not/exist"), paths_empty);
   EXPECT_EQ(resolve_binary_path(path + "/does/not/exist*"), paths_empty);
@@ -196,6 +197,14 @@ TEST(utils, resolve_binary_path)
   EXPECT_EQ(resolve_binary_path(path + "/executable"), paths_one_executable);
   EXPECT_EQ(resolve_binary_path(path + "/executable*"), paths_all_executables);
   EXPECT_EQ(resolve_binary_path(path + "/*executable*"), paths_all_executables);
+  EXPECT_EQ(resolve_binary_path(path + "/nonexecutable",
+                                std::nullopt,
+                                false /* safe_mode */),
+            paths_nonexecutable);
+  EXPECT_EQ(resolve_binary_path(path + "/nonexecutable*",
+                                std::nullopt,
+                                false /* safe_mode */),
+            paths_empty);
 
   EXPECT_GT(std::filesystem::remove_all(path), 0);
 }

@@ -146,7 +146,8 @@ static std::vector<std::string> expand_wildcard_paths(
 // considered.
 static std::vector<std::string> resolve_binary_path(const std::string &cmd,
                                                     const char *env_paths,
-                                                    std::optional<int> pid)
+                                                    std::optional<int> pid,
+                                                    bool safe_mode)
 {
   std::vector<std::string> candidate_paths = { cmd };
 
@@ -154,7 +155,8 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
     for (const auto &path : split_string(env_paths, ':'))
       candidate_paths.push_back(path + "/" + cmd);
 
-  if (cmd.find("*") != std::string::npos)
+  const bool has_wildcard = cmd.find("*") != std::string::npos;
+  if (has_wildcard)
     candidate_paths = expand_wildcard_paths(candidate_paths);
 
   std::vector<std::string> valid_executable_paths;
@@ -176,8 +178,14 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
       rel_path = path;
     }
 
-    // Both executables and shared objects are game.
-    if (auto e_type = is_elf(rel_path)) {
+    std::error_code ec;
+    if (!safe_mode && !has_wildcard && std::filesystem::exists(rel_path, ec)) {
+      // In unsafe mode, if a single path was provided by the user, only check
+      // if the file exists. This allows probing non-ELF files containing
+      // executable code, e.g. JIT caches.
+      valid_executable_paths.push_back(rel_path);
+    } else if (auto e_type = is_elf(rel_path)) {
+      // Both executables and shared objects are game.
       if ((e_type == ET_EXEC && has_exec_permission(rel_path)) ||
           e_type == ET_DYN) {
         valid_executable_paths.push_back(rel_path);
@@ -191,7 +199,8 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
 // If a pid is specified, the binary path is taken relative to its own PATH if
 // it is in a different mount namespace.
 std::vector<std::string> resolve_binary_path(const std::string &cmd,
-                                             std::optional<int> pid)
+                                             std::optional<int> pid,
+                                             bool safe_mode)
 {
   std::string env_paths;
   std::ostringstream pid_environ_path;
@@ -210,9 +219,9 @@ std::vector<std::string> resolve_binary_path(const std::string &cmd,
         }
       }
     }
-    return resolve_binary_path(cmd, env_paths.c_str(), pid);
+    return resolve_binary_path(cmd, env_paths.c_str(), pid, safe_mode);
   } else {
-    return resolve_binary_path(cmd, getenv("PATH"), pid);
+    return resolve_binary_path(cmd, getenv("PATH"), pid, safe_mode);
   }
 }
 

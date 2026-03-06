@@ -74,6 +74,19 @@ if(RUSTC_EXECUTABLE)
   endforeach()
 endif()
 
+# Generate a flat binary containing only function `main` from false.c; it's used by runtime tests
+# to verify that arbitrary files containing executable code can be uprobed, not just ELF binaries.
+find_program(LLVM_OBJCOPY llvm-objcopy REQUIRED)
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/false.bin
+  COMMAND ${CMAKE_C_COMPILER} -c ${CMAKE_CURRENT_SOURCE_DIR}/false.c -o ${CMAKE_CURRENT_BINARY_DIR}/false.o
+  COMMAND ${LLVM_OBJCOPY} -S --only-section=.text --keep-symbol=main -O binary ${CMAKE_CURRENT_BINARY_DIR}/false.o ${CMAKE_CURRENT_BINARY_DIR}/false.bin
+  COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_BINARY_DIR}/false.o
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  DEPENDS false.c
+)
+list(APPEND testprogtargets false.bin)
+
 add_custom_target(testprogs ALL DEPENDS ${testprogtargets})
 
 foreach(prog usdt_lib usdt_lib-pie)
