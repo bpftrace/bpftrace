@@ -28,6 +28,7 @@
 #include "util/bpf_names.h"
 #include "util/cpus.h"
 #include "util/exceptions.h"
+#include "util/paths.h"
 #include "util/symbols.h"
 
 namespace bpftrace {
@@ -640,13 +641,23 @@ Result<std::unique_ptr<AttachedUprobeProbe>> AttachedUprobeProbe::make(
     return offset_res.takeError();
   }
 
+  uint64_t offset = *offset_res;
   DECLARE_LIBBPF_OPTS(bpf_uprobe_opts, opts);
   opts.retprobe = probe.type == ProbeType::uretprobe;
+
+  if (!probe.attach_point.empty() && util::is_archive_path(probe.path)) {
+    // When probing libraries mapped directly from zip archives, libbpf needs
+    // the function name to determine its offset within the archive. The offset
+    // argument in this case is relative to the start of the function. See
+    // https://github.com/libbpf/libbpf/blob/3b4f0ef5/src/libbpf.c#L12289
+    opts.func_name = probe.attach_point.c_str();
+    offset = probe.func_offset;
+  }
 
   auto *link = bpf_program__attach_uprobe_opts(prog.bpf_prog(),
                                                pid.has_value() ? *pid : -1,
                                                probe.path.c_str(),
-                                               *offset_res,
+                                               offset,
                                                &opts);
 
   if (!link) {

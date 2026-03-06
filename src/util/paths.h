@@ -26,4 +26,6 @@ std::optional<std::string> abs_path(const std::string &rel_path);
 
 std::string path_for_pid_mountns(int pid, const std::string &path);
 
+bool is_archive_path(const std::string &path);
+
 } // namespace bpftrace::util
