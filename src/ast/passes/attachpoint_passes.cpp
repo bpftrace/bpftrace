@@ -70,7 +70,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
         else
           return util::get_mapped_paths_for_running_pids();
       } else {
-        return util::resolve_binary_path(ap.target, pid);
+        return util::resolve_binary_path(ap.target, pid, bpftrace_.safe_mode_);
       }
     };
     auto paths = get_paths();
@@ -81,7 +81,8 @@ void AttachPointChecker::visit(AttachPoint &ap)
       switch (paths->size()) {
         case 0:
           ap.addError() << "uprobe target file '" << ap.target
-                        << "' does not exist or is not executable";
+                        << "' does not exist or is not executable. Use "
+                           "--unsafe to probe non-executable files.";
           break;
         case 1:
           // Replace the glob at this stage only if this is *not* a wildcard,
