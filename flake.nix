@@ -170,6 +170,7 @@
                   pkgs."llvmPackages_${toString llvmVersion}".llvm
                   pkgs.pahole
                   pkgs.xxd
+                  pkgs.zip
                   pkgs.zlib
                 ];
 

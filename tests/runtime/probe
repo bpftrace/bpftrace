@@ -707,3 +707,7 @@ RUN {{BPFTRACE}} --unsafe -e 'uprobe:./testprogs/false.bin:0x0 { printf("SUCCESS
 EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/mmap_exec ./testprogs/false.bin
 TIMEOUT 1
+
+NAME uprobe_zip_archive
+RUN {{BPFTRACE}} -e 'uprobe:"./testprogs/archive.zip!/true":main {} begin { exit() }'
+EXPECT_REGEX Attached 2 probes
