@@ -376,7 +376,11 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   EXPECT_EQ(foo4->GetField("b").offset, 10);
   ASSERT_TRUE(foo4->GetField("b").bitfield.has_value());
   EXPECT_EQ(foo4->GetField("b").bitfield->read_bytes, 0x1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 4U);
+#else
+  EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 3U);
+#endif
   EXPECT_EQ(foo4->GetField("b").bitfield->mask, 0x1U);
 
   ASSERT_TRUE(foo4->HasField("c"));
@@ -385,7 +389,11 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   EXPECT_EQ(foo4->GetField("c").offset, 10);
   ASSERT_TRUE(foo4->GetField("c").bitfield.has_value());
   EXPECT_EQ(foo4->GetField("c").bitfield->read_bytes, 0x1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 5U);
+#else
+  EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 0U);
+#endif
   EXPECT_EQ(foo4->GetField("c").bitfield->mask, 0x7U);
 
   ASSERT_TRUE(foo4->HasField("d"));
@@ -394,7 +402,11 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   EXPECT_EQ(foo4->GetField("d").offset, 12);
   ASSERT_TRUE(foo4->GetField("d").bitfield.has_value());
   EXPECT_EQ(foo4->GetField("d").bitfield->read_bytes, 0x3U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo4->GetField("d").bitfield->access_rshift, 0U);
+#else
+  EXPECT_EQ(foo4->GetField("d").bitfield->access_rshift, 4U);
+#endif
   EXPECT_EQ(foo4->GetField("d").bitfield->mask, 0xFFFFFU);
   // NOLINTEND(bugprone-unchecked-optional-access)
 }
@@ -483,7 +495,11 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
               foo4->GetField("a").offset == 9);
   if (foo4->GetField("a").offset == 8) { // DWARF < 4
     EXPECT_EQ(foo4->GetField("a").bitfield->read_bytes, 0x3U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     EXPECT_EQ(foo4->GetField("a").bitfield->access_rshift, 12U);
+#else
+    EXPECT_EQ(foo4->GetField("a").bitfield->access_rshift, 4U);
+#endif
     EXPECT_EQ(foo4->GetField("a").bitfield->mask, 0xFFU);
   } else { // DWARF >= 4
     EXPECT_EQ(foo4->GetField("a").bitfield->read_bytes, 0x2U);
@@ -500,11 +516,19 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
               foo4->GetField("b").offset == 10);
   if (foo4->GetField("b").offset == 8) { // DWARF < 4
     EXPECT_EQ(foo4->GetField("b").bitfield->read_bytes, 0x3U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 20U);
+#else
+    EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 3U);
+#endif
     EXPECT_EQ(foo4->GetField("b").bitfield->mask, 0x1U);
   } else { // DWARF >= 4
     EXPECT_EQ(foo4->GetField("b").bitfield->read_bytes, 0x1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 4U);
+#else
+    EXPECT_EQ(foo4->GetField("b").bitfield->access_rshift, 3U);
+#endif
     EXPECT_EQ(foo4->GetField("b").bitfield->mask, 0x1U);
   }
 
@@ -518,11 +542,19 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 
   if (foo4->GetField("c").offset == 8) { // DWARF < 4
     EXPECT_EQ(foo4->GetField("c").bitfield->read_bytes, 0x3U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 21U);
+#else
+    EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 0U);
+#endif
     EXPECT_EQ(foo4->GetField("c").bitfield->mask, 0x7U);
   } else { // DWARF >= 4
     EXPECT_EQ(foo4->GetField("c").bitfield->read_bytes, 0x1U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
     EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 5U);
+#else
+    EXPECT_EQ(foo4->GetField("c").bitfield->access_rshift, 0U);
+#endif
     EXPECT_EQ(foo4->GetField("c").bitfield->mask, 0x7U);
   }
 
@@ -532,7 +564,11 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   EXPECT_EQ(foo4->GetField("d").offset, 12);
   ASSERT_TRUE(foo4->GetField("d").bitfield.has_value());
   EXPECT_EQ(foo4->GetField("d").bitfield->read_bytes, 0x3U);
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   EXPECT_EQ(foo4->GetField("d").bitfield->access_rshift, 0U);
+#else
+  EXPECT_EQ(foo4->GetField("d").bitfield->access_rshift, 4U);
+#endif
   EXPECT_EQ(foo4->GetField("d").bitfield->mask, 0xFFFFFU);
   // NOLINTEND(bugprone-unchecked-optional-access)
 }
