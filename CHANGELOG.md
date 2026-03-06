@@ -38,6 +38,8 @@ and this project adheres to
 - `BPFTRACE_DEBUG_OUTPUT` is removed, and errors are now propagated via the runtime error path
   - [#4976](https://github.com/bpftrace/bpftrace/pull/4976)
 #### Added
+- Add `uprobe` support for source location attach points.
+  - [#4867](https://github.com/bpftrace/bpftrace/pull/4867)
 - `getopt()` add optional description argument
   - [#4998](https://github.com/bpftrace/bpftrace/pull/4998)
 - Add `--probe-filter` CLI flag to selectively run probes matching a regex

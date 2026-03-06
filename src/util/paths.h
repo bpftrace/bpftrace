@@ -25,4 +25,7 @@ std::optional<std::string> abs_path(const std::string &rel_path);
 
 std::string path_for_pid_mountns(int pid, const std::string &path);
 
+bool path_ends_with(const std::filesystem::path &path,
+                    const std::filesystem::path &pattern);
+
 } // namespace bpftrace::util
