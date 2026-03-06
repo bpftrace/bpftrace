@@ -39,6 +39,7 @@ RUN apk add --update \
   wget \
   xxd \
   xz-static \
+  zip \
   zlib-dev \
   zlib-static \
   zstd-dev \

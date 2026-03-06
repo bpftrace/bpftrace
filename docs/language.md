@@ -1537,6 +1537,12 @@ fatal error: unknown caller pc
 
 Uprobe targets are expected to be valid ELF binaries. Unsafe mode (`--unsafe`) allows probing arbitrary files containing executable code.
 
+For shared libraries mapped directly from ZIP archives (common on Android), the archive and library name can be separated by `!/`:
+
+```
+uprobe:"/system/app/Foo/Foo.apk!/lib/arm64-v8a/libfoo.so":func { ... }
+```
+
 ### usdt
 
 **variants**

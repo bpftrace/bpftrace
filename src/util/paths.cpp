@@ -184,6 +184,9 @@ static std::vector<std::string> resolve_binary_path(const std::string &cmd,
       // if the file exists. This allows probing non-ELF files containing
       // executable code, e.g. JIT caches.
       valid_executable_paths.push_back(rel_path);
+    } else if (is_archive_path(rel_path)) {
+      // Binary contained in a ZIP file (uncompressed and page aligned).
+      valid_executable_paths.push_back(rel_path);
     } else if (auto e_type = is_elf(rel_path)) {
       // Both executables and shared objects are game.
       if ((e_type == ET_EXEC && has_exec_permission(rel_path)) ||
@@ -335,6 +338,21 @@ std::string path_for_pid_mountns(int pid, const std::string &path)
     pid_relative_path << path;
   }
   return pid_relative_path.str();
+}
+
+bool is_archive_path(const std::string &path)
+{
+  // Check if the path refers to a binary within an archive. If so, the two are
+  // separated by "!/", e.g. "/system/app/Foo/foo.apk!/lib/arm64-v8a/libfoo.so".
+  auto idx = path.find("!/");
+  if (idx == std::string::npos) {
+    return false;
+  }
+
+  std::string archive = path.substr(0, idx);
+  std::error_code ec;
+
+  return std::filesystem::exists(archive, ec);
 }
 
 } // namespace bpftrace::util

@@ -27,6 +27,7 @@ RUN dnf install -y \
         make \
         pahole \
         xxd \
+        zip \
         zlib-devel
 
 COPY . /src

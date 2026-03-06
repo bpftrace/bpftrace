@@ -87,6 +87,15 @@ add_custom_command(
 )
 list(APPEND testprogtargets false.bin)
 
+# Create a ZIP file containing one of the test programs. Used to test probing files inside archives.
+find_PROGRAM(ZIP zip REQUIRED)
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/archive.zip
+  COMMAND ${ZIP} -0 -j ${CMAKE_CURRENT_BINARY_DIR}/archive.zip ${CMAKE_CURRENT_BINARY_DIR}/true
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/true
+)
+list(APPEND testprogtargets archive.zip)
+
 add_custom_target(testprogs ALL DEPENDS ${testprogtargets})
 
 foreach(prog usdt_lib usdt_lib-pie)

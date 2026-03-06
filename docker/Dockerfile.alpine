@@ -26,7 +26,8 @@ RUN apk add --update \
   llvm$LLVM_VERSION-gtest \
   llvm$LLVM_VERSION-static \
   samurai \
-  libxml2-dev
+  libxml2-dev \
+  zip
 
 RUN ln -s "clang${LLVM_VERSION}" /usr/lib/cmake/clang
 
