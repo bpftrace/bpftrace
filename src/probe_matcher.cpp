@@ -125,7 +125,9 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
         return symbols::BinaryFuncMap();
       }();
       // Expand to the full set of possible matching paths.
-      auto paths = util::resolve_binary_path(target, bpftrace_->pid());
+      auto paths = util::resolve_binary_path(target,
+                                             bpftrace_->pid(),
+                                             bpftrace_->safe_mode_);
       for (const auto& path : paths) {
         auto ok = user_func_info_.func_symbols_for_path(path);
         if (ok) {
