@@ -53,7 +53,8 @@ void AttachPointChecker::visit(AttachPoint &ap)
   } else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
     if (ap.target.empty())
       ap.addError() << ap.provider << " should have a target";
-    if (ap.func.empty() && ap.address == 0)
+    // --unsafe allows attaching to arbitrary files, and 0 is a valid offset
+    if (ap.func.empty() && ap.address == 0 && bpftrace_.safe_mode_)
       ap.addError() << ap.provider
                     << " should be attached to a function and/or address";
     if (!ap.lang.empty() && !is_supported_lang(ap.lang))
@@ -70,7 +71,7 @@ void AttachPointChecker::visit(AttachPoint &ap)
         else
           return util::get_mapped_paths_for_running_pids();
       } else {
-        return util::resolve_binary_path(ap.target, pid);
+        return util::resolve_binary_path(ap.target, pid, bpftrace_.safe_mode_);
       }
     };
     auto paths = get_paths();

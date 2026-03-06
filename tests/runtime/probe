@@ -701,3 +701,9 @@ RUN {{BPFTRACE}} --unsafe -e 'kprobe:0x12345678 {}'
 EXPECT_REGEX .*ERROR: Unable to attach probe: kprobe:305419896.*
 TIMEOUT 5
 WILL_FAIL
+
+NAME uprobe_flat_binary
+RUN {{BPFTRACE}} --unsafe -e 'uprobe:./testprogs/false.bin:0x0 { printf("SUCCESS %d\n", pid); exit(); }'
+EXPECT_REGEX SUCCESS [0-9][0-9]*
+AFTER ./testprogs/mmap_exec ./testprogs/false.bin
+TIMEOUT 1

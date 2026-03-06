@@ -9,7 +9,8 @@ namespace bpftrace::util {
 
 std::vector<std::string> resolve_binary_path(
     const std::string &cmd,
-    std::optional<int> pid = std::nullopt);
+    std::optional<int> pid = std::nullopt,
+    bool safe_mode = true);
 
 // Tries to find a file in $PATH.
 std::optional<std::filesystem::path> find_in_path(std::string_view name);
