@@ -2,8 +2,7 @@
 
 #include <sstream>
 
-namespace bpftrace {
-namespace util {
+namespace bpftrace::util {
 
 // Individual flag names mapping
 const std::unordered_map<uint64_t, std::string> GFPFlags::flag_names = {

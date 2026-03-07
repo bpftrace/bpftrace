@@ -39,8 +39,7 @@ enum {
 	___GFP_LAST_BIT
 };
 
-namespace bpftrace {
-namespace util {
+namespace bpftrace::util {
 
 // GFP flag definitions based on linux/gfp_types.h
 // These are the most common GFP flags used in the kernel
