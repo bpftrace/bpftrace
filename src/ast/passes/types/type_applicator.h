@@ -1,11 +1,10 @@
 #pragma once
 
-#include "ast/passes/types/type_resolver.h"
-
 namespace bpftrace::ast {
 
 class ASTContext;
+class TypeMap;
 
-void RunTypeApplicator(ASTContext &ast, const ResolvedTypes &resolved_types);
+void RunTypeApplicator(ASTContext &ast, const TypeMap &type_map);
 
 } // namespace bpftrace::ast

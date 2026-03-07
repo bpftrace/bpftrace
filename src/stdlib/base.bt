@@ -636,7 +636,7 @@ macro len(e)
 //
 macro memcmp($left, $right, count)
 {
-  __memcmp((int8*)(&$left), (int8*)(&$right), count)
+  __memcmp((int8*)(&$left), (int8*)(&$right), (uint64)count)
 }
 
 macro memcmp($left, right, count)

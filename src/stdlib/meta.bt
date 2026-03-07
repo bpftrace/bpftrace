@@ -68,7 +68,7 @@ macro is_literal(expr)
 
 macro usdt_arg(x)
 {
-  __usdt_arg((void *)ctx, x)
+  __usdt_arg((void *)ctx, (int64)x)
 }
 
 macro assert_userspace_probe(func) {

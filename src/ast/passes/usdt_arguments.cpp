@@ -28,8 +28,7 @@ public:
   {
     // The USDT arg function expects an long int type
     auto *int_arg = ast_.make_node<ast::Integer>(node.loc,
-                                                 static_cast<uint64_t>(arg),
-                                                 CreateInt64());
+                                                 static_cast<uint64_t>(arg));
     std::vector<Expression> args = { int_arg };
     Expression expr = ast_.make_node<ast::Call>(node.loc,
                                                 "usdt_arg",
