@@ -12,7 +12,6 @@
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
 #include "util/gfp_flags.h"
-#include "util/cgroup.h"
 #include "util/math.h"
 #include "util/paths.h"
 #include "util/similar.h"

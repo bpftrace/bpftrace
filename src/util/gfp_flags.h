@@ -100,5 +100,4 @@ private:
   static const std::vector<std::pair<uint64_t, std::string>> compound_flags;
 };
 
-} // namespace util
-} // namespace bpftrace
+} // namespace bpftrace::util

@@ -96,5 +96,4 @@ std::string GFPFlags::format(uint64_t gfp_flags)
   return result.str();
 }
 
-} // namespace util
-} // namespace bpftrace
+} // namespace bpftrace::util
