@@ -5,7 +5,7 @@
 namespace bpftrace::util {
 
 // Individual flag names mapping
-const std::unordered_map<uint64_t, std::string> GFPFlags::flag_names = {
+const std::map<uint64_t, std::string> GFPFlags::flag_names = {
   { __GFP_DMA, "__GFP_DMA" },
   { __GFP_HIGHMEM, "__GFP_HIGHMEM" },
   { __GFP_DMA32, "__GFP_DMA32" },
@@ -37,18 +37,18 @@ const std::unordered_map<uint64_t, std::string> GFPFlags::flag_names = {
 // Compound flag names mapping (ordered from most specific to least specific)
 const std::vector<std::pair<uint64_t, std::string>> GFPFlags::compound_flags = {
   { GFP_ATOMIC, "GFP_ATOMIC" },
-  { GFP_KERNEL, "GFP_KERNEL" },
-  { GFP_KERNEL_ACCOUNT, "GFP_KERNEL_ACCOUNT" },
   { GFP_NOWAIT, "GFP_NOWAIT" },
-  { GFP_NOIO, "GFP_NOIO" },
-  { GFP_NOFS, "GFP_NOFS" },
-  { GFP_USER, "GFP_USER" },
-  { GFP_DMA, "GFP_DMA" },
-  { GFP_DMA32, "GFP_DMA32" },
-  { GFP_HIGHUSER, "GFP_HIGHUSER" },
-  { GFP_HIGHUSER_MOVABLE, "GFP_HIGHUSER_MOVABLE" },
+  { GFP_TRANSHUGE, "GFP_TRANSHUGE" },
   { GFP_TRANSHUGE_LIGHT, "GFP_TRANSHUGE_LIGHT" },
-  { GFP_TRANSHUGE, "GFP_TRANSHUGE" }
+  { GFP_HIGHUSER_MOVABLE, "GFP_HIGHUSER_MOVABLE" },
+  { GFP_HIGHUSER, "GFP_HIGHUSER" },
+  { GFP_USER, "GFP_USER" },
+  { GFP_KERNEL_ACCOUNT, "GFP_KERNEL_ACCOUNT" },
+  { GFP_KERNEL, "GFP_KERNEL" },
+  { GFP_NOFS, "GFP_NOFS" },
+  { GFP_NOIO, "GFP_NOIO" },
+  { GFP_DMA, "GFP_DMA" },
+  { GFP_DMA32, "GFP_DMA32" }
 };
 
 std::string GFPFlags::format(uint64_t gfp_flags)

@@ -1,11 +1,11 @@
 #pragma once
 
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <vector>
 #include <cstdint>
 
-#define BIT(nr) (1UL << (nr))
+namespace bpftrace::util {
 
 // GFP flag bit definitions (from linux/gfp_types.h)
 enum {
@@ -39,7 +39,10 @@ enum {
 	___GFP_LAST_BIT
 };
 
-namespace bpftrace::util {
+template <typename T = uint64_t>
+constexpr T BIT(int nr) {
+  return static_cast<T>(1) << nr;
+}
 
 // GFP flag definitions based on linux/gfp_types.h
 // These are the most common GFP flags used in the kernel
@@ -84,8 +87,8 @@ private:
   static constexpr uint64_t GFP_KERNEL_ACCOUNT = (GFP_KERNEL | __GFP_ACCOUNT);
   static constexpr uint64_t GFP_NOWAIT = (__GFP_KSWAPD_RECLAIM | __GFP_NOWARN);
   static constexpr uint64_t GFP_NOIO = (__GFP_RECLAIM);
-  static constexpr uint64_t GFP_NOFS = (__GFP_RECLAIM | __GFP_IO);
-  static constexpr uint64_t GFP_USER = (__GFP_RECLAIM | __GFP_IO | __GFP_FS | __GFP_HARDWALL);
+  static constexpr uint64_t GFP_NOFS = (GFP_NOIO | __GFP_IO);
+  static constexpr uint64_t GFP_USER = (GFP_NOFS | __GFP_FS | __GFP_HARDWALL);
   static constexpr uint64_t GFP_DMA = (__GFP_DMA);
   static constexpr uint64_t GFP_DMA32 = (__GFP_DMA32);
   static constexpr uint64_t GFP_HIGHUSER = (GFP_USER | __GFP_HIGHMEM);
@@ -94,7 +97,7 @@ private:
   static constexpr uint64_t GFP_TRANSHUGE = (GFP_TRANSHUGE_LIGHT | __GFP_DIRECT_RECLAIM);
 
   // Map of flag values to names for individual flags
-  static const std::unordered_map<uint64_t, std::string> flag_names;
+  static const std::map<uint64_t, std::string> flag_names;
   
   // Map of compound flag values to names (order matters - check most specific first)
   static const std::vector<std::pair<uint64_t, std::string>> compound_flags;

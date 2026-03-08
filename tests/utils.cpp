@@ -540,15 +540,22 @@ TEST(utils, gfp_flags_format)
 
   // Test compound flags 
   // if compound flag is present, it overrides individual flags of the same bits
+  EXPECT_EQ(GFPFlags::format(0x820), "GFP_ATOMIC");
+  EXPECT_EQ(GFPFlags::format(0x2800), "GFP_NOWAIT");
+  EXPECT_EQ(GFPFlags::format(0x21C24CA), "GFP_TRANSHUGE");
+  EXPECT_EQ(GFPFlags::format(0x21C20CA), "GFP_TRANSHUGE_LIGHT");
+  EXPECT_EQ(GFPFlags::format(0x2100CCA), "GFP_HIGHUSER_MOVABLE");
+  EXPECT_EQ(GFPFlags::format(0x100CC2), "GFP_HIGHUSER");
+  EXPECT_EQ(GFPFlags::format(0x100CC0), "GFP_USER");
+  EXPECT_EQ(GFPFlags::format(0x400CC0), "GFP_KERNEL_ACCOUNT");
+  EXPECT_EQ(GFPFlags::format(0xCC0), "GFP_KERNEL");
+  EXPECT_EQ(GFPFlags::format(0xC40), "GFP_NOFS");
+  EXPECT_EQ(GFPFlags::format(0xC00), "GFP_NOIO");
   EXPECT_EQ(GFPFlags::format(0x01), "GFP_DMA");
   EXPECT_EQ(GFPFlags::format(0x04), "GFP_DMA32");
-  EXPECT_EQ(GFPFlags::format(0xCC0), "GFP_KERNEL");
 
   // Test combined compound and individual flags
   EXPECT_EQ(GFPFlags::format(0x41), "GFP_DMA|__GFP_IO");
-
-  // Test GFP_ATOMIC 
-  EXPECT_EQ(GFPFlags::format(0x820), "GFP_ATOMIC");
 
   // Test unrecognized bits
   EXPECT_EQ(GFPFlags::format(0x80000000), "0x80000000");
