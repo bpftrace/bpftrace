@@ -161,7 +161,7 @@ EXPECT_REGEX ^([0-9]+\.[0-9]+ ?)+.*$
 NAME log size too small
 ENV BPFTRACE_LOG_SIZE=2
 RUN {{BPFTRACE}} -v -e 'begin { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT ERROR: Error loading BPF program for begin_1.
+EXPECT ERROR: Error loading BPF program for begin_1. Error code: -28.
 EXPECT_REGEX ^WARNING: Kernel log seems to be trimmed.*
 WILL_FAIL
 

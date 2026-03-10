@@ -195,6 +195,12 @@ static bool is_log_trimmed(std::string_view log)
   return !util::wildcard_match(log, tokens, true, true);
 }
 
+static bool is_stack_size_error(std::string_view log)
+{
+  static const std::vector<std::string> tokens = { "stack size", "Too large" };
+  return util::wildcard_match(log, tokens, true, true);
+}
+
 Result<> BpfBytecode::load_progs(const RequiredResources &resources,
                                  const BTF &btf,
                                  BPFfeature &feature,
@@ -231,8 +237,9 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
 
   // If loading of bpf_object failed, we try to give user some hints of what
   // could've gone wrong.
+  std::string last_error_msg;
   for (const auto &[name, prog] : programs_) {
-    if (res == 0 || prog.fd() >= 0)
+    if (prog.fd() >= 0)
       continue;
 
     // Unfortunately, a negative fd does not mean that this specific program
@@ -262,8 +269,16 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
         return ok.takeError();
       }
 
+      if (is_stack_size_error(log)) {
+        return make_error<BpfLoadError>(
+            "Stack size is too large. Trying moving some scratch variables "
+            "into maps or try setting a lower on_stack_limit (e.g. `config = { "
+            "on_stack_limit=16 }`)");
+      }
+
       std::stringstream errmsg;
-      errmsg << "Error loading BPF program for " << name << ".";
+      errmsg << "Error loading BPF program for " << name
+             << ". Error code: " << res << ".";
       if (bt_verbose) {
         errmsg << std::endl
                << "Kernel error log: " << std::endl
@@ -278,8 +293,12 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
       } else {
         errmsg << " Use -v for full kernel error log.";
       }
-      return make_error<BpfLoadError>(errmsg.str());
+      last_error_msg = errmsg.str();
     }
+  }
+
+  if (!last_error_msg.empty()) {
+    return make_error<BpfLoadError>(last_error_msg);
   }
 
   // The problem does not seem to be in program loading. It may be something
