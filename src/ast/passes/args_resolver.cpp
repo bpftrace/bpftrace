@@ -76,7 +76,7 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
       Dwarf *dwarf = bpftrace_.get_dwarf(ap.target);
       if (dwarf) {
         auto args = dwarf->resolve_args(ap.func);
-        if (args && args->fields.size() >= arch::Host::arguments().size()) {
+        if (args && args->fields.size() > arch::Host::arguments().size()) {
           return make_error<ast::ArgParseError>(
               ap.name(),
               "\'args\' builtin is not supported for probes with stack-passed "
