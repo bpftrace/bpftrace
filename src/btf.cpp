@@ -487,7 +487,20 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     }
     stype = CreateInteger(btf_int_bits(t), encoding & BTF_INT_SIGNED);
   } else if (btf_is_enum(t)) {
-    stype = CreateInteger(t->size * 8, false);
+    std::string enum_name = btf_str(btf_id.btf, t->name_off);
+    if (!enum_name.empty()) {
+      stype = CreateEnum(t->size * 8, enum_name);
+      // Extract enum values from BTF for symbolication
+      auto [it, inserted] = enum_defs_.try_emplace(enum_name);
+      if (inserted) {
+        const auto *p = btf_enum(t);
+        for (__u16 e = 0, vlen = btf_vlen(t); e < vlen; ++e, ++p) {
+          it->second[p->val] = btf_str(btf_id.btf, p->name_off);
+        }
+      }
+    } else {
+      stype = CreateInteger(t->size * 8, false);
+    }
   } else if (btf_is_composite(t)) {
     bool is_anon = false;
     std::string recprefix = btf_is_struct(t) ? "struct " : "union ";
