@@ -1,0 +1,86 @@
+#include "gfp_flags.h"
+
+#include <sstream>
+
+namespace bpftrace::util {
+
+// Compound flag names mapping
+//
+// The order should be consistent with kernel's __def_gfpflag_names order
+// defined in include/trace/events/mmflags.h
+//
+// Note from kernel:
+// The order of these masks is important. Matching masks will be seen
+// first and the left over flags will end up showing by themselves.
+const std::vector<std::pair<uint64_t, std::string>> GFPFlags::flag_names = {
+  { GFP_TRANSHUGE, "GFP_TRANSHUGE" },
+  { GFP_TRANSHUGE_LIGHT, "GFP_TRANSHUGE_LIGHT" },
+  { GFP_HIGHUSER_MOVABLE, "GFP_HIGHUSER_MOVABLE" },
+  { GFP_HIGHUSER, "GFP_HIGHUSER" },
+  { GFP_USER, "GFP_USER" },
+  { GFP_KERNEL_ACCOUNT, "GFP_KERNEL_ACCOUNT" },
+  { GFP_KERNEL, "GFP_KERNEL" },
+  { GFP_NOFS, "GFP_NOFS" },
+  { GFP_ATOMIC, "GFP_ATOMIC" },
+  { GFP_NOIO, "GFP_NOIO" },
+  { GFP_NOWAIT, "GFP_NOWAIT" },
+  { GFP_DMA, "GFP_DMA" },
+  { __GFP_HIGHMEM, "__GFP_HIGHMEM" },
+  { GFP_DMA32, "GFP_DMA32" },
+  { __GFP_HIGH, "__GFP_HIGH" },
+  { __GFP_IO, "__GFP_IO" },
+  { __GFP_FS, "__GFP_FS" },
+  { __GFP_ZERO, "__GFP_ZERO" },
+  { __GFP_DIRECT_RECLAIM, "__GFP_DIRECT_RECLAIM" },
+  { __GFP_KSWAPD_RECLAIM, "__GFP_KSWAPD_RECLAIM" },
+  { __GFP_WRITE, "__GFP_WRITE" },
+  { __GFP_NOWARN, "__GFP_NOWARN" },
+  { __GFP_RETRY_MAYFAIL, "__GFP_RETRY_MAYFAIL" },
+  { __GFP_NOFAIL, "__GFP_NOFAIL" },
+  { __GFP_NORETRY, "__GFP_NORETRY" },
+  { __GFP_MEMALLOC, "__GFP_MEMALLOC" },
+  { __GFP_COMP, "__GFP_COMP" },
+  { __GFP_NOMEMALLOC, "__GFP_NOMEMALLOC" },
+  { __GFP_HARDWALL, "__GFP_HARDWALL" },
+  { __GFP_THISNODE, "__GFP_THISNODE" },
+  { __GFP_ACCOUNT, "__GFP_ACCOUNT" },
+  { __GFP_ZEROTAGS, "__GFP_ZEROTAGS" },
+  { __GFP_SKIP_ZERO, "__GFP_SKIP_ZERO" },
+  { __GFP_SKIP_KASAN, "__GFP_SKIP_KASAN" },
+  { __GFP_NO_OBJ_EXT, "__GFP_NO_OBJ_EXT" }
+};
+
+std::string GFPFlags::format(uint64_t gfp_flags)
+{
+  if (gfp_flags == 0) {
+    return "0";
+  }
+
+  std::stringstream result;
+  uint64_t remaining = gfp_flags;
+  bool first = true;
+
+  // Check flags based on the order
+  for (const auto& pair : flag_names) {
+    if ((remaining & pair.first) == pair.first) {
+      if (!first) {
+        result << "|";
+      }
+      result << pair.second;
+      remaining &= ~pair.first;
+      first = false;
+    }
+  }
+
+  // If there are unrecognized bits, add them as hex
+  if (remaining != 0) {
+    if (!first) {
+      result << "|";
+    }
+    result << "0x" << std::hex << remaining;
+  }
+
+  return result.str();
+}
+
+} // namespace bpftrace::util

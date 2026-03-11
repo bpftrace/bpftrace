@@ -11,6 +11,7 @@
 #include "symbols/kernel.h"
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
+#include "util/gfp_flags.h"
 #include "util/math.h"
 #include "util/paths.h"
 #include "util/similar.h"
@@ -534,6 +535,50 @@ TEST(utils, similar)
   EXPECT_TRUE(is_similar("foo", "foofoo"));
   EXPECT_TRUE(is_similar("fo", "foo"));
   EXPECT_TRUE(is_similar("foobar", "fobar"));
+}
+
+TEST(utils, gfp_flags_format)
+{
+  // Test zero value
+  EXPECT_EQ(GFPFlags::format(0), "0");
+
+  // Test individual flags
+  EXPECT_EQ(GFPFlags::format(0x02), "__GFP_HIGHMEM");
+  EXPECT_EQ(GFPFlags::format(0x40), "__GFP_IO");
+  EXPECT_EQ(GFPFlags::format(0x80), "__GFP_FS");
+
+  // Test combined individual flags
+  EXPECT_EQ(GFPFlags::format(0xC0), "__GFP_IO|__GFP_FS");
+
+  // Test compound flags
+  // if compound flag is present, it overrides individual flags of the same bits
+  EXPECT_EQ(GFPFlags::format(0x820), "GFP_ATOMIC");
+  EXPECT_EQ(GFPFlags::format(0x2800), "GFP_NOWAIT");
+  EXPECT_EQ(GFPFlags::format(0x21C24CA), "GFP_TRANSHUGE");
+  EXPECT_EQ(GFPFlags::format(0x21C20CA), "GFP_TRANSHUGE_LIGHT");
+  EXPECT_EQ(GFPFlags::format(0x2100CCA), "GFP_HIGHUSER_MOVABLE");
+  EXPECT_EQ(GFPFlags::format(0x100CC2), "GFP_HIGHUSER");
+  EXPECT_EQ(GFPFlags::format(0x100CC0), "GFP_USER");
+  EXPECT_EQ(GFPFlags::format(0x400CC0), "GFP_KERNEL_ACCOUNT");
+  EXPECT_EQ(GFPFlags::format(0xCC0), "GFP_KERNEL");
+  EXPECT_EQ(GFPFlags::format(0xC40), "GFP_NOFS");
+  EXPECT_EQ(GFPFlags::format(0xC00), "GFP_NOIO");
+  EXPECT_EQ(GFPFlags::format(0x01), "GFP_DMA");
+  EXPECT_EQ(GFPFlags::format(0x04), "GFP_DMA32");
+
+  // Test combined compound and individual flags
+  EXPECT_EQ(GFPFlags::format(0xCE0), "GFP_KERNEL|__GFP_HIGH");
+  EXPECT_EQ(GFPFlags::format(0x41), "GFP_DMA|__GFP_IO");
+
+  // Test combined flag order
+  // Match both GFP_NOIO|__GFP_NOWARN and GFP_NOWAIT|__GFP_DIRECT_RECLAIM
+  EXPECT_EQ(GFPFlags::format(0x2c00), "GFP_NOIO|__GFP_NOWARN");
+
+  // Test unrecognized bits
+  EXPECT_EQ(GFPFlags::format(0x80000000), "0x80000000");
+
+  // Test combination of known and unknown flags
+  EXPECT_EQ(GFPFlags::format(0x80000001), "GFP_DMA|0x80000000");
 }
 
 } // namespace bpftrace::test::utils

@@ -4,6 +4,7 @@ add_library(util STATIC
   cgroup.cpp
   cpus.cpp
   env.cpp
+  gfp_flags.cpp
   int_parser.cpp
   math.cpp
   memfd.cpp
