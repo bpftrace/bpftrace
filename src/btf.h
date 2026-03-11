@@ -176,6 +176,10 @@ private:
   mutable std::string all_funcs_;
   std::string all_rawtracepoints_;
   std::optional<bool> has_module_btf_;
+
+public:
+  // enum_name -> (value -> variant_name)
+  std::map<std::string, std::map<uint64_t, std::string>> enum_defs_;
 };
 
 inline bool BTF::has_data()
