@@ -208,6 +208,15 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
             return output::Primitive::Symbolic(val_it->second, enum_val);
           }
         }
+        if (bpftrace.btf_) {
+          auto btf_it = bpftrace.btf_->enum_defs_.find(enum_name);
+          if (btf_it != bpftrace.btf_->enum_defs_.end()) {
+            auto val_it = btf_it->second.find(enum_val);
+            if (val_it != btf_it->second.end()) {
+              return output::Primitive::Symbolic(val_it->second, enum_val);
+            }
+          }
+        }
         // Fall back to something comprehensible in case user somehow
         // tricked the type system into accepting an invalid enum.
         return output::Primitive::Symbolic(std::to_string(enum_val), enum_val);
