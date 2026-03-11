@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <map>
 #include <vector>
 #include <cstdint>
 
@@ -83,10 +82,10 @@ private:
 
   // Compound GFP flags (common combinations) - calculated at compile time
   static constexpr uint64_t GFP_ATOMIC = (__GFP_HIGH | __GFP_KSWAPD_RECLAIM);
-  static constexpr uint64_t GFP_KERNEL = (__GFP_RECLAIM | __GFP_IO | __GFP_FS);
+  static constexpr uint64_t GFP_KERNEL = (__GFP_DIRECT_RECLAIM | __GFP_KSWAPD_RECLAIM | __GFP_IO | __GFP_FS);
   static constexpr uint64_t GFP_KERNEL_ACCOUNT = (GFP_KERNEL | __GFP_ACCOUNT);
   static constexpr uint64_t GFP_NOWAIT = (__GFP_KSWAPD_RECLAIM | __GFP_NOWARN);
-  static constexpr uint64_t GFP_NOIO = (__GFP_RECLAIM);
+  static constexpr uint64_t GFP_NOIO = (__GFP_DIRECT_RECLAIM | __GFP_KSWAPD_RECLAIM);
   static constexpr uint64_t GFP_NOFS = (GFP_NOIO | __GFP_IO);
   static constexpr uint64_t GFP_USER = (GFP_NOFS | __GFP_FS | __GFP_HARDWALL);
   static constexpr uint64_t GFP_DMA = (__GFP_DMA);
@@ -96,11 +95,7 @@ private:
   static constexpr uint64_t GFP_TRANSHUGE_LIGHT = (GFP_HIGHUSER_MOVABLE | __GFP_COMP | __GFP_NOMEMALLOC | __GFP_NOWARN) & ~__GFP_RECLAIM;
   static constexpr uint64_t GFP_TRANSHUGE = (GFP_TRANSHUGE_LIGHT | __GFP_DIRECT_RECLAIM);
 
-  // Map of flag values to names for individual flags
-  static const std::map<uint64_t, std::string> flag_names;
-  
-  // Map of compound flag values to names (order matters - check most specific first)
-  static const std::vector<std::pair<uint64_t, std::string>> compound_flags;
+  static const std::vector<std::pair<uint64_t, std::string>> flag_names;
 };
 
 } // namespace bpftrace::util

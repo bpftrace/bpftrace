@@ -538,7 +538,7 @@ TEST(utils, gfp_flags_format)
   // Test combined individual flags
   EXPECT_EQ(GFPFlags::format(0xC0), "__GFP_IO|__GFP_FS");
 
-  // Test compound flags 
+  // Test compound flags
   // if compound flag is present, it overrides individual flags of the same bits
   EXPECT_EQ(GFPFlags::format(0x820), "GFP_ATOMIC");
   EXPECT_EQ(GFPFlags::format(0x2800), "GFP_NOWAIT");
@@ -555,7 +555,12 @@ TEST(utils, gfp_flags_format)
   EXPECT_EQ(GFPFlags::format(0x04), "GFP_DMA32");
 
   // Test combined compound and individual flags
+  EXPECT_EQ(GFPFlags::format(0xCE0), "GFP_KERNEL|__GFP_HIGH");
   EXPECT_EQ(GFPFlags::format(0x41), "GFP_DMA|__GFP_IO");
+
+  // Test combined flag order
+  // Match both GFP_NOIO|__GFP_NOWARN and GFP_NOWAIT|__GFP_DIRECT_RECLAIM
+  EXPECT_EQ(GFPFlags::format(0x2c00), "GFP_NOIO|__GFP_NOWARN");
 
   // Test unrecognized bits
   EXPECT_EQ(GFPFlags::format(0x80000000), "0x80000000");

@@ -14,6 +14,10 @@ NAME printf_llu
 PROG begin { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); }
 EXPECT Elapsed time: 1s
 
+NAME printf_gr
+PROG begin { printf("GFPFlags: %gr\n", 0x1); }
+EXPECT GFPFlags: GFP_DMA
+
 NAME printf_argument_alignment
 RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; $foo2 = (struct Foo *)arg1; printf("%d %s %d %s\n", $foo.a, $foo.b, $foo2.a, $foo2.b) }' -c ./testprogs/uprobe_test
 EXPECT 123 hello 456 world

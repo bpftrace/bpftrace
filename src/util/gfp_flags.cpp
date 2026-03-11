@@ -4,13 +4,29 @@
 
 namespace bpftrace::util {
 
-// Individual flag names mapping
-const std::map<uint64_t, std::string> GFPFlags::flag_names = {
-  { __GFP_DMA, "__GFP_DMA" },
+// Compound flag names mapping
+//
+// The order should be consistent with kernel's __def_gfpflag_names order
+// defined in include/trace/events/mmflags.h
+//
+// Note from kernel:
+// The order of these masks is important. Matching masks will be seen
+// first and the left over flags will end up showing by themselves.
+const std::vector<std::pair<uint64_t, std::string>> GFPFlags::flag_names = {
+  { GFP_TRANSHUGE, "GFP_TRANSHUGE" },
+  { GFP_TRANSHUGE_LIGHT, "GFP_TRANSHUGE_LIGHT" },
+  { GFP_HIGHUSER_MOVABLE, "GFP_HIGHUSER_MOVABLE" },
+  { GFP_HIGHUSER, "GFP_HIGHUSER" },
+  { GFP_USER, "GFP_USER" },
+  { GFP_KERNEL_ACCOUNT, "GFP_KERNEL_ACCOUNT" },
+  { GFP_KERNEL, "GFP_KERNEL" },
+  { GFP_NOFS, "GFP_NOFS" },
+  { GFP_ATOMIC, "GFP_ATOMIC" },
+  { GFP_NOIO, "GFP_NOIO" },
+  { GFP_NOWAIT, "GFP_NOWAIT" },
+  { GFP_DMA, "GFP_DMA" },
   { __GFP_HIGHMEM, "__GFP_HIGHMEM" },
-  { __GFP_DMA32, "__GFP_DMA32" },
-  { __GFP_MOVABLE, "__GFP_MOVABLE" },
-  { __GFP_RECLAIMABLE, "__GFP_RECLAIMABLE" },
+  { GFP_DMA32, "GFP_DMA32" },
   { __GFP_HIGH, "__GFP_HIGH" },
   { __GFP_IO, "__GFP_IO" },
   { __GFP_FS, "__GFP_FS" },
@@ -34,23 +50,6 @@ const std::map<uint64_t, std::string> GFPFlags::flag_names = {
   { __GFP_NO_OBJ_EXT, "__GFP_NO_OBJ_EXT" }
 };
 
-// Compound flag names mapping (ordered from most specific to least specific)
-const std::vector<std::pair<uint64_t, std::string>> GFPFlags::compound_flags = {
-  { GFP_ATOMIC, "GFP_ATOMIC" },
-  { GFP_NOWAIT, "GFP_NOWAIT" },
-  { GFP_TRANSHUGE, "GFP_TRANSHUGE" },
-  { GFP_TRANSHUGE_LIGHT, "GFP_TRANSHUGE_LIGHT" },
-  { GFP_HIGHUSER_MOVABLE, "GFP_HIGHUSER_MOVABLE" },
-  { GFP_HIGHUSER, "GFP_HIGHUSER" },
-  { GFP_USER, "GFP_USER" },
-  { GFP_KERNEL_ACCOUNT, "GFP_KERNEL_ACCOUNT" },
-  { GFP_KERNEL, "GFP_KERNEL" },
-  { GFP_NOFS, "GFP_NOFS" },
-  { GFP_NOIO, "GFP_NOIO" },
-  { GFP_DMA, "GFP_DMA" },
-  { GFP_DMA32, "GFP_DMA32" }
-};
-
 std::string GFPFlags::format(uint64_t gfp_flags)
 {
   if (gfp_flags == 0) {
@@ -61,21 +60,9 @@ std::string GFPFlags::format(uint64_t gfp_flags)
   uint64_t remaining = gfp_flags;
   bool first = true;
 
-  // First check for compound flags (exact matches)
-  for (const auto& pair : compound_flags) {
-    if ((remaining & pair.first) == pair.first) {
-      if (!first) {
-        result << "|";
-      }
-      result << pair.second;
-      remaining &= ~pair.first;
-      first = false;
-    }
-  }
-
-  // Then check remaining individual flags
+  // Check flags based on the order
   for (const auto& pair : flag_names) {
-    if (remaining & pair.first) {
+    if ((remaining & pair.first) == pair.first) {
       if (!first) {
         result << "|";
       }
