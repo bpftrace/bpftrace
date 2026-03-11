@@ -1,6 +1,7 @@
 #include "ast/passes/types/cast_creator.h"
 #include "ast/ast.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/types/type_map.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
 #include "log.h"
@@ -47,7 +48,6 @@ std::optional<SizedType> try_tuple_cast(ASTContext &ctx,
       elem = ctx.make_node<TupleAccess>(Location(exp.loc()),
                                         clone(ctx, exp.loc(), exp),
                                         i);
-      elem.as<TupleAccess>()->element_type = expr_field_ty;
     }
     auto cast_type = try_expression_cast(
         ctx, elem, expr_field_ty, target_field_ty);
@@ -59,9 +59,7 @@ std::optional<SizedType> try_tuple_cast(ASTContext &ctx,
   }
 
   auto tuple_type = CreateTuple(Struct::CreateTuple(element_types));
-
   exp = ctx.make_node<Tuple>(Location(exp.loc()), std::move(expr_list));
-  exp.as<Tuple>()->tuple_type = tuple_type;
 
   return tuple_type;
 }
@@ -97,7 +95,6 @@ std::optional<SizedType> try_record_cast(ASTContext &ctx,
       elem = ctx.make_node<FieldAccess>(Location(exp.loc()),
                                         clone(ctx, exp.loc(), exp),
                                         target_field.name);
-      elem.as<FieldAccess>()->field_type = expr_field_ty;
     }
     auto cast_type = try_expression_cast(
         ctx, elem, expr_field_ty, target_field_ty);
@@ -124,7 +121,6 @@ std::optional<SizedType> try_record_cast(ASTContext &ctx,
   auto record_type = CreateRecord(Struct::CreateRecord(elements, names));
 
   exp = ctx.make_node<Record>(Location(exp.loc()), std::move(named_args));
-  exp.as<Record>()->record_type = record_type;
 
   return record_type;
 }
@@ -134,7 +130,6 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
                                              const SizedType &expr_type,
                                              const SizedType &target_type)
 {
-  // We don't need a cast if it's a literal
   if (auto *integer = exp.as<Integer>()) {
     if (target_type.IsSigned()) {
       auto signed_ty = ast::get_signed_integer_type(integer->value);
@@ -149,9 +144,6 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
         return std::nullopt;
       }
     }
-    exp = ctx.make_node<Integer>(
-        Location(exp.loc()), integer->value, target_type, integer->original);
-    return target_type;
   } else if (auto *negative_integer = exp.as<NegativeInteger>()) {
     if (!target_type.IsSigned()) {
       return std::nullopt;
@@ -162,14 +154,10 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
       // The integer is too large
       return std::nullopt;
     }
-
-    exp = ctx.make_node<NegativeInteger>(Location(exp.loc()),
-                                         negative_integer->value,
-                                         target_type);
-    return target_type;
   }
 
-  if (!expr_type.FitsInto(target_type) && !expr_type.IsCastableMapTy()) {
+  if (!expr_type.FitsInto(target_type) && !expr_type.IsCastableMapTy() &&
+      !exp.is<Integer>() && !exp.is<NegativeInteger>()) {
     return std::nullopt;
   }
 
@@ -186,7 +174,7 @@ static std::optional<SizedType> try_string_cast(ASTContext &ctx,
                                                 const SizedType &expr_type,
                                                 const SizedType &target_type)
 {
-  if (exp.type().GetSize() == target_type.GetSize()) {
+  if (expr_type.GetSize() == target_type.GetSize()) {
     return target_type;
   }
 
@@ -250,7 +238,9 @@ namespace {
 
 class CastCreator : public Visitor<CastCreator> {
 public:
-  explicit CastCreator(ASTContext &ast, BPFtrace &bpftrace);
+  explicit CastCreator(ASTContext &ast,
+                       BPFtrace &bpftrace,
+                       const TypeMap &type_map);
 
   using Visitor<CastCreator>::visit;
   void visit(AssignMapStatement &assignment);
@@ -267,14 +257,29 @@ public:
   void visit(Subprog &subprog);
 
 private:
+  std::optional<SizedType> cast_expression(Expression &expr,
+                                           const SizedType &expr_type,
+                                           const SizedType &target_type);
+
   ASTContext &ctx_;
   BPFtrace &bpftrace_;
+  const TypeMap &type_map_;
   std::variant<std::monostate, Probe *, Subprog *> top_level_node_;
 };
 
-CastCreator::CastCreator(ASTContext &ast, BPFtrace &bpftrace)
-    : ctx_(ast), bpftrace_(bpftrace)
+CastCreator::CastCreator(ASTContext &ast,
+                         BPFtrace &bpftrace,
+                         const TypeMap &type_map)
+    : ctx_(ast), bpftrace_(bpftrace), type_map_(type_map)
 {
+}
+
+std::optional<SizedType> CastCreator::cast_expression(
+    Expression &expr,
+    const SizedType &expr_type,
+    const SizedType &target_type)
+{
+  return try_expression_cast(ctx_, expr, expr_type, target_type);
 }
 
 void CastCreator::visit(AssignMapStatement &assignment)
@@ -282,14 +287,15 @@ void CastCreator::visit(AssignMapStatement &assignment)
   visit(assignment.map_access);
   visit(assignment.expr);
 
-  const auto &expr_type = assignment.expr.type();
-  const auto &value_type = assignment.map_access->map->value_type;
+  const auto &expr_type = type_map_.type(assignment.expr);
+  const auto &value_type = type_map_.map_value_type(
+      assignment.map_access->map->ident);
 
   if (value_type == expr_type) {
     return;
   }
 
-  if (!try_expression_cast(ctx_, assignment.expr, expr_type, value_type)) {
+  if (!cast_expression(assignment.expr, expr_type, value_type)) {
     assignment.addError() << "Type mismatch for "
                           << assignment.map_access->map->ident << ": "
                           << "trying to assign value of type '" << expr_type
@@ -303,14 +309,14 @@ void CastCreator::visit(AssignVarStatement &assignment)
   visit(assignment.expr);
   visit(assignment.var_decl);
 
-  const auto &expr_type = assignment.expr.type();
-  const auto &var_type = assignment.var()->type();
+  const auto &expr_type = type_map_.type(assignment.expr);
+  const auto &var_type = type_map_.type(assignment.var());
 
   if (var_type == expr_type) {
     return;
   }
 
-  if (!try_expression_cast(ctx_, assignment.expr, expr_type, var_type)) {
+  if (!cast_expression(assignment.expr, expr_type, var_type)) {
     assignment.addError() << "Type mismatch for " << assignment.var()->ident
                           << ": "
                           << "trying to assign value of type '" << expr_type
@@ -324,8 +330,8 @@ void CastCreator::visit(Binop &binop)
   visit(binop.left);
   visit(binop.right);
 
-  const auto &left_type = binop.left.type();
-  const auto &right_type = binop.right.type();
+  const auto &left_type = type_map_.type(binop.left);
+  const auto &right_type = type_map_.type(binop.right);
 
   // N.B. don't upcast strings as there are cases when one size is the max
   // string size and we don't want to create a cast like (string[1024])"hi"
@@ -336,12 +342,13 @@ void CastCreator::visit(Binop &binop)
   if (is_comparison_op(binop.op)) {
     auto promoted = get_promoted_type(left_type, right_type);
     if (promoted) {
-      try_expression_cast(ctx_, binop.left, left_type, *promoted);
-      try_expression_cast(ctx_, binop.right, right_type, *promoted);
+      cast_expression(binop.left, left_type, *promoted);
+      cast_expression(binop.right, right_type, *promoted);
     }
   } else {
-    try_expression_cast(ctx_, binop.left, left_type, binop.result_type);
-    try_expression_cast(ctx_, binop.right, right_type, binop.result_type);
+    const auto &result_type = type_map_.type(&binop);
+    cast_expression(binop.left, left_type, result_type);
+    cast_expression(binop.right, right_type, result_type);
   }
 }
 
@@ -359,12 +366,13 @@ void CastCreator::visit(Call &call)
 
   if (getAssignRewriteFuncs().contains(call.func)) {
     if (auto *map = call.vargs.at(0).as<Map>()) {
-      try_expression_cast(
-          ctx_, call.vargs.at(1), call.vargs.at(1).type(), map->key_type);
+      cast_expression(call.vargs.at(1),
+                      type_map_.type(call.vargs.at(1)),
+                      type_map_.map_key_type(map->ident));
     }
   } else if (call.func == "percpu_kaddr") {
     if (call.vargs.size() == 2) {
-      auto arg_type = call.vargs.at(1).type();
+      auto arg_type = type_map_.type(call.vargs.at(1));
       if (arg_type != CreateUInt32() && arg_type.IsIntegerTy()) {
         auto *typeof_c = ctx_.make_node<Typeof>(
             Location(call.vargs.at(1).loc()), CreateUInt32());
@@ -375,10 +383,11 @@ void CastCreator::visit(Call &call)
       }
     }
   } else if (call.func == "usym") {
-    auto arg_type = call.vargs.at(0).type();
+    auto arg_type = type_map_.type(call.vargs.at(0));
     if (arg_type.IsIntegerTy() && arg_type.GetSize() != 8) {
-      try_expression_cast(
-          ctx_, call.vargs.at(0), call.vargs.at(0).type(), CreateUInt64());
+      cast_expression(call.vargs.at(0),
+                      type_map_.type(call.vargs.at(0)),
+                      CreateUInt64());
     }
   }
 }
@@ -400,15 +409,15 @@ void CastCreator::visit(For &f)
     visit(range->start);
     visit(range->end);
 
-    const auto &start_type = range->start.type();
-    const auto &end_type = range->end.type();
+    const auto &start_type = type_map_.type(range->start);
+    const auto &end_type = type_map_.type(range->end);
     if (start_type == end_type) {
       return;
     }
     auto larger = start_type.GetSize() > end_type.GetSize() ? start_type
                                                             : end_type;
-    try_expression_cast(ctx_, range->start, start_type, larger);
-    try_expression_cast(ctx_, range->end, end_type, larger);
+    cast_expression(range->start, start_type, larger);
+    cast_expression(range->end, end_type, larger);
   }
 }
 
@@ -418,18 +427,18 @@ void CastCreator::visit(IfExpr &if_expr)
   visit(if_expr.left);
   visit(if_expr.right);
 
-  const auto &result_type = if_expr.result_type;
-  const auto &left_type = if_expr.left.type();
-  const auto &right_type = if_expr.right.type();
+  const auto &result_type = type_map_.type(&if_expr);
+  const auto &left_type = type_map_.type(if_expr.left);
+  const auto &right_type = type_map_.type(if_expr.right);
 
   if (result_type != left_type) {
-    if (!try_expression_cast(ctx_, if_expr.left, left_type, result_type)) {
+    if (!cast_expression(if_expr.left, left_type, result_type)) {
       LOG(BUG) << "IfExpr left should be castable";
     }
   }
 
   if (result_type != right_type) {
-    if (!try_expression_cast(ctx_, if_expr.right, right_type, result_type)) {
+    if (!cast_expression(if_expr.right, right_type, result_type)) {
       LOG(BUG) << "IfExpr right should be castable";
     }
   }
@@ -441,30 +450,29 @@ void CastCreator::visit(Jump &jump)
     visit(jump.return_value);
     if (std::holds_alternative<Probe *>(top_level_node_)) {
       if (jump.return_value.has_value()) {
-        const auto &ty = jump.return_value->type();
+        const auto &ty = type_map_.type(*jump.return_value);
         if (ty.IsIntegerTy() && ty.GetSize() != 8) {
           // Probes always return 64 bit ints
-          try_expression_cast(ctx_, *jump.return_value, ty, CreateInt64());
+          cast_expression(*jump.return_value, ty, CreateInt64());
         }
       }
     } else if (auto **subprog_ptr = std::get_if<Subprog *>(&top_level_node_)) {
       auto *subprog = *subprog_ptr;
+      const auto &return_type = type_map_.type(subprog->return_type);
       if (!jump.return_value.has_value()) {
-        if (!subprog->return_type->type().IsVoidTy()) {
+        if (!return_type.IsVoidTy()) {
           jump.addError() << "Function " << subprog->name << " is of type "
-                          << subprog->return_type->type() << ", cannot return "
-                          << CreateVoid();
+                          << return_type << ", cannot return " << CreateVoid();
           return;
         }
         return;
       }
-      if (!try_expression_cast(ctx_,
-                               *jump.return_value,
-                               jump.return_value->type(),
-                               subprog->return_type->type())) {
+      if (!cast_expression(*jump.return_value,
+                           type_map_.type(*jump.return_value),
+                           return_type)) {
         jump.addError() << "Function " << subprog->name << " is of type "
-                        << subprog->return_type->type() << ", cannot return "
-                        << jump.return_value->type();
+                        << return_type << ", cannot return "
+                        << type_map_.type(*jump.return_value);
         return;
       }
     }
@@ -475,14 +483,14 @@ void CastCreator::visit(MapAccess &acc)
 {
   visit(acc.key);
   visit(acc.map);
-  const auto &expr_type = acc.key.type();
-  const auto &key_type = acc.map->key_type;
+  const auto &expr_type = type_map_.type(acc.key);
+  const auto &key_type = type_map_.map_key_type(acc.map->ident);
 
   if (key_type.IsNoneTy() || expr_type.IsNoneTy()) {
     return;
   }
 
-  if (!try_expression_cast(ctx_, acc.key, expr_type, key_type)) {
+  if (!cast_expression(acc.key, expr_type, key_type)) {
     acc.addError() << "Type mismatch for " << acc.map->ident << ": "
                    << "trying to assign key of type '" << expr_type
                    << "' when map already has a key type '" << key_type << "'";
@@ -510,9 +518,11 @@ void CastCreator::visit(Subprog &subprog)
 
 } // namespace
 
-void RunCastCreator(ASTContext &ast, BPFtrace &bpftrace)
+void RunCastCreator(ASTContext &ast,
+                    BPFtrace &bpftrace,
+                    const TypeMap &type_map)
 {
-  CastCreator(ast, bpftrace).visit(ast.root);
+  CastCreator(ast, bpftrace, type_map).visit(ast.root);
 }
 
 } // namespace bpftrace::ast

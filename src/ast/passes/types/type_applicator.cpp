@@ -1,5 +1,6 @@
 #include "ast/passes/types/type_applicator.h"
 #include "ast/ast.h"
+#include "ast/passes/types/type_map.h"
 #include "ast/visitor.h"
 
 namespace bpftrace::ast {
@@ -8,8 +9,7 @@ namespace {
 
 class TypeApplicator : public Visitor<TypeApplicator> {
 public:
-  explicit TypeApplicator(const ResolvedTypes &resolved_types)
-      : resolved_types_(resolved_types) {};
+  explicit TypeApplicator(const TypeMap &type_map) : type_map_(type_map) {};
 
   using Visitor<TypeApplicator>::visit;
 
@@ -31,13 +31,13 @@ public:
   void visit(VariableAddr &var_addr);
 
 private:
-  const ResolvedTypes &resolved_types_;
+  const TypeMap &type_map_;
 
   void apply(Node &node, SizedType &target)
   {
-    auto it = resolved_types_.find(&node);
-    if (it != resolved_types_.end()) {
-      target = it->second;
+    const auto &type = type_map_.type(&node);
+    if (!type.IsNoneTy()) {
+      target = type;
     }
   }
 };
@@ -98,16 +98,16 @@ void TypeApplicator::visit(Identifier &identifier)
 
 void TypeApplicator::visit(Map &map)
 {
-  auto key_it = resolved_types_.find(get_map_key_name(map.ident));
-  if (key_it != resolved_types_.end()) {
-    map.key_type = key_it->second;
+  const auto *key_type = type_map_.find_map_key_type(map.ident);
+  if (key_type) {
+    map.key_type = *key_type;
   }
   if (map.key_type.IsNoneTy()) {
     map.addError() << "Undefined map: " + map.ident;
   }
-  auto val_it = resolved_types_.find(get_map_value_name(map.ident));
-  if (val_it != resolved_types_.end()) {
-    map.value_type = val_it->second;
+  const auto *val_type = type_map_.find_map_value_type(map.ident);
+  if (val_type) {
+    map.value_type = *val_type;
   }
   if (map.value_type.IsNoneTy()) {
     map.addError() << "Undefined map: " + map.ident;
@@ -160,9 +160,9 @@ void TypeApplicator::visit(VariableAddr &var_addr)
 
 } // namespace
 
-void RunTypeApplicator(ASTContext &ast, const ResolvedTypes &resolved_types)
+void RunTypeApplicator(ASTContext &ast, const TypeMap &type_map)
 {
-  TypeApplicator(resolved_types).visit(ast.root);
+  TypeApplicator(type_map).visit(ast.root);
 }
 
 } // namespace bpftrace::ast

@@ -84,23 +84,25 @@ std::optional<Expression> AstTransformer::visit(Binop &binop)
     return std::nullopt;
   }
 
+  auto updated_lht = lht;
   if (*updatedTy != lht) {
-    if (is_tuple) {
-      try_tuple_cast(ast_, binop.left, lht, *updatedTy);
-    } else {
-      try_record_cast(ast_, binop.left, lht, *updatedTy);
+    auto updated = is_tuple
+                       ? try_tuple_cast(ast_, binop.left, lht, *updatedTy)
+                       : try_record_cast(ast_, binop.left, lht, *updatedTy);
+    if (updated) {
+      updated_lht = *updated;
     }
   }
+
+  auto updated_rht = rht;
   if (*updatedTy != rht) {
-    if (is_tuple) {
-      try_tuple_cast(ast_, binop.right, rht, *updatedTy);
-    } else {
-      try_record_cast(ast_, binop.right, rht, *updatedTy);
+    auto updated = is_tuple
+                       ? try_tuple_cast(ast_, binop.right, rht, *updatedTy)
+                       : try_record_cast(ast_, binop.right, rht, *updatedTy);
+    if (updated) {
+      updated_rht = *updated;
     }
   }
-
-  bool types_equal = binop.left.type() == binop.right.type();
-
   auto *size = ast_.make_node<Integer>(binop.loc,
                                        updatedTy->GetSize(),
                                        CreateUInt64());
@@ -112,10 +114,10 @@ std::optional<Expression> AstTransformer::visit(Binop &binop)
   // before assignment (e.g. `let $right: typeof($left) = right;`)
   // as this ensures the temporary `$right` variable has the same
   // field ordering as the `$left`.
-  auto *call = ast_.make_node<Call>(binop.loc,
-                                    types_equal ? "memcmp" : "memcmp_record",
-                                    ExpressionList{
-                                        binop.left, binop.right, size });
+  auto *call = ast_.make_node<Call>(
+      binop.loc,
+      updated_rht == updated_lht ? "memcmp" : "memcmp_record",
+      ExpressionList{ binop.left, binop.right, size });
   auto *typeof_node = ast_.make_node<Typeof>(binop.loc, CreateBool());
   auto *cast = ast_.make_node<Cast>(binop.loc, typeof_node, call);
   if (binop.op == Operator::NE) {
@@ -150,14 +152,9 @@ std::optional<Expression> AstTransformer::visit(FieldAccess &acc)
     auto *unop = ast_.make_node<Unop>(acc.expr.node().loc,
                                       acc.expr,
                                       Operator::MUL);
-    unop->result_type = type.GetPointeeTy();
-    if (type.IsCtxAccess())
-      unop->result_type.MarkCtxAccess();
-    unop->result_type.is_internal = type.is_internal;
-    unop->result_type.SetAS(type.GetAS());
     acc.expr.value = unop;
     had_transforms_ = true;
-    type = unop->result_type;
+    type = type.GetPointeeTy();
   }
 
   return std::nullopt;
@@ -222,19 +219,10 @@ std::optional<Expression> AstTransformer::visit(Typeinfo &typeinfo)
   auto *base_ty = ast_.make_node<String>(typeinfo.loc, to_string(type.GetTy()));
   auto *full_ty = ast_.make_node<String>(typeinfo.loc, typestr(type));
 
-  std::vector<SizedType> elements = { CreateUInt64(),
-                                      base_ty->type(),
-                                      full_ty->type() };
-  std::vector<std::string_view> names = { "btf_id", "base_type", "full_type" };
-
-  auto record_type = CreateRecord(Struct::CreateRecord(elements, names));
-
   auto *record = make_record(
       ast_,
       typeinfo.loc,
       { { "btf_id", id }, { "base_type", base_ty }, { "full_type", full_ty } });
-
-  record->record_type = record_type;
 
   return record;
 }

@@ -58,6 +58,8 @@ inline std::string get_map_key_name(const std::string &ident)
   return ident + "__key";
 }
 
+class TypeMap;
+
 Pass CreateTypeResolverPass();
 
 } // namespace bpftrace::ast
