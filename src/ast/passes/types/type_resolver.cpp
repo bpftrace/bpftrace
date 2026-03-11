@@ -54,11 +54,15 @@ std::unordered_map<std::string, SizedType (*)()> SIMPLE_BUILTIN_TYPES = {
 };
 
 std::unordered_map<std::string, SizedType (*)()> SIMPLE_CALL_TYPES = {
-  { "ksym", CreateKSym },          { "usym", CreateUSym },
-  { "cgroupid", CreateUInt64 },    { "cgroup_path", CreateCgroupPath },
-  { "stack_len", CreateInt64 },    { "strftime", CreateTimestamp },
-  { "macaddr", CreateMacAddress }, { "skboutput", CreateUInt32 },
-  { "strncmp", CreateUInt64 },     { "socket_cookie", CreateUInt64 },
+  { "ksym", CreateKSym },
+  { "usym", CreateUSym },
+  { "cgroupid", CreateUInt64 },
+  { "cgroup_path", CreateCgroupPath },
+  { "stack_len", CreateInt64 },
+  { "macaddr", CreateMacAddress },
+  { "skboutput", CreateUInt32 },
+  { "strncmp", CreateUInt64 },
+  { "socket_cookie", CreateUInt64 },
 };
 
 const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
@@ -1261,6 +1265,18 @@ void TypeRuleCollector::visit(Call &call)
         return_type = CreateUInt64();
         return_type.ts_mode = TimestampMode::boot;
       }
+    } else if (call.func == "strftime") {
+      resolver_.add_type_rule({
+          .output = &call,
+          .inputs = { &call.vargs.at(1).node() },
+          .resolve =
+              [this, &call](const std::vector<SizedType> &inputs) -> SizedType {
+            auto ret_type = CreateTimestamp();
+            ret_type.ts_mode = inputs[0].ts_mode;
+            return ret_type;
+          },
+      });
+      return;
     } else if (auto bit = SIMPLE_BUILTIN_TYPES.find(call.func);
                bit != SIMPLE_BUILTIN_TYPES.end()) {
       return_type = bit->second();
