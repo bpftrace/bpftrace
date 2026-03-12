@@ -2564,11 +2564,11 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   if (type.is_funcarg) {
     auto probe_type = probetype(current_attach_point_->provider);
     if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
-        probe_type == ProbeType::rawtracepoint)
+        probe_type == ProbeType::rawtracepoint) {
       return ScopedExpr(
           b_.CreateKFuncArg(ctx_, type_map_.type(&acc), acc.field),
           std::move(scoped_arg));
-    else if (probe_type == ProbeType::uprobe) {
+    } else if (probe_type == ProbeType::uprobe) {
       llvm::Type *args_type = b_.UprobeArgsType(type);
       return readDatastructElemFromStack(std::move(scoped_arg),
                                          b_.getInt32(
@@ -2699,12 +2699,12 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
     b_.SetInsertPoint(merge);
   }
 
-  if (inBpfMemory(type_map_.type(&arr)) && !type.IsPtrTy())
+  if (inBpfMemory(type_map_.type(&arr)) && !type.IsPtrTy()) {
     return readDatastructElemFromStack(std::move(scoped_expr),
                                        scoped_index.value(),
                                        type,
                                        type_map_.type(&arr));
-  else {
+  } else {
     Value *array = scoped_expr.value();
     if (array->getType()->isPointerTy()) {
       scoped_expr = ScopedExpr(b_.CreatePtrToInt(array, b_.getInt64Ty()),
@@ -2793,10 +2793,7 @@ ScopedExpr CodegenLLVM::visit(MapAccess &acc)
         acc.map->ident, scoped_key.value(), val_type, acc.loc);
   }
 
-  return ScopedExpr(value, [this, value] {
-    if (dyn_cast<AllocaInst>(value))
-      b_.CreateLifetimeEnd(value);
-  });
+  return ScopedExpr(value, [this, value] { b_.CreateLifetimeEnd(value); });
 }
 
 ScopedExpr CodegenLLVM::visit(Cast &cast)
@@ -3181,8 +3178,9 @@ ScopedExpr CodegenLLVM::visit(Jump &jump)
       if (jump.return_value) {
         auto scoped_return = visit(jump.return_value);
         createRet(scoped_return.value());
-      } else
+      } else {
         createRet();
+      }
       break;
     case JumpType::BREAK:
       b_.CreateBr(std::get<1>(loops_.back())());
@@ -4670,7 +4668,11 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
         // declaration that points there.
         auto *ctx = callback->getArg(1);
         auto *start_field_ptr = b_.CreateSafeGEP(
-            ctx_t, ctx, { b_.getInt64(0), b_.getInt32(sz) }, "start");
+            // NOLINTNEXTLINE(modernize-type-traits): false positive on var
+            ctx_t,
+            ctx,
+            { b_.getInt64(0), b_.getInt32(sz) },
+            "start");
         auto *current_field_ptr = b_.CreateSafeGEP(
             ctx_t, ctx, { b_.getInt64(0), b_.getInt32(sz + 1) }, "current");
 

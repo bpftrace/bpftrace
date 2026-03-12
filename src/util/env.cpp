@@ -27,11 +27,11 @@ void get_bool_env_var(const ::std::string &str,
   if (const char *env_p = std::getenv(str.c_str())) {
     bool dest;
     std::string s(env_p);
-    if (s == "1")
+    if (s == "1") {
       dest = true;
-    else if (s == "0")
+    } else if (s == "0") {
       dest = false;
-    else {
+    } else {
       throw FatalUserException("Env var '" + str +
                                "' did not contain a valid value (0 or 1).");
     }
