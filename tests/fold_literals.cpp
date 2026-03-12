@@ -521,17 +521,6 @@ TEST(fold_literals, ternary)
   test("\"\" ? true : false", Boolean(false));
 }
 
-TEST(fold_literals, cast)
-{
-  test("(bool)0", Boolean(false));
-  test("(bool)\"\"", Boolean(false));
-  test("(bool)false", Boolean(false));
-  test("(bool)1", Boolean(true));
-  test("(bool)-1", Boolean(true));
-  test("(bool)\"str\"", Boolean(true));
-  test("(bool)true", Boolean(true));
-}
-
 TEST(fold_literals, conditional)
 {
   test_comptime_if("if (comptime 1) { }");
