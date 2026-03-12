@@ -295,11 +295,10 @@ void ControlFlowInjector::visit(Subprog &subprog)
   bool has_return = ControlFlowAnalyser<JumpType::RETURN>(ast_).visit(
       subprog.block);
   if (!has_return) {
-    if (subprog.return_type->type().IsVoidTy()) {
-      inject_jump<JumpType::RETURN>(ast_, *subprog.block);
-    } else {
-      subprog.addError() << "Not all code paths returned a value";
-    }
+    // Always inject a return regardless of the subprog's return type. For
+    // non-void subprogs, a future pass will catch the implicit void return and
+    // report a type mismatch error.
+    inject_jump<JumpType::RETURN>(ast_, *subprog.block);
   }
 
   // Recurse to check loops, etc.
