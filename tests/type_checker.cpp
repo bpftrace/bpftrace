@@ -4151,6 +4151,25 @@ ERROR: Function f is of type int64, cannot return void
 fn f(): int64 { return; }
                 ~~~~~~
 )" });
+
+  const std::string err_msg = "Function f is of type int64, cannot return void";
+  test("fn f(): int64 { $x = 0; }", Error{ err_msg });
+  test("fn f($x: int64): int64 { if ($x > 0) { return 0; } else { $x = 0; } }",
+       Error{ err_msg });
+  test("fn f($x: int64): int64 { if ($x > 0) { return 0; } }",
+       Error{ err_msg });
+  // This was previously allowed, but is no longer allowed. All loops
+  // are treated equally, and therefore we require all paths to return
+  // appropriately ahead of any folding, etc.
+  test("fn f($x: int64): int64 { while ($x) { return 0; } }", Error{ err_msg });
+  test("fn f($x: int64): int64 {"
+       "  if ($x > 0) {"
+       "    if ($x > 0) { return 1; } else { return 0; }"
+       "  } else {"
+       "    if ($x > 0) { return 1; } else { $x = 1; }"
+       "  }"
+       "}",
+       Error{ err_msg });
 }
 
 TEST_F(TypeCheckerTest, subprog_arguments)
