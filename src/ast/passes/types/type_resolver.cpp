@@ -1673,10 +1673,7 @@ void TypeRuleCollector::visit(For &f)
               ctx_idents.push_back(var.ident);
             }
 
-            f.ctx_type = CreateCStruct(
-                Struct::CreateRecord(ctx_types, ctx_idents));
-            // Nothing should be dependent upon this for loop
-            return CreateNone();
+            return CreateCStruct(Struct::CreateRecord(ctx_types, ctx_idents));
           },
       });
     }
@@ -1686,7 +1683,8 @@ void TypeRuleCollector::visit(For &f)
   // body
   std::vector<SizedType> ctx_types;
   std::vector<std::string_view> ctx_idents;
-  f.ctx_type = CreateCStruct(Struct::CreateRecord(ctx_types, ctx_idents));
+  resolver_.set_type(
+      &f, CreateCStruct(Struct::CreateRecord(ctx_types, ctx_idents)));
 }
 
 void TypeRuleCollector::visit(Identifier &identifier)
