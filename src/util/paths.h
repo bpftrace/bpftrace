@@ -28,4 +28,7 @@ std::string path_for_pid_mountns(int pid, const std::string &path);
 
 bool is_archive_path(const std::string &path);
 
+bool path_ends_with(const std::filesystem::path &path,
+                    const std::filesystem::path &pattern);
+
 } // namespace bpftrace::util

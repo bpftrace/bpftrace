@@ -2944,9 +2944,9 @@ TEST(Parser, map_declarations)
            .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
 
   test_parse_failure("@a = hash(); begin { $x; }", R"(
-stdin:1:1-3: ERROR: syntax error, unexpected map
+stdin:1:4-5: ERROR: syntax error, unexpected =
 @a = hash(); begin { $x; }
-~~
+   ~
 )");
 
   test_parse_failure("let @a = hash(); begin { $x; }", R"(

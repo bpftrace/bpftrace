@@ -355,4 +355,42 @@ bool is_archive_path(const std::string &path)
   return std::filesystem::exists(archive, ec);
 }
 
+// Returns true if the given pattern (e.g. file name, relative/absolute path)
+// matches the tail of the path. Comparison order is done from the file name
+// towards the root dir, comparing each path element.
+//
+// Paths passed as parameters are *expected* to be
+// normalised beforehand, i.e. this function doesn't normalise given paths.
+bool path_ends_with(const std::filesystem::path &path,
+                    const std::filesystem::path &pattern)
+{
+  // Early exit on empty paths
+  if (path.empty() && pattern.empty()) {
+    return true;
+  }
+  if (path.empty() || pattern.empty()) {
+    return false;
+  }
+
+  // Iterate backwards, i.e. from file name
+  auto path_it = path.end();
+  auto pattern_it = pattern.end();
+
+  // According to the standard, end() returns an iterator one
+  // past the last element of the path. Dereferencing it is undefined
+  // behavior, so we decrement first.
+  // https://en.cppreference.com/w/cpp/filesystem/path/begin.html
+  --path_it;
+  --pattern_it;
+
+  for (; pattern_it != pattern.begin(); pattern_it--, path_it--) {
+    // Path can't have less elements than pattern
+    if (path_it == path.begin() || *pattern_it != *path_it) {
+      return false;
+    }
+  }
+
+  return *pattern_it == *path_it;
+}
+
 } // namespace bpftrace::util

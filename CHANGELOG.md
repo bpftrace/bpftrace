@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Add `uprobe` support for source location attach points.
+  - [#4867](https://github.com/bpftrace/bpftrace/pull/4867)
 - Add printf specifier `%gr` to print GFP flags in human readable format
   - [#4832](https://github.com/bpftrace/bpftrace/issues/4832)
 #### Changed

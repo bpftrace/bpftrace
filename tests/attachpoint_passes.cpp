@@ -5,6 +5,10 @@
 #include "mocks.h"
 #include "gtest/gtest.h"
 
+#ifdef HAVE_LIBDW
+#include "dwarf_common.h"
+#endif // HAVE_LIBDW
+
 namespace bpftrace::test {
 
 namespace attachpoint_parser {
@@ -99,6 +103,73 @@ TEST(attachpoint_parser, uprobe_lang)
   test_uprobe_lang("uprobe:main { 1 }");
   test_uprobe_lang("uprobe:cpp:main { 1 }", "cpp");
 }
+
+#ifdef HAVE_LIBDW
+
+class attachpoint_parser_dwarf : public test_dwarf {};
+
+TEST_F(attachpoint_parser_dwarf, uprobe)
+{
+  // Valid test executable to ensure DWARF function proceeds.
+  // The line numbers used must be mappable to a present, valid statement within
+  // the target executable. If the test executable/source-file is subject to
+  // change, be sure to update these tests. Tests might also fail, if the file
+  // 'data_source.c' is to be compiled elsewhere than in the 'data/' dir.
+  std::string bin = std::string(bin_);
+  std::string ap = "uprobe:" + bin;
+
+  test(ap + "@data_source.c:195 { 1 }");
+  test(ap + "@data_source.c:195:1 { 1 }");
+  test(ap + "@data/data_source.c:195 { 1 }");
+  test(ap + "@data/data_source.c:195:1 { 1 }");
+  test(ap + "@data_source.c:195 / 1 / { 1 }");
+  test(ap + "@data/data_source.c:195 / 1 / { 1 }");
+  test("begin { @x = 1; } " + ap + "@data/data_source.c:195 / @x / { @x/1; }");
+  test("begin { @x = 1; } " + ap + "@data/data_source.c:195 /@x/ { @x/1; }");
+  test("begin { @data_source = 1; } " + ap +
+       "@data_source.c:195 /@data_source/ { @data_source/1; }");
+  test("begin { @data = 1; } " + ap +
+       "@data/data_source.c:195 /@data/ { @data/1; }");
+
+  // Quoted arguments
+  test(ap + R"(@"data_source.c":195 { 1 })");
+  test(ap + R"(@data_source.c:"195" { 1 })");
+  test(ap + R"(@"data_source.c":"195" { 1 })");
+  test(ap + R"(@"data_source.c":"195":"1" { 1 })");
+  test(ap + R"(@data/"data_source.c":195 { 1 })");
+  test(ap + R"(@"data/data_source.c":195 { 1 })");
+  test(R"(uprobe:")" + bin + R"("@data_source.c:195 { 1 })");
+  test(R"(uprobe:")" + bin + R"("@"data_source.c":195 { 1 })");
+  test(R"(uprobe:")" + bin + R"("@"data/data_source.c":195 { 1 })");
+
+  test_error("uretprobe:" + bin + "@data_source.c:195 { 1 }",
+             R"(Source code location not allowed)");
+  test_error("uprobe:*@data_source.c:195 { 1 }",
+             R"(Cannot use wildcards with source code location)");
+  test_error(ap + "@ { 1 }", R"(ERROR: syntax error, unexpected {)");
+  test_error(ap + "@: { 1 }", R"(ERROR: syntax error, unexpected :)");
+  test_error(
+      ap + "@data_source.c: { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(ap + "@:195 { 1 }", R"(ERROR: syntax error, unexpected path)");
+  test_error(
+      ap + "@data_source.c:195:1:2:3 { 1 }",
+      R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
+  test_error(ap + "@data_source.c:invalid { 1 }", R"(Invalid line number: )");
+  test_error(ap + "@data_source.c:195:invalid { 1 }",
+             R"(Invalid column number: )");
+  test_error(ap + "@data_source.c:195: { 1 }", R"(Invalid column number: )");
+  test_error(ap + "@invalid.c:195 { 1 }",
+             R"(No compilation unit matches invalid.c)");
+  test_error(
+      "uprobe:no_dwarf@main.c:123 { 1 }",
+      R"(No DWARF debug info found for 'no_dwarf', cannot attach by source code location.)");
+  test_error(
+      "uprobe:@main.c:123 { 1 }",
+      R"(Unspecified target binary, cannot attach by source code location.)");
+}
+
+#endif // HAVE_LIBDW
 
 } // namespace attachpoint_parser
 
