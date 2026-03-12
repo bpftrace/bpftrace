@@ -764,15 +764,12 @@ TEST_F(TypeResolverTest, map_key_promotion_records)
 TEST_F(TypeResolverTest, variable_no_type)
 {
   test(R"(begin { let $z; $a = 1; $b = typeinfo($z); })", Error{ R"(
-ERROR: Could not resolve the type of this variable
-begin { let $z; $a = 1; $b = typeinfo($z); }
-            ~~
-stdin:1:25-27: ERROR: Could not resolve the type of this variable
-begin { let $z; $a = 1; $b = typeinfo($z); }
-                        ~~
 stdin:1:39-41: ERROR: Could not resolve the type of this variable
 begin { let $z; $a = 1; $b = typeinfo($z); }
                                       ~~
+stdin:1:25-42: ERROR: Invalid expression for assignment
+begin { let $z; $a = 1; $b = typeinfo($z); }
+                        ~~~~~~~~~~~~~~~~~
 )" });
 
   test(R"(begin { let $a; let $b; $b = $a; $a = $b; })", Error{});

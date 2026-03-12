@@ -51,6 +51,7 @@ public:
   void visit(Call &call);
   void visit(Map &map);
   void visit(MapDeclStatement &decl);
+  void visit(Variable &var);
   void visit(VariableAddr &var_addr);
   void visit(Binop &binop);
   void visit(While &while_block);
@@ -659,11 +660,17 @@ void TypeChecker::visit(Map &map)
 {
   used_maps_.insert(map.ident);
 
+  const auto &value_type = type_map_.map_value_type(map.ident);
+  const auto &key_type = type_map_.map_key_type(map.ident);
+
+  if (value_type.IsNoneTy() || key_type.IsNoneTy()) {
+    map.addError() << "Undefined map: " + map.ident;
+  }
+
   // Note that the naked `Map` node actually gets no type, the type
   // is applied to the node at the `MapAccess` level.
   auto found_kind = bpf_map_type_.find(map.ident);
   if (found_kind != bpf_map_type_.end()) {
-    const auto &value_type = type_map_.map_value_type(map.ident);
     if (!bpf_map_types_compatible(value_type, found_kind->second)) {
       auto map_type = get_bpf_map_type(value_type);
       map.addError() << "Incompatible map types. Type from declaration: "
@@ -671,6 +678,13 @@ void TypeChecker::visit(Map &map)
                      << ". Type from value/key type: "
                      << get_bpf_map_type_str(map_type);
     }
+  }
+}
+
+void TypeChecker::visit(Variable &var)
+{
+  if (type_map_.type(&var).IsNoneTy()) {
+    var.addError() << "Could not resolve the type of this variable";
   }
 }
 

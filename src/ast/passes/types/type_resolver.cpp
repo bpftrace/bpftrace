@@ -10,7 +10,6 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/types/ast_transformer.h"
 #include "ast/passes/types/cast_creator.h"
-#include "ast/passes/types/type_applicator.h"
 #include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_system.h"
@@ -2733,13 +2732,6 @@ Pass CreateTypeResolverPass()
         resolver.resolve(collector.get_map_value_names());
         resolved_types = resolver.get_resolved_types();
         type_map = TypeMap(std::move(resolved_types));
-
-        // Add the types to the AST nodes themselves
-        RunTypeApplicator(ast, type_map);
-
-        if (!ast.diagnostics().ok()) {
-          return TypeMap(ResolvedTypes{});
-        }
 
         // Run type checking as the final step
         RunTypeChecker(ast, b, c_definitions, types, type_map);
