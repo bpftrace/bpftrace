@@ -202,7 +202,7 @@ std::vector<std::string> resolve_binary_path(const std::string &cmd,
 
     if (environ) {
       std::string env_var;
-      std::string pathstr = ("PATH=");
+      std::string pathstr = "PATH=";
       while (std::getline(environ, env_var, '\0')) {
         if (env_var.find(pathstr) != std::string::npos) {
           env_paths = env_var.substr(pathstr.length());

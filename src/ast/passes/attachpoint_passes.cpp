@@ -167,9 +167,9 @@ void AttachPointChecker::visit(AttachPoint &ap)
     }
 
   } else if (ap.provider == "profile") {
-    if (ap.target.empty())
+    if (ap.target.empty()) {
       ap.addError() << "profile probe must have unit of time";
-    else {
+    } else {
       if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
       if (!ap.func.empty())
@@ -178,9 +178,9 @@ void AttachPointChecker::visit(AttachPoint &ap)
         ap.addError() << "profile frequency should be a positive integer";
     }
   } else if (ap.provider == "interval") {
-    if (ap.target.empty())
+    if (ap.target.empty()) {
       ap.addError() << "interval probe must have unit of time";
-    else {
+    } else {
       if (!TIME_UNITS.contains(ap.target))
         ap.addError() << ap.target << " is not an accepted unit of time";
       if (!ap.func.empty())
@@ -443,8 +443,9 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     } else {
       probe_types = probe_matcher.expand_probetype_kernel(probetype_query);
     }
-  } else
+  } else {
     probe_types = { front };
+  }
 
   if (probe_types.empty()) {
     if (util::has_wildcard(front))
@@ -529,10 +530,10 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
       // The standard says an std::string in moved-from state is in
       // valid but unspecified state, so clear() to be safe
       argument.clear();
-    } else if (raw[idx] == '"')
+    } else if (raw[idx] == '"') {
       in_quotes = !in_quotes;
     // Handle escaped characters in a string
-    else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size())) {
+    } else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size())) {
       argument += raw[idx + 1];
       ++idx;
     } else if (!in_quotes && raw[idx] == '$') {
@@ -571,8 +572,9 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
       raw = raw.substr(0, idx) + bpftrace_.get_param(*param_idx) +
             raw.substr(i);
       idx--;
-    } else
+    } else {
       argument += raw[idx];
+    }
   }
 
   // Add final argument
@@ -787,8 +789,9 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
         ap_->address = 0;
         ap_->func = func;
       }
-    } else
+    } else {
       ap_->func = func;
+    }
   }
 
   return OK;
@@ -1026,9 +1029,9 @@ AttachPointParser::State AttachPointParser::fentry_parser()
     if (!util::has_wildcard(ap_->func)) {
       auto func_modules = func_info_state_.kernel_info().get_func_modules(
           ap_->func);
-      if (func_modules.size() == 1)
+      if (func_modules.size() == 1) {
         ap_->target = *func_modules.begin();
-      else if (func_modules.size() > 1) {
+      } else if (func_modules.size() > 1) {
         // Attaching to multiple functions of the same name is currently
         // broken, ask the user to specify a module explicitly.
         errs_ << "ambiguous attach point, please specify module containing "
@@ -1036,8 +1039,9 @@ AttachPointParser::State AttachPointParser::fentry_parser()
               << ap_->func << "\'";
         return INVALID;
       }
-    } else // leave the module empty for now
+    } else { // leave the module empty for now
       ap_->target = "*";
+    }
   }
 
   return OK;

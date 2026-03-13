@@ -21,8 +21,14 @@ public:
   {
   }
 
-  symbols::KernelInfo &kernel_info() const { return kernel_impl_; }
-  symbols::UserInfo &user_info() const { return user_impl_; }
+  symbols::KernelInfo &kernel_info() const
+  {
+    return kernel_impl_;
+  }
+  symbols::UserInfo &user_info() const
+  {
+    return user_impl_;
+  }
 
 private:
   symbols::KernelInfo &kernel_impl_;

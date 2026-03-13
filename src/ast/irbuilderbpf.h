@@ -23,6 +23,11 @@ public:
                BPFtrace &bpftrace,
                AsyncIds &async_ids);
 
+  // LLVM 22+ requires lifetime intrinsics only on alloca or poison.
+  // Since createAllocation() may return a GEP into a global scratch buffer,
+  // this wrapper guards against calling lifetime.end on non-alloca values.
+  void CreateLifetimeEnd(Value *val);
+
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name = "");
   AllocaInst *CreateAllocaBPF(const SizedType &stype,
                               const std::string &name = "");

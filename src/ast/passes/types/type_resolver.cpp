@@ -855,8 +855,9 @@ void TypeRuleCollector::visit(Builtin &builtin)
                                                       RETVAL_FIELD_NAME);
       if (arg) {
         builtin_type = arg->type;
-      } else
+      } else {
         builtin.addError() << "Can't find a field " << RETVAL_FIELD_NAME;
+      }
     } else {
       builtin_type = CreateUInt64();
     }
@@ -2236,9 +2237,9 @@ void TypeRuleCollector::visit(Unop &unop)
           } else if (type.IsCStructTy()) {
             // We allow dereferencing "args" with no effect (for backwards
             // compat)
-            if (type.IsCtxAccess())
+            if (type.IsCtxAccess()) {
               result = type;
-            else {
+            } else {
               unop.addError() << "Can not dereference struct/union of type '"
                               << type.GetName() << "'. It is not a pointer.";
             }

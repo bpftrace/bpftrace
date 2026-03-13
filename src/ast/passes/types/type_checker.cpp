@@ -955,9 +955,9 @@ void TypeChecker::visit(Cast &cast)
 
   if (ty.IsArrayTy()) {
     if (ty.GetNumElements() == 0) {
-      if (ty.GetElementTy().GetSize() == 0)
+      if (ty.GetElementTy().GetSize() == 0) {
         cast.addError() << "Could not determine size of the array";
-      else {
+      } else {
         if (rhs.GetSize() % ty.GetElementTy().GetSize() != 0) {
           cast.addError() << "Cannot determine array size: the element size is "
                              "incompatible with the cast integer size";

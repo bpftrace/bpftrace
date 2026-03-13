@@ -1218,9 +1218,9 @@ void BTF::resolve_fields(const SizedType &type)
   if (record->HasFields())
     return;
 
-  if (type.IsAnonTy())
+  if (type.IsAnonTy()) {
     type_id = parse_anon_btf_name(name);
-  else {
+  } else {
     __u32 kind = name.starts_with("struct") ? BTF_KIND_STRUCT : BTF_KIND_UNION;
     auto type_name = btf_type_str(name);
 
