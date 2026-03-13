@@ -92,11 +92,7 @@ static auto getTargetMachine()
         "",
         TargetOptions(),
         std::optional<Reloc::Model>());
-#if LLVM_VERSION_MAJOR >= 18
     machine->setOptLevel(llvm::CodeGenOptLevel::Aggressive);
-#else
-    machine->setOptLevel(llvm::CodeGenOpt::Aggressive);
-#endif
     return machine;
   }();
   return target;
@@ -4884,11 +4880,7 @@ Pass CreateObjectPass()
     raw_svector_ostream os(output);
 
     legacy::PassManager PM;
-#if LLVM_VERSION_MAJOR >= 18
     auto type = CodeGenFileType::ObjectFile;
-#else
-    auto type = llvm::CGFT_ObjectFile;
-#endif
     if (getTargetMachine()->addPassesToEmitFile(PM, os, nullptr, type))
       LOG(BUG) << "Cannot emit a file of this type";
     PM.run(*cm.module);
