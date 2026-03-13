@@ -2409,7 +2409,6 @@ llvm::Value *IRBuilderBPF::CreateSafeGEP(llvm::Type *ty,
     ptr = CreateIntToPtr(ptr, getPtrTy());
   }
 
-#if LLVM_VERSION_MAJOR >= 18
   if (!preserve_static_offset_) {
 #if LLVM_VERSION_MAJOR >= 20
     preserve_static_offset_ = llvm::Intrinsic::getOrInsertDeclaration(
@@ -2420,7 +2419,6 @@ llvm::Value *IRBuilderBPF::CreateSafeGEP(llvm::Type *ty,
 #endif
   }
   ptr = CreateCall(preserve_static_offset_, ptr);
-#endif
 
   // Create the GEP itself; on newer versions of LLVM this coerces the pointer
   // value into a pointer to the given type, and older versions have guaranteed
