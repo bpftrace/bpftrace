@@ -1,12 +1,4 @@
-# Upcoming release schedule
-
-The schedule for the upcoming v0.24 release is:
-- August 20, 2025: Create release branch `release/0.24.x`.
-- **September 17, 2025: Release v0.24.0.**
-- September 24, 2025: Release v0.24.1 (if necessary).
-- October 1, 2025: Release v0.24.2 (if necessary).
-
-# Release procedure
+# Release Process
 
 This document describes the bpftrace release process.
 
@@ -80,6 +72,9 @@ performed:
 1. Bump the supported LLVM version in [CMakeLists.txt](../CMakeLists.txt) and
    [flake.nix](../flake.nix), resolve any potential issues, and add a CI job to
    [.github/workflows/ci.yml](../.github/workflows/ci.yml) for the new version.
+1. Bump the min LLVM major version (see: `MIN_LLVM_MAJOR`) and drop support for
+   this in [.github/workflows/ci.yml](../.github/workflows/ci.yml). Also check
+   if there are compile time `#if`s for LLVM majors that can be dropped ([example](https://github.com/bpftrace/bpftrace/pull/5067)).
 1. Once the final LLVM is released and present in Nixpkgs (usually 2-5 days
    after the LLVM release), repeat step 4 to get the released LLVM in the CI
    environment.
