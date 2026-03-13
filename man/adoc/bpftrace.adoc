@@ -100,6 +100,10 @@ Valid values are::
 
 The JSON output is compatible with NDJSON and JSON Lines, meaning each line of the streamed output is a single blob of valid JSON.
 
+=== *--fmt* _FILENAME_
+
+Output standard format for the bpftrace file _FILENAME_.
+
 === *-h, --help*
 
 Print the help summary.
