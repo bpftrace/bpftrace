@@ -11,9 +11,18 @@ clean abstraction over eBPF complexity. Written in C++20.
 
 ## Build
 
-Use Nix for development.
+Nix is recommended for development as it matches CI and manages all
+dependencies automatically. If Nix is not available or the user already
+has build dependencies installed, use the distro build instructions instead.
+
+Before running any tests, verify the `build/` directory and test binaries
+exist. If they don't, build first.
 
 ### Nix (preferred, matches CI)
+
+All build and test commands using Nix must be run inside the Nix dev shell
+(e.g., `nix develop --command bash -c "<command>"`), or from within an
+active `nix develop` session.
 
 ```
 nix develop          # enter dev shell
