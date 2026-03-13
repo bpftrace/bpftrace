@@ -1007,9 +1007,9 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
     auto args = util::split_string(cmd_, ' ', /* remove_empty */ true);
     assert(!args.empty());
     return util::resolve_binary_path(args[0]).front();
-  } else if (pid().has_value())
+  } else if (pid().has_value()) {
     return "/proc/" + std::to_string(pid().value_or(0)) + "/exe";
-  else {
+  } else {
     return std::nullopt;
   }
 }

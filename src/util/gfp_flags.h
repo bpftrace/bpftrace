@@ -88,8 +88,8 @@ private:
   static constexpr uint64_t GFP_NOIO = (__GFP_DIRECT_RECLAIM | __GFP_KSWAPD_RECLAIM);
   static constexpr uint64_t GFP_NOFS = (GFP_NOIO | __GFP_IO);
   static constexpr uint64_t GFP_USER = (GFP_NOFS | __GFP_FS | __GFP_HARDWALL);
-  static constexpr uint64_t GFP_DMA = (__GFP_DMA);
-  static constexpr uint64_t GFP_DMA32 = (__GFP_DMA32);
+  static constexpr uint64_t GFP_DMA = __GFP_DMA;
+  static constexpr uint64_t GFP_DMA32 = __GFP_DMA32;
   static constexpr uint64_t GFP_HIGHUSER = (GFP_USER | __GFP_HIGHMEM);
   static constexpr uint64_t GFP_HIGHUSER_MOVABLE = (GFP_HIGHUSER | __GFP_MOVABLE | __GFP_SKIP_KASAN);
   static constexpr uint64_t GFP_TRANSHUGE_LIGHT = (GFP_HIGHUSER_MOVABLE | __GFP_COMP | __GFP_NOMEMALLOC | __GFP_NOWARN) & ~__GFP_RECLAIM;

@@ -235,6 +235,12 @@ void IRBuilderBPF::hoist(const std::function<void()> &functor)
   restoreIP(ip);
 }
 
+void IRBuilderBPF::CreateLifetimeEnd(Value *val)
+{
+  if (isa<AllocaInst>(val))
+    IRBuilder::CreateLifetimeEnd(val);
+}
+
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
                                           const std::string &name)
 {
@@ -754,9 +760,9 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
-  if (needMemcpy(type))
+  if (needMemcpy(type)) {
     CreateMemcpyBPF(value, call, type.GetSize());
-  else {
+  } else {
     CreateStore(CreateLoad(GetType(type), call), value);
   }
   CreateBr(lookup_merge_block);

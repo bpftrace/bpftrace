@@ -435,9 +435,9 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
     std::string fun = match;
     std::string path = util::erase_prefix(fun);
     auto dwarf = Dwarf::GetFromBinary(nullptr, path);
-    if (dwarf)
+    if (dwarf) {
       params.emplace(match, dwarf->get_function_params(fun));
-    else {
+    } else {
       if (warned_paths.insert(path).second)
         LOG(WARNING) << "No DWARF found for \"" << path << "\""
                      << ", cannot show parameter info";
@@ -701,8 +701,9 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
         if (!target.empty()) {
           if (auto abs_target = util::abs_path(target))
             target = "*" + abs_target.value();
-        } else
+        } else {
           target = "*";
+        }
       }
       auto ns = attach_point.ns.empty() ? "*" : attach_point.ns;
       search_input = target + ":" + ns + ":" + attach_point.func;
