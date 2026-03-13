@@ -348,9 +348,9 @@ KConfig::KConfig()
   // Try to get the config from BPFTRACE_KCONFIG_TEST env
   // If not set, use the set of default locations
   const char *path_env = std::getenv("BPFTRACE_KCONFIG_TEST");
-  if (path_env)
+  if (path_env) {
     config_locs = { std::string(path_env) };
-  else {
+  } else {
     struct utsname utsname;
     if (uname(&utsname) < 0)
       return;

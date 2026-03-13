@@ -14,8 +14,8 @@
 #include "ast/integer_types.h"
 #include "diagnostic.h"
 #include "probe_types.h"
-#include "types.h"
 #include "symbols/elf_parser.h"
+#include "types.h"
 
 namespace bpftrace::ast {
 
@@ -291,9 +291,10 @@ public:
       : Node(ctx, std::move(loc)),
         value(n),
         original(std::move(original)),
-        integer_type(std::move(integer_ty)) {
-          assert(integer_type.IsIntTy());
-        };
+        integer_type(std::move(integer_ty))
+  {
+    assert(integer_type.IsIntTy());
+  };
   explicit Integer(ASTContext &ctx, const Location &loc, const Integer &other)
       : Node(ctx, loc + other.loc),
         value(other.value),
@@ -331,15 +332,23 @@ public:
 class NegativeInteger : public Node {
 public:
   explicit NegativeInteger(ASTContext &ctx, Location &&loc, int64_t n)
-      : Node(ctx, std::move(loc)), value(n), integer_type(get_signed_integer_type(n)) {};
-  explicit NegativeInteger(ASTContext &ctx, Location &&loc, int64_t n, SizedType integer_ty)
-      : Node(ctx, std::move(loc)), value(n), integer_type(std::move(integer_ty)) {
-        assert(integer_type.IsIntTy() && integer_type.IsSigned());
-      };
+      : Node(ctx, std::move(loc)),
+        value(n),
+        integer_type(get_signed_integer_type(n)) {};
+  explicit NegativeInteger(ASTContext &ctx,
+                           Location &&loc,
+                           int64_t n,
+                           SizedType integer_ty)
+      : Node(ctx, std::move(loc)), value(n), integer_type(std::move(integer_ty))
+  {
+    assert(integer_type.IsIntTy() && integer_type.IsSigned());
+  };
   explicit NegativeInteger(ASTContext &ctx,
                            const Location &loc,
                            const NegativeInteger &other)
-      : Node(ctx, loc + other.loc), value(other.value), integer_type(other.integer_type) {};
+      : Node(ctx, loc + other.loc),
+        value(other.value),
+        integer_type(other.integer_type) {};
 
   const SizedType &type() const
   {
@@ -348,7 +357,7 @@ public:
 
   bool operator==(const NegativeInteger &other) const
   {
-     return value == other.value && integer_type == other.integer_type;
+    return value == other.value && integer_type == other.integer_type;
   }
   std::strong_ordering operator<=>(const NegativeInteger &other) const
   {
@@ -1320,10 +1329,11 @@ public:
 
   bool operator==(const Record &other) const
   {
-    return std::ranges::equal(
-               elems,
-               other.elems,
-               [](const auto *a, const auto *b) { return *a == *b; }) &&
+    return std::ranges::equal(elems,
+                              other.elems,
+                              [](const auto *a, const auto *b) {
+                                return *a == *b;
+                              }) &&
            record_type == other.record_type;
   }
   std::strong_ordering operator<=>(const Record &other) const
