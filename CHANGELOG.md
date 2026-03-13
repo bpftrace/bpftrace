@@ -18,13 +18,11 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
-- Fix listing multi-probes error
-  - [#5022](https://github.com/bpftrace/bpftrace/pull/5022)
 #### Security
 #### Docs
 #### Tools
 
-## [0.25.0] TBD
+## [0.25.0] 2026-03-13
 
 #### Breaking Changes
 - `exit()` is no longer allowed inside loops. `return` was always disallowed, and `exit()` implicitly returns, which may result in undefined behavior.
@@ -117,6 +115,8 @@ and this project adheres to
 #### Removed
 - Drop support for LLVM 16
   - [#4534](https://github.com/bpftrace/bpftrace/pull/4534)
+- Drop support for LLVM 17
+  - [#5067](https://github.com/bpftrace/bpftrace/pull/5067)
 #### Fixed
 - Fix interval probe attachment when CPU 0 is offline
   - [#4987](https://github.com/bpftrace/bpftrace/pull/4987)
@@ -127,7 +127,11 @@ and this project adheres to
 - Stack type comparison and compatibility
   - [#4948](https://github.com/bpftrace/bpftrace/pull/4948)
 - Fix missing lines in stack resolution
-  - [#4953] (https://github.com/bpftrace/bpftrace/pull/4953)
+  - [#4953](https://github.com/bpftrace/bpftrace/pull/4953)
+- Fix listing multi-probes error
+  - [#5022](https://github.com/bpftrace/bpftrace/pull/5022)
+- Fix handling of void ptr and function ptr BTF types
+  - [#5042](https://github.com/bpftrace/bpftrace/pull/5042)
 #### Security
 #### Docs
 #### Tools
