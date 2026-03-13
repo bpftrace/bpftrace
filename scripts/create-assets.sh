@@ -47,7 +47,7 @@ asciidoctor man/adoc/bpftrace.adoc  -b manpage -o - | gzip -n - > "$TMP/share/ma
 tar --xz -cf "$OUT/man.tar.xz" -C "$TMP/share" man
 
 info "Building bpftrace appimage"
-nix build .#appimage
+nix build .?submodules=1#appimage
 
 info "Creating bundle"
 cp ./result "$OUT/bpftrace"
