@@ -8,6 +8,7 @@
 #include "ast/ast.h"
 #include "types.h"
 #include "util/hash.h"
+#include "util/opaque.h"
 
 namespace bpftrace {
 
@@ -38,6 +39,23 @@ private:
   void serialize(Archive &archive)
   {
     archive(read_bytes, access_rshift, mask);
+  }
+
+public:
+  template <typename T>
+  bpftrace::util::OpaqueValue to_opaque(
+      const bpftrace::util::OpaqueValue &data) const
+  {
+    size_t rshiftbits;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    rshiftbits = access_rshift;
+#else
+    rshiftbits = (data.size() - read_bytes) * 8;
+    rshiftbits += access_rshift;
+#endif
+
+    return bpftrace::util::OpaqueValue::from<T>(
+        (data.bitcast<T>() >> rshiftbits) & static_cast<T>(mask));
   }
 };
 
