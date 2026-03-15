@@ -13,6 +13,12 @@ ASTSource::ASTSource(std::string &&filename, std::string &&input)
   while (std::getline(ss, line)) {
     lines_.emplace_back(std::move(line));
   }
+  // std::getline doesn't produce an entry for a trailing newline, but
+  // the lexer advances the line counter past it, so the END token (and
+  // thus the Program node) can reference a line beyond lines_.size().
+  if (!contents.empty() && contents.back() == '\n') {
+    lines_.emplace_back("");
+  }
 }
 
 std::string ASTSource::read(const SourceLocation &loc)
