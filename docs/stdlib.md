@@ -1557,6 +1557,31 @@ EXPECT stdin:1:9-62: WARNING: Something kinda bad with args: 10, arg2
 ```
 
 
+### write_user
+- `bool write_user(T * dst, T * src, uint32 len)`
+
+**unsafe**
+
+Writes `len` bytes from BPF program memory at `src` to user-space address
+`dst` using the BPF helper `bpf_probe_write_user`.
+
+Returns true on success, or false on failure.
+
+**Warning**: This can crash or corrupt the target process if used incorrectly.
+Only use on user-space memory addresses belonging to the current task.
+The kernel will print a warning to dmesg when this helper is used.
+
+```
+tracepoint:syscalls:sys_enter_openat
+/comm == "myapp"/ {
+  $new_path = "/tmp/redirected\0";
+  if (write_user(args.filename, $new_path, 16)) {
+    printf("redirected open for pid %d\n", pid);
+  }
+}
+```
+
+
 ### zero
 - `void zero(map m)`
 

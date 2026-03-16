@@ -14,6 +14,8 @@ and this project adheres to
   - [#4867](https://github.com/bpftrace/bpftrace/pull/4867)
 - Add printf specifier `%gr` to print GFP flags in human readable format
   - [#4832](https://github.com/bpftrace/bpftrace/issues/4832)
+- Add `write_user(dst, src, len)` function to write to user-space memory using `bpf_probe_write_user` (requires `--unsafe`)
+  - [#3742](https://github.com/bpftrace/bpftrace/issues/3742)
 #### Changed
 #### Deprecated
 #### Removed

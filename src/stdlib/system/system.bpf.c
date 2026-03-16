@@ -13,3 +13,7 @@ long __get_numa_node_id() {
 void __override(void * ctx, __u64 rc) {
     bpf_override_return(ctx, rc);
 }
+
+long __probe_write_user(void *dst, const void *src, __u32 len) {
+    return bpf_probe_write_user(dst, src, len);
+}
