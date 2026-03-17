@@ -835,3 +835,13 @@ AFTER ./testprogs/syscall nanosleep  1e8
 NAME block expression with map assignment
 PROG begin { @ = { let $a = 100; avg($a) };  }
 EXPECT @: 100
+
+NAME write_user_unsafe_required
+PROG tracepoint:syscalls:sys_enter_openat { write_user(args.filename, "x", 1); }
+EXPECT_REGEX .*ERROR: write_user\(\) is unsafe. To use you need the --unsafe flag
+WILL_FAIL
+
+NAME write_user_basic
+RUN {{BPFTRACE}} --unsafe -e 'tracepoint:syscalls:sys_enter_openat /pid == 0xffffffff/ { write_user(args.filename, "x", 1); }' -e 'BEGIN { exit(); }'
+EXPECT Attached 1 probe
+TIMEOUT 5
