@@ -867,6 +867,7 @@ non_if_expr:
         |       unary_expr                { $$ = $1; }
         |       comptime_expr             { $$ = $1; }
         |       expr QUES expr COLON expr { $$ = driver.ctx.make_node<ast::IfExpr>(@$, $1, $3, $5); }
+        |       expr QUES COLON expr      { $$ = driver.ctx.make_node<ast::IfExpr>(@$, $1, $1, $4); }
         |       expr LOR expr             { $$ = driver.ctx.make_node<ast::Binop>(@2, $1, ast::Operator::LOR, $3); }
         |       expr LAND expr            { $$ = driver.ctx.make_node<ast::Binop>(@2, $1, ast::Operator::LAND, $3); }
         |       expr BOR expr             { $$ = driver.ctx.make_node<ast::Binop>(@2, $1, ast::Operator::BOR, $3); }
