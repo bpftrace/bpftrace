@@ -25,6 +25,8 @@ and this project adheres to
 ## [0.25.1] TBD
 
 #### Fixed
+- Fix crash for invalid if expressions
+  - [#5080](https://github.com/bpftrace/bpftrace/pull/5080)
 - Fix crash when scripts have a trailing new line and there are clang warnings
   - [#5074](https://github.com/bpftrace/bpftrace/pull/5074)
 
