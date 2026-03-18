@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Ternary operator supports an empty second operand.
+  - [#5077](https://github.com/bpftrace/bpftrace/pull/5077)
 - Add `uprobe` support for source location attach points.
   - [#4867](https://github.com/bpftrace/bpftrace/pull/4867)
 - Add printf specifier `%gr` to print GFP flags in human readable format

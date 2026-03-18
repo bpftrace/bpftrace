@@ -58,6 +58,10 @@ NAME ternary_tuple
 PROG i:ms:1 { $a = nsecs ? ("hellolongstr", "a") : ("b", "hellolongstr"); print($a); exit(); }
 EXPECT (hellolongstr, a)
 
+NAME ternary_empty_2nd_operand
+PROG begin { $x = 1; $a =$x ?: 10; $b = 0 ?: 20; print(($a, $b)); exit(); }
+EXPECT (1, 20)
+
 NAME unroll
 PROG i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}
 EXPECT a=11
