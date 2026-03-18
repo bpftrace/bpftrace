@@ -402,6 +402,26 @@ kprobe:dummy {
 Determine whether the given expression is an array.
 
 
+### is_err
+- `bool is_err(void * ptr)`
+
+Returns true if the pointer is an ERR_PTR, i.e. it encodes a kernel error code.
+
+In the Linux kernel, some functions return error codes encoded as pointers
+using the `ERR_PTR` macro. These are pointer values in the range
+`(unsigned long)(-4095)` to `(unsigned long)(-1)`.
+
+This is equivalent to the kernel's `IS_ERR()` macro.
+
+```
+fexit:do_filp_open {
+  if (is_err(retval)) {
+    printf("error: %ld\n", (int64)retval);
+  }
+}
+```
+
+
 ### is_integer
 - `bool is_integer(any expression)`
 

@@ -18,6 +18,8 @@ and this project adheres to
   - [#4832](https://github.com/bpftrace/bpftrace/issues/4832)
 - Add `write_user(dst, src, len)` function to write to user-space memory using `bpf_probe_write_user` (requires `--unsafe`)
   - [#3742](https://github.com/bpftrace/bpftrace/issues/3742)
+- Add `is_err` stdlib macro for detecting ERR_PTR return values
+  - [#5086](https://github.com/bpftrace/bpftrace/pull/5086)
 #### Changed
 #### Deprecated
 #### Removed

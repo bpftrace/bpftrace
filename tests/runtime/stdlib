@@ -39,6 +39,13 @@ PROG begin { @a[1] = 1; $x = delete(@a, 2); $y = delete(@a, 1); if ($x == false 
 EXPECT SUCCESS
 TIMEOUT 1
 
+NAME is_err
+PROG fexit:do_filp_open { if (is_err(retval)) { printf("is_err: %ld\n", (int64)retval); exit(); } }
+EXPECT_REGEX is_err: -[0-9]{1,4}$
+AFTER cat /tmp/bpftrace_nonexistent_file
+REQUIRES_FEATURE btf
+TIMEOUT 5
+
 NAME strlen
 PROG begin { $a = "hello"; print(strlen($a)); }
 EXPECT 5
