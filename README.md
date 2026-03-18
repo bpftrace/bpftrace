@@ -21,7 +21,7 @@ For migrating from older versions, see the [migration guide](docs/migration_guid
 
 ## Quick Start
 
-Get started with bpftrace in just a few minutes! To build from source, see the [building](#building) section below. However, you can often install it using your distribution's [package manager](https://pkgs.org/search/?q=bpftrace).
+Get started with bpftrace in just a few minutes! To build from source, see the [development guide](docs/developers.md#building). However, you can often install it using your distribution's [package manager](https://pkgs.org/search/?q=bpftrace).
 
 > [!IMPORTANT]
 > When using a distribution package, be sure to verify `bpftrace --version` when referencing documentation.
@@ -120,41 +120,8 @@ If you have tools built with bpftrace that you'd like to submit, please contribu
 
 ## Building
 
-For minimum kernel version requirements, see our [dependency support policy](docs/dependency_support.md#linux-kernel). Your kernel should be built with the necessary BPF options enabled. Verify this by running the `check_kernel_features` script from the `scripts` directory.
-
-bpftrace also uses [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules), so ensure they are initialized when checking out the code. See [dependency support](docs/dependency_support.md) for details.
-
-```bash
-git clone --recurse-submodules https://github.com/bpftrace/bpftrace
-cd bpftrace
-```
-
-bpftrace provides a [Nix](https://nixos.org/nix/) [flake](https://wiki.nixos.org/wiki/Flakes), which is recommended for building and testing.
-
-```bash
-nix develop
-```
-
-For a suitable build environment without Nix, see our Dockerfiles for detailed build examples:
-- [Ubuntu](https://github.com/bpftrace/bpftrace/blob/master/docker/Dockerfile.ubuntu)
-- [Fedora](https://github.com/bpftrace/bpftrace/blob/master/docker/Dockerfile.fedora)
-- [Debian](https://github.com/bpftrace/bpftrace/blob/master/docker/Dockerfile.debian)
-
-If all dependencies are installed correctly, you should be able to configure and build using [CMake](https://cmake.org).
-
-```bash
-cmake -DCMAKE_BUILD_TYPE=Release -B build .
-make -C build -j$(nproc)
-```
-
-<details>
-<summary>Troubleshooting</summary>
-
-**Kernel Lockdown:** If your system has kernel lockdown enabled (often with Secure Boot), bpftrace will be blocked. To disable:
-- Disable Secure Boot in UEFI, or
-- Run `sudo mokutil --disable-validation` and reboot, or
-- Temporarily lift lockdown with `SysRQ+x` (until next boot)
-</details>
+For full build instructions (Nix or distro-native), see the
+[development guide](docs/developers.md#building).
 
 ## Community & Support
 
