@@ -1,0 +1,456 @@
+# Integrates Claude Code as an AI assistant for reviewing pull requests.
+# For tips how to configure this workflow, see https://github.com/anthropics/claude-code-action.
+# Examples: https://github.com/anthropics/claude-code-action/blob/0cf5eeec4f908121edd03a81411b55485994f8d3/docs/solutions.md.
+#
+# Architecture: The workflow is split into three jobs for least-privilege:
+#   1. "setup"  - posts/updates a "reviewing…" tracking comment (write permissions)
+#   2. "review" - runs Claude with read-only permissions, produces structured JSON
+#   3. "post"   - reads the JSON and posts comments to the PR (write permissions)
+
+name: Claude PR Review
+on:
+    # _target gives forks access to upstream's secrets and identity.
+    pull_request_target:
+        types: [opened, synchronize]
+        branches: [master]
+concurrency:
+    group: claude-review-${{ github.event.pull_request.number }}
+    cancel-in-progress: true
+
+jobs:
+    setup:
+        runs-on: ubuntu-latest
+        env:
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+        permissions:
+            contents: read
+            pull-requests: write
+        outputs:
+            comment_id: ${{ steps.tracking.outputs.comment_id }}
+            pr_number: ${{ steps.pr.outputs.number }}
+            head_sha: ${{ steps.pr.outputs.head_sha }}
+        steps:
+            - name: Resolve PR metadata
+              id: pr
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+                  gh pr view --repo "${{ github.repository }}" "$PR_NUMBER" --json headRefOid --jq '.headRefOid' | \
+                    xargs -I{} echo "head_sha={}" >> "$GITHUB_OUTPUT"
+
+            - name: Create or update tracking comment
+              id: tracking
+              uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+              with:
+                  script: |
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const prNumber = parseInt(process.env.PR_NUMBER, 10);
+                      const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+                      const MARKER = "<!-- claude-pr-review -->";
+
+                      const issueComments = await github.paginate(
+                        github.rest.issues.listComments,
+                        { owner, repo, issue_number: prNumber, per_page: 100 },
+                      );
+
+                      const existing = issueComments.find((c) => c.body && c.body.includes(MARKER));
+
+                      let commentId;
+                      if (existing) {
+                        console.log(`Updating existing tracking comment ${existing.id}.`);
+                        /* Prepend a re-reviewing banner but keep the previous review visible. */
+                        const prevBody = existing.body.replace(/\n\n\[Workflow run\]\([^)]*\)$/, "");
+                        await github.rest.issues.updateComment({
+                          owner,
+                          repo,
+                          comment_id: existing.id,
+                          body: `> **Claude is re-reviewing this PR…** ([workflow run](${runUrl}))\n\n${prevBody}`,
+                        });
+                        commentId = existing.id;
+                      } else {
+                        console.log("Creating new tracking comment.");
+                        const {data: created} = await github.rest.issues.createComment({
+                          owner,
+                          repo,
+                          issue_number: prNumber,
+                          body: `Claude is reviewing this PR… ([workflow run](${runUrl}))\n\n${MARKER}`,
+                        });
+                        commentId = created.id;
+                      }
+
+                      core.setOutput("comment_id", commentId);
+
+    review:
+        runs-on: ubuntu-latest
+        needs: setup
+        permissions:
+            id-token: write # authentication for Claude GH bot
+            contents: read # clone repo
+            pull-requests: read # fetch PR comments and reviews
+            issues: read # fetch issue comments
+            actions: read # see GH Actions outputs
+        outputs:
+            structured_output: ${{ steps.claude.outputs.structured_output }}
+        steps:
+            # With _target mode, actions/checkout is checking out upstream, not the current PR.
+            # This is fine, we don't want anyone to be able to inject custom CLAUDE.md.
+            - name: Checkout upstream repository
+              uses: actions/checkout@v6
+
+            # TODO(@pzmarzly): Unpin once https://github.com/anthropics/claude-code-action/issues/1013 is fixed.
+            - name: Run Claude Code
+              id: claude
+              uses: anthropics/claude-code-action@v1.0.66
+              env:
+                  ANTHROPIC_BASE_URL: https://openrouter.ai/api
+                  REVIEW_SCHEMA: >-
+                      {
+                        "type": "object",
+                        "required": ["comments", "summary"],
+                        "properties": {
+                          "summary": {
+                            "type": "string",
+                            "description": "A markdown summary of the review to post as a top-level tracking comment"
+                          },
+                          "comments": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "required": ["file", "severity", "body"],
+                              "properties": {
+                                "file": {
+                                  "type": "string",
+                                  "description": "Path to the file relative to the repo root"
+                                },
+                                "line": {
+                                  "type": "integer",
+                                  "description": "Line number in the diff (new file side) to attach the comment to"
+                                },
+                                "severity": {
+                                  "type": "string",
+                                  "enum": ["must-fix", "suggestion", "nit"]
+                                },
+                                "body": {
+                                  "type": "string",
+                                  "description": "The review comment body in markdown"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+              with:
+                  # Anthropic/OpenRouter auth
+                  anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+                  # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+                  # We still have to pass GITHUB_TOKEN here because claude-code-action
+                  # requires it, but we restrict Claude's tools to read-only operations
+                  # so it cannot post comments or modify the PR.
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+
+                  # Prompt
+                  prompt: |
+                      REPO: ${{ github.repository }}
+                      PR NUMBER: ${{ github.event.pull_request.number }}
+                      HEAD SHA: ${{ github.event.pull_request.head.sha }}
+
+                      You are a code reviewer for the ${{ github.repository }} project. Review this pull request and
+                      produce a structured JSON result containing your review. Do NOT attempt
+                      to post comments yourself — just return the JSON. You are in the upstream repo
+                      without the patch applied. Do not apply it.
+
+                      ## Phase 1: Gather context
+
+                      Use the GitHub MCP server tools to fetch PR data. For all tools, pass
+                      owner `${{ github.repository_owner }}`, repo `${{ github.event.repository.name }}`,
+                      and pullNumber/issue_number ${{ github.event.pull_request.number }}:
+                      - `mcp__github__get_pull_request_diff` to get the PR diff
+                      - `mcp__github__get_pull_request` to get the PR title, body, and metadata
+                      - `mcp__github__get_pull_request_comments` to get top-level PR comments
+                      - `mcp__github__get_pull_request_reviews` to get PR reviews
+                      - `mcp__github__get_pull_request_review_comments` to get inline review comments
+
+                      Also fetch issue comments using `mcp__github__get_issue_comments` with
+                      issue_number ${{ github.event.pull_request.number }}.
+
+                      Look for an existing tracking comment (containing `<!-- claude-pr-review -->`)
+                      in the issue comments. If one exists, you will use it as the basis for
+                      your `summary` in Phase 3.
+
+                      ## Phase 2: Parallel review subagents
+
+                      Review:
+                      - Code quality, style, and best practices
+                      - Potential bugs, issues, incorrect logic
+                      - Security implications
+                      - CLAUDE.md compliance
+
+                      Pay special attention to these bpftrace-specific requirements:
+                      - User-facing changes must include a `CHANGELOG.md` entry.
+                      - Language changes must update `docs/language.md`, `docs/stdlib.md`, or `man/adoc/bpftrace.adoc`.
+                      - New features and bug fixes must have test coverage: unit tests in `tests/*.cpp`,
+                        runtime tests in `tests/runtime/`, or self tests in `tests/self/`.
+
+                      For every category, launch subagents to review them in parallel. Group related sections
+                      as needed — use 2-4 subagents based on PR size and scope.
+
+                      Give each subagent the PR title, description, full patch, and the list of changed files.
+
+                      Each subagent must return a JSON array of issues:
+                      `[{"file": "path", "line": <number> (optional), "severity": "must-fix|suggestion|nit", "body": "..."}]`
+
+                      `line` should be a line number from the NEW side of the diff **that appears inside
+                      a diff hunk** (i.e. a line that is shown in the patch output). GitHub's review
+                      comment API rejects lines outside the diff context, so never reference lines
+                      that are not visible in the patch. If you cannot determine a valid diff line,
+                      omit `line` — the comment will still appear in the tracking comment summary.
+
+                      Each subagent MUST verify its findings before returning them:
+                      - For style/convention claims, check at least 3 existing examples in the codebase to confirm
+                        the pattern actually exists before flagging a violation.
+                      - For "use X instead of Y" suggestions, confirm X actually exists and works for this case.
+                      - If unsure, don't include the issue.
+
+                      ## Phase 3: Collect, deduplicate, and summarize
+
+                      After ALL subagents complete:
+                      1. Collect all issues. Merge duplicates (same file, lines within 3 of each other, same problem).
+                      2. Drop low-confidence findings.
+                      3. For CLAUDE.md violations that appear in 3+ existing places in the codebase, do NOT include
+                         them in `comments`. Instead, add them to the 'CLAUDE.md improvements' section of the summary.
+                      4. Check the existing inline review comments fetched in Phase 1. Do NOT include a
+                         comment if one already exists on the same file and line about the same problem.
+                         Also check for author replies that dismiss or reject a previous comment — do NOT
+                         re-raise an issue the PR author has already responded to disagreeing with.
+                      5. Do NOT prefix `body` with a severity tag — the severity is already
+                         captured in the `severity` field and will be added automatically when
+                         posting inline comments.
+                      6. Write a `summary` field in markdown for a top-level tracking comment.
+
+                         **If no existing tracking comment was found (first run):**
+                         Use this format:
+
+                         ```
+                         ## Claude review of PR #<number> (<HEAD SHA>)
+
+                         <!-- claude-pr-review -->
+
+                         ### Must fix
+                         - [ ] **short title** — `file:line` — brief explanation
+
+                         ### Suggestions
+                         - [ ] **short title** — `file:line` — brief explanation
+
+                         ### Nits
+                         - [ ] **short title** — `file:line` — brief explanation
+
+                         ### CLAUDE.md improvements
+                         - improvement suggestion
+                         ```
+
+                         Omit empty sections. Each checkbox item must correspond to an entry in `comments`.
+                         If there are no issues at all, write a short message saying the PR looks good.
+
+                         **If an existing tracking comment was found (subsequent run):**
+                         Use the existing comment as the starting point. Preserve the order and wording
+                         of all existing items. Then apply these updates:
+                         - Update the HEAD SHA in the header line.
+                         - For each existing item, re-check whether the issue is still present in the
+                           current diff. If it has been fixed, mark it checked: `- [x]`.
+                         - If the PR author replied dismissing an item, mark it:
+                           `- [x] ~~short title~~ (dismissed)`.
+                         - Preserve checkbox state that was already set by previous runs or by hand.
+                         - Append any NEW issues found in this run that aren't already listed,
+                           in the appropriate severity section, after the existing items.
+                         - Do NOT reorder, reword, or remove existing items.
+
+                      ## Error tracking
+
+                      Throughout all phases, track any errors that prevented you from doing
+                      your job fully: permission denials (403, "Resource not accessible by
+                      integration"), tools that were not available, rate limits, or any other
+                      failures that degraded the review quality. If there were any, append a
+                      `### Errors` section listing each failed tool/action and the error
+                      message, so maintainers can fix the workflow configuration.
+
+                      ## CRITICAL: Return structured JSON output
+
+                      Your FINAL action must be to return a JSON object matching the following
+                      JSON schema — do NOT end with a text summary or narrative. The `--json-schema`
+                      flag is set, so your last response must be the structured JSON result, not a
+                      text message.
+
+                      ```json
+                      ${{ env.REVIEW_SCHEMA }}
+                      ```
+
+                      Do NOT attempt to post comments or use any MCP tools to modify the PR.
+                  claude_args: |
+                      --max-turns 100
+                      --model claude-opus-4-6
+                      --json-schema '${{ env.REVIEW_SCHEMA }}'
+                      --allowedTools "
+                        Read,LS,Grep,Glob,Task,
+                        Bash(cat:*),Bash(test:*),Bash(printf:*),Bash(jq:*),Bash(head:*),Bash(tail:*),
+                        Bash(git:*),Bash(gh:*),Bash(grep:*),Bash(find:*),Bash(ls:*),Bash(wc:*),
+                        Bash(diff:*),Bash(sed:*),Bash(awk:*),Bash(sort:*),Bash(uniq:*),
+                        mcp__github__get_pull_request,
+                        mcp__github__get_pull_request_diff,
+                        mcp__github__get_pull_request_files,
+                        mcp__github__get_pull_request_reviews,
+                        mcp__github__get_pull_request_comments,
+                        mcp__github__get_pull_request_review_comments,
+                        mcp__github__get_pull_request_status,
+                        mcp__github__get_issue_comments,
+                        "
+
+                  # Run even when triggered by 3rd party developer's PR
+                  allowed_non_write_users: "*"
+
+                  # This requires "tag mode", which is currently bugged:
+                  # https://github.com/anthropics/claude-code-action/issues/939
+                  track_progress: false
+
+                  # Show logs and Claude reasoning
+                  show_full_output: true
+
+                  # Enable access to other GH Actions outputs
+                  additional_permissions: |
+                      actions: read
+
+    post:
+        runs-on: ubuntu-latest
+        needs: [setup, review]
+        if: always() && needs.setup.result == 'success'
+
+        permissions:
+            pull-requests: write
+
+        steps:
+            - name: Post review comments
+              uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+              env:
+                  STRUCTURED_OUTPUT: ${{ needs.review.outputs.structured_output }}
+                  REVIEW_RESULT: ${{ needs.review.result }}
+                  PR_NUMBER: ${{ needs.setup.outputs.pr_number }}
+                  HEAD_SHA: ${{ needs.setup.outputs.head_sha }}
+                  COMMENT_ID: ${{ needs.setup.outputs.comment_id }}
+              with:
+                  script: |
+                      const owner = context.repo.owner;
+                      const repo = context.repo.repo;
+                      const prNumber = parseInt(process.env.PR_NUMBER, 10);
+                      const headSha = process.env.HEAD_SHA;
+                      const commentId = parseInt(process.env.COMMENT_ID, 10);
+                      const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+                      const MARKER = "<!-- claude-pr-review -->";
+
+                      /* If the review job failed or was cancelled, update the tracking
+                       * comment to reflect that and bail out. */
+                      if (process.env.REVIEW_RESULT !== "success") {
+                        const verb = process.env.REVIEW_RESULT === "cancelled" ? "was cancelled" : "failed";
+                        await github.rest.issues.updateComment({
+                          owner,
+                          repo,
+                          comment_id: commentId,
+                          body: `Claude review ${verb} — see [workflow run](${runUrl}) for details.\n\n${MARKER}`,
+                        });
+                        core.setFailed("Review job did not succeed.");
+                        return;
+                      }
+
+                      /* Parse Claude's structured output. */
+                      const raw = process.env.STRUCTURED_OUTPUT;
+                      console.log("Structured output from Claude:");
+                      console.log(raw || "(empty)");
+
+                      let comments = [];
+                      let summary = "";
+                      if (raw) {
+                        try {
+                          const review = JSON.parse(raw);
+                          if (Array.isArray(review.comments))
+                            comments = review.comments;
+                          if (typeof review.summary === "string")
+                            summary = review.summary;
+                        } catch (e) {
+                          core.warning(`Failed to parse structured output: ${e.message}`);
+                        }
+                      }
+
+                      console.log(`Claude produced ${comments.length} review comment(s).`);
+
+                      /* Post each inline comment individually. Deduplication against existing
+                       * comments is handled by Claude in the prompt, so we just post whatever
+                       * it returns. Using individual comments (rather than a review) means
+                       * re-runs only add new comments instead of creating a whole new review. */
+                      const inlineComments = comments.filter((c) => c.line);
+                      const skipped = comments.length - inlineComments.length;
+                      if (skipped > 0)
+                        console.log(`Skipping ${skipped} file-level comment(s) (no line number).`);
+
+                      let posted = 0;
+                      for (const c of inlineComments) {
+                        console.log(`  Posting comment on ${c.file}:${c.line}`);
+                        try {
+                          await github.rest.pulls.createReviewComment({
+                            owner,
+                            repo,
+                            pull_number: prNumber,
+                            commit_id: headSha,
+                            path: c.file,
+                            line: c.line,
+                            body: `Claude: **${c.severity}**: ${c.body}`,
+                          });
+                          posted++;
+                        } catch (e) {
+                          /* GitHub rejects comments on lines outside the diff context. Log
+                           * and continue — the tracking comment still contains all findings. */
+                          console.log(`  Warning: failed to post comment on ${c.file}:${c.line}: ${e.message}`);
+                        }
+                      }
+
+                      if (posted > 0)
+                        console.log(`Posted ${posted}/${inlineComments.length} inline comment(s).`);
+                      else if (inlineComments.length > 0)
+                        console.log(`Could not post any of ${inlineComments.length} inline comment(s) — see warnings above.`);
+                      else
+                        console.log("No inline comments to post.");
+
+                      /* Append file-level comments (no line number) to the summary
+                       * so they are not silently lost. */
+                      const fileLevelComments = comments.filter((c) => !c.line);
+                      if (fileLevelComments.length > 0) {
+                        const fileLevelSection = "\n\n### File-level comments\n" +
+                          fileLevelComments.map((c) =>
+                            `- **${c.severity}** — \`${c.file}\` — ${c.body}`
+                          ).join("\n");
+                        if (summary)
+                          summary += fileLevelSection;
+                        else
+                          summary = fileLevelSection;
+                      }
+
+                      /* Update the tracking comment with Claude's summary. */
+                      if (!summary)
+                        summary = "Claude review: no issues found :tada:\n\n" + MARKER;
+                      else if (!summary.includes(MARKER))
+                        summary += "\n\n" + MARKER;
+                      summary += `\n\n[Workflow run](${runUrl})`;
+
+                      await github.rest.issues.updateComment({
+                        owner,
+                        repo,
+                        comment_id: commentId,
+                        body: summary,
+                      });
+
+                      console.log("Tracking comment updated successfully.");
+
+                      if (inlineComments.length > 0 && posted === 0)
+                        core.setFailed(`Could not post any of ${inlineComments.length} inline comment(s) — see warnings above.`);
+                      else if (posted < inlineComments.length)
+                        core.warning(`${inlineComments.length - posted}/${inlineComments.length} inline comment(s) could not be posted.`);
