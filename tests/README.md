@@ -1,6 +1,6 @@
 # bpftrace Tests
 
-There are three different types of tests: [unit](#unit-tests), [runtime](#runtime-tests), and [tool parsing](#tool-parsing-tests).
+There are four different types of tests: [unit](#unit-tests), [self](#self-tests), [runtime](#runtime-tests), and [tool parsing](#tool-parsing-tests).
 
 Every contribution should (1) not break the existing tests and (2) introduce new tests if relevant.
 

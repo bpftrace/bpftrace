@@ -11,76 +11,35 @@ clean abstraction over eBPF complexity. Written in C++20.
 
 ## Build
 
-Nix is recommended for development as it matches CI and manages all
-dependencies automatically. If Nix is not available or the user already
-has build dependencies installed, use the distro build instructions instead.
+See [docs/developers.md](docs/developers.md#building) for full build
+instructions. Before running any tests, verify the `build/` directory and
+test binaries exist. If they don't, build first.
 
-Before running any tests, verify the `build/` directory and test binaries
-exist. If they don't, build first.
-
-### Nix (preferred, matches CI)
-
-All build and test commands using Nix must be run inside the Nix dev shell
-(e.g., `nix develop --command bash -c "<command>"`), or from within an
-active `nix develop` session.
+Quick reference (Nix, preferred):
 
 ```
 nix develop          # enter dev shell
-mkdir build
 cmake -B build -DCMAKE_BUILD_TYPE=Debug
 make -C build -j$(nproc)
 ```
 
-Develop with a different llvm version: `nix develop .#bpftrace-llvm21`
-
-The built binary is at `build/src/bpftrace`.
-
-### Distro build
-
-```
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-make -C build -j$(nproc)
-```
-
-Key cmake options: `-DBUILD_TESTING=ON` (default), `-DLLVM_REQUESTED_VERSION=<major>`.
 The built binary is at `build/src/bpftrace`.
 
 ## Tests
 
-All contributions must not break existing tests and should add new tests when relevant.
+All contributions must not break existing tests and should add new tests when
+relevant. See [tests/README.md](tests/README.md) for the full test reference
+(test types, directives, runtime variables, etc.).
 
-### Unit tests (GoogleTest)
-
-```
-./build/tests/bpftrace_test
-./build/tests/bpftrace_test --gtest_filter='Parser.*'
-```
-
-Tests are in `tests/*.cpp`. Test semantic analysis, codegen, parsing, etc.
-
-### Self tests (test: probes)
+Quick reference:
 
 ```
-sudo ./build/tests/self-tests.sh
-```
-
-Tests are in `tests/self/`. Uses bpftrace's built-in `test:` probe type.
-
-### Runtime tests
-
-```
-sudo ./build/tests/runtime-tests.sh
-sudo ./build/tests/runtime-tests.sh --filter="^uprobe"
-```
-
-Tests are in `tests/runtime/`. Each file is a test suite. Tests use directives:
-`NAME`, `PROG` (or `RUN`), `EXPECT`/`EXPECT_REGEX`, `TIMEOUT`, `REQUIRES`,
-`BEFORE`, `AFTER`, etc. See `tests/README.md` for the full directive reference.
-
-### Tool parsing tests
-
-```
-sudo ./build/tests/tools-parsing-test.sh
+./build/tests/bpftrace_test                          # unit tests
+./build/tests/bpftrace_test --gtest_filter='Parser.*' # filtered unit tests
+sudo ./build/tests/self-tests.sh                      # self tests
+sudo ./build/tests/runtime-tests.sh                   # runtime tests
+sudo ./build/tests/runtime-tests.sh --filter="^uprobe" # filtered runtime tests
+sudo ./build/tests/tools-parsing-test.sh              # tool parsing tests
 ```
 
 ## Code formatting

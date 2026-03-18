@@ -2,38 +2,85 @@
 
 This document features basic guidelines and recommendations on how to do
 bpftrace development. Please read it carefully before submitting pull requests
-to simplify reviewing and to speed up the merge process.
+to simplify reviewing and speed up the merge process.
 
 ## Building
 
-The project supports the following recommended build workflows. Please choose
-the one that works the best for you.
+bpftrace uses [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules),
+so ensure they are initialized when checking out the code:
 
-### Nix build
+```bash
+git clone --recurse-submodules https://github.com/bpftrace/bpftrace
+cd bpftrace
+```
 
-Nix is the most convenient way to build and test bpftrace. Nix will manage
-all of bpftrace's build and runtime dependencies. It also has the advantage
-of being used by the CI, so you are more likely to shake out errors before
-submitting your change and seeing the CI fail.
+For minimum kernel version requirements, see our
+[dependency support policy](dependency_support.md#linux-kernel). Your kernel
+should be built with the necessary BPF options enabled. Verify this by running
+the `check_kernel_features` script from the `scripts` directory.
 
-The Nix build is documented in [nix.md](./nix.md).
+### Nix build (recommended)
+
+[Nix](https://nixos.org/nix/) is the most convenient way to build and test
+bpftrace. Nix manages all build and runtime dependencies automatically. It is
+also used by CI, so you are more likely to catch errors before submitting your
+change.
+
+All build and test commands using Nix must be run inside the Nix dev shell
+(e.g., `nix develop --command bash -c "<command>"`), or from within an
+active `nix develop` session.
+
+```bash
+nix develop          # enter dev shell
+mkdir build
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+make -C build -j$(nproc)
+```
+
+To develop with a different LLVM version: `nix develop .#bpftrace-llvm21`
+
+For more Nix examples (static builds, fuzzing, flake management), see
+[nix.md](./nix.md).
 
 ### Distro build
 
-The "distro build" is the more traditional way to build bpftrace. It relies on
-you installing all of bpftrace's build and runtime dependencies on your host
-and then calling into `cmake`.
+The distro build relies on you installing all of bpftrace's build and runtime
+dependencies on your host and then calling `cmake`.
 
 Please be aware that bpftrace has strict dependencies on new versions of
-`libbpf` and `bcc`. They are two of bpftrace's most important dependencies and
-we plan on tracking their upstream quite closely over time.
-
-As a result, while the distro build should work well on distros with newer
-packages, developers on distros that lag more behind (for example Debian) may
-want to consider using the Nix build. Or manually building and installing
+`libbpf` and `bcc`. We track their upstream closely, so while the distro build
+works well on distros with newer packages, developers on distros that lag behind
+(e.g. Debian) may want to use the Nix build or manually build and install
 `bcc` and `libbpf`.
 
-The distro build is documented in [INSTALL.md](../INSTALL.md#generic-build-process).
+For a suitable build environment, see our Dockerfiles for detailed dependency
+examples:
+- [Ubuntu](https://github.com/bpftrace/bpftrace/blob/master/docker/Dockerfile.ubuntu)
+- [Fedora](https://github.com/bpftrace/bpftrace/blob/master/docker/Dockerfile.fedora)
+- [Debian](https://github.com/bpftrace/bpftrace/blob/master/docker/Dockerfile.debian)
+
+Once all dependencies are installed:
+
+```bash
+mkdir build
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+make -C build -j$(nproc)
+```
+
+Key cmake options: `-DBUILD_TESTING=ON` (default),
+`-DLLVM_REQUESTED_VERSION=<major>`.
+
+### Build output
+
+The built binary is at `build/src/bpftrace`.
+
+### Troubleshooting
+
+**Kernel Lockdown:** If your system has kernel lockdown enabled (often with
+Secure Boot), bpftrace will be blocked. To disable:
+- Disable Secure Boot in UEFI, or
+- Run `sudo mokutil --disable-validation` and reboot, or
+- Temporarily lift lockdown with `SysRQ+x` (until next boot)
 
 ## [Tests](../tests/README.md)
 
@@ -100,16 +147,6 @@ $ NIX_TARGET=.#bpftrace-llvm11  \
   ./.github/include/ci.py
 ```
 
-### Known issues
-
-Some tests are known to be flaky and sometimes fail in the CI environment. The
-list of known such tests:
-- runtime test `usdt.usdt probes - file based semaphore activation multi
-  process` ([#2410](https://github.com/bpftrace/bpftrace/issues/2402))
-
-What usually helps, is restarting the CI. This is simple on your own fork but
-requires one of the maintainers for pull requests.
-
 ### Virtual machine tests (vmtests)
 
 In CI we run a subset of runtime tests under a controlled kernel by taking
@@ -147,22 +184,16 @@ on the topic.
 
 ## Code style
 
-We use clang-format with our custom config for formatting code. This was
-[introduced](https://github.com/bpftrace/bpftrace/pull/639) after a lot of code
-was already written. Instead of formatting the whole code base at once and
-breaking `git blame` we're taking an incremental approach, each new/modified
-bit of code needs to be formatted.
+We use clang-format with our custom config for formatting code.
+
+[git clang-format](https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/git-clang-format)
+can be used to easily format commits, e.g. `git clang-format upstream/master`.
 
 For bpftrace code (standard library and scripts), it should be formatted by
 bpftrace itself. You can use `bpftrace --fmt` or `scripts/bpftrace_tidy.sh`.
 
 Note that these are both checked by tests; if the changes don't adhere to our
 style CI jobs will fail.
-
-### Using clang-format
-
-[git clang-format](https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/git-clang-format)
-can be used to easily format commits, e.g. `git clang-format upstream/master`
 
 ### Avoid 'fix formatting' commits
 
