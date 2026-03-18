@@ -2772,7 +2772,7 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     } else {
       return ScopedExpr(b_.CreateIntCast(scoped_expr.value(),
                                          b_.getIntNTy(ty.GetIntBitWidth()),
-                                         ty.IsSigned(),
+                                         cast.expr.type().IsSigned(),
                                          "cast"));
     }
   } else if (ty.IsArrayTy() && cast.expr.type().IsIntTy()) {
