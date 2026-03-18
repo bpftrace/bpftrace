@@ -22,6 +22,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix casting negative literals to unsigned types
+  - [#000](https://github.com/bpftrace/bpftrace/issues/000)
 #### Security
 #### Docs
 #### Tools
