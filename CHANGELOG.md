@@ -31,6 +31,8 @@ and this project adheres to
 #### Fixed
 - Fix crash when scripts have a trailing new line and there are clang warnings
   - [#5074](https://github.com/bpftrace/bpftrace/pull/5074)
+- Fix casting negative literals to unsigned types
+  - [#5085](https://github.com/bpftrace/bpftrace/pull/5085)
 
 ## [0.25.0] 2026-03-13
 
