@@ -21,4 +21,6 @@ Result<std::vector<int>> get_pids_for_program(const std::string &program);
 Result<std::vector<int>> get_all_running_pids();
 Result<uint64_t> get_available_mem_kb();
 
+Result<std::vector<int>> get_process_tids(pid_t pid);
+
 } // namespace bpftrace::util

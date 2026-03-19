@@ -22,6 +22,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Attach watchpoint probes to all threads of a process
+  - [#5088](https://github.com/bpftrace/bpftrace/pull/5088)
 #### Security
 #### Docs
 #### Tools
