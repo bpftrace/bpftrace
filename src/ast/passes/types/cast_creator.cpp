@@ -432,13 +432,13 @@ void CastCreator::visit(IfExpr &if_expr)
   const auto &left_type = type_map_.type(if_expr.left);
   const auto &right_type = type_map_.type(if_expr.right);
 
-  if (result_type != left_type) {
+  if (!left_type.IsNoneTy() && result_type != left_type) {
     if (!cast_expression(if_expr.left, left_type, result_type)) {
       LOG(BUG) << "IfExpr left should be castable";
     }
   }
 
-  if (result_type != right_type) {
+  if (!right_type.IsNoneTy() && result_type != right_type) {
     if (!cast_expression(if_expr.right, right_type, result_type)) {
       LOG(BUG) << "IfExpr right should be castable";
     }
