@@ -9,8 +9,14 @@ and this project adheres to
 ## [0.25.1] TBD
 
 #### Fixed
+- Fix crash for invalid if expressions
+  - [#5080](https://github.com/bpftrace/bpftrace/pull/5080)
 - Fix crash when scripts have a trailing new line and there are clang warnings
   - [#5074](https://github.com/bpftrace/bpftrace/pull/5074)
+- Fix casting negative literals to unsigned types
+  - [#5085](https://github.com/bpftrace/bpftrace/pull/5085)
+- Attach watchpoint probes to all threads of a process
+  - [#5088](https://github.com/bpftrace/bpftrace/pull/5088)
 
 ## [0.25.0] 2026-03-13
 
