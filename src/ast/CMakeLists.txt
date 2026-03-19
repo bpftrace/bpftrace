@@ -5,7 +5,6 @@ add_library(ast_defs STATIC
   integer_types.cpp
   location.cpp
 )
-add_dependencies(ast_defs parser)
 target_link_libraries(ast_defs util)
 
 add_library(ast STATIC
@@ -54,10 +53,9 @@ add_library(ast STATIC
   passes/usdt_arguments.cpp
 )
 
-add_dependencies(ast parser)
 target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
 target_link_libraries(ast PRIVATE debugfs tracefs util stdlib ${LIBBPF_LIBRARIES})
-target_link_libraries(ast PUBLIC ast_defs arch compiler_core parser btf)
+target_link_libraries(ast PUBLIC ast_defs arch compiler_core btf)
 
 if (NOT SYSTEM_INCLUDE_PATHS EQUAL "auto")
   MESSAGE(STATUS "Using SYSTEM_INCLUDE_PATHS=${SYSTEM_INCLUDE_PATHS}")

@@ -2265,12 +2265,12 @@ kprobe:f { @x = 1; @y = stats(5); @x = @y; }
   test("kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }");
 
   test("kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }", Error{ R"(
-stdin:1:31-32: ERROR: Type mismatch for '>': comparing hist_t with uint8
+stdin:1:29-34: ERROR: Type mismatch for '>': comparing hist_t with uint8
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
-                              ~
-stdin:1:29-30: ERROR: left (hist_t)
+                            ~~~~~
+stdin:1:29-31: ERROR: left (hist_t)
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
-                            ~
+                            ~~
 stdin:1:33-34: ERROR: right (uint8)
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                                 ~
@@ -2322,9 +2322,12 @@ begin { (struct faketype *)cpu }
          ~~~~~~~~~~~~~~~~~
 )" });
   test("begin { (faketype)cpu }", Error{ R"(
-stdin:1:10-18: ERROR: Cannot resolve unknown type "faketype"
+stdin:1:10-18: ERROR: Unknown identifier: 'faketype'
 begin { (faketype)cpu }
          ~~~~~~~~
+stdin:1:9-19: ERROR: Incomplete cast, unknown type
+begin { (faketype)cpu }
+        ~~~~~~~~~~
 )" });
 }
 
@@ -2673,9 +2676,9 @@ TEST_F(TypeCheckerTest, string_index)
   test(R"(kprobe:f { $x = "foo"; printf("%c is the fourth letter", $x[3]); })");
   test(R"(kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); })",
        Error{ R"(
-stdin:1:59-62: ERROR: the index 4 is out of bounds for array of size 4
+stdin:1:57-62: ERROR: the index 4 is out of bounds for array of size 4
 kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); }
-                                                          ~~~
+                                                        ~~~~~
 )" });
 }
 
@@ -4218,9 +4221,9 @@ TEST_F(TypeCheckerBTFTest, fentry)
   test("fentry:*:func_1 { 1 }");
 
   test("fexit:func_1 { $x = args.foo; }", Error{ R"(
-stdin:1:25-26: ERROR: Can't find function parameter foo
+stdin:1:21-29: ERROR: Can't find function parameter foo
 fexit:func_1 { $x = args.foo; }
-                        ~
+                    ~~~~~~~~
 )" });
   test("fexit:func_1 { $x = args; }");
   test("fentry:func_1 { @ = args; }");
@@ -4288,9 +4291,9 @@ TEST_F(TypeCheckerBTFTest, rawtracepoint)
   test("rawtracepoint:event_rt { args.first_real_arg }");
 
   test("rawtracepoint:event_rt { args.bad_arg }", Error{ R"(
-stdin:1:30-31: ERROR: Can't find function parameter bad_arg
+stdin:1:26-38: ERROR: Can't find function parameter bad_arg
 rawtracepoint:event_rt { args.bad_arg }
-                             ~
+                         ~~~~~~~~~~~~
 )" });
 }
 
@@ -4306,9 +4309,9 @@ TEST_F(TypeCheckerBTFTest, kfunc)
   test("kfunc:func_1 { @[func] = 1; }");
 
   test("kretfunc:func_1 { $x = args.foo; }", Error{ R"(
-stdin:1:28-29: ERROR: Can't find function parameter foo
+stdin:1:24-32: ERROR: Can't find function parameter foo
 kretfunc:func_1 { $x = args.foo; }
-                           ~
+                       ~~~~~~~~
 )" });
   test("kretfunc:func_1 { $x = args; }");
   test("kfunc:func_1 { @ = args; }");
@@ -4339,9 +4342,9 @@ TEST_F(TypeCheckerTest, btf_type_tags)
   test("kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:32-34: ERROR: Attempting to access pointer field 'field_with_bad_tag' with unsupported tag attribute: percpu
+stdin:1:13-52: ERROR: Attempting to access pointer field 'field_with_bad_tag' with unsupported tag attribute: percpu
 kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }
-                               ~~
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
 }
 
@@ -4603,19 +4606,34 @@ TEST_F(TypeCheckerTest, for_loop_invalid_expr)
 {
   // Error location is incorrect: #3063
   test("begin { for ($x : $var) { } }", Error{ R"(
-stdin:1:23-24: ERROR: syntax error, unexpected ), expecting [ or . or ->
+stdin:1:29-30: ERROR: expected map or range in for loop
 begin { for ($x : $var) { } }
-                      ~
+                            ~
 )" });
   test("begin { for ($x : 1+2) { } }", Error{ R"(
-stdin:1:20-21: ERROR: syntax error, unexpected +, expecting [ or . or ->
+stdin:1:20-21: ERROR: expected ')'
 begin { for ($x : 1+2) { } }
                    ~
+stdin:1:20-21: ERROR: expected '{'
+begin { for ($x : 1+2) { } }
+                   ~
+stdin:1:20-21: ERROR: expected map or range in for loop
+begin { for ($x : 1+2) { } }
+                   ~
+stdin:1:20-21: ERROR: expected expression
+begin { for ($x : 1+2) { } }
+                   ~
+stdin:1:22-23: ERROR: expected expression
+begin { for ($x : 1+2) { } }
+                     ~
+stdin:1:22-23: ERROR: unexpected input in block
+begin { for ($x : 1+2) { } }
+                     ~
 )" });
   test("begin { for ($x : \"abc\") { } }", Error{ R"(
-stdin:1:24-25: ERROR: syntax error, unexpected ), expecting [ or . or ->
+stdin:1:30-31: ERROR: expected map or range in for loop
 begin { for ($x : "abc") { } }
-                       ~
+                             ~
 )" });
 }
 
@@ -4662,20 +4680,18 @@ TEST_F(TypeCheckerTest, for_range_variable_use)
 TEST_F(TypeCheckerTest, for_range_invalid_types)
 {
   test(R"(begin { for ($i : "str"..5) { printf("%d", $i); } })", Error{ R"(
-stdin:1:23-27: ERROR: Loop range requires an integer for the start value
+stdin:1:9-27: ERROR: Loop range requires an integer for the start value
 begin { for ($i : "str"..5) { printf("%d", $i); } }
-                      ~~~~
+        ~~~~~~~~~~~~~~~~~~
 )" });
 
   test(R"(begin { for ($i : 0.."str") { printf("%d", $i); } })", Error{ R"(
-stdin:1:19-27: ERROR: Loop range requires an integer for the end value
+stdin:1:9-27: ERROR: Loop range requires an integer for the end value
 begin { for ($i : 0.."str") { printf("%d", $i); } }
-                  ~~~~~~~~
+        ~~~~~~~~~~~~~~~~~~
 )" });
 
-  test(R"(begin { for ($i : 0.0..5) { printf("%d", $i); } })", Error{ R"(
-ERROR: Could not resolve the type of this variable
-)" });
+  test(R"(begin { for ($i : 0.0..5) { printf("%d", $i); } })", Error{});
 }
 
 TEST_F(TypeCheckerTest, for_range_control_flow)
@@ -5121,9 +5137,9 @@ macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
        "begin { $a = \"string\"; add1($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:21-22: ERROR: Type mismatch for '+': comparing string[7] with uint8
+stdin:1:18-24: ERROR: Type mismatch for '+': comparing string[7] with uint8
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
-                    ~
+                 ~~~~~~
 stdin:1:18-20: ERROR: left (string[7])
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                  ~~

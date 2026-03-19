@@ -10,7 +10,7 @@
 
 namespace bpftrace {
 
-class Driver;
+class RDParser;
 
 namespace ast {
 
@@ -198,7 +198,7 @@ private:
   std::unique_ptr<State> state_;
   std::shared_ptr<ASTSource> source_;
 
-  friend class bpftrace::Driver;
+  friend class bpftrace::RDParser;
   friend class Node;
 };
 

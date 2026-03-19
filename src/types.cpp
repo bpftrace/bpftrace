@@ -601,6 +601,46 @@ SizedType CreateTimestampMode()
   return { Type::timestamp_mode, 0 };
 }
 
+std::optional<SizedType> ident_to_type(const std::string &name)
+{
+  static const std::unordered_map<std::string, SizedType> types = {
+    // Integer types
+    { "bool", CreateBool() },
+    { "int8", CreateInt(8) },
+    { "int16", CreateInt(16) },
+    { "int32", CreateInt(32) },
+    { "int64", CreateInt(64) },
+    { "uint8", CreateUInt(8) },
+    { "uint16", CreateUInt(16) },
+    { "uint32", CreateUInt(32) },
+    { "uint64", CreateUInt(64) },
+    // Builtin types
+    { "void", CreateVoid() },
+    { "min_t", CreateMin(true) },
+    { "max_t", CreateMax(true) },
+    { "sum_t", CreateSum(true) },
+    { "count_t", CreateCount() },
+    { "avg_t", CreateAvg(true) },
+    { "stats_t", CreateStats(true) },
+    { "umin_t", CreateMin(false) },
+    { "umax_t", CreateMax(false) },
+    { "usum_t", CreateSum(false) },
+    { "uavg_t", CreateAvg(false) },
+    { "ustats_t", CreateStats(false) },
+    { "timestamp", CreateTimestamp() },
+    { "macaddr_t", CreateMacAddress() },
+    { "cgroup_path_t", CreateCgroupPath() },
+    // Sized types (without size parameter)
+    { "string", CreateString(0) },
+    { "buffer", CreateBuffer(0) },
+    { "inet", CreateInet(0) },
+  };
+  auto it = types.find(name);
+  if (it != types.end())
+    return it->second;
+  return std::nullopt;
+}
+
 std::optional<SizedType> get_promoted_int(const SizedType &currentType,
                                           const SizedType &newType)
 {
