@@ -112,8 +112,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       break;
     }
     case ProbeType::uprobe:
-    case ProbeType::uretprobe:
-    case ProbeType::watchpoint: {
+    case ProbeType::uretprobe: {
       auto result = [&]() {
         if (bpftrace_->pid()) {
           auto pid_symbols = user_func_info_.func_symbols_for_pid(
