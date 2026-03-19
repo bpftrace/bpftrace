@@ -3,11 +3,11 @@
     "blazesym": {
       "flake": false,
       "locked": {
-        "lastModified": 1772480768,
-        "narHash": "sha256-2yek4Ha+RnZFRZCqjtrRw5eD7LD2Qz/8ikvHlmJK15A=",
+        "lastModified": 1774111433,
+        "narHash": "sha256-c3ETNTuQMUCgP1U5DfyqXHyMoq9dg7fif7UvSn5xMvs=",
         "owner": "libbpf",
         "repo": "blazesym",
-        "rev": "7744c9647abddf97e52f795b1e991fc46aa049c5",
+        "rev": "8d28acade9ac5e5991ac2b67912eb3d88fa5b8f1",
         "type": "github"
       },
       "original": {
@@ -119,11 +119,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1772585379,
-        "narHash": "sha256-zomLtA51H/qXAcjczveQFXPi/GuJUkPdpDeyu5bGI4M=",
+        "lastModified": 1773840656,
+        "narHash": "sha256-9tpvMGFteZnd3gRQZFlRCohVpqooygFuy9yjuyRL2C0=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "0fd2db475afdde93c9e4b1625aafb8eb41b99807",
+        "rev": "9cf7092bdd603554bd8b63c216e8943cf9b12512",
         "type": "github"
       },
       "original": {

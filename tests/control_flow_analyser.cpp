@@ -1,5 +1,5 @@
 #include "ast/passes/control_flow_analyser.h"
-#include "ast/passes/parser.h"
+#include "ast/passes/parse_passes.h"
 #include "ast/passes/types/type_system.h"
 #include "mocks.h"
 #include "gtest/gtest.h"

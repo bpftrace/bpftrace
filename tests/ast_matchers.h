@@ -339,6 +339,18 @@ public:
     });
   }
 
+  SizedTypeMatcher& WithNumElements(size_t num_elements)
+  {
+    return Where(
+        [num_elements](const SizedType& type, MatchResultListener* listener) {
+          return (type.IsArrayTy() && type.GetNumElements() == num_elements) ||
+                 (*listener << "has num elements "
+                            << (type.IsArrayTy() ? type.GetNumElements() : 0)
+                            << " instead of " << num_elements,
+                  false);
+        });
+  }
+
   SizedTypeMatcher& WithType(Type ty)
   {
     return Where(

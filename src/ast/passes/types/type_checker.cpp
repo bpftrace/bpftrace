@@ -1105,11 +1105,11 @@ void TypeChecker::visit(VarDeclStatement &decl)
     const auto &ty = type_map_.type(decl.typeof);
     if (!ty.IsNoneTy()) {
       if (!IsValidVarDeclType(ty)) {
-        decl.addError() << "Invalid variable declaration type: " << ty;
+        decl.typeof->addError() << "Invalid variable declaration type: " << ty;
       }
     } else {
       // We couldn't resolve that specific type by now.
-      decl.addError() << "Type cannot be resolved: still none";
+      decl.typeof->addError() << "Type cannot be resolved: still none";
     }
   }
 }

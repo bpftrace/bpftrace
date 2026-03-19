@@ -2,8 +2,8 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast_matchers.h"
 #include "btf_common.h"
-#include "driver.h"
 #include "mocks.h"
+#include "parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::ap_probe_expansion {

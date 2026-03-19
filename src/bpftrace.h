@@ -65,12 +65,12 @@ enum class DebugStage {
 
 const std::unordered_map<std::string_view, DebugStage> debug_stages = {
   // clang-format off
-  { "parse", DebugStage::Parse },
   { "ast", DebugStage::Ast },
   { "codegen", DebugStage::Codegen },
   { "codegen-opt", DebugStage::CodegenOpt },
 #ifndef NDEBUG
   { "dis", DebugStage::Disassemble },
+  { "parse", DebugStage::Parse },
 #endif
   { "libbpf", DebugStage::Libbpf },
   { "verifier", DebugStage::Verifier },

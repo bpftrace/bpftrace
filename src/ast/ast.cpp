@@ -38,8 +38,6 @@ bool Expression::is_literal() const
   return false;
 }
 
-static constexpr std::string_view ENUM = "enum ";
-
 std::string opstr(const Jump &jump)
 {
   switch (jump.ident) {
@@ -390,29 +388,6 @@ void Program::clear_empty_probes()
                                      return p->attach_points.empty();
                                    });
   probes.erase(it.begin(), it.end());
-}
-
-SizedType ident_to_c_struct(const std::string &ident, int pointer_level)
-{
-  SizedType result = CreateCStruct(ident);
-  for (int i = 0; i < pointer_level; i++)
-    result = CreatePointer(result);
-  return result;
-}
-
-SizedType ident_to_sized_type(const std::string &ident)
-{
-  if (ident.starts_with(ENUM)) {
-    auto enum_name = ident.substr(ENUM.size());
-    // This is an automatic promotion to a uint64
-    // even though it's possible that highest variant value of that enum
-    // fits into a smaller int. This will also affect casts from a smaller
-    // int and cause an ERROR: Integer size mismatch.
-    // This could potentially be revisited or the cast relaxed
-    // if we check the variant values during type resolution.
-    return CreateEnum(64, enum_name);
-  }
-  return ident_to_c_struct(ident);
 }
 
 Record *make_record(ASTContext &ctx,

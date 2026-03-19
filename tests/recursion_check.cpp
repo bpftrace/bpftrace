@@ -1,7 +1,7 @@
 #include "ast/passes/recursion_check.h"
 #include "ast/passes/attachpoint_passes.h"
-#include "driver.h"
 #include "mocks.h"
+#include "parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::recursion_check {

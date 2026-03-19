@@ -1,6 +1,6 @@
 add_library(aot STATIC aot.cpp)
 add_dependencies(aot version_h)
-target_link_libraries(aot required_resources parser)
+target_link_libraries(aot required_resources)
 target_compile_definitions(aot PRIVATE ${BPFTRACE_FLAGS})
 
 if(STATIC_LINKING)
