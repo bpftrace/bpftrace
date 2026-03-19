@@ -29,6 +29,7 @@
 #include "util/cpus.h"
 #include "util/exceptions.h"
 #include "util/symbols.h"
+#include "util/system.h"
 
 namespace bpftrace {
 
@@ -1406,56 +1407,58 @@ Result<std::unique_ptr<AttachedWatchpointProbe>> AttachedWatchpointProbe::make(
   attr.bp_len = (attr.bp_type & HW_BREAKPOINT_X) ? sizeof(long) : probe.len;
   // Generate a notification every 1 event; we care about every event
   attr.sample_period = 1;
-  // Attach to threads.
-  //
-  // NB: this only works for threads created after attachment
-  // (limitation of perf_event_open)!
+  // Attach to threads created after attachment.
   attr.inherit = 1;
 
-  std::vector<int> cpus;
+  std::vector<int> cpus, tids;
   if (pid.has_value()) {
+    // when tracing a specific process, we need to create a separate perf event
+    // for each of its existing threads
+    auto res = util::get_process_tids(*pid);
+    if (!res) {
+      return res.takeError();
+    }
+    tids = *res;
     cpus = { -1 };
   } else {
     cpus = util::get_online_cpus();
+    tids = { -1 };
   }
 
   std::string err_msg;
-  bool has_error = false;
   std::vector<struct bpf_link *> links;
 
   for (int cpu : cpus) {
-    // We copy paste the code from bcc's bpf_attach_perf_event_raw here
-    // because we need to know the exact error codes (and also we don't
-    // want bcc's noisy error messages).
-    int perf_event_fd = syscall(__NR_perf_event_open,
-                                &attr,
-                                pid.has_value() ? *pid : -1,
-                                cpu,
-                                -1,
-                                PERF_FLAG_FD_CLOEXEC);
-    if (perf_event_fd < 0) {
-      if (errno == ENOSPC)
-        err_msg = "No more HW registers left";
+    for (int tid : tids) {
+      // We copy paste the code from bcc's bpf_attach_perf_event_raw here
+      // because we need to know the exact error codes (and also we don't
+      // want bcc's noisy error messages).
+      int perf_event_fd = syscall(
+          __NR_perf_event_open, &attr, tid, cpu, -1, PERF_FLAG_FD_CLOEXEC);
+      if (perf_event_fd < 0) {
+        if (errno == ENOSPC)
+          err_msg = "No more HW registers left";
 
-      has_error = true;
-      break;
+        LOG(WARNING) << "Failed to create a perf event for cpu " << cpu
+                     << " tid " << tid << ": " << strerror(errno);
+        continue;
+      }
+
+      auto *link = bpf_program__attach_perf_event(prog.bpf_prog(),
+                                                  perf_event_fd);
+      if (!link) {
+        close(perf_event_fd);
+        continue;
+      }
+
+      links.push_back(link);
     }
-
-    auto *link = bpf_program__attach_perf_event(prog.bpf_prog(), perf_event_fd);
-    if (!link) {
-      has_error = true;
-      break;
-    }
-
-    links.push_back(link);
   }
 
-  if (has_error) {
-    for (struct bpf_link *link : links) {
-      if (bpf_link__destroy(link))
-        LOG(WARNING) << "failed to destroy link for watchpoint probe: "
-                     << strerror(errno);
-    }
+  if (links.empty()) {
+    // Not all perf_event_open() calls will necessarily succeed -- threads may
+    // exit and CPUs may be offlined. Only return an error if we were unable to
+    // create any event.
     return make_error<AttachError>(std::move(err_msg));
   }
 

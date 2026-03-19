@@ -1,16 +1,19 @@
 #include <algorithm>
 #include <climits>
 #include <cstring>
+#include <dirent.h>
 #include <filesystem>
 #include <fstream>
 #include <linux/limits.h>
 #include <map>
 #include <sstream>
 #include <sys/prctl.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <unordered_set>
 
+#include "util/int_parser.h"
 #include "util/system.h"
 
 namespace bpftrace::util {
@@ -287,6 +290,27 @@ Result<uint64_t> get_available_mem_kb()
   file.close();
 
   return memAvailable;
+}
+
+Result<std::vector<int>> get_process_tids(pid_t pid)
+{
+  char task_path[32];
+  snprintf(task_path, sizeof(task_path), "/proc/%d/task", pid);
+
+  std::vector<int> tids;
+  std::error_code ec;
+  for (const auto &task : std::filesystem::directory_iterator(task_path, ec)) {
+    std::string filename = task.path().filename().string();
+    if (!std::ranges::all_of(filename, ::isdigit))
+      continue;
+    tids.emplace_back(std::stoi(filename));
+  }
+
+  if (ec) {
+    return make_error<SystemError>("Unable to open " + std::string(task_path),
+                                   ec.value());
+  }
+  return tids;
 }
 
 } // namespace bpftrace::util

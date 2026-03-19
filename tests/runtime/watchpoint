@@ -18,10 +18,18 @@ RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:1:x { printf("hit!\n"); exit() }' -c 
 EXPECT hit!
 ARCH aarch64|x86_64
 
-NAME watchpoint absolute address threaded
+NAME watchpoint - created thread
 BEFORE ./testprogs/watchpoint_threaded
-RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:1:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_threaded
+RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:1:w { printf("hit!\n"); exit() }' -c './testprogs/watchpoint_threaded 1'
 EXPECT hit!
 # Not all archs support mmap to our specific address, so be conservative here.
 # See 08a47afa ("Fixing absolute address test issue across platforms")
+ARCH x86_64
+
+# Attaches a watchpoint probe to an existing multi-threaded process. Waits a bit before running
+# bpftrace to allow the test program to start the thread that triggers the watchpoint.
+NAME watchpoint - existing thread
+BEFORE ./testprogs/watchpoint_threaded
+RUN sleep 1; {{BPFTRACE}} -p {{BEFORE_PID}} -e 'watchpoint:0x10000000:1:w { printf("hit!\n"); exit() }'
+EXPECT hit!
 ARCH x86_64

@@ -27,6 +27,7 @@ int main()
   memcpy(addr, insns, sizeof(insns));
   void (*func)(void);
   func = addr;
+  sleep(1); // wait a bit for bpftrace to attach
   (*func)();
 
   if (munmap(addr, len) == -1) {
