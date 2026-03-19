@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -21,17 +22,22 @@ void *work(void *)
   }
 
   uint8_t i = 0;
-  while (i < 10) {
+  while (i < 100) {
     *((volatile uint8_t *)addr) = i++;
-    // 250ms*10 sleep, enough for watchpoint trigger
+    // 250ms*100 sleep, enough for watchpoint trigger
     usleep(250 * 1000);
   }
 
   return NULL;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+  if (argc > 1) {
+    // optionally wait before creating a new thread
+    sleep(atoi(argv[1]));
+  }
+
   pthread_t tid;
   if (pthread_create(&tid, NULL, work, 0)) {
     perror("pthread_create");
