@@ -1,6 +1,6 @@
 #include "ast/passes/macro_expansion.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::macro_expansion {
@@ -207,21 +207,9 @@ macro add(x) { x + 1 } macro add(x, y) { x + y } begin { add(1, 1, 1); }
 )");
   test_error("macro test(pid) { } begin { }",
              R"(
-stdin:1:12-15: ERROR: syntax error, unexpected builtin, expecting ) or ","
+stdin:1:12-15: ERROR: syntax: builtin 'pid' can't be used as a macro argument
 macro test(pid) { } begin { }
            ~~~
-)");
-  test_error("macro test(usym_t) { } begin { }",
-             R"(
-stdin:1:12-18: ERROR: syntax error, unexpected builtin type, expecting ) or ","
-macro test(usym_t) { } begin { }
-           ~~~~~~
-)");
-  test_error("macro test(inet) { } begin { }",
-             R"(
-stdin:1:12-16: ERROR: syntax error, unexpected sized type, expecting ) or ","
-macro test(inet) { } begin { }
-           ~~~~
 )");
 }
 

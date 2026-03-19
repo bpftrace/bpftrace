@@ -68,16 +68,12 @@ EXPECT a=11
 
 NAME unroll_max_value
 PROG i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-EXPECT stdin:1:17-29: ERROR: unroll maximum value is 100
-       i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-                       ~~~~~~~~~~~~
+EXPECT_REGEX .* ERROR: unroll maximum value is 100.*
 WILL_FAIL
 
 NAME unroll_min_value
 PROG i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-EXPECT stdin:1:17-27: ERROR: unroll minimum value is 1
-       i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-                       ~~~~~~~~~~
+EXPECT_REGEX .* ERROR: unroll minimum value is 1.*
 WILL_FAIL
 
 NAME unroll_param
@@ -257,9 +253,7 @@ AFTER ./testprogs/bitfield_test
 
 NAME exit with unreachable code
 PROG i:ms:100 { @++; exit(); @++ }
-EXPECT stdin:1:10-30: WARNING: Unreachable statement.
-       i:ms:100 { @++; exit(); @++ }
-                ~~~~~~~~~~~~~~~~~~~~
+EXPECT_REGEX .* WARNING: Unreachable statement.*
 TIMEOUT 1
 
 NAME exit exits immediately

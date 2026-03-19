@@ -138,11 +138,9 @@
                 src = self;
 
                 nativeBuildInputs = [
-                  pkgs.bison
                   pkgs.bpftools
                   pkgs."llvmPackages_${toString llvmVersion}".clang
                   pkgs.cmake
-                  pkgs.flex
                   pkgs.gcc
                   pkgs.ninja
                   pkgs.pkg-config

@@ -4,7 +4,7 @@
 
 #include "ast/passes/resolve_imports.h"
 #include "ast/visitor.h"
-#include "driver.h"
+#include "rd_parser.h"
 #include "stdlib/stdlib.h"
 #include "util/result.h"
 #include "util/similar.h"

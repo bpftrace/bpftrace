@@ -4,5 +4,5 @@ add_library(btf STATIC
   helpers.cpp
   irbuilder.cpp
 )
-add_dependencies(btf parser util)
+add_dependencies(btf util)
 target_link_libraries(btf util)

@@ -528,7 +528,7 @@ public:
 class Sizeof : public Node {
 public:
   explicit Sizeof(ASTContext &ctx, Location &&loc, SizedType type)
-      : Node(ctx, std::move(loc)), record(type) {};
+      : Node(ctx, std::move(loc)), record(std::move(type)) {};
   explicit Sizeof(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), record(expr) {};
   explicit Sizeof(ASTContext &ctx, const Location &loc, const Sizeof &other)
@@ -566,7 +566,9 @@ public:
                     Location &&loc,
                     SizedType record,
                     std::vector<std::string> field)
-      : Node(ctx, std::move(loc)), record(record), field(std::move(field)) {};
+      : Node(ctx, std::move(loc)),
+        record(std::move(record)),
+        field(std::move(field)) {};
   explicit Offsetof(ASTContext &ctx,
                     Location &&loc,
                     Expression expr,
@@ -631,7 +633,7 @@ public:
 class Typeof : public Node {
 public:
   explicit Typeof(ASTContext &ctx, Location &&loc, SizedType record)
-      : Node(ctx, std::move(loc)), record(record) {};
+      : Node(ctx, std::move(loc)), record(std::move(record)) {};
   explicit Typeof(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), record(expr) {};
   explicit Typeof(ASTContext &ctx, const Location &loc, const Typeof &other)

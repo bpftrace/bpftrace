@@ -115,6 +115,13 @@ public:
   {
     return !has(Severity::Error);
   }
+  size_t error_count() const
+  {
+    auto index = static_cast<long unsigned int>(Severity::Error);
+    if (diagnostics_.size() <= index)
+      return 0;
+    return diagnostics_[index].size();
+  }
 
   // emit implements a default formatter of all diagnostics to a given stream.
   // The use of `emit` should be generally discouraged, especially by tests,

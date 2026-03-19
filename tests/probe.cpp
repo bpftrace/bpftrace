@@ -14,8 +14,8 @@
 #include "bpftrace.h"
 #include "btf.h"
 #include "btf_common.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::probe {

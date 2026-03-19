@@ -3,8 +3,8 @@
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/field_analyser.h"
 #include "ast_matchers.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::pid_filter_pass {

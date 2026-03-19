@@ -1,6 +1,6 @@
 #include "ast/passes/deprecated.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::deprecated {

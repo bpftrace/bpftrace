@@ -1,0 +1,173 @@
+#pragma once
+
+#include <optional>
+#include <string>
+#include <string_view>
+
+#include "ast/ast.h"
+#include "ast/context.h"
+#include "ast/pass_manager.h"
+
+namespace bpftrace {
+
+ast::Pass CreateParsePass(bool debug = false);
+
+// RD -> Recursive Descent
+// N.B. the debug argument is only valid if compiled in DEBUG mode
+class RDParser {
+public:
+  explicit RDParser(ast::ASTContext &ctx, bool debug = false)
+      : ctx_(ctx), debug_(debug) {};
+
+  ast::Program *parse();
+  std::optional<ast::Expression> parse_expr();
+
+private:
+  // Root-level grammar
+  ast::Program *parse_program();
+  ast::CStatement *parse_c_preprocessor();
+  ast::CStatement *parse_c_definition();
+  ast::RootImport *parse_root_import();
+  ast::StatementImport *parse_statement_import();
+  ast::Macro *parse_macro();
+  ast::Expression parse_macro_arg();
+  ast::Subprog *parse_subprog();
+  ast::MapDeclStatement *parse_map_decl_stmt();
+  ast::Config *parse_config();
+  void skip_config_block();
+  ast::Probe *parse_probe();
+  ast::AttachPoint *parse_attach_point();
+  std::optional<ast::Expression> parse_predicate();
+
+  // Block and statement grammar
+  ast::BlockExpr *parse_block(bool allow_trailing_expr = true);
+  ast::Statement parse_while_or_unroll();
+  ast::Statement parse_for();
+  void skip_to_block_end();
+  void expect_stmt_end();
+  void normalize_block_expression(ast::Expression &expr);
+  bool parse_sigiled_stmt_or_trailing_expr(
+      ast::StatementList &stmts,
+      std::optional<ast::Expression> &trailing_expr);
+  std::optional<ast::Operator> try_compound_op();
+  ast::Statement make_assignment_or_expr(ast::Expression lhs,
+                                         int stmt_line,
+                                         int stmt_col);
+  ast::Statement parse_statement();
+
+  // Type parsing
+  SizedType parse_sized_type();
+  std::optional<SizedType> try_parse_sized_type();
+  ast::Typeof *parse_type_annotation();
+
+  // Expression grammar
+  ast::Expression parse_expression();
+  ast::Expression parse_ternary();
+  ast::Expression parse_binary(int min_prec);
+  ast::Expression parse_binary(int min_prec, ast::Expression left);
+  ast::Expression parse_unary();
+  ast::Expression parse_postfix(ast::Expression expr);
+  ast::Expression parse_primary();
+  ast::Expression parse_call_expression(const std::string &name,
+                                        const ast::SourceLocation &start_loc);
+  ast::Expression parse_paren_expr();
+  std::optional<ast::Expression> try_parse_record(int begin_line,
+                                                  int begin_col);
+  std::optional<ast::Expression> try_parse_cast_expr(int begin_line,
+                                                     int begin_col);
+  ast::Expression parse_tuple_or_grouping_expr(int begin_line, int begin_col);
+  ast::Expression parse_map_with_optional_keys(int begin_line, int begin_col);
+  std::vector<std::string> parse_field_list();
+
+  // Lexer helpers
+  char at(size_t pos) const
+  {
+    return (*input_)[pos];
+  }
+  bool in_bounds(size_t pos) const
+  {
+    return pos < input_->size();
+  }
+  void advance(int n = 1);
+  char peek(size_t offset = 0) const;
+  char char_at(size_t pos) const;
+  bool at_end() const;
+  void skip_whitespace();
+  size_t skip_whitespace(size_t pos) const;
+  static bool is_identifier_start(char c);
+  static bool is_identifier_body(char c);
+  size_t scan_identifier_end(size_t pos) const;
+  size_t scan_balanced(size_t pos, char open, char close) const;
+  size_t scan_pointer_suffix(size_t pos) const;
+  std::string_view view(size_t start, size_t end) const;
+  std::string_view peek_keyword() const;
+  bool match(char c);
+  bool match(const std::string &s);
+  bool check_keyword(const std::string &s) const;
+  bool expect(char c);
+  std::string consume_identifier();
+  std::string consume_string();
+  std::string consume_integer_str();
+
+  // Error reporting
+  bool has_errors() const;
+  void error(const std::string &msg);
+  void error(const std::string &msg,
+             int begin_line,
+             int begin_col,
+             int end_line,
+             int end_col);
+  ast::None *make_none();
+
+  // Source location tracking
+  ast::SourceLocation make_loc(int begin_line,
+                               int begin_col,
+                               int end_line,
+                               int end_col) const;
+  struct LineCol {
+    int line;
+    int col;
+  };
+  LineCol get_current_line_col();
+
+  // Lookahead helpers
+  static bool is_builtin(std::string_view name);
+  bool can_start_expression() const;
+  bool looks_like_type() const;
+  bool looks_like_c_definition() const;
+
+  // Saves parser position for backtracking. Call restore() to rewind.
+  struct SavePoint {
+    size_t pos;
+    int line;
+    int col;
+
+    explicit SavePoint(RDParser &p)
+        : pos(p.pos_), line(p.line_), col(p.col_), parser_(p)
+    {
+    }
+    void restore()
+    {
+      parser_.pos_ = pos;
+      parser_.line_ = line;
+      parser_.col_ = col;
+    }
+
+  private:
+    RDParser &parser_;
+  };
+  SavePoint save_point()
+  {
+    return SavePoint(*this);
+  }
+
+  ast::ASTContext &ctx_;
+  const bool debug_;
+
+  const std::string *input_ = nullptr;
+  size_t pos_ = 0;
+  int line_ = 1;
+  int col_ = 1;
+};
+
+} // namespace bpftrace

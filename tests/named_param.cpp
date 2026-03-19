@@ -1,7 +1,7 @@
 #include "ast/passes/named_param.h"
 #include "ast_matchers.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::named_param {

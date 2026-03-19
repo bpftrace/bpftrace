@@ -1,7 +1,7 @@
 #include "ast/passes/tracepoint_format_parser.h"
 #include "btf_common.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "gtest/gtest.h"
 
 using namespace testing;

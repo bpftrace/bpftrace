@@ -158,7 +158,8 @@ void usage(std::ostream& out)
   out << "    --dry-run               terminate execution right after attaching all the probes" << std::endl;
   out << "    --verify-llvm-ir        check that the generated LLVM IR is valid" << std::endl;
   out << "    -d, --debug STAGE       debug info for various stages of bpftrace execution" << std::endl;
-  out << "                            ('all', 'ast', 'types', 'codegen', 'codegen-opt', 'dis', 'libbpf', 'verifier')" << std::endl;
+  out << "                            ('all', 'ast', 'types', 'codegen', 'codegen-opt', 'libbpf', 'verifier')" << std::endl;
+  out << "                            ('parse', 'dis') - available on debug builds" << std::endl;
   out << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
   out << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
   out << std::endl;

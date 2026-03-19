@@ -2,8 +2,8 @@
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/args_resolver.h"
 #include "ast/passes/attachpoint_passes.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "gtest/gtest.h"
 
 #include "btf_common.h"

@@ -7,8 +7,8 @@
 #include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
 #include "btf_common.h"
-#include "driver.h"
 #include "mocks.h"
+#include "rd_parser.h"
 #include "struct.h"
 #include "gtest/gtest.h"
 
