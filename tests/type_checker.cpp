@@ -512,6 +512,21 @@ stdin:1:17-57: ERROR: Branches must return the same type or compatible types: ha
 kprobe:f { @x = pid < 10000 ? kstack(raw) : kstack(perf) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
+
+  test("kprobe:f { $x = nonsense; $y = true ? $x : 1; exit(); }", Error{ R"(
+stdin:1:12-14: ERROR: Could not resolve the type of this variable
+kprobe:f { $x = nonsense; $y = true ? $x : 1; exit(); }
+           ~~
+stdin:1:39-41: ERROR: Could not resolve the type of this variable
+kprobe:f { $x = nonsense; $y = true ? $x : 1; exit(); }
+                                      ~~
+stdin:1:17-25: ERROR: Unknown identifier: 'nonsense'
+kprobe:f { $x = nonsense; $y = true ? $x : 1; exit(); }
+                ~~~~~~~~
+stdin:1:12-25: ERROR: Invalid expression for assignment
+kprobe:f { $x = nonsense; $y = true ? $x : 1; exit(); }
+           ~~~~~~~~~~~~~
+)" });
 }
 
 TEST_F(TypeCheckerTest, mismatched_call_types)
