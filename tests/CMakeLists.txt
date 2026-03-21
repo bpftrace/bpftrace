@@ -7,6 +7,7 @@ add_executable(bpftrace_test
   ast_matchers.cpp
   attached_probe.cpp
   attachpoint_passes.cpp
+  bitfield.cpp
   bpfbytecode.cpp
   bpftrace.cpp
   btf.cpp
