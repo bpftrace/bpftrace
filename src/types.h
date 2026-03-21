@@ -608,6 +608,10 @@ SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
 SizedType CreateTimestampMode();
 
+// Converts a type name string (e.g. "uint32", "string") to the corresponding
+// SizedType, or std::nullopt if the name is not a known type.
+std::optional<SizedType> ident_to_type(const std::string &name);
+
 std::optional<SizedType> get_promoted_int(const SizedType &currentType,
                                           const SizedType &newType);
 std::optional<SizedType> get_promoted_tuple(const SizedType &currentType,
