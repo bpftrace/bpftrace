@@ -2,7 +2,7 @@
 .SH NAME
 opensnoop.bt \- Trace open(),openat(),openat2() syscalls. Uses bpftrace/eBPF.
 .SH SYNOPSIS
-.B opensnoop.bt -- [--depth=<N>]
+.B opensnoop.bt -- [--depth=<N>] [--errname]
 .SH DESCRIPTION
 opensnoop traces the open(),openat(),openat2() syscall, showing which processes
 are attempting to open which files. This can be useful for determining the
@@ -13,8 +13,12 @@ This works by tracing the open(),openat(),openat2() syscall tracepoint.
 
 Since this uses BPF, only the root user can use this tool.
 .SH OPTIONS
+.TP
 --depth=<N>
 Used to set the maximum supported path depth, default is 35.
+.TP
+--errname
+Show error message instead of errno.
 .SH REQUIREMENTS
 CONFIG_BPF and bcc.
 .SH EXAMPLES
