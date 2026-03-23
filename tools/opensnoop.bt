@@ -2,7 +2,7 @@
 // opensnoop	Trace open() syscalls.
 // 		For Linux, uses bpftrace and eBPF.
 //
-// USAGE: opensnoop.bt -- [--depth=<N>]
+// USAGE: opensnoop.bt -- [--depth=<N>] [--errname]
 //
 // Example of usage:
 //
@@ -40,10 +40,26 @@ config = {
   missing_probes = warn;
 }
 
+macro max_path_depth()
+{
+  getopt("depth", 35, "Maximum depth of full path")
+}
+
+macro errname()
+{
+  getopt("errname", false, "Show error message instead of errno")
+}
+
 BEGIN
 {
   printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
-  printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
+  printf("%-6s %-16s %4s", "PID", "COMM", "FD");
+  if errname {
+    printf(" %16s", "ERR");
+  } else {
+    printf(" %4s", "ERR");
+  }
+  printf(" %s\n", "PATH");
 }
 
 tracepoint:syscalls:sys_enter_open,
@@ -51,11 +67,6 @@ tracepoint:syscalls:sys_enter_openat,
 tracepoint:syscalls:sys_enter_openat2
 {
   @filename[tid] = args.filename;
-}
-
-macro max_path_depth()
-{
-  getopt("depth", 35, "Maximum depth of full path")
 }
 
 macro getcwd(@paths)
@@ -118,7 +129,13 @@ macro sys_exit(ret, @filename, @paths)
 
   $path = str(@filename[tid]);
 
-  printf("%-6d %-16s %4d %3d ", pid, comm, $fd, $errno);
+  printf("%-6d %-16s %4d", pid, comm, $fd);
+
+  if errname {
+    printf(" %16s ", strerror($errno));
+  } else {
+    printf(" %3d ", $errno);
+  }
 
   // Skip display cwd if path start with '/'.
   if ($path[0] != "/"[0]) {
