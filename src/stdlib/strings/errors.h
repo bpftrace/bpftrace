@@ -46,6 +46,7 @@ static err_str errors[] = {
   [ENOSYS] = "Invalid system call number",
   [ENOTEMPTY] = "Directory not empty",
   [ELOOP] = "Too many symbolic links encountered",
+  // errno 41 does not exist
   [ENOMSG] = "No message of desired type",
   [EIDRM] = "Identifier removed",
   [ECHRNG] = "Channel number out of range",
@@ -62,6 +63,7 @@ static err_str errors[] = {
   [ENOANO] = "No anode",
   [EBADRQC] = "Invalid request code",
   [EBADSLT] = "Invalid slot",
+  // errno 58 does not exist
   [EBFONT] = "Bad font file format",
   [ENOSTR] = "Device not a stream",
   [ENODATA] = "No data available",
