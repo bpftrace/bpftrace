@@ -62,7 +62,7 @@ private:
   State special_parser();
   State test_parser();
   State benchmark_parser();
-  State kprobe_parser(bool allow_offset = true);
+  State kprobe_parser(bool allow_offset = true, bool allow_src_loc = true);
   State kretprobe_parser();
   State uprobe_parser(bool allow_offset = true, bool allow_src_loc = true);
   State uretprobe_parser();
