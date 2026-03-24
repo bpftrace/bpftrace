@@ -39,8 +39,12 @@ private:
 void AttachPointChecker::visit(AttachPoint &ap)
 {
   if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
-    if (ap.func.empty() && ap.address == 0)
-      ap.addError() << "kprobes should be attached to a function or an address";
+    if (ap.func.empty() && ap.address == 0 &&
+        (ap.source_file.empty() || ap.line_num == 0))
+      ap.addError() << "kprobes should be attached to a function"
+                    << (bpftrace_.get_dwarf(ap)
+                            ? ", address, or source file and line (using DWARF)"
+                            : " or an address");
     // Warn if user tries to attach to a non-traceable function
     if (bpftrace_.config_->missing_probes != ConfigMissingProbes::ignore &&
         !util::has_wildcard(ap.func) && !ap.func.empty() &&
@@ -540,7 +544,7 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
       }
     } else if (raw[idx] == '"') {
       in_quotes = !in_quotes;
-    // Handle escaped characters in a string
+      // Handle escaped characters in a string
     } else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size())) {
       argument += raw[idx + 1];
       ++idx;
@@ -641,14 +645,71 @@ AttachPointParser::State AttachPointParser::benchmark_parser()
   return OK;
 }
 
-AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
+AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
+                                                          bool allow_src_loc)
 {
   auto num_parts = parts_.size();
-  if (num_parts != 2 && num_parts != 3) {
+  // kprobe attached by source code location (kprobe@source_file:line[:col])
+  const bool source_location = num_parts > 1 && parts_[1] == "@";
+  if (!source_location && num_parts != 2 && num_parts != 3) {
     if (ap_->ignore_invalid)
       return SKIP;
 
     return argument_count_error(1, 2);
+  }
+
+  if (source_location) {
+    if (!allow_src_loc) {
+      errs_ << "Source code location not allowed" << std::endl;
+      return INVALID;
+    }
+
+    if ((parts_.size() != 4 && parts_.size() != 5) ||
+        (parts_[2].empty() || parts_[3].empty())) {
+      errs_ << "Invalid kprobe arguments, "
+            << "expected format: kprobe:TARGET@FILE:LINE[:COL]" << std::endl;
+      return INVALID;
+    }
+
+    ap_->source_file = parts_[2];
+
+    auto line = util::to_uint(parts_[3]);
+    if (!line) {
+      errs_ << "Invalid line number: " << line.takeError() << std::endl;
+      return INVALID;
+    }
+    ap_->line_num = *line;
+
+    if (parts_.size() == 5) {
+      auto col = util::to_uint(parts_[4]);
+      if (!col) {
+        errs_ << "Invalid column number: " << col.takeError() << std::endl;
+        return INVALID;
+      }
+      ap_->col_num = *col;
+    }
+
+    Dwarf *dwarf = bpftrace_.get_dwarf(*ap_);
+    if (dwarf) {
+      auto address = dwarf->line_to_addr(ap_->source_file,
+                                         ap_->line_num,
+                                         ap_->col_num);
+      if (!address) {
+        errs_ << address.takeError() << std::endl;
+        return INVALID;
+      }
+      if (bpftrace_.safe_mode_) {
+        errs_ << "Probing by source location requires --unsafe" << std::endl;
+        return INVALID;
+      }
+      ap_->address = *address;
+
+      return OK;
+    }
+
+    errs_ << "No DWARF debug info found for kernel, cannot attach "
+          << "by source code location." << std::endl;
+    return INVALID;
   }
 
   auto func_idx = 1;
@@ -709,7 +770,7 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
 
 AttachPointParser::State AttachPointParser::kretprobe_parser()
 {
-  return kprobe_parser(false);
+  return kprobe_parser(false, false);
 }
 
 AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,

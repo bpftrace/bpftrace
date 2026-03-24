@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Add `kprobe` support for source location attachpoints.
+  - [#5115](https://github.com/bpftrace/bpftrace/pull/5115)
 - Extend support for DWARF formats
   - [#5095](https://github.com/bpftrace/bpftrace/pull/5095)
 - Ternary operator supports an empty second operand.

@@ -883,7 +883,7 @@ int main(int argc, char* argv[])
   bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
   bpftrace.probe_filter_ = args.probe_filter;
-  bpftrace.debuginfo_path_ = args.debuginfo_path;
+  bpftrace.debuginfo_path_ = args.debuginfo_path + default_debuginfo_paths;
 
   if (!args.pid_str.empty()) {
     auto maybe_pid = util::to_uint(args.pid_str);
