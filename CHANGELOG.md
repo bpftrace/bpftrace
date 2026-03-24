@@ -22,6 +22,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix stdlib `strerror` error caused by exceeding the BPF stack limit.
+  - [#5094](https://github.com/bpftrace/bpftrace/pull/5094)
 - Attach watchpoint probes to all threads of a process
   - [#5088](https://github.com/bpftrace/bpftrace/pull/5088)
 #### Security

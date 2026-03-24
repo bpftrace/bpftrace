@@ -71,7 +71,22 @@ int __strerror(int errno, err_str *out) {
     errno = -errno;
   }
   if (errno >= 0 && errno <= EHWPOISON) {
-    __builtin_memcpy(out, &errors[errno], sizeof(*out));
+    // The array 'errors' is not fully populated, skip the empty 'errno'.
+    //
+    // There is another benefit to doing this. BPF 512-byte stack limit.
+    // 1. When the code has extremely simple control flow, LLVM will allocate a
+    //    64-byte temporary stack buffer, which can exceed the limit when
+    //    accumulated.
+    // 2. By increasing the complexity of the code control flow, the LLVM
+    //    optimization strategy for memcpy was changed, allowing it to avoid
+    //    using a temporary stack buffer and instead use more direct memory
+    //    access instructions, thereby keeping the stack frame size within
+    //    limits.
+    if (errors[errno][0] == '\0') {
+      __builtin_memcpy(out, &unknown_error, sizeof(*out));
+    } else {
+      __builtin_memcpy(out, &errors[errno], sizeof(*out));
+    }
   } else {
     __builtin_memcpy(out, &unknown_error, sizeof(*out));
   }
