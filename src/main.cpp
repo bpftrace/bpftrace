@@ -851,6 +851,8 @@ int main(int argc, char* argv[])
   auto config = std::make_unique<Config>(!args.cmd_str.empty());
   BPFtrace bpftrace(args.no_feature, std::move(config));
 
+  check_privileges();
+
   // Create function info objects for probe matching and pass state.
   auto kernel_func_info = symbols::KernelInfoImpl::open(
       args.traceable_functions_file);
@@ -910,8 +912,6 @@ int main(int argc, char* argv[])
 
   // Listing probes when there is no program.
   if (args.listing && args.script.empty() && args.filename.empty()) {
-    check_privileges();
-
     list_probes(bpftrace, args.search, *kernel_func_info, user_func_info);
     return 0;
   }
@@ -994,8 +994,6 @@ int main(int argc, char* argv[])
   // If we are not running anything, then we don't require privileges.
   if (args.mode == Mode::NONE || args.mode == Mode::BPF_TEST ||
       args.mode == Mode::BPF_BENCHMARK) {
-    check_privileges();
-
     auto lockdown_state = lockdown::detect();
     if (lockdown_state == lockdown::LockdownState::Confidentiality) {
       lockdown::emit_warning(std::cerr);
