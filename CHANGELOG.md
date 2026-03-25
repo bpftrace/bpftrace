@@ -24,15 +24,11 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
-- Fix stdlib `strerror` error caused by exceeding the BPF stack limit.
-  - [#5094](https://github.com/bpftrace/bpftrace/pull/5094)
-- Attach watchpoint probes to all threads of a process
-  - [#5088](https://github.com/bpftrace/bpftrace/pull/5088)
 #### Security
 #### Docs
 #### Tools
 
-## [0.25.1] TBD
+## [0.25.1] 2026-03-25
 
 #### Fixed
 - Fix crash for invalid if expressions
@@ -41,6 +37,10 @@ and this project adheres to
   - [#5074](https://github.com/bpftrace/bpftrace/pull/5074)
 - Fix casting negative literals to unsigned types
   - [#5085](https://github.com/bpftrace/bpftrace/pull/5085)
+- Attach watchpoint probes to all threads of a process
+  - [#5088](https://github.com/bpftrace/bpftrace/pull/5088)
+- Fix stdlib `strerror` error caused by exceeding the BPF stack limit.
+  - [#5094](https://github.com/bpftrace/bpftrace/pull/5094)
 
 ## [0.25.0] 2026-03-13
 
