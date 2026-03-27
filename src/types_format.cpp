@@ -157,6 +157,28 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       output::Primitive::Record record;
       for (auto &field : type.GetFields()) {
         auto elem_data = value.slice(field.offset, field.type.GetSize());
+
+        if (field.bitfield) {
+          auto bf = *field.bitfield;
+          switch (field.type.GetIntBitWidth()) {
+            case 64:
+              elem_data = bf.to_opaque<uint64_t>(elem_data);
+              break;
+            case 32:
+              elem_data = bf.to_opaque<uint32_t>(elem_data);
+              break;
+            case 16:
+              elem_data = bf.to_opaque<uint16_t>(elem_data);
+              break;
+            case 8:
+              elem_data = bf.to_opaque<uint8_t>(elem_data);
+              break;
+            default:
+              // This type cannot be handled.
+              return make_error<TypeFormatError>(type);
+          }
+        }
+
         auto val = format(bpftrace, c_definitions, field.type, elem_data, div);
         if (!val) {
           return val.takeError();

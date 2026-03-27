@@ -45,3 +45,8 @@ PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s = (1, *(
 EXPECT @s: (1, { .m = 2, .n = 3 })
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
+
+NAME struct with bitfield
+PROG struct foo { unsigned long long x_0:1; unsigned long long x_1:1; unsigned long long x_2:2; } begin { $val = (uint64)0x1e; $f = *(struct foo *)(&$val); print($f); }
+EXPECT { .x_0 = 0, .x_1 = 1, .x_2 = 3 }
+
