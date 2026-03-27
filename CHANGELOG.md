@@ -24,6 +24,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Add bitfield support when printing full structure using "print()"
+  - [#2801](https://github.com/bpftrace/bpftrace/issues/2801)
 #### Security
 #### Docs
 #### Tools
