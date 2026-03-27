@@ -33,15 +33,6 @@ struct Bitfield {
   // Then logical AND `mask` to mask out everything but this bitfield
   uint64_t mask;
 
-private:
-  friend class cereal::access;
-  template <typename Archive>
-  void serialize(Archive &archive)
-  {
-    archive(read_bytes, access_rshift, mask);
-  }
-
-public:
   template <typename T>
   bpftrace::util::OpaqueValue to_opaque(
       const bpftrace::util::OpaqueValue &data) const
@@ -56,6 +47,14 @@ public:
 
     return bpftrace::util::OpaqueValue::from<T>(
         (data.bitcast<T>() >> rshiftbits) & static_cast<T>(mask));
+  }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(read_bytes, access_rshift, mask);
   }
 };
 

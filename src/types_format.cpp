@@ -159,8 +159,7 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
         auto elem_data = value.slice(field.offset, field.type.GetSize());
 
         if (field.bitfield) {
-          auto bf = field.bitfield.value_or(Bitfield{});
-
+          auto bf = *field.bitfield;
           switch (field.type.GetIntBitWidth()) {
             case 64:
               elem_data = bf.to_opaque<uint64_t>(elem_data);
