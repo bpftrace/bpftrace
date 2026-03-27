@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Extend support for DWARF formats
+  - [#5095](https://github.com/bpftrace/bpftrace/pull/5095)
 - Ternary operator supports an empty second operand.
   - [#5077](https://github.com/bpftrace/bpftrace/pull/5077)
 - Add `uprobe` support for source location attach points.

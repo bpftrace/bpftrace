@@ -98,3 +98,62 @@ REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
+NAME parse stripped debuginfo - list args
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test-stripped:main' --debuginfo=./debug
+EXPECT int argc
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME parse stripped debuginfo - arg by name
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_test-stripped:uprobeFunction1 { printf("%c\n", args.c); exit(); }' --debuginfo=./debug
+EXPECT x
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test-stripped
+
+NAME parse stripped debuginfo - attach by source line
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_test-stripped@uprobe_test.c:16 { print("ok"); exit(); }' --debuginfo=./debug
+EXPECT ok
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test-stripped
+
+NAME parse DWO debuginfo - list args
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/debug/dwo/uprobe_test-split:main'
+EXPECT int argc
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME parse DWO debuginfo - arg by name
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwo/uprobe_test-split:uprobeFunction1 { printf("%c\n", args.c); exit(); }'
+EXPECT x
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/debug/dwo/uprobe_test-split
+
+NAME parse DWO debuginfo - attach by source line
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwo/uprobe_test-split@uprobe_test.c:16 { printf("ok"); exit(); }'
+EXPECT ok
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/debug/dwo/uprobe_test-split
+
+NAME parse DWP debuginfo - list args
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/debug/dwp/uprobe_test-split:main'
+EXPECT int argc
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME parse DWP debuginfo - arg by name
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwp/uprobe_test-split:uprobeFunction1 { printf("%c\n", args.c); exit(); }'
+EXPECT x
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/debug/dwp/uprobe_test-split
+
+NAME parse DWP debuginfo - attach by source line
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwp/uprobe_test-split@uprobe_test.c:16 { printf("ok"); exit(); }'
+EXPECT ok
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/debug/dwp/uprobe_test-split

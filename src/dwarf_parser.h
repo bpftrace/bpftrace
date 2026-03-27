@@ -43,8 +43,16 @@ class Dwarf {
 public:
   virtual ~Dwarf();
 
-  static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace,
-                                              const std::string &file_path);
+  Dwarf(const Dwarf &) = delete;
+  Dwarf &operator=(const Dwarf &) = delete;
+
+  Dwarf(Dwarf &&) = delete;
+  Dwarf &operator=(Dwarf &&) = delete;
+
+  static std::unique_ptr<Dwarf> GetFromBinary(
+      BPFtrace *bpftrace,
+      const std::string &file_path,
+      const std::string &debuginfo_path);
 
   std::vector<std::string> get_function_params(
       const std::string &function) const;
@@ -58,13 +66,34 @@ public:
                                 size_t col_num = 0) const;
 
 private:
-  struct CuInfo {
-    std::filesystem::path source;
-    Dwarf_Die *die;
+  // Compilation unit wrapper, abstracting over regular and split (DWO/DWP)
+  // CU DIEs.
+  class CuInfo {
+  public:
+    // Standard CU DIE, managed by the libdw session.
+    Dwarf_Die *cudie = nullptr;
+
+    // Split CU DIE loaded from a dwo/dwp file. Must be owned and managed
+    // manually per the libdw API, and is valid for the lifetime of the CuInfo
+    // instance.
+    //
+    // Present when cudie is a DW_UT_skeleton unit. In that case, this should
+    // be used instead, as it holds vast majority of the debug info. libdw
+    // automatically resolves references between the skeleton and split CU.
+    std::optional<Dwarf_Die> split_cudie;
+
+    // Returns split CU DIE if present (skeleton CU), otherwise cudie.
+    Dwarf_Die *cu_die()
+    {
+      return split_cudie ? &split_cudie.value() : cudie;
+    }
   };
 
-  Dwarf(BPFtrace *bpftrace, const std::string &file_path);
+  Dwarf(BPFtrace *bpftrace,
+        const std::string &file_path,
+        std::string debuginfo_path);
 
+  bool next_cu_info(CuInfo *cu_info) const;
   std::vector<Dwarf_Die> function_param_dies(const std::string &function) const;
   std::optional<Dwarf_Die> get_func_die(const std::string &function) const;
   std::string get_type_name(Dwarf_Die &type_die) const;
@@ -78,7 +107,7 @@ private:
 
   SizedType get_stype(Dwarf_Die &type_die, bool resolve_structs = true) const;
 
-  Result<CuInfo> get_cu_info(const std::string &source_file) const;
+  Result<CuInfo> get_cu_by_src(const std::string &source_file) const;
 
   static std::optional<Dwarf_Die> get_child_with_tagname(
       Dwarf_Die *die,
@@ -87,15 +116,23 @@ private:
   static std::vector<Dwarf_Die> get_all_children_with_tag(Dwarf_Die *die,
                                                           int tag);
 
-  static std::optional<std::filesystem::path> resolve_cu_path(
-      std::string_view cu_name,
-      std::string_view cu_comp_dir);
+  static std::optional<std::filesystem::path> get_cu_src_path(Dwarf_Die *cudie);
 
   Dwfl *dwfl = nullptr;
   Dwfl_Callbacks callbacks;
 
   BPFtrace *bpftrace_;
   std::string file_path_;
+  // Dwfl_Callbacks struct takes a char** pointing to a debuginfo path which has
+  // to remain valid for the lifetime of the dwfl session, because debug info is
+  // loaded lazily; e.g. dwfl_nextcu triggers the find_debuginfo callback on
+  // first use for *each* module and dereferences the pointer.
+  //
+  // Each instance of this class owns a copy of the path string and keeps
+  // debuginfo_path_cstr_ pointing to its internal buffer to pass a stable
+  // char** to Dwfl_Callbacks.
+  std::string debuginfo_path_;
+  const char *debuginfo_path_cstr_;
 };
 
 } // namespace bpftrace
@@ -113,6 +150,8 @@ public:
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace
                                               __attribute__((unused)),
                                               const std::string &file_path_
+                                              __attribute__((unused)),
+                                              const std::string &debuginfo_path
                                               __attribute__((unused)))
   {
     return nullptr;

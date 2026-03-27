@@ -81,6 +81,7 @@ enum Options {
   BTF,
   CMD,
   DEBUG,
+  DEBUGINFO,
   DRY_RUN,
   EMIT_ELF,
   EMIT_LLVM,
@@ -149,6 +150,8 @@ void usage(std::ostream& out)
   out << "                   only run probes whose name matches REGEX" << std::endl;
   out << "    --traceable-functions FILE" << std::endl;
   out << "                   load the list of traceable kernel functions from FILE" << std::endl;
+  out << "    --debuginfo DIR" << std::endl;
+  out << "                   add one or more directory to the debug info search path" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    -v, --verbose           verbose messages" << std::endl;
@@ -330,6 +333,7 @@ struct Args {
   std::string script;
   std::string search;
   std::string filename;
+  std::string debuginfo_path;
   std::string output_file;
   std::string output_format;
   std::string output_elf;
@@ -422,6 +426,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::DEBUG },
+    option{ .name = "debuginfo",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::DEBUGINFO },
     option{ .name = "dry-run",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -663,6 +671,9 @@ Args parse_args(int argc, char* argv[])
       case 'b':
       case Options::BTF:
         break;
+      case Options::DEBUGINFO:
+        args.debuginfo_path = optarg;
+        break;
       case 'h':
       case Options::HELP:
         usage(std::cout);
@@ -872,6 +883,7 @@ int main(int argc, char* argv[])
   bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
   bpftrace.probe_filter_ = args.probe_filter;
+  bpftrace.debuginfo_path_ = args.debuginfo_path;
 
   if (!args.pid_str.empty()) {
     auto maybe_pid = util::to_uint(args.pid_str);
