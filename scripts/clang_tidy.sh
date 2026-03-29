@@ -69,4 +69,4 @@ run make -C "$BUILD_DIR" -j $(nproc)
 # and unset, then it's an empty arg and run-clang-tidy will treat it as
 # an empty regex which causes all sorts of trouble.
 run run-clang-tidy -q -format -config-file .clang-tidy -p "$BUILD_DIR" $FIX \
-  '^.*(src|tests)/.*\.(h|cpp)$'
+  '(?!.*/(libbpf)/).*(src|tests)/.*\.(h|cpp)$'
