@@ -148,6 +148,10 @@ void UnstableFeature::check_unstable_tseries(Node &node)
 
 void UnstableFeature::check_unstable_dw_ustack(Node &node)
 {
+#ifndef HAVE_DW_UNWIND
+  node.addError() << "dw_ustack is not available in this build "
+                     "(requires x86_64 and LLVM >= 21)";
+#else
   if (bpftrace_.config_->unstable_dw_ustack == ConfigUnstable::error) {
     node.addError() << get_error(DW_USTACK, UNSTABLE_DW_USTACK);
     return;
@@ -158,6 +162,7 @@ void UnstableFeature::check_unstable_dw_ustack(Node &node)
     LOG(WARNING) << get_warning(DW_USTACK, UNSTABLE_DW_USTACK);
     warned_features.insert(UNSTABLE_DW_USTACK);
   }
+#endif // HAVE_DW_UNWIND
 }
 
 void UnstableFeature::visit(MapAddr &map_addr)

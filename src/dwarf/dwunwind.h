@@ -8,11 +8,6 @@
 #include <vector>
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
-#include <llvm/Config/llvm-config.h>
-
-#if (defined(__x86_64__) || defined(__amd64__)) && LLVM_VERSION_MAJOR >= 21
-#define DWUNWIND
-#endif
 
 #define DWUNWIND_MAPPINGS "dwunwind_mappings"
 #define DWUNWIND_OFFSETMAPS "dwunwind_offsetmaps"

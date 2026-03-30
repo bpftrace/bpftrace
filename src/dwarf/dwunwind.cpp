@@ -7,8 +7,8 @@
 #include <iostream>
 #include <memory>
 
-#include "dwunwind.h"
-#include "dwunwind_table.h"
+#include "dwarf/dwunwind.h"
+#include "dwarf/dwunwind_table.h"
 #include "log.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -391,6 +391,15 @@ DWARFError DWARFUnwind::add_new_file(const std::string &filename,
   return read_eh_frame(fn, oid, map_offsets);
 }
 
+static DWARFError not_implemented(const std::string &filename,
+                                  const std::string &enc)
+{
+  LOG(ERROR) << "DWARF encoding " << enc << " not supported in file "
+             << filename;
+
+  return DWARFError::ParseError;
+}
+
 DWARFError DWARFUnwind::push_current_table()
 {
   if (current_table_.empty())
@@ -548,19 +557,17 @@ DWARFError DWARFUnwind::read_eh_frame(
               append_u64(rs, 0);
               break;
             case llvm::dwarf::UnwindLocation::CFAPlusOffset:
-              if (loc.getDereference())
+              if (loc.getDereference()) {
                 append_u32(rs, 3); // offset(N)
-              else
+              } else {
                 append_u32(rs, 4); // val_offset(N)
+              }
               append_u64(rs, loc.getOffset());
               break;
             case llvm::dwarf::UnwindLocation::RegPlusOffset:
-              if (loc.getOffset() != 0) {
-                LOG(V1) << "RegPlusOffset with non-zero offset not supported "
-                           "for reg "
-                        << reg;
-                return DWARFError::ParseError;
-              }
+              if (loc.getOffset() != 0)
+                return not_implemented(filename,
+                                       "RegPlusOffset with non-zero offset");
               append_u32(rs, 5); // register(R)
               append_u64(rs, loc.getRegister());
               break;
@@ -582,13 +589,12 @@ DWARFError DWARFUnwind::read_eh_frame(
               break;
             }
             case llvm::dwarf::UnwindLocation::Constant:
-              append_u32(rs, 9);
+              append_u32(rs, 8);
               append_u64(rs, loc.getOffset());
               break;
-
             default:
-              LOG(V1) << "Unsupported location type for reg " << reg;
-              return DWARFError::ParseError;
+              return not_implemented(filename,
+                                     "location type " + loc.getLocation());
           }
           reg_rules[reg] = rs;
         }

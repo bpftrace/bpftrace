@@ -76,6 +76,7 @@ enum register_rule_type {
   REGISTER_RULE_REGISTER = 5,
   REGISTER_RULE_EXPRESSION = 6,
   REGISTER_RULE_VAL_EXPRESSION = 7,
+  REGISTER_RULE_CONSTANT = 8,
 };
 
 struct register_rule {
@@ -763,6 +764,60 @@ unwind_step(void)
       DBG("  r%d: at addr %lx value %lx", reg, addr, val);
       regs_n[reg] = val;
       regs_v_n |= (1 << reg);
+    } else if (cf->rules[reg].rtype == REGISTER_RULE_VAL_OFFSET) {
+      // register value is CFA + offset (no dereference)
+      s64 off = cf->rules[reg].data.offset;
+      regs_n[reg] = cfa + off;
+      DBG("  r%d: val_offset cfa %lx + %lld = %lx", reg, cfa, off, regs_n[reg]);
+      regs_v_n |= (1 << reg);
+    } else if (cf->rules[reg].rtype == REGISTER_RULE_REGISTER) {
+      // register value is copied from another register
+      u64 src_reg = cf->rules[reg].data.reg;
+      if (src_reg >= NUM_REGISTERS) {
+        LOG("Stack walk: register rule source r%d out of range for r%d",
+          (int)src_reg, reg);
+        return 1;
+      }
+      if ((regs_v_o & (1 << src_reg)) == 0) {
+        LOG("Stack walk: source register r%d not valid for r%d",
+          (int)src_reg, reg);
+        return 1;
+      }
+      regs_n[reg] = regs_o[src_reg];
+      DBG("  r%d: register r%d = %lx", reg, (int)src_reg, regs_n[reg]);
+      regs_v_n |= (1 << reg);
+    } else if (cf->rules[reg].rtype == REGISTER_RULE_EXPRESSION) {
+      // evaluate expression and dereference result
+      u32 expr_id = cf->rules[reg].data.expression_id;
+      u64 addr;
+      [[clang::noinline]] addr = eval_expr(expr_id);
+      if (s->eval_error)
+        return 1;
+      u64 val = 0;
+      int ret = bpf_probe_read_user(&val, sizeof(val), (void *)addr);
+      if (ret < 0) {
+        LOG("Stack walk: failed to deref expr result for r%d at %lx",
+          reg, addr);
+        return 1;
+      }
+      regs_n[reg] = val;
+      DBG("  r%d: expression(%d) deref %lx = %lx", reg, expr_id, addr, val);
+      regs_v_n |= (1 << reg);
+    } else if (cf->rules[reg].rtype == REGISTER_RULE_VAL_EXPRESSION) {
+      // evaluate expression, use result directly (no dereference)
+      u32 expr_id = cf->rules[reg].data.expression_id;
+      u64 val;
+      [[clang::noinline]] val = eval_expr(expr_id);
+      if (s->eval_error)
+        return 1;
+      regs_n[reg] = val;
+      DBG("  r%d: val_expression(%d) = %lx", reg, expr_id, val);
+      regs_v_n |= (1 << reg);
+    } else if (cf->rules[reg].rtype == REGISTER_RULE_CONSTANT) {
+      // register value is a constant
+      regs_n[reg] = cf->rules[reg].data.offset;
+      DBG("  r%d: constant %lx", reg, regs_n[reg]);
+      regs_v_n |= (1 << reg);
     } else {
       LOG("Stack walk: unsupported register rule type %d for r%d",
         cf->rules[reg].rtype, reg);
@@ -799,10 +854,10 @@ long __ustack_dwunwind(void *ctx, u64 *buf, u32 buf_size, u32 tgid)
 
   u64 *buf_start = buf;
 
-  /* test if we have a mapping for this pid, otherwise fall back to ustack() */
+  /* test if we have a mapping for this pid */
   void *m = bpf_map_lookup_elem(&dwunwind_mappings, &tgid);
   if (m == NULL)
-    return bpf_get_stack(ctx, buf, buf_size, BPF_F_USER_STACK);
+    return -2;
 
   task = bpf_get_current_task_btf();
   if (task == NULL) {
@@ -833,7 +888,7 @@ long __ustack_dwunwind(void *ctx, u64 *buf, u32 buf_size, u32 tgid)
     LOG("no pt_regs");
     return 0;
   }
-  // XXX differentiate between 32 and 64 bit?
+  // TODO: differentiate between 32 and 64 bit?
 
   u32 zero = 0;
   struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scrach, &zero);
@@ -844,8 +899,8 @@ long __ustack_dwunwind(void *ctx, u64 *buf, u32 buf_size, u32 tgid)
   s->tgid = tgid;
   s->xol_base = xol_base;
 
-  // XXX just read all as a block and sort later?
-  // XXX not all needed for stack walk without params
+  // TODO: just read all as a block and sort later?
+  // TODO: not all needed for stack walk without params
   s->regs_map[0] = BPF_CORE_READ(pregs, ax);
   s->regs_map[1] = BPF_CORE_READ(pregs, dx);
   s->regs_map[2] = BPF_CORE_READ(pregs, cx);

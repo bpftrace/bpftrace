@@ -729,6 +729,20 @@ ScopedExpr CodegenLLVM::dw_ustack(const SizedType &stype, const Location &loc)
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
 
   b_.SetInsertPoint(get_stack_fail);
+  BasicBlock *no_dwarf_block = BasicBlock::Create(module_->getContext(),
+                                                  "no_dwarf_data",
+                                                  parent);
+  BasicBlock *ustack_error_block = BasicBlock::Create(module_->getContext(),
+                                                      "ustack_error",
+                                                      parent);
+  Value *is_no_dwarf = b_.CreateICmpEQ(stack_size, b_.getInt64(-2));
+  b_.CreateCondBr(is_no_dwarf, no_dwarf_block, ustack_error_block);
+
+  b_.SetInsertPoint(no_dwarf_block);
+  b_.CreateRuntimeError(RuntimeErrorId::DW_USTACK_NO_DWARF, loc);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(ustack_error_block);
   b_.CreateRuntimeError(RuntimeErrorId::USTACK, loc);
   b_.CreateBr(merge_block);
 
@@ -4888,7 +4902,7 @@ ScopedExpr CodegenLLVM::createExternFuncCall(
   auto *inst = b_.CreateCall(func, arg_values, name);
   return ScopedExpr(inst, [this, inst, loc] {
     // We set the debug location on the call instructions only after the
-    // scoped expression is not longer used. Otherwise the instruction emitter
+    // scoped expression is no longer used. Otherwise the instruction emitter
     // seems to use this location for everything, which results in problems.
     inst->setDebugLoc(debug_.createDebugLocation(llvm_ctx_, scope_, loc));
   });

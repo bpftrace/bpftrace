@@ -8,10 +8,14 @@ namespace bpftrace::test::unstable_feature {
 
 using ::testing::HasSubstr;
 
-void test(const std::string& input, const std::string& error = "")
+void test(const std::string& input,
+          const std::string& error = "",
+          bool has_pid = false)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace& bpftrace = *mock_bpftrace;
+  if (has_pid)
+    bpftrace.dwarf_pids_.emplace_back(1);
 
   // The input provided here is embedded into an expression.
   ast::ASTContext ast("stdin", input);
@@ -37,9 +41,11 @@ void test(const std::string& input, const std::string& error = "")
   }
 }
 
-void test_error(const std::string& input, const std::string& error)
+void test_error(const std::string& input,
+                const std::string& error,
+                bool has_pid = false)
 {
-  test(input, error);
+  test(input, error, has_pid);
 }
 
 TEST(unstable_feature, check_error)
@@ -61,14 +67,18 @@ TEST(unstable_feature, check_error)
              "enable this unstable "
              "feature, set the config flag to enable. unstable_addr=enable");
 
+#ifdef HAVE_DW_UNWIND
   test("config = { unstable_dw_ustack=warn } uprobe:./a:main "
-       "{ @ = dw_ustack(); }");
+       "{ @ = dw_ustack(); }",
+       "",
+       true);
   test_error(
       "config = { unstable_dw_ustack=error } uprobe:./a:main "
       "{ @ = dw_ustack(); }",
       "dw_ustack (DWARF stack unwinding) feature is not enabled by default. "
       "To enable this unstable feature, set the config flag to enable. "
       "unstable_dw_ustack=enable");
+#endif
 }
 
 } // namespace bpftrace::test::unstable_feature

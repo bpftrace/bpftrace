@@ -2,7 +2,6 @@
 #include <sstream>
 
 #include "build_info.h"
-#include "dwunwind.h"
 
 #include "version.h"
 
@@ -41,7 +40,7 @@ std::string BuildInfo::report()
       << "no" << std::endl;
 #endif
   buf << "  dwunwind (DWARF stack unwinding): "
-#ifdef DWUNWIND
+#ifdef HAVE_DW_UNWIND
       << "yes" << std::endl;
 #else
       << "no" << std::endl;

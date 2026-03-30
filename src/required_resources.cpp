@@ -71,6 +71,10 @@ std::ostream &operator<<(std::ostream &os, const RuntimeErrorInfo &info)
       os << USTACK_MSG;
       break;
     }
+    case RuntimeErrorId::DW_USTACK_NO_DWARF: {
+      os << DW_USTACK_NO_DWARF_MSG;
+      break;
+    }
   }
   return os;
 }

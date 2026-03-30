@@ -43,7 +43,8 @@
 #include "bpfprogram.h"
 #include "bpftrace.h"
 #include "btf.h"
-#include "dwunwind.h"
+#include "dwarf/dwunwind.h"
+#include "dwarf/dwunwind_loader.h"
 #include "log.h"
 #include "output/capture.h"
 #include "output/discard.h"
@@ -290,115 +291,6 @@ void skb_output_lost(void *ctx, [[maybe_unused]] int cpu, __u64 cnt)
   perf_ctx->output.lost_events(cnt);
 }
 
-/*
- * Parse all DWARF unwind information here and buffer in RAM, so we
- * know how much space we need in the maps. Once dynamically allocated
- * hash maps are widely available, we can omit this step and directly
- * push to the maps in the step after loading the progs.
- */
-int parse_dwarf_unwind(
-    BpfBytecode &bytecode,
-    const std::vector<uint64_t> &pids,
-    std::map<TableType, std::vector<std::vector<uint8_t>>> &unwind_data,
-    std::map<uint32_t, std::vector<uint8_t>> &unwind_mappings)
-{
-  auto unwind = DWARFUnwind(
-      [&unwind_data, &unwind_mappings](TableType t,
-                                       uint32_t k,
-                                       const std::vector<uint8_t> &v) {
-        if (t != TableType::Mappings) {
-          if (!unwind_data.contains(t)) {
-            unwind_data[t] = std::vector<std::vector<uint8_t>>();
-          }
-          auto &table = unwind_data[t];
-          if (k < table.size()) {
-            table[k] = v;
-          } else if (k == table.size()) {
-            table.emplace_back(v);
-          } else {
-            LOG(BUG) << "Unwind mapping key " << k << " out of order, expected "
-                     << table.size();
-            return -1;
-          }
-        } else {
-          unwind_mappings[k] = v;
-        }
-        return 0;
-      });
-  for (const auto &pid : pids) {
-    auto ret = unwind.add_pid(pid);
-    if (ret != DWARFError::Success)
-      return -1;
-  }
-
-  // resize maps
-  for (auto const &t : unwind_data) {
-    Result<> ret = OK();
-    auto size = t.second.size();
-    if (t.first == TableType::UnwindTable) {
-      ret = bytecode.getMap(DWUNWIND_OFFSETMAPS).resize(size);
-    } else if (t.first == TableType::UnwindEntries) {
-      ret = bytecode.getMap(DWUNWIND_CFTS).resize(size);
-    } else if (t.first == TableType::Expressions) {
-      ret = bytecode.getMap(DWUNWIND_EXPRESSIONS).resize(size);
-    } else {
-      LOG(BUG) << "Unknown table type: " << static_cast<int>(t.first);
-      return -1;
-    }
-    if (!ret) {
-      LOG(BUG) << "Failed to resize unwind table: " << ret.takeError();
-      return -1;
-    }
-  }
-  auto ret = bytecode.getMap(DWUNWIND_MAPPINGS).resize(unwind_mappings.size());
-  if (!ret) {
-    LOG(BUG) << "Failed to resize unwind table: " << ret.takeError();
-    return -1;
-  }
-
-  return 0;
-}
-
-int feed_dwarf_unwind(
-    BpfBytecode &bytecode,
-    const std::map<TableType, std::vector<std::vector<uint8_t>>> &unwind_data,
-    const std::map<uint32_t, std::vector<uint8_t>> &unwind_mappings)
-{
-  // update arrays
-  for (auto const &t : unwind_data) {
-    std::string name;
-    const BpfMap *table;
-    if (t.first == TableType::UnwindTable) {
-      table = &bytecode.getMap(DWUNWIND_OFFSETMAPS);
-    } else if (t.first == TableType::UnwindEntries) {
-      table = &bytecode.getMap(DWUNWIND_CFTS);
-    } else if (t.first == TableType::Expressions) {
-      table = &bytecode.getMap(DWUNWIND_EXPRESSIONS);
-    } else {
-      LOG(BUG) << "Unknown table type: " << static_cast<int>(t.first);
-      return -1;
-    }
-    for (size_t i = 0; i < t.second.size(); i++) {
-      auto ret = table->update_elem(&i, t.second[i].data());
-      if (!ret) {
-        LOG(BUG) << "Failed to add unwind entry: " << ret.takeError();
-        return -1;
-      }
-    }
-  }
-  // unwind mappings are indexed by pid, so they are stored in a hash map
-  auto table = bytecode.getMap(DWUNWIND_MAPPINGS);
-  for (auto const &m : unwind_mappings) {
-    auto ret = table.update_elem(&m.first, m.second.data());
-    if (!ret) {
-      LOG(BUG) << "Failed to add unwind mapping: " << ret.takeError();
-      return -1;
-    }
-  }
-
-  return 0;
-}
-
 void BPFtrace::add_param(const std::string &param)
 {
   params_.emplace_back(param);
@@ -541,6 +433,7 @@ int BPFtrace::run(output::Output &out,
                   const ast::CDefinitions &c_definitions,
                   BpfBytecode bytecode)
 {
+  // temporary storage for DWARF unwind data, between parse and feed
   std::map<TableType, std::vector<std::vector<uint8_t>>> unwind_data;
   std::map<uint32_t, std::vector<uint8_t>> unwind_mappings;
 
@@ -580,12 +473,18 @@ int BPFtrace::run(output::Output &out,
 
   set_rlimit_nofile(resources.num_probes(), resources.maps_info.size());
 
+  // map DWUNWIND_MAPPINGS is only present if dw_unwind() is used.
   bool needs_dwarf_unwind = bytecode_.hasMap(DWUNWIND_MAPPINGS);
   if (needs_dwarf_unwind) {
     if (procmon_)
       dwarf_pids_.emplace_back(procmon_->pid());
     if (child_)
       dwarf_pids_.emplace_back(child_->pid());
+    if (dwarf_pids_.empty()) {
+      LOG(ERROR) << "dw_ustack requires a target process. "
+                    "Use -p, -c, or --dwarf-pid to specify one.";
+      return -1;
+    }
   }
 
   if (!(run_tests_ || run_benchmarks_) && child_ &&
@@ -604,7 +503,7 @@ int BPFtrace::run(output::Output &out,
     }
   }
 
-  if (bytecode_.hasMap(DWUNWIND_MAPPINGS) && !dwarf_pids_.empty()) {
+  if (needs_dwarf_unwind) {
     int ret = parse_dwarf_unwind(
         bytecode_, dwarf_pids_, unwind_data, unwind_mappings);
     if (ret)
@@ -643,7 +542,7 @@ int BPFtrace::run(output::Output &out,
     return -1;
   }
 
-  if (bytecode_.hasMap(DWUNWIND_MAPPINGS) && !dwarf_pids_.empty()) {
+  if (needs_dwarf_unwind) {
     int ret = feed_dwarf_unwind(bytecode_, unwind_data, unwind_mappings);
     if (ret)
       return ret;

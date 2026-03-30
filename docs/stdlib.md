@@ -259,7 +259,7 @@ The signature and output format are the same as `ustack`.
 Bpftrace needs to read the DWARF information for the target processes at startup.
 For this, one or more pids have to be specified. This can either be done via
 `-p`, `-c` (implicitly) or `--dwarf-pid`. If `dw_ustack` cannot find unwind
-information, it falls back to frame pointer-based stack walking.
+information for a process, a runtime warning is emitted.
 
 `dw_ustack` is currently only available on x86_64.
 

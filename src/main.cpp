@@ -40,7 +40,6 @@
 #include "btf.h"
 #include "build_info.h"
 #include "config.h"
-#include "dwunwind.h"
 #include "globalvars.h"
 #include "lockdown.h"
 #include "log.h"
@@ -133,7 +132,7 @@ void usage(std::ostream& out)
   out << "    -l, --list [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
   out << "    -p, --pid PID  filter actions and enable USDT probes on PID" << std::endl;
-#ifdef DWUNWIND
+#ifdef HAVE_DW_UNWIND
   out << "    --dwarf-pid PID add additional pids to the DWARF-unwinder." << std::endl;
 #endif
   out << "    -c, --cmd CMD  run CMD and enable USDT probes on resulting process" << std::endl;
@@ -659,7 +658,7 @@ Args parse_args(int argc, char* argv[])
       case Options::PROBE_FILTER:
         args.probe_filter = optarg;
         break;
-#ifdef DWUNWIND
+#ifdef HAVE_DW_UNWIND
       case Options::DWARF_PID:
         args.dwarf_pids_str.emplace_back(optarg);
         break;
