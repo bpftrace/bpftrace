@@ -104,6 +104,7 @@ void UnstableFeature::visit(Call &call)
   } else if (call.func == "dw_ustack") {
     check_unstable_dw_ustack(call);
   }
+  Visitor<UnstableFeature>::visit(call.vargs);
 }
 
 void UnstableFeature::visit(Typeinfo &typeinfo)
