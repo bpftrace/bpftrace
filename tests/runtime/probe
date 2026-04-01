@@ -653,6 +653,18 @@ EXPECT_REGEX fentry:bpf:[0-9]+:interval_us_100000_1
 EXPECT_REGEX fentry:bpf:[0-9]+:interval_us_100000_2
 TIMEOUT 10
 
+NAME fentry_bpf_args
+RUN {{BPFTRACE}} runtime/scripts/bpf_attach.bt & sleep 3 && {{BPFTRACE}} -e 'fentry:bpf:interval_us_* { printf("ctx=%p\n", args.ctx); exit(); }'
+EXPECT_REGEX ctx=0x[0-9a-f]+
+TIMEOUT 10
+REQUIRES_FEATURE btf
+
+NAME fexit_bpf_args
+RUN {{BPFTRACE}} runtime/scripts/bpf_attach.bt & sleep 3 && {{BPFTRACE}} -e 'fexit:bpf:interval_us_* { printf("ctx=%p ret=%d\n", args.ctx, retval); exit(); }'
+EXPECT_REGEX ctx=0x[0-9a-f]+ ret=-?[0-9]+
+TIMEOUT 15
+REQUIRES_FEATURE btf
+
 NAME probe_filter matches specific probe
 RUN {{BPFTRACE}} --probe-filter ':200' -e 'interval:ms:100 { printf("bad\n"); exit(); } interval:ms:200 { printf("hit\n"); exit(); }'
 EXPECT hit
