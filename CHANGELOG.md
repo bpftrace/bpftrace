@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.2] TBD
+
+#### Fixed
+- Fix crash when passing a variable as the second arg to `str`
+  - [#5107](https://github.com/bpftrace/bpftrace/pull/5107)
+
 ## [0.25.1] 2026-03-25
 
 #### Fixed
