@@ -1305,7 +1305,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     Value *strlen = b_.getInt64(max_strlen);
     if (call.vargs.size() > 1) {
       auto scoped_arg = visit(call.vargs.at(1));
-      Value *proposed_strlen = scoped_arg.value();
+      // Widen to i64 to match strlen (max_strlen) above, since the
+      // ICmp and Select below require matching operand types.
+      Value *proposed_strlen = b_.CreateIntCast(scoped_arg.value(),
+                                                b_.getInt64Ty(),
+                                                false);
 
       // integer comparison: unsigned less-than-or-equal-to
       CmpInst::Predicate P = CmpInst::ICMP_ULE;
