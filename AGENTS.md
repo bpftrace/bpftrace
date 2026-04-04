@@ -80,7 +80,7 @@ Use the `LOG()` macro with these levels:
 ## Source architecture
 
 The compilation pipeline:
-1. **Parser** (`src/rd_parser.cpp`, `src/rd_parser.h`) - recursive descent parser, generates AST
+1. **Parser** (`src/parser.cpp`, `src/parser.h`) - recursive descent parser, generates AST
 2. **AST passes** (`src/ast/passes/`) - semantic analysis, type checking, AST replacement, macro expansion
 3. **Codegen** (`src/ast/passes/codegen_llvm.cpp`, `src/ast/irbuilderbpf.cpp`) - LLVM IR generation
 4. **BPF bytecode** (`src/bpfbytecode.cpp`) - compiled BPF programs

@@ -42,7 +42,7 @@ add_library(runtime STATIC
 add_library(libbpftrace STATIC
   build_info.cpp
   lockdown.cpp
-  rd_parser.cpp
+  parser.cpp
 )
 # So it's not "liblibbpftrace"
 set_target_properties(libbpftrace PROPERTIES PREFIX "")

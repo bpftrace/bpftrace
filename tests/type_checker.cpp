@@ -25,7 +25,7 @@
 #include "bpftrace.h"
 #include "btf_common.h"
 #include "mocks.h"
-#include "rd_parser.h"
+#include "parser.h"
 #include "struct.h"
 
 namespace bpftrace::test::type_checker {

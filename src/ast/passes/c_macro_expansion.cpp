@@ -5,7 +5,7 @@
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/visitor.h"
 #include "clang_parser.h"
-#include "rd_parser.h"
+#include "parser.h"
 #include "util/strings.h"
 
 namespace bpftrace::ast {

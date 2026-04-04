@@ -1,7 +1,7 @@
 # Language Lexing and Parsing
 
 This describes the technical design and implementation of bpftrace's
-recursive descent parser (`src/rd_parser`).
+recursive descent parser (`src/parser`).
 
 ## Overview
 

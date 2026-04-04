@@ -25,7 +25,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
-#include "ast/passes/parser.h"
+#include "ast/passes/parse_passes.h"
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/printer.h"

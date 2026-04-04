@@ -3,7 +3,7 @@
 #include "arch/arch.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "mocks.h"
-#include "rd_parser.h"
+#include "parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::buitins {

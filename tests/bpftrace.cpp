@@ -19,7 +19,7 @@
 #include "btf_common.h"
 #include "mocks.h"
 #include "output/text.h"
-#include "rd_parser.h"
+#include "parser.h"
 #include "types.h"
 #include "types_format.h"
 #include "gmock/gmock-matchers.h"

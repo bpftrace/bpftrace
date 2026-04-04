@@ -1,7 +1,7 @@
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/config_analyser.h"
 #include "mocks.h"
-#include "rd_parser.h"
+#include "parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::unstable_feature {

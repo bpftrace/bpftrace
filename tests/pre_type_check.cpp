@@ -9,7 +9,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/types/pre_type_check.h"
 #include "mocks.h"
-#include "rd_parser.h"
+#include "parser.h"
 
 namespace bpftrace::test::pre_type_check {
 

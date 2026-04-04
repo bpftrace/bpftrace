@@ -3,7 +3,7 @@
 #include "ast_matchers.h"
 #include "btf_common.h"
 #include "mocks.h"
-#include "rd_parser.h"
+#include "parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::ap_probe_expansion {

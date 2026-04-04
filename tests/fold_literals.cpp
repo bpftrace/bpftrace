@@ -1,5 +1,5 @@
 #include "ast/passes/fold_literals.h"
-#include "ast/passes/parser.h"
+#include "ast/passes/parse_passes.h"
 #include "ast_matchers.h"
 #include "mocks.h"
 #include "gtest/gtest.h"

@@ -23,7 +23,7 @@
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/usdt_arguments.h"
 #include "btf.h"
-#include "rd_parser.h"
+#include "parser.h"
 
 namespace bpftrace::ast {
 

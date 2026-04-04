@@ -14,7 +14,7 @@
 #include "ast/passes/types/type_system.h"
 #include "bpftrace.h"
 #include "mocks.h"
-#include "rd_parser.h"
+#include "parser.h"
 
 namespace bpftrace::test::type_resolver {
 
