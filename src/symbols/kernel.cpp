@@ -246,17 +246,23 @@ static bool is_bad_func(const std::string &func)
 
 static Result<ModuleSet> parse_modules()
 {
-  std::ifstream modules_file("/proc/modules");
-  if (modules_file.fail()) {
-    return make_error<SystemError>("Error reading modules from /proc/modules");
-  }
-
   // We have a single pseudo-module for the main kernel binary, which
   // is vmlinux. This is used throughout the codebase to refer to the
   // kernel. For simplicity, we just add it here and everything else
   // just works out, since we also use it during populate_lazy.
   ModuleSet modules;
   modules.emplace("vmlinux");
+
+  std::ifstream modules_file("/proc/modules");
+  if (modules_file.fail()) {
+    // If the kernel is built without modules, then /proc/modules will not exist
+    if (errno == ENOENT) {
+      return modules;
+    }
+
+    return make_error<SystemError>("Error reading modules from /proc/modules");
+  }
+
   for (std::string line; std::getline(modules_file, line);) {
     // /proc/modules format: name size refcount deps state addr
     // We only need the name (first space-separated field)
