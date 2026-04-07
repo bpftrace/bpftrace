@@ -391,6 +391,7 @@ DWARFError DWARFUnwind::add_new_file(const std::string &filename,
   return read_eh_frame(fn, oid, map_offsets);
 }
 
+#if LLVM_VERSION_MAJOR >= 21
 static DWARFError not_implemented(const std::string &filename,
                                   const std::string &enc)
 {
@@ -399,6 +400,7 @@ static DWARFError not_implemented(const std::string &filename,
 
   return DWARFError::ParseError;
 }
+#endif
 
 DWARFError DWARFUnwind::push_current_table()
 {
