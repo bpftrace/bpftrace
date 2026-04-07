@@ -6,13 +6,16 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
+#include <sys/stat.h>
 
 #include "dwarf/dwunwind.h"
 #include "dwarf/dwunwind_table.h"
 #include "log.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include <llvm/Config/llvm-config.h>
@@ -296,11 +299,47 @@ DWARFError DWARFUnwind::add_object_file(const std::string &filename)
   return push_current_table();
 }
 
+std::string DWARFUnwind::resolve_path(const std::string &filename, int pid)
+{
+  if (pid >= 0)
+    return "/proc/" + std::to_string(pid) + "/root/" + filename;
+  return filename;
+}
+
+std::string DWARFUnwind::file_cache_key(const std::string &filename, int pid)
+{
+  auto resolved = resolve_path(filename, pid);
+
+  auto expectedBinary = llvm::object::createBinary(resolved);
+  if (expectedBinary) {
+    auto *bin = expectedBinary.get().getBinary();
+    auto *obj = llvm::dyn_cast<llvm::object::ObjectFile>(bin);
+    if (obj) {
+      auto build_id = llvm::object::getBuildID(obj);
+      if (!build_id.empty()) {
+        return "buildid:" + llvm::toHex(build_id);
+      }
+    }
+  } else {
+    llvm::consumeError(expectedBinary.takeError());
+  }
+
+  // Fallback: original pathname + size + mtime
+  struct stat st;
+  if (stat(resolved.c_str(), &st) == 0) {
+    return filename + ":" + std::to_string(st.st_size) + ":" +
+           std::to_string(st.st_mtim.tv_sec);
+  }
+
+  return filename;
+}
+
 DWARFError DWARFUnwind::add_file_nopush(const std::string &filename,
                                         int pid,
                                         uint32_t &out_oid)
 {
-  auto f = files_seen_.find(filename);
+  auto key = file_cache_key(filename, pid);
+  auto f = files_seen_.find(key);
   if (f != files_seen_.end()) {
     if (!f->second.has_value())
       return DWARFError::ParseError;
@@ -310,9 +349,9 @@ DWARFError DWARFUnwind::add_file_nopush(const std::string &filename,
 
   DWARFError err = add_new_file(filename, pid, out_oid);
   if (err != DWARFError::Success) {
-    files_seen_[filename] = std::nullopt;
+    files_seen_[key] = std::nullopt;
   } else {
-    files_seen_[filename] = out_oid;
+    files_seen_[key] = out_oid;
   }
 
   return err;
@@ -353,11 +392,7 @@ DWARFError DWARFUnwind::add_new_file(const std::string &filename,
   ++next_oid_;
   out_oid = oid;
 
-  std::string fn;
-  if (pid >= 0)
-    fn = "/proc/" + std::to_string(pid) + "/root/" + filename;
-  else
-    fn = filename;
+  auto fn = resolve_path(filename, pid);
 
   LOG(V1) << "Adding file " << fn << " with OID " << oid;
   auto ExpectedBinary = llvm::object::createBinary(fn);

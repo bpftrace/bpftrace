@@ -62,6 +62,8 @@ private:
   DWARFError read_eh_frame(const std::string &filename,
                            uint32_t oid,
                            const std::map<uint64_t, uint64_t> &map_offsets);
+  static std::string resolve_path(const std::string &filename, int pid);
+  std::string file_cache_key(const std::string &filename, int pid);
 
   TableFeedCallback table_feed_cb_;
   uint32_t next_oid_{ 0 };
