@@ -935,8 +935,10 @@ long __ustack_dwunwind(void *ctx, u64 *buf, u32 buf_size, u32 tgid)
   *buf++ = s->regs_map[RIP];
   int nframes = buf_size / sizeof(u64);
   for (int i = 1; i < MAX_STACK_FRAMES && i < nframes; ++i) {
-    [[clang::noinline]] if (unwind_step() != 0)
+    [[clang::noinline]] if (unwind_step() != 0) {
+      *buf++ = -1ull;
       goto done;
+    }
     ulong off = s->current_reg_set == 1 ? NUM_REGISTERS : 0;
     INFO("frame %d: RIP %lx RSP %lx", i,
       s->regs_map[RIP + off], s->regs_map[RSP + off]);

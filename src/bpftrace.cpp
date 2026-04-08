@@ -1069,6 +1069,10 @@ std::string BPFtrace::get_stack(uint64_t nr_stack_frames,
   stack << "\n";
   for (uint64_t i = 0; i < nr_stack_frames; ++i) {
     auto addr = raw_stack.bitcast<uint64_t>(i);
+    if (addr == static_cast<uint64_t>(-1)) {
+      stack << padding << "<unwind failure>" << std::endl;
+      break;
+    }
     if (stack_type.mode == StackMode::raw) {
       stack << std::hex << addr << std::endl;
       continue;
