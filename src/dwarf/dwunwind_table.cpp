@@ -2,8 +2,9 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
-#include <stdexcept>
 #include <vector>
+
+#include "log.h"
 
 //
 // Table entry format:
@@ -63,12 +64,6 @@
 // Maximum encodable table size is 256k
 //
 
-struct PtrTooLarge : std::runtime_error {
-  PtrTooLarge() : std::runtime_error("table pointer too large")
-  {
-  }
-};
-
 static std::vector<uint8_t> enc_rel_key(int64_t rel_key)
 {
   auto ukey = static_cast<uint64_t>(rel_key);
@@ -91,6 +86,7 @@ static std::vector<uint8_t> enc_rel_key(int64_t rel_key)
   }
 }
 
+// returning an empty vector means the pointer is too large to encode
 static std::vector<uint8_t> enc_rel_ptr(uint64_t rel_ptr)
 {
   if (rel_ptr <= 0xcf) {
@@ -100,10 +96,11 @@ static std::vector<uint8_t> enc_rel_ptr(uint64_t rel_ptr)
              static_cast<uint8_t>(rel_ptr & 0xff),
              static_cast<uint8_t>(rel_ptr >> 8) };
   } else {
-    throw PtrTooLarge();
+    return {};
   }
 }
 
+// returning an empty vector means the pointer is too large to encode
 static std::vector<uint8_t> enc_rel_leaf_ptr(uint64_t rel_ptr)
 {
   if (rel_ptr <= 0x1f) {
@@ -113,7 +110,7 @@ static std::vector<uint8_t> enc_rel_leaf_ptr(uint64_t rel_ptr)
              static_cast<uint8_t>(rel_ptr & 0xff),
              static_cast<uint8_t>(rel_ptr >> 8) };
   } else {
-    throw PtrTooLarge();
+    return {};
   }
 }
 
@@ -137,7 +134,8 @@ static std::vector<uint8_t> enc_value(uint64_t val)
       static_cast<uint8_t>(val & 0xff),
     };
   } else {
-    throw std::runtime_error("table value too large");
+    LOG(BUG) << "Encoding DWARF unwind table failed: value too large";
+    return {}; // unreachable
   }
 }
 
@@ -154,7 +152,7 @@ struct BuildStats {
   uint64_t bytes_in_values = 0;
 };
 
-static uint64_t build_recurse(
+static std::optional<uint64_t> build_recurse(
     BuildStats& stats,
     std::vector<uint8_t>& buf,
     const std::vector<std::pair<uint64_t, uint64_t>>& entries,
@@ -269,22 +267,32 @@ static uint64_t build_recurse(
   // <own key> <left ptr> <own value> <right subtree> <left subtree>
   // built from back to front
   // left subtree
-  auto left_ptr = build_recurse(
-      stats, buf, entries, start, split, own_key, false);
+  auto ret = build_recurse(stats, buf, entries, start, split, own_key, false);
+  if (!ret.has_value())
+    return std::nullopt;
+  auto left_ptr = ret.value();
+
   // right subtree
-  build_recurse(
+  ret = build_recurse(
       stats, buf, entries, split + 1, end, own_key, right_unmarked_leaf);
+  if (!ret.has_value())
+    return std::nullopt;
 
   // own value
   n = push(buf, enc_value(own_value));
   stats.bytes_in_values += n;
 
   // left ptr
+  std::vector<uint8_t> enc_ptr;
   if (left_is_leaf) {
-    n = push(buf, enc_rel_leaf_ptr(buf.size() - left_ptr));
+    enc_ptr = enc_rel_leaf_ptr(buf.size() - left_ptr);
   } else {
-    n = push(buf, enc_rel_ptr(buf.size() - left_ptr));
+    enc_ptr = enc_rel_ptr(buf.size() - left_ptr);
   }
+  if (enc_ptr.empty())
+    return std::nullopt;
+
+  n = push(buf, enc_ptr);
 
   // own key
   n = push(buf, enc_rel_key(own_key - parent_key));
@@ -311,10 +319,14 @@ std::vector<uint8_t> dwunwind_build_table(
     BuildStats stats = {};
     std::vector<uint8_t> buf;
 
-    try {
-      build_recurse(stats, buf, entries, start, start + n, 0, false);
-    } catch (const PtrTooLarge&) {
-      // too large, try fewer entries
+    auto ret = build_recurse(stats, buf, entries, start, start + n, 0, false);
+    if (!ret.has_value()) {
+      // this means the table is way too big, so we need to reduce the number of
+      // entries. This should only happen if the initial estimate was way off,
+      // so we can just drastically decrease the number of entries.
+      right = n - 1;
+      n = (left + right) / 2;
+      continue;
     }
 
     auto diff = static_cast<signed long>(buf.size()) -
@@ -328,7 +340,7 @@ std::vector<uint8_t> dwunwind_build_table(
       result_entries = n;
       left = n;
       n = std::min(n + adj, right);
-      if (labs(diff) < 100.0)
+      if (labs(diff) < 100)
         break;
     }
   }

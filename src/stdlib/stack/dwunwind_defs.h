@@ -1,7 +1,10 @@
-#ifndef EXPRESSION_H__
-#define EXPRESSION_H__
+#ifndef DWUNWIND_DEFS_H__
+#define DWUNWIND_DEFS_H__
 
 // NOLINTBEGIN(modernize-macro-to-enum) - shared with BPF C code
+#define MAX_MAPPINGS 1000
+#define NUM_REGISTERS 17 // 16 + RIP
+
 #define MAX_EXPR_INSTRUCTIONS 32
 
 // OPs without arguments
@@ -19,4 +22,4 @@
 #define EXPR_OP_BREG 0xc1
 // NOLINTEND(modernize-macro-to-enum)
 
-#endif // EXPRESSION_H__
+#endif // DWUNWIND_DEFS_H__

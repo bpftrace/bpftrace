@@ -4,14 +4,13 @@
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_core_read.h>
 
-#include "expression.h"
+#include "dwunwind_defs.h"
 
 #define LOG(...) // bpf_printk(__VA_ARGS__)
 #define DBG(...) // bpf_printk(__VA_ARGS__)
 #define INFO(...) // bpf_printk(__VA_ARGS__)
 #define TABLE(...) // bpf_printk(__VA_ARGS__)
 
-#define MAX_MAPPINGS 1000
 #define MAX_MAPPINGS_BISECT_STEPS 10
 
 #define OFFSETMAP_SIZE 262144  // 256 KB
@@ -20,7 +19,6 @@
 #define MAX_CFT_ENTRIES 1000
 
 #define MAX_EXPRESSION_LEN 255
-#define NUM_REGISTERS 17    // 16 + RIP
 #define EXPR_STACK_SIZE 16
 
 #define RSP 7
@@ -234,7 +232,7 @@ struct {
   __uint(max_entries, 1);
   __type(key, u32);
   __type(value, struct dwunwind_state);
-} dwunwind_state_scrach SEC(".maps");
+} dwunwind_state_scratch SEC(".maps");
 
 
 static struct map_entry *
@@ -457,7 +455,7 @@ u64 __noinline
 eval_expr(int expression_id)
 {
   u32 zero = 0;
-  struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scrach, &zero);
+  struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scratch, &zero);
   if (s == NULL) {
     LOG("no scratch state");
     return 0;
@@ -475,7 +473,6 @@ eval_expr(int expression_id)
   unsigned long sp = 0;
   int ninstr = expr->ninstructions;
   unsigned long i = 0;
-  unsigned long n = 0;
   if (ninstr > MAX_EXPR_INSTRUCTIONS) {
     LOG("expression id %d too many instructions %d",
         expression_id, ninstr);
@@ -638,7 +635,7 @@ unwind_step(void)
 {
   // fetch state from scratch memory
   u32 zero = 0;
-  struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scrach, &zero);
+  struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scratch, &zero);
   if (s == NULL) {
     LOG("no scratch state");
     return 1;
@@ -891,7 +888,7 @@ long __ustack_dwunwind(void *ctx, u64 *buf, u32 buf_size, u32 tgid)
   // TODO: differentiate between 32 and 64 bit?
 
   u32 zero = 0;
-  struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scrach, &zero);
+  struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scratch, &zero);
   if (s == NULL) {
     LOG("no scratch state");
     return 1;

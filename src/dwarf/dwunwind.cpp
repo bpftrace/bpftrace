@@ -20,11 +20,9 @@
 #include "llvm/Object/ObjectFile.h"
 #include <llvm/Config/llvm-config.h>
 
-#include "stdlib/stack/expression.h"
+#include "stdlib/stack/dwunwind_defs.h"
 
-const int NUM_REGISTERS = 17;
 const int CFT_ENTRY_SIZE = 228;
-const int MAX_MAPPINGS = 1000;
 const int CHUNK_SIZE = 256 * 1024;
 
 std::ostream &operator<<(std::ostream &os, const DWARFError &err)
@@ -58,14 +56,14 @@ std::ostream &operator<<(std::ostream &os, const DWARFError &err)
 static void append_u8(std::vector<uint8_t> &buf, uint8_t val)
 {
   if (buf.capacity() < buf.size() + 1)
-    throw std::bad_alloc();
+    LOG(BUG) << "append_u8: buffer overflow";
   buf.emplace_back(val);
 }
 
 static void append_u32(std::vector<uint8_t> &buf, uint32_t val)
 {
   if (buf.capacity() < buf.size() + 4)
-    throw std::bad_alloc();
+    LOG(BUG) << "append_u32: buffer overflow";
   buf.emplace_back(static_cast<uint8_t>(val & 0xff));
   buf.emplace_back(static_cast<uint8_t>((val >> 8) & 0xff));
   buf.emplace_back(static_cast<uint8_t>((val >> 16) & 0xff));
@@ -75,7 +73,7 @@ static void append_u32(std::vector<uint8_t> &buf, uint32_t val)
 static void append_u64(std::vector<uint8_t> &buf, uint64_t val)
 {
   if (buf.capacity() < buf.size() + 8)
-    throw std::bad_alloc();
+    LOG(BUG) << "append_u64: buffer overflow";
   buf.emplace_back(static_cast<uint8_t>(val & 0xff));
   buf.emplace_back(static_cast<uint8_t>((val >> 8) & 0xff));
   buf.emplace_back(static_cast<uint8_t>((val >> 16) & 0xff));
@@ -86,12 +84,12 @@ static void append_u64(std::vector<uint8_t> &buf, uint64_t val)
   buf.emplace_back(static_cast<uint8_t>((val >> 56) & 0xff));
 }
 
-static uint64_t expr_get(const std::vector<uint8_t> &expr_u8,
-                         size_t size,
-                         size_t &ix)
+static std::optional<uint64_t> expr_get(const std::vector<uint8_t> &expr_u8,
+                                        size_t size,
+                                        size_t &ix)
 {
   if (ix + size > expr_u8.size())
-    throw std::out_of_range("expr_get out of range");
+    return std::nullopt;
 
   uint64_t v = 0;
   for (size_t j = 0; j < size; ++j) {
@@ -100,16 +98,16 @@ static uint64_t expr_get(const std::vector<uint8_t> &expr_u8,
   return v;
 }
 
-static uint64_t expr_get_leb(const std::vector<uint8_t> &expr_u8,
-                             bool is_signed,
-                             size_t &ix)
+static std::optional<uint64_t> expr_get_leb(const std::vector<uint8_t> &expr_u8,
+                                            bool is_signed,
+                                            size_t &ix)
 {
   uint64_t result = 0;
   unsigned shift = 0;
   uint8_t byte;
   while (true) {
     if (ix >= expr_u8.size())
-      throw std::out_of_range("expr_get_sleb out of range");
+      return std::nullopt;
 
     byte = expr_u8[ix++];
     result |= static_cast<uint64_t>(byte & 0x7f) << shift;
@@ -123,92 +121,117 @@ static uint64_t expr_get_leb(const std::vector<uint8_t> &expr_u8,
   return result;
 }
 
-static void convert_expression(const std::vector<uint8_t> &expr_u8,
-                               std::vector<uint8_t> &eout)
+// returns nullopt or error string
+static std::optional<std::string> convert_expression(
+    const std::vector<uint8_t> &expr_u8,
+    std::vector<uint8_t> &eout)
 {
   eout.emplace_back(0); // placeholder for number of instructions
-  uint64_t v;
-  uint64_t w;
+  uint64_t u;
+  std::optional<uint64_t> v;
   size_t i = 0;
   uint8_t nexpr = 0;
   while (i < expr_u8.size()) {
-    if (nexpr == MAX_EXPR_INSTRUCTIONS)
-      throw std::runtime_error("DWARF expression too long");
+    if (nexpr == MAX_EXPR_INSTRUCTIONS) {
+      return std::make_optional<std::string>("DWARF expression too long");
+    }
     ++nexpr;
     uint8_t op = expr_u8[i++];
     switch (op) {
       case llvm::dwarf::DW_OP_addr:
         // XXX handle 32 bit case
         v = expr_get(expr_u8, 8, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_deref:
         append_u8(eout, EXPR_OP_DEREF);
         break;
       case llvm::dwarf::DW_OP_const1u:
         v = expr_get(expr_u8, 1, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_const1s:
-        v = static_cast<int8_t>(expr_get(expr_u8, 1, i));
+        v = expr_get(expr_u8, 1, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, static_cast<int8_t>(v.value()));
         break;
       case llvm::dwarf::DW_OP_const2u:
         v = expr_get(expr_u8, 2, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_const2s:
-        v = static_cast<int16_t>(expr_get(expr_u8, 2, i));
+        v = expr_get(expr_u8, 2, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, static_cast<int16_t>(v.value()));
         break;
       case llvm::dwarf::DW_OP_const4u:
         v = expr_get(expr_u8, 4, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_const4s:
-        v = static_cast<int32_t>(expr_get(expr_u8, 4, i));
+        v = expr_get(expr_u8, 4, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, static_cast<int32_t>(v.value()));
         break;
       case llvm::dwarf::DW_OP_const8u:
       case llvm::dwarf::DW_OP_const8s:
         v = expr_get(expr_u8, 8, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_constu:
         v = expr_get_leb(expr_u8, false, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_consts:
         v = expr_get_leb(expr_u8, true, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_lit0... llvm::dwarf::DW_OP_lit31:
-        v = op - llvm::dwarf::DW_OP_lit0;
+        u = op - llvm::dwarf::DW_OP_lit0;
         append_u8(eout, EXPR_OP_CONST);
-        append_u64(eout, v);
+        append_u64(eout, u);
         break;
       case llvm::dwarf::DW_OP_reg0... llvm::dwarf::DW_OP_reg31:
-        v = op - llvm::dwarf::DW_OP_reg0;
+        u = op - llvm::dwarf::DW_OP_reg0;
         append_u8(eout, EXPR_OP_BREG);
-        append_u8(eout, v);
+        append_u8(eout, u);
         append_u64(eout, 0);
         break;
       case llvm::dwarf::DW_OP_breg0... llvm::dwarf::DW_OP_breg31:
-        v = op - llvm::dwarf::DW_OP_breg0;
-        w = expr_get_leb(expr_u8, true, i);
+        u = op - llvm::dwarf::DW_OP_breg0;
+        v = expr_get_leb(expr_u8, true, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_BREG);
-        append_u8(eout, v);
-        append_u64(eout, w);
+        append_u8(eout, u);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_and:
         append_u8(eout, EXPR_OP_AND);
@@ -227,8 +250,10 @@ static void convert_expression(const std::vector<uint8_t> &expr_u8,
         break;
       case llvm::dwarf::DW_OP_plus_uconst:
         v = expr_get_leb(expr_u8, false, i);
+        if (!v.has_value())
+          goto invalid_expression;
         append_u8(eout, EXPR_OP_PLUS_CONST);
-        append_u64(eout, v);
+        append_u64(eout, v.value());
         break;
       case llvm::dwarf::DW_OP_addrx:
       case llvm::dwarf::DW_OP_call2:
@@ -242,19 +267,20 @@ static void convert_expression(const std::vector<uint8_t> &expr_u8,
       case llvm::dwarf::DW_OP_reinterpret:
       case llvm::dwarf::DW_OP_push_object_address:
       case llvm::dwarf::DW_OP_call_frame_cfa:
-        LOG(ERROR) << "DWARF expression op 0x" << std::hex
-                   << static_cast<int>(op) << std::dec << " not allowed here.";
-        throw std::runtime_error("invalid DWARF expression");
-        break;
+        return std::make_optional<std::string>("DWARF expression op 0x" +
+                                               llvm::utohexstr(op, true) +
+                                               " not allowed");
       default:
-        LOG(ERROR) << "DWARF expression op 0x" << std::hex
-                   << static_cast<int>(op) << std::dec
-                   << " not implemented yet.";
-        throw std::runtime_error("unsupported DWARF expression");
-        break;
+        return std::make_optional<std::string>("DWARF expression op 0x" +
+                                               llvm::utohexstr(op, true) +
+                                               " not implemented");
     }
   }
   eout[0] = nexpr;
+  return std::nullopt;
+
+invalid_expression:
+  return std::make_optional<std::string>("invalid expression");
 }
 
 std::optional<uint32_t> DWARFUnwind::add_expression(llvm::DWARFExpression &expr)
@@ -275,10 +301,9 @@ std::optional<uint32_t> DWARFUnwind::add_expression(llvm::DWARFExpression &expr)
   std::vector<uint8_t> expr_out;
   expr_out.reserve(256);
 
-  try {
-    convert_expression(expr_u8, expr_out);
-  } catch (const std::exception &e) {
-    LOG(ERROR) << "Failed to convert DWARF expression: " << e.what();
+  auto error = convert_expression(expr_u8, expr_out);
+  if (error.has_value()) {
+    LOG(ERROR) << "Failed to convert DWARF expression: " << error.value();
     return std::nullopt;
   }
   expr_out.resize(256, 0);
@@ -736,7 +761,7 @@ DWARFError DWARFUnwind::read_eh_frame(
   (void)filename;
   (void)oid;
   (void)map_offsets;
-  throw std::runtime_error("DWARF unwind not supported");
+  return DWARFError::UnsupportedFormat;
 #endif
 }
 

@@ -8,7 +8,7 @@
 // the actual unwind instructions.
 // Data is encoded as a compact binary tree suitable for lower bound style
 // lookups.
-// See dwundind_table.cpp for details of the encoding.
+// See dwunwind_table.cpp for details of the encoding.
 std::vector<uint8_t> dwunwind_build_table(
     const std::vector<std::pair<uint64_t, uint64_t>>& entries,
     size_t start,

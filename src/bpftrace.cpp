@@ -503,12 +503,8 @@ int BPFtrace::run(output::Output &out,
     }
   }
 
-  if (needs_dwarf_unwind) {
-    int ret = parse_dwarf_unwind(
-        bytecode_, dwarf_pids_, unwind_data, unwind_mappings);
-    if (ret)
-      return ret;
-  }
+  if (needs_dwarf_unwind)
+    parse_dwarf_unwind(bytecode_, dwarf_pids_, unwind_data, unwind_mappings);
 
   auto ok = bytecode_.load_progs(resources, *btf_, *feature_, *config_);
   if (!ok) {

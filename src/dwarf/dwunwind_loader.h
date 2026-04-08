@@ -11,7 +11,7 @@ namespace bpftrace {
 
 int parse_dwarf_unwind(
     BpfBytecode &bytecode,
-    const std::vector<uint64_t> &pids,
+    const std::vector<pid_t> &pids,
     std::map<TableType, std::vector<std::vector<uint8_t>>> &unwind_data,
     std::map<uint32_t, std::vector<uint8_t>> &unwind_mappings);
 
