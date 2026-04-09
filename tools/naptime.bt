@@ -38,10 +38,24 @@ BEGIN
          "TIME", "PPID", "PCOMM", "PID", "COMM", "SECONDS");
 }
 
+tracepoint:syscalls:sys_enter_clock_nanosleep,
 tracepoint:syscalls:sys_enter_nanosleep
-/args.rqtp.tv_sec + args.rqtp.tv_nsec/
+{
+  @rqtp[tid] = args.rqtp;
+}
+
+tracepoint:syscalls:sys_exit_clock_nanosleep,
+tracepoint:syscalls:sys_exit_nanosleep
+/ args.ret == 0 /
 {
   time("%H:%M:%S ");
+  $t = @rqtp[tid];
   printf("%-6d %-16s %-6d %-16s %d.%03d\n",
-         ppid, pcomm, pid, comm, args.rqtp.tv_sec, ((uint64)args.rqtp.tv_nsec) / 1e6);
+         ppid, pcomm, pid, comm, $t.tv_sec, ((uint64)$t.tv_nsec) / 1e6);
+  delete(@rqtp, tid);
+}
+
+END
+{
+  clear(@rqtp);
 }

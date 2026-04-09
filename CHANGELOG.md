@@ -31,6 +31,8 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- naptime.bt: Filter out failed calls and add clock_nanosleep support
+  - [#5117](https://github.com/bpftrace/bpftrace/pull/5117)
 
 ## [0.25.1] 2026-03-25
 
