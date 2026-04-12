@@ -495,8 +495,13 @@ Buffer Formatter::visit(Typeof& typeof)
   } else {
     // Prefer the simpler form for direct types.
     return format(
-        std::get<SizedType>(typeof.record), metadata, max_width, bare);
+        *std::get<ParsedType*>(typeof.record), metadata, max_width, bare);
   }
+}
+
+Buffer Formatter::visit(ParsedType& type)
+{
+  return visit(static_cast<const ParsedType&>(type));
 }
 
 Buffer Formatter::visit(Typeinfo& typeinfo)
@@ -1376,9 +1381,32 @@ Buffer Formatter::visit(NamedArgument& named_arg)
   return elem;
 }
 
-Buffer Formatter::visit(const SizedType& type)
+Buffer Formatter::visit(const ParsedType& type)
 {
-  return Buffer().text(typestr(type));
+  switch (type.kind) {
+    case ParsedType::Kind::Identifier:
+    case ParsedType::Kind::Struct:
+    case ParsedType::Kind::Union:
+    case ParsedType::Kind::Enum:
+      return Buffer().text(type.type_name());
+    case ParsedType::Kind::Pointer:
+      if (!type.inner) {
+        return {};
+      }
+      return format(*type.inner, metadata, max_width, bare).text("*");
+    case ParsedType::Kind::Array: {
+      if (!type.inner) {
+        return {};
+      }
+      auto buffer = format(*type.inner, metadata, max_width, bare).text("[");
+      if (type.array_size != 0) {
+        buffer = std::move(buffer).text(std::to_string(type.array_size));
+      }
+      return std::move(buffer).text("]");
+    }
+  }
+
+  return {};
 }
 
 } // namespace bpftrace::ast

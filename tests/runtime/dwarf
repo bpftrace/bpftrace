@@ -73,16 +73,23 @@ REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
+NAME complex type declaration
+PROG uprobe:./testprogs/uprobe_test:uprobeFunctionBar { let $x: struct Foo *[2] = args.bar->foos; printf("bar.foos[0].a = %d\n", $x[0]->a); exit(); }
+EXPECT bar.foos[0].a = 123
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
 # Attaching probes using source code location
 NAME uprobe source location - attach probe to source line
-PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:16 { printf("0x%lx\n", reg("ip")); exit(); }
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:22 { printf("0x%lx\n", reg("ip")); exit(); }
 EXPECT_REGEX ^0x[0-9A-Fa-f]+$
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobe source location - source line to address validation
-PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:16 { @a = reg("ip"); }
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:22 { @a = reg("ip"); }
      uprobe:./testprogs/uprobe_test:uprobeFunction1 { @b = reg("ip"); if (@b == @a) { printf("0x%lx == 0x%lx\n", @a, @b); exit(); } }
 EXPECT_REGEX ^0x[0-9A-Fa-f]+ == 0x[0-9A-Fa-f]+$
 REQUIRES_FEATURE dwarf
@@ -90,9 +97,9 @@ TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobe source location - attach multiple probes
-PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:28 { @a=1; }
-     uprobe:./testprogs/uprobe_test@uprobe_test.c:30 { @b=1; }
-     uprobe:./testprogs/uprobe_test@uprobe_test.c:33 { if (@a == 1 && @b == 1) { print("success"); exit(); } }
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:34 { @a=1; }
+     uprobe:./testprogs/uprobe_test@uprobe_test.c:36 { @b=1; }
+     uprobe:./testprogs/uprobe_test@uprobe_test.c:39 { if (@a == 1 && @b == 1) { print("success"); exit(); } }
 EXPECT success
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
@@ -112,7 +119,7 @@ TIMEOUT 5
 BEFORE ./testprogs/uprobe_test-stripped
 
 NAME parse stripped debuginfo - attach by source line
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_test-stripped@uprobe_test.c:16 { print("ok"); exit(); }' --debuginfo=./debug
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_test-stripped@uprobe_test.c:22 { print("ok"); exit(); }' --debuginfo=./debug
 EXPECT ok
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
@@ -132,7 +139,7 @@ TIMEOUT 5
 BEFORE ./testprogs/debug/dwo/uprobe_test-split
 
 NAME parse DWO debuginfo - attach by source line
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwo/uprobe_test-split@uprobe_test.c:16 { printf("ok"); exit(); }'
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwo/uprobe_test-split@uprobe_test.c:22 { printf("ok"); exit(); }'
 EXPECT ok
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
@@ -152,7 +159,7 @@ TIMEOUT 5
 BEFORE ./testprogs/debug/dwp/uprobe_test-split
 
 NAME parse DWP debuginfo - attach by source line
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwp/uprobe_test-split@uprobe_test.c:16 { printf("ok"); exit(); }'
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/debug/dwp/uprobe_test-split@uprobe_test.c:22 { printf("ok"); exit(); }'
 EXPECT ok
 REQUIRES_FEATURE dwarf
 TIMEOUT 5

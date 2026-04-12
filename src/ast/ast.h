@@ -13,7 +13,6 @@
 #include "ast/context.h"
 #include "diagnostic.h"
 #include "probe_types.h"
-#include "types.h"
 #include "symbols/elf_parser.h"
 
 namespace bpftrace::ast {
@@ -161,6 +160,7 @@ class String;
 class None;
 class Identifier;
 class Builtin;
+class ParsedType;
 class Call;
 class Sizeof;
 class Offsetof;
@@ -525,9 +525,129 @@ public:
   size_t injected_args = 0;
 };
 
+class ParsedType : public Node {
+public:
+  enum class Kind {
+    Identifier,
+    Struct,
+    Union,
+    Enum,
+    Pointer,
+    Array,
+  };
+
+  ParsedType(ASTContext &ctx, Location &&loc, Kind kind, std::string name)
+      : Node(ctx, std::move(loc)), kind(kind), name(std::move(name)) {};
+
+  ParsedType(ASTContext &ctx, Location &&loc, ParsedType *pointee)
+      : Node(ctx, std::move(loc)), kind(Kind::Pointer), inner(pointee) {};
+
+  ParsedType(ASTContext &ctx,
+             Location &&loc,
+             uint64_t size,
+             ParsedType *element)
+      : Node(ctx, std::move(loc)),
+        kind(Kind::Array),
+        array_size(size),
+        inner(element) {};
+
+  ParsedType(ASTContext &ctx, const Location &loc, const ParsedType &other)
+      : Node(ctx, loc + other.loc),
+        kind(other.kind),
+        name(other.name),
+        array_size(other.array_size),
+        inner(other.inner ? ctx.clone_node<ParsedType>(loc, other.inner)
+                          : nullptr) {};
+
+  std::string type_name() const
+  {
+    switch (kind) {
+      case Kind::Identifier:
+        return name;
+      case Kind::Struct:
+        return "struct " + name;
+      case Kind::Union:
+        return "union " + name;
+      case Kind::Enum:
+        return "enum " + name;
+      case Kind::Pointer:
+      case Kind::Array:
+        return inner ? inner->type_name() + "*" : "";
+    }
+
+    return "";
+  }
+
+  const ParsedType &base_type() const
+  {
+    if ((kind == Kind::Pointer || kind == Kind::Array) && inner) {
+      return inner->base_type();
+    }
+    return *this;
+  }
+
+  bool operator==(const ParsedType &other) const
+  {
+    return kind == other.kind && name == other.name &&
+           array_size == other.array_size &&
+           (inner == other.inner ||
+            (inner && other.inner && *inner == *other.inner));
+  }
+
+  std::strong_ordering operator<=>(const ParsedType &other) const
+  {
+    if (auto cmp = kind <=> other.kind; cmp != 0) {
+      return cmp;
+    }
+    if (auto cmp = name <=> other.name; cmp != 0) {
+      return cmp;
+    }
+    if (auto cmp = array_size <=> other.array_size; cmp != 0) {
+      return cmp;
+    }
+    if (inner && other.inner)
+      return *inner <=> *other.inner;
+    if (!inner && !other.inner)
+      return std::strong_ordering::equal;
+    return inner ? std::strong_ordering::greater : std::strong_ordering::less;
+  }
+
+  Kind kind;
+  std::string name;
+  uint64_t array_size = 0;
+  ParsedType *inner = nullptr;
+};
+
+using ExprOrType = std::variant<Expression, ParsedType *>;
+
+inline bool expr_or_type_equal(const ExprOrType &lhs, const ExprOrType &rhs)
+{
+  if (auto *const *p = std::get_if<ParsedType *>(&lhs)) {
+    auto *const *q = std::get_if<ParsedType *>(&rhs);
+    return q && *p && *q && **p == **q;
+  }
+  return lhs == rhs;
+}
+
+inline std::strong_ordering expr_or_type_compare(const ExprOrType &lhs,
+                                                 const ExprOrType &rhs)
+{
+  if (auto cmp = lhs.index() <=> rhs.index(); cmp != 0)
+    return cmp;
+  if (auto *const *p = std::get_if<ParsedType *>(&lhs)) {
+    auto *q = std::get<ParsedType *>(rhs);
+    if (*p && q)
+      return **p <=> *q;
+    if (!*p && !q)
+      return std::strong_ordering::equal;
+    return *p ? std::strong_ordering::greater : std::strong_ordering::less;
+  }
+  return std::get<Expression>(lhs) <=> std::get<Expression>(rhs);
+}
+
 class Sizeof : public Node {
 public:
-  explicit Sizeof(ASTContext &ctx, Location &&loc, SizedType type)
+  explicit Sizeof(ASTContext &ctx, Location &&loc, ParsedType *type)
       : Node(ctx, std::move(loc)), record(std::move(type)) {};
   explicit Sizeof(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), record(expr) {};
@@ -536,35 +656,21 @@ public:
 
   bool operator==(const Sizeof &other) const
   {
-    if (record.index() != other.record.index())
-      return false;
-    return std::visit(
-        [&other](const auto &v) {
-          using T = std::decay_t<decltype(v)>;
-          return v == std::get<T>(other.record);
-        },
-        record);
+    return expr_or_type_equal(record, other.record);
   }
   std::strong_ordering operator<=>(const Sizeof &other) const
   {
-    if (auto cmp = record.index() <=> other.record.index(); cmp != 0)
-      return cmp;
-    return std::visit(
-        [&other](const auto &v) -> std::strong_ordering {
-          using T = std::decay_t<decltype(v)>;
-          return v <=> std::get<T>(other.record);
-        },
-        record);
+    return expr_or_type_compare(record, other.record);
   }
 
-  std::variant<Expression, SizedType> record;
+  ExprOrType record;
 };
 
 class Offsetof : public Node {
 public:
   explicit Offsetof(ASTContext &ctx,
                     Location &&loc,
-                    SizedType record,
+                    ParsedType *record,
                     std::vector<std::string> field)
       : Node(ctx, std::move(loc)),
         record(std::move(record)),
@@ -581,32 +687,16 @@ public:
 
   bool operator==(const Offsetof &other) const
   {
-    if (record.index() != other.record.index())
-      return false;
-    bool record_equal = std::visit(
-        [&other](const auto &v) {
-          using T = std::decay_t<decltype(v)>;
-          return v == std::get<T>(other.record);
-        },
-        record);
-    return record_equal && field == other.field;
+    return expr_or_type_equal(record, other.record) && field == other.field;
   }
   std::strong_ordering operator<=>(const Offsetof &other) const
   {
-    if (auto cmp = record.index() <=> other.record.index(); cmp != 0)
+    if (auto cmp = expr_or_type_compare(record, other.record); cmp != 0)
       return cmp;
-    auto record_cmp = std::visit(
-        [&other](const auto &v) -> std::strong_ordering {
-          using T = std::decay_t<decltype(v)>;
-          return v <=> std::get<T>(other.record);
-        },
-        record);
-    if (record_cmp != 0)
-      return record_cmp;
     return field <=> other.field;
   }
 
-  std::variant<Expression, SizedType> record;
+  ExprOrType record;
   std::vector<std::string> field;
 };
 
@@ -632,7 +722,7 @@ public:
 
 class Typeof : public Node {
 public:
-  explicit Typeof(ASTContext &ctx, Location &&loc, SizedType record)
+  explicit Typeof(ASTContext &ctx, Location &&loc, ParsedType *record)
       : Node(ctx, std::move(loc)), record(std::move(record)) {};
   explicit Typeof(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), record(expr) {};
@@ -642,14 +732,14 @@ public:
 
   bool operator==(const Typeof &other) const
   {
-    return record == other.record;
+    return expr_or_type_equal(record, other.record);
   }
   std::strong_ordering operator<=>(const Typeof &other) const
   {
-    return record <=> other.record;
+    return expr_or_type_compare(record, other.record);
   }
 
-  std::variant<Expression, SizedType> record;
+  ExprOrType record;
 };
 
 class Typeinfo : public Node {

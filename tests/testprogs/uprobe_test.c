@@ -12,6 +12,12 @@ struct Foo {
   __int128_t d;
 };
 
+struct Bar {
+  int x;
+  struct Foo *foos[2];
+  struct Foo nested;
+};
+
 int uprobeFunction1(int *n, char c __attribute__((unused)))
 {
   return *n;
@@ -63,6 +69,11 @@ int uprobeFunctionBranching(int n)
  */
 // clang-format on
 
+struct Bar *uprobeFunctionBar(struct Bar *bar)
+{
+  return bar;
+}
+
 __uint128_t uprobeFunctionUint128(__uint128_t x,
                                   __uint128_t y __attribute__((unused)),
                                   __uint128_t z __attribute__((unused)),
@@ -87,6 +98,11 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
     uprobeFunction2(&foo1, &foo2);
 
     uprobeFunctionBranching(n);
+
+    struct Bar bar = {
+      .x = 42, .foos = { &foo1, &foo2 }, .nested = foo1
+    };
+    uprobeFunctionBar(&bar);
 
     __uint128_t x = 0x123456789ABCDEF0;
     __uint128_t y = 0xEFEFEFEFEFEFEFEF;

@@ -8,6 +8,7 @@
 #include <unordered_set>
 
 #include "log.h"
+#include "types.h"
 #include "util/int_parser.h"
 
 // clang-format off
@@ -573,7 +574,7 @@ Subprog *Parser::parse_subprog()
       if (!expect(':')) {
         break;
       }
-      auto *type = parse_type_annotation();
+      auto *type = parse_type_annotation(true);
       if (!type) {
         break;
       }
@@ -592,7 +593,7 @@ Subprog *Parser::parse_subprog()
     return nullptr;
   }
 
-  auto *return_type = parse_type_annotation();
+  auto *return_type = parse_type_annotation(true);
   if (!return_type) {
     return nullptr;
   }
@@ -1419,7 +1420,7 @@ Statement Parser::parse_statement()
     consume_layout();
     if (peek() == ':') {
       advance();
-      type_annotation = parse_type_annotation();
+      type_annotation = parse_type_annotation(true);
     }
 
     consume_layout();
@@ -1485,31 +1486,48 @@ Statement Parser::parse_statement()
 
 // Type parsing
 
-SizedType Parser::parse_sized_type()
+ParsedType *Parser::parse_type(bool emit_error)
 {
-  auto name = consume_identifier("expected type name");
+  auto [begin_line, begin_col] = get_current_line_col();
+  auto name = emit_error ? consume_identifier("expected type name")
+                         : consume_identifier();
   if (!name) {
-    return CreateNone();
+    return nullptr;
   }
 
-  std::string type_ident = *name;
+  ParsedType *type = nullptr;
   if (*name == "struct" || *name == "union" || *name == "enum") {
-    auto type_name = consume_identifier("expected identifier");
+    auto type_name = emit_error ? consume_identifier("expected identifier")
+                                : consume_identifier();
     if (!type_name) {
-      return CreateNone();
+      return nullptr;
     }
-    type_ident += " " + *type_name;
+    auto kind = ParsedType::Kind::Struct;
+    if (*name == "union") {
+      kind = ParsedType::Kind::Union;
+    } else if (*name == "enum") {
+      kind = ParsedType::Kind::Enum;
+    }
+    type = ctx_.make_node<ParsedType>(
+        make_loc(begin_line, begin_col, line_, col_), kind, *type_name);
+  } else {
+    type = ctx_.make_node<ParsedType>(
+        make_loc(begin_line, begin_col, line_, col_),
+        ParsedType::Kind::Identifier,
+        *name);
   }
-  SizedType stype = compound_ident_to_type(type_ident);
 
   // Pointer and array suffixes in any order.
   consume_layout();
   while (peek() == '*' || peek() == '[') {
     if (peek() == '*') {
+      auto [pointer_line, pointer_col] = get_current_line_col();
       advance();
-      stype = CreatePointer(stype);
+      type = ctx_.make_node<ParsedType>(
+          make_loc(pointer_line, pointer_col, line_, col_), type);
       consume_layout();
     } else {
+      auto [array_line, array_col] = get_current_line_col();
       advance();
       consume_layout();
       uint64_t size = 0;
@@ -1519,12 +1537,13 @@ SizedType Parser::parse_sized_type()
         size = res ? *res : 0;
       }
       expect(']');
-      stype = CreateArray(size, stype);
+      type = ctx_.make_node<ParsedType>(
+          make_loc(array_line, array_col, line_, col_), size, type);
       consume_layout();
     }
   }
 
-  return stype;
+  return type;
 }
 
 std::optional<size_t> Parser::scan_type_suffixes(size_t pos,
@@ -1555,7 +1574,7 @@ std::optional<size_t> Parser::scan_type_suffixes(size_t pos,
   return pos;
 }
 
-std::optional<std::variant<Expression, SizedType>> Parser::
+std::optional<std::variant<Expression, ParsedType *>> Parser::
     try_parse_type_reference(std::string_view end_chars)
 {
   auto sp = save_point();
@@ -1580,7 +1599,7 @@ std::optional<std::variant<Expression, SizedType>> Parser::
     return next != '\0' && end_chars.find(next) != std::string_view::npos;
   };
 
-  bool is_known_type = false;
+  bool is_unknown_typedef = true;
   if (ident == "struct" || ident == "union" || ident == "enum") {
     lookahead = scan_layout(lookahead);
     if (!is_identifier_start(char_at(lookahead))) {
@@ -1588,9 +1607,9 @@ std::optional<std::variant<Expression, SizedType>> Parser::
       return std::nullopt;
     }
     lookahead = scan_identifier_end(lookahead);
-    is_known_type = true;
-  } else if (ident_to_type(std::string(ident)).has_value()) {
-    is_known_type = true;
+    is_unknown_typedef = false;
+  } else if (ident_to_builtin_type(std::string(ident)).has_value()) {
+    is_unknown_typedef = false;
   }
 
   bool saw_suffix = false;
@@ -1599,10 +1618,10 @@ std::optional<std::variant<Expression, SizedType>> Parser::
     sp.restore();
     return std::nullopt;
   }
-  bool parse_as_sized_type = is_known_type || saw_suffix;
+  bool parse_as_type = !is_unknown_typedef || saw_suffix;
 
-  if (parse_as_sized_type) {
-    return parse_sized_type();
+  if (parse_as_type) {
+    return parse_type();
   }
 
   auto [begin_line, begin_col] = get_current_line_col();
@@ -1616,7 +1635,7 @@ std::optional<std::variant<Expression, SizedType>> Parser::
   return Expression(id);
 }
 
-Typeof *Parser::parse_type_annotation()
+Typeof *Parser::parse_type_annotation(bool type_only)
 {
   consume_layout();
   auto [begin_line, begin_col] = get_current_line_col();
@@ -1630,9 +1649,8 @@ Typeof *Parser::parse_type_annotation()
     if (auto type_ref = try_parse_type_reference(")")) {
       expect(')');
       auto loc = make_loc(begin_line, begin_col, line_, col_);
-      if (auto *stype = std::get_if<SizedType>(&*type_ref)) {
-        return ctx_.make_node<Typeof>(loc,
-                                      normalize_array_to_sized_type(*stype));
+      if (auto *type = std::get_if<ParsedType *>(&*type_ref)) {
+        return ctx_.make_node<Typeof>(loc, *type);
       }
       return ctx_.make_node<Typeof>(loc,
                                     std::move(std::get<Expression>(*type_ref)));
@@ -1643,10 +1661,19 @@ Typeof *Parser::parse_type_annotation()
     return ctx_.make_node<Typeof>(loc, std::move(expr));
   }
 
+  if (type_only) {
+    auto *type = parse_type();
+    if (!type) {
+      return nullptr;
+    }
+    auto loc = make_loc(begin_line, begin_col, line_, col_);
+    return ctx_.make_node<Typeof>(loc, type);
+  }
+
   if (auto type_ref = try_parse_type_reference(";,=){}")) {
     auto loc = make_loc(begin_line, begin_col, line_, col_);
-    if (auto *stype = std::get_if<SizedType>(&*type_ref)) {
-      return ctx_.make_node<Typeof>(loc, normalize_array_to_sized_type(*stype));
+    if (auto *type = std::get_if<ParsedType *>(&*type_ref)) {
+      return ctx_.make_node<Typeof>(loc, *type);
     }
     return ctx_.make_node<Typeof>(loc,
                                   std::move(std::get<Expression>(*type_ref)));
@@ -2133,9 +2160,8 @@ Expression Parser::parse_primary()
     if (auto type_ref = try_parse_type_reference(")")) {
       expect(')');
       auto loc = make_loc(begin_line, begin_col, line_, col_);
-      if (auto *stype = std::get_if<SizedType>(&*type_ref)) {
-        auto *s = ctx_.make_node<Sizeof>(loc,
-                                         normalize_array_to_sized_type(*stype));
+      if (auto *type = std::get_if<ParsedType *>(&*type_ref)) {
+        auto *s = ctx_.make_node<Sizeof>(loc, *type);
         return { s };
       }
       auto *s = ctx_.make_node<Sizeof>(
@@ -2162,14 +2188,12 @@ Expression Parser::parse_primary()
     sp.restore();
 
     if (is_struct_type) {
-      auto stype = parse_sized_type();
+      auto *type = parse_type();
       expect(',');
       auto fields = parse_field_access();
       expect(')');
       auto loc = make_loc(begin_line, begin_col, line_, col_);
-      auto *o = ctx_.make_node<Offsetof>(loc,
-                                         normalize_array_to_sized_type(stype),
-                                         std::move(fields));
+      auto *o = ctx_.make_node<Offsetof>(loc, type, std::move(fields));
       return { o };
     }
     // Expression form: offsetof(expr, field)
@@ -2428,23 +2452,35 @@ std::optional<Expression> Parser::try_parse_cast_expr(int begin_line,
     typeof_node = parse_type_annotation();
   } else {
     consume_layout();
+    if (!is_identifier_start(peek())) {
+      sp.restore();
+      return std::nullopt;
+    }
+    size_t lookahead = pos_;
+    const size_t ident_start = lookahead;
+    lookahead = scan_identifier_end(lookahead);
+    if (is_builtin(view(ident_start, lookahead))) {
+      sp.restore();
+      return std::nullopt;
+    }
     auto [type_begin_line, type_begin_col] = get_current_line_col();
-    if (auto type_ref = try_parse_type_reference(")")) {
+    if (auto *type = parse_type(false)) {
       auto loc = make_loc(type_begin_line, type_begin_col, line_, col_);
-      if (auto *stype = std::get_if<SizedType>(&*type_ref)) {
-        typeof_node = ctx_.make_node<Typeof>(
-            loc, normalize_array_to_sized_type(*stype));
-      } else {
-        typeof_node = ctx_.make_node<Typeof>(
-            loc, std::move(std::get<Expression>(*type_ref)));
-      }
+      typeof_node = ctx_.make_node<Typeof>(loc, type);
     } else {
       sp.restore();
       return std::nullopt;
     }
   }
 
-  if (!expect(')') || !can_start_expression()) {
+  consume_layout();
+  if (peek() != ')') {
+    sp.restore();
+    return std::nullopt;
+  }
+  advance();
+  consume_layout();
+  if (!can_start_expression()) {
     sp.restore();
     return std::nullopt;
   }

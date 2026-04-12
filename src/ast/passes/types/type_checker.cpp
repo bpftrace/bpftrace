@@ -932,8 +932,8 @@ void TypeChecker::visit(Cast &cast)
   visit(cast.expr);
   visit(cast.typeof);
 
-  const auto &resolved_ty = type_map_.type(&cast);
-  if (resolved_ty.IsNoneTy()) {
+  const auto &ty = type_map_.type(&cast);
+  if (ty.IsNoneTy()) {
     cast.addError() << "Incomplete cast, unknown type";
     return;
   }
@@ -946,10 +946,6 @@ void TypeChecker::visit(Cast &cast)
     cast.addError() << "Cannot cast from \"" << rhs << "\" type";
     return;
   }
-
-  // Resolved the type because we may mutate it below, for various reasons.
-  cast.typeof->record = resolved_ty;
-  auto &ty = std::get<SizedType>(cast.typeof->record);
 
   auto logError = [&]() {
     cast.addError() << "Cannot cast from \"" << rhs << "\" to \"" << ty << "\"";

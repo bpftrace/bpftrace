@@ -60,10 +60,10 @@ private:
   ast::Statement parse_statement();
 
   // Type parsing
-  SizedType parse_sized_type();
-  ast::Typeof *parse_type_annotation();
+  ast::ParsedType *parse_type(bool emit_error = true);
+  ast::Typeof *parse_type_annotation(bool type_only = false);
   std::optional<size_t> scan_type_suffixes(size_t pos, bool &saw_suffix) const;
-  std::optional<std::variant<ast::Expression, SizedType>> try_parse_type_reference(
+  std::optional<std::variant<ast::Expression, ast::ParsedType *>> try_parse_type_reference(
       std::string_view end_chars);
 
   // Expression grammar

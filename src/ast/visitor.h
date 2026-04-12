@@ -57,6 +57,10 @@ public:
   {
     return default_value();
   }
+  R visit([[maybe_unused]] ParsedType &type)
+  {
+    return default_value();
+  }
   R visit([[maybe_unused]] Variable &var)
   {
     return default_value();

@@ -6,7 +6,6 @@
 #include "ast/clone.h"
 #include "ast/context.h"
 #include "ast/location.h"
-#include "types.h"
 
 namespace bpftrace::test::ast {
 
@@ -137,13 +136,38 @@ std::vector<Call *> variants<Call>(ASTContext &c, SourceLocation l)
 }
 
 template <>
+std::vector<ParsedType *> variants<ParsedType>(ASTContext &c, SourceLocation l)
+{
+  auto *inner_id = c.make_node<ParsedType>(l,
+                                           ParsedType::Kind::Identifier,
+                                           "int32");
+  auto *inner_struct = c.make_node<ParsedType>(l,
+                                               ParsedType::Kind::Struct,
+                                               "task_struct");
+  return {
+    c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint64"),
+    c.make_node<ParsedType>(l, ParsedType::Kind::Struct, "task_struct"),
+    c.make_node<ParsedType>(l, ParsedType::Kind::Union, "my_union"),
+    c.make_node<ParsedType>(l, ParsedType::Kind::Enum, "my_enum"),
+    c.make_node<ParsedType>(l, inner_id),
+    c.make_node<ParsedType>(l, inner_struct),
+    c.make_node<ParsedType>(l, static_cast<uint64_t>(10), inner_id),
+  };
+}
+
+template <>
 std::vector<Sizeof *> variants<Sizeof>(ASTContext &c, SourceLocation l)
 {
   Expression expr = c.make_node<Integer>(l, 42UL);
-  return { c.make_node<Sizeof>(l, CreateInt32()),
-           c.make_node<Sizeof>(l, CreateInt64()),
-           c.make_node<Sizeof>(l, CreateUInt32()),
-           c.make_node<Sizeof>(l, std::move(expr)) };
+  return {
+    c.make_node<Sizeof>(
+        l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32")),
+    c.make_node<Sizeof>(
+        l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int64")),
+    c.make_node<Sizeof>(
+        l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32")),
+    c.make_node<Sizeof>(l, std::move(expr))
+  };
 }
 
 template <>
@@ -155,10 +179,21 @@ std::vector<Offsetof *> variants<Offsetof>(ASTContext &c, SourceLocation l)
   Expression expr = c.make_node<Variable>(l, std::string("$var"));
   std::vector<std::string> field4 = { "member" };
 
-  return { c.make_node<Offsetof>(l, CreateInteger(32, false), field1),
-           c.make_node<Offsetof>(l, CreateInteger(64, false), field2),
-           c.make_node<Offsetof>(l, CreateString(64), field3),
-           c.make_node<Offsetof>(l, std::move(expr), field4) };
+  auto *string = c.make_node<ParsedType>(l,
+                                         ParsedType::Kind::Identifier,
+                                         "string");
+  return {
+    c.make_node<Offsetof>(
+        l,
+        c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32"),
+        field1),
+    c.make_node<Offsetof>(
+        l,
+        c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint64"),
+        field2),
+    c.make_node<Offsetof>(l, c.make_node<ParsedType>(l, 64, string), field3),
+    c.make_node<Offsetof>(l, std::move(expr), field4)
+  };
 }
 
 template <>
@@ -299,16 +334,20 @@ std::vector<MapAccess *> variants<MapAccess>(ASTContext &c, SourceLocation l)
 template <>
 std::vector<Cast *> variants<Cast>(ASTContext &c, SourceLocation l)
 {
-  auto *typeof1 = c.make_node<Typeof>(l, CreateInt32());
+  auto *typeof1 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32"));
   Expression expr1 = c.make_node<Integer>(l, 42UL);
 
-  auto *typeof2 = c.make_node<Typeof>(l, CreateInt64());
+  auto *typeof2 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int64"));
   Expression expr2 = c.make_node<Integer>(l, 24UL);
 
-  auto *typeof3 = c.make_node<Typeof>(l, CreateInt32());
+  auto *typeof3 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32"));
   Expression expr3 = c.make_node<Variable>(l, std::string("$x"));
 
-  auto *typeof4 = c.make_node<Typeof>(l, CreateUInt32());
+  auto *typeof4 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32"));
   Expression expr4 = c.make_node<Integer>(l, 42UL);
 
   return { c.make_node<Cast>(l, typeof1, std::move(expr1)),
@@ -398,9 +437,12 @@ std::vector<BlockExpr *> variants<BlockExpr>(ASTContext &c, SourceLocation l)
 template <>
 std::vector<Typeinfo *> variants<Typeinfo>(ASTContext &c, SourceLocation l)
 {
-  auto *typeof1 = c.make_node<Typeof>(l, CreateInt32());
-  auto *typeof2 = c.make_node<Typeof>(l, CreateInt64());
-  auto *typeof3 = c.make_node<Typeof>(l, CreateUInt32());
+  auto *typeof1 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32"));
+  auto *typeof2 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int64"));
+  auto *typeof3 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32"));
   Expression expr = c.make_node<Variable>(l, std::string("$x"));
   auto *typeof4 = c.make_node<Typeof>(l, std::move(expr));
 
@@ -444,16 +486,20 @@ std::vector<VarDeclStatement *> variants<VarDeclStatement>(ASTContext &c,
                                                            SourceLocation l)
 {
   auto *var1 = c.make_node<Variable>(l, std::string("$var"));
-  auto *typeof1 = c.make_node<Typeof>(l, CreateInt32());
+  auto *typeof1 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32"));
 
   auto *var2 = c.make_node<Variable>(l, std::string("$other"));
-  auto *typeof2 = c.make_node<Typeof>(l, CreateInt64());
+  auto *typeof2 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int64"));
 
   auto *var3 = c.make_node<Variable>(l, std::string("$x"));
-  auto *typeof3 = c.make_node<Typeof>(l, CreateUInt32());
+  auto *typeof3 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32"));
 
   auto *var4 = c.make_node<Variable>(l, std::string("$test"));
-  auto *typeof4 = c.make_node<Typeof>(l, CreateInt32());
+  auto *typeof4 = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32"));
 
   return { c.make_node<VarDeclStatement>(l, var1, typeof1),
            c.make_node<VarDeclStatement>(l, var2, typeof2),
@@ -714,7 +760,8 @@ std::vector<Statement> variants<Statement>(ASTContext &c, SourceLocation l)
   Expression expr1 = c.make_node<Integer>(l, 42UL);
   Expression expr2 = c.make_node<Integer>(l, 24UL);
   auto *var = c.make_node<Variable>(l, std::string("$var"));
-  auto *typeof_node = c.make_node<Typeof>(l, CreateInt32());
+  auto *typeof_node = c.make_node<Typeof>(
+      l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32"));
   auto *map = c.make_node<Map>(l, std::string("@map"));
   Expression expr3 = c.make_node<String>(l, std::string("value"));
 
@@ -768,6 +815,7 @@ using TestTypes = ::testing::Types<Integer,
                                    PositionalParameter,
                                    PositionalParameterCount,
                                    Call,
+                                   ParsedType,
                                    Sizeof,
                                    Offsetof,
                                    VariableAddr,
