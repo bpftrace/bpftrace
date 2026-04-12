@@ -40,7 +40,8 @@ public:
 
 private:
   void resolve_fields(SizedType &type);
-  void resolve_type(SizedType &type);
+  SizedType resolve_type(const SizedType &type);
+  void seed_type_record(const std::variant<Expression, SizedType> &record);
 
   ProbeType probe_type_;
   std::string attach_func_;
@@ -173,29 +174,17 @@ void FieldAnalyser::visit(MapAccess &acc)
 
 void FieldAnalyser::visit(Sizeof &szof)
 {
-  if (std::holds_alternative<SizedType>(szof.record)) {
-    resolve_type(std::get<SizedType>(szof.record));
-  } else {
-    visit(szof.record);
-  }
+  seed_type_record(szof.record);
 }
 
 void FieldAnalyser::visit(Offsetof &offof)
 {
-  if (std::holds_alternative<SizedType>(offof.record)) {
-    resolve_type(std::get<SizedType>(offof.record));
-  } else {
-    visit(offof.record);
-  }
+  seed_type_record(offof.record);
 }
 
 void FieldAnalyser::visit(Typeof &typeof)
 {
-  if (std::holds_alternative<SizedType>(typeof.record)) {
-    resolve_type(std::get<SizedType>(typeof.record));
-  } else {
-    visit(typeof.record);
-  }
+  seed_type_record(typeof.record);
 }
 
 void FieldAnalyser::visit(AssignMapStatement &assignment)
@@ -235,29 +224,48 @@ void FieldAnalyser::resolve_fields(SizedType &type)
     bpftrace_.btf_->resolve_fields(type);
 }
 
-void FieldAnalyser::resolve_type(SizedType &type)
+SizedType FieldAnalyser::resolve_type(const SizedType &type)
 {
-  sized_type_ = CreateNone();
+  SizedType resolved_type = CreateNone();
 
   SizedType inner_type = type;
   while (inner_type.IsPtrTy())
     inner_type = inner_type.GetPointeeTy();
   if (!inner_type.IsCStructTy())
-    return;
+    return resolved_type;
   const auto &name = inner_type.GetName();
 
   if (probe_) {
     for (auto &ap : probe_->attach_points)
       if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-        sized_type_ = dwarf->get_stype(name);
+        resolved_type = dwarf->get_stype(name);
   }
 
-  if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
-    sized_type_ = bpftrace_.btf_->get_stype(name);
+  if (resolved_type.IsNoneTy() && bpftrace_.has_btf_data())
+    resolved_type = bpftrace_.btf_->get_stype(name);
 
   // Could not resolve destination type - let ClangParser do it
-  if (sized_type_.IsNoneTy())
+  if (resolved_type.IsNoneTy())
     bpftrace_.btf_set_.insert(name);
+
+  return resolved_type;
+}
+
+void FieldAnalyser::seed_type_record(
+    const std::variant<Expression, SizedType> &record)
+{
+  auto prev_type = sized_type_;
+  auto prev_has_builtin_args = has_builtin_args_;
+
+  if (const auto *type = std::get_if<SizedType>(&record)) {
+    resolve_type(*type);
+  } else {
+    auto expr = std::get<Expression>(record);
+    visit(expr);
+  }
+
+  sized_type_ = prev_type;
+  has_builtin_args_ = prev_has_builtin_args;
 }
 
 void FieldAnalyser::visit(Probe &probe)
@@ -280,10 +288,16 @@ void FieldAnalyser::visit(Subprog &subprog)
 
 void FieldAnalyser::visit(Cast &cast)
 {
-  // N.B. Visit the expression first, so that fields can be resolved, but then
-  // visit the type so that the returned sized_type_ is always the type.
+  // Visit the expression first so nested field accesses seed BTF roots.
   visit(cast.expr);
-  visit(cast.typeof);
+  // Note: we intentionally don't use seed_type_record() here because casts
+  // need to propagate the resolved type via sized_type_ for downstream
+  // FieldAccess visitors, whereas seed_type_record() restores sized_type_.
+  if (std::holds_alternative<SizedType>(cast.typeof->record)) {
+    sized_type_ = resolve_type(std::get<SizedType>(cast.typeof->record));
+  } else {
+    visit(std::get<Expression>(cast.typeof->record));
+  }
 }
 
 Pass CreateFieldAnalyserPass()
