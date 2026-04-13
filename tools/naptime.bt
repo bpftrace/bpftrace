@@ -31,6 +31,8 @@
 #include <linux/sched.h>
 #endif
 
+let @rqtp = lruhash(4096);
+
 BEGIN
 {
   printf("Tracing sleeps. Hit Ctrl-C to end.\n");
@@ -46,12 +48,14 @@ tracepoint:syscalls:sys_enter_nanosleep
 
 tracepoint:syscalls:sys_exit_clock_nanosleep,
 tracepoint:syscalls:sys_exit_nanosleep
-/ args.ret == 0 /
+/ has_key(@rqtp, tid) /
 {
-  time("%H:%M:%S ");
-  $t = @rqtp[tid];
-  printf("%-6d %-16s %-6d %-16s %d.%03d\n",
-         ppid, pcomm, pid, comm, $t.tv_sec, ((uint64)$t.tv_nsec) / 1e6);
+  if (args.ret == 0) {
+    time("%H:%M:%S ");
+    $t = @rqtp[tid];
+    printf("%-6d %-16s %-6d %-16s %d.%03d\n",
+           ppid, pcomm, pid, comm, $t.tv_sec, ((uint64)$t.tv_nsec) / 1e6);
+  }
   delete(@rqtp, tid);
 }
 
