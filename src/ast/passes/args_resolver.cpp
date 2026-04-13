@@ -1,4 +1,5 @@
 #include <bpf/bpf.h>
+#include <bpf/btf.h>
 #include <cassert>
 
 #include "arch/arch.h"
@@ -10,6 +11,7 @@
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
 #include "probe_types.h"
+#include "scopeguard.h"
 #include "util/result.h"
 
 namespace bpftrace::ast {
@@ -60,6 +62,32 @@ Result<std::shared_ptr<Struct>> ArgsResolver::resolve_args(
   switch (probe_type) {
     case ProbeType::fentry:
     case ProbeType::fexit:
+      if (ap.target == "bpf" && ap.bpf_prog_id != 0) {
+        int fd = bpf_prog_get_fd_by_id(ap.bpf_prog_id);
+        if (fd < 0) {
+          return make_error<ast::ArgParseError>(
+              ap.name(), "failed to get BPF program fd");
+        }
+        SCOPE_EXIT { close(fd); };
+
+        struct bpf_prog_info info = {};
+        __u32 info_len = sizeof(info);
+        if (bpf_prog_get_info_by_fd(fd, &info, &info_len) != 0 ||
+            info.btf_id == 0) {
+          return make_error<ast::ArgParseError>(
+              ap.name(), "BPF program has no BTF");
+        }
+
+        struct btf *prog_btf = btf__load_from_kernel_by_id(info.btf_id);
+        if (!prog_btf) {
+          return make_error<ast::ArgParseError>(
+              ap.name(), "failed to load BPF program BTF");
+        }
+        SCOPE_EXIT { btf__free(prog_btf); };
+
+        return bpftrace_.btf_->resolve_args(
+            ap.func, probe_type == ProbeType::fexit, false, prog_btf);
+      }
       return bpftrace_.btf_->resolve_args(ap.func,
                                           probe_type == ProbeType::fexit,
                                           false);
