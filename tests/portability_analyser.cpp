@@ -9,8 +9,8 @@
 #include "ast/passes/types/type_resolver.h"
 #include "ast/passes/types/type_system.h"
 #include "btf_common.h"
-#include "driver.h"
 #include "mocks.h"
+#include "parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::portability_analyser {

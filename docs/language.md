@@ -836,17 +836,27 @@ The warning can also be silenced by utilizing the Discard Expression:
 _ = has_key(@a, 1); // No Warning
 ```
 
-## Preamble
+## Program Structure
 
-The preamble consists of multiple optional pieces:
-- preprocessor definitions
-- type definitions
-- a [config block](#config-block)
-- [map declarations](#map-declarations)
+A bpftrace script has the following top-level structure, where each section is
+optional but must appear in this order:
+
+1. **Config block and imports** — a `config` block and any `import` statements.
+   These can appear in any order relative to each other, but must come before
+   everything else (aside from a shebang line).
+2. **C definitions** — `#include` directives, `#define` macros, and
+   `struct`/`union`/`enum` type definitions. Must appear after config/imports
+   and before probes, functions, and macros.
+3. **Probes, macros, and map declarations** — the main body of the
+   script. These can appear in any order relative to each other.
 
 For example:
 
 ```
+config = {
+    stack_mode=perf
+}
+
 #include <linux/socket.h>
 #define RED "\033[31m"
 
@@ -854,12 +864,11 @@ struct S {
   int x;
 }
 
-config = {
-    stack_mode=perf
-}
-
 let @a = lruhash(100);
 
+macro greet { print("hi"); }
+
+kprobe:do_nanosleep { greet!(); }
 ```
 
 ## Probes
@@ -1630,11 +1639,51 @@ watchpoint:0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):8:w {
 }
 ```
 
-## Pointers
+## Types
+
+### Type Syntax
+
+bpftrace uses a postfix type syntax for pointer and array modifiers.
+Modifiers are read left-to-right: the base type comes first, followed by
+any combination of `*` (pointer) and `[N]` (array) suffixes in any order.
+
+```
+int32*       // pointer to int32
+int32[4]     // array of 4 int32
+int32*[4]    // array of 4 pointers to int32
+int32[4]*    // pointer to an array of 4 int32
+int32*[4]*   // pointer to an array of 4 pointers to int32
+```
+
+This differs from C, where pointer and array declarators are written around
+the variable name and read inside-out. The table below shows equivalent
+types in both syntaxes:
+
+| C syntax | bpftrace syntax | Description |
+| --- | --- | --- |
+| `int *p` | `int32*` | pointer to int |
+| `int a[4]` | `int32[4]` | array of 4 ints |
+| `int *a[4]` | `int32*[4]` | array of 4 pointers to int |
+| `int (*p)[4]` | `int32[4]*` | pointer to array of 4 ints |
+| `struct foo *p` | `struct foo*` | pointer to struct foo |
+| `struct foo *a[4]` | `struct foo*[4]` | array of 4 pointers to struct foo |
+| `struct foo (*p)[4]` | `struct foo[4]*` | pointer to array of 4 struct foo |
+
+The same syntax applies to type annotations in variable declarations, casts, and type introspection functions (e.g. `sizeof`, `offsetof`, etc.)
+
+For the parameterized types `string`, `buffer`, and `inet`, a `[N]` suffix
+sets the type's size parameter rather than creating an array:
+
+```
+$s = (string[64])arg0;    // string with capacity 64 bytes
+$b = (buffer[256])arg0;   // buffer of 256 bytes
+```
+
+### Pointers
 
 Pointers in bpftrace are similar to those found in `C`.
 
-## Structs
+### Structs
 
 `C` like structs are supported by bpftrace.
 Fields are accessed with the `.` operator.
@@ -1659,7 +1708,7 @@ kprobe:dummy {
 }
 ```
 
-## Tuples
+### Tuples
 
 bpftrace has support for immutable N-tuples.
 A tuple is a sequence type (like an array) where, unlike an array, every element can have a different type.
@@ -1683,7 +1732,7 @@ interval:s:1 {
 Single-element and empty tuples can be specified using Python-like syntax.
 A single element tuple requires a trailing comma, `(1,)`, while the empty tuple is simply `()`.
 
-## Records
+### Records
 
 bpftrace has support for immutable N-records.
 A record is a struct-like type where every element has a name and a type.
@@ -1703,9 +1752,7 @@ interval:s:1 {
 }
 ```
 
-
-
-## Type conversion
+### Type Conversion
 
 Integer and pointer types can be converted using explicit type conversion with an expression like:
 
@@ -1729,7 +1776,29 @@ When casting to an array, it is possible to omit the size which will be determin
 
 Integers are internally represented as 64 bit signed. If you need another representation, you may cast to the supported [Data Types](#data-types).
 
-### Array casts
+#### Cast Parsing
+
+Most C-style casting is supported, however due to bpftrace's builtins, which are raw identifiers (e.g. `pid`), and macros which can be called without parenthesis if the macro doesn't have any arguments, a raw identifier wrapped in parenthesis is considered a type when followed by something that looks like an expression start.
+
+```
+$w = (myident); // parsed as an expression and not a type
+$x = (myident)*$a; // parsed as a cast to myident type with a dereference of $a
+$y = (pid)*tid; // parsed a multiplication of the pid builtin and the tid builtin
+$z = (myident)*arg0; // parsed as a cast to myident with a dereference of builtin arg0
+```
+
+Bare identifiers in type contexts (casts, `sizeof`, etc.) are always treated
+as type names and are never expanded as macros. To force macro expansion in a
+type context, use the call syntax or wrap with `typeof`:
+
+```
+macro uint64_t() { 1 }
+$x = sizeof(uint64_t);           // uint64_t is treated as a type name and $x evaluates to 8
+$x = sizeof(uint64_t());         // call syntax forces macro expansion and $x evaluates to 1
+$y = (typeof(uint64_t()))$z;     // typeof wrapper for casts and this becomes $y = (typeof({ 1 }))$z;
+```
+
+#### Array Casts
 
 It is possible to cast between integer arrays and integers.
 Both the source and the destination type must have the same size.

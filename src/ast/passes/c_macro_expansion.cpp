@@ -5,7 +5,7 @@
 #include "ast/passes/c_macro_expansion.h"
 #include "ast/visitor.h"
 #include "clang_parser.h"
-#include "driver.h"
+#include "parser.h"
 #include "util/strings.h"
 
 namespace bpftrace::ast {
@@ -42,8 +42,8 @@ void CMacroExpander::visit(Expression &expr)
 
       // Parse just the macro as an expression.
       ASTContext macro(ident->ident, value);
-      Driver driver(macro);
-      auto expanded = driver.parse_expr();
+      Parser parser(macro);
+      auto expanded = parser.parse_expr();
       if (!expanded) {
         ident->addError() << "unable to expand macro as an expression: "
                           << value;

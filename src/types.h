@@ -608,6 +608,17 @@ SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
 SizedType CreateTimestampMode();
 
+// Converts a type name string (e.g. "uint32", "string") to the corresponding
+// SizedType, or std::nullopt if the name is not a known type.
+std::optional<SizedType> ident_to_type(const std::string &name);
+SizedType compound_ident_to_type(const std::string &ident);
+
+// Normalize Array(N, SizedBaseType) into the appropriate sized type.
+// For example, Array(64, String(0)) becomes String(64). This allows the
+// parser to treat all [N] suffixes uniformly as arrays, deferring the
+// sized-type interpretation to a later stage.
+SizedType normalize_array_to_sized_type(SizedType type);
+
 std::optional<SizedType> get_promoted_int(const SizedType &currentType,
                                           const SizedType &newType);
 std::optional<SizedType> get_promoted_tuple(const SizedType &currentType,

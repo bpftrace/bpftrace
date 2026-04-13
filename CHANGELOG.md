@@ -23,6 +23,8 @@ and this project adheres to
 - Add `is_err` stdlib macro for detecting ERR_PTR return values
   - [#5086](https://github.com/bpftrace/bpftrace/pull/5086)
 #### Changed
+- Improved disambiguation for cast and typeof-style expressions
+  - [#5092](https://github.com/bpftrace/bpftrace/pull/5092)
 #### Deprecated
 #### Removed
 #### Fixed

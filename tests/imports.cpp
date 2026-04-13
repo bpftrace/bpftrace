@@ -2,7 +2,7 @@
 #include <optional>
 #include <sstream>
 
-#include "ast/passes/parser.h"
+#include "ast/passes/parse_passes.h"
 #include "ast/passes/resolve_imports.h"
 #include "mocks.h"
 #include "util/temp.h"

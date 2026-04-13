@@ -1,6 +1,6 @@
 #include "ast/passes/config_analyser.h"
-#include "driver.h"
 #include "mocks.h"
+#include "parser.h"
 #include "types.h"
 #include "gtest/gtest.h"
 

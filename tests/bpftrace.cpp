@@ -17,9 +17,9 @@
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "btf_common.h"
-#include "driver.h"
 #include "mocks.h"
 #include "output/text.h"
+#include "parser.h"
 #include "types.h"
 #include "types_format.h"
 #include "gmock/gmock-matchers.h"
@@ -410,10 +410,10 @@ TEST(bpftrace, add_probes_hardware)
 TEST(bpftrace, trailing_comma)
 {
   ast::ASTContext ast("stdin", "kprobe:f, {}");
-  Driver driver(ast);
+  Parser parser(ast);
 
   // Trailing comma is fine
-  driver.parse_program();
+  parser.parse();
   std::stringstream ss;
   ast.diagnostics().emit(ss);
   ASSERT_TRUE(ast.diagnostics().ok()) << ss.str();
@@ -422,10 +422,10 @@ TEST(bpftrace, trailing_comma)
 TEST(bpftrace, empty_attachpoint)
 {
   ast::ASTContext ast("stdin", "{}");
-  Driver driver(ast);
+  Parser parser(ast);
 
   // Empty attach point should fail...
-  ast.root = driver.parse_program();
+  ast.root = parser.parse();
 
   // ... ah, but it doesn't really. What fails is the attachpoint parser. The
   // above is a valid program, it is just not a valid attachpoint.

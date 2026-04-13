@@ -2,8 +2,8 @@
 
 #include "arch/arch.h"
 #include "ast/passes/attachpoint_passes.h"
-#include "driver.h"
 #include "mocks.h"
+#include "parser.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::buitins {

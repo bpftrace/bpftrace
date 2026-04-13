@@ -8,8 +8,8 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/types/pre_type_check.h"
-#include "driver.h"
 #include "mocks.h"
+#include "parser.h"
 
 namespace bpftrace::test::pre_type_check {
 
