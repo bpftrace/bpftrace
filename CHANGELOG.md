@@ -30,6 +30,8 @@ and this project adheres to
 #### Fixed
 - Add bitfield support when printing full structure using "print()"
   - [#2801](https://github.com/bpftrace/bpftrace/issues/2801)
+- Enable session probes for kprobes with exact function names (not only wildcards)
+  - [#5104](https://github.com/bpftrace/bpftrace/pull/5104)
 #### Security
 #### Docs
 #### Tools

@@ -91,7 +91,6 @@ void check_kprobe(Probe &p,
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(kprobe_name(attach_point, target, func_offset), p.name);
   EXPECT_EQ(func_offset, p.func_offset);
-  EXPECT_TRUE(p.funcs.empty());
 }
 
 void check_uprobe(Probe &p,
