@@ -141,6 +141,8 @@ public:
   Probe expand(Probe &entry, Probe &exit);
 
 private:
+  bool is_session_attach_point(AttachPoint &ap);
+
   Probe *find_matching_retprobe(Probe &probe);
 
   ASTContext &ast_;
@@ -148,6 +150,21 @@ private:
   ExpansionResult &expansion_result_;
   ProbeList probes_to_erase_;
 };
+
+bool SessionExpander::is_session_attach_point(AttachPoint &ap)
+{
+  auto provider = probetype(ap.provider);
+  if (provider != ProbeType::kprobe && provider != ProbeType::kretprobe)
+    return false;
+
+  auto expansion = expansion_result_.get_expansion(ap);
+  if (expansion == ExpansionType::MULTI)
+    return true;
+
+  return expansion == ExpansionType::NONE &&
+         bpftrace_.feature_->has_kprobe_multi() && ap.target.empty() &&
+         ap.func_offset == 0 && ap.address == 0 && !util::has_wildcard(ap.func);
+}
 
 Probe *SessionExpander::find_matching_retprobe(Probe &probe)
 {
@@ -158,13 +175,13 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
   // - attaches to the same target and function as probe
   // - is multi-expanded (session expansion uses the same attach mechanism)
   // - is not already scheduled for erasure
+  // - is eligible for session expansion
   std::ranges::copy_if(
       ast_.root->probes, std::back_inserter(retprobes), [&](Probe *other) {
         return other->attach_points.size() == 1 &&
                probetype(other->attach_points[0]->provider) ==
                    ProbeType::kretprobe &&
-               expansion_result_.get_expansion(*other->attach_points[0]) ==
-                   ExpansionType::MULTI &&
+               is_session_attach_point(*other->attach_points[0]) &&
                other->attach_points[0]->target == ap->target &&
                other->attach_points[0]->func == ap->func &&
                std::ranges::find(probes_to_erase_, other) ==
@@ -180,12 +197,13 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
 
 void SessionExpander::visit(Probe &probe)
 {
-  // If the probe has a single multi-expanded kprobe attach point, check if
-  // there's another probe with a single multi-expanded kretprobe attach point
-  // with the same target. If so, perform session expansion by merging the two
-  // probes together.
+  // If the probe has a single session-eligible kprobe attach point, check if
+  // there's another probe with a single session-eligible kretprobe attach
+  // point with the same target. If so, perform session expansion by merging
+  // the two probes together.
   if (probe.attach_points.size() == 1 &&
-      probetype(probe.attach_points[0]->provider) == ProbeType::kprobe) {
+      probetype(probe.attach_points[0]->provider) == ProbeType::kprobe &&
+      is_session_attach_point(*probe.attach_points[0])) {
     Probe *retprobe = find_matching_retprobe(probe);
     if (!retprobe)
       return;

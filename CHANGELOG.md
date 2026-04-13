@@ -73,6 +73,8 @@ and this project adheres to
   - [#5157](https://github.com/bpftrace/bpftrace/pull/5157)
 - Fix verbose listing of some kernel struct types
   - [#5169](https://github.com/bpftrace/bpftrace/pull/5169)
+- Enable session probes for kprobes with exact function names (not only wildcards)
+  - [#5104](https://github.com/bpftrace/bpftrace/pull/5104)
 #### Security
 #### Docs
 #### Tools
