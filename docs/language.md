@@ -1245,6 +1245,7 @@ fexit:fget {
 * `kprobe[:module]:fn`
 * `kprobe[:module]:fn+offset`
 * `kprobe:addr`
+* `kprobe@file:line[:col]`
 * `kretprobe[:module]:fn`
 * `kretprobe:addr`
 
@@ -1328,6 +1329,16 @@ kretprobe:d_lookup
 {
 	printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm,
 	    str(@fname[tid]));
+}
+```
+
+If DWARF debugging symbols are availaible for kernel and/or kernel modules, `kprobe` s can be attached via `file:line[:col]` source file location, requiring the `--unsafe` flag. `file` path may be absolute or relative, and `line:col` must refer to a valid statement in that file. Useful for probing inside a functions body.
+
+```
+kprobe@fs/open.c:1077
+{
+  printf("0x%lx\n", reg("ip"));
+  exit();
 }
 ```
 

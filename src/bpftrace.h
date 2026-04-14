@@ -44,6 +44,9 @@ using util::symbol;
 
 const int timeout_ms = 100;
 
+constexpr auto default_debuginfo_paths =
+    ":.debug:/usr/lib/debug:/lib/debug/boot";
+
 enum class DebugStage;
 
 // globals
@@ -172,6 +175,7 @@ public:
   bool write_pcaps(uint64_t id, uint64_t ns, const OpaqueValue &pkt);
   void parse_module_btf(const std::set<std::string> &modules);
   bool has_btf_data() const;
+  Dwarf *get_kernel_dwarf();
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
   std::set<std::string> list_modules(const ast::ASTContext &ctx,
@@ -265,6 +269,7 @@ private:
   uint64_t event_loss_count_ = 0;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
+  std::unique_ptr<Dwarf> kernel_dwarf_;
 };
 
 } // namespace bpftrace

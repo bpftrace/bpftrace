@@ -75,6 +75,54 @@ std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
   return dwarf;
 }
 
+static int kernel_module_section_address(Dwfl_Module *mod,
+                                         void **userdata,
+                                         const char *modname,
+                                         Dwarf_Addr base,
+                                         const char *secname,
+                                         Elf32_Word shndx,
+                                         const GElf_Shdr *shdr,
+                                         Dwarf_Addr *addr)
+{
+  if (std::string_view(secname) == "__versions") {
+    *addr = static_cast<Dwarf_Addr>(-1L);
+    return DWARF_CB_OK;
+  }
+
+  return dwfl_linux_kernel_module_section_address(
+      mod, userdata, modname, base, secname, shndx, shdr, addr);
+}
+
+Dwarf::Dwarf(BPFtrace *bpftrace, std::string debuginfo_path)
+    : bpftrace_(bpftrace),
+      debuginfo_path_(std::move(debuginfo_path)),
+      is_kernel(true)
+{
+  debuginfo_path_cstr_ = debuginfo_path_.c_str();
+  callbacks.find_elf = dwfl_linux_kernel_find_elf;
+  callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
+  // Wrapper callback preventing libdw to mistakenly fail due to missing
+  // __versions section in /sys/module/<name>/sections/ at runtime.
+  callbacks.section_address = kernel_module_section_address;
+  callbacks.debuginfo_path = const_cast<char **>(&debuginfo_path_cstr_);
+  dwfl = dwfl_begin(&callbacks);
+  dwfl_linux_kernel_report_kernel(dwfl);
+  dwfl_linux_kernel_report_modules(dwfl);
+  dwfl_report_end(dwfl, nullptr, nullptr);
+}
+
+std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
+                                            const std::string &debuginfo_path)
+{
+  std::unique_ptr<Dwarf> dwarf(new Dwarf(bpftrace, debuginfo_path));
+  Dwarf_Addr bias;
+
+  if (dwfl_nextcu(dwarf->dwfl, nullptr, &bias) == nullptr)
+    return nullptr;
+
+  return dwarf;
+}
+
 Dwarf::~Dwarf()
 {
   dwfl_end(dwfl);
@@ -82,8 +130,7 @@ Dwarf::~Dwarf()
 
 bool Dwarf::next_cu_info(CuInfo *cu_info) const
 {
-  Dwarf_Addr cubias;
-  cu_info->cudie = dwfl_nextcu(dwfl, cu_info->cudie, &cubias);
+  cu_info->cudie = dwfl_nextcu(dwfl, cu_info->cudie, &cu_info->mod_bias);
   if (cu_info->cudie == nullptr)
     return false;
 
@@ -605,7 +652,8 @@ Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
         (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
       Dwarf_Addr addr;
       if (dwarf_lineaddr(line, &addr) == 0) {
-        return addr;
+        // Add KASLR offset if in kernel mode
+        return is_kernel ? addr + cu->mod_bias : addr;
       }
     }
   }
