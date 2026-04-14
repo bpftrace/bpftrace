@@ -147,14 +147,6 @@ public:
       const std::vector<Matcher<const ast::Statement&>>& statements)
     requires requires(NodeType t) { t.stmts; };
 
-  Derived& WithType(const Matcher<const SizedType&>& type_matcher)
-    requires requires(NodeType* ptr) { ptr->type(); }
-  {
-    return this->Where([type_matcher](const NodeType& node) {
-      return MatchWith(node, type_matcher, node.type());
-    });
-  }
-
 private:
   template <typename U = NodeType>
   class Impl : public MatcherInterface<const U&> {
@@ -321,155 +313,6 @@ inline BlockExprMatcher Block(
     const std::vector<Matcher<const ast::Statement&>>& statements)
 {
   return BlockExprMatcher().WithStatements(statements).WithExpr(None());
-}
-
-class SizedTypeMatcher
-    : public PredicateMatcher<
-          SizedTypeMatcher,
-          SizedType,
-          std::function<bool(const SizedType&, MatchResultListener*)>> {
-public:
-  SizedTypeMatcher& WithSize(size_t size)
-  {
-    return Where([size](const SizedType& type, MatchResultListener* listener) {
-      return type.GetSize() == size ||
-             (*listener << "has size " << type.GetSize() << " instead of "
-                        << size,
-              false);
-    });
-  }
-
-  SizedTypeMatcher& WithNumElements(size_t num_elements)
-  {
-    return Where(
-        [num_elements](const SizedType& type, MatchResultListener* listener) {
-          return (type.IsArrayTy() && type.GetNumElements() == num_elements) ||
-                 (*listener << "has num elements "
-                            << (type.IsArrayTy() ? type.GetNumElements() : 0)
-                            << " instead of " << num_elements,
-                  false);
-        });
-  }
-
-  SizedTypeMatcher& WithType(Type ty)
-  {
-    return Where(
-        [ty](const SizedType& type_obj, MatchResultListener* listener) {
-          return type_obj.GetTy() == ty ||
-                 (*listener << "has type " << static_cast<int>(type_obj.GetTy())
-                            << " instead of " << static_cast<int>(ty),
-                  false);
-        });
-  }
-
-  SizedTypeMatcher& WithSigned(bool is_signed)
-  {
-    return Where(
-        [is_signed](const SizedType& type_obj, MatchResultListener* listener) {
-          return type_obj.IsSigned() == is_signed ||
-             (*listener << "has signed " << type_obj.IsSigned() << " instead of "
-                        << is_signed,
-              false);
-        });
-  }
-
-  SizedTypeMatcher& WithName(const std::string& name)
-  {
-    return Where(
-        [name](const SizedType& type_obj, MatchResultListener* listener) {
-          return type_obj.GetName() == name ||
-                 (*listener << "has name \"" << type_obj.GetName()
-                            << "\" instead of \"" << name << "\"",
-                  false);
-        });
-  }
-
-  SizedTypeMatcher& WithElement(
-      const Matcher<const SizedType&>& element_matcher)
-  {
-    return Where([element_matcher](const SizedType& type_obj,
-                                   MatchResultListener* listener) {
-      // For arrays, check element type.
-      if (type_obj.IsArrayTy()) {
-        const SizedType element_type = type_obj.GetElementTy();
-        return element_matcher.MatchAndExplain(element_type, listener);
-      }
-      // For pointers, check pointee type.
-      else if (type_obj.IsPtrTy()) {
-        const SizedType pointee_type = type_obj.GetPointeeTy();
-        return element_matcher.MatchAndExplain(pointee_type, listener);
-      } else {
-        *listener << "type is neither array nor pointer, cannot have element";
-        return false;
-      }
-    });
-  }
-
-  SizedTypeMatcher& WithField(
-      const std::string& field_name,
-      const Matcher<const class SizedType&>& field_type_matcher)
-  {
-    return Where(
-        [field_name, field_type_matcher](const class SizedType& type_obj,
-                                         MatchResultListener* listener) {
-          // Check if this is a record type (struct/union) or tuple.
-          if (!type_obj.IsCStructTy() && !type_obj.IsTupleTy()) {
-            *listener << "type is not a record or tuple, cannot have fields";
-            return false;
-          }
-          // Check if the field exists.
-          if (!type_obj.HasField(field_name)) {
-            *listener << "does not have field \"" << field_name << "\"";
-            return false;
-          }
-          // Check the field type.
-          const Field& field = type_obj.GetField(field_name);
-          return field_type_matcher.MatchAndExplain(field.type, listener);
-        });
-  }
-
-  bool MatchAndExplain(const SizedType& type,
-                       MatchResultListener* listener) const
-  {
-    return std::ranges::all_of(predicates_, [&](const auto& pred) {
-      return pred(type, listener);
-    });
-  }
-
-  operator Matcher<const SizedType&>() const
-  {
-    return ::testing::MakeMatcher(new Impl(predicates_));
-  }
-
-private:
-  class Impl : public MatcherInterface<const SizedType&> {
-  public:
-    explicit Impl(const std::vector<
-                  std::function<bool(const SizedType&, MatchResultListener*)>>&
-                      predicates)
-        : predicates_(predicates) {};
-
-    bool MatchAndExplain(const SizedType& type,
-                         MatchResultListener* listener) const override
-    {
-      return std::ranges::all_of(predicates_, [&](const auto& pred) {
-        return pred(type, listener);
-      });
-    }
-
-    void DescribeTo(std::ostream* os) const override
-    {
-      *os << "is a SizedType";
-    }
-
-    std::vector<std::function<bool(const SizedType&, MatchResultListener*)>>
-        predicates_;
-  };
-};
-
-inline SizedTypeMatcher SizedType(Type ty)
-{
-  return SizedTypeMatcher().WithType(ty);
 }
 
 class ParsedTypeMatcher
@@ -902,19 +745,6 @@ public:
     });
   }
 
-  TypeofMatcher& WithType(const Matcher<const class SizedType&>& type_matcher)
-  {
-    return Where([type_matcher](const ast::Typeof& node) {
-      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
-        node.addError() << "record is not a ParsedType";
-        return false;
-      }
-      const auto type = parsed_type_to_sized_type(
-          *std::get<ast::ParsedType*>(node.record));
-      return MatchWith(node, type_matcher, type);
-    });
-  }
-
   TypeofMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
   {
     return Where([type_matcher](const ast::Typeof& node) {
@@ -931,11 +761,6 @@ public:
 inline TypeofMatcher Typeof(const Matcher<const ast::Expression&>& expr_matcher)
 {
   return TypeofMatcher().WithExpr(expr_matcher);
-}
-
-inline TypeofMatcher Typeof(const Matcher<const class SizedType&>& type_matcher)
-{
-  return TypeofMatcher().WithType(type_matcher);
 }
 
 inline TypeofMatcher Typeof(const Matcher<const ast::ParsedType&>& type_matcher)
@@ -1576,19 +1401,6 @@ public:
     });
   }
 
-  SizeofMatcher& WithType(const Matcher<const class SizedType&>& type_matcher)
-  {
-    return Where([type_matcher](const ast::Sizeof& node) {
-      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
-        node.addError() << "record is not a ParsedType";
-        return false;
-      }
-      const auto type = parsed_type_to_sized_type(
-          *std::get<ast::ParsedType*>(node.record));
-      return MatchWith(node, type_matcher, type);
-    });
-  }
-
   SizeofMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
   {
     return Where([type_matcher](const ast::Sizeof& node) {
@@ -1605,11 +1417,6 @@ public:
 inline SizeofMatcher Sizeof(const Matcher<const ast::Expression&>& expr)
 {
   return SizeofMatcher().WithExpr(expr);
-}
-
-inline SizeofMatcher Sizeof(const Matcher<const class SizedType&>& type)
-{
-  return SizeofMatcher().WithType(type);
 }
 
 inline SizeofMatcher Sizeof(const Matcher<const ast::ParsedType&>& type)
@@ -1629,19 +1436,6 @@ public:
       return MatchWith(node,
                        expr_matcher,
                        std::get<ast::Expression>(node.record));
-    });
-  }
-
-  OffsetofMatcher& WithType(const Matcher<const class SizedType&>& type_matcher)
-  {
-    return Where([type_matcher](const ast::Offsetof& node) {
-      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
-        node.addError() << "record is not a ParsedType";
-        return false;
-      }
-      const auto type = parsed_type_to_sized_type(
-          *std::get<ast::ParsedType*>(node.record));
-      return MatchWith(node, type_matcher, type);
     });
   }
 
@@ -1667,12 +1461,6 @@ inline OffsetofMatcher Offsetof(const Matcher<const ast::Expression&>& expr,
                                 const std::vector<std::string>& field)
 {
   return OffsetofMatcher().WithExpr(expr).WithField(field);
-}
-
-inline OffsetofMatcher Offsetof(const Matcher<const class SizedType&>& type,
-                                const std::vector<std::string>& field)
-{
-  return OffsetofMatcher().WithType(type).WithField(field);
 }
 
 inline OffsetofMatcher Offsetof(const Matcher<const ast::ParsedType&>& type,

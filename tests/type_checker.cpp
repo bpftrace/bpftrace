@@ -43,6 +43,7 @@ using bpftrace::test::Integer;
 using bpftrace::test::Map;
 using bpftrace::test::MapAccess;
 using bpftrace::test::NamedArgument;
+using bpftrace::test::ParsedType;
 using bpftrace::test::Probe;
 using bpftrace::test::Program;
 using bpftrace::test::Record;
@@ -480,7 +481,9 @@ TEST_F(TypeCheckerTest, ternary_expressions)
           { ExprStatement(
               If(Binop(Operator::LT,
                        Builtin("pid"),
-                       Cast(Typeof(SizedType(Type::integer)), Integer(10000))),
+                       Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                              "uint32")),
+                            Integer(10000))),
                  Block({ ExprStatement(
                              Tuple({ String("a"), String("hellolongstr") })),
                          Jump(ast::JumpType::RETURN) }),
@@ -2153,68 +2156,72 @@ TEST_F(TypeCheckerTest, map_aggregations_implicit_cast)
   // When assigning an aggregation to a map
   // containing integers, the aggregation is
   // implicitly cast to an integer.
-  auto CastInt = [](auto &&expr) {
-    return Cast(Typeof(bpftrace::test::SizedType(Type::integer)),
+  auto CastKey = [](auto &&expr) {
+    return Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "int64")),
+                std::forward<decltype(expr)>(expr));
+  };
+  auto CastVal = [](auto &&expr) {
+    return Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "uint64")),
                 std::forward<decltype(expr)>(expr));
   };
   test("kprobe:f { @x = 1; @y = count(); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(
-                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
-             DiscardExpr(Call("count", { Map("@y"), CastInt(Integer(0)) })),
+                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
+             DiscardExpr(Call("count", { Map("@y"), CastKey(Integer(0)) })),
              AssignMapStatement(Map("@x"),
-                                CastInt(Integer(0)),
-                                CastInt(
-                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
+                                CastKey(Integer(0)),
+                                CastVal(
+                                    MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(
-                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
              DiscardExpr(
-                 Call("sum", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+                 Call("sum", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
-                                CastInt(Integer(0)),
-                                CastInt(
-                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
+                                CastKey(Integer(0)),
+                                CastVal(
+                                    MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = min(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(
-                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
              DiscardExpr(
-                 Call("min", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+                 Call("min", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
-                                CastInt(Integer(0)),
-                                CastInt(
-                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
+                                CastKey(Integer(0)),
+                                CastVal(
+                                    MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = max(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(
-                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
              DiscardExpr(
-                 Call("max", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+                 Call("max", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
-                                CastInt(Integer(0)),
-                                CastInt(
-                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
+                                CastKey(Integer(0)),
+                                CastVal(
+                                    MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
   test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
            { AssignMapStatement(
-                 Map("@x"), CastInt(Integer(0)), CastInt(Integer(1))),
+                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
              DiscardExpr(
-                 Call("avg", { Map("@y"), CastInt(Integer(0)), Integer(5) })),
+                 Call("avg", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
-                                CastInt(Integer(0)),
-                                CastInt(
-                                    MapAccess(Map("@y"), CastInt(Integer(0))))),
+                                CastKey(Integer(0)),
+                                CastVal(
+                                    MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
 
   // Assigning to a newly declared map
@@ -3018,25 +3025,36 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
   test("begin { $x = (int8)1; $x = 5; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "begin" },
-           { AssignVarStatement(Variable("$x"),
-                                Cast(Typeof(SizedType(Type::integer)),
-                                     Cast(Typeof(SizedType(Type::integer)),
-                                          Integer(1)))),
-             AssignVarStatement(Variable("$x"),
-                                Cast(Typeof(SizedType(Type::integer)),
-                                     Integer(5))),
+           { AssignVarStatement(
+                 Variable("$x"),
+                 Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                        "int16")),
+                      Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "int8")),
+                           Integer(1)))),
+             AssignVarStatement(
+                 Variable("$x"),
+                 Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                        "int16")),
+                      Integer(5))),
              Jump(ast::JumpType::RETURN) })) });
   test("begin { $x = (int8)1; $x = (uint8)5; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "begin" },
-           { AssignVarStatement(Variable("$x"),
-                                Cast(Typeof(SizedType(Type::integer)),
-                                     Cast(Typeof(SizedType(Type::integer)),
-                                          Integer(1)))),
-             AssignVarStatement(Variable("$x"),
-                                Cast(Typeof(SizedType(Type::integer)),
-                                     Cast(Typeof(SizedType(Type::integer)),
-                                          Integer(5)))),
+           { AssignVarStatement(
+                 Variable("$x"),
+                 Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                        "int16")),
+                      Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "int8")),
+                           Integer(1)))),
+             AssignVarStatement(
+                 Variable("$x"),
+                 Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                        "int16")),
+                      Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "uint8")),
+                           Integer(5)))),
              Jump(ast::JumpType::RETURN) })) });
 }
 
@@ -3173,12 +3191,18 @@ TEST_F(TypeCheckerTest, mixed_int_like_binop)
            { "kprobe:f" },
            { AssignVarStatement(
                  Variable("$a"),
-                 Binop(Operator::EQ,
-                       Cast(Typeof(SizedType(Type::integer)),
-                            Cast(Typeof(SizedType(Type::integer)), Integer(1))),
-                       Cast(Typeof(SizedType(Type::integer)),
-                            Cast(Typeof(SizedType(Type::integer)),
-                                 NegativeInteger(-1))))),
+                 Binop(
+                     Operator::EQ,
+                     Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                            "int16")),
+                          Cast(Typeof(ParsedType(
+                                   ast::ParsedType::Kind::Identifier, "uint8")),
+                               Integer(1))),
+                     Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                            "int16")),
+                          Cast(Typeof(ParsedType(
+                                   ast::ParsedType::Kind::Identifier, "int8")),
+                               NegativeInteger(-1))))),
              Jump(ast::JumpType::RETURN) })) });
 
   // The left has an additional cast to int64
@@ -3188,17 +3212,26 @@ TEST_F(TypeCheckerTest, mixed_int_like_binop)
            { DiscardExpr(
                  Call("sum",
                       { Map("@a"),
-                        Cast(Typeof(SizedType(Type::integer)), Integer(0)),
+                        Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "int64")),
+                             Integer(0)),
                         NegativeInteger(-1) })),
              AssignVarStatement(
                  Variable("$a"),
-                 Binop(Operator::EQ,
-                       Cast(Typeof(SizedType(Type::integer)),
-                            Cast(Typeof(SizedType(Type::integer)), Integer(1))),
-                       Cast(Typeof(SizedType(Type::integer)),
-                            MapAccess(Map("@a"),
-                                      Cast(Typeof(SizedType(Type::integer)),
-                                           Integer(0)))))),
+                 Binop(
+                     Operator::EQ,
+                     Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                            "int64")),
+                          Cast(Typeof(ParsedType(
+                                   ast::ParsedType::Kind::Identifier, "uint8")),
+                               Integer(1))),
+                     Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                            "int64")),
+                          MapAccess(Map("@a"),
+                                    Cast(Typeof(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "int64")),
+                                         Integer(0)))))),
              Jump(ast::JumpType::RETURN) })) });
 }
 
@@ -3821,20 +3854,26 @@ TEST_F(TypeCheckerTest, mixed_tuple)
            { "begin" },
            { AssignVarStatement(
                  Variable("$a"),
-                 Tuple(
-                     { Cast(Typeof(SizedType(Type::integer)
-                                       .WithSize(4)
-                                       .WithSigned(true)),
-                            Cast(Typeof(SizedType(Type::integer)), Integer(1))),
-                       Cast(Typeof(SizedType(Type::string)), String("hi")) })),
+                 Tuple({ Cast(Typeof(ParsedType(
+                                  ast::ParsedType::Kind::Identifier, "int32")),
+                              Cast(Typeof(ParsedType(
+                                       ast::ParsedType::Kind::Identifier,
+                                       "int16")),
+                                   Integer(1))),
+                         Cast(Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "string"))),
+                              String("hi")) })),
              AssignVarStatement(
                  Variable("$a"),
-                 Tuple(
-                     { Cast(Typeof(SizedType(Type::integer)
-                                       .WithSize(4)
-                                       .WithSigned(true)),
-                            Cast(Typeof(SizedType(Type::integer)), Integer(2))),
-                       String("hellostr") })),
+                 Tuple({ Cast(Typeof(ParsedType(
+                                  ast::ParsedType::Kind::Identifier, "int32")),
+                              Cast(Typeof(ParsedType(
+                                       ast::ParsedType::Kind::Identifier,
+                                       "uint16")),
+                                   Integer(2))),
+                         String("hellostr") })),
              Jump(ast::JumpType::RETURN) })) });
   test(
       R"(begin { $a = ((int16)1, "hi"); $b = ((uint16)2, "hellostr"); $a = $b })",
@@ -3842,45 +3881,60 @@ TEST_F(TypeCheckerTest, mixed_tuple)
           { "begin" },
           { AssignVarStatement(
                 Variable("$a"),
-                Tuple(
-                    { Cast(Typeof(SizedType(Type::integer)
-                                      .WithSize(4)
-                                      .WithSigned(true)),
-                           Cast(Typeof(SizedType(Type::integer)), Integer(1))),
-                      Cast(Typeof(SizedType(Type::string).WithSize(9)),
-                           String("hi")) })),
-            AssignVarStatement(Variable("$b"),
-                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
-                                            Integer(2)),
-                                       String("hellostr") })),
-            AssignVarStatement(Variable("$a"),
-                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
-                                            TupleAccess(Variable("$b"), 0)),
-                                       TupleAccess(Variable("$b"), 1) })),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "int32")),
+                             Cast(Typeof(ParsedType(
+                                      ast::ParsedType::Kind::Identifier,
+                                      "int16")),
+                                  Integer(1))),
+                        Cast(Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                        .WithArraySize(9)
+                                        .WithInner(ParsedType(
+                                            ast::ParsedType::Kind::Identifier,
+                                            "string"))),
+                             String("hi")) })),
+            AssignVarStatement(
+                Variable("$b"),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "uint16")),
+                             Integer(2)),
+                        String("hellostr") })),
+            AssignVarStatement(
+                Variable("$a"),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "int32")),
+                             TupleAccess(Variable("$b"), 0)),
+                        TupleAccess(Variable("$b"), 1) })),
             Jump(ast::JumpType::RETURN) })) });
   test(
       R"(begin { $a = ((int16)1, "hi"); $b = ((uint16)2, "hellostr"); $b = $a })",
       ExpectedAST{ Program().WithProbe(Probe(
           { "begin" },
-          { AssignVarStatement(Variable("$a"),
-                               Tuple({ Cast(Typeof(SizedType(Type::integer)),
-                                            Integer(1)),
-                                       String("hi") })),
+          { AssignVarStatement(
+                Variable("$a"),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "int16")),
+                             Integer(1)),
+                        String("hi") })),
             AssignVarStatement(
                 Variable("$b"),
-                Tuple(
-                    { Cast(Typeof(SizedType(Type::integer)
-                                      .WithSize(4)
-                                      .WithSigned(true)),
-                           Cast(Typeof(SizedType(Type::integer)), Integer(2))),
-                      String("hellostr") })),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "int32")),
+                             Cast(Typeof(ParsedType(
+                                      ast::ParsedType::Kind::Identifier,
+                                      "uint16")),
+                                  Integer(2))),
+                        String("hellostr") })),
             AssignVarStatement(
                 Variable("$b"),
-                Tuple({ Cast(Typeof(SizedType(Type::integer)
-                                        .WithSize(4)
-                                        .WithSigned(true)),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "int32")),
                              TupleAccess(Variable("$a"), 0)),
-                        Cast(Typeof(SizedType(Type::string).WithSize(9)),
+                        Cast(Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                        .WithArraySize(9)
+                                        .WithInner(ParsedType(
+                                            ast::ParsedType::Kind::Identifier,
+                                            "string"))),
                              TupleAccess(Variable("$a"), 1)) })),
             Jump(ast::JumpType::RETURN) })) });
   test(
@@ -3889,33 +3943,53 @@ TEST_F(TypeCheckerTest, mixed_tuple)
           { "begin" },
           { AssignMapStatement(
                 Map("@a"),
-                Cast(Typeof(SizedType(Type::integer)), Integer(0)),
-                Tuple(
-                    { Cast(Typeof(SizedType(Type::integer)
-                                      .WithSize(4)
-                                      .WithSigned(true)),
-                           Cast(Typeof(SizedType(Type::integer)), Integer(1))),
-                      Cast(Typeof(SizedType(Type::string).WithSize(9)),
-                           String("hi")) })),
+                Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                       "int64")),
+                     Integer(0)),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "int32")),
+                             Cast(Typeof(ParsedType(
+                                      ast::ParsedType::Kind::Identifier,
+                                      "int16")),
+                                  Integer(1))),
+                        Cast(Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                        .WithArraySize(9)
+                                        .WithInner(ParsedType(
+                                            ast::ParsedType::Kind::Identifier,
+                                            "string"))),
+                             String("hi")) })),
             AssignMapStatement(
                 Map("@b"),
-                Cast(Typeof(SizedType(Type::integer)), Integer(0)),
-                Tuple({ Cast(Typeof(SizedType(Type::integer)), Integer(2)),
+                Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                       "int64")),
+                     Integer(0)),
+                Tuple({ Cast(Typeof(ParsedType(
+                                 ast::ParsedType::Kind::Identifier, "uint16")),
+                             Integer(2)),
                         String("hellostr") })),
             AssignMapStatement(
                 Map("@a"),
-                Cast(Typeof(SizedType(Type::integer)), Integer(0)),
-                Tuple({ Cast(Typeof(SizedType(Type::integer)),
-                             TupleAccess(MapAccess(Map("@b"),
-                                                   Cast(Typeof(SizedType(
-                                                            Type::integer)),
-                                                        Integer(0))),
-                                         0)),
-                        TupleAccess(
-                            MapAccess(Map("@b"),
-                                      Cast(Typeof(SizedType(Type::integer)),
-                                           Integer(0))),
-                            1) })),
+                Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                       "int64")),
+                     Integer(0)),
+                Tuple(
+                    { Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "int32")),
+                           TupleAccess(
+                               MapAccess(
+                                   Map("@b"),
+                                   Cast(Typeof(ParsedType(
+                                            ast::ParsedType::Kind::Identifier,
+                                            "int64")),
+                                        Integer(0))),
+                               0)),
+                      TupleAccess(
+                          MapAccess(Map("@b"),
+                                    Cast(Typeof(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "int64")),
+                                         Integer(0))),
+                          1) })),
             Jump(ast::JumpType::RETURN) })) });
   test(
       R"(begin { print(if (pid == 1) { ((int16)1, "hi") } else { ((uint16)2, "hellostr") }); })",
@@ -3924,24 +3998,37 @@ TEST_F(TypeCheckerTest, mixed_tuple)
           { ExprStatement(Block(
               { ExprStatement(Call(
                     "print",
-                    { If(Binop(Operator::EQ,
-                               Builtin("pid"),
-                               Cast(Typeof(SizedType(Type::integer)),
-                                    Integer(1))),
-                         Tuple(
-                             { Cast(Typeof(SizedType(Type::integer)
-                                               .WithSize(4)
-                                               .WithSigned(true)),
-                                    Cast(Typeof(SizedType(Type::integer)),
-                                         Integer(1))),
-                               Cast(Typeof(SizedType(Type::string).WithSize(9)),
-                                    String("hi")) }),
-                         Tuple({ Cast(Typeof(SizedType(Type::integer)
-                                                 .WithSize(4)
-                                                 .WithSigned(true)),
-                                      Cast(Typeof(SizedType(Type::integer)),
-                                           Integer(2))),
-                                 String("hellostr") })) })),
+                    { If(
+                        Binop(Operator::EQ,
+                              Builtin("pid"),
+                              Cast(Typeof(ParsedType(
+                                       ast::ParsedType::Kind::Identifier,
+                                       "uint32")),
+                                   Integer(1))),
+                        Tuple(
+                            { Cast(Typeof(ParsedType(
+                                       ast::ParsedType::Kind::Identifier,
+                                       "int32")),
+                                   Cast(Typeof(ParsedType(
+                                            ast::ParsedType::Kind::Identifier,
+                                            "int16")),
+                                        Integer(1))),
+                              Cast(
+                                  Typeof(
+                                      ParsedType(ast::ParsedType::Kind::Array)
+                                          .WithArraySize(9)
+                                          .WithInner(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "string"))),
+                                  String("hi")) }),
+                        Tuple({ Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Identifier,
+                                         "int32")),
+                                     Cast(Typeof(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "uint16")),
+                                          Integer(2))),
+                                String("hellostr") })) })),
                 Jump(ast::JumpType::RETURN) })) })) });
 }
 
@@ -4508,23 +4595,25 @@ TEST_F(TypeCheckerTest, for_loop_variables_modified_during_loop)
       }
       print($var);
     })",
-      ExpectedAST{ Program().WithProbe(
-          Probe({ "begin" },
-                {
-                    AssignVarStatement(Variable("$var"),
-                                       Cast(Typeof(SizedType(Type::integer)),
-                                            Integer(0))),
-                    AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
-                    For(Variable("$kv"),
-                        Map("@map"),
-                        { ExprStatement(
-                            Block({ ExprStatement(Unop(Operator::POST_INCREMENT,
-                                                       Variable("$var"))),
-                                    Jump(ast::JumpType::CONTINUE) })) }),
-                    ExprStatement(Block(
-                        { ExprStatement(Call("print", { Variable("$var") })),
+      ExpectedAST{ Program().WithProbe(Probe(
+          { "begin" },
+          {
+              AssignVarStatement(
+                  Variable("$var"),
+                  Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                         "uint64")),
+                       Integer(0))),
+              AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
+              For(Variable("$kv"),
+                  Map("@map"),
+                  { ExprStatement(
+                      Block({ ExprStatement(Unop(Operator::POST_INCREMENT,
+                                                 Variable("$var"))),
+                              Jump(ast::JumpType::CONTINUE) })) }),
+              ExprStatement(
+                  Block({ ExprStatement(Call("print", { Variable("$var") })),
                           Jump(ast::JumpType::RETURN) })),
-                })) });
+          })) });
 
   auto *for_node =
       result.ast.root->probes.at(0)->block->stmts.at(2).as<ast::For>();
@@ -5414,9 +5503,10 @@ TEST_F(TypeCheckerTest, probe_return)
            Probe({ "begin" },
                  { AssignVarStatement(Variable("$a"), Integer(1)),
                    Jump(ast::JumpType::RETURN)
-                       .WithReturnValue(
-                           Cast(Typeof(SizedType(Type::integer).WithSize(8)),
-                                Variable("$a"))) })) });
+                       .WithReturnValue(Cast(
+                           Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "int64")),
+                           Variable("$a"))) })) });
 
   test("begin { return \"tomato\"; }", Error{});
 }
@@ -5568,25 +5658,33 @@ TEST_F(TypeCheckerTest, record_mixed_types)
           { AssignVarStatement(
                 Variable("$a"),
                 Record(
-                    { NamedArgument("a",
-                                    Cast(Typeof(SizedType(Type::integer)
-                                                    .WithSize(4)
-                                                    .WithSigned(true)),
-                                         Cast(Typeof(SizedType(Type::integer)),
-                                              Integer(1)))),
-                      NamedArgument("b",
-                                    Cast(Typeof(SizedType(Type::string)),
-                                         String("hi"))) })),
+                    { NamedArgument(
+                          "a",
+                          Cast(Typeof(ParsedType(
+                                   ast::ParsedType::Kind::Identifier, "int32")),
+                               Cast(Typeof(ParsedType(
+                                        ast::ParsedType::Kind::Identifier,
+                                        "int16")),
+                                    Integer(1)))),
+                      NamedArgument(
+                          "b",
+                          Cast(Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                          .WithInner(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "string"))),
+                               String("hi"))) })),
             AssignVarStatement(
                 Variable("$a"),
                 Record(
                     { NamedArgument("b", String("hellostr")),
-                      NamedArgument("a",
-                                    Cast(Typeof(SizedType(Type::integer)
-                                                    .WithSize(4)
-                                                    .WithSigned(true)),
-                                         Cast(Typeof(SizedType(Type::integer)),
-                                              Integer(2)))) })),
+                      NamedArgument(
+                          "a",
+                          Cast(Typeof(ParsedType(
+                                   ast::ParsedType::Kind::Identifier, "int32")),
+                               Cast(Typeof(ParsedType(
+                                        ast::ParsedType::Kind::Identifier,
+                                        "uint16")),
+                                    Integer(2)))) })),
             Jump(ast::JumpType::RETURN) })) });
 
   // Nested record with casts
@@ -5596,25 +5694,33 @@ TEST_F(TypeCheckerTest, record_mixed_types)
           { "begin" },
           { AssignVarStatement(
                 Variable("$a"),
-                Record({ NamedArgument(
-                             "x",
-                             Record({ NamedArgument(
-                                          "a",
-                                          Cast(Typeof(SizedType(Type::integer)
-                                                          .WithSize(2)
-                                                          .WithSigned(true)),
-                                               Cast(Typeof(SizedType(
-                                                        Type::integer)),
-                                                    Integer(1)))),
-                                      NamedArgument(
-                                          "b",
-                                          Cast(Typeof(SizedType(Type::integer)
-                                                          .WithSize(2)
-                                                          .WithSigned(false)),
-                                               Integer(2))) })),
-                         NamedArgument("y",
-                                       Cast(Typeof(SizedType(Type::string)),
-                                            String("hi"))) })),
+                Record(
+                    { NamedArgument(
+                          "x",
+                          Record(
+                              { NamedArgument(
+                                    "a",
+                                    Cast(Typeof(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "int16")),
+                                         Cast(Typeof(ParsedType(
+                                                  ast::ParsedType::Kind::
+                                                      Identifier,
+                                                  "int8")),
+                                              Integer(1)))),
+                                NamedArgument(
+                                    "b",
+                                    Cast(Typeof(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "uint16")),
+                                         Integer(2))) })),
+                      NamedArgument(
+                          "y",
+                          Cast(Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                          .WithInner(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "string"))),
+                               String("hi"))) })),
             AssignVarStatement(
                 Variable("$a"),
                 Record({
@@ -5624,16 +5730,19 @@ TEST_F(TypeCheckerTest, record_mixed_types)
                         Record({
                             NamedArgument(
                                 "b",
-                                Cast(Typeof(SizedType(Type::integer)
-                                                .WithSize(2)
-                                                .WithSigned(false)),
-                                     Cast(Typeof(SizedType(Type::integer)),
+                                Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Identifier,
+                                         "uint16")),
+                                     Cast(Typeof(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "uint8")),
                                           Integer(4)))),
-                            NamedArgument("a",
-                                          Cast(Typeof(SizedType(Type::integer)
-                                                          .WithSize(2)
-                                                          .WithSigned(true)),
-                                               Integer(3))),
+                            NamedArgument(
+                                "a",
+                                Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Identifier,
+                                         "int16")),
+                                     Integer(3))),
                         })),
                 })),
             Jump(ast::JumpType::RETURN) })) });
@@ -5645,34 +5754,46 @@ TEST_F(TypeCheckerTest, record_mixed_types)
           { "begin" },
           { AssignVarStatement(
                 Variable("$a"),
-                Record({ NamedArgument(
-                             "x",
-                             Tuple({ Cast(Typeof(SizedType(Type::integer)
-                                                     .WithSize(2)
-                                                     .WithSigned(true)),
-                                          Cast(Typeof(SizedType(Type::integer)),
-                                               Integer(1))),
-                                     Cast(Typeof(SizedType(Type::integer)
-                                                     .WithSize(2)
-                                                     .WithSigned(false)),
-                                          Integer(2)) })),
-                         NamedArgument("y",
-                                       Cast(Typeof(SizedType(Type::string)),
-                                            String("hi"))) })),
+                Record(
+                    { NamedArgument(
+                          "x",
+                          Tuple(
+                              { Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Identifier,
+                                         "int16")),
+                                     Cast(Typeof(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "int8")),
+                                          Integer(1))),
+                                Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Identifier,
+                                         "uint16")),
+                                     Integer(2)) })),
+                      NamedArgument(
+                          "y",
+                          Cast(Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                          .WithInner(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "string"))),
+                               String("hi"))) })),
             AssignVarStatement(
                 Variable("$a"),
-                Record({ NamedArgument(
-                             "x",
-                             Tuple({ Cast(Typeof(SizedType(Type::integer)
-                                                     .WithSize(2)
-                                                     .WithSigned(true)),
-                                          Integer(3)),
-                                     Cast(Typeof(SizedType(Type::integer)
-                                                     .WithSize(2)
-                                                     .WithSigned(false)),
-                                          Cast(Typeof(SizedType(Type::integer)),
-                                               Integer(4))) })),
-                         NamedArgument("y", String("hello")) })),
+                Record(
+                    { NamedArgument(
+                          "x",
+                          Tuple(
+                              { Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Identifier,
+                                         "int16")),
+                                     Integer(3)),
+                                Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Identifier,
+                                         "uint16")),
+                                     Cast(Typeof(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "uint8")),
+                                          Integer(4))) })),
+                      NamedArgument("y", String("hello")) })),
             Jump(ast::JumpType::RETURN) })) });
 }
 
