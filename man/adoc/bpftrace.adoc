@@ -355,6 +355,7 @@ combined with `-e` or filename args to see all the probes that a program would a
 # bpftrace -l -e 'tracepoint:xdp:mem_* { exit(); }'
 # bpftrace -l my_script.bt
 # bpftrace -lv 'enum cpu_usage_stat'
+# bpftrace -lvv 'u:/bin/bash:readline'
 ----
 
 The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:
@@ -391,6 +392,27 @@ struct css_task_iter {
         struct list_head iters_node;
 };
 ----
+
+Providers that support DWARF can also use the extra verbose flag (`-lvv`) to list attachable source locations:
+
+----
+# bpftrace -l 'uprobe:/bin/bash:readline' -vv    # works only if /bin/bash has DWARF
+uprobe:/bin/bash:readline
+    args:
+      const char* prompt
+    source lines:
+      @lib/readline/readline.c:355:1
+      @lib/readline/readline.c:356:3
+      @lib/readline/readline.c:362:3
+      ...
+----
+
+Each listed source location can be used directly as a probe target (see link:https://github.com/bpftrace/bpftrace/blob/master/docs/language.md#uprobe-uretprobe[uprobes]),
+allowing probes to be attached at a specific file, line, and column rather than at a function entry point. Inlined functions are not listed, as attaching to them via source
+location is not supported yet.
+
+Note: Source location listing is currently only available for providers with DWARF support (e.g. uprobe). Output can be
+large for functions with many statements.
 
 === Preprocessor Options
 

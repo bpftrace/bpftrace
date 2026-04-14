@@ -476,10 +476,45 @@ FuncParamLists ProbeMatcher::get_params_for_matches(
   }
 }
 
+SourceLineLists ProbeMatcher::get_source_lines_for_matches(
+    ProbeType probe_type,
+    const std::set<std::string>& matches)
+{
+  if (!bt_verbose_extra ||
+      (probe_type != ProbeType::uprobe && probe_type != ProbeType::kprobe))
+    return {};
+
+  SourceLineLists result;
+  static std::set<std::string> warned_paths;
+
+  for (const auto& match : matches) {
+    std::string fun = match;
+    std::string path = util::erase_prefix(fun);
+    auto dwarf = Dwarf::GetFromBinary(nullptr,
+                                      path,
+                                      bpftrace_->debuginfo_path_);
+    if (dwarf) {
+      auto lines = dwarf->get_function_src_lines(fun);
+      if (lines) {
+        result.emplace(match, *lines);
+      } else {
+        LOG(WARNING) << lines.takeError();
+      }
+    } else {
+      if (warned_paths.insert(path).second)
+        LOG(WARNING) << "No DWARF found for \"" << path << "\""
+                     << ", cannot show source line info";
+    }
+  }
+
+  return result;
+}
+
 void ProbeMatcher::format_matches_for_listing(
     ProbeType probe_type,
     const std::set<std::string>& matches,
     const FuncParamLists& param_lists,
+    const SourceLineLists& src_lists,
     std::vector<std::string>& results,
     const std::string& lang)
 {
@@ -504,11 +539,25 @@ void ProbeMatcher::format_matches_for_listing(
     std::ostringstream ss;
     ss << probe_type << ":" << match_print;
     results.push_back(ss.str());
+
     if (bt_verbose) {
-      auto it = param_lists.find(match);
-      if (it != param_lists.end()) {
-        for (const auto& param : it->second)
-          results.push_back("    " + param);
+      const std::string indent = bt_verbose_extra ? "      " : "    ";
+
+      auto param_it = param_lists.find(match);
+      if (param_it != param_lists.end() && !param_it->second.empty()) {
+        if (bt_verbose_extra)
+          results.emplace_back("    args:");
+        for (const auto& param : param_it->second)
+          results.push_back(indent + param);
+      }
+
+      if (bt_verbose_extra) {
+        auto src_it = src_lists.find(match);
+        if (src_it != src_lists.end() && !src_it->second.empty()) {
+          results.emplace_back("    source lines:");
+          for (const auto& line : src_it->second)
+            results.push_back(indent + "@" + line);
+        }
       }
     }
   }
@@ -527,8 +576,9 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
 
       auto matches = get_matches_for_ap(*ap);
       auto param_lists = get_params_for_matches(probe_type, matches);
+      auto source_lines = get_source_lines_for_matches(probe_type, matches);
       format_matches_for_listing(
-          probe_type, matches, param_lists, results, ap->lang);
+          probe_type, matches, param_lists, source_lines, results, ap->lang);
     }
   }
   return results;
@@ -632,7 +682,9 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
         probe_type, target, search_input, false /* demangle_symbols */);
 
     auto param_lists = get_params_for_matches(probe_type, matches);
-    format_matches_for_listing(probe_type, matches, param_lists, results);
+    auto source_lines = get_source_lines_for_matches(probe_type, matches);
+    format_matches_for_listing(
+        probe_type, matches, param_lists, source_lines, results);
   }
   return results;
 }

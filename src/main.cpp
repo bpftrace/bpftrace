@@ -621,8 +621,12 @@ Args parse_args(int argc, char* argv[])
         break;
       case 'v':
       case Options::VERBOSE:
-        ENABLE_LOG(V1);
-        bt_verbose = true;
+        if (bt_verbose) {
+          bt_verbose_extra = true;
+        } else {
+          ENABLE_LOG(V1);
+          bt_verbose = true;
+        }
         break;
       case 'B':
         if (std::strcmp(optarg, "line") == 0) {

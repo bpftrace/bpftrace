@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Add source location listing
+  - [#5116](https://github.com/bpftrace/bpftrace/pull/5116)
 - Extend support for DWARF formats
   - [#5095](https://github.com/bpftrace/bpftrace/pull/5095)
 - Ternary operator supports an empty second operand.

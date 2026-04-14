@@ -50,6 +50,7 @@ enum class DebugStage;
 extern std::set<DebugStage> bt_debug;
 extern bool bt_quiet;
 extern bool bt_verbose;
+extern bool bt_verbose_extra;
 extern bool dry_run;
 
 enum class DebugStage {

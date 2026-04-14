@@ -157,3 +157,19 @@ EXPECT ok
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/debug/dwp/uprobe_test-split
+
+NAME list uprobe source lines - basic
+RUN {{BPFTRACE}} -lvv 'uprobe:./testprogs/uprobe_test:uprobeFunction1'
+EXPECT_REGEX ^\s+@[^\s]+uprobe_test\.c:16(:[0-9]+)?$
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME list uprobe source lines - wildcard
+RUN {{BPFTRACE}} -lvv 'uprobe:./testprogs/uprobe_test:*'
+EXPECT_REGEX ^\s+@[^\s]+uprobe_test\.c:16(:[0-9]+)?$
+EXPECT_REGEX ^\s+@[^\s]+uprobe_test\.c:22(:[0-9]+)?$
+EXPECT_REGEX ^\s+@[^\s]+uprobe_test\.c:27(:[0-9]+)?$
+EXPECT_REGEX ^\s+@[^\s]+uprobe_test\.c:70(:[0-9]+)?$
+EXPECT_REGEX ^\s+@[^\s]+uprobe_test\.c:75(:[0-9]+)?$
+REQUIRES_FEATURE dwarf
+TIMEOUT 5

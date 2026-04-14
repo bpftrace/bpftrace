@@ -39,6 +39,10 @@ namespace bpftrace {
 
 class BPFtrace;
 
+template <typename T>
+concept LineCallback =
+    std::is_invocable_r_v<bool, T, Dwarf_Line *, const char *, int, int>;
+
 class Dwarf {
 public:
   virtual ~Dwarf();
@@ -61,11 +65,16 @@ public:
   SizedType get_stype(const std::string &type_name) const;
   void resolve_fields(const SizedType &type) const;
 
+  // Maps a source file, line, and optional column to the *first* corresponding
+  // instruction address. Mapping to inlined code is not supported.
   Result<uint64_t> line_to_addr(const std::string &source_file,
                                 size_t line_num,
                                 size_t col_num = 0) const;
+  // Returns source lines associated with a function as 'file:line:col' strings.
+  // Inlined line entries are omitted.
+  Result<std::vector<std::string>> get_function_src_lines(
+      const std::string &function) const;
 
-private:
   // Compilation unit wrapper, abstracting over regular and split (DWO/DWP)
   // CU DIEs.
   class CuInfo {
@@ -89,13 +98,15 @@ private:
     }
   };
 
+private:
   Dwarf(BPFtrace *bpftrace,
         const std::string &file_path,
         std::string debuginfo_path);
 
   bool next_cu_info(CuInfo *cu_info) const;
   std::vector<Dwarf_Die> function_param_dies(const std::string &function) const;
-  std::optional<Dwarf_Die> get_func_die(const std::string &function) const;
+  std::optional<Dwarf_Die> get_func_die(const std::string &function,
+                                        bool prefer_abstract_die) const;
   std::string get_type_name(Dwarf_Die &type_die) const;
   Dwarf_Word get_type_encoding(Dwarf_Die &type_die) const;
   std::optional<Dwarf_Die> find_type(const std::string &name) const;
@@ -106,8 +117,10 @@ private:
   std::optional<Bitfield> resolve_bitfield(Dwarf_Die &field_die) const;
 
   SizedType get_stype(Dwarf_Die &type_die, bool resolve_structs = true) const;
-
-  Result<CuInfo> get_cu_by_src(const std::string &source_file) const;
+  // Returns all CUs that reference the given source file in their srcfile table
+  // as (CU, resolved source file) pairs.
+  std::vector<std::pair<Dwarf::CuInfo, std::string>> get_cus_with_srcfile(
+      const std::string &source_file) const;
 
   static std::optional<Dwarf_Die> get_child_with_tagname(
       Dwarf_Die *die,
@@ -115,8 +128,17 @@ private:
       const std::string &name);
   static std::vector<Dwarf_Die> get_all_children_with_tag(Dwarf_Die *die,
                                                           int tag);
-
-  static std::optional<std::filesystem::path> get_cu_src_path(Dwarf_Die *cudie);
+  // Preorder DFS traversal of a DIE subtree.
+  template <typename VisitCallback>
+  static void visit_die_subtree(Dwarf_Die *die, VisitCallback &&callback);
+  // Iterates line table in a CUDIE and calls the given callback for
+  // each entry. If the callback returns false value the iteration stops,
+  // otherwise keeps iterating.
+  static Result<> foreach_src_line(Dwarf_Die *cudie,
+                                   LineCallback auto &&callback);
+  // Returns PC ranges of all inlined subroutines within the given function DIE.
+  static std::vector<std::pair<Dwarf_Addr, Dwarf_Addr>> get_inlined_func_ranges(
+      Dwarf_Die *func_die);
 
   Dwfl *dwfl = nullptr;
   Dwfl_Callbacks callbacks;
@@ -183,6 +205,12 @@ public:
                                 __attribute__((unused)),
                                 size_t line_num __attribute__((unused)),
                                 size_t col_num __attribute__((unused))) const
+  {
+    return make_error<DwarfParseError>();
+  }
+
+  Result<std::vector<std::string>> get_function_src_lines(
+      const std::string &function __attribute__((unused))) const
   {
     return make_error<DwarfParseError>();
   }
