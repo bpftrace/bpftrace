@@ -43,8 +43,11 @@ int parse_dwarf_unwind(
       });
   for (const auto &pid : pids) {
     auto ret = unwind.add_pid(pid);
-    if (ret != DWARFError::Success)
+    if (ret != DWARFError::Success) {
+      LOG(ERROR) << "Failed to build unwind tables for pid " << pid << ": "
+                 << ret;
       return -1;
+    }
   }
 
   // resize maps

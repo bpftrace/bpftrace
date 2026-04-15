@@ -495,6 +495,18 @@ int BPFtrace::run(output::Output &out,
       return -1;
     }
     if (needs_dwarf_unwind) {
+      // Run the program to its entry point, normally _start. This ensures
+      // that the shared libraries are loaded. We need this to be able to
+      // extract the unwind information from the libraries as well.
+      // As we haven't attached any probes yet, we might miss events related
+      // to the loader itself.
+      // TODO: Currently we have to parse the unwind tables before loading the
+      // bpf programs, as we need to resize the maps accordingly.
+      // Once we have support for dynamic hash maps, we can change the order
+      // to first load/attach the programs, then run_until_entry, and then
+      // parse and feed the unwind tables directly. This eliminates the race
+      // condition.
+      // Mainline supports it from 6.1.
       auto ok = child_->run_until_entry();
       if (!ok) {
         LOG(ERROR) << "Failed to run child to entry: " << ok.takeError();
