@@ -389,4 +389,19 @@ TEST(ap_probe_expansion_btf, kprobe_session)
        true);
 }
 
+TEST(ap_probe_expansion_btf, kprobe_session_duplicate_kprobe)
+{
+  auto funcs = std::set<std::string>{ "func_1",
+                                      "func_2",
+                                      "func_3",
+                                      "func_anon_struct",
+                                      "func_array_with_compound_data",
+                                      "func_arrays" };
+  test("kprobe:func_* {} kprobe:func_* {} kretprobe:func_* {}",
+       { "kprobe:func_*", "kprobe:func_*" },
+       { funcs, funcs },
+       _,
+       true);
+}
+
 } // namespace bpftrace::test::ap_probe_expansion
