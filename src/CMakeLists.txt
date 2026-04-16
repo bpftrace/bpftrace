@@ -37,8 +37,12 @@ add_library(runtime STATIC
   types_format.cpp
   ksyms.cpp
   usyms.cpp
+  dwarf/dwunwind.cpp
+  dwarf/dwunwind_loader.cpp
+  dwarf/dwunwind_table.cpp
   ${BFD_DISASM_SRC}
 )
+
 add_library(libbpftrace STATIC
   build_info.cpp
   lockdown.cpp

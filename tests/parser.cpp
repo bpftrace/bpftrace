@@ -210,6 +210,10 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("ustack")) })));
 
+  test("kprobe:f { __builtin_dw_ustack }",
+       Program().WithProbe(Probe(
+           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_dw_ustack")) })));
+
   test("kprobe:f { arg0 }",
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("arg0")) })));

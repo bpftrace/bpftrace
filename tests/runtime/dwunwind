@@ -1,0 +1,20 @@
+NAME dwunwind full stack trace without frame pointers
+RUN {{BPFTRACE}} -e 'config = { show_debug_info=0 } u:./testprogs/uprobe_nofp:funcD { printf("%s\n", dw_ustack()); exit(); }' -c ./testprogs/uprobe_nofp
+EXPECT_REGEX funcD\+[0-9]+\s+funcC\+[0-9]+\s+funcB\+[0-9]+\s+funcA\+[0-9]+\s+main\+[0-9]+
+REQUIRES_FEATURE dwunwind
+TIMEOUT 5
+
+NAME dwunwind error when no target process specified
+RUN {{BPFTRACE}} -e 'config = { unstable_dw_ustack=enable } u:./testprogs/uprobe_nofp:funcD { printf("%s\n", dw_ustack()); exit(); }'
+EXPECT_REGEX .*ERROR.*dw_ustack requires a target process.*
+REQUIRES_FEATURE dwunwind
+WILL_FAIL
+TIMEOUT 5
+
+NAME dwunwind runtime error when no dwarf data for process
+BEFORE ./testprogs/work_loop
+RUN {{BPFTRACE}} --dwarf-pid {{BEFORE_PID}} -e 'config = { show_debug_info=0 } u:./testprogs/uprobe_nofp:funcD { printf("%s\n", dw_ustack()); exit(); }'
+AFTER ./testprogs/uprobe_nofp
+EXPECT_REGEX .*WARNING.*No DWARF unwind data available for this process.*
+REQUIRES_FEATURE dwunwind
+TIMEOUT 5

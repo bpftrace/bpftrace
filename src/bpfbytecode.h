@@ -68,6 +68,7 @@ public:
   const BpfProgram &getProgramForProbe(const Probe &probe) const;
   BpfProgram &getProgramForProbe(const Probe &probe);
 
+  bool hasMap(const std::string &name) const;
   bool hasMap(MapType internal_type) const;
   const BpfMap &getMap(const std::string &name) const;
   const BpfMap &getMap(MapType internal_type) const;

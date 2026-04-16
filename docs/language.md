@@ -373,6 +373,7 @@ Controls whether maps are printed on exit. Set to `false` in order to change the
 These are the list of unstable features:
 - `unstable_tseries` - feature flag for time series map type
 - `unstable_addr` - feature flag for address of operator (&)
+- `unstable_dw_ustack` - feature flag for DWARF-based user-space stack unwinding
 
 All of these accept the following options:
 

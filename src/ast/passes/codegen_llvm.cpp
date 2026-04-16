@@ -328,6 +328,7 @@ private:
 
   ScopedExpr kstack(const SizedType &stype, const Location &loc);
   ScopedExpr ustack(const SizedType &stype, const Location &loc);
+  ScopedExpr dw_ustack(const SizedType &stype, const Location &loc);
 
   int get_probe_id();
 
@@ -397,6 +398,12 @@ private:
   VariableLLVM &getVariable(const std::string &var_ident);
 
   GlobalVariable *DeclareKernelVar(const std::string &name);
+
+  ScopedExpr createExternFuncCall(const std::string &name,
+                                  llvm::Type *return_type,
+                                  llvm::ArrayRef<llvm::Type *> arg_types,
+                                  llvm::ArrayRef<llvm::Value *> arg_values,
+                                  const Location &loc);
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
@@ -643,10 +650,99 @@ ScopedExpr CodegenLLVM::ustack(const SizedType &stype, const Location &loc)
                                                        b_.getInt32(3) }),
                                         stype.stack_type,
                                         loc);
+
   Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
   b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
 
   b_.SetInsertPoint(get_stack_fail);
+  b_.CreateRuntimeError(RuntimeErrorId::USTACK, loc);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(get_stack_success);
+
+  Value *num_frames = b_.CreateUDiv(stack_size,
+                                    b_.getInt64(stype.stack_type.elem_size()));
+  b_.CreateStore(num_frames,
+                 b_.CreateGEP(stack_struct_type,
+                              stack,
+                              { b_.getInt64(0), b_.getInt32(2) }));
+  // store pid
+  b_.CreateStore(b_.CreateGetPid(loc, false),
+                 b_.CreateGEP(stack_struct_type,
+                              stack,
+                              { b_.getInt64(0), b_.getInt32(0) }));
+  // store probe id
+  b_.CreateStore(b_.GetIntSameSize(get_probe_id(),
+                                   stack_struct_type->getTypeAtIndex(1)),
+                 b_.CreateGEP(stack_struct_type,
+                              stack,
+                              { b_.getInt64(0), b_.getInt32(1) }));
+  b_.CreateBr(merge_block);
+  b_.SetInsertPoint(merge_block);
+
+  return ScopedExpr(stack);
+}
+
+ScopedExpr CodegenLLVM::dw_ustack(const SizedType &stype, const Location &loc)
+{
+  StructType *stack_struct_type = b_.GetStackStructType(stype.stack_type);
+
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
+
+  BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                               "merge_block",
+                                               parent);
+
+  auto *stack = b_.CreateCallStackAllocation(stype,
+                                             stype.stack_type.name(),
+                                             loc);
+  b_.CreateMemsetBPF(stack,
+                     b_.getInt8(0),
+                     datalayout().getTypeStoreSize(stack_struct_type));
+
+  BasicBlock *get_stack_success = BasicBlock::Create(module_->getContext(),
+                                                     "get_stack_success",
+                                                     parent);
+  BasicBlock *get_stack_fail = BasicBlock::Create(module_->getContext(),
+                                                  "get_stack_fail",
+                                                  parent);
+  Value *stack_trace = b_.CreateGEP(stack_struct_type,
+                                    stack,
+                                    { b_.getInt64(0), b_.getInt32(3) });
+  Value *p_stack_size = b_.getInt32(stype.stack_type.limit *
+                                    stype.stack_type.elem_size());
+  Value *tgid = b_.CreateGetPid(loc, false);
+  std::array<llvm::Type *, 4> arg_types = {
+    b_.getPtrTy(), b_.getPtrTy(), b_.getInt32Ty(), b_.getInt32Ty()
+  };
+  std::array<llvm::Value *, 4> arg_values = {
+    ctx_, stack_trace, p_stack_size, tgid
+  };
+  Value *stack_size = createExternFuncCall("__ustack_dwunwind",
+                                           b_.getInt64Ty(),
+                                           arg_types,
+                                           arg_values,
+                                           loc)
+                          .value();
+
+  Value *condition = b_.CreateICmpSGE(stack_size, b_.getInt64(0));
+  b_.CreateCondBr(condition, get_stack_success, get_stack_fail);
+
+  b_.SetInsertPoint(get_stack_fail);
+  BasicBlock *no_dwarf_block = BasicBlock::Create(module_->getContext(),
+                                                  "no_dwarf_data",
+                                                  parent);
+  BasicBlock *ustack_error_block = BasicBlock::Create(module_->getContext(),
+                                                      "ustack_error",
+                                                      parent);
+  Value *is_no_dwarf = b_.CreateICmpEQ(stack_size, b_.getInt64(-2));
+  b_.CreateCondBr(is_no_dwarf, no_dwarf_block, ustack_error_block);
+
+  b_.SetInsertPoint(no_dwarf_block);
+  b_.CreateRuntimeError(RuntimeErrorId::DW_USTACK_NO_DWARF, loc);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(ustack_error_block);
   b_.CreateRuntimeError(RuntimeErrorId::USTACK, loc);
   b_.CreateBr(merge_block);
 
@@ -706,6 +802,8 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return kstack(type_map_.type(&builtin), builtin.loc);
   } else if (builtin.ident == "ustack") {
     return ustack(type_map_.type(&builtin), builtin.loc);
+  } else if (builtin.ident == "__builtin_dw_ustack") {
+    return dw_ustack(type_map_.type(&builtin), builtin.loc);
   } else if (builtin.ident == "pid") {
     return ScopedExpr(b_.CreateGetPid(builtin.loc, false));
   } else if (builtin.ident == "tid") {
@@ -1897,6 +1995,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return kstack(type_map_.type(&call), call.loc);
   } else if (call.func == "ustack") {
     return ustack(type_map_.type(&call), call.loc);
+  } else if (call.func == "__builtin_dw_ustack") {
+    return dw_ustack(type_map_.type(&call), call.loc);
   } else if (call.func == "strncmp") {
     auto &left_arg = call.vargs.at(0);
     auto &right_arg = call.vargs.at(1);
@@ -2036,7 +2136,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto *inst = b_.CreateCall(func, arg_values, call.func);
     return ScopedExpr(inst, [this, inst, &call] {
       // We set the debug location on the call instructions only after the
-      // scoped expression is not longer used. Otherwise the instruction emitter
+      // scoped expression is no longer used. Otherwise the instruction emitter
       // seems to use this location for everything, which results in problems.
       inst->setDebugLoc(
           debug_.createDebugLocation(llvm_ctx_, scope_, call.loc));
@@ -4772,6 +4872,40 @@ Value *CodegenLLVM::createFmtString(int print_id)
   res->setAlignment(MaybeAlign(1));
   res->setLinkage(llvm::GlobalValue::InternalLinkage);
   return res;
+}
+
+ScopedExpr CodegenLLVM::createExternFuncCall(
+    const std::string &name,
+    llvm::Type *return_type,
+    llvm::ArrayRef<llvm::Type *> arg_types,
+    llvm::ArrayRef<llvm::Value *> arg_values,
+    const Location &loc)
+{
+  auto *func = extern_funcs_[name];
+  if (!func) {
+    FunctionType *function_type = FunctionType::get(return_type,
+                                                    arg_types,
+                                                    false);
+    func = llvm::Function::Create(
+        function_type, llvm::Function::ExternalLinkage, name, module_.get());
+    func->addFnAttr(Attribute::AlwaysInline);
+    func->addFnAttr(Attribute::NoUnwind);
+    func->setDSOLocal(true);
+
+    // Add noundef attribute to each argument.
+    for (auto &arg : func->args()) {
+      arg.addAttr(Attribute::NoUndef);
+    }
+    extern_funcs_[name] = func;
+  }
+
+  auto *inst = b_.CreateCall(func, arg_values, name);
+  return ScopedExpr(inst, [this, inst, loc] {
+    // We set the debug location on the call instructions only after the
+    // scoped expression is no longer used. Otherwise the instruction emitter
+    // seems to use this location for everything, which results in problems.
+    inst->setDebugLoc(debug_.createDebugLocation(llvm_ctx_, scope_, loc));
+  });
 }
 
 /// This should emit

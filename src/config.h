@@ -35,6 +35,7 @@ static const auto UNSTABLE_IMPORT_STATEMENT = "unstable_import_statement";
 static const auto UNSTABLE_TSERIES = "unstable_tseries";
 static const auto UNSTABLE_ADDR = "unstable_addr";
 static const auto UNSTABLE_TYPEINFO = "unstable_typeinfo";
+static const auto UNSTABLE_DW_USTACK = "unstable_dw_ustack";
 
 static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
   "symbol_source",
@@ -68,6 +69,7 @@ public:
   ConfigUnstable unstable_tseries = ConfigUnstable::warn;
   ConfigUnstable unstable_addr = ConfigUnstable::warn;
   ConfigUnstable unstable_typeinfo = ConfigUnstable::error;
+  ConfigUnstable unstable_dw_ustack = ConfigUnstable::warn;
 #ifdef HAVE_BLAZESYM
   bool use_blazesym = true;
   bool show_debug_info = true;

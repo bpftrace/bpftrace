@@ -246,6 +246,35 @@ kprobe:dummy {
 ```
 
 
+### dw_ustack
+- `ustack_t dw_ustack([StackMode mode, ][int limit])`
+
+DWARF-based user-space stack unwinding. Unlike [ustack](#ustack), which
+relies on frame pointers, `dw_ustack` uses DWARF `.eh_frame` debug
+information to unwind the stack. This makes it possible to collect complete
+user-space stack traces from programs compiled without frame pointers.
+
+The signature and output format are the same as `ustack`.
+
+Bpftrace needs to read the DWARF information for the target processes at startup.
+For this, one or more pids have to be specified. This can either be done via
+`-p`, `-c` (implicitly) or `--dwarf-pid`. If `dw_ustack` cannot find unwind
+information for a process, a runtime warning is emitted.
+
+`dw_ustack` is currently only available on x86_64.
+
+**Unstable feature**
+
+`dw_ustack` is an unstable feature. By default a warning is printed when it
+is used. Set the config flag to suppress the warning or to make it an error:
+
+```
+config = { unstable_dw_ustack=enable }
+```
+
+For usage examples see [ustack](#ustack).
+
+
 ### elapsed
 - `uint64 elapsed()`
 - `uint64 elapsed`

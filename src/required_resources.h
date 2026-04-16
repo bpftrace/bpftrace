@@ -38,6 +38,10 @@ static const auto KSTACK_MSG = "Error reading kstack.";
 
 static const auto USTACK_MSG = "Error reading ustack.";
 
+static const auto DW_USTACK_NO_DWARF_MSG =
+    "No DWARF unwind data available for this process. "
+    "Use -p or --dwarf-pid to specify target PIDs.";
+
 enum class RuntimeErrorId {
   DIVIDE_BY_ZERO,
   HELPER_ERROR,
@@ -45,6 +49,7 @@ enum class RuntimeErrorId {
   CPU_COUNT_MISMATCH,
   KSTACK,
   USTACK,
+  DW_USTACK_NO_DWARF,
 };
 
 enum class PrintfSeverity {

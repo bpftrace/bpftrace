@@ -83,6 +83,7 @@ enum Options {
   DEBUG,
   DEBUGINFO,
   DRY_RUN,
+  DWARF_PID,
   EMIT_ELF,
   EMIT_LLVM,
   FMT, // Alias for --mode=format.
@@ -131,6 +132,9 @@ void usage(std::ostream& out)
   out << "    -l, --list [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
   out << "    -p, --pid PID  filter actions and enable USDT probes on PID" << std::endl;
+#ifdef HAVE_DW_UNWIND
+  out << "    --dwarf-pid PID add additional pids to the DWARF-unwinder." << std::endl;
+#endif
   out << "    -c, --cmd CMD  run CMD and enable USDT probes on resulting process" << std::endl;
   out << "    --no-feature FEATURE[,FEATURE]" << std::endl;
   out << "                   disable use of detected features" << std::endl;
@@ -324,6 +328,7 @@ std::vector<std::string> extra_flags(
 
 struct Args {
   std::string pid_str;
+  std::vector<std::string> dwarf_pids_str;
   std::string cmd_str;
   bool listing = false;
   bool safe_mode = true;
@@ -499,6 +504,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::UNSAFE },
+    option{ .name = "dwarf-pid",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = Options::DWARF_PID },
     option{ .name = "usdt-file-activation",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -649,6 +658,11 @@ Args parse_args(int argc, char* argv[])
       case Options::PROBE_FILTER:
         args.probe_filter = optarg;
         break;
+#ifdef HAVE_DW_UNWIND
+      case Options::DWARF_PID:
+        args.dwarf_pids_str.emplace_back(optarg);
+        break;
+#endif
       case 'I':
         args.include_dirs.emplace_back(optarg);
         break;
@@ -840,6 +854,25 @@ void list_probes(BPFtrace& bpftrace,
   }
 }
 
+uint64_t parse_pid(std::string const& pid_str)
+{
+  auto maybe_pid = util::to_uint(pid_str);
+  if (!maybe_pid) {
+    LOG(ERROR) << "Failed to parse pid: " << maybe_pid.takeError();
+    exit(1);
+  }
+  if (*maybe_pid > 0x400000) {
+    // The actual maximum pid depends on the configuration for the specific
+    // system, i.e. read from `/proc/sys/kernel/pid_max`. We can impose a
+    // basic sanity check here against the nominal maximum for 64-bit
+    // systems.
+    LOG(ERROR) << "Pid out of range: " << *maybe_pid;
+    exit(1);
+  }
+
+  return *maybe_pid;
+}
+
 int main(int argc, char* argv[])
 {
   Log::get().set_colorize(is_colorize());
@@ -887,20 +920,8 @@ int main(int argc, char* argv[])
   bpftrace.debuginfo_path_ = args.debuginfo_path;
 
   if (!args.pid_str.empty()) {
-    auto maybe_pid = util::to_uint(args.pid_str);
-    if (!maybe_pid) {
-      LOG(ERROR) << "Failed to parse pid: " << maybe_pid.takeError();
-      exit(1);
-    }
-    if (*maybe_pid > 0x400000) {
-      // The actual maximum pid depends on the configuration for the specific
-      // system, i.e. read from `/proc/sys/kernel/pid_max`. We can impose a
-      // basic sanity check here against the nominal maximum for 64-bit
-      // systems.
-      LOG(ERROR) << "Pid out of range: " << *maybe_pid;
-      exit(1);
-    }
-    auto proc = util::create_proc(*maybe_pid);
+    auto pid = parse_pid(args.pid_str);
+    auto proc = util::create_proc(pid);
     if (!proc) {
       LOG(ERROR) << "Failed to attach to pid: " << proc.takeError();
       exit(1);
@@ -908,6 +929,10 @@ int main(int argc, char* argv[])
     bpftrace.procmon_ = std::move(*proc);
   }
 
+  for (auto const& pid_str : args.dwarf_pids_str) {
+    auto pid = parse_pid(pid_str);
+    bpftrace.dwarf_pids_.emplace_back(pid);
+  }
   if (!args.cmd_str.empty()) {
     bpftrace.cmd_ = args.cmd_str;
     auto child = util::create_child(args.cmd_str);

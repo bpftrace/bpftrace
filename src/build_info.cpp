@@ -39,6 +39,12 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
+  buf << "  dwunwind (DWARF stack unwinding): "
+#ifdef HAVE_DW_UNWIND
+      << "yes" << std::endl;
+#else
+      << "no" << std::endl;
+#endif
 
   return buf.str();
 }

@@ -60,6 +60,17 @@ TEST(unstable_feature, check_error)
              "address-of operator (&) feature is not enabled by default. To "
              "enable this unstable "
              "feature, set the config flag to enable. unstable_addr=enable");
+
+#ifdef HAVE_DW_UNWIND
+  test("config = { unstable_dw_ustack=warn } uprobe:./a:main "
+       "{ @ = dw_ustack(); }");
+  test_error(
+      "config = { unstable_dw_ustack=error } uprobe:./a:main "
+      "{ @ = dw_ustack(); }",
+      "dw_ustack (DWARF stack unwinding) feature is not enabled by default. "
+      "To enable this unstable feature, set the config flag to enable. "
+      "unstable_dw_ustack=enable");
+#endif
 }
 
 } // namespace bpftrace::test::unstable_feature
