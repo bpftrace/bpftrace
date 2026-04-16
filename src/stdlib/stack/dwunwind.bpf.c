@@ -253,8 +253,8 @@ find_mapping(struct mapping *m, u64 ip)
       break;
     struct map_entry *me = &m->entries[mid];
 
-    DBG("bisection step %d: left %d right %d mid %d vma_start %lx",
-      i, left, right, mid, me->vma_start);
+    DBG("bisection step %d: left %d right %d", i, left, right);
+    DBG("    mid %d vma_start %lx", mid, me->vma_start);
     if (me->vma_start <= ip)
       left = mid + 1;
     else
@@ -530,8 +530,8 @@ eval_expr(int expression_id)
         break;
     }
 
-    DBG(" eval expr id %d instr %d op %x sp %d a1 %lx a2 %lx",
-        expression_id, i, instr, sp, a1, a2);
+    DBG(" eval expr id %d instr %d op %x", expression_id, i, instr);
+    DBG("     sp %d a1 %lx a2 %lx", sp, a1, a2);
     switch (instr) {
       case EXPR_OP_CONST:
         stack[sp++] = a1;
@@ -638,7 +638,7 @@ unwind_step(void)
   struct dwunwind_state *s = bpf_map_lookup_elem(&dwunwind_state_scratch, &zero);
   if (s == NULL) {
     LOG("no scratch state");
-    return 1;
+    return -1;
   }
 
   /*
@@ -648,7 +648,7 @@ unwind_step(void)
   struct mapping *m = bpf_map_lookup_elem(&dwunwind_mappings, &s->tgid);
   if (m == NULL) {
     INFO("no mapping found");
-    return 1;
+    return -1;
   }
 
   u64 *regs_o;    /* regs, old set */
@@ -667,36 +667,32 @@ unwind_step(void)
   }
   regs_v_n = regs_v_o;
 
-  if ((regs_v_o & (1 << RIP)) == 0) {
-    INFO("Stack walk: PC is None, stopping");
-    return 1;
-  }
-
   struct map_entry *me = find_mapping(m, regs_o[RIP]);
   if (me == NULL) {
     LOG("no map entry found");
-    return 1;
+    return -1;
   }
 
   u64 offset = regs_o[RIP] - me->vma_start + me->offset;
   DBG("rip %lx vma_start %lx offset %lx", regs_o[RIP], me->vma_start, offset);
   int cft_id;
-  [[clang::noinline]] cft_id = find_cft(me->offsetmap_id, me->start_in_map, offset);
+  [[clang::noinline]] cft_id = find_cft(me->offsetmap_id, me->start_in_map,
+      offset);
   INFO(" found cft entry id %d", cft_id);
 
   if (cft_id < 0) {
     LOG("error in offsetmap processing");
-    return 1;
+    return -1;
   }
   if (cft_id == 0) {
     LOG("no offsetmap entry found for ip %lx offset %lx", regs_o[RIP], offset);
-    return 1;
+    return -1;
   }
 
   struct cft *cf = bpf_map_lookup_elem(&dwunwind_cfts, &cft_id);
   if (cf == NULL) {
     LOG("cft not found");
-    return 1;
+    return -1;
   }
   INFO("cft %d found", cft_id);
 
@@ -710,24 +706,24 @@ unwind_step(void)
     INFO("eval_expr cft_id %d ip %lx", cft_id, regs_o[RIP]);
     INFO("step %d CFA = %lx error %d", s->steps, cfa, s->eval_error);
     if (s->eval_error)
-      return 1;
+      return -1;
   } else if (cf->cfa.rtype == CFA_RULE_REG_OFFSET) {
     u32 r = cf->cfa.data.reg_offset.reg;
     s64 o = cf->cfa.data.reg_offset.offset;
     if ((regs_v_o & (1 << r)) == 0) {
       LOG("Stack walk: CFA register r%d not valid, stopping", r);
-      return 1;
+      return -1;
     }
     if (r >= NUM_REGISTERS) {
       LOG("Stack walk: CFA register r%d out of range, stopping", r);
-      return 1;
+      return -1;
     }
     cfa = regs_o[r] + o;
     INFO("  CFA = r%d (%lx) + %lld = %lx", r, regs_o[r], o);
     INFO("  new CFA = %lx", cfa);
   } else {
     LOG("Stack walk: unknown CFA rule type %d, stopping", cf->cfa.rtype);
-    return 1;
+    return -1;
   }
 
   // unwind stack pointer
@@ -756,7 +752,7 @@ unwind_step(void)
       if (ret < 0) {
         LOG("Stack walk: failed to read r%d at addr %lx",
           reg, addr);
-        return 1;
+        return -1;
       }
       DBG("  r%d: at addr %lx value %lx", reg, addr, val);
       regs_n[reg] = val;
@@ -765,7 +761,8 @@ unwind_step(void)
       // register value is CFA + offset (no dereference)
       s64 off = cf->rules[reg].data.offset;
       regs_n[reg] = cfa + off;
-      DBG("  r%d: val_offset cfa %lx + %lld = %lx", reg, cfa, off, regs_n[reg]);
+      DBG("  r%d: val_offset cfa %lx + %lld", reg, cfa, off);
+      DBG("                   = %lx", regs_n[reg]);
       regs_v_n |= (1 << reg);
     } else if (cf->rules[reg].rtype == REGISTER_RULE_REGISTER) {
       // register value is copied from another register
@@ -773,12 +770,12 @@ unwind_step(void)
       if (src_reg >= NUM_REGISTERS) {
         LOG("Stack walk: register rule source r%d out of range for r%d",
           (int)src_reg, reg);
-        return 1;
+        return -1;
       }
       if ((regs_v_o & (1 << src_reg)) == 0) {
         LOG("Stack walk: source register r%d not valid for r%d",
           (int)src_reg, reg);
-        return 1;
+        return -1;
       }
       regs_n[reg] = regs_o[src_reg];
       DBG("  r%d: register r%d = %lx", reg, (int)src_reg, regs_n[reg]);
@@ -789,16 +786,17 @@ unwind_step(void)
       u64 addr;
       [[clang::noinline]] addr = eval_expr(expr_id);
       if (s->eval_error)
-        return 1;
+        return -1;
       u64 val = 0;
       int ret = bpf_probe_read_user(&val, sizeof(val), (void *)addr);
       if (ret < 0) {
         LOG("Stack walk: failed to deref expr result for r%d at %lx",
           reg, addr);
-        return 1;
+        return -1;
       }
       regs_n[reg] = val;
-      DBG("  r%d: expression(%d) deref %lx = %lx", reg, expr_id, addr, val);
+      DBG("  r%d: expression(%d) deref %lx", reg, expr_id, addr);
+      DBG("                  = %lx", reg, val);
       regs_v_n |= (1 << reg);
     } else if (cf->rules[reg].rtype == REGISTER_RULE_VAL_EXPRESSION) {
       // evaluate expression, use result directly (no dereference)
@@ -806,7 +804,7 @@ unwind_step(void)
       u64 val;
       [[clang::noinline]] val = eval_expr(expr_id);
       if (s->eval_error)
-        return 1;
+        return -1;
       regs_n[reg] = val;
       DBG("  r%d: val_expression(%d) = %lx", reg, expr_id, val);
       regs_v_n |= (1 << reg);
@@ -818,7 +816,7 @@ unwind_step(void)
     } else {
       LOG("Stack walk: unsupported register rule type %d for r%d",
         cf->rules[reg].rtype, reg);
-      return 1;
+      return -1;
     }
   }
 
@@ -842,6 +840,13 @@ unwind_step(void)
   INFO("After unwind step: next PC %lx", regs_n[RIP]);
 
   s->steps += 1;
+
+  // if the return address is undefined, we've reached the end of the stack
+  if ((regs_v_n & (1 << RIP)) == 0 || regs_n[RIP] == 0) {
+    LOG("return address undefined or zero, end of stack");
+    return 1;
+  }
+
   return 0;
 }
 
@@ -932,7 +937,11 @@ long __ustack_dwunwind(void *ctx, u64 *buf, u32 buf_size, u32 tgid)
   *buf++ = s->regs_map[RIP];
   int nframes = buf_size / sizeof(u64);
   for (int i = 1; i < MAX_STACK_FRAMES && i < nframes; ++i) {
-    [[clang::noinline]] if (unwind_step() != 0) {
+    int ret;
+    [[clang::noinline]] ret = unwind_step();
+    if (ret > 0) /* end of stack */
+      goto done;
+    if (ret < 0) { /* error */
       *buf++ = -1ull;
       goto done;
     }
