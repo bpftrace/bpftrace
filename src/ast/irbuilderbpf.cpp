@@ -376,11 +376,11 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 /// Convert internal SizedType to a corresponding LLVM type.
 ///
 /// Only one type is not converted directly into an LLVM type:
-/// - C structs (c_struct) are represented as byte arrays
+/// - C types (c_type) are represented as byte arrays
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
-  if (stype.IsByteArray() || stype.IsCStructTy()) {
+  if (stype.IsByteArray() || stype.IsCTypeTy()) {
     ty = ArrayType::get(getInt8Ty(), stype.GetSize());
   } else if (stype.IsArrayTy()) {
     ty = ArrayType::get(GetType(stype.GetElementTy()), stype.GetNumElements());
@@ -2108,7 +2108,7 @@ Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,
 Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
                                             const SizedType &args_type)
 {
-  assert(args_type.IsCStructTy());
+  assert(args_type.IsCTypeTy());
 
   auto *args_t = UprobeArgsType(args_type);
   AllocaInst *result = CreateAllocaBPF(args_t, "args");
@@ -2129,13 +2129,10 @@ Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
 
 llvm::Type *IRBuilderBPF::UprobeArgsType(const SizedType &args_type)
 {
-  auto type_name = args_type.GetName();
-  type_name.erase(0, STRUCT_PREFIX.length());
-
   std::vector<llvm::Type *> arg_types;
   for (auto &arg : args_type.GetFields())
     arg_types.push_back(GetType(arg.type));
-  return GetStructType(type_name, arg_types, false);
+  return GetStructType(std::string(args_type.GetBaseName()), arg_types, false);
 }
 
 Value *IRBuilderBPF::CreateRegisterRead(Value *ctx, const std::string &builtin)

@@ -2158,10 +2158,9 @@ ScopedExpr CodegenLLVM::visit(MapAddr &map_addr)
 
 ScopedExpr CodegenLLVM::visit(Variable &var)
 {
-  // Arrays and structs are not memcopied for local variables
+  // Arrays and c-types are not memcopied for local variables
   if (needMemcpy(type_map_.type(&var)) &&
-      !(type_map_.type(&var).IsArrayTy() ||
-        type_map_.type(&var).IsCStructTy())) {
+      !(type_map_.type(&var).IsArrayTy() || type_map_.type(&var).IsCTypeTy())) {
     return ScopedExpr(getVariable(var.ident).value);
   } else {
     auto &var_llvm = getVariable(var.ident);
@@ -2653,7 +2652,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   const SizedType &type = type_map_.type(acc.expr);
   auto scoped_arg = visit(acc.expr);
 
-  assert(type.IsRecordTy() || type.IsCStructTy());
+  assert(type.IsRecordTy() || type.IsCTypeTy());
 
   if (type.IsRecordTy()) {
     return createAnonStructAccess(type,
@@ -3023,7 +3022,7 @@ Value *CodegenLLVM::createAnonStruct(
 
     if (inBpfMemory(type))
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
-    else if (type.IsArrayTy() || type.IsCStructTy())
+    else if (type.IsArrayTy() || type.IsCTypeTy())
       b_.CreateProbeRead(dst, type, val, vloc);
     else
       b_.CreateStore(val, dst);
@@ -3128,7 +3127,7 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
   // Arrays and structs need not to be copied when assigned to local variables
   // since they are treated as read-only - it is sufficient to assign
   // the pointer and do the memcpy/proberead later when necessary
-  if (var_type.IsArrayTy() || var_type.IsCStructTy()) {
+  if (var_type.IsArrayTy() || var_type.IsCTypeTy()) {
     const auto &pointee_type = var_type.IsArrayTy() ? var_type.GetElementTy()
                                                     : var_type;
     alloca_type = CreatePointer(pointee_type, var_type.GetAS());
@@ -3200,7 +3199,7 @@ void CodegenLLVM::createVariableStore(const SizedType &src_type,
     return;
   }
 
-  if (dst_type.IsArrayTy() || dst_type.IsCStructTy()) {
+  if (dst_type.IsArrayTy() || dst_type.IsCTypeTy()) {
     b_.CreateStore(b_.CreatePtrToInt(src, b_.getInt64Ty()), dst);
   } else if (needMemcpy(dst_type)) {
     b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
@@ -3228,7 +3227,7 @@ ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
 
   maybeAllocVariable(var.ident, type_map_.type(&var), var.loc);
 
-  if (type_map_.type(&var).IsArrayTy() || type_map_.type(&var).IsCStructTy()) {
+  if (type_map_.type(&var).IsArrayTy() || type_map_.type(&var).IsCTypeTy()) {
     // For arrays and structs, only the pointer is stored. However, this means
     // that we cannot release the underlying memory for any of these types. We
     // just disarm the scoped expression, and therefore never free any of these
@@ -3575,7 +3574,7 @@ void CodegenLLVM::createMapBufferStore(const SizedType &src_type,
     return;
   }
 
-  if (dst_type.IsArrayTy() || dst_type.IsCStructTy()) {
+  if (dst_type.IsArrayTy() || dst_type.IsCTypeTy()) {
     // src currently contains a pointer to the struct or array
     // We now want to read the entire struct/array in so we can save it
     b_.CreateProbeRead(dst, dst_type, src, loc, src_type.GetAS());
@@ -3650,7 +3649,7 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
       aligned = false;
   } else {
     if (type_map_.type(key_expr).IsArrayTy() ||
-        type_map_.type(key_expr).IsCStructTy()) {
+        type_map_.type(key_expr).IsCTypeTy()) {
       // Read the array/struct into the key
       b_.CreateProbeRead(
           offset_val, type_map_.type(key_expr), scoped_expr.value(), map.loc);
@@ -4450,9 +4449,9 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
   // to cast the pointer to the expected value.
   Value *src = b_.CreateSafeGEP(b_.getInt8Ty(), scoped_src.value(), offset);
 
-  if (elem_type.IsCStructTy() || elem_type.IsArrayTy()) {
-    // For nested arrays and structs, just pass the pointer along and
-    // dereference it later when necessary. We just need to extend lifetime
+  if (elem_type.IsCTypeTy() || elem_type.IsArrayTy()) {
+    // For nested arrays, structs, unions, typedefs just pass the pointer along
+    // and dereference it later when necessary. We just need to extend lifetime
     // of the source pointer.
     return ScopedExpr(src, std::move(scoped_src));
   } else if (elem_type.IsStringTy() || elem_type.IsBufferTy()) {

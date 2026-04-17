@@ -1210,7 +1210,7 @@ void BTF::resolve_fields(const SizedType &type)
 {
   BTFId type_id;
 
-  if (!type.IsCStructTy())
+  if (!type.IsCTypeTy())
     return;
 
   auto const &name = type.GetName();
@@ -1221,7 +1221,7 @@ void BTF::resolve_fields(const SizedType &type)
   if (type.IsAnonTy()) {
     type_id = parse_anon_btf_name(name);
   } else {
-    __u32 kind = name.starts_with("struct") ? BTF_KIND_STRUCT : BTF_KIND_UNION;
+    __u32 kind = type.IsCStructTy() ? BTF_KIND_STRUCT : BTF_KIND_UNION;
     auto type_name = btf_type_str(name);
 
     type_id = find_id(type_name, kind);

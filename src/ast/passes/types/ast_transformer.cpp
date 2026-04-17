@@ -194,25 +194,25 @@ std::optional<Expression> AstTransformer::visit(FieldAccess &acc)
 
 std::optional<Expression> AstTransformer::visit(Offsetof &offof)
 {
-  SizedType cstruct;
+  SizedType c_type;
   if (std::holds_alternative<ParsedType *>(offof.record)) {
-    cstruct = get_type(std::get<ParsedType *>(offof.record));
+    c_type = get_type(std::get<ParsedType *>(offof.record));
   } else {
-    cstruct = get_type(&std::get<Expression>(offof.record).node());
+    c_type = get_type(&std::get<Expression>(offof.record).node());
   }
 
-  if (cstruct.IsNoneTy()) {
+  if (c_type.IsNoneTy()) {
     return std::nullopt;
   }
 
   size_t offset = 0;
   for (const auto &field : offof.field) {
-    if (!cstruct.IsCStructTy() || !cstruct.HasField(field)) {
+    if (!c_type.IsCTypeTy() || !c_type.HasField(field)) {
       return std::nullopt;
     }
-    const auto &f = cstruct.GetField(field);
+    const auto &f = c_type.GetField(field);
     offset += f.offset;
-    cstruct = f.type;
+    c_type = f.type;
   }
 
   return ast_.make_node<Integer>(Location(offof.loc), offset);

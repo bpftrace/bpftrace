@@ -292,20 +292,14 @@ DIType *DIBuilderBPF::CreateByteArrayType(uint64_t num_bytes)
 /// programs (see IRBuilderBPF::GetType for details).
 ///
 /// As opposed to IRBuilderBPF::GetType we need to emit proper struct type
-/// info for the c_struct SizedType whose BTF must exactly match the kernel
+/// info for the c_type SizedType whose BTF must exactly match the kernel
 /// BTF (e.g. kernel functions ("kfunc") prototypes). For debug info the name
 /// and size need to at least be correct but the fields are not necessary.
 DIType *DIBuilderBPF::GetType(const SizedType &stype)
 {
-  if (stype.IsCStructTy()) {
-    std::string name = stype.GetName();
-    if (name.starts_with(STRUCT_PREFIX))
-      name = name.substr(STRUCT_PREFIX.length());
-    else if (name.starts_with(UNION_PREFIX))
-      name = name.substr(UNION_PREFIX.length());
-
+  if (stype.IsCTypeTy()) {
     return createStructType(file,
-                            name,
+                            std::string(stype.GetBaseName()),
                             file,
                             0,
                             stype.GetSize() * 8,

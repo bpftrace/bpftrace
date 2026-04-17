@@ -2353,7 +2353,7 @@ TEST_F(TypeCheckerTest, cast_struct)
   test("struct mytype { int field; }\n"
        "begin { $s = (struct mytype *)cpu; (uint32)*$s; }",
        Error{ R"(
-stdin:2:36-44: ERROR: Cannot cast from struct type "struct mytype"
+stdin:2:36-44: ERROR: Cannot cast from C type "struct mytype"
 begin { $s = (struct mytype *)cpu; (uint32)*$s; }
                                    ~~~~~~~~
 )" });
@@ -3544,7 +3544,7 @@ TEST_F(TypeCheckerTest, type_ctx)
   fieldaccess = assignment->expr.as<ast::FieldAccess>();
   EXPECT_EQ(chartype, result.type_map.type(fieldaccess));
   unop = fieldaccess->expr.as<ast::Unop>();
-  EXPECT_TRUE(result.type_map.type(unop).IsCStructTy());
+  EXPECT_TRUE(result.type_map.type(unop).IsCTypeTy());
   fieldaccess = unop->expr.as<ast::FieldAccess>();
   EXPECT_TRUE(result.type_map.type(fieldaccess).IsPtrTy());
   unop = fieldaccess->expr.as<ast::Unop>();
@@ -3612,7 +3612,7 @@ TEST_F(TypeCheckerTest, double_pointer_struct)
   ASSERT_TRUE(result.type_map.type(assignment->var())
                   .GetPointeeTy()
                   .GetPointeeTy()
-                  .IsCStructTy());
+                  .IsCTypeTy());
   EXPECT_EQ(result.type_map.type(assignment->var())
                 .GetPointeeTy()
                 .GetPointeeTy()
@@ -3623,7 +3623,7 @@ TEST_F(TypeCheckerTest, double_pointer_struct)
   assignment = stmts.at(1).as<ast::AssignVarStatement>();
   ASSERT_TRUE(result.type_map.type(assignment->var()).IsPtrTy());
   ASSERT_TRUE(
-      result.type_map.type(assignment->var()).GetPointeeTy().IsCStructTy());
+      result.type_map.type(assignment->var()).GetPointeeTy().IsCTypeTy());
   EXPECT_EQ(result.type_map.type(assignment->var()).GetPointeeTy().GetName(),
             "struct Foo");
 
@@ -4116,7 +4116,7 @@ TEST_F(TypeCheckerTest, call_offsetof)
   test("struct Foo { struct Bar { int a; } *bar; } \
               begin { @x = offsetof(struct Foo, bar.a); }",
        Error{ R"(
-stdin:1:71-98: ERROR: 'struct Bar *' is not a c_struct type.
+stdin:1:71-98: ERROR: 'struct Bar *' is not a C type.
 struct Foo { struct Bar { int a; } *bar; }               begin { @x = offsetof(struct Foo, bar.a); }
                                                                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -4135,7 +4135,7 @@ stdin:1:70-117: ERROR: 'struct Bar' has no field named '__notexist_subfield__'
 struct Foo { struct Bar { int a; } bar; }               begin { @x = offsetof(struct Foo, bar.__notexist_subfield__); }
                                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
-  // Not exist c_struct
+  // Non-existent type
   test("begin { @x = offsetof(__passident__, x); }", Error{});
   test("begin { @x = offsetof(__passident__, x.y.z); }", Error{});
   test("begin { @x = offsetof(struct __notexiststruct__, x); }", Error{});
@@ -4576,7 +4576,7 @@ TEST_F(TypeCheckerTest, for_loop_variables_read_only)
       result.ast.root->probes.at(0)->block->stmts.at(2).as<ast::For>();
   ASSERT_NE(for_node, nullptr);
   const auto &ctx_type = result.type_map.type(for_node);
-  EXPECT_TRUE(ctx_type.IsCStructTy());
+  EXPECT_TRUE(ctx_type.IsCTypeTy());
   ASSERT_EQ(ctx_type.GetFields().size(), 1U);
   EXPECT_EQ(ctx_type.GetFields()[0].name, "$var");
   EXPECT_TRUE(ctx_type.GetFields()[0].type.IsPtrTy());
@@ -4619,7 +4619,7 @@ TEST_F(TypeCheckerTest, for_loop_variables_modified_during_loop)
       result.ast.root->probes.at(0)->block->stmts.at(2).as<ast::For>();
   ASSERT_NE(for_node, nullptr);
   const auto &ctx_type = result.type_map.type(for_node);
-  EXPECT_TRUE(ctx_type.IsCStructTy());
+  EXPECT_TRUE(ctx_type.IsCTypeTy());
   ASSERT_EQ(ctx_type.GetFields().size(), 1U);
   EXPECT_EQ(ctx_type.GetFields()[0].name, "$var");
   EXPECT_TRUE(ctx_type.GetFields()[0].type.IsPtrTy());
@@ -4690,7 +4690,7 @@ TEST_F(TypeCheckerTest, for_loop_variables_multiple)
       result.ast.root->probes.at(0)->block->stmts.at(4).as<ast::For>();
   ASSERT_NE(for_node, nullptr);
   const auto &ctx_type = result.type_map.type(for_node);
-  EXPECT_TRUE(ctx_type.IsCStructTy());
+  EXPECT_TRUE(ctx_type.IsCTypeTy());
   ASSERT_EQ(ctx_type.GetFields().size(), 2U);
   EXPECT_EQ(ctx_type.GetFields()[0].name, "$var1");
   EXPECT_TRUE(ctx_type.GetFields()[0].type.IsPtrTy());

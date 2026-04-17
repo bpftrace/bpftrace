@@ -34,7 +34,7 @@ enum class Type : uint8_t {
   integer, // int is a protected keyword
   boolean,
   pointer,
-  c_struct, // struct/union from external c programs or the kernel
+  c_type, // struct/union/typedef from external C programs or the kernel
   hist_t,
   lhist_t,
   tseries_t,
@@ -354,15 +354,25 @@ public:
     return name_;
   }
 
+  std::string_view GetBaseName() const
+  {
+    std::string_view name = name_;
+    if (name.starts_with(STRUCT_PREFIX))
+      return name.substr(STRUCT_PREFIX.length());
+    if (name.starts_with(UNION_PREFIX))
+      return name.substr(UNION_PREFIX.length());
+    return name;
+  }
+
   bool IsAnonTy() const
   {
-    assert(IsCStructTy());
+    assert(IsCTypeTy());
     return is_anon_;
   }
 
   void SetAnon()
   {
-    assert(IsCStructTy());
+    assert(IsCTypeTy());
     is_anon_ = true;
   }
 
@@ -486,9 +496,21 @@ public:
   {
     return type_ == Type::array;
   };
+  bool IsCTypeTy() const
+  {
+    return type_ == Type::c_type;
+  };
   bool IsCStructTy() const
   {
-    return type_ == Type::c_struct;
+    return IsCTypeTy() && name_.starts_with(STRUCT_PREFIX);
+  };
+  bool IsCUnionTy() const
+  {
+    return IsCTypeTy() && name_.starts_with(UNION_PREFIX);
+  };
+  bool IsCTypedefTy() const
+  {
+    return IsCTypeTy() && !IsCStructTy() && !IsCUnionTy();
   };
   bool IsBufferTy() const
   {

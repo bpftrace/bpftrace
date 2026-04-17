@@ -60,21 +60,20 @@ ast::ParsedType *sized_type_to_parsed_type(ast::ASTContext &ctx,
                                           type.GetName());
   }
 
+  if (type.IsCUnionTy()) {
+    return ctx.make_node<ast::ParsedType>(loc,
+                                          ast::ParsedType::Kind::Union,
+                                          std::string(type.GetBaseName()));
+  }
   if (type.IsCStructTy()) {
-    const auto &name = type.GetName();
-    if (name.starts_with(STRUCT_PREFIX)) {
-      return ctx.make_node<ast::ParsedType>(loc,
-                                            ast::ParsedType::Kind::Struct,
-                                            name.substr(STRUCT_PREFIX.size()));
-    }
-    if (name.starts_with(UNION_PREFIX)) {
-      return ctx.make_node<ast::ParsedType>(loc,
-                                            ast::ParsedType::Kind::Union,
-                                            name.substr(UNION_PREFIX.size()));
-    }
+    return ctx.make_node<ast::ParsedType>(loc,
+                                          ast::ParsedType::Kind::Struct,
+                                          std::string(type.GetBaseName()));
+  }
+  if (type.IsCTypedefTy()) {
     return ctx.make_node<ast::ParsedType>(loc,
                                           ast::ParsedType::Kind::Identifier,
-                                          name);
+                                          type.GetName());
   }
 
   return ctx.make_node<ast::ParsedType>(loc,

@@ -98,7 +98,7 @@ TEST_F(field_analyser_btf, btf_types)
   EXPECT_EQ(foo2->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo2->GetField("a").offset, 0);
 
-  EXPECT_TRUE(foo2->GetField("f").type.IsCStructTy());
+  EXPECT_TRUE(foo2->GetField("f").type.IsCTypeTy());
   EXPECT_EQ(foo2->GetField("f").type.GetSize(), 16U);
   EXPECT_EQ(foo2->GetField("f").offset, 8);
 
@@ -238,14 +238,14 @@ void test_arrays_compound_data(BPFtrace &bpftrace)
   ASSERT_TRUE(foo3_ptr_type.IsPtrTy());
 
   const auto &foo3_type = foo3_ptr_type.GetPointeeTy();
-  ASSERT_TRUE(foo3_type.IsCStructTy());
+  ASSERT_TRUE(foo3_type.IsCTypeTy());
   ASSERT_TRUE(foo3_type.HasField("foo1"));
 
   const auto &foo1_ptr_type = foo3_type.GetField("foo1").type;
   ASSERT_TRUE(foo1_ptr_type.IsPtrTy());
 
   const auto &foo1_type = foo1_ptr_type.GetPointeeTy();
-  ASSERT_TRUE(foo1_type.IsCStructTy());
+  ASSERT_TRUE(foo1_type.IsCTypeTy());
   ASSERT_TRUE(foo1_type.HasField("a"));
 }
 
@@ -326,7 +326,7 @@ TEST_F(field_analyser_btf, btf_types_anon_structs)
   EXPECT_TRUE(typedefarray.IsArrayTy());
   EXPECT_EQ(typedefarray.GetNumElements(), 8);
   EXPECT_EQ(typedefarray.GetSize(), 32);
-  EXPECT_TRUE(typedefarray.GetElementTy().IsCStructTy());
+  EXPECT_TRUE(typedefarray.GetElementTy().IsCTypeTy());
   EXPECT_TRUE(typedefarray.GetElementTy().IsAnonTy());
   EXPECT_TRUE(typedefarray.GetElementTy().HasField("a"));
 
@@ -335,7 +335,7 @@ TEST_F(field_analyser_btf, btf_types_anon_structs)
   EXPECT_TRUE(typedefarray.IsArrayTy());
   EXPECT_EQ(structarray.GetSize(), 96);
   EXPECT_EQ(structarray.GetNumElements(), 4);
-  EXPECT_TRUE(structarray.GetElementTy().IsCStructTy());
+  EXPECT_TRUE(structarray.GetElementTy().IsCTypeTy());
   EXPECT_TRUE(structarray.GetElementTy().IsAnonTy());
   EXPECT_TRUE(structarray.GetElementTy().HasField("a"));
   EXPECT_TRUE(structarray.GetElementTy().HasField("b"));
@@ -343,7 +343,7 @@ TEST_F(field_analyser_btf, btf_types_anon_structs)
   ASSERT_TRUE(structarray.GetElementTy().HasField("AnonSubArray"));
   auto subarray = structarray.GetElementTy().GetField("AnonSubArray").type;
   EXPECT_EQ(subarray.GetNumElements(), 2);
-  EXPECT_TRUE(subarray.GetElementTy().IsCStructTy());
+  EXPECT_TRUE(subarray.GetElementTy().IsCTypeTy());
   EXPECT_TRUE(subarray.GetElementTy().IsAnonTy());
   EXPECT_TRUE(subarray.GetElementTy().HasField("c"));
   EXPECT_TRUE(subarray.GetElementTy().HasField("d"));

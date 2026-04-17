@@ -49,7 +49,7 @@ std::string typestr(const SizedType &type)
     case Type::array:
       return typestr(type.GetElementTy()) + "[" +
              std::to_string(type.GetNumElements()) + "]";
-    case Type::c_struct: {
+    case Type::c_type: {
       if (!type.IsAnonTy())
         return type.GetName();
 
@@ -135,7 +135,7 @@ bool SizedType::IsCompatible(const SizedType &t) const
   if (t.GetTy() != type_)
     return false;
 
-  if (IsCStructTy())
+  if (IsCTypeTy())
     return t.GetName() == GetName();
 
   if (IsPtrTy())
@@ -214,7 +214,7 @@ std::strong_ordering SizedType::operator<=>(const SizedType &t) const
   if (auto cmp = type_ <=> t.type_; cmp != 0)
     return cmp;
 
-  if (IsCStructTy()) {
+  if (IsCTypeTy()) {
     if (auto cmp = GetName() <=> t.GetName(); cmp != 0)
       return cmp;
     return GetSize() <=> t.GetSize();
@@ -284,7 +284,7 @@ bool SizedType::IsByteArray() const
 
 bool SizedType::IsAggregate() const
 {
-  return IsArrayTy() || IsByteArray() || IsTupleTy() || IsCStructTy() ||
+  return IsArrayTy() || IsByteArray() || IsTupleTy() || IsCTypeTy() ||
          IsStack() || IsRecordTy();
 }
 
@@ -318,7 +318,7 @@ std::string typestr(Type t)
     case Type::voidtype: return "void";     break;
     case Type::integer:  return "int";  break;
     case Type::pointer:  return "pointer";  break;
-    case Type::c_struct:   return "c_struct";   break;
+    case Type::c_type:   return "c_type";   break;
     case Type::hist_t:     return "hist_t";     break;
     case Type::lhist_t:    return "lhist_t";    break;
     case Type::tseries_t:    return "tseries_t";    break;
@@ -456,7 +456,7 @@ SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as)
 SizedType CreateCStruct(const std::string &name)
 {
   assert(!name.empty());
-  auto ty = SizedType(Type::c_struct, 0);
+  auto ty = SizedType(Type::c_type, 0);
   ty.name_ = name;
   return ty;
 }
@@ -465,7 +465,7 @@ SizedType CreateCStruct(std::shared_ptr<Struct> &&record)
 {
   // A local anonymous record.
   assert(record);
-  auto ty = SizedType(Type::c_struct, record->size);
+  auto ty = SizedType(Type::c_type, record->size);
   ty.inner_struct_ = std::move(record);
   return ty;
 }
@@ -474,7 +474,7 @@ SizedType CreateCStruct(const std::string &name, std::weak_ptr<Struct> record)
 {
   // A named type, stored in the `StructManager`.
   assert(!name.empty() && !record.expired());
-  auto ty = SizedType(Type::c_struct, record.lock()->size);
+  auto ty = SizedType(Type::c_type, record.lock()->size);
   ty.name_ = name;
   ty.inner_struct_ = std::move(record);
   return ty;
@@ -801,13 +801,13 @@ bool SizedType::IsSigned() const
 
 std::vector<Field> &SizedType::GetFields() const
 {
-  assert(IsTupleTy() || IsCStructTy() || IsRecordTy());
+  assert(IsTupleTy() || IsCTypeTy() || IsRecordTy());
   return inner_struct()->fields;
 }
 
 Field &SizedType::GetField(ssize_t n) const
 {
-  assert(IsTupleTy() || IsCStructTy() || IsRecordTy());
+  assert(IsTupleTy() || IsCTypeTy() || IsRecordTy());
   if (n >= GetFieldCount())
     throw util::FatalUserException("Getfield(): out of bounds");
   return inner_struct()->fields[n];
@@ -821,7 +821,7 @@ size_t SizedType::GetFieldIdx(const std::string &name) const
 
 ssize_t SizedType::GetFieldCount() const
 {
-  assert(IsTupleTy() || IsCStructTy() || IsRecordTy());
+  assert(IsTupleTy() || IsCTypeTy() || IsRecordTy());
   return inner_struct()->fields.size();
 }
 
@@ -840,7 +840,7 @@ ssize_t SizedType::GetInTupleAlignment() const
   if (IsByteArray())
     return 1;
 
-  if (IsTupleTy() || IsCStructTy() || IsRecordTy())
+  if (IsTupleTy() || IsCTypeTy() || IsRecordTy())
     return inner_struct()->align;
 
   if (GetSize() <= 2)
@@ -855,19 +855,19 @@ ssize_t SizedType::GetInTupleAlignment() const
 
 bool SizedType::HasField(const std::string &name) const
 {
-  assert(IsCStructTy() || IsRecordTy() || IsTupleTy());
+  assert(IsCTypeTy() || IsRecordTy() || IsTupleTy());
   return inner_struct()->HasField(name);
 }
 
 const Field &SizedType::GetField(const std::string &name) const
 {
-  assert(IsCStructTy() || IsRecordTy() || IsTupleTy());
+  assert(IsCTypeTy() || IsRecordTy() || IsTupleTy());
   return inner_struct()->GetField(name);
 }
 
 std::shared_ptr<Struct> SizedType::inner_struct() const
 {
-  assert(IsCStructTy() || IsTupleTy() || IsRecordTy());
+  assert(IsCTypeTy() || IsTupleTy() || IsRecordTy());
   return std::visit(
       [](const auto &v) {
         if constexpr (std::is_same_v<std::decay_t<decltype(v)>,
@@ -882,7 +882,7 @@ std::shared_ptr<Struct> SizedType::inner_struct() const
 
 std::shared_ptr<const Struct> SizedType::GetStruct() const
 {
-  assert(IsCStructTy() || IsTupleTy() || IsRecordTy());
+  assert(IsCTypeTy() || IsTupleTy() || IsRecordTy());
   return inner_struct();
 }
 

@@ -134,7 +134,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
       sized_type_ = arg->type;
 
     has_builtin_args_ = false;
-  } else if (sized_type_.IsCStructTy()) {
+  } else if (sized_type_.IsCTypeTy()) {
     SizedType field_type = CreateNone();
     if (sized_type_.HasField(acc.field))
       field_type = sized_type_.GetField(acc.field).type;
@@ -222,7 +222,7 @@ void FieldAnalyser::visit(Unop &unop)
 
 void FieldAnalyser::resolve_fields(SizedType &type)
 {
-  if (!type.IsCStructTy())
+  if (!type.IsCTypeTy())
     return;
 
   if (probe_) {
