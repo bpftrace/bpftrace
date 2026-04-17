@@ -152,6 +152,24 @@ macro strerror(errno)
   $v
 }
 
+// :variant string signal_name(int sig)
+//
+// Convert signal code to string.
+//
+// ```
+// #include <signal.h>
+// begin {
+//   print(signal_name(SIGINT));
+// }
+// ```
+macro signal_name(sig)
+{
+  import "stdlib/strings/strings.bpf.c";
+  let $v : string[64];
+  __signal_name((int32)sig, &$v);
+  $v
+}
+
 // :variant string syscall_name(int nr_syscall)
 //
 // Convert syscall number to string.

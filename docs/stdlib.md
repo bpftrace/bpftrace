@@ -1118,6 +1118,19 @@ Trace/breakpoint trap (core dumped)
 ```
 
 
+### signal_name
+- `string signal_name(int sig)`
+
+Convert signal code to string.
+
+```
+#include <signal.h>
+begin {
+  print(signal_name(SIGINT));
+}
+```
+
+
 ### signal_thread
 - `void signal_thread(const string sig)`
 - `void signal_thread(uint32 signum)`

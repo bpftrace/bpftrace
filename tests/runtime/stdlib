@@ -11,6 +11,12 @@ NAME strerror
 PROG BEGIN { print(strerror(22)); }
 EXPECT Invalid argument
 
+NAME signal_name
+PROG BEGIN { print(signal_name(2)); print(signal_name(0)); print(signal_name(1024)); }
+EXPECT Interrupt
+EXPECT Unknown signal 0
+EXPECT N/A
+
 NAME comm from pid
 PROG iter:task { @ = comm(pid); exit() }
 EXPECT @: bpftrace
