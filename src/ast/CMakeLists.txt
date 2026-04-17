@@ -26,6 +26,7 @@ add_library(ast STATIC
   passes/named_param.cpp
   passes/types/ast_transformer.cpp
   passes/types/cast_creator.cpp
+  passes/types/parsed_type_bridge.cpp
   passes/config_analyser.cpp
   passes/control_flow_analyser.cpp
   passes/deprecated.cpp

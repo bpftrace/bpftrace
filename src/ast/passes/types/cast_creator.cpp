@@ -2,6 +2,7 @@
 #include "ast/ast.h"
 #include "ast/integer_types.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/types/parsed_type_bridge.h"
 #include "ast/passes/types/type_map.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"

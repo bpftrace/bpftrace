@@ -618,18 +618,6 @@ std::optional<SizedType> ident_to_builtin_type(const std::string &name);
 // sized-type interpretation to a later stage.
 SizedType normalize_array_to_sized_type(SizedType type);
 
-namespace ast {
-class ASTContext;
-class LocationChain;
-using Location = std::shared_ptr<LocationChain>;
-class ParsedType;
-} // namespace ast
-
-SizedType parsed_type_to_sized_type(const ast::ParsedType &type);
-ast::ParsedType *sized_type_to_parsed_type(ast::ASTContext &ctx,
-                                           const ast::Location &loc,
-                                           const SizedType &type);
-
 std::optional<SizedType> get_promoted_int(const SizedType &currentType,
                                           const SizedType &newType);
 std::optional<SizedType> get_promoted_tuple(const SizedType &currentType,
