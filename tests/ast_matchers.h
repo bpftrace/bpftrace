@@ -472,6 +472,110 @@ inline SizedTypeMatcher SizedType(Type ty)
   return SizedTypeMatcher().WithType(ty);
 }
 
+class ParsedTypeMatcher
+    : public PredicateMatcher<
+          ParsedTypeMatcher,
+          ast::ParsedType,
+          std::function<bool(const ast::ParsedType&, MatchResultListener*)>> {
+public:
+  ParsedTypeMatcher& WithKind(ast::ParsedType::Kind kind)
+  {
+    return Where(
+        [kind](const ast::ParsedType& type, MatchResultListener* listener) {
+          return type.kind == kind ||
+                 (*listener << "has kind " << static_cast<int>(type.kind)
+                            << " instead of " << static_cast<int>(kind),
+                  false);
+        });
+  }
+
+  ParsedTypeMatcher& WithName(const std::string& name)
+  {
+    return Where(
+        [name](const ast::ParsedType& type, MatchResultListener* listener) {
+          return type.name == name ||
+                 (*listener << "has name \"" << type.name << "\" instead of \""
+                            << name << "\"",
+                  false);
+        });
+  }
+
+  ParsedTypeMatcher& WithArraySize(uint64_t size)
+  {
+    return Where(
+        [size](const ast::ParsedType& type, MatchResultListener* listener) {
+          return type.array_size == size ||
+                 (*listener << "has array size " << type.array_size
+                            << " instead of " << size,
+                  false);
+        });
+  }
+
+  ParsedTypeMatcher& WithInner(
+      const Matcher<const ast::ParsedType&>& inner_matcher)
+  {
+    return Where([inner_matcher](const ast::ParsedType& type,
+                                 MatchResultListener* listener) {
+      if (!type.inner) {
+        *listener << "has no inner type";
+        return false;
+      }
+      return inner_matcher.MatchAndExplain(*type.inner, listener);
+    });
+  }
+
+  bool MatchAndExplain(const ast::ParsedType& type,
+                       MatchResultListener* listener) const
+  {
+    return std::ranges::all_of(predicates_, [&](const auto& pred) {
+      return pred(type, listener);
+    });
+  }
+
+  operator Matcher<const ast::ParsedType&>() const
+  {
+    return ::testing::MakeMatcher(new Impl(predicates_));
+  }
+
+private:
+  class Impl : public MatcherInterface<const ast::ParsedType&> {
+  public:
+    explicit Impl(
+        const std::vector<
+            std::function<bool(const ast::ParsedType&, MatchResultListener*)>>&
+            predicates)
+        : predicates_(predicates) {};
+
+    bool MatchAndExplain(const ast::ParsedType& type,
+                         MatchResultListener* listener) const override
+    {
+      return std::ranges::all_of(predicates_, [&](const auto& pred) {
+        return pred(type, listener);
+      });
+    }
+
+    void DescribeTo(std::ostream* os) const override
+    {
+      *os << "is a ParsedType";
+    }
+
+    std::vector<
+        std::function<bool(const ast::ParsedType&, MatchResultListener*)>>
+        predicates_;
+  };
+};
+
+inline ParsedTypeMatcher ParsedType(ast::ParsedType::Kind kind)
+{
+  return ParsedTypeMatcher().WithKind(kind);
+}
+
+inline ParsedTypeMatcher ParsedType(ast::ParsedType::Kind kind,
+                                    const std::string& name)
+{
+  return ParsedTypeMatcher().WithKind(kind).WithName(name);
+}
+
 class ProgramMatcher : public NodeMatcher<ProgramMatcher, ast::Program> {
 public:
   ProgramMatcher& WithProbe(const Matcher<const ast::Probe&>& probe_matcher)
@@ -801,12 +905,25 @@ public:
   TypeofMatcher& WithType(const Matcher<const class SizedType&>& type_matcher)
   {
     return Where([type_matcher](const ast::Typeof& node) {
-      if (!std::holds_alternative<class SizedType>(node.record)) {
-        node.addError() << "record is not a SizedType";
+      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+        node.addError() << "record is not a ParsedType";
         return false;
       }
-      const auto& type = std::get<class SizedType>(node.record);
+      const auto type = parsed_type_to_sized_type(
+          *std::get<ast::ParsedType*>(node.record));
       return MatchWith(node, type_matcher, type);
+    });
+  }
+
+  TypeofMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
+  {
+    return Where([type_matcher](const ast::Typeof& node) {
+      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+        node.addError() << "record is not a ParsedType";
+        return false;
+      }
+      const auto* type = std::get<ast::ParsedType*>(node.record);
+      return type && MatchWith(node, type_matcher, *type);
     });
   }
 };
@@ -817,6 +934,11 @@ inline TypeofMatcher Typeof(const Matcher<const ast::Expression&>& expr_matcher)
 }
 
 inline TypeofMatcher Typeof(const Matcher<const class SizedType&>& type_matcher)
+{
+  return TypeofMatcher().WithType(type_matcher);
+}
+
+inline TypeofMatcher Typeof(const Matcher<const ast::ParsedType&>& type_matcher)
 {
   return TypeofMatcher().WithType(type_matcher);
 }
@@ -1457,12 +1579,25 @@ public:
   SizeofMatcher& WithType(const Matcher<const class SizedType&>& type_matcher)
   {
     return Where([type_matcher](const ast::Sizeof& node) {
-      if (!std::holds_alternative<class SizedType>(node.record)) {
-        node.addError() << "record is not a SizedType";
+      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+        node.addError() << "record is not a ParsedType";
         return false;
       }
-      const auto& type = std::get<class SizedType>(node.record);
+      const auto type = parsed_type_to_sized_type(
+          *std::get<ast::ParsedType*>(node.record));
       return MatchWith(node, type_matcher, type);
+    });
+  }
+
+  SizeofMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
+  {
+    return Where([type_matcher](const ast::Sizeof& node) {
+      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+        node.addError() << "record is not a ParsedType";
+        return false;
+      }
+      const auto* type = std::get<ast::ParsedType*>(node.record);
+      return type && MatchWith(node, type_matcher, *type);
     });
   }
 };
@@ -1473,6 +1608,11 @@ inline SizeofMatcher Sizeof(const Matcher<const ast::Expression&>& expr)
 }
 
 inline SizeofMatcher Sizeof(const Matcher<const class SizedType&>& type)
+{
+  return SizeofMatcher().WithType(type);
+}
+
+inline SizeofMatcher Sizeof(const Matcher<const ast::ParsedType&>& type)
 {
   return SizeofMatcher().WithType(type);
 }
@@ -1495,12 +1635,25 @@ public:
   OffsetofMatcher& WithType(const Matcher<const class SizedType&>& type_matcher)
   {
     return Where([type_matcher](const ast::Offsetof& node) {
-      if (!std::holds_alternative<class SizedType>(node.record)) {
-        node.addError() << "record is not a SizedType";
+      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+        node.addError() << "record is not a ParsedType";
         return false;
       }
-      const auto& type = std::get<class SizedType>(node.record);
+      const auto type = parsed_type_to_sized_type(
+          *std::get<ast::ParsedType*>(node.record));
       return MatchWith(node, type_matcher, type);
+    });
+  }
+
+  OffsetofMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
+  {
+    return Where([type_matcher](const ast::Offsetof& node) {
+      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+        node.addError() << "record is not a ParsedType";
+        return false;
+      }
+      const auto* type = std::get<ast::ParsedType*>(node.record);
+      return type && MatchWith(node, type_matcher, *type);
     });
   }
 
@@ -1517,6 +1670,12 @@ inline OffsetofMatcher Offsetof(const Matcher<const ast::Expression&>& expr,
 }
 
 inline OffsetofMatcher Offsetof(const Matcher<const class SizedType&>& type,
+                                const std::vector<std::string>& field)
+{
+  return OffsetofMatcher().WithType(type).WithField(field);
+}
+
+inline OffsetofMatcher Offsetof(const Matcher<const ast::ParsedType&>& type,
                                 const std::vector<std::string>& field)
 {
   return OffsetofMatcher().WithType(type).WithField(field);

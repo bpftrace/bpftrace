@@ -40,7 +40,7 @@ public:
 
 private:
   void resolve_fields(SizedType &type);
-  void resolve_type(SizedType &type);
+  void resolve_type(const ParsedType &type);
 
   ProbeType probe_type_;
   std::string attach_func_;
@@ -173,8 +173,8 @@ void FieldAnalyser::visit(MapAccess &acc)
 
 void FieldAnalyser::visit(Sizeof &szof)
 {
-  if (std::holds_alternative<SizedType>(szof.record)) {
-    resolve_type(std::get<SizedType>(szof.record));
+  if (auto *const *type = std::get_if<ParsedType *>(&szof.record)) {
+    resolve_type(**type);
   } else {
     visit(szof.record);
   }
@@ -182,8 +182,8 @@ void FieldAnalyser::visit(Sizeof &szof)
 
 void FieldAnalyser::visit(Offsetof &offof)
 {
-  if (std::holds_alternative<SizedType>(offof.record)) {
-    resolve_type(std::get<SizedType>(offof.record));
+  if (auto *const *type = std::get_if<ParsedType *>(&offof.record)) {
+    resolve_type(**type);
   } else {
     visit(offof.record);
   }
@@ -191,8 +191,8 @@ void FieldAnalyser::visit(Offsetof &offof)
 
 void FieldAnalyser::visit(Typeof &typeof)
 {
-  if (std::holds_alternative<SizedType>(typeof.record)) {
-    resolve_type(std::get<SizedType>(typeof.record));
+  if (auto *const *type = std::get_if<ParsedType *>(&typeof.record)) {
+    resolve_type(**type);
   } else {
     visit(typeof.record);
   }
@@ -235,16 +235,19 @@ void FieldAnalyser::resolve_fields(SizedType &type)
     bpftrace_.btf_->resolve_fields(type);
 }
 
-void FieldAnalyser::resolve_type(SizedType &type)
+void FieldAnalyser::resolve_type(const ParsedType &type)
 {
   sized_type_ = CreateNone();
 
-  SizedType inner_type = type;
-  while (inner_type.IsPtrTy())
-    inner_type = inner_type.GetPointeeTy();
-  if (!inner_type.IsCStructTy())
+  const auto &base = type.base_type();
+  if (base.kind == ParsedType::Kind::Identifier &&
+      ident_to_builtin_type(base.name))
     return;
-  const auto &name = inner_type.GetName();
+  if (base.kind != ParsedType::Kind::Struct &&
+      base.kind != ParsedType::Kind::Union &&
+      base.kind != ParsedType::Kind::Identifier)
+    return;
+  const auto name = base.type_name();
 
   if (probe_) {
     for (auto &ap : probe_->attach_points)

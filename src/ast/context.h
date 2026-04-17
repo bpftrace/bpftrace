@@ -108,22 +108,25 @@ public:
   template <NodeType T, typename... Args>
   T *make_node(const SourceLocation &loc, Args &&...args)
   {
-    // Occasionally, the parse default-constructs SourceLocation objects,
-    // which therefore do not reference the original source. We fix up this
-    // case and bound a location to the current from this context.
-    auto bound_loc = loc;
-    if (bound_loc.source_ == nullptr) {
-      bound_loc.source_ = source_;
-    }
-    auto loc_chain = std::make_shared<LocationChain>(std::move(bound_loc));
-    return make_node<T, Args...>(std::move(loc_chain),
-                                 std::forward<Args>(args)...);
+    return make_node<T, Args...>(location(loc), std::forward<Args>(args)...);
   }
 
   template <NodeType T, typename... Args>
   T *make_node(const Location &loc, Args... args)
   {
     return make_node<T, Args...>(Location(loc), std::forward<Args>(args)...);
+  }
+
+  Location location(const SourceLocation &loc)
+  {
+    // Occasionally, the parse default-constructs SourceLocation objects,
+    // which therefore do not reference the original source. We fix up this
+    // case and bind a location to the current source from this context.
+    auto bound_loc = loc;
+    if (bound_loc.source_ == nullptr) {
+      bound_loc.source_ = source_;
+    }
+    return std::make_shared<LocationChain>(std::move(bound_loc));
   }
 
   template <NodeType T>

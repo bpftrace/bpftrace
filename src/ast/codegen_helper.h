@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast/ast.h"
+#include "types.h"
 
 namespace bpftrace::ast {
 

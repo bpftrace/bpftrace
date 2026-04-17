@@ -144,7 +144,7 @@ public:
   void visit(Offsetof &offsetof_node);
   void visit(Typeof &typeof_node);
 
-  void visit_type_record(std::variant<Expression, SizedType> &record);
+  void visit_expr_or_type(ExprOrType &record);
 
   std::optional<BlockExpr *> expand(const Macro &macro, Call &call);
   std::optional<BlockExpr *> expand(const Macro &macro, Identifier &ident);
@@ -235,8 +235,7 @@ void MacroExpander::visit(Map &map)
 // offsetof). A bare identifier here is intended as a type name, not a macro
 // invocation. Use the call syntax (e.g. sizeof(mymacro())) or typeof wrapper
 // (e.g. (typeof(mymacro()))x) to force macro expansion in type contexts.
-void MacroExpander::visit_type_record(
-    std::variant<Expression, SizedType> &record)
+void MacroExpander::visit_expr_or_type(ExprOrType &record)
 {
   if (auto *expr = std::get_if<Expression>(&record)) {
     auto *ident = expr->as<Identifier>();
@@ -251,17 +250,17 @@ void MacroExpander::visit_type_record(
 
 void MacroExpander::visit(Sizeof &sizeof_node)
 {
-  visit_type_record(sizeof_node.record);
+  visit_expr_or_type(sizeof_node.record);
 }
 
 void MacroExpander::visit(Offsetof &offsetof_node)
 {
-  visit_type_record(offsetof_node.record);
+  visit_expr_or_type(offsetof_node.record);
 }
 
 void MacroExpander::visit(Typeof &typeof_node)
 {
-  visit_type_record(typeof_node.record);
+  visit_expr_or_type(typeof_node.record);
 }
 
 void MacroExpander::visit(Expression &expr)

@@ -2,12 +2,16 @@
 #include <iostream>
 #include <sstream>
 
+#include "ast/ast.h"
 #include "ast/async_event_types.h"
 #include "struct.h"
 #include "types.h"
 #include "util/exceptions.h"
 
 namespace bpftrace {
+
+static constexpr std::string_view STRUCT_PREFIX = "struct ";
+static constexpr std::string_view UNION_PREFIX = "union ";
 
 std::ostream &operator<<(std::ostream &os, Type type)
 {
@@ -601,10 +605,9 @@ SizedType CreateTimestampMode()
   return { Type::timestamp_mode, 0 };
 }
 
-std::optional<SizedType> ident_to_type(const std::string &name)
+std::optional<SizedType> ident_to_builtin_type(const std::string &name)
 {
   static const std::unordered_map<std::string, SizedType> types = {
-    // Integer types
     { "bool", CreateBool() },
     { "int8", CreateInt(8) },
     { "int16", CreateInt(16) },
@@ -614,7 +617,6 @@ std::optional<SizedType> ident_to_type(const std::string &name)
     { "uint16", CreateUInt(16) },
     { "uint32", CreateUInt(32) },
     { "uint64", CreateUInt(64) },
-    // Builtin types
     { "void", CreateVoid() },
     { "min_t", CreateMin(true) },
     { "max_t", CreateMax(true) },
@@ -639,26 +641,6 @@ std::optional<SizedType> ident_to_type(const std::string &name)
   if (it != types.end())
     return it->second;
   return std::nullopt;
-}
-
-SizedType compound_ident_to_type(const std::string &ident)
-{
-  auto known = ident_to_type(ident);
-  if (known) {
-    return *known;
-  }
-  static constexpr std::string_view ENUM = "enum ";
-  if (ident.starts_with(ENUM)) {
-    auto enum_name = ident.substr(ENUM.size());
-    // This is an automatic promotion to a uint64
-    // even though it's possible that highest variant value of that enum
-    // fits into a smaller int. This will also affect casts from a smaller
-    // int and cause an ERROR: Integer size mismatch.
-    // This could potentially be revisited or the cast relaxed
-    // if we check the variant values during type resolution.
-    return CreateEnum(64, enum_name);
-  }
-  return CreateCStruct(ident);
 }
 
 SizedType normalize_array_to_sized_type(SizedType type)
@@ -980,6 +962,84 @@ std::ostream &operator<<(std::ostream &os, TSeriesAggFunc agg)
   }
 
   return os;
+}
+
+SizedType parsed_type_to_sized_type(const ast::ParsedType &type)
+{
+  switch (type.kind) {
+    case ast::ParsedType::Kind::Identifier:
+      if (auto bt = ident_to_builtin_type(type.name)) {
+        return *bt;
+      }
+      return CreateCStruct(type.name);
+    case ast::ParsedType::Kind::Struct:
+    case ast::ParsedType::Kind::Union:
+      return CreateCStruct(type.type_name());
+    case ast::ParsedType::Kind::Enum:
+      return CreateEnum(64, type.name);
+    case ast::ParsedType::Kind::Pointer: {
+      assert(type.inner);
+      return CreatePointer(parsed_type_to_sized_type(*type.inner));
+    }
+    case ast::ParsedType::Kind::Array: {
+      assert(type.inner);
+      return normalize_array_to_sized_type(
+          CreateArray(type.array_size, parsed_type_to_sized_type(*type.inner)));
+    }
+  }
+
+  return CreateNone();
+}
+
+ast::ParsedType *sized_type_to_parsed_type(ast::ASTContext &ctx,
+                                           const ast::Location &loc,
+                                           const SizedType &type)
+{
+  if (type.IsPtrTy()) {
+    auto *pointee = sized_type_to_parsed_type(ctx, loc, type.GetPointeeTy());
+    return ctx.make_node<ast::ParsedType>(loc, pointee);
+  }
+
+  if (type.IsArrayTy()) {
+    auto *element = sized_type_to_parsed_type(ctx, loc, type.GetElementTy());
+    return ctx.make_node<ast::ParsedType>(loc, type.GetNumElements(), element);
+  }
+
+  if (type.IsStringTy() || type.IsBufferTy() || type.IsInetTy()) {
+    auto *base = ctx.make_node<ast::ParsedType>(
+        loc, ast::ParsedType::Kind::Identifier, typestr(type.GetTy()));
+    if (type.GetSize() == 0) {
+      return base;
+    }
+    return ctx.make_node<ast::ParsedType>(loc, type.GetSize(), base);
+  }
+
+  if (type.IsEnumTy()) {
+    return ctx.make_node<ast::ParsedType>(loc,
+                                          ast::ParsedType::Kind::Enum,
+                                          type.GetName());
+  }
+
+  if (type.IsCStructTy()) {
+    const auto &name = type.GetName();
+    if (name.starts_with(STRUCT_PREFIX)) {
+      return ctx.make_node<ast::ParsedType>(loc,
+                                            ast::ParsedType::Kind::Struct,
+                                            name.substr(STRUCT_PREFIX.size()));
+    }
+    if (name.starts_with(UNION_PREFIX)) {
+      return ctx.make_node<ast::ParsedType>(loc,
+                                            ast::ParsedType::Kind::Union,
+                                            name.substr(UNION_PREFIX.size()));
+    }
+    return ctx.make_node<ast::ParsedType>(loc,
+                                          ast::ParsedType::Kind::Identifier,
+                                          name);
+  }
+
+  return ctx.make_node<ast::ParsedType>(loc,
+                                        ast::ParsedType::Kind::Identifier,
+                                        typestr(type));
 }
 
 } // namespace bpftrace

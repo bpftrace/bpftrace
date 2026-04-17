@@ -72,6 +72,7 @@ public:
   Buffer visit(None &none);
   Buffer visit(Builtin &builtin);
   Buffer visit(Identifier &identifier);
+  Buffer visit(ParsedType &type);
   Buffer visit(Variable &var);
   Buffer visit(VariableAddr &var_addr);
   Buffer visit(SubprogArg &subprog_arg);
@@ -120,7 +121,7 @@ public:
   Buffer visit(RootStatement &root);
   Buffer visit(CStatement &cstmt);
   Buffer visit(NamedArgument& named_arg);
-  Buffer visit(const SizedType &type);
+  Buffer visit(const ParsedType &type);
 
 private:
   template <typename U>

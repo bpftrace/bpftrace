@@ -162,7 +162,9 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
     return std::nullopt;
   }
 
-  auto *typeof_r = ctx.make_node<Typeof>(Location(exp.loc()), target_type);
+  auto *typeof_r = ctx.make_node<Typeof>(
+      Location(exp.loc()),
+      sized_type_to_parsed_type(ctx, Location(exp.loc()), target_type));
   exp = ctx.make_node<Cast>(Location(exp.loc()),
                             typeof_r,
                             clone(ctx, exp.loc(), exp));
@@ -183,7 +185,9 @@ static std::optional<SizedType> try_string_cast(ASTContext &ctx,
     return std::nullopt;
   }
 
-  auto *typeof_r = ctx.make_node<Typeof>(Location(exp.loc()), target_type);
+  auto *typeof_r = ctx.make_node<Typeof>(
+      Location(exp.loc()),
+      sized_type_to_parsed_type(ctx, Location(exp.loc()), target_type));
   exp = ctx.make_node<Cast>(Location(exp.loc()),
                             typeof_r,
                             clone(ctx, exp.loc(), exp));
@@ -221,7 +225,9 @@ static std::optional<SizedType> try_expression_cast(
   } else if (target_type.IsRecordTy()) {
     return try_record_cast(ctx, expr, expr_type, target_type);
   } else if (target_type.IsPtrTy()) {
-    auto *typeof_r = ctx.make_node<Typeof>(Location(expr.loc()), target_type);
+    auto *typeof_r = ctx.make_node<Typeof>(
+        Location(expr.loc()),
+        sized_type_to_parsed_type(ctx, Location(expr.loc()), target_type));
     expr = ctx.make_node<Cast>(Location(expr.loc()),
                                typeof_r,
                                clone(ctx, expr.loc(), expr));
@@ -376,7 +382,10 @@ void CastCreator::visit(Call &call)
       auto arg_type = type_map_.type(call.vargs.at(1));
       if (arg_type != CreateUInt32() && arg_type.IsIntegerTy()) {
         auto *typeof_c = ctx_.make_node<Typeof>(
-            Location(call.vargs.at(1).loc()), CreateUInt32());
+            Location(call.vargs.at(1).loc()),
+            sized_type_to_parsed_type(ctx_,
+                                      Location(call.vargs.at(1).loc()),
+                                      CreateUInt32()));
         call.vargs.at(1) = ctx_.make_node<Cast>(
             Location(call.vargs.at(1).loc()),
             typeof_c,

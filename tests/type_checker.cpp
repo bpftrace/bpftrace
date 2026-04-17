@@ -2334,12 +2334,9 @@ begin { (struct faketype *)cpu }
          ~~~~~~~~~~~~~~~~~
 )" });
   test("begin { (faketype)cpu }", Error{ R"(
-stdin:1:10-18: ERROR: Unknown identifier: 'faketype'
+stdin:1:10-18: ERROR: Cannot resolve unknown type "faketype"
 begin { (faketype)cpu }
          ~~~~~~~~
-stdin:1:9-19: ERROR: Incomplete cast, unknown type
-begin { (faketype)cpu }
-        ~~~~~~~~~~
 )" });
 }
 

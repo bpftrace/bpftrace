@@ -30,11 +30,12 @@ using bpftrace::test::Map;
 using bpftrace::test::MapAddr;
 using bpftrace::test::None;
 using bpftrace::test::Offsetof;
+using bpftrace::test::ParsedType;
 using bpftrace::test::PositionalParameter;
 using bpftrace::test::PositionalParameterCount;
 using bpftrace::test::Probe;
 using bpftrace::test::Program;
-using bpftrace::test::SizedType;
+
 using bpftrace::test::String;
 using bpftrace::test::Tuple;
 using bpftrace::test::Typeof;
@@ -1639,37 +1640,45 @@ TEST(Parser, brackets)
 TEST(Parser, cast_simple_type)
 {
   test("kprobe:sys_read { (int32)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::integer)),
-                                      Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "int32")),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_simple_type_pointer)
 {
   test("kprobe:sys_read { (int32 *)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::pointer)),
-                                      Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(ParsedType(
+                              ast::ParsedType::Kind::Identifier, "int32"))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_sized_type)
 {
   test("kprobe:sys_read { (string)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::string)),
-                                      Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "string")),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_sized_type_pointer)
 {
   test("kprobe:sys_read { (string *)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::pointer)),
-                                      Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(ParsedType(
+                              ast::ParsedType::Kind::Identifier, "string"))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_sized_type_pointer_with_size)
@@ -1677,9 +1686,14 @@ TEST(Parser, cast_sized_type_pointer_with_size)
   test("kprobe:sys_read { (inet[1] *)arg0; }",
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
-           { ExprStatement(Cast(Typeof(SizedType(Type::pointer)
-                                           .WithElement(SizedType(Type::inet))),
-                                Builtin("arg0"))) })));
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(ParsedType(ast::ParsedType::Kind::Array)
+                                         .WithArraySize(1)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "inet")))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_struct)
@@ -1688,13 +1702,13 @@ TEST(Parser, cast_struct)
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
            { ExprStatement(
-               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
+               Cast(Typeof(ParsedType(ast::ParsedType::Kind::Struct, "mytype")),
                     Builtin("arg0"))) })));
   test("kprobe:sys_read { (union mytype)arg0; }",
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
                  { ExprStatement(Cast(
-                     Typeof(SizedType(Type::c_struct).WithName("union mytype")),
+                     Typeof(ParsedType(ast::ParsedType::Kind::Union, "mytype")),
                      Builtin("arg0"))) })));
 }
 
@@ -1703,49 +1717,63 @@ TEST(Parser, cast_struct_ptr)
   test("kprobe:sys_read { (struct mytype*)arg0; }",
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::pointer)),
-                                      Builtin("arg0"))) })));
+                 { ExprStatement(Cast(
+                     Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                                .WithInner(ParsedType(
+                                    ast::ParsedType::Kind::Struct, "mytype"))),
+                     Builtin("arg0"))) })));
   test("kprobe:sys_read { (union mytype*)arg0; }",
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::pointer)),
-                                      Builtin("arg0"))) })));
+                 { ExprStatement(Cast(
+                     Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                                .WithInner(ParsedType(
+                                    ast::ParsedType::Kind::Union, "mytype"))),
+                     Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_typedef)
 {
   test("kprobe:sys_read { (mytype)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(
-                     Cast(Typeof(Identifier("mytype")), Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "mytype")),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_ptr_typedef)
 {
   test("kprobe:sys_read { (mytype*)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::pointer)),
-                                      Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(ParsedType(
+                              ast::ParsedType::Kind::Identifier, "mytype"))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_deep_pointer)
 {
-  test("kprobe:sys_read { (uint64 ****)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(
-                     Typeof(SizedType(Type::pointer)
-                                .WithElement(
-                                    SizedType(Type::pointer)
-                                        .WithElement(
-                                            SizedType(Type::pointer)
-                                                .WithElement(
-                                                    SizedType(Type::pointer)
-                                                        .WithElement(SizedType(
-                                                            Type::integer)))))),
-                     Builtin("arg0"))) })));
+  test(
+      "kprobe:sys_read { (uint64 ****)arg0; }",
+      Program().WithProbe(Probe(
+          { "kprobe:sys_read" },
+          { ExprStatement(Cast(
+              Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                         .WithInner(
+                             ParsedType(ast::ParsedType::Kind::Pointer)
+                                 .WithInner(
+                                     ParsedType(ast::ParsedType::Kind::Pointer)
+                                         .WithInner(
+                                             ParsedType(
+                                                 ast::ParsedType::Kind::Pointer)
+                                                 .WithInner(ParsedType(
+                                                     ast::ParsedType::Kind::
+                                                         Identifier,
+                                                     "uint64")))))),
+              Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_or_expr1)
@@ -1754,7 +1782,7 @@ TEST(Parser, cast_or_expr1)
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
            { ExprStatement(
-               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
+               Cast(Typeof(ParsedType(ast::ParsedType::Kind::Struct, "mytype")),
                     Unop(Operator::MUL, Builtin("arg0")))) })));
 
   test("kprobe:sys_read { (arg1)*arg0; }",
@@ -1766,8 +1794,9 @@ TEST(Parser, cast_or_expr1)
   test("kprobe:sys_read { (mytype)*arg0; }",
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
-           { ExprStatement(Cast(Typeof(Identifier("mytype")),
-                                Unop(Operator::MUL, Builtin("arg0")))) })));
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "mytype")),
+               Unop(Operator::MUL, Builtin("arg0")))) })));
 }
 
 TEST(Parser, cast_precedence)
@@ -1776,21 +1805,24 @@ TEST(Parser, cast_precedence)
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
            { ExprStatement(
-               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
+               Cast(Typeof(ParsedType(ast::ParsedType::Kind::Struct, "mytype")),
                     FieldAccess("field", Builtin("arg0")))) })));
 
   test("kprobe:sys_read { (struct mytype*)arg0->field; }",
-       Program().WithProbe(Probe(
-           { "kprobe:sys_read" },
-           { ExprStatement(Cast(Typeof(SizedType(Type::pointer)),
-                                FieldAccess("field", Builtin("arg0")))) })));
+       Program().WithProbe(
+           Probe({ "kprobe:sys_read" },
+                 { ExprStatement(Cast(
+                     Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                                .WithInner(ParsedType(
+                                    ast::ParsedType::Kind::Struct, "mytype"))),
+                     FieldAccess("field", Builtin("arg0")))) })));
 
   test("kprobe:sys_read { (struct mytype)arg0+123; }",
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
            { ExprStatement(Binop(
                Operator::PLUS,
-               Cast(Typeof(SizedType(Type::c_struct).WithName("struct mytype")),
+               Cast(Typeof(ParsedType(ast::ParsedType::Kind::Struct, "mytype")),
                     Builtin("arg0")),
                Integer(123))) })));
 }
@@ -1802,37 +1834,41 @@ TEST(Parser, cast_enum)
            .WithCStatements({ CStatement("enum Foo { ONE = 1 };") })
            .WithProbe(
                Probe({ "kprobe:sys_read" },
-                     { ExprStatement(
-                         Cast(Typeof(SizedType(Type::integer).WithName("Foo")),
-                              Integer(1))) })));
+                     { ExprStatement(Cast(
+                         Typeof(ParsedType(ast::ParsedType::Kind::Enum, "Foo")),
+                         Integer(1))) })));
 }
 
 TEST(Parser, cast_pointer_then_array)
 {
   // int32*[4] → array of pointers to int32
   test("kprobe:sys_read { (int32*[4])arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(
-                     Cast(Typeof(SizedType(Type::array)
-                                     .WithElement(SizedType(Type::pointer)
-                                                      .WithElement(SizedType(
-                                                          Type::integer)))),
-                          Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                          .WithArraySize(4)
+                          .WithInner(ParsedType(ast::ParsedType::Kind::Pointer)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "int32")))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_array_then_pointer)
 {
   // int32[4]* → pointer to array of int32
   test("kprobe:sys_read { (int32[4]*)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(
-                     Cast(Typeof(SizedType(Type::pointer)
-                                     .WithElement(SizedType(Type::array)
-                                                      .WithElement(SizedType(
-                                                          Type::integer)))),
-                          Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(ParsedType(ast::ParsedType::Kind::Array)
+                                         .WithArraySize(4)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "int32")))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_struct_array_then_pointer)
@@ -1842,66 +1878,78 @@ TEST(Parser, cast_struct_array_then_pointer)
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
            { ExprStatement(Cast(
-               Typeof(SizedType(Type::pointer)
-                          .WithElement(
-                              SizedType(Type::array)
-                                  .WithElement(SizedType(Type::c_struct)
-                                                   .WithName("struct foo")))),
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(
+                              ParsedType(ast::ParsedType::Kind::Array)
+                                  .WithArraySize(4)
+                                  .WithInner(ParsedType(
+                                      ast::ParsedType::Kind::Struct, "foo")))),
                Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_struct_pointer_then_array)
 {
   // struct mytype*[4] → array of pointers to struct mytype
-  test(
-      "kprobe:sys_read { (struct mytype*[4])arg0; }",
-      Program().WithProbe(Probe(
-          { "kprobe:sys_read" },
-          { ExprStatement(Cast(
-              Typeof(SizedType(Type::array)
-                         .WithElement(
-                             SizedType(Type::pointer)
-                                 .WithElement(SizedType(Type::c_struct)
-                                                  .WithName("struct mytype")))),
-              Builtin("arg0"))) })));
+  test("kprobe:sys_read { (struct mytype*[4])arg0; }",
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                          .WithArraySize(4)
+                          .WithInner(ParsedType(ast::ParsedType::Kind::Pointer)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Struct,
+                                             "mytype")))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_sized_type_normalization)
 {
   // string[64] normalizes from Array(64, String(0)) to String(64)
   test("kprobe:sys_read { (string[64])arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(Typeof(SizedType(Type::string)),
-                                      Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                          .WithArraySize(64)
+                          .WithInner(ParsedType(
+                              ast::ParsedType::Kind::Identifier, "string"))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_sized_type_pointer_normalization)
 {
   // string[64]* normalizes to pointer to String(64)
   test("kprobe:sys_read { (string[64]*)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(
-                     Cast(Typeof(SizedType(Type::pointer)
-                                     .WithElement(SizedType(Type::string))),
-                          Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(ParsedType(ast::ParsedType::Kind::Array)
+                                         .WithArraySize(64)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "string")))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, cast_mixed_suffix_levels)
 {
   // int32*[4]* → pointer to array of pointers to int32
   test("kprobe:sys_read { (int32*[4]*)arg0; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Cast(
-                     Typeof(SizedType(Type::pointer)
-                                .WithElement(
-                                    SizedType(Type::array)
-                                        .WithElement(SizedType(Type::pointer)
-                                                         .WithElement(SizedType(
-                                                             Type::integer))))),
-                     Builtin("arg0"))) })));
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Cast(
+               Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                          .WithInner(
+                              ParsedType(ast::ParsedType::Kind::Array)
+                                  .WithArraySize(4)
+                                  .WithInner(
+                                      ParsedType(ast::ParsedType::Kind::Pointer)
+                                          .WithInner(ParsedType(
+                                              ast::ParsedType::Kind::Identifier,
+                                              "int32"))))),
+               Builtin("arg0"))) })));
 }
 
 TEST(Parser, sizeof_expression)
@@ -1916,7 +1964,8 @@ TEST(Parser, sizeof_type)
   test("kprobe:sys_read { sizeof(int32); }",
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
-                 { ExprStatement(Sizeof(SizedType(Type::integer))) })));
+                 { ExprStatement(Sizeof(ParsedType(
+                     ast::ParsedType::Kind::Identifier, "int32"))) })));
 }
 
 TEST(Parser, offsetof_type)
@@ -1927,7 +1976,7 @@ TEST(Parser, offsetof_type)
            .WithProbe(
                Probe({ "begin" },
                      { ExprStatement(Offsetof(
-                         SizedType(Type::c_struct).WithName("struct Foo"),
+                         ParsedType(ast::ParsedType::Kind::Struct, "Foo"),
                          { "x" })) })));
   test("struct Foo { struct Bar { int x; } bar; } "
        "begin { offsetof(struct Foo, bar.x); }",
@@ -1937,7 +1986,7 @@ TEST(Parser, offsetof_type)
            .WithProbe(
                Probe({ "begin" },
                      { ExprStatement(Offsetof(
-                         SizedType(Type::c_struct).WithName("struct Foo"),
+                         ParsedType(ast::ParsedType::Kind::Struct, "Foo"),
                          { "bar", "x" })) })));
   test_parse_failure("struct Foo { struct Bar { int x; } *bar; } "
                      "begin { offsetof(struct Foo, bar->x); }",
@@ -1953,17 +2002,21 @@ struct Foo { struct Bar { int x; } *bar; } begin { offsetof(struct Foo, bar->x);
 
 TEST(Parser, offsetof_expression)
 {
-  test("struct Foo { int x; }; "
-       "begin { $foo = (struct Foo *)0; offsetof(*$foo, x); }",
-       Program()
-           .WithCStatements({ CStatement("struct Foo { int x; };") })
-           .WithProbe(Probe(
-               { "begin" },
-               { AssignVarStatement(Variable("$foo"),
-                                    Cast(Typeof(SizedType(Type::pointer)),
-                                         Integer(0))),
-                 ExprStatement(Offsetof(Unop(Operator::MUL, Variable("$foo")),
-                                        { "x" })) })));
+  test(
+      "struct Foo { int x; }; "
+      "begin { $foo = (struct Foo *)0; offsetof(*$foo, x); }",
+      Program()
+          .WithCStatements({ CStatement("struct Foo { int x; };") })
+          .WithProbe(Probe(
+              { "begin" },
+              { AssignVarStatement(
+                    Variable("$foo"),
+                    Cast(Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                                    .WithInner(ParsedType(
+                                        ast::ParsedType::Kind::Struct, "Foo"))),
+                         Integer(0))),
+                ExprStatement(Offsetof(Unop(Operator::MUL, Variable("$foo")),
+                                       { "x" })) })));
 }
 
 TEST(Parser, offsetof_builtin_type)
@@ -1975,7 +2028,7 @@ TEST(Parser, offsetof_builtin_type)
            .WithProbe(
                Probe({ "begin" },
                      { ExprStatement(Offsetof(
-                         SizedType(Type::c_struct).WithName("struct Foo"),
+                         ParsedType(ast::ParsedType::Kind::Struct, "Foo"),
                          { "timestamp" })) })));
 }
 
@@ -2800,20 +2853,24 @@ TEST(Parser, keywords_as_identifiers)
                                         "unroll",   "while" };
   for (const auto &keyword : keywords) {
     test("begin { $x = (struct Foo*)0; $x->" + keyword + "; }",
-         Program().WithProbe(
-             Probe({ "begin" },
-                   { AssignVarStatement(Variable("$x"),
-                                        Cast(Typeof(SizedType(Type::pointer)),
-                                             Integer(0))),
-                     ExprStatement(FieldAccess(keyword, Variable("$x"))) })));
-    test("begin { $x = (struct Foo)0; $x." + keyword + "; }",
          Program().WithProbe(Probe(
              { "begin" },
-             { AssignVarStatement(Variable("$x"),
-                                  Cast(Typeof(SizedType(Type::c_struct)
-                                                  .WithName("struct Foo")),
-                                       Integer(0))),
+             { AssignVarStatement(
+                   Variable("$x"),
+                   Cast(Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                                   .WithInner(ParsedType(
+                                       ast::ParsedType::Kind::Struct, "Foo"))),
+                        Integer(0))),
                ExprStatement(FieldAccess(keyword, Variable("$x"))) })));
+    test("begin { $x = (struct Foo)0; $x." + keyword + "; }",
+         Program().WithProbe(
+             Probe({ "begin" },
+                   { AssignVarStatement(
+                         Variable("$x"),
+                         Cast(Typeof(ParsedType(ast::ParsedType::Kind::Struct,
+                                                "Foo")),
+                              Integer(0))),
+                     ExprStatement(FieldAccess(keyword, Variable("$x"))) })));
     test("begin { $x = offsetof(*__builtin_cpu, " + keyword + "); }",
          Program().WithProbe(
              Probe({ "begin" },
@@ -2833,8 +2890,16 @@ TEST(Parser, prog_body_items)
        Program()
            .WithMapDecls({ MapDeclStatement("@a", "hash", 5) })
            .WithFunctions(
-               { Subprog("f1", Typeof(SizedType(Type::voidtype)), {}, {}),
-                 Subprog("f2", Typeof(SizedType(Type::voidtype)), {}, {}) })
+               { Subprog("f1",
+                         Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                           "void")),
+                         {},
+                         {}),
+                 Subprog("f2",
+                         Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                           "void")),
+                         {},
+                         {}) })
            .WithProbes({ Probe({ "interval:s:1" }, {}),
                          Probe({ "interval:s:1" }, {}) }));
 }
@@ -2842,15 +2907,21 @@ TEST(Parser, prog_body_items)
 TEST(Parser, subprog_void_no_args)
 {
   test("fn f(): void {}",
-       Program().WithFunction(
-           Subprog("f", Typeof(SizedType(Type::voidtype)), {}, {})));
+       Program().WithFunction(Subprog(
+           "f",
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
+           {},
+           {})));
 }
 
 TEST(Parser, subprog_ident_return_type)
 {
   test("fn f(): nonexistent {}",
-       Program().WithFunction(
-           Subprog("f", Typeof(Identifier("nonexistent")), {}, {})));
+       Program().WithFunction(Subprog(
+           "f",
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "nonexistent")),
+           {},
+           {})));
 }
 
 TEST(Parser, subprog_one_arg)
@@ -2858,8 +2929,10 @@ TEST(Parser, subprog_one_arg)
   test("fn f($a : uint8): void {}",
        Program().WithFunction(Subprog(
            "f",
-           Typeof(SizedType(Type::voidtype)),
-           { SubprogArg(Variable("$a"), Typeof(SizedType(Type::integer))) },
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
+           { SubprogArg(Variable("$a"),
+                        Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                          "uint8"))) },
            {})));
 }
 
@@ -2868,9 +2941,13 @@ TEST(Parser, subprog_two_args)
   test("fn f($a : uint8, $b : uint8): void {}",
        Program().WithFunction(Subprog(
            "f",
-           Typeof(SizedType(Type::voidtype)),
-           { SubprogArg(Variable("$a"), Typeof(SizedType(Type::integer))),
-             SubprogArg(Variable("$b"), Typeof(SizedType(Type::integer))) },
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
+           { SubprogArg(Variable("$a"),
+                        Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                          "uint8"))),
+             SubprogArg(Variable("$b"),
+                        Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                          "uint8"))) },
            {})));
 }
 
@@ -2879,8 +2956,10 @@ TEST(Parser, subprog_string_arg)
   test("fn f($a : string): void {}",
        Program().WithFunction(Subprog(
            "f",
-           Typeof(SizedType(Type::voidtype)),
-           { SubprogArg(Variable("$a"), Typeof(SizedType(Type::string))) },
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
+           { SubprogArg(Variable("$a"),
+                        Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                          "string"))) },
            {})));
 }
 
@@ -2889,10 +2968,10 @@ TEST(Parser, subprog_struct_arg)
   test("fn f($a: struct x): void {}",
        Program().WithFunction(Subprog(
            "f",
-           Typeof(SizedType(Type::voidtype)),
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
            { SubprogArg(Variable("$a"),
                         Typeof(
-                            SizedType(Type::c_struct).WithName("struct x"))) },
+                            ParsedType(ast::ParsedType::Kind::Struct, "x"))) },
            {})));
 }
 
@@ -2902,9 +2981,9 @@ TEST(Parser, subprog_union_arg)
       "fn f($a : union x): void {}",
       Program().WithFunction(Subprog(
           "f",
-          Typeof(SizedType(Type::voidtype)),
+          Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
           { SubprogArg(Variable("$a"),
-                       Typeof(SizedType(Type::c_struct).WithName("union x"))) },
+                       Typeof(ParsedType(ast::ParsedType::Kind::Union, "x"))) },
           {})));
 }
 
@@ -2913,9 +2992,9 @@ TEST(Parser, subprog_enum_arg)
   test("fn f($a : enum x): void {}",
        Program().WithFunction(Subprog(
            "f",
-           Typeof(SizedType(Type::voidtype)),
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
            { SubprogArg(Variable("$a"),
-                        Typeof(SizedType(Type::integer).WithName("x"))) },
+                        Typeof(ParsedType(ast::ParsedType::Kind::Enum, "x"))) },
            {})));
 }
 
@@ -2924,19 +3003,21 @@ TEST(Parser, subprog_ident_arg_type)
   test("fn f($x : nonexistent): void {}",
        Program().WithFunction(Subprog(
            "f",
-           Typeof(SizedType(Type::voidtype)),
-           { SubprogArg(Variable("$x"), Typeof(Identifier("nonexistent"))) },
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
+           { SubprogArg(Variable("$x"),
+                        Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                          "nonexistent"))) },
            {})));
 }
 
 TEST(Parser, subprog_return)
 {
   test("fn f(): void { return 1 + 1; }",
-       Program().WithFunction(
-           Subprog("f",
-                   Typeof(SizedType(Type::voidtype)),
-                   {},
-                   { Return(Binop(Operator::PLUS, Integer(1), Integer(1))) })));
+       Program().WithFunction(Subprog(
+           "f",
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "void")),
+           {},
+           { Return(Binop(Operator::PLUS, Integer(1), Integer(1))) })));
 }
 
 TEST(Parser, jump_statements_require_separator)
@@ -2996,8 +3077,11 @@ begin { $x++ print(2); }
 TEST(Parser, subprog_string)
 {
   test("fn f(): string {}",
-       Program().WithFunction(
-           Subprog("f", Typeof(SizedType(Type::string)), {}, {})));
+       Program().WithFunction(Subprog(
+           "f",
+           Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "string")),
+           {},
+           {})));
 }
 
 TEST(Parser, subprog_struct)
@@ -3005,7 +3089,7 @@ TEST(Parser, subprog_struct)
   test("fn f(): struct x {}",
        Program().WithFunction(
            Subprog("f",
-                   Typeof(SizedType(Type::c_struct).WithName("struct x")),
+                   Typeof(ParsedType(ast::ParsedType::Kind::Struct, "x")),
                    {},
                    {})));
 }
@@ -3015,14 +3099,14 @@ TEST(Parser, subprog_union)
   test(
       "fn f(): union x {}",
       Program().WithFunction(Subprog(
-          "f", Typeof(SizedType(Type::c_struct).WithName("union x")), {}, {})));
+          "f", Typeof(ParsedType(ast::ParsedType::Kind::Union, "x")), {}, {})));
 }
 
 TEST(Parser, subprog_enum)
 {
   test("fn f(): enum x {}",
        Program().WithFunction(Subprog(
-           "f", Typeof(SizedType(Type::integer).WithName("x")), {}, {})));
+           "f", Typeof(ParsedType(ast::ParsedType::Kind::Enum, "x")), {}, {})));
 }
 
 TEST(Parser, for_loop)
@@ -3110,33 +3194,37 @@ TEST(Parser, variable_declarations)
   test("begin { let $x: int8; }",
        Program().WithProbe(
            Probe({ "begin" },
-                 { VarDeclStatement(Variable("$x"),
-                                    Typeof(SizedType(Type::integer))) })));
+                 { VarDeclStatement(
+                     Variable("$x"),
+                     Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                       "int8"))) })));
 
   test("begin { let $x: nonexistent; }",
        Program().WithProbe(
            Probe({ "begin" },
-                 { VarDeclStatement(Variable("$x"),
-                                    Typeof(Identifier("nonexistent"))) })));
+                 { VarDeclStatement(
+                     Variable("$x"),
+                     Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                       "nonexistent"))) })));
 
   test("begin { let $x: nonexistent *; }",
        Program().WithProbe(Probe(
            { "begin" },
-           { VarDeclStatement(
-               Variable("$x"),
-               Typeof(SizedType(Type::pointer)
-                          .WithElement(SizedType(Type::c_struct)
-                                           .WithName("nonexistent")))) })));
+           { VarDeclStatement(Variable("$x"),
+                              Typeof(ParsedType(ast::ParsedType::Kind::Pointer)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "nonexistent")))) })));
 
   test("begin { let $x: nonexistent[5]; }",
        Program().WithProbe(Probe(
            { "begin" },
-           { VarDeclStatement(
-               Variable("$x"),
-               Typeof(SizedType(Type::array)
-                          .WithNumElements(5)
-                          .WithElement(SizedType(Type::c_struct)
-                                           .WithName("nonexistent")))) })));
+           { VarDeclStatement(Variable("$x"),
+                              Typeof(ParsedType(ast::ParsedType::Kind::Array)
+                                         .WithArraySize(5)
+                                         .WithInner(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "nonexistent")))) })));
 
   test("begin { let $x = 1; }",
        Program().WithProbe(Probe(
@@ -3203,12 +3291,12 @@ TEST(Parser, struct_save_nested)
     } baz;
   } bar;
 };)") })
-           .WithProbe(Probe(
-               { "interval:ms:100" },
-               { AssignVarStatement(Variable("$s"),
-                                    Cast(Typeof(SizedType(Type::c_struct)
-                                                    .WithName("struct Foo")),
-                                         Integer(1))) })));
+           .WithProbe(Probe({ "interval:ms:100" },
+                            { AssignVarStatement(
+                                Variable("$s"),
+                                Cast(Typeof(ParsedType(
+                                         ast::ParsedType::Kind::Struct, "Foo")),
+                                     Integer(1))) })));
 }
 
 TEST(Parser, bare_blocks)

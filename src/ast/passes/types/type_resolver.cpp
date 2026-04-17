@@ -381,7 +381,8 @@ private:
     return it->second;
   }
 
-  bool resolve_struct_type(SizedType &type, Node &node);
+  std::optional<SizedType> resolve_parsed_type(ParsedType *type, Node &node);
+  bool resolve_external_type(SizedType &type, Node &node);
   bool check_offsetof_type(Offsetof &offof, SizedType cstruct);
 
   SizedType get_var_type(const ScopedVariable &scoped_var,
@@ -1414,16 +1415,17 @@ void TypeRuleCollector::visit(Cast &cast)
       },
   });
 
-  if (std::holds_alternative<SizedType>(cast.typeof->record)) {
-    auto &ty = std::get<SizedType>(cast.typeof->record);
-    if (!resolve_struct_type(ty, *cast.typeof)) {
+  if (std::holds_alternative<ParsedType *>(cast.typeof->record)) {
+    auto ty = resolve_parsed_type(std::get<ParsedType *>(cast.typeof->record),
+                                  *cast.typeof);
+    if (!ty) {
       return;
     }
     const auto &expr_ty = resolver_.get_type(&cast.expr.node());
     if (!expr_ty.IsNoneTy()) {
-      ty = update_cast_expr(ty, expr_ty, probe);
+      *ty = update_cast_expr(*ty, expr_ty, probe);
     }
-    resolver_.set_type(&cast, ty);
+    resolver_.set_type(&cast, *ty);
   } else {
     visit(cast.typeof);
     resolver_.add_type_rule({
@@ -1888,10 +1890,9 @@ void TypeRuleCollector::visit(Offsetof &offof)
 {
   // This type will change later depending on what integer literal it resolves
   // to in AstTransformer but for now set it to the smallest uint
-  if (std::holds_alternative<SizedType>(offof.record)) {
-    auto &ty = std::get<SizedType>(offof.record);
-    resolve_struct_type(ty, offof);
-    if (!check_offsetof_type(offof, ty)) {
+  if (std::holds_alternative<ParsedType *>(offof.record)) {
+    auto ty = resolve_parsed_type(std::get<ParsedType *>(offof.record), offof);
+    if (!ty || !check_offsetof_type(offof, *ty)) {
       return;
     }
     resolver_.set_type(&offof, CreateUInt8());
@@ -1906,7 +1907,7 @@ void TypeRuleCollector::visit(Offsetof &offof)
         .resolve = [this,
                     &offof](const std::vector<SizedType> &inputs) -> SizedType {
           auto local_type = inputs[0];
-          resolve_struct_type(local_type, offof);
+          resolve_external_type(local_type, offof);
           if (!check_offsetof_type(offof, local_type)) {
             return CreateNone();
           }
@@ -1950,9 +1951,11 @@ void TypeRuleCollector::visit(Sizeof &szof)
 {
   // This type will change later depending on what integer literal it resolves
   // to for now set it to the smallest uint
-  if (std::holds_alternative<SizedType>(szof.record)) {
-    auto &ty = std::get<SizedType>(szof.record);
-    resolve_struct_type(ty, szof);
+  if (std::holds_alternative<ParsedType *>(szof.record)) {
+    auto ty = resolve_parsed_type(std::get<ParsedType *>(szof.record), szof);
+    if (!ty) {
+      return;
+    }
     resolver_.set_type(&szof, CreateUInt8());
   } else {
     auto &expr = std::get<Expression>(szof.record);
@@ -1988,12 +1991,13 @@ void TypeRuleCollector::visit(Subprog &subprog)
   for (SubprogArg *arg : subprog.args) {
     ScopedVariable scoped_var = std::make_pair(&subprog, arg->var->ident);
 
-    if (std::holds_alternative<SizedType>(arg->typeof->record)) {
-      auto &ty = std::get<SizedType>(arg->typeof->record);
-      if (resolve_struct_type(ty, *arg->typeof)) {
-        resolver_.set_type(scoped_var, ty);
-        resolver_.set_type(arg->typeof, ty);
-        if (ty.GetSize() != 0) {
+    if (std::holds_alternative<ParsedType *>(arg->typeof->record)) {
+      auto ty = resolve_parsed_type(std::get<ParsedType *>(arg->typeof->record),
+                                    *arg->typeof);
+      if (ty) {
+        resolver_.set_type(scoped_var, *ty);
+        resolver_.set_type(arg->typeof, *ty);
+        if (ty->GetSize() != 0) {
           sized_decl_vars_.insert(scoped_var);
         }
       }
@@ -2014,10 +2018,12 @@ void TypeRuleCollector::visit(Subprog &subprog)
 
 void TypeRuleCollector::visit(Typeof &typeof)
 {
-  if (std::holds_alternative<SizedType>(typeof.record)) {
-    auto &ty = std::get<SizedType>(typeof.record);
-    resolve_struct_type(ty, typeof);
-    resolver_.set_type(&typeof, ty);
+  if (std::holds_alternative<ParsedType *>(typeof.record)) {
+    auto ty = resolve_parsed_type(std::get<ParsedType *>(typeof.record),
+                                  typeof);
+    if (ty) {
+      resolver_.set_type(&typeof, *ty);
+    }
   } else {
     auto &expr = std::get<Expression>(typeof.record);
     ++introspection_level_;
@@ -2275,16 +2281,17 @@ void TypeRuleCollector::visit(VarDeclStatement &decl)
   auto *scope = scope_stack_.back();
   ScopedVariable scoped_var = std::make_pair(scope, decl.var->ident);
 
-  if (std::holds_alternative<SizedType>(decl.typeof->record)) {
-    auto &ty = std::get<SizedType>(decl.typeof->record);
-    if (!resolve_struct_type(ty, *decl.typeof)) {
+  if (std::holds_alternative<ParsedType *>(decl.typeof->record)) {
+    auto ty = resolve_parsed_type(std::get<ParsedType *>(decl.typeof->record),
+                                  *decl.typeof);
+    if (!ty) {
       return;
     }
-    resolver_.set_type(scoped_var, ty);
-    resolver_.set_type(decl.typeof, ty);
+    resolver_.set_type(scoped_var, *ty);
+    resolver_.set_type(decl.typeof, *ty);
     // Some declared types like 'string' have no size so we can factor in the
     // size of the assignment
-    if (ty.GetSize() != 0) {
+    if (ty->GetSize() != 0) {
       sized_decl_vars_.insert(scoped_var);
     }
   } else {
@@ -2326,46 +2333,62 @@ void TypeRuleCollector::visit(VariableAddr &var_addr)
   });
 }
 
-bool TypeRuleCollector::resolve_struct_type(SizedType &type, Node &node)
+std::optional<SizedType> TypeRuleCollector::resolve_parsed_type(
+    ParsedType *type,
+    Node &node)
 {
-  SizedType inner_type = type;
-  int pointer_level = 0;
-  while (inner_type.IsPtrTy()) {
-    inner_type = inner_type.GetPointeeTy();
-    pointer_level++;
+  if (!type) {
+    return std::nullopt;
   }
 
-  bool is_array = false;
-  size_t num_elements = 0;
-  if (inner_type.IsArrayTy()) {
-    num_elements = inner_type.GetNumElements();
-    inner_type = inner_type.GetElementTy();
-    is_array = true;
+  auto sized_type = parsed_type_to_sized_type(*type);
+  // N.B. Only certain SizedTypes might need additional external resolution,
+  // e.g. structs, typedefs, etc.
+  if (!resolve_external_type(sized_type, node)) {
+    return std::nullopt;
+  }
+  resolver_.set_type(type, sized_type);
+  return sized_type;
+}
+
+bool TypeRuleCollector::resolve_external_type(SizedType &type, Node &node)
+{
+  if (type.IsPtrTy()) {
+    auto inner = type.GetPointeeTy();
+    if (!resolve_external_type(inner, node)) {
+      return false;
+    }
+    type = CreatePointer(inner);
+    return true;
   }
 
-  if (inner_type.IsCStructTy() && !inner_type.GetStruct()) {
-    auto struct_type = bpftrace_.structs.Lookup(inner_type.GetName()).lock();
-    if (!struct_type) {
-      // Try to find the type as something other than a struct, e.g. 'char' or
-      // 'uint64_t'
-      auto stype = bpftrace_.btf_->get_stype(inner_type.GetName());
-      if (stype.IsNoneTy()) {
-        node.addError() << "Cannot resolve unknown type \""
-                        << inner_type.GetName() << "\"\n";
-        return false;
-      } else {
-        type = stype;
-      }
-    } else {
-      type = CreateCStruct(inner_type.GetName(), struct_type);
+  if (type.IsArrayTy()) {
+    auto num_elements = type.GetNumElements();
+    auto inner = type.GetElementTy();
+    if (!resolve_external_type(inner, node)) {
+      return false;
     }
-    if (is_array) {
-      type = CreateArray(num_elements, type);
+    type = CreateArray(num_elements, inner);
+    return true;
+  }
+
+  if (type.IsCStructTy() && !type.GetStruct()) {
+    auto struct_type = bpftrace_.structs.Lookup(type.GetName()).lock();
+    if (struct_type) {
+      type = CreateCStruct(type.GetName(), struct_type);
+      return true;
     }
-    while (pointer_level > 0) {
-      type = CreatePointer(type);
-      pointer_level--;
+
+    // Try to find the type as something other than a struct, e.g. 'char' or
+    // 'uint64_t'
+    auto stype = bpftrace_.btf_->get_stype(type.GetName());
+    if (stype.IsNoneTy()) {
+      node.addError() << "Cannot resolve unknown type \"" << type.GetName()
+                      << "\"\n";
+      return false;
     }
+
+    type = stype;
   }
   return true;
 }

@@ -138,7 +138,10 @@ std::optional<Expression> AstTransformer::visit(Binop &binop)
       binop.loc,
       updated_rht == updated_lht ? "memcmp" : "memcmp_record",
       ExpressionList{ binop.left, binop.right, size });
-  auto *typeof_node = ast_.make_node<Typeof>(binop.loc, CreateBool());
+  auto *parsed_type = ast_.make_node<ParsedType>(binop.loc,
+                                                 ParsedType::Kind::Identifier,
+                                                 "bool");
+  auto *typeof_node = ast_.make_node<Typeof>(binop.loc, parsed_type);
   auto *cast = ast_.make_node<Cast>(binop.loc, typeof_node, call);
   if (binop.op == Operator::NE) {
     return cast;
@@ -192,8 +195,8 @@ std::optional<Expression> AstTransformer::visit(FieldAccess &acc)
 std::optional<Expression> AstTransformer::visit(Offsetof &offof)
 {
   SizedType cstruct;
-  if (std::holds_alternative<SizedType>(offof.record)) {
-    cstruct = std::get<SizedType>(offof.record);
+  if (std::holds_alternative<ParsedType *>(offof.record)) {
+    cstruct = get_type(std::get<ParsedType *>(offof.record));
   } else {
     cstruct = get_type(&std::get<Expression>(offof.record).node());
   }
@@ -218,8 +221,8 @@ std::optional<Expression> AstTransformer::visit(Offsetof &offof)
 std::optional<Expression> AstTransformer::visit(Sizeof &szof)
 {
   size_t size = 0;
-  if (std::holds_alternative<SizedType>(szof.record)) {
-    auto &ty = std::get<SizedType>(szof.record);
+  if (std::holds_alternative<ParsedType *>(szof.record)) {
+    const auto &ty = get_type(std::get<ParsedType *>(szof.record));
     if (ty.IsNoneTy()) {
       return std::nullopt;
     }
