@@ -199,11 +199,11 @@ std::string Dwarf::get_type_name(Dwarf_Die &type_die) const
     case DW_TAG_enumeration_type: {
       std::string prefix;
       if (tag == DW_TAG_structure_type)
-        prefix = "struct ";
+        prefix = STRUCT_PREFIX;
       else if (tag == DW_TAG_union_type)
-        prefix = "union ";
+        prefix = UNION_PREFIX;
       else
-        prefix = "enum ";
+        prefix = ENUM_PREFIX;
 
       if (dwarf_hasattr(&type_die, DW_AT_name))
         return prefix + get_die_name(&type_die);
@@ -269,7 +269,9 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
       std::string name = get_die_name(&type_die);
-      name = (tag == DW_TAG_structure_type ? "struct " : "union ") + name;
+      name = std::string(tag == DW_TAG_structure_type ? STRUCT_PREFIX
+                                                      : UNION_PREFIX) +
+             name;
       auto result = CreateCStruct(
           name, bpftrace_->structs.LookupOrAdd(name, bit_size / 8));
       if (resolve_structs)
@@ -304,8 +306,8 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
 SizedType Dwarf::get_stype(const std::string &type_name) const
 {
   std::string name = type_name;
-  if (name.starts_with("struct "))
-    name = name.substr(strlen("struct "));
+  if (name.starts_with(STRUCT_PREFIX))
+    name = name.substr(STRUCT_PREFIX.length());
 
   auto type_die = find_type(name);
   if (!type_die)
@@ -351,8 +353,8 @@ void Dwarf::resolve_fields(const SizedType &type) const
     return;
 
   std::string type_name = type.GetName();
-  if (type_name.starts_with("struct "))
-    type_name = type_name.substr(strlen("struct "));
+  if (type_name.starts_with(STRUCT_PREFIX))
+    type_name = type_name.substr(STRUCT_PREFIX.length());
   auto type_die = find_type(type_name);
   if (!type_die)
     return;

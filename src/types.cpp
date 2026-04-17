@@ -9,9 +9,6 @@
 
 namespace bpftrace {
 
-static constexpr std::string_view STRUCT_PREFIX = "struct ";
-static constexpr std::string_view UNION_PREFIX = "union ";
-
 std::ostream &operator<<(std::ostream &os, Type type)
 {
   os << typestr(type);
@@ -35,7 +32,7 @@ std::string typestr(const SizedType &type)
   switch (type.GetTy()) {
     case Type::integer:
       if (type.IsEnumTy()) {
-        return "enum " + type.GetName();
+        return std::string(ENUM_PREFIX) + type.GetName();
       }
       return (type.is_signed_ ? "int" : "uint") +
              std::to_string(8 * type.GetSize());

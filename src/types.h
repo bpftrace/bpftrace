@@ -11,6 +11,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <sys/types.h>
 #include <unistd.h>
 #include <unordered_set>
@@ -21,6 +22,10 @@
 #include "util/result.h"
 
 namespace bpftrace {
+
+inline constexpr std::string_view STRUCT_PREFIX = "struct ";
+inline constexpr std::string_view UNION_PREFIX = "union ";
+inline constexpr std::string_view ENUM_PREFIX = "enum ";
 
 enum class Type : uint8_t {
   // clang-format off

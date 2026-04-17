@@ -351,7 +351,7 @@ std::optional<std::string> Probe::args_typename() const
   if (!name) {
     return std::nullopt;
   }
-  return "struct " + *name + "_args";
+  return std::string(STRUCT_PREFIX) + *name + "_args";
 }
 
 int Probe::index() const

@@ -268,7 +268,7 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
     case CXType_Enum: {
       // The pretty printed type name contains `enum` prefix. That's not
       // helpful for us, so remove it. We have our own metadata.
-      static std::regex re("enum ");
+      static std::regex re{ std::string{ ENUM_PREFIX } };
       auto enum_name = std::regex_replace(typestr, re, "");
       return CreateEnum(size, enum_name);
     }

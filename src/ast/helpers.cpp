@@ -2,6 +2,7 @@
 
 #include "ast/helpers.h"
 #include "log.h"
+#include "types.h"
 
 namespace bpftrace {
 
@@ -32,8 +33,8 @@ bool is_supported_lang(const std::string &lang)
 
 bool is_type_name(std::string_view str)
 {
-  return str.starts_with("struct ") || str.starts_with("union ") ||
-         str.starts_with("enum ");
+  return str.starts_with(STRUCT_PREFIX) || str.starts_with(UNION_PREFIX) ||
+         str.starts_with(ENUM_PREFIX);
 }
 
 } // namespace bpftrace
