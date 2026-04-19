@@ -221,7 +221,7 @@ inside a script config block.
 ## Config Variables
 
 Some behavior can only be controlled through config variables, which are listed here.
-These can be set via the [Config Block](#config-block) directly in a script (before any probes) or via their environment variable equivalent, which is upper case and includes the `BPFTRACE_` prefix e.g. ``stack_mode`’s environment variable would be `BPFTRACE_STACK_MODE`.
+These can be set via the [Config Block](#config-block) directly in a script (before any probes) or via their environment variable equivalent, which is upper case and includes the `BPFTRACE_` prefix e.g. `stack_mode`’s environment variable would be `BPFTRACE_STACK_MODE`.
 
 ### cache_user_symbols
 
