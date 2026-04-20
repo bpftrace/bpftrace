@@ -34,6 +34,7 @@ add_executable(bpftrace_test
   opaque.cpp
   output.cpp
   parser.cpp
+  parsed_type_bridge.cpp
   portability_analyser.cpp
   ap_probe_expansion.cpp
   procmon.cpp

@@ -10,6 +10,7 @@
 #include "ast/passes/named_param.h"
 #include "ast/passes/types/ast_transformer.h"
 #include "ast/passes/types/cast_creator.h"
+#include "ast/passes/types/parsed_type_bridge.h"
 #include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_system.h"
