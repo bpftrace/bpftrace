@@ -6,13 +6,6 @@
 
 namespace bpftrace {
 
-namespace {
-
-constexpr std::string_view STRUCT_PREFIX = "struct ";
-constexpr std::string_view UNION_PREFIX = "union ";
-
-} // namespace
-
 SizedType parsed_type_to_sized_type(const ast::ParsedType &type)
 {
   switch (type.kind) {

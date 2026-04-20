@@ -218,25 +218,25 @@ static std::string full_type_str(const struct btf *btf,
   const char *str = btf_str(btf, type->name_off);
 
   if (BTF_INFO_KIND(type->info) == BTF_KIND_STRUCT)
-    return std::string("struct ") + str;
+    return std::string(STRUCT_PREFIX) + str;
 
   if (BTF_INFO_KIND(type->info) == BTF_KIND_UNION)
-    return std::string("union ") + str;
+    return std::string(UNION_PREFIX) + str;
 
   if (BTF_INFO_KIND(type->info) == BTF_KIND_ENUM)
-    return std::string("enum ") + str;
+    return std::string(ENUM_PREFIX) + str;
 
   return str;
 }
 
 static std::string_view btf_type_str(std::string_view type)
 {
-  if (type.starts_with("struct "))
-    return type.substr("struct "sv.length());
-  if (type.starts_with("union "))
-    return type.substr("union "sv.length());
-  if (type.starts_with("enum "))
-    return type.substr("enum "sv.length());
+  if (type.starts_with(STRUCT_PREFIX))
+    return type.substr(STRUCT_PREFIX.length());
+  if (type.starts_with(UNION_PREFIX))
+    return type.substr(UNION_PREFIX.length());
+  if (type.starts_with(ENUM_PREFIX))
+    return type.substr(ENUM_PREFIX.length());
   return type;
 }
 
@@ -503,7 +503,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     }
   } else if (btf_is_composite(t)) {
     bool is_anon = false;
-    std::string recprefix = btf_is_struct(t) ? "struct " : "union ";
+    std::string recprefix(btf_is_struct(t) ? STRUCT_PREFIX : UNION_PREFIX);
     std::string rname = btf_str(btf_id.btf, t->name_off);
 
     if (is_anon_btf_typename(rname)) {

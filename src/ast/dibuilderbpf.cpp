@@ -299,12 +299,10 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
 {
   if (stype.IsCStructTy()) {
     std::string name = stype.GetName();
-    static constexpr std::string_view struct_prefix = "struct ";
-    static constexpr std::string_view union_prefix = "union ";
-    if (name.starts_with(struct_prefix))
-      name = name.substr(struct_prefix.length());
-    else if (name.starts_with(union_prefix))
-      name = name.substr(union_prefix.length());
+    if (name.starts_with(STRUCT_PREFIX))
+      name = name.substr(STRUCT_PREFIX.length());
+    else if (name.starts_with(UNION_PREFIX))
+      name = name.substr(UNION_PREFIX.length());
 
     return createStructType(file,
                             name,

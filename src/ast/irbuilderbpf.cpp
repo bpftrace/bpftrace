@@ -2130,7 +2130,7 @@ Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
 llvm::Type *IRBuilderBPF::UprobeArgsType(const SizedType &args_type)
 {
   auto type_name = args_type.GetName();
-  type_name.erase(0, strlen("struct "));
+  type_name.erase(0, STRUCT_PREFIX.length());
 
   std::vector<llvm::Type *> arg_types;
   for (auto &arg : args_type.GetFields())
