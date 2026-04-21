@@ -221,7 +221,7 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::pointer:
     case Type::array:
     case Type::mac_address:
-    case Type::c_struct:
+    case Type::c_type:
     case Type::tuple:
     case Type::record:
     case Type::cgroup_path_t:
@@ -450,9 +450,8 @@ void TypeChecker::visit(Call &call)
     // member, like: path(args.filp->f_path))
     auto &arg = call.vargs.at(0);
     const auto &arg_type = type_map_.type(arg);
-    if (arg_type.GetTy() != Type::c_struct &&
-        arg_type.GetTy() != Type::pointer) {
-      call.addError() << "path() only supports pointer or record argument ("
+    if (!arg_type.IsCTypeTy() && !arg_type.IsPtrTy()) {
+      call.addError() << "path() only supports pointer or C type argument ("
                       << arg_type.GetTy() << " provided)";
     }
   } else if (call.func == "kptr" || call.func == "uptr") {
@@ -506,7 +505,7 @@ void TypeChecker::visit(Call &call)
     };
 
     const auto &type = type_map_.type(call.vargs.at(0));
-    if (!type.IsPtrTy() || !type.GetPointeeTy().IsCStructTy()) {
+    if (!type.IsPtrTy() || !type.GetPointeeTy().IsCTypeTy()) {
       logError(type.GetTy());
       return;
     }
@@ -867,7 +866,7 @@ void TypeChecker::visit(FieldAccess &acc)
     type = type.GetPointeeTy();
   }
 
-  if (!type.IsCStructTy() && !type.IsTupleTy() && !type.IsRecordTy()) {
+  if (!type.IsCTypeTy() && !type.IsTupleTy() && !type.IsRecordTy()) {
     return;
   }
 
@@ -939,8 +938,8 @@ void TypeChecker::visit(Cast &cast)
   }
 
   auto rhs = type_map_.type(cast.expr);
-  if (rhs.IsCStructTy()) {
-    cast.addError() << "Cannot cast from struct type \"" << rhs << "\"";
+  if (rhs.IsCTypeTy()) {
+    cast.addError() << "Cannot cast from C type \"" << rhs << "\"";
     return;
   } else if (rhs.IsNoneTy()) {
     cast.addError() << "Cannot cast from \"" << rhs << "\" type";
@@ -960,7 +959,7 @@ void TypeChecker::visit(Cast &cast)
 
   if (!ty.IsIntTy() && !ty.IsPtrTy() && !ty.IsBoolTy() &&
       (!ty.IsPtrTy() || ty.GetElementTy().IsIntTy() ||
-       ty.GetElementTy().IsCStructTy()) &&
+       ty.GetElementTy().IsCTypeTy()) &&
       // we support casting integers to int arrays
       !(ty.IsArrayTy() && ty.GetElementTy().IsBoolTy()) &&
       !(ty.IsArrayTy() && ty.GetElementTy().IsIntTy())) {

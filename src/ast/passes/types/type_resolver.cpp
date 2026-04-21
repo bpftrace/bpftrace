@@ -384,7 +384,7 @@ private:
 
   std::optional<SizedType> resolve_parsed_type(ParsedType *type, Node &node);
   bool resolve_external_type(SizedType &type, Node &node);
-  bool check_offsetof_type(Offsetof &offof, SizedType cstruct);
+  bool check_offsetof_type(Offsetof &offof, SizedType c_type);
 
   SizedType get_var_type(const ScopedVariable &scoped_var,
                          const SizedType &type,
@@ -609,24 +609,25 @@ SizedType get_binop_type(Binop &binop,
   return result_type;
 }
 
-bool TypeRuleCollector::check_offsetof_type(Offsetof &offof, SizedType cstruct)
+bool TypeRuleCollector::check_offsetof_type(Offsetof &offof, SizedType c_type)
 {
   // Check if all sub-fields are present.
   for (const auto &field : offof.field) {
-    if (!cstruct.IsCStructTy()) {
-      offof.addError() << "'" << cstruct << "' " << "is not a c_struct type.";
+    if (!c_type.IsCTypeTy()) {
+      offof.addError() << "'" << c_type << "' "
+                       << "is not a C type.";
       return false;
-    } else if (!bpftrace_.structs.Has(cstruct.GetName())) {
-      offof.addError() << "'" << cstruct.GetName() << "' does not exist.";
+    } else if (!bpftrace_.structs.Has(c_type.GetName())) {
+      offof.addError() << "'" << c_type.GetName() << "' does not exist.";
       return false;
-    } else if (!cstruct.HasField(field)) {
-      offof.addError() << "'" << cstruct.GetName() << "' "
+    } else if (!c_type.HasField(field)) {
+      offof.addError() << "'" << c_type.GetName() << "' "
                        << "has no field named " << "'" << field << "'";
       return false;
     } else {
       // Get next sub-field
-      const auto &f = cstruct.GetField(field);
-      cstruct = f.type;
+      const auto &f = c_type.GetField(field);
+      c_type = f.type;
     }
   }
   return true;
@@ -1482,7 +1483,7 @@ void TypeRuleCollector::visit(FieldAccess &acc)
 
         SizedType result_type = CreateNone();
 
-        if (!expr_type.IsCStructTy() && !expr_type.IsRecordTy()) {
+        if (!expr_type.IsCTypeTy() && !expr_type.IsRecordTy()) {
           acc.addError() << "Can not access field '" << acc.field
                          << "' on expression of type '" << expr_type << "'";
           return CreateNone();
@@ -1544,8 +1545,7 @@ void TypeRuleCollector::visit(FieldAccess &acc)
           }
 
           result_type = field.type;
-          if (is_ctx &&
-              (result_type.IsArrayTy() || result_type.IsCStructTy())) {
+          if (is_ctx && (result_type.IsArrayTy() || result_type.IsCTypeTy())) {
             // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
             result_type.MarkCtxAccess();
           }
@@ -2238,7 +2238,7 @@ void TypeRuleCollector::visit(Unop &unop)
               result.MarkCtxAccess();
             result.is_internal = type.is_internal;
             result.SetAS(type.GetAS());
-          } else if (type.IsCStructTy()) {
+          } else if (type.IsCTypeTy()) {
             // We allow dereferencing "args" with no effect (for backwards
             // compat)
             if (type.IsCtxAccess()) {
@@ -2373,7 +2373,7 @@ bool TypeRuleCollector::resolve_external_type(SizedType &type, Node &node)
     return true;
   }
 
-  if (type.IsCStructTy() && !type.GetStruct()) {
+  if (type.IsCTypeTy() && !type.GetStruct()) {
     auto struct_type = bpftrace_.structs.Lookup(type.GetName()).lock();
     if (struct_type) {
       type = CreateCStruct(type.GetName(), struct_type);
@@ -2447,7 +2447,7 @@ SizedType TypeRuleCollector::get_map_value_type(const std::string &map_name,
   if (promoted) {
     // Data stored in a BPF map is internal (managed by BPF runtime), so
     // structs and arrays should be marked as such.
-    if (promoted->IsCStructTy() || promoted->IsArrayTy()) {
+    if (promoted->IsCTypeTy() || promoted->IsArrayTy()) {
       promoted->is_internal = true;
     }
 

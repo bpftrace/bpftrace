@@ -345,17 +345,14 @@ std::optional<Bitfield> Dwarf::resolve_bitfield(Dwarf_Die &field_die) const
 
 void Dwarf::resolve_fields(const SizedType &type) const
 {
-  if (!type.IsCStructTy())
+  if (!type.IsCTypeTy())
     return;
 
   auto str = bpftrace_->structs.Lookup(type.GetName()).lock();
   if (str->HasFields())
     return;
 
-  std::string type_name = type.GetName();
-  if (type_name.starts_with(STRUCT_PREFIX))
-    type_name = type_name.substr(STRUCT_PREFIX.length());
-  auto type_die = find_type(type_name);
+  auto type_die = find_type(std::string(type.GetBaseName()));
   if (!type_die)
     return;
 
