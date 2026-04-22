@@ -45,7 +45,7 @@ static Result<BitcodeModules::Result> build(
                llvm::MemoryBuffer::getMemBufferCopy(obj.data(), "main"));
 
   const std::string asm_dir = "include/asm/" + arch::Host::asm_arch() + "/";
-  for (const auto &[name, other] : stdlib::Stdlib::files) {
+  for (const auto &[name, other] : stdlib::Stdlib::c_files) {
     // If this include file is an arch-specific assembly file, then we
     // skip if it does not match the current architecture. If it *does*
     // match the current architecture, then we remap it as the `asm`

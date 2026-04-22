@@ -7,10 +7,10 @@ namespace bpftrace::stdlib {
 
 class Stdlib {
 public:
-  // files is the set of files embedded in the standard library.
-  //
   // This is constructed automatically from a generated `stdlib.cpp`.
-  static const std::map<std::string, std::string_view> files;
+  static const std::map<std::string, std::string_view> c_files;
+  static const std::map<std::string, std::string_view> bt_files;
+  static const std::map<std::string, std::string> macro_to_file;
 };
 
 } // namespace bpftrace::stdlib

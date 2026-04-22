@@ -9,9 +9,16 @@ inline std::string_view make_view(const unsigned char *v, size_t sz)
   return { reinterpret_cast<const char *>(v), sz };
 }
 
-const std::map<std::string, std::string_view> Stdlib::files = {
-    ${STDLIB_FILES}
+const std::map<std::string, std::string_view> Stdlib::c_files = {
+    ${STDLIB_C_FILES}
+};
+
+const std::map<std::string, std::string_view> Stdlib::bt_files = {
+    ${STDLIB_BT_FILES}
+};
+
+const std::map<std::string, std::string> Stdlib::macro_to_file = {
+    ${STDLIB_MACROS}
 };
 
 } // namespace bpftrace::stdlib
-

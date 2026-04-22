@@ -131,7 +131,7 @@ const std::vector<CXUnsavedFile> &getDefaultHeaders()
   static auto cached = [] {
     std::vector<std::string> names;
     std::vector<CXUnsavedFile> unsaved_files;
-    for (const auto &[name, view] : stdlib::Stdlib::files) {
+    for (const auto &[name, view] : stdlib::Stdlib::c_files) {
       if (!name.ends_with(".h")) {
         continue; // Inlucde only headers.
       }

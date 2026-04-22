@@ -1,9 +1,11 @@
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <sstream>
 
 #include "ast/passes/resolve_imports.h"
 #include "ast/visitor.h"
+#include "log.h"
 #include "parser.h"
 #include "stdlib/stdlib.h"
 #include "util/result.h"
@@ -13,6 +15,8 @@
 namespace bpftrace::ast {
 
 using bpftrace::stdlib::Stdlib;
+
+static constexpr auto INTERNAL_BT = "stdlib/internal.bt";
 
 class ResolveRootImports : public Visitor<ResolveRootImports> {
 public:
@@ -25,6 +29,26 @@ public:
 
 private:
   Imports &imports_;
+  const std::vector<std::filesystem::path> &paths_;
+};
+
+class ResolveStdlibMacroImports : public Visitor<ResolveStdlibMacroImports> {
+public:
+  ResolveStdlibMacroImports(
+      Imports &imports,
+      std::optional<std::string> source_macro_name,
+      const std::vector<std::filesystem::path> &paths = {})
+      : imports_(imports),
+        source_macro_name_(std::move(source_macro_name)),
+        paths_(paths) {};
+
+  using Visitor<ResolveStdlibMacroImports>::visit;
+  void visit(Expression &expr);
+  void visit(Macro &macro);
+
+private:
+  Imports &imports_;
+  std::optional<std::string> source_macro_name_;
   const std::vector<std::filesystem::path> &paths_;
 };
 
@@ -60,6 +84,36 @@ static bool check_permissions(const std::filesystem::path &path)
   }
 }
 
+// Parses a script into the scripts map and returns a pointer to its
+// ASTContext, or nullptr if already imported.
+static Result<ASTContext *> import_bt_file(
+    Node &node,
+    const std::string &name,
+    std::string data,
+    bool internal,
+    std::map<std::string, ScriptObject> &scripts)
+{
+  if (scripts.contains(name)) {
+    return nullptr;
+  }
+
+  auto [it, added] = scripts.emplace(
+      name, ScriptObject(node, ASTContext(name, std::move(data)), internal));
+  assert(added);
+  auto &ast = it->second.ast;
+
+  PassManager pm;
+  pm.put(ast);
+  pm.add(CreateParsePass());
+
+  auto ok = pm.run();
+  if (!ok) {
+    return ok.takeError();
+  }
+
+  return &ast;
+}
+
 static Result<OK> import_script(Node &node,
                                 Imports &imports,
                                 const std::string &name,
@@ -68,27 +122,14 @@ static Result<OK> import_script(Node &node,
                                 std::map<std::string, ScriptObject> &contents,
                                 bool internal)
 {
-  if (contents.contains(name)) {
-    return OK(); // Already added.
+  auto result = import_bt_file(node, name, data, internal, contents);
+  if (!result) {
+    return result.takeError();
   }
-
-  // Construct our context.
-  auto [it, added] = contents.emplace(
-      name, ScriptObject(node, ASTContext(name, data), internal));
-  assert(added);
-  auto &ast = it->second.ast;
-
-  // Perform the basic parse pass. Note that this parse is done extremely
-  // early, and does zero expansion or parsing of attachpoints, etc.
-  PassManager pm;
-  pm.put(ast);
-  pm.add(CreateParsePass());
-
-  // Attempt to parse the source.
-  auto ok = pm.run();
-  if (!ok) {
-    return ok.takeError();
+  if (*result == nullptr) {
+    return OK();
   }
+  auto &ast = **result;
 
   // Disallow `config` blocks as they cannot be merged.
   if (ast.root != nullptr && ast.root->config != nullptr &&
@@ -99,6 +140,10 @@ static Result<OK> import_script(Node &node,
   // Recursively visit the parsed tree.
   ResolveRootImports resolver(imports, paths);
   resolver.visit(ast.root);
+
+  // Check for stdlib macro references in the imported script.
+  ResolveStdlibMacroImports macro_resolver(imports, std::nullopt, paths);
+  macro_resolver.visit(ast.root);
 
   return OK();
 }
@@ -247,6 +292,48 @@ Result<OK> Imports::import_any(Node &node,
   return OK();
 }
 
+Result<OK> Imports::import_stdlib(
+    Node &node,
+    const std::string &name,
+    const std::string_view &data,
+    const std::string &macro_name,
+    const std::vector<std::filesystem::path> &paths)
+{
+  if (has_external_stdlib_override_ && name != INTERNAL_BT) {
+    return OK();
+  }
+
+  if (seen_stdlib_macros_.contains(macro_name)) {
+    return OK();
+  }
+
+  seen_stdlib_macros_.insert(macro_name);
+
+  auto result = import_bt_file(node, name, std::string(data), true, scripts);
+  if (!result) {
+    return result.takeError();
+  }
+
+  if (*result == nullptr) {
+    // Even though we imported and parsed the stdlib file, we may still need to
+    // resolve other nested macros
+    auto found = scripts.find(name);
+    if (found != scripts.end()) {
+      ResolveStdlibMacroImports resolver(*this, macro_name, paths);
+      auto &ast = found->second.ast;
+      resolver.visit(ast.root);
+    }
+
+    return OK();
+  }
+  auto &ast = **result;
+
+  ResolveStdlibMacroImports resolver(*this, macro_name, paths);
+  resolver.visit(ast.root);
+
+  return OK();
+}
+
 Result<OK> Imports::import_any(Node &node,
                                const std::string &name,
                                const std::vector<std::filesystem::path> &paths)
@@ -286,8 +373,12 @@ Result<OK> Imports::import_any(Node &node,
   // expansion here, importing anything that is matching as a path.
   bool found = false;
   std::vector<std::string> similar;
-  for (const auto &[internal_path, s] : Stdlib::files) {
+  // This automatically imports c files from the stdlib but not bpftrace (bt)
+  // files so we don't have to always re-parse the entire stdlib library for
+  // every script invocation
+  for (const auto &[internal_path, s] : Stdlib::c_files) {
     auto path = std::filesystem::path(internal_path);
+
     if (path.string() == name) {
       return import_any(node, name, s, paths, false);
     } else if (path.parent_path().string() == name) {
@@ -329,13 +420,6 @@ void ResolveStatementImports::visit(StatementImport &imp)
     imp.addError() << import_error;
   } else if (path.extension() == ".bt") {
     imp.addError() << import_error;
-  } else {
-    for (const auto &[internal_path, s] : Stdlib::files) {
-      auto path = std::filesystem::path(internal_path);
-      if (path.parent_path().string() == imp.name) {
-        imp.addError() << import_error;
-      }
-    }
   }
   auto ok = imports_.import_any(imp, imp.name, paths_);
   if (!ok) {
@@ -345,9 +429,74 @@ void ResolveStatementImports::visit(StatementImport &imp)
 
 void ResolveRootImports::visit(RootImport &imp)
 {
+  if (imp.name == "stdlib") {
+    // If an explicit root import resolves to a filesystem stdlib package,
+    // treat it as an override before importing its files so later
+    // conditional stdlib bt imports do not mix in embedded stdlib scripts.
+    for (const auto &import_path : paths_) {
+      auto path = import_path / imp.name;
+      std::error_code ec;
+      if (!std::filesystem::exists(path, ec)) {
+        continue;
+      }
+      if (!check_permissions(path)) {
+        continue;
+      }
+      if (std::filesystem::is_directory(path)) {
+        imports_.mark_external_stdlib_override();
+      }
+      break;
+    }
+  }
+
   auto ok = imports_.import_any(imp, imp.name, paths_);
   if (!ok) {
     imp.addError() << "import error: " << ok.takeError();
+  }
+}
+
+void ResolveStdlibMacroImports::visit(Macro &macro)
+{
+  if (!source_macro_name_ || macro.name == *source_macro_name_) {
+    visit(macro.block);
+  }
+}
+
+void ResolveStdlibMacroImports::visit(Expression &expr)
+{
+  auto *ident = expr.as<Identifier>();
+  auto *call = expr.as<Call>();
+
+  if (!ident && !call) {
+    Visitor<ResolveStdlibMacroImports>::visit(expr);
+    return;
+  }
+
+  if (call) {
+    visit(call->vargs);
+  }
+
+  const std::string &possible_macro_name = ident ? ident->ident : call->func;
+  auto found = Stdlib::macro_to_file.find(possible_macro_name);
+
+  if (found == Stdlib::macro_to_file.end()) {
+    return;
+  }
+
+  auto found_files_entry = Stdlib::bt_files.find(found->second);
+
+  if (found_files_entry == Stdlib::bt_files.end()) {
+    LOG(BUG) << found->second << " should be also in Stdlib::bt_files";
+    return;
+  }
+
+  auto ok = imports_.import_stdlib(expr.node(),
+                                   found->second,
+                                   found_files_entry->second,
+                                   possible_macro_name,
+                                   paths_);
+  if (!ok) {
+    LOG(BUG) << "import error: " << ok.takeError();
   }
 }
 
@@ -370,6 +519,13 @@ Pass CreateResolveRootImportsPass(std::vector<std::string> &&import_paths)
                         ResolveRootImports analyser(imports, updated_paths);
                         analyser.visit(ast.root);
 
+                        // Let's pull in stdlib bt files as needed by the script
+                        // itself
+                        ResolveStdlibMacroImports macro_analyser(imports,
+                                                                 std::nullopt,
+                                                                 updated_paths);
+                        macro_analyser.visit(ast.root);
+
                         // Ensure that the essential part of the standard
                         // library is imported. All other parts of the standard
                         // library are conditionally imported based on inlined
@@ -381,6 +537,22 @@ Pass CreateResolveRootImportsPass(std::vector<std::string> &&import_paths)
                         if (!ok) {
                           return ok.takeError();
                         }
+
+                        // This is the only stdlib bt script we import
+                        // unconditionally because it contains macro calls that
+                        // are created in future passes
+                        auto internal = Stdlib::bt_files.find(INTERNAL_BT);
+                        if (internal != Stdlib::bt_files.end()) {
+                          ok = imports.import_stdlib(*ast.root,
+                                                     INTERNAL_BT,
+                                                     internal->second,
+                                                     INTERNAL_BT,
+                                                     updated_paths);
+                          if (!ok) {
+                            return ok.takeError();
+                          }
+                        }
+
                         return imports;
                       });
 }
