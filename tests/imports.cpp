@@ -133,11 +133,76 @@ TEST_F(ImportTest, stdlib_implicit_rules)
     EXPECT_FALSE(imports.scripts.contains("stdlib/base.bt"));
   });
 
-  // Without the explicit import, it should use the builtin one.
+  // Without the explicit import, stdlib .bt files are only imported
+  // if the script references macros from them.
   test(R"(begin {})", { dir->path() }, [](Imports &imports) {
     EXPECT_FALSE(imports.scripts.contains("stdlib/foo.bt"));
+    EXPECT_FALSE(imports.scripts.contains("stdlib/base.bt"));
+  });
+
+  // Referencing a macro from base.bt should import it.
+  test(R"(begin { print(cpu()); })", { dir->path() }, [](Imports &imports) {
+    EXPECT_FALSE(imports.scripts.contains("stdlib/strings.bt"));
+    EXPECT_FALSE(imports.scripts.contains("stdlib/meta.bt"));
     EXPECT_TRUE(imports.scripts.contains("stdlib/base.bt"));
   });
+
+  // This test is to illustrate something that can be improved later. The `cpu`
+  // macro takes no arguments but the call to `cpu` in this test passes
+  // arguments meaning that if another `cpu` marco is defined by the user that
+  // does take arguments we are unneccesarily importing part of the stdlib. One
+  // potential fix is having cmake count the number of arguments and adding this
+  // to the macro_to_file map and then comparing this number to the actual ast
+  // Call argument count.
+  test(R"(macro cpu(x, y) { x + y } begin { print(cpu(1, 2)); })",
+       { dir->path() },
+       [](Imports &imports) {
+         EXPECT_FALSE(imports.scripts.contains("stdlib/strings.bt"));
+         EXPECT_FALSE(imports.scripts.contains("stdlib/meta.bt"));
+         EXPECT_TRUE(imports.scripts.contains("stdlib/base.bt"));
+       });
+
+  // Referencing a macro from base.bt inside another macro should import it.
+  test(R"(macro get_cpu() { cpu } begin { print(get_cpu()); })",
+       { dir->path() },
+       [](Imports &imports) {
+         EXPECT_FALSE(imports.scripts.contains("stdlib/strings.bt"));
+         EXPECT_FALSE(imports.scripts.contains("stdlib/meta.bt"));
+         EXPECT_TRUE(imports.scripts.contains("stdlib/base.bt"));
+       });
+
+  // Referencing a macro from base.bt that references a macro in another stdlib
+  // file
+  test(R"(begin { @a[1,2] = 1; $b = !has_key(@a, (1,2)); })",
+       { dir->path() },
+       [](Imports &imports) {
+         EXPECT_FALSE(imports.scripts.contains("stdlib/strings.bt"));
+         EXPECT_TRUE(imports.scripts.contains("stdlib/base.bt"));
+         EXPECT_TRUE(imports.scripts.contains("stdlib/meta.bt"));
+       });
+
+  // Imported .bt files that reference stdlib macros should also trigger
+  // stdlib imports.
+  ASSERT_TRUE(create_file(*dir, "mylib.bt", R"(macro myfunc() { cpu() })"));
+  test(R"(import "mylib.bt"; begin { print(myfunc()); })",
+       { dir->path() },
+       [](Imports &imports) {
+         EXPECT_TRUE(imports.scripts.contains("mylib.bt"));
+         EXPECT_TRUE(imports.scripts.contains("stdlib/base.bt"));
+         EXPECT_FALSE(imports.scripts.contains("stdlib/meta.bt"));
+       });
+
+  // Referencing a macro from base.bt that references a macro in another stdlib
+  // file from a manuallys imported bt file
+  ASSERT_TRUE(
+      create_file(*dir, "mylib2.bt", R"(macro myfunc(@a) { has_key(@a, 1) })"));
+  test(R"(import "mylib2.bt"; begin { @b[1] = 2; print(myfunc(@b)); })",
+       { dir->path() },
+       [](Imports &imports) {
+         EXPECT_TRUE(imports.scripts.contains("mylib2.bt"));
+         EXPECT_TRUE(imports.scripts.contains("stdlib/base.bt"));
+         EXPECT_TRUE(imports.scripts.contains("stdlib/meta.bt"));
+       });
 }
 
 TEST_F(ImportTest, world_writable_ignored)

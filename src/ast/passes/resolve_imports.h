@@ -77,10 +77,16 @@ public:
   std::map<std::string, ExternalObject> objects;
   std::map<std::string, ScriptObject> scripts;
 
-  // Public import call.
+  // Public import calls.
   Result<OK> import_any(Node &node,
                         const std::string &name,
                         const std::vector<std::filesystem::path> &paths = {});
+
+  Result<OK> import_stdlib(Node &node,
+                           const std::string &name,
+                           const std::string_view &data,
+                           const std::string &macro_name,
+                           const std::vector<std::filesystem::path> &paths);
 
 private:
   Result<OK> import_any(Node &node,
@@ -99,6 +105,7 @@ private:
   // Record full packages/directories that have been imported separately from
   // the specific modules, in order to avoid re-importing these paths.
   std::unordered_set<std::string> packages_;
+  std::unordered_set<std::string> seen_stdlib_macros_;
 };
 
 // This pass resolves imports from the AST itself.
