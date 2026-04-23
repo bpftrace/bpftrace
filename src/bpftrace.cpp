@@ -209,7 +209,10 @@ struct PerfEventContext {
   output::Output &output;
 };
 
-static Result<> event_printer(void *cb_cookie, void *raw_data, int size)
+static Result<> event_printer(void *cb_cookie,
+                              void *raw_data,
+                              int size,
+                              const std::string &prefix)
 {
   auto *ctx = static_cast<PerfEventContext *>(cb_cookie);
 
@@ -232,6 +235,9 @@ static Result<> event_printer(void *cb_cookie, void *raw_data, int size)
 
   // async actions
   auto printf_id = async_action::AsyncAction(data.bitcast<uint64_t>());
+
+  LOG(V1) << "[" << prefix << "] Event print async action " << printf_id;
+
   if (printf_id == async_action::AsyncAction::exit) {
     return ctx->handlers.exit(data);
   } else if (printf_id == async_action::AsyncAction::print) {
@@ -265,13 +271,27 @@ static Result<> event_printer(void *cb_cookie, void *raw_data, int size)
   }
 }
 
-static int ringbuf_printer(void *cb_cookie, void *data, size_t size)
+static int ringbuf_printer_helper(RingbufMap rb,
+                                  void *cb_cookie,
+                                  void *data,
+                                  size_t size)
 {
-  auto ok = event_printer(cb_cookie, data, size);
+  auto ok = event_printer(
+      cb_cookie, data, size, rb == RingbufMap::Normal ? "NORMAL" : "URGENT");
   if (!ok) {
     LOG(ERROR) << ok.takeError();
   }
   return 0;
+}
+
+static int ringbuf_printer(void *cb_cookie, void *data, size_t size)
+{
+  return ringbuf_printer_helper(RingbufMap::Normal, cb_cookie, data, size);
+}
+
+static int ringbuf_urg_printer(void *cb_cookie, void *data, size_t size)
+{
+  return ringbuf_printer_helper(RingbufMap::Urgent, cb_cookie, data, size);
 }
 
 static void skb_output_printer(void *ctx,
@@ -279,7 +299,7 @@ static void skb_output_printer(void *ctx,
                                void *data,
                                __u32 size)
 {
-  auto ok = event_printer(ctx, data, size);
+  auto ok = event_printer(ctx, data, size, "SKB");
   if (!ok) {
     LOG(ERROR) << ok.takeError();
   }
@@ -953,22 +973,34 @@ int BPFtrace::setup_skboutput_perf_buffer(void *ctx)
 void BPFtrace::setup_ringbuf(void *ctx)
 {
   ringbuf_ = ring_buffer__new(
-      bytecode_.getMap(MapType::Ringbuf).fd(), ringbuf_printer, ctx, nullptr);
+      bytecode_.getMap(get_bpf_ringbuf_map_str(RingbufMap::Normal)).fd(),
+      ringbuf_printer,
+      ctx,
+      nullptr);
+
+  ringbuf_urg_ = ring_buffer__new(
+      bytecode_.getMap(get_bpf_ringbuf_map_str(RingbufMap::Urgent)).fd(),
+      ringbuf_urg_printer,
+      ctx,
+      nullptr);
 }
 
 void BPFtrace::teardown_output()
 {
   ring_buffer__free(ringbuf_);
+  ring_buffer__free(ringbuf_urg_);
 
   if (resources.using_skboutput)
     perf_buffer__free(skb_perfbuf_);
 }
 
-void BPFtrace::poll_output(output::Output &out, bool drain)
+bool BPFtrace::poll_buf_helper(void *buf,
+                               bool is_ringbuf,
+                               bool drain,
+                               bool do_retry,
+                               bool &do_poll)
 {
   int ready;
-  bool poll_skboutput = resources.using_skboutput;
-  bool do_poll_ringbuf = true;
   auto should_retry = [](int ready) {
     // epoll_wait will set errno to EINTR if an interrupt received, it is
     // retryable if not caused by SIGINT. ring_buffer__poll does not set
@@ -986,33 +1018,57 @@ void BPFtrace::poll_output(output::Output &out, bool drain)
            (ready == 0 && (drain || finalize_));
   };
 
+  if (do_poll) {
+    if (is_ringbuf) {
+      ready = ring_buffer__poll(static_cast<struct ring_buffer *>(buf),
+                                timeout_ms);
+    } else {
+      ready = perf_buffer__poll(static_cast<struct perf_buffer *>(buf),
+                                timeout_ms);
+    }
+    if (should_retry(ready)) {
+      if (do_retry)
+        return true;
+    }
+    if (should_stop(ready)) {
+      do_poll = false;
+    }
+  }
+  return false;
+}
+
+void BPFtrace::poll_output(output::Output &out, bool drain)
+{
+  bool poll_skboutput = resources.using_skboutput;
+  bool do_poll_ringbuf = true;
+  bool do_poll_ringbuf_urg = true;
+  bool retry;
+
   while (true) {
     if (poll_skboutput) {
-      ready = perf_buffer__poll(skb_perfbuf_, timeout_ms);
-      if (should_retry(ready)) {
-        if (!do_poll_ringbuf)
-          continue;
-      }
-      if (should_stop(ready)) {
-        poll_skboutput = false;
-      }
+      retry = poll_buf_helper(skb_perfbuf_,
+                              false,
+                              drain,
+                              !do_poll_ringbuf && !do_poll_ringbuf_urg,
+                              poll_skboutput);
+      if (retry)
+        continue;
     }
 
     // Handle lost events, if any
     poll_event_loss(out);
 
-    if (do_poll_ringbuf) {
-      ready = ring_buffer__poll(ringbuf_, timeout_ms);
-      if (should_retry(ready)) {
-        continue;
-      }
-      if (should_stop(ready)) {
-        do_poll_ringbuf = false;
-      }
-    }
-    if (!poll_skboutput && !do_poll_ringbuf) {
+    retry = poll_buf_helper(
+        ringbuf_urg_, true, drain, !do_poll_ringbuf, do_poll_ringbuf_urg);
+    if (retry)
+      continue;
+
+    retry = poll_buf_helper(ringbuf_, true, drain, true, do_poll_ringbuf);
+    if (retry)
+      continue;
+
+    if (!poll_skboutput && !do_poll_ringbuf && !do_poll_ringbuf_urg)
       return;
-    }
 
     // If we are tracing a specific pid and it has exited, we should exit
     // as well b/c otherwise we'd be tracing nothing.

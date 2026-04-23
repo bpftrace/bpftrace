@@ -1924,7 +1924,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                    { b_.getInt64(0), b_.getInt32(1) });
     b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 
-    b_.CreateOutput(buf, getStructSize(event_struct), call.loc);
+    b_.CreateOutput(buf, getStructSize(event_struct), call.loc, true);
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "stack_len") {
     auto &arg = call.vargs.at(0);
@@ -4345,6 +4345,8 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources)
                         CreateInt32(),
                         CreateInt32());
   }
+
+  // Create ring buffers for kernel/user interactions
   auto num_pages = bpftrace_.get_buffer_pages();
   // The default value exists just to prevent a segfault.
   // The program should terminate as we're adding an error to the ast root
@@ -4360,9 +4362,15 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources)
     buffer_size = *num_pages * sysconf(_SC_PAGE_SIZE);
   }
 
-  createMapDefinition(to_string(MapType::Ringbuf),
+  createMapDefinition(get_bpf_ringbuf_map_str(RingbufMap::Normal),
                       BPF_MAP_TYPE_RINGBUF,
                       buffer_size,
+                      CreateNone(),
+                      CreateNone());
+
+  createMapDefinition(get_bpf_ringbuf_map_str(RingbufMap::Urgent),
+                      BPF_MAP_TYPE_RINGBUF,
+                      sysconf(_SC_PAGE_SIZE), // single page
                       CreateNone(),
                       CreateNone());
 }

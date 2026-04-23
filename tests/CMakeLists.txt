@@ -47,6 +47,7 @@ add_executable(bpftrace_test
   resource_analyser.cpp
   result.cpp
   required_resources.cpp
+  ringbuf.cpp
   scopeguard.cpp
   type_checker.cpp
   type_resolver.cpp

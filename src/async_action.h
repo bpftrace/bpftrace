@@ -27,6 +27,8 @@ enum class AsyncAction {
   // clang-format on
 };
 
+std::ostream &operator<<(std::ostream &os, const AsyncAction &action);
+
 class AsyncHandlers {
 public:
   const static size_t MAX_TIME_STR_LEN = 64;

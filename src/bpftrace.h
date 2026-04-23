@@ -252,6 +252,11 @@ private:
                                               bool perf_mode,
                                               bool show_debug_info);
   void teardown_output();
+  bool poll_buf_helper(void *buf,
+                       bool is_ringbuf,
+                       bool drain,
+                       bool do_retry,
+                       bool &do_poll);
   void poll_output(output::Output &out, bool drain = false);
   void poll_event_loss(output::Output &out);
   static uint64_t read_address_from_output(std::string output);
@@ -262,6 +267,7 @@ private:
                        std::set<std::string> expanded_funcs);
   bool has_iter_ = false;
   struct ring_buffer *ringbuf_ = nullptr;
+  struct ring_buffer *ringbuf_urg_ = nullptr; // urgent ringbuf
   struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
 

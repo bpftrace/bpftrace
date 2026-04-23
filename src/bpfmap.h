@@ -106,6 +106,9 @@ enum class MapType {
 
 std::string to_string(MapType t);
 
+// Ringbuf maps
+enum class RingbufMap { Normal, Urgent };
+
 // BPF maps do not accept "@" in name so we replace it by "AT_".
 // The below two functions do the translations.
 inline std::string bpf_map_name(std::string_view bpftrace_map_name)
@@ -128,7 +131,7 @@ bpf_map_type get_bpf_map_type(const SizedType &val_type);
 std::optional<bpf_map_type> get_bpf_map_type(const std::string &name);
 std::string get_bpf_map_type_str(bpf_map_type map_type);
 void add_bpf_map_types_hint(std::stringstream &hint);
-bool bpf_map_types_compatible(const SizedType &val_type,
-                              bpf_map_type kind);
+bool bpf_map_types_compatible(const SizedType &val_type, bpf_map_type kind);
+std::string get_bpf_ringbuf_map_str(const RingbufMap &rb_map);
 
 } // namespace bpftrace

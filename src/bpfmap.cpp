@@ -15,6 +15,12 @@ const std::unordered_map<std::string, bpf_map_type> BPF_MAP_TYPES = {
   { "percpulruhash", BPF_MAP_TYPE_LRU_PERCPU_HASH }
 };
 
+// ringbuf maps
+const std::unordered_map<RingbufMap, std::string> BPF_RINGBUF_MAP_NAMES = {
+  { RingbufMap::Normal, "ringbuf" },
+  { RingbufMap::Urgent, "ringbuf_urg" }
+};
+
 int BpfMap::fd() const
 {
   return bpf_map__fd(bpf_map_);
@@ -297,6 +303,15 @@ bool bpf_map_types_compatible(const SizedType &val_type, bpf_map_type kind)
   }
 
   return false;
+}
+
+std::string get_bpf_ringbuf_map_str(const RingbufMap &rb_map)
+{
+  auto found = BPF_RINGBUF_MAP_NAMES.find(rb_map);
+  if (found == BPF_RINGBUF_MAP_NAMES.end()) {
+    return "unknown";
+  }
+  return found->second;
 }
 
 } // namespace bpftrace
