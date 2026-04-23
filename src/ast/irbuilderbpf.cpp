@@ -810,12 +810,12 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
 
   const std::string &map_name = map.ident;
 
-  AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
+  AllocaInst *i = CreateAllocaBPF(getInt64Ty(), "i");
   AllocaInst *val_1 = CreateAllocaBPF(getInt64Ty(), "val_1");
   // used for min/max/avg
   AllocaInst *val_2 = CreateAllocaBPF(getInt64Ty(), "val_2");
 
-  CreateStore(getInt32(0), i);
+  CreateStore(getInt64(0), i);
   CreateStore(getInt64(0), val_1);
   CreateStore(getInt64(0), val_2);
 
@@ -833,8 +833,8 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
   SetInsertPoint(while_cond);
 
   auto *cond = CreateICmp(CmpInst::ICMP_ULT,
-                          CreateLoad(getInt32Ty(), i),
-                          CreateLoad(getInt32Ty(),
+                          CreateLoad(getInt64Ty(), i),
+                          CreateLoad(getInt64Ty(),
                                      module_.getGlobalVariable(std::string(
                                          bpftrace::globalvars::NUM_CPUS))),
                           "num_cpu.cmp");
@@ -842,9 +842,8 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
 
   SetInsertPoint(while_body);
 
-  CallInst *call = createPerCpuMapLookup(map_name,
-                                         key,
-                                         CreateLoad(getInt32Ty(), i));
+  CallInst *call = createPerCpuMapLookup(
+      map_name, key, CreateTrunc(CreateLoad(getInt64Ty(), i), getInt32Ty()));
 
   llvm::Function *lookup_parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
@@ -871,7 +870,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
   }
 
   // ++i;
-  CreateStore(CreateAdd(CreateLoad(getInt32Ty(), i), getInt32(1)), i);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), i), getInt64(1)), i);
 
   CreateBr(while_cond);
   SetInsertPoint(lookup_failure_block);
@@ -885,8 +884,8 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
                                                        error_parent);
 
   // If the CPU is 0 and the map lookup fails it means the key doesn't exist.
-  Value *error_condition = CreateICmpEQ(CreateLoad(getInt32Ty(), i),
-                                        getInt32(0),
+  Value *error_condition = CreateICmpEQ(CreateLoad(getInt64Ty(), i),
+                                        getInt64(0),
                                         "error_lookup_cond");
   CreateCondBr(error_condition, error_success_block, error_failure_block);
 

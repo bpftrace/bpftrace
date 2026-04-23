@@ -32,6 +32,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix per-cpu map aggregation on big-endian architectures
+  - [#5130](https://github.com/bpftrace/bpftrace/pull/5130)
 - Add bitfield support when printing full structure using "print()"
   - [#2801](https://github.com/bpftrace/bpftrace/issues/2801)
 #### Security
