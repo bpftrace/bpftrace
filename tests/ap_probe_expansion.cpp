@@ -98,14 +98,14 @@ TEST(ap_probe_expansion, kprobe_multi_wildcard)
 {
   test("kprobe:sys_read,kprobe:func_*,kprobe:sys_write {}",
        { "kprobe:sys_read", "kprobe:func_*", "kprobe:sys_write" },
-       { {},
+       { { "sys_read" },
          { "func_1",
            "func_2",
            "func_3",
            "func_anon_struct",
            "func_array_with_compound_data",
            "func_arrays" },
-         {} },
+         { "sys_write" } },
        _,
        true);
 }
@@ -168,6 +168,31 @@ TEST(ap_probe_expansion, kprobe_module_function_wildcard)
        {},
        _,
        true);
+}
+
+TEST(ap_probe_expansion, kprobe_multi_exact)
+{
+  // Exact function names should keep NONE expansion but still support session
+  // probes.
+  test("kprobe:sys_read { @entry = 1 } kretprobe:sys_read { @exit = 1 }",
+       { "kprobe:sys_read" },
+       { {} },
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(
+               If(Call("__session_is_return", {}),
+                  Block({ AssignScalarMapStatement(Map("@exit"), Integer(1)) },
+                        None()),
+                  Block({ AssignScalarMapStatement(Map("@entry"), Integer(1)) },
+                        None()))) })),
+       true);
+}
+
+TEST(ap_probe_expansion, kprobe_offset_no_multi)
+{
+  // kprobe_multi does not support non-zero offsets, so even with
+  // kprobe_multi enabled, an offset probe must not use multi expansion.
+  test("kprobe:sys_read+10 {}", { "kprobe:sys_read+10" }, { {} }, _, true);
 }
 
 TEST(ap_probe_expansion, uprobe_wildcard)

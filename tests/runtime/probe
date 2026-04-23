@@ -285,6 +285,14 @@ EXPECT links: 1
 REQUIRES bpftool
 REQUIRES_FEATURE kprobe_session
 
+NAME kprobe_session_exact
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_read { @entry = 1; printf("progs: "); system("bpftool prog | grep kprobe | grep ksys_read | wc -l"); } kretprobe:ksys_read { printf("links: "); system("bpftool link | grep kprobe_multi | wc -l"); if (@entry == 1) { exit() } }'
+AFTER ./testprogs/syscall read
+EXPECT progs: 1
+EXPECT links: 1
+REQUIRES bpftool
+REQUIRES_FEATURE kprobe_session
+
 NAME uprobe
 PROG uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*
