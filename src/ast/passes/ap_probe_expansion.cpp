@@ -135,6 +135,7 @@ public:
   }
 
   using Visitor<SessionExpander>::visit;
+  void visit(Program &prog);
   void visit(Probe &probe);
 
   Probe expand(Probe &entry, Probe &exit);
@@ -145,6 +146,7 @@ private:
   ASTContext &ast_;
   const BPFtrace &bpftrace_;
   ExpansionResult &expansion_result_;
+  ProbeList probes_to_erase_;
 };
 
 Probe *SessionExpander::find_matching_retprobe(Probe &probe)
@@ -167,10 +169,14 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
       });
 
   // If there's not exactly one match, we don't know how to do session expansion
-  if (retprobes.size() == 1)
-    return retprobes[0];
-
-  return nullptr;
+  if (retprobes.size() != 1) {
+    return nullptr;
+  }
+  // Return the probe as long as it isn't scheduled for erasure.
+  auto begin = probes_to_erase_.begin();
+  auto end = probes_to_erase_.end();
+  auto found = std::find(begin, end, retprobes[0]);
+  return found == end ? retprobes[0] : nullptr;
 }
 
 void SessionExpander::visit(Probe &probe)
@@ -206,7 +212,15 @@ void SessionExpander::visit(Probe &probe)
     expansion_result_.set_expansion(*probe.attach_points[0],
                                     ExpansionType::SESSION);
 
-    std::erase(ast_.root->probes, retprobe);
+    probes_to_erase_.push_back(retprobe);
+  }
+}
+
+void SessionExpander::visit(Program &prog)
+{
+  Visitor<SessionExpander>::visit(prog);
+  for (auto *retprobe : probes_to_erase_) {
+    std::erase(prog.probes, retprobe);
   }
 }
 
