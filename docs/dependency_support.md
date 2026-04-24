@@ -6,7 +6,7 @@ usually at distro/user request.
 
 ## Linux kernel
 
-**Minimum kernel version: 5.15**
+**Minimum kernel version: 6.1**
 
 The linux kernel is bpftrace's biggest runtime dependency.
 While we would like to support the oldest LTS kernel version, we also want to make
