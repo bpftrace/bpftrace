@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- stdlib: add leader_tid() and leader_comm().
+  - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
 - stdlib: add signal_name().
   - [#5098](https://github.com/bpftrace/bpftrace/pull/5098)
 - Add DWARF-based user-space stack unwinding via `dw_ustack()` for x86_64 (requires LLVM >= 21).
@@ -27,6 +29,8 @@ and this project adheres to
 - Add `is_err` stdlib macro for detecting ERR_PTR return values
   - [#5086](https://github.com/bpftrace/bpftrace/pull/5086)
 #### Changed
+- stdlib: {pcomm,ppid}: Distinguishing between thread and process
+  - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
 - Improved disambiguation for cast and typeof-style expressions
   - [#5092](https://github.com/bpftrace/bpftrace/pull/5092)
 #### Deprecated
