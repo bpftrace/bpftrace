@@ -907,7 +907,9 @@ macro write_user(dst, src, len)
 
 // :variant uint32 ppid()
 // :variant uint32 ppid(struct task_struct * task)
+//
 // Get the pid of the parent process for the passed task or the current task if called without arguments.
+// This is an alias for `task.real_parent.pid`, which is different than `task.group_leader.pid`, which you can get from calling `leader_tid()`.
 macro ppid(task)
 {
   task.real_parent.pid
@@ -918,17 +920,51 @@ macro ppid()
   ppid(curtask)
 }
 
+// :variant string leader_tid()
+// :variant string leader_tid(struct task_struct * task)
+//
+// Get the thread id of the thread group leader for the passed task or the current task if called without arguments.
+// This is an alias for `task.group_leader.pid`, which is different than `task.real_parent.pid`, which you can get from calling `ppid()`.
+// See `ppid()` for more details.
+macro leader_tid(task)
+{
+  task.group_leader.pid
+}
+
+macro leader_tid()
+{
+  leader_tid(curtask)
+}
+
 // :variant string pcomm()
 // :variant string pcomm(struct task_struct * task)
-// Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
+//
+// Get the name of the parent process for the passed task or the current task if called without arguments.
+// This is an alias for `task.real_parent.comm`, which is different than `task.group_leader.comm`, which you can get from calling `leader_comm()`.
 macro pcomm(task)
 {
-  task.group_leader.comm
+  task.real_parent.comm
 }
 
 macro pcomm()
 {
   pcomm(curtask)
+}
+
+// :variant string leader_comm()
+// :variant string leader_comm(struct task_struct * task)
+//
+// Get the thread name of the thread group leader for the passed task or the current task if called without arguments.
+// This is an alias for `task.group_leader.comm`, which is different than `task.real_parent.comm`, which you can get from calling `pcomm()`.
+// See `pcomm()` for more details.
+macro leader_comm(task)
+{
+  task.group_leader.comm
+}
+
+macro leader_comm()
+{
+  leader_comm(curtask)
 }
 
 // :function print

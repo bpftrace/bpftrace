@@ -9,7 +9,11 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- stdlib: Change `pcomm` to an alias of task.real_parent.comm instead of task.group_leader.comm.
+  - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
 #### Added
+- stdlib: add `leader_{tid,comm}` to retrieve the thread group leader.
+  - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
 - stdlib: add signal_name().
   - [#5098](https://github.com/bpftrace/bpftrace/pull/5098)
 - Add DWARF-based user-space stack unwinding via `dw_ustack()` for x86_64 (requires LLVM >= 21).

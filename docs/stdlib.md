@@ -634,6 +634,26 @@ kprobe:do_nanosleep
 ```
 
 
+### leader_comm
+- `string leader_comm()`
+- `string leader_comm`
+- `string leader_comm(struct task_struct * task)`
+
+Get the thread name of the thread group leader for the passed task or the current task if called without arguments.
+This is an alias for `task.group_leader.comm`, which is different than `task.real_parent.comm`, which you can get from calling `pcomm()`.
+See `pcomm()` for more details.
+
+
+### leader_tid
+- `string leader_tid()`
+- `string leader_tid`
+- `string leader_tid(struct task_struct * task)`
+
+Get the thread id of the thread group leader for the passed task or the current task if called without arguments.
+This is an alias for `task.group_leader.pid`, which is different than `task.real_parent.pid`, which you can get from calling `ppid()`.
+See `ppid()` for more details.
+
+
 ### len
 - `int64 len(map m)`
 - `int64 len(ustack stack)`
@@ -815,7 +835,8 @@ This function can only be used by functions that are allowed to, these functions
 - `string pcomm`
 - `string pcomm(struct task_struct * task)`
 
-Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
+Get the name of the parent process for the passed task or the current task if called without arguments.
+This is an alias for `task.real_parent.comm`, which is different than `task.group_leader.comm`, which you can get from calling `leader_comm()`.
 
 
 ### percpu_kaddr
@@ -866,6 +887,7 @@ Defaults to `curr_ns`.
 - `uint32 ppid(struct task_struct * task)`
 
 Get the pid of the parent process for the passed task or the current task if called without arguments.
+This is an alias for `task.real_parent.pid`, which is different than `task.group_leader.pid`, which you can get from calling `leader_tid()`.
 
 
 ### print

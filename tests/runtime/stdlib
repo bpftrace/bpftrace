@@ -21,6 +21,18 @@ NAME comm from pid
 PROG iter:task { @ = comm(pid); exit() }
 EXPECT @: bpftrace
 
+NAME pcomm and leader_comm for thread
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/multi_threads:stub { printf("%s %s %s\n", comm, pcomm, leader_comm); }'
+EXPECT son-thread multi_threads parent-thread
+EXPECT grandson-thread multi_threads parent-thread
+AFTER ./testprogs/multi_threads
+
+NAME pcomm and leader_comm for process
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/multi_procs:stub { printf("%s %s %s\n", comm, pcomm, leader_comm); }'
+EXPECT son-proc parent-proc son-proc
+EXPECT grandson-proc son-proc grandson-proc
+AFTER ./testprogs/multi_procs
+
 NAME delete map
 PROG begin { @ = 1; @a[1] = 1; @b[1, 2] = 2; if (delete(@)) { printf("ok1\n"); } delete(@a, 1); if (delete(@b, (1, 2))) { printf("ok2\n"); } if (!delete(@b, (5, 6))) { printf("ok3\n"); } }
 EXPECT ok1
