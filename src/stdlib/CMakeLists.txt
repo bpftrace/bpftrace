@@ -40,9 +40,17 @@ function(add_stdlib_source PREFIX FILENAME)
   # Set globals that are used to configure the template.
   set(STDLIB_INCLUDES "${STDLIB_INCLUDES}
 #include \"${PREFIX}/${header_name}.h\"" PARENT_SCOPE)
-  set(STDLIB_FILES "${STDLIB_FILES}
+
+  get_filename_component(ext "${FILENAME}" EXT)
+  if(ext STREQUAL ".bt")
+    set(STDLIB_BT_FILES "${STDLIB_BT_FILES}
   { \"${PREFIX}/${name}\", make_view(${rule_name}, sizeof(${rule_name})) },"
-  PARENT_SCOPE)
+    PARENT_SCOPE)
+  else()
+    set(STDLIB_C_FILES "${STDLIB_C_FILES}
+  { \"${PREFIX}/${name}\", make_view(${rule_name}, sizeof(${rule_name})) },"
+    PARENT_SCOPE)
+  endif()
 endfunction()
 
 foreach(filename ${STDLIB_SOURCES})
@@ -59,6 +67,24 @@ foreach(filename ${BPF_HEADERS})
   string(REGEX REPLACE "^${LIBBPF_INCLUDE_DIRS}/" "" suffix "${filename}")
   get_filename_component(prefix "include/${suffix}" DIRECTORY)
   add_stdlib_source("${prefix}" "${filename}")
+endforeach()
+
+# Extract macro names from .bt files and build a macro-name-to-filename map.
+file(GLOB STDLIB_BT_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.bt")
+set(STDLIB_MACROS "")
+set(SEEN_MACROS "")
+foreach(bt_file ${STDLIB_BT_SOURCES})
+  get_filename_component(bt_name "${bt_file}" NAME)
+  file(READ "${bt_file}" bt_content)
+  string(REGEX MATCHALL "(^|\n)macro [a-zA-Z_][a-zA-Z0-9_]*\\(" macro_matches "${bt_content}")
+  foreach(match ${macro_matches})
+    string(REGEX REPLACE "(^|\n)macro ([a-zA-Z_][a-zA-Z0-9_]*)\\(" "\\2" macro_name "${match}")
+    if(NOT "${macro_name}" IN_LIST SEEN_MACROS)
+      list(APPEND SEEN_MACROS "${macro_name}")
+      string(APPEND STDLIB_MACROS
+        "\n  { \"${macro_name}\", \"stdlib/${bt_name}\" },")
+    endif()
+  endforeach()
 endforeach()
 
 configure_file(stdlib.cpp.in stdlib.cpp)
