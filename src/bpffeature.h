@@ -56,13 +56,10 @@ public:
 
   int instruction_limit();
   bool has_btf();
-  bool has_btf_func_global();
-  bool has_map_batch();
   bool has_d_path();
   bool has_kprobe_multi();
   bool has_kprobe_session();
   bool has_uprobe_multi();
-  bool has_prog_fentry();
   virtual bool has_iter(std::string name);
 
   std::string report();
@@ -78,12 +75,9 @@ public:
 protected:
   std::optional<bool> has_d_path_;
   std::optional<int> insns_limit_;
-  std::optional<bool> has_map_batch_;
   std::optional<bool> has_kprobe_multi_;
   std::optional<bool> has_kprobe_session_;
   std::optional<bool> has_uprobe_multi_;
-  std::optional<bool> has_prog_fentry_;
-  std::optional<bool> has_btf_func_global_;
   std::optional<bool> has_kernel_dwarf_;
 
 private:

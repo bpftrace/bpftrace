@@ -157,7 +157,6 @@ class MockBPFfeature : public BPFfeature {
 public:
   MockBPFfeature(bool has_features = true) : BPFfeature(bpf_nofeature, btf_obj)
   {
-    has_prog_fentry_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
     has_d_path_ = std::make_optional<bool>(has_features);
     has_kprobe_multi_ = std::make_optional<bool>(has_features);
