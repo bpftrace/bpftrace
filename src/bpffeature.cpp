@@ -302,36 +302,6 @@ int BPFfeature::instruction_limit()
   return *insns_limit_;
 }
 
-bool BPFfeature::has_map_batch()
-{
-  int key_size = 4;
-  int value_size = 4;
-  int max_entries = 10;
-  int flags = 0;
-  int map_fd = 0;
-  int keys[10];
-  int values[10];
-  uint32_t count = 0;
-
-  if (has_map_batch_.has_value())
-    return *has_map_batch_;
-
-  DECLARE_LIBBPF_OPTS(bpf_map_create_opts, opts);
-  opts.map_flags = flags;
-  map_fd = bpf_map_create(
-      BPF_MAP_TYPE_HASH, nullptr, key_size, value_size, max_entries, &opts);
-
-  if (map_fd < 0)
-    return false;
-
-  int err = bpf_map_lookup_batch(
-      map_fd, nullptr, nullptr, keys, values, &count, nullptr);
-  close(map_fd);
-
-  has_map_batch_ = err >= 0;
-  return *has_map_batch_;
-}
-
 bool BPFfeature::has_d_path()
 {
   if (has_d_path_.has_value())
@@ -502,7 +472,6 @@ std::string BPFfeature::report()
     { "Instruction limit", std::to_string(instruction_limit()) },
     { "btf", to_str(has_btf()) },
     { "module btf", to_str(btf_.has_module_btf()) },
-    { "map batch", to_str(has_map_batch()) },
   };
 
   std::vector<std::pair<std::string, std::string>> probe_types = {
