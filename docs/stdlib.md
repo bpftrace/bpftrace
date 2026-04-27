@@ -634,6 +634,24 @@ kprobe:do_nanosleep
 ```
 
 
+### leader_comm
+- `string leader_comm()`
+- `string leader_comm`
+- `string leader_comm(struct task_struct * task)`
+
+Get the leader comm of the thread group for the specified task.
+This is an alias for (task->group_leader->comm). see also `leader_tid()`.
+
+
+### leader_tid
+- `string leader_tid()`
+- `string leader_tid`
+- `string leader_tid(struct task_struct * task)`
+
+Get the leader tid of the thread group for the specified task. When a task is the leader of a process or thread group, it will obtain information about itself.
+This is an alias for (task->group_leader->pid). see also `leader_comm()`.
+
+
 ### len
 - `int64 len(map m)`
 - `int64 len(ustack stack)`
@@ -815,7 +833,10 @@ This function can only be used by functions that are allowed to, these functions
 - `string pcomm`
 - `string pcomm(struct task_struct * task)`
 
-Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
+Get the name of the parent process or leader thread for the passed task or the current task if called without arguments.
+
+When the tracked task is the leader of thread group or a single process, pcomm will return the comm of the parent process. When the tracked task is a child thread of a thread group, pcomm will return the comm of the leader thread of the thread group.
+You can directly use `leader_comm()` to get the comm of the leader thread of the thread group.
 
 
 ### percpu_kaddr
@@ -865,7 +886,10 @@ Defaults to `curr_ns`.
 - `uint32 ppid`
 - `uint32 ppid(struct task_struct * task)`
 
-Get the pid of the parent process for the passed task or the current task if called without arguments.
+Get the pid of the parent process or leader thread for the passed task or the current task if called without arguments.
+
+When the tracked task is the leader of thread group or a single process, ppid will return the pid of the parent process. When the tracked task is a child thread of a thread group, ppid will return the pid of the leader thread of the thread group.
+You can directly use `leader_tid()` to get the tid of the leader thread of the thread group.
 
 
 ### print

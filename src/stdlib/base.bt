@@ -907,10 +907,17 @@ macro write_user(dst, src, len)
 
 // :variant uint32 ppid()
 // :variant uint32 ppid(struct task_struct * task)
-// Get the pid of the parent process for the passed task or the current task if called without arguments.
+// Get the pid of the parent process or leader thread for the passed task or the current task if called without arguments.
+//
+// When the tracked task is the leader of thread group or a single process, ppid will return the pid of the parent process. When the tracked task is a child thread of a thread group, ppid will return the pid of the leader thread of the thread group.
+// You can directly use `leader_tid()` to get the tid of the leader thread of the thread group.
 macro ppid(task)
 {
-  task.real_parent.pid
+  if (task.pid == task.tgid) {
+    task.real_parent.pid
+  } else {
+    task.group_leader.pid
+  }
 }
 
 macro ppid()
@@ -918,17 +925,54 @@ macro ppid()
   ppid(curtask)
 }
 
+// :variant string leader_tid()
+// :variant string leader_tid(struct task_struct * task)
+//
+// Get the leader tid of the thread group for the specified task. When a task is the leader of a process or thread group, it will obtain information about itself.
+// This is an alias for (task->group_leader->pid). see also `leader_comm()`.
+macro leader_tid(task)
+{
+  task.group_leader.pid
+}
+
+macro leader_tid()
+{
+  leader_tid(curtask)
+}
+
 // :variant string pcomm()
 // :variant string pcomm(struct task_struct * task)
-// Get the name of the process for the passed task or the current task if called without arguments. This is an alias for (task->group_leader->comm).
+// Get the name of the parent process or leader thread for the passed task or the current task if called without arguments.
+//
+// When the tracked task is the leader of thread group or a single process, pcomm will return the comm of the parent process. When the tracked task is a child thread of a thread group, pcomm will return the comm of the leader thread of the thread group.
+// You can directly use `leader_comm()` to get the comm of the leader thread of the thread group.
 macro pcomm(task)
 {
-  task.group_leader.comm
+  if (task.pid == task.tgid) {
+    task.real_parent.comm
+  } else {
+    task.group_leader.comm
+  }
 }
 
 macro pcomm()
 {
   pcomm(curtask)
+}
+
+// :variant string leader_comm()
+// :variant string leader_comm(struct task_struct * task)
+//
+// Get the leader comm of the thread group for the specified task.
+// This is an alias for (task->group_leader->comm). see also `leader_tid()`.
+macro leader_comm(task)
+{
+  task.group_leader.comm
+}
+
+macro leader_comm()
+{
+  leader_comm(curtask)
 }
 
 // :function print
