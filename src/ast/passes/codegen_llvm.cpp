@@ -2919,9 +2919,6 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
       return ScopedExpr(b_.CreateLoad(int_ty, array, true /*volatile*/));
     } else if (type_map_.type(cast.expr).IsPtrTy()) {
       return ScopedExpr(b_.CreatePtrToInt(scoped_expr.value(), int_ty));
-    } else if (type_map_.type(cast.expr).IsBoolTy()) {
-      return ScopedExpr(
-          b_.CreateIntCast(scoped_expr.value(), b_.getInt1Ty(), false, "cast"));
     } else {
       return ScopedExpr(b_.CreateIntCast(scoped_expr.value(),
                                          b_.getIntNTy(ty.GetIntBitWidth()),

@@ -36,6 +36,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix boolean to integer cast on big-endian architectures
+  - [#5143](https://github.com/bpftrace/bpftrace/pull/5143)
 - Fix per-cpu map aggregation on big-endian architectures
   - [#5130](https://github.com/bpftrace/bpftrace/pull/5130)
 - Add bitfield support when printing full structure using "print()"
