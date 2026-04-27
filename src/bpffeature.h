@@ -60,7 +60,6 @@ public:
   bool has_kprobe_multi();
   bool has_kprobe_session();
   bool has_uprobe_multi();
-  bool has_prog_fentry();
   virtual bool has_iter(std::string name);
 
   std::string report();
@@ -79,7 +78,6 @@ protected:
   std::optional<bool> has_kprobe_multi_;
   std::optional<bool> has_kprobe_session_;
   std::optional<bool> has_uprobe_multi_;
-  std::optional<bool> has_prog_fentry_;
   std::optional<bool> has_kernel_dwarf_;
 
 private:

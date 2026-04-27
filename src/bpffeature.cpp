@@ -496,26 +496,6 @@ std::string BPFfeature::report()
   return buf.str();
 }
 
-bool BPFfeature::has_prog_fentry()
-{
-  if (!has_prog_fentry_.has_value()) {
-    int progfd;
-    if (!detect_prog_type(
-            BPF_PROG_TYPE_TRACING, "sched_fork", BPF_TRACE_FENTRY, &progfd))
-      goto out_false;
-    int tracing_fd = bpf_raw_tracepoint_open(nullptr, progfd);
-    close(progfd);
-    if (tracing_fd < 0)
-      goto out_false;
-    close(tracing_fd);
-    has_prog_fentry_ = std::make_optional<bool>(true);
-  }
-  return *(has_prog_fentry_);
-out_false:
-  has_prog_fentry_ = std::make_optional<bool>(false);
-  return *(has_prog_fentry_);
-}
-
 bool BPFfeature::has_iter(std::string name)
 {
   auto tracing_name = "bpf_iter_" + name;
