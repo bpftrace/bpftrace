@@ -2698,22 +2698,6 @@ kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); }
 )" });
 }
 
-TEST_F(TypeCheckerTest, signed_int_arithmetic_warnings)
-{
-  // Test type warnings for arithmetic
-  std::string msg = "arithmetic on integers of different signs";
-
-  test("kprobe:f { @ = -1 - arg0 }", Warning{ msg });
-  test("kprobe:f { @ = -1 + arg0 }", Warning{ msg });
-  test("kprobe:f { @ = -1 * arg0 }", Warning{ msg });
-  test("kprobe:f { @ = -1 / arg0 }", Warning{ msg });
-
-  test("kprobe:f { @ = arg0 + 1 }", NoWarning{ msg });
-  test("kprobe:f { @ = arg0 - 1 }", NoWarning{ msg });
-  test("kprobe:f { @ = arg0 * 1 }", NoWarning{ msg });
-  test("kprobe:f { @ = arg0 / 1 }", NoWarning{ msg });
-}
-
 TEST_F(TypeCheckerTest, signed_int_division_warnings)
 {
   std::string msg = "signed operands";
@@ -3159,31 +3143,6 @@ TEST_F(TypeCheckerTest, mixed_int_like_binop)
        Warning{ "comparison of integers" });
   test("kprobe:f { @a = sum(-1); @b = count(); $a = @a == @b; }",
        Warning{ "comparison of integers" });
-
-  test("kprobe:f { $a = 1 + -1; }", NoWarning{ "arithmetic on integers" });
-  test("kprobe:f { $a = 1 + (int64)-1; }",
-       NoWarning{ "arithmetic on integers" });
-  test("kprobe:f { $a = (uint32)1 + (int32)-1; }",
-       NoWarning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(-1); $a = 1 + @a; }",
-       NoWarning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(-1); $a = @a + 1; }",
-       NoWarning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(1); $a = @a + (uint16)1; }",
-       NoWarning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(-1); $a = @a + (uint16)1; }",
-       NoWarning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(1); @b = count(); $a = @a + @b; }",
-       NoWarning{ "arithmetic on integers" });
-
-  test("kprobe:f { $a = (uint64)1 + (int64)-1; }",
-       Warning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(-1); $a = (uint64)1 + @a; }",
-       Warning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(-1); $a = @a + (uint64)1; }",
-       Warning{ "arithmetic on integers" });
-  test("kprobe:f { @a = sum(-1); @b = count(); $a = @a + @b; }",
-       Warning{ "arithmetic on integers" });
 
   // Both are additionally casted to int16
   test("kprobe:f { $a = (uint8)1 == (int8)-1; }",

@@ -409,7 +409,9 @@ private:
   SizedType get_stack_type(Call &call, bool kernel);
 };
 
-SizedType binop_ptr(Binop &binop, const SizedType &lht, const SizedType &rht)
+SizedType get_binop_ptr(Binop &binop,
+                        const SizedType &lht,
+                        const SizedType &rht)
 {
   bool left_is_ptr = lht.IsPtrTy();
   const auto &ptr = left_is_ptr ? lht : rht;
@@ -466,7 +468,9 @@ SizedType binop_ptr(Binop &binop, const SizedType &lht, const SizedType &rht)
   }
 }
 
-SizedType binop_int(Binop &binop, const SizedType &lht, const SizedType &rht)
+SizedType get_binop_int(Binop &binop,
+                        const SizedType &lht,
+                        const SizedType &rht)
 {
   auto is_comparison = is_comparison_op(binop.op);
   if (lht == rht) {
@@ -499,30 +503,10 @@ SizedType binop_int(Binop &binop, const SizedType &lht, const SizedType &rht)
     show_warning = true;
   }
 
-  if (show_warning) {
-    switch (binop.op) {
-      case Operator::EQ:
-      case Operator::NE:
-      case Operator::LE:
-      case Operator::GE:
-      case Operator::LT:
-      case Operator::GT:
-        binop.addWarning() << "comparison of integers of different signs: '"
-                           << lht << "' and '" << rht << "'"
-                           << " can lead to undefined behavior";
-        break;
-      case Operator::PLUS:
-      case Operator::MINUS:
-      case Operator::MUL:
-      case Operator::DIV:
-      case Operator::MOD:
-        binop.addWarning() << "arithmetic on integers of different signs: '"
-                           << lht << "' and '" << rht << "'"
-                           << " can lead to undefined behavior";
-        break;
-      default:
-        break;
-    }
+  if (show_warning && is_comparison) {
+    binop.addWarning() << "comparison of integers of different signs: '" << lht
+                       << "' and '" << rht << "'"
+                       << " can lead to undefined behavior";
   }
 
   if (is_comparison) {
@@ -576,7 +560,7 @@ SizedType get_binop_type(Binop &binop,
   }
 
   if (lht.IsPtrTy() || rht.IsPtrTy()) {
-    return binop_ptr(binop, lht, rht);
+    return get_binop_ptr(binop, lht, rht);
   }
 
   auto result_type = is_comparison ? CreateBool()
@@ -601,7 +585,7 @@ SizedType get_binop_type(Binop &binop,
   }
 
   if (is_int_binop) {
-    auto int_type = binop_int(binop, lht, rht);
+    auto int_type = get_binop_int(binop, lht, rht);
     int_type.SetAS(result_type.GetAS());
     return int_type;
   }
