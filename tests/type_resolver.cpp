@@ -116,15 +116,33 @@ TEST_F(TypeResolverTest, variable_promotion_integers)
 {
   {
     auto result = test(R"(begin { $a = 1; })");
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt8());
+    EXPECT_EQ(var_type(result, "$a"), CreateInt8());
   }
   {
     auto result = test(R"(begin { $a = -1; })");
     EXPECT_EQ(var_type(result, "$a"), CreateInt8());
   }
   {
+    auto result = test(R"(begin { $a = 10446744073709551615; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
     auto result = test(R"(begin { $a = 1; $a = (uint32)2; })");
     EXPECT_EQ(var_type(result, "$a"), CreateUInt32());
+  }
+  {
+    auto result = test(R"(begin { $a = 1; $a = (uint64)2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    // Multiple positive literals then unsigned: all adapt
+    auto result = test(R"(begin { $a = 1; $a = 2; $a = (uint64)3; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    // Negative literal pins sign, positive literals follow
+    auto result = test(R"(begin { $a = 1; $a = -1; $a = (int32)3; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt32());
   }
   {
     auto result = test(R"(begin { $a = (int8)1; $a = (uint8)2; })");
@@ -140,12 +158,16 @@ TEST_F(TypeResolverTest, variable_promotion_integers)
   }
   {
     auto result = test(R"(begin { let $v; $a = $v; $v = 10; })");
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt8());
-    EXPECT_EQ(var_type(result, "$v"), CreateUInt8());
+    EXPECT_EQ(var_type(result, "$a"), CreateInt8());
+    EXPECT_EQ(var_type(result, "$v"), CreateInt8());
   }
 
   // Errors
   test(R"(begin { $a = (uint64)1; $a = (int64)2 })", Error{});
+  // Negative literal pins sign; can't promote to uint64
+  test(R"(begin { $a = -1; $a = (uint64)2 })", Error{});
+  // Multiple literals where negative pins sign
+  test(R"(begin { $a = 1; $a = -1; $a = (uint64)2 })", Error{});
 }
 
 TEST_F(TypeResolverTest, variable_promotion_strings)
@@ -170,7 +192,7 @@ TEST_F(TypeResolverTest, variable_promotion_tuples)
     auto result = test(R"(begin { $a = (1, "str"); })");
     EXPECT_EQ(var_type(result, "$a"),
               CreateTuple(
-                  Struct::CreateTuple({ CreateUInt8(), CreateString(4) })));
+                  Struct::CreateTuple({ CreateInt8(), CreateString(4) })));
   }
   {
     auto result = test(
@@ -236,7 +258,7 @@ TEST_F(TypeResolverTest, variable_promotion_records)
     auto result = test(R"(begin { $a = (x = 1, y = "str"); })");
     EXPECT_EQ(var_type(result, "$a"),
               CreateRecord(Struct::CreateRecord(
-                  { CreateUInt8(), CreateString(4) }, { "x", "y" })));
+                  { CreateInt8(), CreateString(4) }, { "x", "y" })));
   }
   {
     auto result = test(
@@ -308,11 +330,15 @@ TEST_F(TypeResolverTest, variable_castable_maps)
 {
   {
     auto result = test(R"(begin { @a = sum(1); $a = @a; })");
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
   {
     auto result = test(R"(begin { @a = sum(-1); $a = @a; })");
     EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { @a = sum((uint64)1); $a = @a; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
   }
   {
     auto result = test(R"(begin { @a = sum(1); @a = sum(-1); $a = @a; })");
@@ -322,24 +348,49 @@ TEST_F(TypeResolverTest, variable_castable_maps)
     auto result = test(R"(begin { @a = sum(-1); $a = (int16)2; $a = @a; })");
     EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
+  {
+    auto result = test(
+        R"(begin { @a = sum((uint64)1); $a = (uint8)1; $a = @a; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
 
-  // Errors
-  test(R"(begin { @a = sum(1); $a = (int64)1; $a = @a; })", Error{});
+  {
+    auto result = test(R"(begin { @a = sum((uint64)1); $a = 1; $a = @a; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
 }
 
 TEST_F(TypeResolverTest, map_value_promotion_integers)
 {
   {
     auto result = test(R"(begin { @a = 1; })");
-    EXPECT_EQ(map_val_type(result, "@a"), CreateUInt8());
+    EXPECT_EQ(map_val_type(result, "@a"), CreateInt8());
   }
   {
     auto result = test(R"(begin { @a = -1; })");
     EXPECT_EQ(map_val_type(result, "@a"), CreateInt8());
   }
   {
+    auto result = test(R"(begin { @a = 10446744073709551615; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateUInt64());
+  }
+  {
     auto result = test(R"(begin { @a = 1; @a = (uint32)2; })");
     EXPECT_EQ(map_val_type(result, "@a"), CreateUInt32());
+  }
+  {
+    auto result = test(R"(begin { @a = 1; @a = (uint64)2; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateUInt64());
+  }
+  {
+    // Multiple positive literals then unsigned: all adapt
+    auto result = test(R"(begin { @a = 1; @a = 2; @a = (uint32)3; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateUInt32());
+  }
+  {
+    // Negative literal pins sign, positive literals follow
+    auto result = test(R"(begin { @a = 1; @a = -1; @a = (int32)3; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateInt32());
   }
   {
     auto result = test(R"(begin { @a = (int8)1; @a = (uint8)2; })");
@@ -355,12 +406,16 @@ TEST_F(TypeResolverTest, map_value_promotion_integers)
   }
   {
     auto result = test(R"(begin { let $v; @a = $v; $v = 10; })");
-    EXPECT_EQ(map_val_type(result, "@a"), CreateUInt8());
-    EXPECT_EQ(var_type(result, "$v"), CreateUInt8());
+    EXPECT_EQ(map_val_type(result, "@a"), CreateInt8());
+    EXPECT_EQ(var_type(result, "$v"), CreateInt8());
   }
 
   // Errors
   test(R"(begin { @a = (uint64)1; @a = (int64)2 })", Error{});
+  // Negative literal pins sign; can't promote to uint64
+  test(R"(begin { @a = -1; @a = (uint64)2 })", Error{});
+  // Multiple literals where negative pins sign
+  test(R"(begin { @a = 1; @a = -1; @a = (uint64)2 })", Error{});
 }
 
 TEST_F(TypeResolverTest, map_value_promotion_strings)
@@ -385,7 +440,7 @@ TEST_F(TypeResolverTest, map_value_promotion_tuples)
     auto result = test(R"(begin { @a = (1, "str"); })");
     EXPECT_EQ(map_val_type(result, "@a"),
               CreateTuple(
-                  Struct::CreateTuple({ CreateUInt8(), CreateString(4) })));
+                  Struct::CreateTuple({ CreateInt8(), CreateString(4) })));
   }
   {
     auto result = test(
@@ -451,7 +506,7 @@ TEST_F(TypeResolverTest, map_value_promotion_records)
     auto result = test(R"(begin { @a = (x = 1, y = "str"); })");
     EXPECT_EQ(map_val_type(result, "@a"),
               CreateRecord(Struct::CreateRecord(
-                  { CreateUInt8(), CreateString(4) }, { "x", "y" })));
+                  { CreateInt8(), CreateString(4) }, { "x", "y" })));
   }
   {
     auto result = test(
@@ -539,7 +594,7 @@ TEST_F(TypeResolverTest, map_value_castable_maps)
 {
   {
     auto result = test(R"(begin { @a = sum(1); })");
-    EXPECT_EQ(map_val_type(result, "@a"), CreateSum(false));
+    EXPECT_EQ(map_val_type(result, "@a"), CreateSum(true));
   }
   {
     auto result = test(R"(begin { @a = sum(-1); })");
@@ -560,7 +615,7 @@ TEST_F(TypeResolverTest, map_key_promotion_integers)
 {
   {
     auto result = test(R"(begin { @a[1] = 1; })");
-    EXPECT_EQ(map_key_type(result, "@a"), CreateUInt8());
+    EXPECT_EQ(map_key_type(result, "@a"), CreateInt8());
   }
   {
     auto result = test(R"(begin { @a[-1] = 1; })");
@@ -569,6 +624,10 @@ TEST_F(TypeResolverTest, map_key_promotion_integers)
   {
     auto result = test(R"(begin { @a[1] = 1; @a[(uint32)2] = 1; })");
     EXPECT_EQ(map_key_type(result, "@a"), CreateUInt32());
+  }
+  {
+    auto result = test(R"(begin { @a[1] = 1; @a[(uint64)2] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@a"), CreateUInt64());
   }
   {
     auto result = test(R"(begin { @a[(int8)1] = 1; @a[(uint8)2] = 1; })");
@@ -586,6 +645,7 @@ TEST_F(TypeResolverTest, map_key_promotion_integers)
 
   // Errors
   test(R"(begin { @a[(uint64)1] = 1; @a[(int64)2] = 1 })", Error{});
+  test(R"(begin { @a[-1] = 1; @a[(uint64)2] = 1 })", Error{});
 }
 
 TEST_F(TypeResolverTest, map_key_promotion_strings)
@@ -611,7 +671,7 @@ TEST_F(TypeResolverTest, map_key_promotion_tuples)
     auto result = test(R"(begin { @a[(1, "str")] = 1; })");
     EXPECT_EQ(map_key_type(result, "@a"),
               CreateTuple(
-                  Struct::CreateTuple({ CreateUInt8(), CreateString(4) })));
+                  Struct::CreateTuple({ CreateInt8(), CreateString(4) })));
   }
   {
     auto result = test(
@@ -677,7 +737,7 @@ TEST_F(TypeResolverTest, map_key_promotion_records)
     auto result = test(R"(begin { @a[(x = 1, y = "str")] = 1; })");
     EXPECT_EQ(map_key_type(result, "@a"),
               CreateRecord(Struct::CreateRecord(
-                  { CreateUInt8(), CreateString(4) }, { "x", "y" })));
+                  { CreateInt8(), CreateString(4) }, { "x", "y" })));
   }
   {
     auto result = test(
@@ -778,7 +838,7 @@ begin { let $z; $a = 1; $b = typeinfo($z); }
 TEST_F(TypeResolverTest, variable_with_type_decl)
 {
   {
-    auto result = test(R"(begin { let $a: uint32 = 1; })");
+    auto result = test(R"(begin { let $a: uint32 = (uint32)1; })");
     EXPECT_EQ(var_type(result, "$a"), CreateUInt32());
   }
   {
@@ -799,10 +859,10 @@ TEST_F(TypeResolverTest, variable_map_promotion)
 {
   {
     auto result = test(
-        R"(begin { $a = 1; @x = (uint32)1; $a = @x; @y = $a; } end { @x = (uint64)2; })");
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
-    EXPECT_EQ(map_val_type(result, "@x"), CreateUInt64());
-    EXPECT_EQ(map_val_type(result, "@y"), CreateUInt64());
+        R"(begin { $a = 1; @x = (uint32)1; $a = @x; @y = $a; } end { @x = (int64)2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+    EXPECT_EQ(map_val_type(result, "@x"), CreateInt64());
+    EXPECT_EQ(map_val_type(result, "@y"), CreateInt64());
   }
   {
     auto result = test(
@@ -820,9 +880,9 @@ TEST_F(TypeResolverTest, typeof)
   }
   {
     auto result = test(
-        R"(begin { let $b; $a = (typeof($b))1; $b = 1; $b = (uint64)2; })");
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
-    EXPECT_EQ(var_type(result, "$b"), CreateUInt64());
+        R"(begin { let $b; $a = (typeof($b))1; $b = 1; $b = (int64)2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+    EXPECT_EQ(var_type(result, "$b"), CreateInt64());
   }
   {
     auto result = test(
@@ -845,8 +905,8 @@ TEST_F(TypeResolverTest, typeof)
   {
     auto result = test(
         R"(begin { @x[(int16)1] = 1; $a = (typeof({ print(1); @x[0] }))1; })");
-    EXPECT_EQ(map_val_type(result, "@x"), CreateUInt8());
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt8());
+    EXPECT_EQ(map_val_type(result, "@x"), CreateInt8());
+    EXPECT_EQ(var_type(result, "$a"), CreateInt8());
   }
 }
 
@@ -854,24 +914,24 @@ TEST_F(TypeResolverTest, comptime)
 {
   {
     auto result = test(
-        R"(begin { let $c; $a = 1; if comptime (typeinfo($a).full_type == "uint64") { $c = (int64)2; } $a = (uint64)2; })");
+        R"(begin { let $c; $a = 1; if comptime (typeinfo($a).full_type == "int64") { $c = (int64)2; } $a = (int64)2; })");
     EXPECT_EQ(var_type(result, "$c"), CreateInt64());
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
   {
     auto result = test(
-        R"(begin { let $c; $a = 1; if comptime (typeinfo(sizeof($a)).base_type == "int") { $c = (int64)2; } $a = (uint64)2; })");
+        R"(begin { let $c; $a = 1; if comptime (typeinfo(sizeof($a)).base_type == "int") { $c = (int64)2; } $a = (int64)2; })");
     EXPECT_EQ(var_type(result, "$c"), CreateInt64());
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
   {
     auto result = test(
-        R"(begin { let $c; $a = 1; if comptime (typeinfo($a).full_type == "uint64") { let $d; if comptime (typeinfo($d).full_type == "int64") { $c = (int16)3; } $d = (int64)2; } $a = (uint64)2; })");
+        R"(begin { let $c; $a = 1; if comptime (typeinfo($a).full_type == "int64") { let $d; if comptime (typeinfo($d).full_type == "int64") { $c = (int16)3; } $d = (int64)2; } $a = (int64)2; })");
     EXPECT_EQ(var_type(result, "$c"), CreateInt16());
   }
   {
     auto result = test(
-        R"(begin { let $c; let $e; let $d; $a = 1; if comptime (typeinfo($a).full_type == "uint64") { if comptime (typeinfo($d).full_type == "int64") { $c = (int16)3; } $e = (int32)1; } $a = (uint64)2; if comptime (typeinfo($e).full_type == "int32") { $d = (int64)3; } })");
+        R"(begin { let $c; let $e; let $d; $a = 1; if comptime (typeinfo($a).full_type == "int64") { if comptime (typeinfo($d).full_type == "int64") { $c = (int16)3; } $e = (int32)1; } $a = (int64)2; if comptime (typeinfo($e).full_type == "int32") { $d = (int64)3; } })");
     EXPECT_EQ(var_type(result, "$c"), CreateInt16());
   }
   {
@@ -883,7 +943,7 @@ TEST_F(TypeResolverTest, comptime)
   {
     auto result = test(
         R"(begin { @x = 1; if comptime (typeinfo(@y[1]).full_type != "uint64") { @x = (int32)2; } } end { @y[1] = (uint64)2; })");
-    EXPECT_EQ(map_val_type(result, "@x"), CreateUInt8());
+    EXPECT_EQ(map_val_type(result, "@x"), CreateInt8());
     EXPECT_EQ(map_val_type(result, "@y"), CreateUInt64());
   }
 
@@ -904,11 +964,13 @@ begin { let $c; if comptime (typeinfo($c).base_type == "int") { 1 } }
 TEST_F(TypeResolverTest, locked_types)
 {
   test(
-      R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a = 2; } @a = (uint32)1; })");
+      R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a = (uint32)2; } @a = (uint32)1; })");
   test(
-      R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a[2] = 2; } @a[(uint32)1] = 1; })");
+      R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a[(uint32)2] = 2; } @a[(uint32)1] = 1; })");
   test(
       R"(begin { let $c; if comptime (typeinfo($c).full_type == "uint32") { $c = (uint16)2; } $c = (uint32)1; })");
+  test(
+      R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a = 1; } @a = (uint32)2; })");
 
   // Errors
   test(
@@ -928,12 +990,16 @@ begin { if comptime (typeinfo(@a).full_type == "uint32") { @a[(uint64)2] = 2; } 
 )" });
 
   test(
-      R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { $a = 1; if comptime (typeinfo($a).full_type == "uint8") { @a[(uint64)2] = 2; } } @a[(uint32)1] = 1; })",
+      R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { $a = 1; if comptime (typeinfo($a).full_type == "int8") { @a[(uint64)2] = 2; } } @a[(uint32)1] = 1; })",
       Error{ R"(
 ERROR: Type mismatch for @a: this type has been locked because it was used in another part of the type graph that was already resolved (e.g. `sizeof`, `typeinfo`, etc.). The new type 'uint64' doesn't fit into the locked type 'uint32'
-begin { if comptime (typeinfo(@a).full_type == "uint32") { $a = 1; if comptime (typeinfo($a).full_type == "uint8") { @a[(uint64)2] = 2; } } @a[(uint32)1] = 1; }
-                                                                                                                     ~~~~~~~~~~~~~
+begin { if comptime (typeinfo(@a).full_type == "uint32") { $a = 1; if comptime (typeinfo($a).full_type == "int8") { @a[(uint64)2] = 2; } } @a[(uint32)1] = 1; }
+                                                                                                                    ~~~~~~~~~~~~~
 )" });
+  // Sign-flexible literal too large for locked type
+  test(
+      R"(begin { if comptime (typeinfo(@a).full_type == "uint8") { @a = 200; } @a = (uint8)2; })",
+      Error{});
 }
 
 TEST_F(TypeResolverTest, unop)
@@ -943,8 +1009,17 @@ TEST_F(TypeResolverTest, unop)
     EXPECT_EQ(map_val_type(result, "@a"), CreateInt64());
   }
   {
+    auto result = test(R"(begin { ++@a; --@b; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateInt64());
+    EXPECT_EQ(map_val_type(result, "@b"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { @a = 0; ++@a; --@a; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateInt64());
+  }
+  {
     auto result = test(R"(begin { @a = 0; ++@a; $b = @a; })");
-    EXPECT_EQ(var_type(result, "$b"), CreateUInt64());
+    EXPECT_EQ(var_type(result, "$b"), CreateInt64());
   }
   {
     auto result = test(R"(begin { ++@a; $b = @a; })");
@@ -956,8 +1031,17 @@ TEST_F(TypeResolverTest, unop)
   }
   {
     auto result = test(R"(begin { $a = 1; $c = ++$a; })");
-    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
-    EXPECT_EQ(var_type(result, "$c"), CreateUInt64());
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+    EXPECT_EQ(var_type(result, "$c"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = 1; $c = --$a; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+    EXPECT_EQ(var_type(result, "$c"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = 0; --$a; ++$a; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
   {
     auto result = test(R"(begin { let $a: int16; $c = ++$a; $b = $a; })");
@@ -992,8 +1076,51 @@ TEST_F(TypeResolverTest, binop)
     EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
   {
+    auto result = test(R"(begin { $a = (uint32)1 * (uint32)2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (uint8)1 / (uint8)2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (uint64)10 + 2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (uint64)10 * 2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (uint64)10 / 2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (uint64)10 % 2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (uint32)2 - (uint32)1; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
     auto result = test(R"(begin { $a = (int8)1 * 2; })");
     EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
+    // Literal adapts to signed when other side is signed
+    auto result = test(R"(begin { $a = (int64)10 + 2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
+    // Negative literal stays signed, makes result signed
+    auto result = test(R"(begin { $a = (uint64)10 + (-1); })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
+    // Literal adapts to unsigned for comparison
+    auto result = test(R"(begin { $a = ((uint32)1 == 2); })");
+    EXPECT_EQ(var_type(result, "$a"), CreateBool());
   }
   {
     auto result = test(R"(begin { $a = (uint8)1 * sizeof(uint64 *); })");
@@ -1057,11 +1184,11 @@ TEST_F(TypeResolverTest, binop)
   }
   {
     auto result = test(R"(begin { $pv = 1; $p = &$pv; $a = $p + 1; })");
-    EXPECT_EQ(var_type(result, "$a"), CreatePointer(CreateUInt8()));
+    EXPECT_EQ(var_type(result, "$a"), CreatePointer(CreateInt8()));
   }
   {
     auto result = test(R"(begin { $pv = 1; $p = &$pv; $a = $p - 1; })");
-    EXPECT_EQ(var_type(result, "$a"), CreatePointer(CreateUInt8()));
+    EXPECT_EQ(var_type(result, "$a"), CreatePointer(CreateInt8()));
   }
   {
     auto result = test(
@@ -1149,13 +1276,13 @@ TEST_F(TypeResolverTest, macro_not_expanded_in_type_context)
     // sizeof: call syntax forces macro expansion.
     auto result = test(
         R"(macro mytype() { 1 } begin { $x = sizeof(mytype()); })");
-    EXPECT_EQ(var_type(result, "$x"), CreateUInt8());
+    EXPECT_EQ(var_type(result, "$x"), CreateInt8());
   }
   {
     // cast: typeof wrapper with call syntax forces macro expansion.
     auto result = test(
         R"(macro mytype() { 1 } begin { $x = (typeof(mytype()))1; })");
-    EXPECT_EQ(var_type(result, "$x"), CreateUInt8());
+    EXPECT_EQ(var_type(result, "$x"), CreateInt8());
   }
 }
 

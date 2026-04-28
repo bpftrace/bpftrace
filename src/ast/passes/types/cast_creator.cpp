@@ -9,11 +9,73 @@
 #include "log.h"
 #include "types.h"
 
+#include <cassert>
+#include <climits>
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <variant>
 
 namespace bpftrace::ast {
+
+static bool integer_fits_in_type(uint64_t val, const SizedType &type)
+{
+  assert(type.IsIntegerTy());
+
+  auto size = type.GetSize();
+  if (type.IsSigned()) {
+    switch (size) {
+      case 1:
+        return val <= std::numeric_limits<int8_t>::max();
+      case 2:
+        return val <= std::numeric_limits<int16_t>::max();
+      case 4:
+        return val <= std::numeric_limits<int32_t>::max();
+      case 8:
+        return val <= std::numeric_limits<int64_t>::max();
+      default:
+        return false;
+    }
+  } else {
+    switch (size) {
+      case 1:
+        return val <= std::numeric_limits<uint8_t>::max();
+      case 2:
+        return val <= std::numeric_limits<uint16_t>::max();
+      case 4:
+        return val <= std::numeric_limits<uint32_t>::max();
+      case 8:
+        return true;
+      default:
+        return false;
+    }
+  }
+}
+
+static bool integer_fits_in_type(int64_t val, const SizedType &type)
+{
+  assert(type.IsIntegerTy());
+  if (!type.IsSigned()) {
+    return false;
+  }
+
+  auto size = type.GetSize();
+  switch (size) {
+    case 1:
+      return val >= std::numeric_limits<int8_t>::min() &&
+             val <= std::numeric_limits<int8_t>::max();
+    case 2:
+      return val >= std::numeric_limits<int16_t>::min() &&
+             val <= std::numeric_limits<int16_t>::max();
+    case 4:
+      return val >= std::numeric_limits<int32_t>::min() &&
+             val <= std::numeric_limits<int32_t>::max();
+    case 8:
+      return true;
+    default:
+      return false;
+  }
+}
 
 static std::optional<SizedType> try_expression_cast(
     ASTContext &ctx,
@@ -133,27 +195,11 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
                                              const SizedType &target_type)
 {
   if (auto *integer = exp.as<Integer>()) {
-    if (target_type.IsSigned()) {
-      auto signed_ty = get_signed_integer_type(integer->value);
-      if (!signed_ty || !signed_ty->FitsInto(target_type)) {
-        // The integer is too large
-        return std::nullopt;
-      }
-    } else {
-      auto unsigned_ty = ast::get_integer_type(integer->value);
-      if (!unsigned_ty.FitsInto(target_type)) {
-        // The integer is too large
-        return std::nullopt;
-      }
-    }
-  } else if (auto *negative_integer = exp.as<NegativeInteger>()) {
-    if (!target_type.IsSigned()) {
+    if (!integer_fits_in_type(integer->value, target_type)) {
       return std::nullopt;
     }
-
-    auto signed_ty = get_signed_integer_type(negative_integer->value);
-    if (!signed_ty.FitsInto(target_type)) {
-      // The integer is too large
+  } else if (auto *negative_integer = exp.as<NegativeInteger>()) {
+    if (!integer_fits_in_type(negative_integer->value, target_type)) {
       return std::nullopt;
     }
   }

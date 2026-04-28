@@ -36,6 +36,31 @@ PROG begin { printf("%lu\n", (uint64)(-4095)); }
 EXPECT 18446744073709547521
 TIMEOUT 1
 
+NAME subtraction produces negative
+PROG begin { $a = (uint8)1 - 2; printf("%d\n", $a); }
+EXPECT -1
+TIMEOUT 1
+
+NAME decrement map below zero
+PROG begin { @x = 0; --@x; printf("%d\n", @x); }
+EXPECT -1
+TIMEOUT 1
+
+NAME increment then decrement map below zero
+PROG begin { @x = 0; ++@x; --@x; --@x; printf("%d\n", @x); }
+EXPECT -1
+TIMEOUT 1
+
+NAME uint64 subtraction stays unsigned with cast
+PROG begin { $a = (uint64)((uint64)5 - (uint64)3); printf("%lu\n", $a); }
+EXPECT 2
+TIMEOUT 1
+
+NAME uint64 subtraction underflow with cast
+PROG begin { $a = (uint64)3 - (uint64)5; printf("%d %lu\n", $a, $a); }
+EXPECT -2 18446744073709551614
+TIMEOUT 1
+
 NAME mixed values
 PROG begin { printf("%d %d %d %d\n", (int8) -10, -5555, (int16)-123, 100);  }
 EXPECT -10 -5555 -123 100

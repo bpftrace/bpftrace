@@ -208,13 +208,14 @@ public:
 
     // There are some map expressions that self initialize, e.g. `@a++` or `@a
     // +=1` and there are no other assignments to them. Treat these as holding
-    // an int64 value type and try again to resolve them
+    // an int8 value type, as this is equivalent to a default 0 assignment, and
+    // then try again to resolve
     bool had_unresolved_map_values = false;
     for (const auto &name : map_value_names) {
       const auto &current_type = get_type(name);
       if (current_type.IsNoneTy()) {
         had_unresolved_map_values = true;
-        set_type(name, CreateInt64());
+        set_type(name, CreateInt8());
       }
     }
     if (had_unresolved_map_values) {
@@ -398,7 +399,6 @@ private:
   SizedType get_map_key_type(const std::string &map_name,
                              const SizedType &type,
                              Node &error_node);
-  void check_unresolved_maps();
   Node *find_variable_scope(const std::string &var_ident, bool safe = true);
   SizedType get_locked_node(const TypeVariable &node,
                             const SizedType &type,
@@ -472,12 +472,22 @@ SizedType get_binop_int(Binop &binop,
                         const SizedType &lht,
                         const SizedType &rht)
 {
+  auto left_type = lht;
+  auto right_type = rht;
+
+  if (left_type.IsSignFlexible() && !right_type.IsSignFlexible()) {
+    left_type.SetSign(right_type.IsSigned());
+    left_type.SetSignFlexible(false);
+  } else if (right_type.IsSignFlexible() && !left_type.IsSignFlexible()) {
+    right_type.SetSign(left_type.IsSigned());
+    right_type.SetSignFlexible(false);
+  }
   auto is_comparison = is_comparison_op(binop.op);
-  if (lht == rht) {
+  if (left_type == right_type) {
     if (is_comparison) {
       return CreateBool();
     } else {
-      if (lht.IsSigned()) {
+      if (left_type.IsSigned() || binop.op == Operator::MINUS) {
         return CreateInt64();
       }
       return CreateUInt64();
@@ -485,21 +495,23 @@ SizedType get_binop_int(Binop &binop,
   }
 
   bool show_warning = false;
-  bool mismatched_sign = rht.IsSigned() != lht.IsSigned();
+  bool mismatched_sign = right_type.IsSigned() != left_type.IsSigned();
   // N.B. all castable map values are 64 bits
-  if (lht.IsCastableMapTy()) {
-    if (rht.IsCastableMapTy()) {
+  if (left_type.IsCastableMapTy()) {
+    if (right_type.IsCastableMapTy()) {
       show_warning = mismatched_sign;
     } else {
-      if (!get_promoted_type(rht, CreateInteger(64, lht.IsSigned()))) {
+      if (!get_promoted_type(right_type,
+                             CreateInteger(64, left_type.IsSigned()))) {
         show_warning = true;
       }
     }
-  } else if (rht.IsCastableMapTy()) {
-    if (!get_promoted_type(lht, CreateInteger(64, rht.IsSigned()))) {
+  } else if (right_type.IsCastableMapTy()) {
+    if (!get_promoted_type(left_type,
+                           CreateInteger(64, right_type.IsSigned()))) {
       show_warning = true;
     }
-  } else if (!get_promoted_type(lht, rht)) {
+  } else if (!get_promoted_type(left_type, right_type)) {
     show_warning = true;
   }
 
@@ -519,13 +531,14 @@ SizedType get_binop_int(Binop &binop,
   // in kernel sources
   if (binop.op == Operator::DIV || binop.op == Operator::MOD) {
     // If they're still signed, we have to warn
-    if (lht.IsSigned() || rht.IsSigned()) {
+    if (left_type.IsSigned() || right_type.IsSigned()) {
       binop.addWarning() << "signed operands for '" << opstr(binop)
                          << "' can lead to undefined behavior "
                          << "(cast to unsigned to silence warning)";
     }
   }
-  if (lht.IsSigned() || rht.IsSigned()) {
+  if (left_type.IsSigned() || right_type.IsSigned() ||
+      binop.op == Operator::MINUS) {
     return CreateInt64();
   }
 
@@ -2095,14 +2108,17 @@ void TypeRuleCollector::visit(Unop &unop)
 {
   visit(unop.expr);
 
-  bool is_inc_dec_op = false;
+  bool is_inc_op = false;
+  bool is_dec_op = false;
 
   switch (unop.op) {
     case Operator::PRE_INCREMENT:
-    case Operator::PRE_DECREMENT:
     case Operator::POST_INCREMENT:
+      is_inc_op = true;
+      break;
+    case Operator::PRE_DECREMENT:
     case Operator::POST_DECREMENT:
-      is_inc_dec_op = true;
+      is_dec_op = true;
       break;
     default:;
   }
@@ -2113,7 +2129,7 @@ void TypeRuleCollector::visit(Unop &unop)
   // chain that attemps to assign this integer type to the stored map value or
   // variable. This enables us to get error messages on the correct node if we
   // attempt to increment a string or some other invalid type.
-  if (is_inc_dec_op) {
+  if (is_inc_op || is_dec_op) {
     if (auto *acc = unop.expr.as<MapAccess>()) {
       auto map_name = acc->map->ident;
 
@@ -2135,9 +2151,10 @@ void TypeRuleCollector::visit(Unop &unop)
       resolver_.add_type_rule({
           .output = &unop,
           .inputs = { &unop.expr.node() },
-          .resolve =
-              [&unop](const std::vector<SizedType> &inputs) -> SizedType {
-            return inputs[0].IsSigned() ? CreateInt64() : CreateUInt64();
+          .resolve = [&unop, is_dec_op](
+                         const std::vector<SizedType> &inputs) -> SizedType {
+            return (inputs[0].IsSigned() || is_dec_op) ? CreateInt64()
+                                                       : CreateUInt64();
           },
       });
 
@@ -2168,7 +2185,7 @@ void TypeRuleCollector::visit(Unop &unop)
       resolver_.add_type_rule({
           .output = &unop,
           .inputs = { &unop.expr.node() },
-          .resolve = [this, &unop, scoped_var](
+          .resolve = [this, &unop, scoped_var, is_dec_op](
                          const std::vector<SizedType> &inputs) -> SizedType {
             const auto &type = inputs[0];
             const auto &current_type = resolver_.get_type(scoped_var);
@@ -2177,7 +2194,8 @@ void TypeRuleCollector::visit(Unop &unop)
               return current_type;
             }
 
-            return type.IsSigned() ? CreateInt64() : CreateUInt64();
+            return (type.IsSigned() || is_dec_op) ? CreateInt64()
+                                                  : CreateUInt64();
           },
       });
 

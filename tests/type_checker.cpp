@@ -331,7 +331,7 @@ TEST_F(TypeCheckerTest, consistent_map_values)
   test(
       R"(begin { $a = (3, "hello"); @m[1] = $a; $a = (1,"aaaaaaaaaa"); @m[2] = $a; })");
   test("kprobe:f { @x = 0; @x = \"a\"; }", Error{ R"(
-stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already has a type 'uint8'
+stdin:1:20-28: ERROR: Type mismatch for @x: trying to assign value of type 'string[2]' when map already has a type 'int8'
 kprobe:f { @x = 0; @x = "a"; }
                    ~~~~~~~~
 )" });
@@ -361,12 +361,12 @@ begin { @x[1] = 0; @x; }
   test("begin { @x[1, ((int8)2, ((int16)3, 4))] = 0; @x[5, (6, (7, 8))]; }");
 
   test("begin { @x[1,2] = 0; @x[3]; }", Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: 'uint8'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(int8,int8)' when map expects arguments: 'int8'
 begin { @x[1,2] = 0; @x[3]; }
         ~~~~~~~
 )" });
   test("begin { @x[1] = 0; @x[2,3]; }", Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: '(uint8,uint8)' when map expects arguments: 'uint8'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(int8,int8)' when map expects arguments: 'int8'
 begin { @x[1] = 0; @x[2,3]; }
                    ~~~~~~~
 )" });
@@ -379,7 +379,7 @@ begin { @x[1] = 0; @x[2,3]; }
       @x["b", 2, kstack];
     })",
        Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],uint8,kstack_bpftrace_127)' when map expects arguments: '(uint8,string[2],kstack_bpftrace_127)'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],int8,kstack_bpftrace_127)' when map expects arguments: '(int8,string[2],kstack_bpftrace_127)'
       @x["b", 2, kstack];
       ~~~~~~~~~~~~~~~~~~
 )" });
@@ -388,7 +388,7 @@ ERROR: Argument mismatch for @x: trying to access with arguments: '(string[2],ui
 
   test(R"(begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } })",
        Error{ R"(
-ERROR: Argument mismatch for @map: trying to access with arguments: 'uint8' when map expects arguments: '(uint8,uint8)'
+ERROR: Argument mismatch for @map: trying to access with arguments: 'int8' when map expects arguments: '(int8,int8)'
 begin { @map[1, 2] = 1; for ($kv : @map) { @map[$kv.0.0] = 2; } }
                                            ~~~~~~~~~~~~~
 )" });
@@ -494,25 +494,25 @@ TEST_F(TypeCheckerTest, ternary_expressions)
   // Error location is incorrect: #3063
   test("kprobe:f { $x = pid < 10000 ? 3 : cat(\"/proc/uptime\"); exit(); }",
        Error{ R"(
-stdin:1:17-54: ERROR: Branches must return the same type or compatible types: have 'uint8' and 'void'
+stdin:1:17-54: ERROR: Branches must return the same type or compatible types: have 'int8' and 'void'
 kprobe:f { $x = pid < 10000 ? 3 : cat("/proc/uptime"); exit(); }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", Error{ R"(
-stdin:1:17-41: ERROR: Branches must return the same type or compatible types: have 'uint8' and 'string[5]'
+stdin:1:17-41: ERROR: Branches must return the same type or compatible types: have 'int8' and 'string[5]'
 kprobe:f { @x = pid < 10000 ? 1 : "high" }
                 ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", Error{ R"(
-stdin:1:17-39: ERROR: Branches must return the same type or compatible types: have 'string[3]' and 'uint8'
+stdin:1:17-39: ERROR: Branches must return the same type or compatible types: have 'string[3]' and 'int8'
 kprobe:f { @x = pid < 10000 ? "lo" : 2 }
                 ~~~~~~~~~~~~~~~~~~~~~~
 )" });
   // Error location is incorrect: #3063
   test("kprobe:f { @x = pid < 10000 ? (1, 2) : (\"a\", 4) }", Error{ R"(
-stdin:1:17-48: ERROR: Branches must return the same type or compatible types: have '(uint8,uint8)' and '(string[2],uint8)'
+stdin:1:17-48: ERROR: Branches must return the same type or compatible types: have '(int8,int8)' and '(string[2],int8)'
 kprobe:f { @x = pid < 10000 ? (1, 2) : ("a", 4) }
                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -545,7 +545,7 @@ kprobe:f { $x = nonsense; $y = true ? $x : 1; exit(); }
 TEST_F(TypeCheckerTest, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already has a type 'uint8'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'count_t' when map already has a type 'int8'
 kprobe:f { @x = 1; @x = count(); }
                         ~~~~~~~
 )" });
@@ -557,7 +557,7 @@ kprobe:f { @x = count(); @x = sum(pid); }
                               ~~~~~~~~
 )" });
   test("kprobe:f { @x = 1; @x = hist(0); }", Error{ R"(
-stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already has a type 'uint8'
+stdin:1:25-32: ERROR: Type mismatch for @x: trying to assign value of type 'hist_t' when map already has a type 'int8'
 kprobe:f { @x = 1; @x = hist(0); }
                         ~~~~~~~
 )" });
@@ -872,7 +872,7 @@ TEST_F(TypeCheckerTest, call_delete)
   test("kprobe:f { @y[(3, 4, 5)] = "
        "5; delete(@y, (1, 2)); }",
        Error{ R"(
-ERROR: Argument mismatch for @y: trying to access with arguments: '(uint8,uint8)' when map expects arguments: '(uint8,uint8,uint8)'
+ERROR: Argument mismatch for @y: trying to access with arguments: '(int8,int8)' when map expects arguments: '(int8,int8,int8)'
 )" },
        Types{ types });
 
@@ -903,7 +903,7 @@ ERROR: call to delete() with two arguments expects a map with explicit keys (non
 
   test(R"(kprobe:f { @x[1, "hi"] = 1; delete(@x["hi", 1]); })",
        Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],uint8)' when map expects arguments: '(uint8,string[3])'
+ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],int8)' when map expects arguments: '(int8,string[3])'
 )" },
        Types{ types });
 
@@ -966,7 +966,7 @@ TEST_F(TypeCheckerTest, call_print_map_item)
   test("begin { print(@x[2]); }");
 
   test("begin { @x[1] = 1; print(@x[\"asdf\"]); }", Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'uint8'
+ERROR: Argument mismatch for @x: trying to access with arguments: 'string[5]' when map expects arguments: 'int8'
 begin { @x[1] = 1; print(@x["asdf"]); }
                          ~~~~~~~~~~
 )" });
@@ -1569,7 +1569,7 @@ TEST_F(TypeCheckerTest, variable_reassignment)
 
   test(R"(kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = 1; })",
        Error{ R"(
-stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'uint8' when variable already has a type 'string[3]'
+stdin:1:23-30: ERROR: Type mismatch for $b: trying to assign value of type 'int8' when variable already has a type 'string[3]'
 kprobe:f { $b = "hi"; $b = @b; } kprobe:func_1 { @b = 1; }
                       ~~~~~~~
 )" });
@@ -1595,6 +1595,8 @@ TEST_F(TypeCheckerTest, variables_are_local)
 
 TEST_F(TypeCheckerTest, array_access)
 {
+  test(R"(begin { $i = 1; $s = "ab"; $a = $s[$i]; })");
+  test(R"(begin { $i = -1; $s = "ab"; $a = $s[$i]; })", Error{});
   test("kprobe:f { $s = arg0; @x = $s->y[0];}", Error{});
   test("kprobe:f { $s = 0; @x = $s->y[0];}", Error{});
   test("struct MyStruct { int y[4]; } "
@@ -1611,7 +1613,7 @@ TEST_F(TypeCheckerTest, array_access)
        Error{});
   test("struct MyStruct { int y[4]; } "
        "kprobe:f { $s = (struct MyStruct *) "
-       "arg0; $idx = 0; @x = $s->y[$idx];}");
+       "arg0; $idx = (uint32)0; @x = $s->y[$idx];}");
   test("struct MyStruct { int y[4]; } "
        "kprobe:f { $s = (struct MyStruct *) "
        "arg0; $idx = -1; @x = $s->y[$idx];}",
@@ -1750,7 +1752,7 @@ TEST_F(TypeCheckerTest, array_compare)
 TEST_F(TypeCheckerTest, variable_type)
 {
   auto result = test("kprobe:f { $x = 1 }");
-  auto st = CreateUInt8();
+  auto st = CreateInt8();
   auto *assignment = result.ast.root->probes.at(0)
                          ->block->stmts.at(0)
                          .as<ast::AssignVarStatement>();
@@ -2161,25 +2163,35 @@ TEST_F(TypeCheckerTest, map_aggregations_implicit_cast)
                 std::forward<decltype(expr)>(expr));
   };
   auto CastVal = [](auto &&expr) {
+    return Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "int64")),
+                std::forward<decltype(expr)>(expr));
+  };
+  auto CastUInt8 = [](auto &&expr) {
+    return Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "uint8")),
+                std::forward<decltype(expr)>(expr));
+  };
+  auto CastValU = [](auto &&expr) {
     return Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier, "uint64")),
                 std::forward<decltype(expr)>(expr));
   };
-  test("kprobe:f { @x = 1; @y = count(); @x = @y; }",
+  test("kprobe:f { @x = (uint8)1; @y = count(); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(
-                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
+           { AssignMapStatement(Map("@x"),
+                                CastKey(Integer(0)),
+                                CastValU(CastUInt8(Integer(1)))),
              DiscardExpr(Call("count", { Map("@y"), CastKey(Integer(0)) })),
              AssignMapStatement(Map("@x"),
                                 CastKey(Integer(0)),
-                                CastVal(
+                                CastValU(
                                     MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
-  test("kprobe:f { @x = 1; @y = sum(5); @x = @y; }",
+  test("kprobe:f { @x = (uint8)1; @y = sum(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(
-                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
+           { AssignMapStatement(Map("@x"),
+                                CastKey(Integer(0)),
+                                CastVal(CastUInt8(Integer(1)))),
              DiscardExpr(
                  Call("sum", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
@@ -2187,11 +2199,12 @@ TEST_F(TypeCheckerTest, map_aggregations_implicit_cast)
                                 CastVal(
                                     MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
-  test("kprobe:f { @x = 1; @y = min(5); @x = @y; }",
+  test("kprobe:f { @x = (uint8)1; @y = min(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(
-                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
+           { AssignMapStatement(Map("@x"),
+                                CastKey(Integer(0)),
+                                CastVal(CastUInt8(Integer(1)))),
              DiscardExpr(
                  Call("min", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
@@ -2199,11 +2212,12 @@ TEST_F(TypeCheckerTest, map_aggregations_implicit_cast)
                                 CastVal(
                                     MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
-  test("kprobe:f { @x = 1; @y = max(5); @x = @y; }",
+  test("kprobe:f { @x = (uint8)1; @y = max(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(
-                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
+           { AssignMapStatement(Map("@x"),
+                                CastKey(Integer(0)),
+                                CastVal(CastUInt8(Integer(1)))),
              DiscardExpr(
                  Call("max", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
@@ -2211,11 +2225,12 @@ TEST_F(TypeCheckerTest, map_aggregations_implicit_cast)
                                 CastVal(
                                     MapAccess(Map("@y"), CastKey(Integer(0))))),
              Jump(ast::JumpType::RETURN) })) });
-  test("kprobe:f { @x = 1; @y = avg(5); @x = @y; }",
+  test("kprobe:f { @x = (uint8)1; @y = avg(5); @x = @y; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "kprobe:f" },
-           { AssignMapStatement(
-                 Map("@x"), CastKey(Integer(0)), CastVal(Integer(1))),
+           { AssignMapStatement(Map("@x"),
+                                CastKey(Integer(0)),
+                                CastVal(CastUInt8(Integer(1)))),
              DiscardExpr(
                  Call("avg", { Map("@y"), CastKey(Integer(0)), Integer(5) })),
              AssignMapStatement(Map("@x"),
@@ -2243,36 +2258,36 @@ kprobe:f { @y = count(); @x = @y; }
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = sum(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'usum_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = sum(retval);`.
+stdin:1:25-32: ERROR: Map value 'sum_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = sum(retval);`.
 kprobe:f { @y = sum(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = min(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'umin_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = min(retval);`.
+stdin:1:25-32: ERROR: Map value 'min_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = min(retval);`.
 kprobe:f { @y = min(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = max(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'umax_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = max(retval);`.
+stdin:1:25-32: ERROR: Map value 'max_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = max(retval);`.
 kprobe:f { @y = max(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = avg(5); @x = @y; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'uavg_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = avg(retval);`.
+stdin:1:25-32: ERROR: Map value 'avg_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = avg(retval);`.
 kprobe:f { @y = avg(5); @x = @y; }
                         ~~~~~~~
 HINT: Add a cast to integer if you want the value of the aggregate, e.g. `@x = (int64)@y;`.
 )" });
   test("kprobe:f { @y = stats(5); @x = @y; }", Error{ R"(
-stdin:1:27-34: ERROR: Map value 'ustats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
+stdin:1:27-34: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
 kprobe:f { @y = stats(5); @x = @y; }
                           ~~~~~~~
 )" });
   test("kprobe:f { @x = 1; @y = stats(5); @x = @y; }", Error{ R"(
-stdin:1:35-42: ERROR: Map value 'ustats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
+stdin:1:35-42: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@x = stats(arg2);`.
 kprobe:f { @x = 1; @y = stats(5); @x = @y; }
                                   ~~~~~~~
 )" });
@@ -2284,13 +2299,13 @@ kprobe:f { @x = 1; @y = stats(5); @x = @y; }
   test("kprobe:f { @ = avg(5); if (@ > 0) { print((1)); } }");
 
   test("kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }", Error{ R"(
-stdin:1:29-34: ERROR: Type mismatch for '>': comparing hist_t with uint8
+stdin:1:29-34: ERROR: Type mismatch for '>': comparing hist_t with int8
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                             ~~~~~
 stdin:1:29-30: ERROR: left (hist_t)
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                             ~
-stdin:1:33-34: ERROR: right (uint8)
+stdin:1:33-34: ERROR: right (int8)
 kprobe:f { @ = hist(5); if (@ > 0) { print((1)); } }
                                 ~
 )" });
@@ -2536,7 +2551,7 @@ begin { @x = tseries(10, 1s, 10); @y[@x] = 1; }
 )" });
 
   test("begin { @x = stats(10); @y[@x] = 1; }", Error{ R"(
-ERROR: Value 'ustats_t' cannot be used as a map key.
+ERROR: Value 'stats_t' cannot be used as a map key.
 begin { @x = stats(10); @y[@x] = 1; }
                         ~~~~~~
 )" });
@@ -2655,14 +2670,22 @@ TEST_F(TypeCheckerTest, signed_int_comparison_warnings)
   test("kretprobe:f /retval < -1/ {}", Warning{ cmp_sign });
 
   // These should not trigger a warning
-  test("kretprobe:f /1 < retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /1 > retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /1 >= retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /1 <= retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /1 != retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /1 == retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /retval > 1/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /retval < 1/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /(uint64)1 < retval/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /(uint64)1 > retval/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /(uint64)1 >= retval/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /(uint64)1 <= retval/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /(uint64)1 != retval/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /(uint64)1 == retval/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /retval > (uint64)1/ {}", NoWarning{ cmp_sign });
+  test("kretprobe:f /retval < (uint64)1/ {}", NoWarning{ cmp_sign });
+}
+
+TEST_F(TypeCheckerTest, unsigned_literal_arithmetic_warnings)
+{
+  test(R"(begin { $a = (uint64)10 / 2; })",
+       NoWarning{ "signed operands for '/'" });
+  test(R"(begin { $a = (uint64)10 % 2; })",
+       NoWarning{ "signed operands for '%'" });
 }
 
 TEST_F(TypeCheckerTest, string_comparison)
@@ -2701,26 +2724,26 @@ kprobe:f { $x = "foo"; printf("%c is the fifth letter", $x[4]); }
 TEST_F(TypeCheckerTest, signed_int_division_warnings)
 {
   std::string msg = "signed operands";
-  test("kprobe:f { @x = -1; @y = @x / 1 }", Warning{ msg });
+  test("kprobe:f { @x = (uint64)1; @y = -1 / @x }", Warning{ msg });
   test("kprobe:f { @x = (uint64)1; @y = @x / -1 }", Warning{ msg });
 
   // These should not trigger a warning.
   // Note that we need to assign to a map in
   // order to ensure that they are typed.
   // Literals are not yet typed.
-  test("kprobe:f { @x = (uint64)1; @y = @x / 1 }", NoWarning{ msg });
-  test("kprobe:f { @x = (uint64)1; @y = -(@x / 1) }", NoWarning{ msg });
+  test("kprobe:f { @x = (uint64)1; @y = @x / (uint64)1 }", NoWarning{ msg });
+  test("kprobe:f { @x = (uint64)1; @y = -(@x / (uint64)1) }", NoWarning{ msg });
 }
 
 TEST_F(TypeCheckerTest, signed_int_modulo_warnings)
 {
   std::string msg = "signed operands";
-  test("kprobe:f { @x = -1; @y = @x % 1 }", Warning{ msg });
+  test("kprobe:f { @x = (uint64)1; @y = -1 % @x }", Warning{ msg });
   test("kprobe:f { @x = (uint64)1; @y = @x % -1 }", Warning{ msg });
 
   // These should not trigger a warning. See above re: types.
-  test("kprobe:f { @x = (uint64)1; @y = @x % 1 }", NoWarning{ msg });
-  test("kprobe:f { @x = (uint64)1; @y = -(@x % 1) }", NoWarning{ msg });
+  test("kprobe:f { @x = (uint64)1; @y = @x % (uint64)1 }", NoWarning{ msg });
+  test("kprobe:f { @x = (uint64)1; @y = -(@x % (uint64)1) }", NoWarning{ msg });
 }
 
 TEST_F(TypeCheckerTest, map_as_lookup_table)
@@ -2787,6 +2810,7 @@ TEST_F(TypeCheckerTest, binop_arithmetic)
 
   std::string arithmetic_operators[] = { "+", "-", "/", "*" };
   for (std::string op : arithmetic_operators) {
+    bool is_subtract = op == "-";
     std::string prog = prog_pre + "$varA = $t->l " + op +
                        " $t->l; "
                        "$varB = $t->ul " +
@@ -2816,11 +2840,13 @@ TEST_F(TypeCheckerTest, binop_arithmetic)
     auto *varC = result.ast.root->probes.at(0)
                      ->block->stmts.at(3)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateUInt64(), result.type_map.type(varC->var()));
+    EXPECT_EQ(is_subtract ? CreateInt64() : CreateUInt64(),
+              result.type_map.type(varC->var()));
     auto *varD = result.ast.root->probes.at(0)
                      ->block->stmts.at(4)
                      .as<ast::AssignVarStatement>();
-    EXPECT_EQ(CreateUInt64(), result.type_map.type(varD->var()));
+    EXPECT_EQ(is_subtract ? CreateInt64() : CreateUInt64(),
+              result.type_map.type(varD->var()));
     // This one is not like the others
     auto *varE = result.ast.root->probes.at(0)
                      ->block->stmts.at(5)
@@ -2999,7 +3025,7 @@ TEST_F(TypeCheckerTest, mixed_int_var_assignments)
   test("begin { $a = -1; $a = (uint64)2; }", Error{});
   test("begin { $a = (int64)1; $a = (uint64)2; }", Error{});
   test("begin { $a = -1; $a = 9223372036854775808; }", Error{});
-  test("begin { $a = 9223372036854775807; $a = -2147483648 }", Error{});
+  test("begin { $a = 9223372036854775807; $a = -2147483648 }");
   test("kprobe:f { $x = -1; $x = 10223372036854775807; }", Error{ R"(
 stdin:1:21-46: ERROR: Type mismatch for $x: trying to assign value of type 'uint64' when variable already has a type 'int8'
 kprobe:f { $x = -1; $x = 10223372036854775807; }
@@ -3007,21 +3033,15 @@ kprobe:f { $x = -1; $x = 10223372036854775807; }
 )" });
 
   test("begin { $x = (int8)1; $x = 5; }",
-       ExpectedAST{ Program().WithProbe(Probe(
-           { "begin" },
-           { AssignVarStatement(
-                 Variable("$x"),
-                 Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
-                                        "int16")),
-                      Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
-                                             "int8")),
-                           Integer(1)))),
-             AssignVarStatement(
-                 Variable("$x"),
-                 Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
-                                        "int16")),
-                      Integer(5))),
-             Jump(ast::JumpType::RETURN) })) });
+       ExpectedAST{ Program().WithProbe(
+           Probe({ "begin" },
+                 { AssignVarStatement(
+                       Variable("$x"),
+                       Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
+                                              "int8")),
+                            Integer(1))),
+                   AssignVarStatement(Variable("$x"), Integer(5)),
+                   Jump(ast::JumpType::RETURN) })) });
   test("begin { $x = (int8)1; $x = (uint8)5; }",
        ExpectedAST{ Program().WithProbe(Probe(
            { "begin" },
@@ -3054,7 +3074,7 @@ TEST_F(TypeCheckerTest, mixed_int_like_map_assignments)
   test("kprobe:f { @x = 1; @x = 9223372036854775807; }");
   test("kprobe:f { @x = 1; @x = -9223372036854775808; }");
   test("kprobe:f { @x = (uint8)1; @x = -1; }");
-  test("kprobe:f { @x = 1; @x = 10223372036854775807; }");
+  test("kprobe:f { @x = (uint8)1; @x = 10223372036854775807; }");
   test("kprobe:f { @x = sum(1); @x = sum(-1); }");
   test("kprobe:f { @x = sum((uint32)1); @x = sum(-1); }");
   test("kprobe:f { @x = avg(1); @x = avg(-1); }");
@@ -3098,7 +3118,7 @@ TEST_F(TypeCheckerTest, mixed_int_map_access)
   test("kprobe:f { @x[(uint16)1] = 1; @x[10223372036854775807] }");
   test("kprobe:f { @x[1] = 1; @x[9223372036854775807] }");
   test("kprobe:f { @x[1] = 1; @x[-9223372036854775808] }");
-  test("kprobe:f { @x[1] = 1; @x[(uint64)1] }");
+  test("kprobe:f { @x[(uint8)1] = 1; @x[(uint64)1] }");
   test("kprobe:f { @x[(uint32)-1] = 1; @x[1] }");
   test("kprobe:f { @x[-1] = 1; @x[(uint32)1] }");
 
@@ -3132,7 +3152,7 @@ TEST_F(TypeCheckerTest, mixed_int_like_binop)
        NoWarning{ "comparison of integers" });
   test("kprobe:f { @a = sum(-1); $a = @a == (uint16)1; }",
        NoWarning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(1); @b = count(); $a = @a == @b; }",
+  test("kprobe:f { @a = sum((uint64)1); @b = count(); $a = @a == @b; }",
        NoWarning{ "comparison of integers" });
 
   test("kprobe:f { $a = (uint64)1 == (int64)-1; }",
@@ -3221,19 +3241,29 @@ TEST_F(TypeCheckerTest, signal)
   for (const auto &signal :
        std::vector<std::string>{ "signal", "signal_thread" }) {
     // int literals
-    test("k:f {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
-    test("k:f {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
-    test("kr:f {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
-    test("u:/bin/sh:f {" + signal + "(11); }",
+    test("k:f {" + signal + "((uint64)1); }",
          UnsafeMode::Enable,
          Types{ types });
-    test("ur:/bin/sh:f {" + signal + "(11); }",
+    test("k:f {" + signal + "((uint64)1); }",
          UnsafeMode::Enable,
          Types{ types });
-    test("p:hz:1 {" + signal + "(1); }", UnsafeMode::Enable, Types{ types });
+    test("kr:f {" + signal + "((uint64)1); }",
+         UnsafeMode::Enable,
+         Types{ types });
+    test("u:/bin/sh:f {" + signal + "((uint64)11); }",
+         UnsafeMode::Enable,
+         Types{ types });
+    test("ur:/bin/sh:f {" + signal + "((uint64)11); }",
+         UnsafeMode::Enable,
+         Types{ types });
+    test("p:hz:1 {" + signal + "((uint64)1); }",
+         UnsafeMode::Enable,
+         Types{ types });
 
     // vars
-    test("k:f { @=1;" + signal + "(@); }", UnsafeMode::Enable, Types{ types });
+    test("k:f { @=(uint8)1;" + signal + "(@); }",
+         UnsafeMode::Enable,
+         Types{ types });
     test("k:f { " + signal + "((uint64)arg0); }",
          UnsafeMode::Enable,
          Types{ types });
@@ -3701,7 +3731,7 @@ TEST_F(TypeCheckerTest, tuple)
 
   test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); })",
        Error{ R"(
-stdin:1:33-57: ERROR: Type mismatch for $t: trying to assign value of type '(uint8,(uint64,uint8))' when variable already has a type '(uint8,(int8,uint8))'
+stdin:1:33-57: ERROR: Type mismatch for $t: trying to assign value of type '(int8,(uint64,int8))' when variable already has a type '(int8,(int8,int8))'
 begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); }
                                 ~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -3733,7 +3763,7 @@ TEST_F(TypeCheckerTest, tuple_indexing)
 TEST_F(TypeCheckerTest, tuple_assign_var)
 {
   class SizedType ty = CreateTuple(
-      Struct::CreateTuple({ CreateUInt8(), CreateString(6) }));
+      Struct::CreateTuple({ CreateInt8(), CreateString(6) }));
   auto result = test(R"(begin { $t = (1, "str"); $t = (4, "other"); })");
   auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
@@ -3755,14 +3785,14 @@ TEST_F(TypeCheckerTest, tuple_assign_map)
   // $t = (1, 3, 3, 7);
   auto *assignment = stmts.at(0).as<ast::AssignMapStatement>();
   class SizedType ty = CreateTuple(Struct::CreateTuple(
-      { CreateUInt8(), CreateUInt8(), CreateUInt8(), CreateUInt8() }));
+      { CreateInt8(), CreateInt8(), CreateInt8(), CreateInt8() }));
   EXPECT_EQ(ty,
             result.type_map.map_value_type(assignment->map_access->map->ident));
 
   // $t = (0, 0, 0, 0);
   assignment = stmts.at(1).as<ast::AssignMapStatement>();
   ty = CreateTuple(Struct::CreateTuple(
-      { CreateUInt8(), CreateUInt8(), CreateUInt8(), CreateUInt8() }));
+      { CreateInt8(), CreateInt8(), CreateInt8(), CreateInt8() }));
   EXPECT_EQ(ty,
             result.type_map.map_value_type(assignment->map_access->map->ident));
 }
@@ -3771,9 +3801,9 @@ TEST_F(TypeCheckerTest, tuple_assign_map)
 TEST_F(TypeCheckerTest, tuple_nested)
 {
   class SizedType ty_inner = CreateTuple(
-      Struct::CreateTuple({ CreateUInt8(), CreateUInt8() }));
+      Struct::CreateTuple({ CreateInt8(), CreateInt8() }));
   class SizedType ty = CreateTuple(
-      Struct::CreateTuple({ CreateUInt8(), ty_inner }));
+      Struct::CreateTuple({ CreateInt8(), ty_inner }));
   auto result = test(R"(begin { $t = (1,(1,2)); })");
   auto &stmts = result.ast.root->probes.at(0)->block->stmts;
 
@@ -4195,11 +4225,11 @@ TEST_F(TypeCheckerTest, call_pid_tid)
 TEST_F(TypeCheckerTest, subprog_return)
 {
   test("fn f(): void { return; }");
-  test("fn f(): uint8 { return 1; }");
+  test("fn f(): uint8 { return (uint8)1; }");
 
   // Error location is incorrect: #3063
   test("fn f(): void { return 1; }", Error{ R"(
-stdin:1:16-25: ERROR: Function f is of type void, cannot return uint8
+stdin:1:16-25: ERROR: Function f is of type void, cannot return int8
 fn f(): void { return 1; }
                ~~~~~~~~~
 )" });
@@ -4244,9 +4274,9 @@ fn f($a : int64): string { return $a; }
 TEST_F(TypeCheckerTest, subprog_map)
 {
   test("fn f(): void { @a = 0; }");
-  test("fn f(): uint64 { @a = 0; return @a + 1; }");
+  test("fn f(): int64 { @a = 0; return @a + 1; }");
   test("fn f(): void { @a[0] = 0; }");
-  test("fn f(): uint64 { @a[0] = 0; return @a[0] + 1; }");
+  test("fn f(): int64 { @a[0] = 0; return @a[0] + 1; }");
 }
 
 TEST_F(TypeCheckerTest, subprog_builtin)
@@ -4498,7 +4528,7 @@ begin { @map[0] = tseries(10, 10s, 10); for ($kv : @map) { } }
                                                    ~~~~
 )" });
   test("begin { @map[0] = stats(10); for ($kv : @map) { } }", Error{ R"(
-stdin:1:41-45: ERROR: Loop expression does not support type: ustats_t
+stdin:1:41-45: ERROR: Loop expression does not support type: stats_t
 begin { @map[0] = stats(10); for ($kv : @map) { } }
                                         ~~~~
 )" });
@@ -4560,7 +4590,7 @@ TEST_F(TypeCheckerTest, for_loop_variables_modified_during_loop)
               AssignVarStatement(
                   Variable("$var"),
                   Cast(Typeof(ParsedType(ast::ParsedType::Kind::Identifier,
-                                         "uint64")),
+                                         "int64")),
                        Integer(0))),
               AssignMapStatement(Map("@map"), Integer(0), Integer(1)),
               For(Variable("$kv"),
@@ -4772,12 +4802,12 @@ begin { @a = count(); $b = @a; }
                            ~~
 )" });
 
-  test("begin { @a = count(); @b = 1; @b = @a; }",
+  test("begin { @a = count(); @b = (uint8)1; @b = @a; }",
        NoFeatures::Enable,
        Error{ R"(
-stdin:1:36-38: ERROR: Missing required kernel feature: map_lookup_percpu_elem
-begin { @a = count(); @b = 1; @b = @a; }
-                                   ~~
+stdin:1:43-45: ERROR: Missing required kernel feature: map_lookup_percpu_elem
+begin { @a = count(); @b = (uint8)1; @b = @a; }
+                                          ~~
 )" });
 }
 
@@ -4835,9 +4865,9 @@ TEST_F(TypeCheckerTest, variable_declarations)
   test("begin { let $a; $a = 1; }");
   test("begin { let $a: int16; $a = 1; }");
   test("begin { let $a = 1; }");
-  test("begin { let $a: uint16 = 1; }");
+  test("begin { let $a: uint16 = (uint16)1; }");
   test("begin { let $a: int16 = 1; }");
-  test("begin { let $a: uint8 = 1; $a = 100; }");
+  test("begin { let $a: uint8 = (uint8)1; $a = (uint8)100; }");
   test("begin { let $a: int8 = 1; $a = -100; }");
   test(R"(begin { let $a: string; $a = "hiya"; })");
   test("begin { let $a: int16; print($a); }");
@@ -4858,10 +4888,10 @@ begin { let $a: uint16; $a = -1; }
                         ~~~~~~~
 )" });
 
-  test("begin { let $a: uint8 = 1; $a = 10000; }", Error{ R"(
-stdin:1:28-38: ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already has a type 'uint8'
-begin { let $a: uint8 = 1; $a = 10000; }
-                           ~~~~~~~~~~
+  test("begin { let $a: uint8 = (uint8)1; $a = 10000; }", Error{ R"(
+stdin:1:35-45: ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already has a type 'uint8'
+begin { let $a: uint8 = (uint8)1; $a = 10000; }
+                                  ~~~~~~~~~~
 )" });
 
   test("begin { let $a: int8 = 1; $a = -10000; }", Error{ R"(
@@ -4871,7 +4901,7 @@ begin { let $a: int8 = 1; $a = -10000; }
 )" });
 
   test("begin { let $a: int8; $a = 10000; }", Error{ R"(
-ERROR: Type mismatch for $a: trying to assign value of type 'uint16' when variable already has a type 'int8'
+ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already has a type 'int8'
 begin { let $a: int8; $a = 10000; }
                       ~~~~~~~~~~
 )" });
@@ -5045,7 +5075,7 @@ begin { @a = tseries(10, 10s, 1); let $b = @a; }
 )" });
 
   test("begin { @a = stats(10); let $b = @a; }", Error{ R"(
-stdin:1:25-36: ERROR: Value 'ustats_t' cannot be assigned to a scratch variable.
+stdin:1:25-36: ERROR: Value 'stats_t' cannot be assigned to a scratch variable.
 begin { @a = stats(10); let $b = @a; }
                         ~~~~~~~~~~~
 )" });
@@ -5069,7 +5099,7 @@ begin { @a = tseries(10, 10s, 1); @b = @a; }
 )" });
 
   test("begin { @a = stats(10); @b = @a; }", Error{ R"(
-stdin:1:25-32: ERROR: Map value 'ustats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = stats(arg2);`.
+stdin:1:25-32: ERROR: Map value 'stats_t' cannot be assigned from one map to another. The function that returns this type must be called directly e.g. `@b = stats(arg2);`.
 begin { @a = stats(10); @b = @a; }
                         ~~~~~~~
 )" });
@@ -5146,7 +5176,7 @@ TEST_F(TypeCheckerTest, macros)
   test("macro set($x) { $x = 1; $x } begin { $a = \"string\"; set($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'uint8' when variable already has a type 'string[7]'
+stdin:1:17-23: ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'string[7]'
 macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
                 ~~~~~~
 stdin:1:53-60: ERROR: expanded from
@@ -5159,13 +5189,13 @@ macro set($x) { $x = 1; $x } begin { $a = "string"; set($a); }
        "begin { $a = \"string\"; add1($a); }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:18-24: ERROR: Type mismatch for '+': comparing string[7] with uint8
+stdin:1:18-24: ERROR: Type mismatch for '+': comparing string[7] with int8
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                  ~~~~~~
 stdin:1:18-20: ERROR: left (string[7])
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                  ~~
-stdin:1:23-24: ERROR: right (uint8)
+stdin:1:23-24: ERROR: right (int8)
 macro add2($x) { $x + 1 } macro add1($x) { add2($x) } begin { $a = "string"; add1($a); }
                       ~
 stdin:1:44-52: ERROR: expanded from
@@ -5290,10 +5320,10 @@ kprobe:f { if (false) { fail("always false"); } }
 
 TEST_F(TypeCheckerTest, typeof_decls)
 {
-  test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = 2; }");
+  test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = (uint8)2; }");
   test(R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = "bar"; })");
   test(R"(kprobe:f { let $y : string = "hi"; $y = "muchmuchlongerstr"; })");
-  test("begin { let $a: uint32 = 1; }");
+  test("begin { let $a: uint32 = (uint32)1; }");
   test("begin { let $a: uint32; $a = (uint8)1; }");
   test("begin { let $a: int8; $a = 1; }");
   test("begin { let $a; $a = (int32)1; }");
@@ -5331,12 +5361,13 @@ kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = "foo"; }
   test(
       R"(kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; })",
       Error{
-          R"(ERROR: Type mismatch for $y: trying to assign value of type 'uint8' when variable already has a type 'string[4]'
+          R"(ERROR: Type mismatch for $y: trying to assign value of type 'int8' when variable already has a type 'string[4]'
 kprobe:f { $x = "foo"; let $y : typeof($x); $y = 2; }
                                             ~~~~~~)" });
 
   // But ordering should not matter, as long as the scope is the same.
-  test("kprobe:f { let $x; let $y : typeof($x); $y = 2; $x = (uint8)1; }");
+  test("kprobe:f { let $x; let $y : typeof($x); $y = (uint8)2; $x = (uint8)1; "
+       "}");
   test(R"(kprobe:f { let $x; let $y : typeof($x); $y = "bar"; $x = "foo"; })");
 }
 
@@ -5373,7 +5404,7 @@ TEST_F(TypeCheckerTest, typeof_casts)
   test(
       R"(struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; })",
       Error{ R"(
-stdin:1:60-73: ERROR: Cannot cast from "uint8" to "struct foo"
+stdin:1:60-73: ERROR: Cannot cast from "int8" to "struct foo"
 struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
                                                            ~~~~~~~~~~~~~
 )" });
@@ -5531,7 +5562,7 @@ TEST_F(TypeCheckerTest, record)
   test(
       R"(begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(int64)5, y="hi")); })",
       Error{ R"(
-stdin:1:35-69: ERROR: Type mismatch for $t: trying to assign value of type 'record { .a = uint8, .b = record { .x = int64, .y = string[3] } }' when variable already has a type 'record { .a = uint8, .b = record { .x = uint8, .y = uint8 } }'
+stdin:1:35-69: ERROR: Type mismatch for $t: trying to assign value of type 'record { .a = int8, .b = record { .x = int64, .y = string[3] } }' when variable already has a type 'record { .a = int8, .b = record { .x = int8, .y = int8 } }'
 begin { $t = (a=1, b=(x=2, y=3)); $t = (a=4, b=(x=(int64)5, y="hi")); }
                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
@@ -5561,7 +5592,7 @@ TEST_F(TypeCheckerTest, record_field_access)
 TEST_F(TypeCheckerTest, record_assign_var)
 {
   class SizedType ty = CreateRecord(
-      Struct::CreateRecord({ CreateUInt8(), CreateString(6) }, { "a", "b" }));
+      Struct::CreateRecord({ CreateInt8(), CreateString(6) }, { "a", "b" }));
   auto result = test(
       R"(begin { $t = (a=1, b="str"); $t = (b="other", a=4); })");
   auto &stmts = result.ast.root->probes.at(0)->block->stmts;

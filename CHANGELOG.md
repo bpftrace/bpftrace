@@ -11,6 +11,8 @@ and this project adheres to
 #### Breaking Changes
 - stdlib: Change `pcomm` to an alias of task.real_parent.comm instead of task.group_leader.comm.
   - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
+- Subtraction and decrement ops now produce an int64 instead of a uint64.
+  - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
 #### Added
 - stdlib: add `leader_{tid,comm}` to retrieve the thread group leader.
   - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
@@ -33,6 +35,8 @@ and this project adheres to
 #### Changed
 - Improved disambiguation for cast and typeof-style expressions
   - [#5092](https://github.com/bpftrace/bpftrace/pull/5092)
+- The default type for positive integer literals is now `int8`
+  - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
 #### Deprecated
 #### Removed
 #### Fixed
@@ -44,6 +48,8 @@ and this project adheres to
   - [#5130](https://github.com/bpftrace/bpftrace/pull/5130)
 - Add bitfield support when printing full structure using "print()"
   - [#2801](https://github.com/bpftrace/bpftrace/issues/2801)
+- Fix subtraction and decrement ops not producing the correct type
+  - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
 #### Security
 #### Docs
 #### Tools

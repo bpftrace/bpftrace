@@ -145,7 +145,10 @@ bool SizedType::IsCompatible(const SizedType &t) const
     if (IsSigned() == t.IsSigned()) {
       return true;
     }
-    // If the signs don't match then then unsigned side
+    if (IsSignFlexible() || t.IsSignFlexible()) {
+      return true;
+    }
+    // If the signs don't match then the unsigned side
     // can't be promoted anymore if it's already the largest int
     if (!t.IsSigned()) {
       return t.GetSize() != 8;
@@ -676,8 +679,20 @@ std::optional<SizedType> get_promoted_int(const SizedType &currentType,
   bool newSigned = newType.IsSigned();
   auto currentSize = currentType.GetSize();
   auto newSize = newType.GetSize();
+  bool result_flexible = currentType.IsSignFlexible() &&
+                         newType.IsSignFlexible();
 
   if (currentSigned != newSigned) {
+    // If one side has flexible sign (from a non-negative integer literal),
+    // adapt it to match the other side's sign and promote by size.
+    if (currentType.IsSignFlexible() || newType.IsSignFlexible()) {
+      bool sign = currentType.IsSignFlexible() ? newSigned : currentSigned;
+      size_t promoted_size = std::max(currentSize, newSize);
+      auto result = CreateInteger(promoted_size * 8, sign);
+      result.SetSignFlexible(result_flexible);
+      return result;
+    }
+
     if (currentSigned && currentSize > newSize) {
       return CreateInteger(currentSize * 8, true);
     } else if (newSigned && newSize > currentSize) {
@@ -694,7 +709,9 @@ std::optional<SizedType> get_promoted_int(const SizedType &currentType,
 
   // Same sign - return the larger of the two
   size_t promoted_size = std::max(currentSize, newSize);
-  return CreateInteger(promoted_size * 8, currentSigned);
+  auto result = CreateInteger(promoted_size * 8, currentSigned);
+  result.SetSignFlexible(result_flexible);
+  return result;
 }
 
 std::optional<SizedType> get_promoted_castable_map(const SizedType &currentType,
@@ -895,7 +912,7 @@ bool SizedType::FitsInto(const SizedType &t) const
     return GetSize() <= t.GetSize();
 
   if (IsIntegerTy()) {
-    if (IsSigned() == t.IsSigned())
+    if (IsSigned() == t.IsSigned() || IsSignFlexible())
       return GetSize() <= t.GetSize();
 
     // Unsigned into signed requires the destination to be bigger than the

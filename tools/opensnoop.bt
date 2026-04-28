@@ -103,7 +103,7 @@ macro getcwd(@paths)
 macro printcwd(@paths)
 {
   for $j : ((uint64)0)..((uint64)max_path_depth) {
-    let $key = (tid,((((uint64)max_path_depth) - $j) - 1));
+    let $key = (tid,(uint64)((max_path_depth() - $j) - 1));
     let $name = @paths[$key];
     // If it is a mount point, there will be a '/', because
     // the '/' will be added below, so just skip this '/'.

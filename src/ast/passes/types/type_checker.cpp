@@ -723,9 +723,10 @@ void TypeChecker::visit(ArrayAccess &arr)
     }
   } else {
     const auto &idx_type = type_map_.type(arr.indexpr);
-    if (!idx_type.IsIntTy() || idx_type.IsSigned()) {
+    if (!idx_type.IsIntTy() ||
+        (idx_type.IsSigned() && !idx_type.IsSignFlexible())) {
       arr.addError() << "The array index operator [] only "
-                        "accepts positive (unsigned) integer indices. Got: "
+                        "accepts non-negative integer indices. Got: "
                      << idx_type;
     }
   }

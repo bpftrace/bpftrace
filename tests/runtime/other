@@ -337,8 +337,8 @@ PROG enum { ONE = 1, TWO = 2 }; begin { @[ONE+1] = TWO-1;  }
 EXPECT @[2]: 1
 
 NAME no symbolize enum after arithmetic mixed
-PROG enum { ONE = 1, TWO = 2 }; begin { @[ONE+1] = TWO-1; @[ONE] = ONE;  }
-EXPECT @[2]: 1
+PROG enum { ONE = 1, TWO = 2 }; begin { @[ONE+1] = TWO+1; @[ONE] = ONE;  }
+EXPECT @[2]: 3
 EXPECT @[1]: 1
 
 NAME symbolize enum in scratch variable

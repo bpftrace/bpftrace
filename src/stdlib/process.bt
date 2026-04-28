@@ -1,7 +1,7 @@
 macro __signal(expr, is_tid)
 {
   import "stdlib/process/process.bpf.c";
-  let $sig : uint64 = 0;
+  let $sig : uint32 = 0;
 
   if comptime (probetype != "kprobe" && probetype != "kretprobe" &&
                probetype != "uprobe" && probetype != "uretprobe" &&
@@ -23,17 +23,17 @@ macro __signal(expr, is_tid)
         fail("%s accepts a string literal or an integer between 1 and 64 (inclusive)",
              is_tid ? "signal_thread()" : "signal()");
       } else {
-        $sig = expr;
+        $sig = (uint32)expr;
       }
     } else {
       fail("%s accepts a string literal or a positive integer",
            is_tid ? "signal_thread()" : "signal()");
     }
-  } else if comptime (!is_unsigned_integer(expr)) {
-    fail("%s accepts a string literal or a unsigned integer",
+  } else if comptime (!is_integer(expr)) {
+    fail("%s accepts a string literal or an integer",
          is_tid ? "signal_thread()" : "signal()");
   } else {
-    $sig = expr;
+    $sig = (uint32)expr;
   }
 
   if ($sig == 0 || $sig > 64) {
@@ -41,8 +41,8 @@ macro __signal(expr, is_tid)
            is_tid ? "signal_thread()" : "signal()", $sig);
   } else {
     $ret = comptime is_tid
-           ? __signal_thread((uint32)$sig)
-           : __signal_process((uint32)$sig);
+           ? __signal_thread($sig)
+           : __signal_process($sig);
     if ($ret != 0) {
       warnf("signal call failed with error %d", $ret);
     }

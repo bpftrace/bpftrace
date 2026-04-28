@@ -434,12 +434,19 @@ begin { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }
 ```
 
 Integers are by default represented as the smallest possible
-type, e.g. `1` is a `uint8` and `-1` is an `int8`. However integers,
-scratch variables, and map keys/values will be automatically upcast
-when necessary, e.g.
-
+signed type, e.g. `0`, `1`, and `-1` are all `int8`.
+If an integer literal exceeds the largest `int64` then it's a `uint64`.
+Positive integer literals are flexible though.
+For this code:
 ```
-$a = 1; // starts as uint8
+$a = 1;
+$a = (uint64)2;
+```
+`$a` ends up being a `uint64` as bpftrace can determine this statically.
+
+Scratch variables and map keys/values will be automatically upcast when necessary, e.g.
+```
+$a = 1; // starts as int8
 $b = -1000; // starts as int16
 $a = $b; // $a now becomes an int16
 
@@ -742,13 +749,18 @@ The following operators are available for integer arithmetic:
 
 Operations between a signed and an unsigned integer are allowed providing
 bpftrace can statically prove a safe conversion is possible. If safe conversion
-is not guaranteed, the operation is undefined behavior and a corresponding
-warning will be emitted.
+is not guaranteed, the operation is undefined behavior.
 
 If the two operands are different size, the smaller integer is implicitly
 promoted to the size of the larger one. Sign is preserved in the promotion.
 For example, `(uint32)5 + (uint8)3` is converted to `(uint32)5 + (uint32)3`
 which results in `(uint32)8`.
+
+Subtraction (as well as decrement below) always yields a signed integer type
+as this is equivalent to addition with a signed (negative) integer, e.g.
+these two assignments yield the same type (`int64`):
+`$a = (uint64)1 - (uint64)2; $b = (uint64)1 + (-2)`.
+To maintain an unsigned type, cast the result, e.g. `$a = (uint64)((uint64)1 - (uint64)2);`.
 
 Pointers may be used with arithmetic operators but only for addition and
 subtraction. For subtraction, the pointer must appear on the left side of the

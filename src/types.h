@@ -208,6 +208,7 @@ private:
                      // owned by the `StructManager`.
   AddrSpace as_ = AddrSpace::none;
   bool is_signed_ = false;
+  bool sign_flexible_ = false;
   bool is_anon_ = false;
   bool ctx_ = false;                              // Is bpf program context
   std::unordered_set<std::string> btf_type_tags_; // Only populated for
@@ -306,6 +307,16 @@ public:
   }
 
   bool IsSigned() const;
+
+  void SetSignFlexible(bool flexible)
+  {
+    sign_flexible_ = flexible;
+  }
+
+  bool IsSignFlexible() const
+  {
+    return sign_flexible_;
+  }
 
   size_t GetSize() const
   {
