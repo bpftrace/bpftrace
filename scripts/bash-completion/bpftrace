@@ -17,10 +17,11 @@ _bpftrace()
 
   _init_completion -- "$@" || return
 
-  local all_args='-B -f -o -e -h --help -I --include -l -p -c
-                  --usdt-file-activation --unsafe -q --info -k
-                  -V --version --no-warnings -v --dry-run -d
-                  --emit-elf --emit-llvm'
+  local all_args='-B -f -o -e -h --help -I --include -l -p --dwarf-pid -c
+                  --usdt-file-activation --unsafe -q --quiet
+                  --info -k --warnings -V --version --no-warnings -v --dry-run
+                  --mode --test --bench --probe-filter --traceable-functions
+                  -d --debug --debuginfo --emit-elf --emit-llvm'
 
   if [[ $cur == -* ]]; then
     argument=$cur
@@ -39,21 +40,26 @@ _bpftrace()
     COMPREPLY=( $(compgen -c -- ${cur}) )
     return 0
     ;;
-  -o | --include | --emit-elf | --emit-llvm)
+  -o | --include | --emit-elf | --emit-llvm | --traceable-functions | --debuginfo)
     _bpftrace_filedir
+    return 0
+    ;;
+  --mode)
+    COMPREPLY=( $(compgen -W "codegen compiler-bench bench test format" -- ${cur}) )
     return 0
     ;;
   -I)
     _bpftrace_filedir -d
     return 0
     ;;
-  -p)
+  -p | --dwarf-pid)
     local PIDS=$(cd /proc && echo [0-9]*)
     COMPREPLY=( $(compgen -W "$PIDS" -- ${cur}) )
     return 0
     ;;
-  -d)
-    COMPREPLY=( $(compgen -W "all ast codegen codegen-opt dis libbpf verifier" -- ${cur}) )
+  -d | --debug)
+    debug_stage=( all ast types codegen codegen-opt dis parse libbpf verifier )
+    COMPREPLY=( $(compgen -W "${debug_stage[*]}" -- ${cur}) )
     return 0
     ;;
   -h | --help | -V | --version | --info)
@@ -65,8 +71,9 @@ _bpftrace()
   if [[ ! ${argument} ]]; then
     _bpftrace_filedir
   else
-    # Just drop -e content completion, because it's very complex.
-    if ([[ ${cur} == -* ]] || [[ -z ${cur} ]]) && [[ ${prev} != -e ]]; then
+    # Just drop -e,--probe-filter content completion, because it's very complex.
+    if ([[ ${cur} == -* ]] || [[ -z ${cur} ]]) &&
+       [[ ! " -e --probe-filter " =~ " ${prev} " ]]; then
       COMPREPLY=( $(compgen -W "${all_args}" -- ${cur}) )
       return
     fi
