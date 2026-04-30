@@ -1,12 +1,9 @@
 #pragma once
 
+#include "strings.h"
 #include <linux/types.h>
 
 typedef char syscall_str[64];
-
-// A constant whose low-order bits are all 1 and is greater than the maximum
-// syscall number.
-#define NR_SYSCALL_ALIGN_BITS 0x3ff
 
 // Syscall table for Linux x86_64.
 #ifdef __TARGET_ARCH_x86
@@ -429,7 +426,7 @@ static syscall_str syscall_names[] = {
   [545] = "execveat",
   [546] = "preadv2",
   [547] = "pwritev2",
-  [NR_SYSCALL_ALIGN_BITS] = "",
+  [SYSCALL_INDEX_MASK] = "",
 };
 #elif defined(__TARGET_ARCH_arm)
 static syscall_str syscall_names[] = {
@@ -867,7 +864,7 @@ static syscall_str syscall_names[] = {
   [467] = "open_tree_attr",
   [468] = "file_getattr",
   [469] = "file_setattr",
-  [NR_SYSCALL_ALIGN_BITS] = "",
+  [SYSCALL_INDEX_MASK] = "",
 };
 #elif defined(__TARGET_ARCH_mips)
 static syscall_str syscall_names[] = {
@@ -1244,7 +1241,7 @@ static syscall_str syscall_names[] = {
   [467] = "open_tree_attr",
   [468] = "file_getattr",
   [469] = "file_setattr",
-  [NR_SYSCALL_ALIGN_BITS] = "",
+  [SYSCALL_INDEX_MASK] = "",
 };
 #elif defined(__TARGET_ARCH_powerpc)
 static syscall_str syscall_names[] = {
@@ -1796,7 +1793,7 @@ static syscall_str syscall_names[] = {
   [467] = "open_tree_attr",
   [468] = "file_getattr",
   [469] = "file_setattr",
-  [NR_SYSCALL_ALIGN_BITS] = "",
+  [SYSCALL_INDEX_MASK] = "",
 };
 #elif defined(__TARGET_ARCH_s390)
 static syscall_str syscall_names[] = {
@@ -2263,7 +2260,7 @@ static syscall_str syscall_names[] = {
   [467] = "open_tree_attr",
   [468] = "file_getattr",
   [469] = "file_setattr",
-  [NR_SYSCALL_ALIGN_BITS] = "",
+  [SYSCALL_INDEX_MASK] = "",
 };
 #elif defined(__TARGET_ARCH_arm64) || defined(__TARGET_ARCH_riscv) ||          \
     defined(__TARGET_ARCH_loongarch)
@@ -2598,13 +2595,13 @@ static syscall_str syscall_names[] = {
   [467] = "open_tree_attr",
   [468] = "file_getattr",
   [469] = "file_setattr",
-  [NR_SYSCALL_ALIGN_BITS] = "",
+  [SYSCALL_INDEX_MASK] = "",
 };
 #else
 // All architectures supported by bpftrace are listed above. If the architecture
 // is still not supported, the unknown system call will be returned.
 static syscall_str syscall_names[] = {
-  [NR_SYSCALL_ALIGN_BITS] = "",
+  [SYSCALL_INDEX_MASK] = "",
 };
 #endif
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "strings.h"
+
 typedef char sig_str[64];
 
 // See strsignal(3)
@@ -69,6 +71,7 @@ static sig_str signals[] = {
   [62] = "Real-time signal 28",
   [63] = "Real-time signal 29",
   [64] = "Real-time signal 30", // SIGRTMAX
+  [SIGNAL_INDEX_MASK] = "",
 };
 
 static sig_str unknown_signal = "N/A";

@@ -71,7 +71,9 @@ int __strerror(int errno, err_str *out) {
   if (errno < 0) {
     errno = -errno;
   }
-  if (errno >= 0 && errno <= EHWPOISON) {
+  if (errno >= 0 && errno < ERROR_INDEX_MASK) {
+    errno &= ERROR_INDEX_MASK;
+
     // The array 'errors' is not fully populated, skip the empty 'errno'.
     //
     // There is another benefit to doing this. BPF 512-byte stack limit.
@@ -95,7 +97,9 @@ int __strerror(int errno, err_str *out) {
 }
 
 void __signal_name(int sig, sig_str *out) {
-  if (sig >= 0 && sig <= 64) {
+  if (sig >= 0 && sig < SIGNAL_INDEX_MASK) {
+    sig &= SIGNAL_INDEX_MASK;
+
     if (signals[sig][0] == '\0') {
       __builtin_memcpy(out, &unknown_signal, sizeof(*out));
     } else {
@@ -107,11 +111,8 @@ void __signal_name(int sig, sig_str *out) {
 }
 
 int __syscall_name(int n, syscall_str *out) {
-  if (n >= 0 && n < NR_SYSCALL_ALIGN_BITS) {
-    // To resolve the verifier's complaint that the off range is too large,
-    // resulting in "possible" access beyond the range of syscall_names[],
-    // we use a constant value to constrain n to help the verifier.
-    n &= NR_SYSCALL_ALIGN_BITS;
+  if (n >= 0 && n < SYSCALL_INDEX_MASK) {
+    n &= SYSCALL_INDEX_MASK;
 
     // System call numbers are not sequential, so when syscall_names is empty,
     // we return "unknown system call".

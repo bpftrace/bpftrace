@@ -1,5 +1,6 @@
 #pragma once
 
+#include "strings.h"
 #include <linux/types.h>
 
 typedef char err_str[64];
@@ -139,6 +140,7 @@ static err_str errors[] = {
   [ENOTRECOVERABLE] = "State not recoverable",
   [ERFKILL] = "Operation not possible due to RF-kill",
   [EHWPOISON] = "Memory page has hardware error",
+  [ERROR_INDEX_MASK] = "",
 };
 
 static err_str unknown_error = "Unknown error";
