@@ -79,9 +79,30 @@ Program *Parser::parse_program()
     consume_layout();
   }
 
-  // Preamble: config and imports must appear after the header but they can be
-  // in any order relative to each other.
+  // C definitions: #include, struct/union/enum definitions.
+  // Must appear after header but before config/imports/probes.
   CStatementList c_stmts;
+  consume_layout();
+  while (!at_end() && !has_errors()) {
+    // C preprocessor directives: #include, #define, etc.
+    if (peek() == '#' && peek(1) != '!') {
+      c_stmts.push_back(parse_c_preprocessor());
+      consume_layout();
+      continue;
+    }
+    // C struct/union/enum definitions: struct Name { ... }
+    auto kw = peek_keyword();
+    if ((kw == "struct" || kw == "union" || kw == "enum") &&
+        looks_like_c_definition()) {
+      c_stmts.push_back(parse_c_definition());
+      consume_layout();
+      continue;
+    }
+    break;
+  }
+
+  // Config and imports: must appear after c_definitions but they can be
+  // in any order relative to each other.
   Config *config = nullptr;
 
   while (!at_end() && !has_errors()) {
@@ -102,27 +123,6 @@ Program *Parser::parse_program()
       if (imp) {
         imports.push_back(imp);
       }
-      consume_layout();
-      continue;
-    }
-    break;
-  }
-
-  // C definitions: #include, struct/union/enum definitions.
-  // Must appear after config/imports but before probes/macros/functions.
-  consume_layout();
-  while (!at_end() && !has_errors()) {
-    // C preprocessor directives: #include, #define, etc.
-    if (peek() == '#' && peek(1) != '!') {
-      c_stmts.push_back(parse_c_preprocessor());
-      consume_layout();
-      continue;
-    }
-    // C struct/union/enum definitions: struct Name { ... }
-    auto kw = peek_keyword();
-    if ((kw == "struct" || kw == "union" || kw == "enum") &&
-        looks_like_c_definition()) {
-      c_stmts.push_back(parse_c_definition());
       consume_layout();
       continue;
     }

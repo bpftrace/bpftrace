@@ -2778,6 +2778,12 @@ TEST(Parser, config)
 
   test("config = {} begin {}",
        Program().WithConfig(Config({})).WithProbe(Probe({ "begin" }, {})));
+
+  test("#include <stdio.h>\nconfig = { blah = 5 } begin {}",
+       Program()
+           .WithCStatements({ CStatement("#include <stdio.h>") })
+           .WithConfig(Config({ AssignConfigVarStatement("blah", 5UL) }))
+           .WithProbe(Probe({ "begin" }, {})));
 }
 
 TEST(Parser, config_error)
@@ -2842,6 +2848,13 @@ config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }
 stdin:1:27-28: ERROR: syntax: expected '{'
 BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }
                           ~
+)");
+
+  test_parse_failure("config = { blah = 5 }\n#include <stdio.h>\nbegin {}",
+                     R"(
+stdin:2-3: ERROR: syntax: C definitions must appear before probes and functions
+#include <stdio.h>
+begin {}
 )");
 }
 
