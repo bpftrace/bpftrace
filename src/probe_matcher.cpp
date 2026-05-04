@@ -462,7 +462,18 @@ FuncParamLists ProbeMatcher::get_params_for_matches(
   switch (probe_type) {
     case ProbeType::tracepoint:
       return get_tracepoints_params(matches);
-    case ProbeType::fentry:
+    case ProbeType::fentry: {
+      auto params = bpftrace_->btf_->get_params(matches);
+      // fentry (kfunc) does not have a return value, so strip the retval
+      // entry that get_params() unconditionally appends. Inspect the last
+      // element rather than blindly popping so a future change in
+      // get_params() can't silently drop a real parameter.
+      for (auto& [name, p] : params) {
+        if (!p.empty() && p.back().ends_with(" retval"))
+          p.pop_back();
+      }
+      return params;
+    }
     case ProbeType::fexit:
       return bpftrace_->btf_->get_params(matches);
     case ProbeType::rawtracepoint:

@@ -36,6 +36,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix kfunc/fentry probe listing incorrectly showing a `retval` parameter
+  - [#5147](https://github.com/bpftrace/bpftrace/pull/5147)
 - stdlib: Fixed strerror() and signal_name() failing BPF verification
   - [#5145](https://github.com/bpftrace/bpftrace/pull/5145)
 - Fix boolean to integer cast on big-endian architectures
