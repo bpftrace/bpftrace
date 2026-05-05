@@ -453,9 +453,23 @@ $a = $b; // $a now becomes an int16
 $c = (uint64)1;
 $d = (int64)-1;
 
-$c = $d; // ERROR: type mismatch because there isn't a larger type
-         // that fits both.
+// $c is a int64 below
+// an implicit cast is added to the assignment -> (int64)$d
+// and a warning about the sign mismatch is surfaced
+$c = $d;
 ```
+
+Note: If there is ever an integer sign mismatch that can't be upcast to a type that can hold both, the resulting type is an `int64`.
+This may lead to undefined behavior, or, most likely, a large number being printed as a negative one.
+
+However, implicit casts of integer literals still fail when the literal is outside the
+destination type's range. For example, `let $a: uint16 = -1;` requires an
+explicit cast: `let $a: uint16 = (uint16)-1;`. Though this:
+```
+$b = -1;
+let $a: uint16 = $b;
+```
+only yields a warning.
 
 Additionally, when vmlinux BTF is available, bpftrace supports
 casting to some of the kernel's fixed integer types:

@@ -2657,27 +2657,98 @@ enum named { a = 1, b } kprobe:f { $a = "str"; print((enum named)$a); }
 )" });
 }
 
-TEST_F(TypeCheckerTest, signed_int_comparison_warnings)
+TEST_F(TypeCheckerTest, implicit_int_cast_warnings)
 {
-  std::string cmp_sign = "comparison of integers of different signs";
-  test("kretprobe:f /-1 < retval/ {}", Warning{ cmp_sign });
-  test("kretprobe:f /-1 > retval/ {}", Warning{ cmp_sign });
-  test("kretprobe:f /-1 >= retval/ {}", Warning{ cmp_sign });
-  test("kretprobe:f /-1 <= retval/ {}", Warning{ cmp_sign });
-  test("kretprobe:f /-1 != retval/ {}", Warning{ cmp_sign });
-  test("kretprobe:f /-1 == retval/ {}", Warning{ cmp_sign });
-  test("kretprobe:f /retval > -1/ {}", Warning{ cmp_sign });
-  test("kretprobe:f /retval < -1/ {}", Warning{ cmp_sign });
+  std::string cast_warn = "being cast to type";
 
-  // These should not trigger a warning
-  test("kretprobe:f /(uint64)1 < retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /(uint64)1 > retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /(uint64)1 >= retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /(uint64)1 <= retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /(uint64)1 != retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /(uint64)1 == retval/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /retval > (uint64)1/ {}", NoWarning{ cmp_sign });
-  test("kretprobe:f /retval < (uint64)1/ {}", NoWarning{ cmp_sign });
+  test("begin { $a = (uint64)1; $a = (int64)2; }", Warning{ cast_warn });
+  test("begin { $a = (int64)1; $a = (uint64)2; }", Warning{ cast_warn });
+  test("begin { $a = -1; $a = (uint64)2; }", Warning{ cast_warn });
+  test("begin { $a = 1; $a = -1; $a = (uint64)2; }", Warning{ cast_warn });
+
+  test("begin { $a = (uint32)1; $a = (int32)2; }", NoWarning{ cast_warn });
+  test("begin { $a = (uint16)1; $a = (int16)2; }", NoWarning{ cast_warn });
+  test("begin { $a = 1; $a = (uint64)2; }", NoWarning{ cast_warn });
+  test("begin { $a = 1; $a = (int64)2; }", NoWarning{ cast_warn });
+
+  test("begin { @a = (uint64)1; @a = (int64)2; }", Warning{ cast_warn });
+  test("begin { @a = (int64)1; @a = (uint64)2; }", Warning{ cast_warn });
+  test("begin { @a = -1; @a = (uint64)2; }", Warning{ cast_warn });
+
+  test("begin { @a = (uint32)1; @a = (int32)2; }", NoWarning{ cast_warn });
+  test("begin { @a = 1; @a = (uint64)2; }", NoWarning{ cast_warn });
+  test("begin { @a = 0; @a--; @a++; }", NoWarning{ cast_warn });
+
+  test("begin { @a[(uint64)1] = 1; @a[(int64)2] = 1; }", Warning{ cast_warn });
+  test("begin { @a[(int64)1] = 1; @a[(uint64)2] = 1; }", Warning{ cast_warn });
+  test("begin { @a[-1] = 1; @a[(uint64)2] = 1; }", Warning{ cast_warn });
+
+  test("begin { @a[(uint32)1] = 1; @a[(int32)2] = 1; }",
+       NoWarning{ cast_warn });
+  test("begin { @a[1] = 1; @a[(uint64)2] = 1; }", NoWarning{ cast_warn });
+
+  test("begin { print(if (1) { (uint64)1 } else { (int64)2 }); }",
+       Warning{ cast_warn });
+  test("begin { print(if (1) { (int64)1 } else { (uint64)2 }); }",
+       Warning{ cast_warn });
+
+  test("begin { print(if (1) { (uint32)1 } else { (int32)2 }); }",
+       NoWarning{ cast_warn });
+  test("begin { print(if (1) { 1 } else { (uint64)2 }); }",
+       NoWarning{ cast_warn });
+
+  test("begin { let $a: uint64 = (int64)1; }", Warning{ cast_warn });
+  test("begin { let $a: int64 = (uint64)1; }", Warning{ cast_warn });
+
+  test("begin { let $a: uint64 = 1; }", NoWarning{ cast_warn });
+  test("begin { let $a: int32 = (uint32)1; }", Warning{ cast_warn });
+  // Smoke test for explict bad casting
+  test("begin { let $a: uint16 = (uint16)-1; }", NoWarning{ cast_warn });
+
+  test("begin { $a = (uint64)1 + (int64)2; }", Warning{ cast_warn });
+  test("begin { $a = (uint64)1 - 1; }", Warning{ cast_warn });
+  test("begin { $a = (uint64)1 == (int64)-1; }", Warning{ cast_warn });
+  test("begin { @a = sum(-1); $a = (uint64)1 == @a; }", Warning{ cast_warn });
+  test("begin { @a = sum(-1); $a = @a == (uint64)1; }", Warning{ cast_warn });
+
+  test("begin { $a = (uint32)1 + (int32)2; }", NoWarning{ cast_warn });
+  test("begin { $a = (int64)(uint64)1 - 1; }", NoWarning{ cast_warn });
+  test("begin { $a = 1 == -1; }", NoWarning{ cast_warn });
+  test("begin { $a = 1 == (int64)-1; }", NoWarning{ cast_warn });
+  test("begin { $a = (uint32)1 == (int32)-1; }", NoWarning{ cast_warn });
+  test("begin { @a = sum(-1); $a = 1 == @a; }", NoWarning{ cast_warn });
+  test("begin { @a = sum(-1); $a = @a == 1; }", NoWarning{ cast_warn });
+  test("begin { @a = sum(1); $a = @a == (uint16)1; }", NoWarning{ cast_warn });
+  test("begin { @a = sum(-1); $a = @a == (uint16)1; }", NoWarning{ cast_warn });
+  test("begin { @a = sum((uint64)1); @b = count(); $a = @a == @b; }",
+       NoWarning{ cast_warn });
+
+  test(R"(begin { $a = ((uint64)1, "hi"); $a = ((int64)2, "hello"); })",
+       Warning{ cast_warn });
+  test(R"(begin { $a = (x=(uint64)1, y="hi"); $a = (x=(int64)2, y="hello"); })",
+       Warning{ cast_warn });
+  test(
+      R"(begin { $a = (1, ("hi", (uint64)2)); $a = (1, ("hello", (int64)3)); })",
+      Warning{ cast_warn });
+
+  test(R"(begin { $a = ((uint32)1, "hi"); $a = ((int32)2, "hello"); })",
+       NoWarning{ cast_warn });
+  test(R"(begin { $a = (1, "hi"); $a = ((uint64)2, "hello"); })",
+       NoWarning{ cast_warn });
+  test(R"(begin { $a = (x=(uint32)1, y="hi"); $a = (x=(int32)2, y="hello"); })",
+       NoWarning{ cast_warn });
+  test(R"(begin { $a = (x=1, y="hi"); $a = (x=(uint64)2, y="hello"); })",
+       NoWarning{ cast_warn });
+  test(
+      R"(begin { $a = (1, ("hi", (uint32)2)); $a = (1, ("hello", (int32)3)); })",
+      NoWarning{ cast_warn });
+}
+
+TEST_F(TypeCheckerTest, implicit_int_cast_literal_errors)
+{
+  test("begin { let $a: uint16 = -1; }", Error{});
+  test("begin { let $a: uint8 = 10000000; }", Error{});
+  test("fn f(): uint8 { return 10000000; }", Error{});
 }
 
 TEST_F(TypeCheckerTest, unsigned_literal_arithmetic_warnings)
@@ -3020,17 +3091,12 @@ TEST_F(TypeCheckerTest, mixed_int_var_assignments)
   test("kprobe:f { $x = (int16)1; $x = 100000; }");
   test("kprobe:f { $a = (uint16)5; $x = (uint8)0; $x = $a; }");
   test("kprobe:f { $a = (int8)-1; $x = (uint8)0; $x = $a; }");
+  test("kprobe:f { $a = -1; $a = (uint64)2; }");
+  test("kprobe:f { $a = (int64)1; $a = (uint64)2; }");
+  test("kprobe:f { $a = 9223372036854775807; $a = -2147483648 }");
 
-  // Errors
-  test("begin { $a = -1; $a = (uint64)2; }", Error{});
-  test("begin { $a = (int64)1; $a = (uint64)2; }", Error{});
-  test("begin { $a = -1; $a = 9223372036854775808; }", Error{});
-  test("begin { $a = 9223372036854775807; $a = -2147483648 }");
-  test("kprobe:f { $x = -1; $x = 10223372036854775807; }", Error{ R"(
-stdin:1:21-46: ERROR: Type mismatch for $x: trying to assign value of type 'uint64' when variable already has a type 'int8'
-kprobe:f { $x = -1; $x = 10223372036854775807; }
-                    ~~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
+  // We can prove statically that these don't fit in the same type
+  test("kprobe:f { $a = -1; $a = 9223372036854775808; }", Error{});
 
   test("begin { $x = (int8)1; $x = 5; }",
        ExpectedAST{ Program().WithProbe(
@@ -3085,25 +3151,10 @@ TEST_F(TypeCheckerTest, mixed_int_like_map_assignments)
   test("kprobe:f { @x = max((uint32)1); @x = max(-1); }");
   test("kprobe:f { @x = stats(1); @x = stats(-1); }");
   test("kprobe:f { @x = stats((uint32)1); @x = stats(-1); }");
-
-  test("kprobe:f { @x = sum((uint64)1); @x = sum(-1); }", Error{ R"(
-ERROR: Type mismatch for sum: trying to call function with type 'int8' when it already has a type 'uint64'
-)" });
-  test("kprobe:f { @x = min((uint64)1); @x = min(-1); }", Error{ R"(
-ERROR: Type mismatch for min: trying to call function with type 'int8' when it already has a type 'uint64'
-)" });
-  test("kprobe:f { @x = max((uint64)1); @x = max(-1); }", Error{ R"(
-ERROR: Type mismatch for max: trying to call function with type 'int8' when it already has a type 'uint64'
-)" });
-  test("kprobe:f { @x = avg((uint64)1); @x = avg(-1); }", Error{ R"(
-ERROR: Type mismatch for avg: trying to call function with type 'int8' when it already has a type 'uint64'
-)" });
-  // One errror test to validate the source location
-  test("kprobe:f { @x = stats((uint64)1); @x = stats(-1); }", Error{ R"(
-ERROR: Type mismatch for stats: trying to call function with type 'int8' when it already has a type 'uint64'
-kprobe:f { @x = stats((uint64)1); @x = stats(-1); }
-                                       ~~~~~~~~~
-)" });
+  test("kprobe:f { @x = sum((uint64)1); @x = sum(-1); }");
+  test("kprobe:f { @x = min((uint64)1); @x = min(-1); }");
+  test("kprobe:f { @x = max((uint64)1); @x = max(-1); }");
+  test("kprobe:f { @x = avg((uint64)1); @x = avg(-1); }");
 }
 
 TEST_F(TypeCheckerTest, mixed_int_map_access)
@@ -3115,55 +3166,21 @@ TEST_F(TypeCheckerTest, mixed_int_map_access)
   test("kprobe:f { @x[(uint16)1] = 1; @x[(uint64)2] }");
   test("kprobe:f { @x[(uint64)1] = 1; @x[(uint16)2] }");
   test("kprobe:f { @x[(uint16)1] = 1; @x[2] }");
+  test("kprobe:f { @x[(uint8)1] = 1; @x[10000000] }");
   test("kprobe:f { @x[(uint16)1] = 1; @x[10223372036854775807] }");
   test("kprobe:f { @x[1] = 1; @x[9223372036854775807] }");
   test("kprobe:f { @x[1] = 1; @x[-9223372036854775808] }");
   test("kprobe:f { @x[(uint8)1] = 1; @x[(uint64)1] }");
   test("kprobe:f { @x[(uint32)-1] = 1; @x[1] }");
   test("kprobe:f { @x[-1] = 1; @x[(uint32)1] }");
+  test("kprobe:f { @x[(uint64)1] = 1; @x[-1] }");
+  test("kprobe:f { @x[-1] = 1; @x[(uint64)1] }");
 
-  test("kprobe:f { @x[-1] = 1; @x[10223372036854775807] }", Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int8'
-kprobe:f { @x[-1] = 1; @x[10223372036854775807] }
-                       ~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("kprobe:f { @x[(uint64)1] = 1; @x[-1] }", Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: 'int8' when map expects arguments: 'uint64'
-kprobe:f { @x[(uint64)1] = 1; @x[-1] }
-                              ~~~~~~
-)" });
-  test("kretprobe:f { @x[-1] = 1; @x[(uint64)1] }", Error{ R"(
-ERROR: Argument mismatch for @x: trying to access with arguments: 'uint64' when map expects arguments: 'int8'
-)" });
+  test("kprobe:f { @x[-1] = 1; @x[10223372036854775807] }", Error{});
 }
 
 TEST_F(TypeCheckerTest, mixed_int_like_binop)
 {
-  test("kprobe:f { $a = 1 == -1; }", NoWarning{ "comparison of integers" });
-  test("kprobe:f { $a = 1 == (int64)-1; }",
-       NoWarning{ "comparison of integers" });
-  test("kprobe:f { $a = (uint32)1 == (int32)-1; }",
-       NoWarning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(-1); $a = 1 == @a; }",
-       NoWarning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(-1); $a = @a == 1; }",
-       NoWarning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(1); $a = @a == (uint16)1; }",
-       NoWarning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(-1); $a = @a == (uint16)1; }",
-       NoWarning{ "comparison of integers" });
-  test("kprobe:f { @a = sum((uint64)1); @b = count(); $a = @a == @b; }",
-       NoWarning{ "comparison of integers" });
-
-  test("kprobe:f { $a = (uint64)1 == (int64)-1; }",
-       Warning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(-1); $a = (uint64)1 == @a; }",
-       Warning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(-1); $a = @a == (uint64)1; }",
-       Warning{ "comparison of integers" });
-  test("kprobe:f { @a = sum(-1); @b = count(); $a = @a == @b; }",
-       Warning{ "comparison of integers" });
-
   // Both are additionally casted to int16
   test("kprobe:f { $a = (uint8)1 == (int8)-1; }",
        ExpectedAST{ Program().WithProbe(Probe(
@@ -3729,12 +3746,7 @@ TEST_F(TypeCheckerTest, tuple)
 
   test(R"(begin { $t = (1, (2, 3)); $t = (4, ((int64)5, 6)); })");
 
-  test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); })",
-       Error{ R"(
-stdin:1:33-57: ERROR: Type mismatch for $t: trying to assign value of type '(int8,(uint64,int8))' when variable already has a type '(int8,(int8,int8))'
-begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); }
-                                ~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
+  test(R"(begin { $t = (1, ((int8)2, 3)); $t = (4, ((uint64)5, 6)); })");
 
   test(R"(begin { $t = ((uint8)1, (2, 3)); $t = (4, (5, 6)); })");
   test(R"(begin { @t = (1, 2, "hi"); @t = (3, 4, "hellolongstr"); })");
@@ -3827,15 +3839,11 @@ TEST_F(TypeCheckerTest, mixed_tuple)
   test(
       R"(begin { print(if (pid == 1) { ((int16)1, "hi") } else { ((uint16)2, "hellostr") }); })");
 
-  test(R"(begin { $a = ((int64)1, "hi"); $a = ((uint64)2, "hellostr"); })",
-       Error{});
-  test(R"(begin { @a[(int64)1, "hi"] = 1; @a[(uint64)2, "hellostr"] = 2; })",
-       Error{});
-  test(R"(begin { @a = ((int64)1, "hi"); @a = ((uint64)2, "hellostr"); })",
-       Error{});
+  test(R"(begin { $a = ((int64)1, "hi"); $a = ((uint64)2, "hellostr"); })");
+  test(R"(begin { @a[(int64)1, "hi"] = 1; @a[(uint64)2, "hellostr"] = 2; })");
+  test(R"(begin { @a = ((int64)1, "hi"); @a = ((uint64)2, "hellostr"); })");
   test(
-      R"(begin { print(if (pid == 1) { ((int64)1, "hi") } else { ((uint64)2, "hellostr") }); })",
-      Error{});
+      R"(begin { print(if (pid == 1) { ((int64)1, "hi") } else { ((uint64)2, "hellostr") }); })");
 
   // Test inserted casts
   test(R"(begin { $a = ((int16)1, "hi"); $a = ((uint16)2, "hellostr"); })",
@@ -4283,7 +4291,7 @@ TEST_F(TypeCheckerTest, subprog_builtin)
 {
   test("fn f(): void { print(\"Hello world\"); }");
   test("fn f(): uint64 { return nsecs; }");
-  test("fn f(): uint8 { return (uint64)2; }", Error{});
+  test("fn f(): uint8 { return \"bob\"; }", Error{});
 }
 
 TEST_F(TypeCheckerTest, subprog_builtin_disallowed)
@@ -4881,36 +4889,16 @@ TEST_F(TypeCheckerTest, variable_declarations)
   test("struct x { int a; } begin { let $a: struct x[10]; }");
   test("begin { if (pid) { let $x = 1; } $x = 2; }");
   test("begin { if (pid) { let $x = 1; } else { let $x = 1; } let $x = 1; }");
+  // Explicit casts, are allowed for typed declarations.
+  test("begin { let $a: uint16 = (uint16)-1; }");
+  test("begin { let $a: uint8 = (uint8)10000; }");
 
-  test("begin { let $a: uint16; $a = -1; }", Error{ R"(
-ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
-begin { let $a: uint16; $a = -1; }
-                        ~~~~~~~
-)" });
-
-  test("begin { let $a: uint8 = (uint8)1; $a = 10000; }", Error{ R"(
-stdin:1:35-45: ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already has a type 'uint8'
-begin { let $a: uint8 = (uint8)1; $a = 10000; }
-                                  ~~~~~~~~~~
-)" });
-
-  test("begin { let $a: int8 = 1; $a = -10000; }", Error{ R"(
-stdin:1:27-38: ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already has a type 'int8'
-begin { let $a: int8 = 1; $a = -10000; }
-                          ~~~~~~~~~~~
-)" });
-
-  test("begin { let $a: int8; $a = 10000; }", Error{ R"(
-ERROR: Type mismatch for $a: trying to assign value of type 'int16' when variable already has a type 'int8'
-begin { let $a: int8; $a = 10000; }
-                      ~~~~~~~~~~
-)" });
-
-  test("begin { let $a: uint16 = -1; }", Error{ R"(
-ERROR: Type mismatch for $a: trying to assign value of type 'int8' when variable already has a type 'uint16'
-begin { let $a: uint16 = -1; }
-        ~~~~~~~~~~~~~~~~~~~
-)" });
+  // Out-of-range integer literals still require an explicit cast.
+  test("begin { let $a: uint16; $a = -1; }", Error{});
+  test("begin { let $a: uint8 = (uint8)1; $a = 10000; }", Error{});
+  test("begin { let $a: int8 = 1; $a = -10000; }", Error{});
+  test("begin { let $a: int8; $a = 10000; }", Error{});
+  test("begin { let $a: uint16 = -1; }", Error{});
 
   test(R"(begin { let $a: sum_t; })", Error{ R"(
 stdin:1:17-22: ERROR: Invalid variable declaration type: sum_t
@@ -5332,18 +5320,18 @@ TEST_F(TypeCheckerTest, typeof_decls)
   test("begin { let $a: int32 = 0; }");
   test(
       R"(begin { @a["hi", 2] = 1; let $x: typeof(@a) = ("hello", (int16)1); @a["hello", (int32)2] = 2; })");
+  // Integer types will be cast to the declaration type
+  test("begin { let $a: int8 = 1; $a = (int32)1; }");
+  test("begin { let $a: uint8; $a = (int8)1; }");
+  test("begin { $y = (int8)1; let $a: uint8; $a = $y; }");
+  test(
+      R"(begin { @a["hi", 2] = 1; let $x: typeof(@a) = ("hello",
+        (uint64)1); @a["hello", (int32)2] = 2; })");
 
   // These types should be enforced.
-  test("begin { let $a: int8 = 1; $a = (int32)1; }", Error{});
-  test("begin { let $a: uint8; $a = (int8)1; }", Error{});
-  test("begin { $y = (int8)1; let $a: uint8; $a = $y; }", Error{});
   test("begin { let $a: uint8; $a = -1; }", Error{});
   test(R"(kprobe:f { let $x: string[3] = "helloooooo"; })", Error{});
   test(R"(kprobe:f { let $x: string[3] = "hi"; $x = "helloooooo"; })", Error{});
-  test(
-      R"(begin { @a["hi", 2] = 1; let $x: typeof(@a) = ("hello",
-        (uint64)1); @a["hello", (int32)2] = 2; })",
-      Error{});
 
   test(R"(kprobe:f { $a = (1, "hi"); let $x: typeof($a) = (1, "helllooo");
     })",
@@ -5626,19 +5614,14 @@ TEST_F(TypeCheckerTest, record_mixed_types)
       R"(begin { print(if (pid == 1) { (x=(int32)1, y="hi") } else { (x=(uint16)2, y="hellostr") }); })");
   test(
       R"(begin { $a = (y="hi", x=(a=(uint8)1, b=(uint32)2)); $a = (x=(b=(uint8)3, a=(int16)5), y="hellostr"); })");
-
   test(
-      R"(begin { $a = (x=(int64)1, y="hi"); $a = (x=(uint64)2, y="hellostr"); })",
-      Error{});
+      R"(begin { $a = (x=(int64)1, y="hi"); $a = (x=(uint64)2, y="hellostr"); })");
   test(
-      R"(begin { @a[(x=(int64)1, y="hi")] = 1; @a[(x=(uint64)2, y="hellostr")] = 2; })",
-      Error{});
+      R"(begin { @a[(x=(int64)1, y="hi")] = 1; @a[(x=(uint64)2, y="hellostr")] = 2; })");
   test(
-      R"(begin { @a = (x=(int64)1, y="hi"); @a = (x=(uint64)2, y="hellostr"); })",
-      Error{});
+      R"(begin { @a = (x=(int64)1, y="hi"); @a = (x=(uint64)2, y="hellostr"); })");
   test(
-      R"(begin { print(if (pid == 1) { (x=(int64)1, y="hi") } else { (x=(uint64)2, y="hellostr") }); })",
-      Error{});
+      R"(begin { print(if (pid == 1) { (x=(int64)1, y="hi") } else { (x=(uint64)2, y="hellostr") }); })");
 
   // Test inserted casts
   test(

@@ -37,6 +37,8 @@ and this project adheres to
   - [#5092](https://github.com/bpftrace/bpftrace/pull/5092)
 - The default type for positive integer literals is now `int8`
   - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
+- Warn instead of error when there is an integer sign mismatch, except for integer literals that are out of range for the destination type
+  - [#5148](https://github.com/bpftrace/bpftrace/pull/5148)
 #### Deprecated
 #### Removed
 #### Fixed

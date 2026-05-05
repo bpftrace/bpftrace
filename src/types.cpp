@@ -141,22 +141,6 @@ bool SizedType::IsCompatible(const SizedType &t) const
   if (IsPtrTy())
     return GetPointeeTy().IsCompatible(t.GetPointeeTy());
 
-  if (IsIntegerTy()) {
-    if (IsSigned() == t.IsSigned()) {
-      return true;
-    }
-    if (IsSignFlexible() || t.IsSignFlexible()) {
-      return true;
-    }
-    // If the signs don't match then the unsigned side
-    // can't be promoted anymore if it's already the largest int
-    if (!t.IsSigned()) {
-      return t.GetSize() != 8;
-    } else { // t is signed
-      return GetSize() != 8;
-    }
-  }
-
   if (IsTupleTy()) {
     if (GetFieldCount() != t.GetFieldCount())
       return false;
@@ -686,7 +670,8 @@ std::optional<SizedType> get_promoted_int(const SizedType &currentType,
     // If one side has flexible sign (from a non-negative integer literal),
     // adapt it to match the other side's sign and promote by size.
     if (currentType.IsSignFlexible() || newType.IsSignFlexible()) {
-      bool sign = currentType.IsSignFlexible() ? newSigned : currentSigned;
+      bool sign = (!currentType.IsSignFlexible() && currentSigned) ||
+                  (!newType.IsSignFlexible() && newSigned);
       size_t promoted_size = std::max(currentSize, newSize);
       auto result = CreateInteger(promoted_size * 8, sign);
       result.SetSignFlexible(result_flexible);
@@ -701,7 +686,9 @@ std::optional<SizedType> get_promoted_int(const SizedType &currentType,
 
     size_t promoted_size = std::max(currentSize, newSize) * 2;
     if (promoted_size > 8) {
-      return std::nullopt;
+      // If both are 64 bits default to signed, which will yield a warning to
+      // the user.
+      return CreateInt64();
     } else {
       return CreateInteger(promoted_size * 8, true);
     }

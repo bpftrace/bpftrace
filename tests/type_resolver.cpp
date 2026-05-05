@@ -145,11 +145,27 @@ TEST_F(TypeResolverTest, variable_promotion_integers)
     EXPECT_EQ(var_type(result, "$a"), CreateInt32());
   }
   {
+    auto result = test(R"(begin { $a = -1; $a = (uint64)2 })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = 1; $a = -1; $a = (uint64)2 })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
     auto result = test(R"(begin { $a = (int8)1; $a = (uint8)2; })");
     EXPECT_EQ(var_type(result, "$a"), CreateInt16());
   }
   {
     auto result = test(R"(begin { $a = (uint32)1; $a = (int32)2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (uint64)1; $a = (int64)2; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { $a = (int64)1; $a = (uint64)2; })");
     EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
   {
@@ -161,13 +177,6 @@ TEST_F(TypeResolverTest, variable_promotion_integers)
     EXPECT_EQ(var_type(result, "$a"), CreateInt8());
     EXPECT_EQ(var_type(result, "$v"), CreateInt8());
   }
-
-  // Errors
-  test(R"(begin { $a = (uint64)1; $a = (int64)2 })", Error{});
-  // Negative literal pins sign; can't promote to uint64
-  test(R"(begin { $a = -1; $a = (uint64)2 })", Error{});
-  // Multiple literals where negative pins sign
-  test(R"(begin { $a = 1; $a = -1; $a = (uint64)2 })", Error{});
 }
 
 TEST_F(TypeResolverTest, variable_promotion_strings)
@@ -203,6 +212,13 @@ TEST_F(TypeResolverTest, variable_promotion_tuples)
   }
   {
     auto result = test(
+        R"(begin { $a = ((uint64)1, "str"); $a = ((int64)1, "longer"); })");
+    EXPECT_EQ(var_type(result, "$a"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateInt64(), CreateString(7) })));
+  }
+  {
+    auto result = test(
         R"(begin { $a = ((uint32)1, "str"); $a = (1, "longer"); $a = ((int64)1, "a"); })");
     EXPECT_EQ(var_type(result, "$a"),
               CreateTuple(
@@ -228,6 +244,15 @@ TEST_F(TypeResolverTest, variable_promotion_tuples)
   }
   {
     auto result = test(
+        R"(begin { $a = ((uint32)1, (x="str", y=(int64)2)); $a = (1, (x="longer", y=(uint64)2)); })");
+    auto nested_record = CreateRecord(
+        Struct::CreateRecord({ CreateString(7), CreateInt64() }, { "x", "y" }));
+    EXPECT_EQ(var_type(result, "$a"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateUInt32(), nested_record })));
+  }
+  {
+    auto result = test(
         R"(begin { $b = ("str", (int16)2); $a = ((uint32)1, $b); $c = ("longer", (uint16)2); $a = (1, $c); })");
     auto nested_tuple = CreateTuple(
         Struct::CreateTuple({ CreateString(7), CreateInt32() }));
@@ -242,14 +267,6 @@ TEST_F(TypeResolverTest, variable_promotion_tuples)
               CreateTuple(
                   Struct::CreateTuple({ CreateString(7), CreateUInt16() })));
   }
-
-  // Errors
-  test(
-      R"(begin { $a = ((uint64)1, "str"); $a = (1, "longer"); $a = ((int64)1, "a"); })",
-      Error{});
-  test(
-      R"(begin { $a = (1, ("str", (uint64)2)); $a = (1, ("longer", (int64)2)); })",
-      Error{});
 }
 
 TEST_F(TypeResolverTest, variable_promotion_records)
@@ -266,6 +283,13 @@ TEST_F(TypeResolverTest, variable_promotion_records)
     EXPECT_EQ(var_type(result, "$a"),
               CreateRecord(Struct::CreateRecord(
                   { CreateUInt32(), CreateString(7) }, { "x", "y" })));
+  }
+  {
+    auto result = test(
+        R"(begin { $a = (x = (uint64)1, y = "str"); $a = (x = (int64)1, y = "longer"); })");
+    EXPECT_EQ(var_type(result, "$a"),
+              CreateRecord(Struct::CreateRecord(
+                  { CreateInt64(), CreateString(7) }, { "x", "y" })));
   }
   {
     auto result = test(
@@ -292,12 +316,31 @@ TEST_F(TypeResolverTest, variable_promotion_records)
   }
   {
     auto result = test(
+        R"(begin { $a = (x = (uint32)1, y = (s = "str", n = (int64)2)); $a = (x = 1, y = (s = "longer", n = (uint64)2)); })");
+    auto nested = CreateRecord(
+        Struct::CreateRecord({ CreateString(7), CreateInt64() }, { "s", "n" }));
+    EXPECT_EQ(var_type(result, "$a"),
+              CreateRecord(Struct::CreateRecord({ CreateUInt32(), nested },
+                                                { "x", "y" })));
+  }
+  {
+    auto result = test(
         R"(begin { $a = (x = (uint32)1, y = ("str", (int16)2)); $a = (x = (int32)1, y = ("longer", (uint16)2)); })");
     EXPECT_EQ(var_type(result, "$a"),
               CreateRecord(Struct::CreateRecord(
                   { CreateInt64(),
                     CreateTuple(Struct::CreateTuple(
                         { CreateString(7), CreateInt32() })) },
+                  { "x", "y" })));
+  }
+  {
+    auto result = test(
+        R"(begin { $a = (x = (uint32)1, y = ("str", (int64)2)); $a = (x = (int32)1, y = ("longer", (uint64)2)); })");
+    EXPECT_EQ(var_type(result, "$a"),
+              CreateRecord(Struct::CreateRecord(
+                  { CreateInt64(),
+                    CreateTuple(Struct::CreateTuple(
+                        { CreateString(7), CreateInt64() })) },
                   { "x", "y" })));
   }
   {
@@ -316,14 +359,6 @@ TEST_F(TypeResolverTest, variable_promotion_records)
               CreateRecord(Struct::CreateRecord(
                   { CreateString(7), CreateUInt16() }, { "s", "n" })));
   }
-
-  // Errors
-  test(
-      R"(begin { $a = (x = (uint64)1, y = "str"); $a = (x = 1, y = "longer"); $a = (x = (int64)1, y = "a"); })",
-      Error{});
-  test(
-      R"(begin { $a = (x = 1, y = (s = "str", n = (uint64)2)); $a = (x = 1, y = (s = "longer", n = (int64)2)); })",
-      Error{});
 }
 
 TEST_F(TypeResolverTest, variable_castable_maps)
@@ -345,6 +380,11 @@ TEST_F(TypeResolverTest, variable_castable_maps)
     EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
   {
+    auto result = test(
+        R"(begin { @a = sum((uint64)1); @a = sum((int64)-1); $a = @a; })");
+    EXPECT_EQ(var_type(result, "$a"), CreateInt64());
+  }
+  {
     auto result = test(R"(begin { @a = sum(-1); $a = (int16)2; $a = @a; })");
     EXPECT_EQ(var_type(result, "$a"), CreateInt64());
   }
@@ -353,7 +393,6 @@ TEST_F(TypeResolverTest, variable_castable_maps)
         R"(begin { @a = sum((uint64)1); $a = (uint8)1; $a = @a; })");
     EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
   }
-
   {
     auto result = test(R"(begin { @a = sum((uint64)1); $a = 1; $a = @a; })");
     EXPECT_EQ(var_type(result, "$a"), CreateUInt64());
@@ -383,6 +422,14 @@ TEST_F(TypeResolverTest, map_value_promotion_integers)
     EXPECT_EQ(map_val_type(result, "@a"), CreateUInt64());
   }
   {
+    auto result = test(R"(begin { @a = (int64)1; @a = (uint64)2; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { @a = (uint64)1; @a = (int64)2; })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateInt64());
+  }
+  {
     // Multiple positive literals then unsigned: all adapt
     auto result = test(R"(begin { @a = 1; @a = 2; @a = (uint32)3; })");
     EXPECT_EQ(map_val_type(result, "@a"), CreateUInt32());
@@ -409,13 +456,6 @@ TEST_F(TypeResolverTest, map_value_promotion_integers)
     EXPECT_EQ(map_val_type(result, "@a"), CreateInt8());
     EXPECT_EQ(var_type(result, "$v"), CreateInt8());
   }
-
-  // Errors
-  test(R"(begin { @a = (uint64)1; @a = (int64)2 })", Error{});
-  // Negative literal pins sign; can't promote to uint64
-  test(R"(begin { @a = -1; @a = (uint64)2 })", Error{});
-  // Multiple literals where negative pins sign
-  test(R"(begin { @a = 1; @a = -1; @a = (uint64)2 })", Error{});
 }
 
 TEST_F(TypeResolverTest, map_value_promotion_strings)
@@ -467,9 +507,27 @@ TEST_F(TypeResolverTest, map_value_promotion_tuples)
   }
   {
     auto result = test(
+        R"(begin { @a = ((uint64)1, ("str", (int64)2)); @a = ((int64)1, ("longer", (uint64)2)); })");
+    auto nested_tuple = CreateTuple(
+        Struct::CreateTuple({ CreateString(7), CreateInt64() }));
+    EXPECT_EQ(map_val_type(result, "@a"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateInt64(), nested_tuple })));
+  }
+  {
+    auto result = test(
         R"(begin { @a = ((uint32)1, (x="str", y=(int16)2)); @a = (1, (x="longer", y=(uint16)2)); })");
     auto nested_record = CreateRecord(
         Struct::CreateRecord({ CreateString(7), CreateInt32() }, { "x", "y" }));
+    EXPECT_EQ(map_val_type(result, "@a"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateUInt32(), nested_record })));
+  }
+  {
+    auto result = test(
+        R"(begin { @a = ((uint32)1, (x="str", y=(int64)2)); @a = (1, (x="longer", y=(uint64)2)); })");
+    auto nested_record = CreateRecord(
+        Struct::CreateRecord({ CreateString(7), CreateInt64() }, { "x", "y" }));
     EXPECT_EQ(map_val_type(result, "@a"),
               CreateTuple(
                   Struct::CreateTuple({ CreateUInt32(), nested_record })));
@@ -490,14 +548,6 @@ TEST_F(TypeResolverTest, map_value_promotion_tuples)
               CreateTuple(
                   Struct::CreateTuple({ CreateString(7), CreateUInt16() })));
   }
-
-  // Errors
-  test(
-      R"(begin { @a = ((uint64)1, "str"); @a = (1, "longer"); @a = ((int64)1, "a"); })",
-      Error{});
-  test(
-      R"(begin { @a = (1, ("str", (uint64)2)); @a = (1, ("longer", (int64)2)); })",
-      Error{});
 }
 
 TEST_F(TypeResolverTest, map_value_promotion_records)
@@ -518,6 +568,13 @@ TEST_F(TypeResolverTest, map_value_promotion_records)
   {
     auto result = test(
         R"(begin { @a = (x = (uint32)1, y = "str"); @a = (y = "longer", x = (int32)1); })");
+    EXPECT_EQ(map_val_type(result, "@a"),
+              CreateRecord(Struct::CreateRecord(
+                  { CreateInt64(), CreateString(7) }, { "x", "y" })));
+  }
+  {
+    auto result = test(
+        R"(begin { @a = (x = (uint64)1, y = "str"); @a = (y = "longer", x = (int64)1); })");
     EXPECT_EQ(map_val_type(result, "@a"),
               CreateRecord(Struct::CreateRecord(
                   { CreateInt64(), CreateString(7) }, { "x", "y" })));
@@ -580,14 +637,6 @@ TEST_F(TypeResolverTest, map_value_promotion_records)
               CreateRecord(Struct::CreateRecord(
                   { CreateString(7), CreateUInt16() }, { "s", "n" })));
   }
-
-  // Errors
-  test(
-      R"(begin { @a = (x = (uint64)1, y = "str"); @a = (x = 1, y = "longer"); @a = (x = (int64)1, y = "a"); })",
-      Error{});
-  test(
-      R"(begin { @a = (x = 1, y = (s = "str", n = (uint64)2)); @a = (x = 1, y = (s = "longer", n = (int64)2)); })",
-      Error{});
 }
 
 TEST_F(TypeResolverTest, map_value_castable_maps)
@@ -604,11 +653,15 @@ TEST_F(TypeResolverTest, map_value_castable_maps)
     auto result = test(R"(begin { @a = sum(1); @a = sum(-1); })");
     EXPECT_EQ(map_val_type(result, "@a"), CreateSum(true));
   }
+  {
+    auto result = test(
+        R"(begin { @a = sum((uint64)1); @a = sum((int64)-1); })");
+    EXPECT_EQ(map_val_type(result, "@a"), CreateSum(true));
+  }
 
   // Errors
   test(R"(begin { @a = sum(1); @a = avg(-1); })", Error{});
   test(R"(begin { @a = sum(1); @a = 1; })", Error{});
-  test(R"(begin { @a = sum((uint64)1); @a = sum((int64)-1); })", Error{});
 }
 
 TEST_F(TypeResolverTest, map_key_promotion_integers)
@@ -630,6 +683,14 @@ TEST_F(TypeResolverTest, map_key_promotion_integers)
     EXPECT_EQ(map_key_type(result, "@a"), CreateUInt64());
   }
   {
+    auto result = test(R"(begin { @a[(int64)1] = 1; @a[(uint64)2] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@a"), CreateInt64());
+  }
+  {
+    auto result = test(R"(begin { @a[(uint64)1] = 1; @a[(int64)2] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@a"), CreateInt64());
+  }
+  {
     auto result = test(R"(begin { @a[(int8)1] = 1; @a[(uint8)2] = 1; })");
     EXPECT_EQ(map_key_type(result, "@a"), CreateInt16());
   }
@@ -642,10 +703,6 @@ TEST_F(TypeResolverTest, map_key_promotion_integers)
         R"(begin { @a[(uint32)1] = 1; $b = (int32)2; @a[$b] = 1; })");
     EXPECT_EQ(map_key_type(result, "@a"), CreateInt64());
   }
-
-  // Errors
-  test(R"(begin { @a[(uint64)1] = 1; @a[(int64)2] = 1 })", Error{});
-  test(R"(begin { @a[-1] = 1; @a[(uint64)2] = 1 })", Error{});
 }
 
 TEST_F(TypeResolverTest, map_key_promotion_strings)
@@ -689,6 +746,13 @@ TEST_F(TypeResolverTest, map_key_promotion_tuples)
   }
   {
     auto result = test(
+        R"(begin { @a[((uint64)1, "str")] = 1; @a[(1, "longer")] = 1; @a[((int64)1, "a")] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@a"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateInt64(), CreateString(7) })));
+  }
+  {
+    auto result = test(
         R"(begin { @a[((uint32)1, ("str", (int16)2))] = 1; @a[(1, ("longer", (uint16)2))] = 1; })");
     auto nested_tuple = CreateTuple(
         Struct::CreateTuple({ CreateString(7), CreateInt32() }));
@@ -721,14 +785,6 @@ TEST_F(TypeResolverTest, map_key_promotion_tuples)
               CreateTuple(
                   Struct::CreateTuple({ CreateString(7), CreateUInt16() })));
   }
-
-  // Errors
-  test(
-      R"(begin { @a[((uint64)1, "str")] = 1; @a[(1, "longer")] = 1; @a[((int64)1, "a")] = 1; })",
-      Error{});
-  test(
-      R"(begin { @a[(1, ("str", (uint64)2))] = 1; @a[(1, ("longer", (int64)2))] = 1; })",
-      Error{});
 }
 
 TEST_F(TypeResolverTest, map_key_promotion_records)
@@ -749,6 +805,13 @@ TEST_F(TypeResolverTest, map_key_promotion_records)
   {
     auto result = test(
         R"(begin { @a[(x = (uint32)1, y = "str")] = 1; @a[(y = "longer", x = (int32)1)] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@a"),
+              CreateRecord(Struct::CreateRecord(
+                  { CreateInt64(), CreateString(7) }, { "x", "y" })));
+  }
+  {
+    auto result = test(
+        R"(begin { @a[(x = (uint64)1, y = "str")] = 1; @a[(y = "longer", x = (int64)1)] = 1; })");
     EXPECT_EQ(map_key_type(result, "@a"),
               CreateRecord(Struct::CreateRecord(
                   { CreateInt64(), CreateString(7) }, { "x", "y" })));
@@ -811,14 +874,6 @@ TEST_F(TypeResolverTest, map_key_promotion_records)
               CreateRecord(Struct::CreateRecord(
                   { CreateString(7), CreateUInt16() }, { "s", "n" })));
   }
-
-  // Errors
-  test(
-      R"(begin { @a[(x = (uint64)1, y = "str")] = 1; @a[(x = 1, y = "longer")] = 1; @a[(x = (int64)1, y = "a")] = 1; })",
-      Error{});
-  test(
-      R"(begin { @a[(x = 1, y = (s = "str", n = (uint64)2))] = 1; @a[(x = 1, y = (s = "longer", n = (int64)2))] = 1; })",
-      Error{});
 }
 
 TEST_F(TypeResolverTest, variable_no_type)
@@ -969,8 +1024,17 @@ TEST_F(TypeResolverTest, locked_types)
       R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a[(uint32)2] = 2; } @a[(uint32)1] = 1; })");
   test(
       R"(begin { let $c; if comptime (typeinfo($c).full_type == "uint32") { $c = (uint16)2; } $c = (uint32)1; })");
+  // This signed mismatch is ok because the variable's type doesn't change
+  test(
+      R"(begin { let $c; if comptime (typeinfo($c).full_type == "int64") { $c = (uint64)2; } $c = (int64)1; })");
   test(
       R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a = 1; } @a = (uint32)2; })");
+  test(
+      R"(begin { if comptime (typeinfo(@a).base_type == "string") { @a = "a"; } @a = "muchlongerstr"; })");
+  test(
+      R"(begin { if comptime (typeinfo(@a).base_type == "tuple") { @a = ((uint8)2, "b"); } @a = ((int64)1, "a"); })");
+  test(
+      R"(begin { if comptime (typeinfo(@a).base_type == "record") { @a = (a=(uint8)2, b="b"); } @a = (a=(int64)1, b="a"); })");
 
   // Errors
   test(
@@ -979,6 +1043,10 @@ TEST_F(TypeResolverTest, locked_types)
 
   test(
       R"(begin { if comptime (typeinfo(@a).full_type == "uint32") { @a = (uint64)2; } @a = (uint32)1; })",
+      Error{});
+
+  test(
+      R"(begin { if comptime (typeinfo(@a).full_type == "uint64") { @a = (int64)2; } @a = (uint64)1; })",
       Error{});
 
   test(
@@ -999,6 +1067,13 @@ begin { if comptime (typeinfo(@a).full_type == "uint32") { $a = 1; if comptime (
   // Sign-flexible literal too large for locked type
   test(
       R"(begin { if comptime (typeinfo(@a).full_type == "uint8") { @a = 200; } @a = (uint8)2; })",
+      Error{});
+
+  test(
+      R"(begin { if comptime (typeinfo(@a).base_type == "tuple") { @a = ((int64)2, "b"); } @a = ((uint64)1, "a"); })",
+      Error{});
+  test(
+      R"(begin { if comptime (typeinfo(@a).base_type == "record") { @a = (a=(int64)2, b="b"); } @a = (a=(uint64)1, b="a"); })",
       Error{});
 }
 

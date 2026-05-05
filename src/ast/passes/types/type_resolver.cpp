@@ -193,12 +193,21 @@ public:
       // referencing a single type for an AST Map node is not correct
       const auto &current_type = types_[type_rule.output];
 
+      // Types can become not sign flexible but not the other way around
+      bool ignore_sign_flexible = (current_type.IsSignFlexible() ==
+                                   result_type.IsSignFlexible()) ||
+                                  (!current_type.IsSignFlexible() &&
+                                   result_type.IsSignFlexible());
+
       // TODO: further investigate and fix this weirdness with address space and
       // ctx access
-      if (current_type == result_type &&
-          current_type.IsCtxAccess() == result_type.IsCtxAccess() &&
-          (current_type.GetAS() == result_type.GetAS() ||
-           current_type.GetAS() != AddrSpace::none)) {
+      bool ignore_address_space = (current_type.GetAS() ==
+                                       result_type.GetAS() ||
+                                   current_type.GetAS() != AddrSpace::none);
+
+      if (current_type == result_type && ignore_sign_flexible &&
+          ignore_address_space &&
+          current_type.IsCtxAccess() == result_type.IsCtxAccess()) {
         continue;
       }
 
@@ -492,33 +501,6 @@ SizedType get_binop_int(Binop &binop,
       }
       return CreateUInt64();
     }
-  }
-
-  bool show_warning = false;
-  bool mismatched_sign = right_type.IsSigned() != left_type.IsSigned();
-  // N.B. all castable map values are 64 bits
-  if (left_type.IsCastableMapTy()) {
-    if (right_type.IsCastableMapTy()) {
-      show_warning = mismatched_sign;
-    } else {
-      if (!get_promoted_type(right_type,
-                             CreateInteger(64, left_type.IsSigned()))) {
-        show_warning = true;
-      }
-    }
-  } else if (right_type.IsCastableMapTy()) {
-    if (!get_promoted_type(left_type,
-                           CreateInteger(64, right_type.IsSigned()))) {
-      show_warning = true;
-    }
-  } else if (!get_promoted_type(left_type, right_type)) {
-    show_warning = true;
-  }
-
-  if (show_warning && is_comparison) {
-    binop.addWarning() << "comparison of integers of different signs: '" << lht
-                       << "' and '" << rht << "'"
-                       << " can lead to undefined behavior";
   }
 
   if (is_comparison) {
@@ -2526,7 +2508,8 @@ SizedType TypeRuleCollector::get_locked_node(const TypeVariable &node,
 {
   if (auto found_locked = locked_nodes_.find(node);
       found_locked != locked_nodes_.end()) {
-    if (!type.FitsInto(found_locked->second)) {
+    auto promoted = get_promoted_type(found_locked->second, type);
+    if (!promoted || *promoted != found_locked->second) {
       error_node.addError()
           << "Type mismatch for " << name << ": "
           << "this type has been locked because it was used "

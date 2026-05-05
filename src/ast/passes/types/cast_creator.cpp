@@ -206,7 +206,11 @@ static std::optional<SizedType> try_int_cast(ASTContext &ctx,
 
   if (!expr_type.FitsInto(target_type) && !expr_type.IsCastableMapTy() &&
       !exp.is<Integer>() && !exp.is<NegativeInteger>()) {
-    return std::nullopt;
+    auto &warning = exp.node().addWarning();
+    warning << "Expression of type: " << expr_type
+            << " being cast to type: " << target_type
+            << ". This may cause unexpected results. Use an explicit cast to "
+               "suppress this warning.";
   }
 
   auto *typeof_r = ctx.make_node<Typeof>(
