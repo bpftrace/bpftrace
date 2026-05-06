@@ -4,8 +4,10 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/types/parsed_type_bridge.h"
 #include "ast/passes/types/type_map.h"
+#include "ast/passes/types/type_system.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
+#include "btf/compat.h"
 #include "log.h"
 #include "types.h"
 
@@ -298,6 +300,7 @@ class CastCreator : public Visitor<CastCreator> {
 public:
   explicit CastCreator(ASTContext &ast,
                        BPFtrace &bpftrace,
+                       TypeMetadata &type_metadata,
                        const TypeMap &type_map);
 
   using Visitor<CastCreator>::visit;
@@ -321,14 +324,19 @@ private:
 
   ASTContext &ctx_;
   BPFtrace &bpftrace_;
+  TypeMetadata &type_metadata_;
   const TypeMap &type_map_;
   std::variant<std::monostate, Probe *, Subprog *> top_level_node_;
 };
 
 CastCreator::CastCreator(ASTContext &ast,
                          BPFtrace &bpftrace,
+                         TypeMetadata &type_metadata,
                          const TypeMap &type_map)
-    : ctx_(ast), bpftrace_(bpftrace), type_map_(type_map)
+    : ctx_(ast),
+      bpftrace_(bpftrace),
+      type_metadata_(type_metadata),
+      type_map_(type_map)
 {
 }
 
@@ -449,6 +457,47 @@ void CastCreator::visit(Call &call)
       cast_expression(call.vargs.at(0),
                       type_map_.type(call.vargs.at(0)),
                       CreateUInt64());
+    }
+  } else {
+    // All these errors below will be surfaced in type_checker
+    auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
+    if (!maybe_func) {
+      consumeError(std::move(maybe_func));
+      return;
+    }
+
+    const auto &func = *maybe_func;
+    auto proto = func.type();
+    if (!proto) {
+      consumeError(std::move(proto));
+      return;
+    }
+
+    auto argument_types = proto->argument_types();
+    if (!argument_types) {
+      consumeError(argument_types.takeError());
+      return;
+    }
+
+    if (argument_types->size() != call.vargs.size()) {
+      return;
+    }
+
+    for (size_t i = 0; i < argument_types->size(); i++) {
+      auto compat_arg_type = getCompatType(argument_types->at(i).second);
+      if (!compat_arg_type) {
+        consumeError(compat_arg_type.takeError());
+        continue;
+      }
+
+      auto &arg = call.vargs.at(i);
+      const auto &arg_type = type_map_.type(arg);
+      if (!arg_type.IsIntegerTy() || !compat_arg_type->IsIntegerTy()) {
+        continue;
+      }
+
+      // Cast integers and issue warnings if neccessary
+      cast_expression(arg, arg_type, *compat_arg_type);
     }
   }
 }
@@ -581,9 +630,10 @@ void CastCreator::visit(Subprog &subprog)
 
 void RunCastCreator(ASTContext &ast,
                     BPFtrace &bpftrace,
+                    TypeMetadata &type_metadata,
                     const TypeMap &type_map)
 {
-  CastCreator(ast, bpftrace, type_map).visit(ast.root);
+  CastCreator(ast, bpftrace, type_metadata, type_map).visit(ast.root);
 }
 
 } // namespace bpftrace::ast

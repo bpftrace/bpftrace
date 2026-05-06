@@ -2723,7 +2723,7 @@ Pass CreateTypeResolverPass()
 
         // Apply casts in parts of the AST where we want the left and right
         // sides to have the same type.
-        RunCastCreator(ast, b, type_map);
+        RunCastCreator(ast, b, types, type_map);
 
         // Re-resolve types for nodes created by CastCreator. This is just
         // easier than having CastCreator update resolved_types

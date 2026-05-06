@@ -5226,6 +5226,8 @@ TEST_F(TypeCheckerTest, external_function)
   ast::TypeMetadata types;
 
   // Build some basic types.
+  auto uint64 = types.global.add<btf::Integer>("uint64", 8, 0);
+  ASSERT_TRUE(bool(uint64));
   auto int32 = types.global.add<btf::Integer>("int32", 4, 1);
   ASSERT_TRUE(bool(int32));
   auto int64 = types.global.add<btf::Integer>("int64", 8, 1);
@@ -5242,9 +5244,56 @@ TEST_F(TypeCheckerTest, external_function)
       "foo", btf::Function::Linkage::Global, *add_proto);
   ASSERT_TRUE(bool(add_func));
 
+  std::vector<std::pair<std::string, btf::ValueType>> cast_args = {
+    { "a", btf::ValueType(*int64) }
+  };
+  auto cast_proto = types.global.add<btf::FunctionProto>(btf::ValueType(*int64),
+                                                         cast_args);
+  ASSERT_TRUE(bool(cast_proto));
+  auto cast_func = types.global.add<btf::Function>(
+      "bar", btf::Function::Linkage::Global, *cast_proto);
+  ASSERT_TRUE(bool(cast_func));
+
   // Test that calling this function works.
   test("kprobe:f { foo((int32)1, (int64)2); }", Types{ types });
   test("kprobe:f { print(foo((int32)1, (int64)2)); }", Types{ types });
+  // Cast int arguments to a different sign
+  test("kprobe:f { print(bar((uint64)1)); }",
+       Types{ types },
+       Warning{ "being cast to type" },
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { ExprStatement(Block(
+               { ExprStatement(Call(
+                     "print",
+                     { Call("bar",
+                            { Cast(Typeof(ParsedType(
+                                       ast::ParsedType::Kind::Identifier,
+                                       "int64")),
+                                   (Cast(Typeof(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "uint64")),
+                                         Integer(1)))) }) })),
+                 Jump(ast::JumpType::RETURN) })) })) });
+  // Cast int arguments to a smaller int
+  test("kprobe:f { print(foo((int64)1, (int64)2)); }",
+       Types{ types },
+       Warning{ "being cast to type" },
+       ExpectedAST{ Program().WithProbe(Probe(
+           { "kprobe:f" },
+           { ExprStatement(Block(
+               { ExprStatement(Call(
+                     "print",
+                     { Call("foo",
+                            { Cast(Typeof(ParsedType(
+                                       ast::ParsedType::Kind::Identifier,
+                                       "int32")),
+                                   (Cast(Typeof(ParsedType(
+                                             ast::ParsedType::Kind::Identifier,
+                                             "int64")),
+                                         Integer(1)))),
+                              _ }) })),
+                 Jump(ast::JumpType::RETURN) })) })) });
 
   // Test that calling with the wrong number of arguments fails.
   test("kprobe:f { foo((int32)1); }", Types{ types }, Error{ R"(
@@ -5253,15 +5302,10 @@ kprobe:f { foo((int32)1); }
            ~~~~~~~~~~~~~
 )" });
 
-  // Test that calling with the wrong types fails.
-  test("kprobe:f { foo((int64)1, (int64)2); }", Types{ types }, Error{ R"(
-stdin:1:16-23: ERROR: Expected int32 for argument `a` got int64
-kprobe:f { foo((int64)1, (int64)2); }
-               ~~~~~~~
-stdin:1:12-35: ERROR: Function `foo` requires arguments (int32, int64)
-kprobe:f { foo((int64)1, (int64)2); }
-           ~~~~~~~~~~~~~~~~~~~~~~~
-)" });
+  // Non-integer mismatches should still fail.
+  test("kprobe:f { foo(\"hi\", (int64)2); }",
+       Types{ types },
+       Error{ "Expected int32 for argument `a` got string[3]" });
 
   // Test that the return type is well-understood.
   test("kprobe:f { $x = (int32*)0; $x = foo((int32)1, (int64)2); }",
