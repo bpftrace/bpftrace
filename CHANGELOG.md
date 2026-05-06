@@ -40,6 +40,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Silence warning hints when warnings are disabled (`--no-warnings`)
+  - [#5151](https://github.com/bpftrace/bpftrace/pull/5151)
 - Fix kfunc/fentry probe listing incorrectly showing a `retval` parameter
   - [#5147](https://github.com/bpftrace/bpftrace/pull/5147)
 - stdlib: Fixed strerror() and signal_name() failing BPF verification

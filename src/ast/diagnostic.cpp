@@ -21,6 +21,9 @@ void Diagnostics::emit(std::ostream& out) const
 
 void Diagnostics::emit(std::ostream& out, Severity s) const
 {
+  if (s == Severity::Warning && !Log::get().is_enabled(LogType::WARNING))
+    return;
+
   foreach(s, [this, s, &out](const Diagnostic& d) { emit(out, s, d); });
 }
 
