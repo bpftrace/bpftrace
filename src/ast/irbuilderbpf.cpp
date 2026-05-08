@@ -787,6 +787,24 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
   return ret;
 }
 
+void IRBuilderBPF::CreateMapDeleteElem(const std::string &map_ident,
+                                       Value *key,
+                                       const Location &loc)
+{
+  Value *map_ptr = GetMapVar(map_ident);
+
+  FunctionType *delete_func_type = FunctionType::get(
+      getInt64Ty(), { map_ptr->getType(), key->getType() }, false);
+  PointerType *delete_func_ptr_type = PointerType::get(getContext(), 0);
+  Constant *delete_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                getInt64(
+                                                    BPF_FUNC_map_delete_elem),
+                                                delete_func_ptr_type);
+  CallInst *call = createCall(
+      delete_func_type, delete_func, { map_ptr, key }, "delete_elem");
+  CreateHelperErrorCond(call, BPF_FUNC_map_delete_elem, loc);
+}
+
 Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
                                              Value *key,
                                              const SizedType &type,

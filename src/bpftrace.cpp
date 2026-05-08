@@ -244,10 +244,6 @@ static Result<> event_printer(void *cb_cookie,
     return ctx->handlers.print_map(data);
   } else if (printf_id == async_action::AsyncAction::print_non_map) {
     return ctx->handlers.print_non_map(data);
-  } else if (printf_id == async_action::AsyncAction::clear) {
-    return ctx->handlers.clear_map(data);
-  } else if (printf_id == async_action::AsyncAction::zero) {
-    return ctx->handlers.zero_map(data);
   } else if (printf_id == async_action::AsyncAction::time) {
     return ctx->handlers.time(data);
   } else if (printf_id == async_action::AsyncAction::join) {

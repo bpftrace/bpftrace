@@ -2,14 +2,6 @@ NAME normal ringbuf
 RUN {{BPFTRACE}} -v -e 'begin { print(0); }'
 EXPECT_REGEX .*\[NORMAL\] Event print async action print_non_map
 
-NAME clear uses urgent ringbuf
-RUN {{BPFTRACE}} -v -e 'begin { @m=1; } end { clear(@m); }'
-EXPECT_REGEX .*\[URGENT\] Event print async action clear
-
-NAME zero uses urgent ringbuf
-RUN {{BPFTRACE}} -v -e 'begin { @m=1; } end { zero(@m); }'
-EXPECT_REGEX .*\[URGENT\] Event print async action zero
-
 NAME runtime error uses urgent ringbuf
 RUN {{BPFTRACE}} -v -e 'begin { $zero = 0; $x = 1 / $zero; }'
 EXPECT_REGEX .*\[URGENT\] Event print async action runtime_error

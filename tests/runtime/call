@@ -416,7 +416,7 @@ LOCALIZE_TIMESTAMPS 0
 
 NAME tseries zigzag
 ENV BPFTRACE_DUMMY_TS_MAP=@ts
-PROG BEGIN { @dir = 1; @c = -5; @ts = (uint64)100ms; } i:ms:1 { $i = 0; while ($i < 20) { @ = tseries(@c, 100ms, 20); @ts += 100ms; @c += @dir; $i++; if (@c > 5) { @dir = -1; @c = 4 } else if (@c < -5) { @dir = 1; @c = -4; } } clear(@ts); clear(@c); clear(@dir); exit(); }
+PROG BEGIN { @dir = 1; @c = -5; @ts = (uint64)100ms; } i:ms:1 { $i = 0; while ($i < 20) { @ = tseries(@c, 100ms, 20); @ts += 100ms; @c += @dir; $i++; if (@c > 5) { @dir = -1; @c = 4 } else if (@c < -5) { @dir = 1; @c = -4; } } } end { clear(@ts); clear(@c); clear(@dir); exit(); }
 EXPECT_FILE runtime/outputs/tseries_zigzag.txt
 LOCALIZE_TIMESTAMPS 0
 
@@ -609,22 +609,22 @@ EXPECT 1.000123
 TIMEOUT 1
 
 NAME print_avg_map_args
-PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@);  }
+PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); } end { clear(@); }
 EXPECT_FILE  runtime/outputs/print_avg_map_args.txt
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
-PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@);  }
+PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); } end { clear(@); }
 EXPECT_FILE runtime/outputs/print_avg_map_with_large_top.txt
 TIMEOUT 1
 
 NAME print_hist_with_top_arg
-PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("end"); clear(@);  }
+PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("end"); } end { clear(@); }
 EXPECT_REGEX begin\n@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 
 NAME print_hist_with_large_top_arg
-PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("end"); clear(@);  }
+PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("end"); } end { clear(@); }
 EXPECT_REGEX begin\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 

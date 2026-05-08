@@ -58,6 +58,9 @@ public:
                            Value *val,
                            const Location &loc,
                            int64_t flags = 0);
+  void CreateMapDeleteElem(const std::string &map_ident,
+                           Value *key,
+                           const Location &loc);
   Value *CreateForRange(Value *iters,
                         Value *callback,
                         Value *callback_ctx,
