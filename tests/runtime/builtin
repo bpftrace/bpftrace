@@ -202,7 +202,7 @@ PROG struct Foo { int x; struct Bar { int x; } bar; } begin { printf("%ld %ld\n"
 EXPECT_REGEX ^0 4$
 
 NAME offsetof_btf
-PROG begin { print(offsetof(qspinlock, tail)); }
+PROG begin { print(offsetof(struct task_struct, pid)); }
 EXPECT_REGEX ^[0-9]+
 REQUIRES_FEATURE btf
 
