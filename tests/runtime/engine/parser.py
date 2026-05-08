@@ -108,10 +108,21 @@ class TestParser(object):
                             platform.machine().lower(),
                             "be" if sys.byteorder == "big" else "le",
                         }
-                        should_run_test = (
-                            not test_struct.arch or
-                            bool(host_arch_identifiers.intersection(test_struct.arch))
-                        )
+                        # Check if test should run based on ARCH directive
+                        should_run_test = True
+                        if test_struct.arch:
+                            # Separate positive and negative arch requirements
+                            positive_archs = set()
+                            negative_archs = set()
+                            for arch in test_struct.arch:
+                                if arch.startswith('!'):
+                                    negative_archs.add(arch[1:])
+                                else:
+                                    positive_archs.add(arch)
+                            if positive_archs:
+                                should_run_test = bool(host_arch_identifiers.intersection(positive_archs))
+                            if negative_archs and should_run_test:
+                                should_run_test = not bool(host_arch_identifiers.intersection(negative_archs))
                         if should_run_test:
                             tests.append(test_struct)
                         test_lines = []

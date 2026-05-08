@@ -39,7 +39,9 @@ Required directives: `NAME`, (`RUN` or `PROG`), (one or more [`EXPECT`, `EXPECT_
 * `ARCH`: Only run testcase on provided architectures. Supports `|` to logical
   OR multiple arches. In addition to architecture names (for example
   `x86_64` or `s390x`), this also accepts `be` and `le` to match host
-  endianness.
+  endianness. Negative filtering is supported by prefixing `!` before the
+  architecture name (e.g., `ARCH !be` will skip the test on big endian systems,
+  `ARCH !s390x` will skip the test only on s390x architecture).
 * `BEFORE`: Run the command in a shell before running bpftrace. The command
   will run while bpftrace is running and be terminated after the test case
   finishes. Can be used multiple times, commands will run in parallel.
