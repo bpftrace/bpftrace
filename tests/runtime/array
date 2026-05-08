@@ -152,11 +152,25 @@ AFTER ./testprogs/array_access
 NAME cast literal to int array
 PROG begin { printf("first byte: %x\n", ((int8[8])12345)[0]); }
 EXPECT first byte: 39
+ARCH le
+TIMEOUT 1
+
+NAME cast literal to int array
+PROG begin { printf("first byte: %x\n", ((int8[8])12345)[0]); }
+EXPECT first byte: 30
+ARCH be
 TIMEOUT 1
 
 NAME cast to int array with automatic size
 PROG begin { printf("byte: %x\n", ((int8[])12345)[0]); }
 EXPECT byte: 39
+ARCH le
+TIMEOUT 1
+
+NAME cast to int array with automatic size
+PROG begin { printf("byte: %x\n", ((int8[])12345)[0]); }
+EXPECT byte: 30
+ARCH be
 TIMEOUT 1
 
 NAME cast int array to int internal
@@ -167,6 +181,13 @@ AFTER ./testprogs/array_access
 NAME cast int array to int proberead
 RUN {{BPFTRACE}} --include "stdint.h" -e 'struct A { int x[4]; uint8_t y[4]; } uprobe:./testprogs/array_access:test_arrays { $y = (int32)((struct A *)arg0).y; printf("y: %x\n", $y); exit()}'
 EXPECT y: ddccbbaa
+ARCH le
+AFTER ./testprogs/array_access
+
+NAME cast int array to int proberead
+RUN {{BPFTRACE}} --include "stdint.h" -e 'struct A { int x[4]; uint8_t y[4]; } uprobe:./testprogs/array_access:test_arrays { $y = (int32)((struct A *)arg0).y; printf("y: %x\n", $y); exit()}'
+EXPECT y: aabbccdd
+ARCH be
 AFTER ./testprogs/array_access
 
 NAME cast string to int array
