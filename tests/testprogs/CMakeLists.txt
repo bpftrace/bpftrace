@@ -102,52 +102,71 @@ add_custom_command(
 )
 list(APPEND testprogtargets archive.zip)
 
-# Make debug subdirs to test parsing of external DWARF debug formats. 
+# Make debug subdirs to test parsing of external DWARF debug formats.
+set(EXTERNAL_DEBUG_DIR ${CMAKE_CURRENT_BINARY_DIR}/external_debug)
 file(MAKE_DIRECTORY
-  ${CMAKE_CURRENT_BINARY_DIR}/debug
-  ${CMAKE_CURRENT_BINARY_DIR}/debug/dwo
-  ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp
+  ${EXTERNAL_DEBUG_DIR}
+  ${EXTERNAL_DEBUG_DIR}/dwo
+  ${EXTERNAL_DEBUG_DIR}/dwp
+  ${CMAKE_CURRENT_BINARY_DIR}/.debug
 )
 
 # Create a stripped binary with a separate .debug file, placed in a subdir; used to verify
-# loading and parsing of external debuginfo.
+# searching and parsing of external debuginfo via --debuginfo option.
 add_custom_command(
   OUTPUT 
     ${CMAKE_CURRENT_BINARY_DIR}/uprobe_test-stripped
-    ${CMAKE_CURRENT_BINARY_DIR}/debug/uprobe_test-stripped.debug
-  COMMAND ${LLVM_OBJCOPY} --only-keep-debug $<TARGET_FILE:uprobe_test> ${CMAKE_CURRENT_BINARY_DIR}/debug/uprobe_test-stripped.debug
+    ${EXTERNAL_DEBUG_DIR}/uprobe_test-stripped.debug
+  COMMAND ${LLVM_OBJCOPY} --only-keep-debug $<TARGET_FILE:uprobe_test> ${EXTERNAL_DEBUG_DIR}/uprobe_test-stripped.debug
   COMMAND ${LLVM_OBJCOPY} --strip-debug $<TARGET_FILE:uprobe_test> ${CMAKE_CURRENT_BINARY_DIR}/uprobe_test-stripped
   DEPENDS uprobe_test
 )
 list(APPEND testprogtargets
   ${CMAKE_CURRENT_BINARY_DIR}/uprobe_test-stripped
-  ${CMAKE_CURRENT_BINARY_DIR}/debug/uprobe_test-stripped.debug)
+  ${EXTERNAL_DEBUG_DIR}/uprobe_test-stripped.debug)
+
+# Second stripped binary (distinct build-id), with its .debug placed in the standard ./.debug/ subdir;
+# used to verify default build-id-based lookup.
+add_custom_command(
+  OUTPUT 
+    ${CMAKE_CURRENT_BINARY_DIR}/uprobe_separate_debug-stripped
+    ${CMAKE_CURRENT_BINARY_DIR}/.debug/uprobe_separate_debug-stripped.debug
+  COMMAND ${LLVM_OBJCOPY} --only-keep-debug $<TARGET_FILE:uprobe_separate_debug> ${CMAKE_CURRENT_BINARY_DIR}/.debug/uprobe_separate_debug-stripped.debug
+  COMMAND ${LLVM_OBJCOPY} --strip-debug $<TARGET_FILE:uprobe_separate_debug> ${CMAKE_CURRENT_BINARY_DIR}/uprobe_separate_debug-stripped
+  COMMAND ${LLVM_OBJCOPY}
+    --add-gnu-debuglink=${CMAKE_CURRENT_BINARY_DIR}/.debug/uprobe_separate_debug-stripped.debug
+    ${CMAKE_CURRENT_BINARY_DIR}/uprobe_separate_debug-stripped
+  DEPENDS uprobe_separate_debug
+)
+list(APPEND testprogtargets
+  ${CMAKE_CURRENT_BINARY_DIR}/uprobe_separate_debug-stripped
+  ${CMAKE_CURRENT_BINARY_DIR}/.debug/uprobe_separate_debug-stripped.debug)
 
 # Build a binary with split DWARF (.dwo files) to verify parsing of the split debug info format.
 add_custom_command(
   OUTPUT
-    ${CMAKE_CURRENT_BINARY_DIR}/debug/dwo/uprobe_test-split
-    ${CMAKE_CURRENT_BINARY_DIR}/debug/dwo/uprobe_test-split-uprobe_test.dwo
-  COMMAND ${CMAKE_C_COMPILER} -g -O0 -gsplit-dwarf ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c -o ${CMAKE_CURRENT_BINARY_DIR}/debug/dwo/uprobe_test-split
+    ${EXTERNAL_DEBUG_DIR}/dwo/uprobe_test-split
+    ${EXTERNAL_DEBUG_DIR}/dwo/uprobe_test-split-uprobe_test.dwo
+  COMMAND ${CMAKE_C_COMPILER} -g -O0 -gsplit-dwarf ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c -o ${EXTERNAL_DEBUG_DIR}/dwo/uprobe_test-split
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c
 )
-list(APPEND testprogtargets ${CMAKE_CURRENT_BINARY_DIR}/debug/dwo/uprobe_test-split)
+list(APPEND testprogtargets ${EXTERNAL_DEBUG_DIR}/dwo/uprobe_test-split)
 
 # Build a binary with split debuginfo and bundle the .dwo files into a DWARF Package (.dwp)
 # archive; to verify parsing of the packaged format.
 find_program(LLVM_DWP llvm-dwp REQUIRED)
 add_custom_command(
   OUTPUT
-    ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/uprobe_test-split
-    ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/uprobe_test-split.dwp
-  COMMAND ${CMAKE_C_COMPILER} -g -O0 -gsplit-dwarf ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c -o ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/uprobe_test-split
-  COMMAND ${LLVM_DWP} -e ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/uprobe_test-split -o ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/uprobe_test-split.dwp
-  COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/*.dwo
+    ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
+    ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp
+  COMMAND ${CMAKE_C_COMPILER} -g -O0 -gsplit-dwarf ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c -o ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
+  COMMAND ${LLVM_DWP} -e ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split -o ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp
+  COMMAND ${CMAKE_COMMAND} -E rm -f ${EXTERNAL_DEBUG_DIR}/dwp/*.dwo
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c
 )
 list(APPEND testprogtargets
-  ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/uprobe_test-split
-  ${CMAKE_CURRENT_BINARY_DIR}/debug/dwp/uprobe_test-split.dwp)
+  ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
+  ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp)
 
 add_custom_target(testprogs ALL DEPENDS ${testprogtargets})
 

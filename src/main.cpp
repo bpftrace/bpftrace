@@ -110,6 +110,8 @@ enum Options {
 
 constexpr auto FULL_SEARCH = "*:*";
 
+constexpr auto DEFAULT_DEBUG_INFO_PATHS = ":.debug:/usr/lib/debug";
+
 } // namespace
 
 void usage(std::ostream& out)
@@ -154,8 +156,8 @@ void usage(std::ostream& out)
   out << "                   only run probes whose name matches REGEX" << std::endl;
   out << "    --traceable-functions FILE" << std::endl;
   out << "                   load the list of traceable kernel functions from FILE" << std::endl;
-  out << "    --debuginfo DIR" << std::endl;
-  out << "                   add one or more directory to the debug info search path" << std::endl;
+  out << "    --debuginfo DIR[:DIR]" << std::endl;
+  out << "                   add directories to the debug info search path" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    -v, --verbose           verbose messages" << std::endl;
@@ -687,7 +689,8 @@ Args parse_args(int argc, char* argv[])
       case Options::BTF:
         break;
       case Options::DEBUGINFO:
-        args.debuginfo_path = optarg;
+        args.debuginfo_path += optarg;
+        args.debuginfo_path += ":";
         break;
       case 'h':
       case Options::HELP:
@@ -917,7 +920,7 @@ int main(int argc, char* argv[])
   bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
   bpftrace.probe_filter_ = args.probe_filter;
-  bpftrace.debuginfo_path_ = args.debuginfo_path;
+  bpftrace.debuginfo_path_ = args.debuginfo_path + DEFAULT_DEBUG_INFO_PATHS;
 
   if (!args.pid_str.empty()) {
     auto pid = parse_pid(args.pid_str);
