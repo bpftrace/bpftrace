@@ -54,6 +54,8 @@ and this project adheres to
   - [#2801](https://github.com/bpftrace/bpftrace/issues/2801)
 - Fix subtraction and decrement ops not producing the correct type
   - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
+- Fix for-loop variable scope causing type merging across loops
+  - [#5157](https://github.com/bpftrace/bpftrace/pull/5157)
 #### Security
 #### Docs
 #### Tools

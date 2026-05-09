@@ -1611,6 +1611,8 @@ void TypeRuleCollector::visit(For &f)
     return false;
   });
 
+  scope_stack_.push_back(&f);
+
   visit(f.decl);
 
   ScopedVariable scoped_var = std::make_pair(scope_stack_.back(), decl_name);
@@ -1644,8 +1646,6 @@ void TypeRuleCollector::visit(For &f)
         },
     });
   }
-
-  scope_stack_.push_back(&f);
 
   visit(f.block);
 

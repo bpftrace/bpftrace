@@ -1286,4 +1286,62 @@ TEST_F(TypeResolverTest, macro_not_expanded_in_type_context)
   }
 }
 
+TEST_F(TypeResolverTest, for_loop_variable_scope)
+{
+  {
+    auto result = test(
+        R"(begin { @mapA[0] = (uint8)1; @mapB[0] = (uint16)1;
+           for ($kv : @mapA) { print($kv); }
+           for ($kv : @mapB) { print($kv); } })");
+
+    EXPECT_EQ(map_val_type(result, "@mapA"), CreateUInt8());
+    EXPECT_EQ(map_val_type(result, "@mapB"), CreateUInt16());
+
+    ast::CollectNodes<ast::Variable> collector;
+    collector.visit(*result.ast.root,
+                    [&](const ast::Variable &v) { return v.ident == "$kv"; });
+    ASSERT_EQ(collector.nodes().size(), 4);
+
+    auto kv_a_type = result.type_map.type(&collector.nodes().front().get());
+    auto kv_b_type = result.type_map.type(&collector.nodes().at(2).get());
+
+    EXPECT_EQ(kv_a_type,
+              CreateTuple(
+                  Struct::CreateTuple({ map_key_type(result, "@mapA"),
+                                        map_val_type(result, "@mapA") })));
+    EXPECT_EQ(kv_b_type,
+              CreateTuple(
+                  Struct::CreateTuple({ map_key_type(result, "@mapB"),
+                                        map_val_type(result, "@mapB") })));
+  }
+  {
+    // Reverse order: the for-loop for @mapB comes first. Each $kv
+    // should still bind to its own loop's scope.
+    auto result = test(
+        R"(begin { @mapA[0] = (uint8)1; @mapB[0] = (uint16)1;
+           for ($kv : @mapB) { print($kv); }
+           for ($kv : @mapA) { print($kv); } })");
+
+    EXPECT_EQ(map_val_type(result, "@mapA"), CreateUInt8());
+    EXPECT_EQ(map_val_type(result, "@mapB"), CreateUInt16());
+
+    ast::CollectNodes<ast::Variable> collector;
+    collector.visit(*result.ast.root,
+                    [&](const ast::Variable &v) { return v.ident == "$kv"; });
+    ASSERT_EQ(collector.nodes().size(), 4);
+
+    auto kv_b_type = result.type_map.type(&collector.nodes().front().get());
+    auto kv_a_type = result.type_map.type(&collector.nodes().at(2).get());
+
+    EXPECT_EQ(kv_b_type,
+              CreateTuple(
+                  Struct::CreateTuple({ map_key_type(result, "@mapB"),
+                                        map_val_type(result, "@mapB") })));
+    EXPECT_EQ(kv_a_type,
+              CreateTuple(
+                  Struct::CreateTuple({ map_key_type(result, "@mapA"),
+                                        map_val_type(result, "@mapA") })));
+  }
+}
+
 } // namespace bpftrace::test::type_resolver
