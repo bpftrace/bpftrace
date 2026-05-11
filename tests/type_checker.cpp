@@ -1223,6 +1223,7 @@ TEST_F(TypeCheckerTest, call_strftime)
   test("kprobe:f { strftime(\"%M:%S\", nsecs(monotonic)); }", Error{});
   test("kprobe:f { strftime(\"%M:%S\", nsecs(boot)); }");
   test("kprobe:f { strftime(\"%M:%S\", nsecs(tai)); }");
+  test("kprobe:f { strftime(\"%M:%S\", -1); }", Error{});
 }
 
 TEST_F(TypeCheckerTest, call_str)
