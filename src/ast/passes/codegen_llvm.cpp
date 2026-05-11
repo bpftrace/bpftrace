@@ -4709,10 +4709,13 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
   auto start = visit(range.start);
   auto end = visit(range.end);
   Value *iters = b_.CreateBinOp(Instruction::Sub, end.value(), start.value());
+  // Get the actual loop variable type from type checker
+  const auto &decl_type = type_map_.type(f.decl);
+  llvm::Type *loop_var_type = b_.GetType(decl_type);
 
   // Construct the context and callback with extra fields add to the context,
   // which track the starting value and the current value of the iteration.
-  auto [ctx_t, ctx] = createForContext(f, { b_.getInt64Ty(), b_.getInt64Ty() });
+  auto [ctx_t, ctx] = createForContext(f, { loop_var_type, loop_var_type });
   const auto sz = type_map_.type(&f).GetFields().size();
   b_.CreateStore(start.value(),
                  b_.CreateSafeGEP(ctx_t,
@@ -4753,9 +4756,11 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
         // value of the current variable in the context. The starting value is
         // not available to the user, simply the value of the current
         // iteration.
-        b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(),
+        b_.CreateStore(b_.CreateAdd(b_.CreateLoad(loop_var_type,
                                                   start_field_ptr),
-                                    callback->getArg(0)),
+                                    b_.CreateIntCast(callback->getArg(0),
+                                                     loop_var_type,
+                                                     true)),
                        current_field_ptr);
         return current_field_ptr;
       });
