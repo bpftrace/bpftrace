@@ -437,6 +437,11 @@ void TypeChecker::visit(Call &call)
     if (type_map_.type(&call).ts_mode == TimestampMode::monotonic) {
       call.addError() << "strftime() can not take a monotonic timestamp";
     }
+    // Check if timestamp argument is a negative literal
+    auto &timestamp_arg = call.vargs.at(1);
+    if (timestamp_arg.is<NegativeInteger>()) {
+      call.addError() << "strftime() does not accept negative timestamps";
+    }
   } else if (call.func == "path") {
     if (!bpftrace_.feature_->has_d_path()) {
       call.addError()
