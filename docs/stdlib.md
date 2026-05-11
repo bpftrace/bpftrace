@@ -1335,12 +1335,13 @@ begin {
 
 
 ### strftime
-- `timestamp strftime(const string fmt, int64 timestamp_ns)`
+- `timestamp strftime(const string fmt, uint64 timestamp_ns)`
 
 **async**
 
 Format the nanoseconds since boot timestamp `timestamp_ns` according to the format specified by `fmt`.
 The time conversion and formatting happens in user space, therefore  the `timestamp` value returned can only be used for printing using the `%s` format specifier.
+**Note:** `timestamp_ns` must be non-negative. Negative timestamp literals are rejected.
 
 bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 

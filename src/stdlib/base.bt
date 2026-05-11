@@ -1322,12 +1322,13 @@ macro signal_thread(expr)
 // bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
 
 // :function strftime
-// :variant timestamp strftime(const string fmt, int64 timestamp_ns)
+// :variant timestamp strftime(const string fmt, uint64 timestamp_ns)
 //
 // **async**
 //
 // Format the nanoseconds since boot timestamp `timestamp_ns` according to the format specified by `fmt`.
 // The time conversion and formatting happens in user space, therefore  the `timestamp` value returned can only be used for printing using the `%s` format specifier.
+// **Note:** `timestamp_ns` must be non-negative. Negative timestamp literals are rejected.
 //
 // bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 //

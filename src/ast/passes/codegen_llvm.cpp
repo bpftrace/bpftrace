@@ -1967,8 +1967,18 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     auto &arg = call.vargs.at(1);
     auto scoped_expr = visit(arg);
+
+    // Ensure the value is 64-bit to match the struct field type (uint64_t
+    // nsecs)
+    llvm::Value *nsecs_value = scoped_expr.value();
+    llvm::Type *value_type = nsecs_value->getType();
+    if (value_type->isIntegerTy() && value_type->getIntegerBitWidth() < 64) {
+      // Zero-extend smaller integers to 64 bits
+      nsecs_value = b_.CreateZExt(nsecs_value, b_.getInt64Ty());
+    }
+
     b_.CreateStore(
-        scoped_expr.value(),
+        nsecs_value,
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "kstack") {
