@@ -41,6 +41,8 @@ and this project adheres to
 - Release assets are now suffixed with the architecture
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
 #### Fixed
+- Propagate address space for sized variable declarations
+  - [#5294](https://github.com/bpftrace/bpftrace/pull/5294)
 - Ensure that string allocation and usage are consistent in size.
   - [#5279](https://github.com/bpftrace/bpftrace/pull/5279)
 - Fix crash caused by debug locations leaking between generated functions

@@ -114,6 +114,10 @@ NAME variable declaration with builtin
 PROG begin { let $f: struct task_struct *; $f = curtask; print($f.pid); }
 EXPECT_REGEX [0-9]+
 
+NAME variable declaration with typeof and builtin
+PROG begin { $a = (struct task_struct *)0; let $f: typeof($a); $f = curtask; print($f.pid); }
+EXPECT_REGEX [0-9]+
+
 NAME variable declaration not initialized
 PROG begin { let $a; if ($a) { $a = 1; } @b = $a; }
 EXPECT @b: 0

@@ -750,11 +750,27 @@ void TypeRuleCollector::visit(AssignVarStatement &assignment)
 
   // Ignore the RHS to determine the type of this variable and issue errors
   // later if the RHS type is not compatible or doesn't fit into this sized
-  // declaration type
+  // declaration type. For sized declarations, propagate addrspace from RHS if
+  // LHS has none.
   if (sized_decl_vars_.contains(scoped_var)) {
+    resolver_.add_type_rule({
+        .output = scoped_var,
+        .inputs = { &assignment.expr.node(), scoped_var },
+        .resolve = [this](const std::vector<SizedType> &inputs) -> SizedType {
+          auto var_type = inputs[1];         // $x's declared type
+          const auto &expr_type = inputs[0]; // rhs type
+          if (var_type.GetAS() == AddrSpace::none &&
+              expr_type.GetAS() != AddrSpace::none) {
+            var_type.SetAS(expr_type.GetAS());
+          }
+          return var_type;
+        },
+    });
     return;
   }
 
+  // For unsized declarations (e.g., begin { let $x; $x = ...; }), infer type
+  // from RHS
   resolver_.add_type_rule({
       .output = scoped_var,
       .inputs = { &assignment.expr.node() },
