@@ -1140,6 +1140,11 @@ macro probetype()
 // `pton` converts a text representation of an IPv4 or IPv6 address to byte array.
 // `pton` infers the address family based on `.` or `:` in the given argument.
 // `pton` comes in handy when we need to select packets with certain IP addresses.
+//
+// When casting the result of `pton()` to an integer (e.g. `(uint32)pton("127.0.0.1")`), the resulting value depends on the system's endianness. The byte array returned by `pton()` is stored in network byte order (big-endian), and when cast to an integer, it is interpreted according to the system's native byte order:
+// **Little-endian systems**: The bytes are reversed when interpreted as an integer. For example, `(uint32)pton("127.0.0.1")` yields `0x100007f` (bytes: `[0x7f, 0x00, 0x00, 0x01]` interpreted as little-endian).
+// **Big-endian systems**: The bytes maintain their network byte order. For example, `(uint32)pton("127.0.0.1")` yields `0x7f000001` (bytes: `[0x7f, 0x00, 0x00, 0x01]` interpreted as big-endian).
+// This behavior is consistent with how the underlying `inet_pton()` function works.
 
 // :variant uint32 rand()
 // Get a pseudo random number

@@ -176,6 +176,13 @@ TIMEOUT 1
 NAME cast int array to int internal
 PROG begin { printf("ip: %x\n", (uint32)pton("127.0.0.1")); }
 EXPECT ip: 100007f
+ARCH le
+AFTER ./testprogs/array_access
+
+NAME cast int array to int internal
+PROG begin { printf("ip: %x\n", (uint32)pton("127.0.0.1")); }
+EXPECT ip: 7f000001
+ARCH be
 AFTER ./testprogs/array_access
 
 NAME cast int array to int proberead
