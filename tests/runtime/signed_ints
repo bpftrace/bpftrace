@@ -22,8 +22,9 @@ EXPECT @: -22
 TIMEOUT 1
 
 NAME Comparison should print as 0 or 1
-PROG struct x { uint64_t x; }; begin { $a = (*(struct x*)0).x; printf("%d %d\n", $a > 0, $a < 1);  }
+PROG struct x { unsigned long x; }; uprobe:./testprogs/signed_ints_test:test_signed_ints { $a = ((struct x*)arg0).x; printf("%d %d\n", $a > 0, $a < 1); exit(); }
 EXPECT 0 1
+AFTER ./testprogs/signed_ints_test
 TIMEOUT 1
 
 NAME sum with negative value
