@@ -26,14 +26,12 @@ PROG begin { @map[16] = 32; @map[64] = 128; for ($kv : @map) { @new[$kv.1] = $kv
 EXPECT @new[32]: 16
 EXPECT @new[128]: 64
 
-# TODO: make these maps different types.
-# https://github.com/bpftrace/bpftrace/issues/5142
 NAME map multiple loops
-PROG begin { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = 40; @mapB[65] = 41; for ($kv : @mapA) { print($kv); } for ($kv : @mapB) { print($kv); }  }
+PROG begin { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = "aa"; @mapB[65] = "bb"; for ($kv : @mapA) { print($kv); } for ($kv : @mapB) { print($kv); }  }
 EXPECT (16, 32)
 EXPECT (17, 33)
-EXPECT (64, 40)
-EXPECT (65, 41)
+EXPECT (64, aa)
+EXPECT (65, bb)
 
 NAME map multiple probes
 PROG begin { @mapA[16] = 32; @mapA[17] = 33; @mapB[64] = 128; @mapB[65] = 129; for ($kv : @mapA) { print($kv); }  } end { for ($kv : @mapB) { print($kv); } }

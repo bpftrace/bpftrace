@@ -1593,9 +1593,12 @@ void TypeRuleCollector::visit(For &f)
     return false;
   });
 
-  visit(f.decl);
-
-  ScopedVariable scoped_var = std::make_pair(scope_stack_.back(), decl_name);
+  ScopedVariable scoped_var = std::make_pair(&f, decl_name);
+  variables_[&f].insert({ decl_name, CreateNone() });
+  resolver_.add_pass_through(scoped_var, f.decl);
+  if (introspection_level_ > 0) {
+    introspected_nodes_.insert(scoped_var);
+  }
 
   if (auto *map = f.iterable.as<Map>()) {
     visit(map);

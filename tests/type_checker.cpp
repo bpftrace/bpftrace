@@ -4478,6 +4478,35 @@ TEST_F(TypeCheckerTest, for_loop_map)
   test("begin {@map1[@map2] = 1; @map2 = 1; for ($kv : @map1) {print($kv);}}");
 }
 
+TEST_F(TypeCheckerTest, for_loop_map_reused_variable_name)
+{
+  auto result = test(R"(
+    begin {
+      @mapA[16] = 32;
+      @mapB[64] = "value";
+      for ($kv : @mapA) {
+        print($kv.1);
+      }
+      for ($kv : @mapB) {
+        print($kv.1);
+      }
+    })");
+
+  auto *first_loop =
+      result.ast.root->probes.at(0)->block->stmts.at(2).as<ast::For>();
+  auto *second_loop =
+      result.ast.root->probes.at(0)->block->stmts.at(3).as<ast::For>();
+  ASSERT_NE(first_loop, nullptr);
+  ASSERT_NE(second_loop, nullptr);
+
+  const auto &first_decl_type = result.type_map.type(first_loop->decl);
+  const auto &second_decl_type = result.type_map.type(second_loop->decl);
+  ASSERT_TRUE(first_decl_type.IsTupleTy());
+  ASSERT_TRUE(second_decl_type.IsTupleTy());
+  EXPECT_TRUE(first_decl_type.GetField(1).type.IsIntTy());
+  EXPECT_TRUE(second_decl_type.GetField(1).type.IsStringTy());
+}
+
 TEST_F(TypeCheckerTest, for_loop_map_declared_after)
 {
   // Regression test: What happens with
