@@ -313,6 +313,23 @@ CStatement *Parser::parse_c_definition()
   while (!def.empty() && std::isspace(def.back())) {
     def.pop_back();
   }
+  // Consume attribute, like __attribute__((packed, aligned(1))),
+  // supports specifying __attribute__ multiple times.
+  size_t attr_pos = pos_;
+  while (match("__attribute__")) {
+    consume_layout();
+    // match __attribute__'s '(('
+    if (peek() == '(' && peek(1) == '(') {
+      size_t after = scan_balanced(pos_, '(', ')');
+      if (after == pos_ || char_at(after - 1) != ')') {
+        error("__attribute__ syntax error, mismatched '(' and ')'");
+      }
+      def += view(attr_pos, after);
+      attr_pos = pos_ = after;
+    } else {
+      error("__attribute__ syntax error, expected '(('");
+    }
+  }
   // Ensure trailing semicolon.
   if (!def.empty() && def.back() != ';') {
     def += ";";
@@ -3373,7 +3390,7 @@ bool Parser::looks_like_c_definition() const
   // Skip keyword (struct/union/enum), then accept an arbitrary sequence of
   // identifiers and balanced (...) / [...] groups before the opening brace.
   // This covers declarations like:
-  //   struct Foo __attribute__((packed)) {
+  //   struct __attribute__((packed)) Foo {
   // while still rejecting attach points such as:
   //   struct:probe { ... }
   p = scan_identifier_end(p);

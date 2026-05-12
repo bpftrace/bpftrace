@@ -884,4 +884,59 @@ TEST(clang_parser, redefined_types)
   parse("struct a {int a;}; struct a {int a; short b;};", bpftrace, false);
 }
 
+TEST(clang_parser, attribute)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo { "
+        "  int x; char y; int z; "
+        "} __attribute__((packed, aligned(1))) "
+        "struct Bar { "
+        " int x; char y; int z; "
+        "} __attribute__((packed)) __attribute__((aligned(1)))",
+        bpftrace);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
+  ASSERT_TRUE(bpftrace.structs.Has("struct Bar"));
+  auto foo = bpftrace.structs.Lookup("struct Foo").lock();
+  auto bar = bpftrace.structs.Lookup("struct Bar").lock();
+
+  // Foo
+  EXPECT_EQ(foo->size, 9);
+  ASSERT_EQ(foo->fields.size(), 3U);
+  ASSERT_EQ(foo->HasField("x"), true);
+  ASSERT_EQ(foo->HasField("y"), true);
+  ASSERT_EQ(foo->HasField("z"), true);
+
+  EXPECT_TRUE(foo->GetField("x").type.IsIntTy());
+  EXPECT_EQ(foo->GetField("x").type.GetSize(), 4U);
+  EXPECT_EQ(foo->GetField("x").offset, 0);
+
+  EXPECT_TRUE(foo->GetField("y").type.IsIntTy());
+  EXPECT_EQ(foo->GetField("y").type.GetSize(), 1U);
+  EXPECT_EQ(foo->GetField("y").offset, 4);
+
+  EXPECT_TRUE(foo->GetField("z").type.IsIntTy());
+  EXPECT_EQ(foo->GetField("z").type.GetSize(), 4U);
+  EXPECT_EQ(foo->GetField("z").offset, 5);
+
+  // Bar
+  EXPECT_EQ(bar->size, 9);
+  ASSERT_EQ(bar->fields.size(), 3U);
+  ASSERT_EQ(bar->HasField("x"), true);
+  ASSERT_EQ(bar->HasField("y"), true);
+  ASSERT_EQ(bar->HasField("z"), true);
+
+  EXPECT_TRUE(bar->GetField("x").type.IsIntTy());
+  EXPECT_EQ(bar->GetField("x").type.GetSize(), 4U);
+  EXPECT_EQ(bar->GetField("x").offset, 0);
+
+  EXPECT_TRUE(bar->GetField("y").type.IsIntTy());
+  EXPECT_EQ(bar->GetField("y").type.GetSize(), 1U);
+  EXPECT_EQ(bar->GetField("y").offset, 4);
+
+  EXPECT_TRUE(bar->GetField("z").type.IsIntTy());
+  EXPECT_EQ(bar->GetField("z").type.GetSize(), 4U);
+  EXPECT_EQ(bar->GetField("z").offset, 5);
+}
+
 } // namespace bpftrace::test::clang_parser

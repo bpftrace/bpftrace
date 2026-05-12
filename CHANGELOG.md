@@ -14,6 +14,8 @@ and this project adheres to
 - Subtraction and decrement ops now produce an int64 instead of a uint64.
   - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
 #### Added
+- User defined C structs support using `__attribute__`s after the closing curly brace.
+  - [#5153](https://github.com/bpftrace/bpftrace/pull/5153)
 - stdlib: add `leader_{tid,comm}` to retrieve the thread group leader.
   - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
 - stdlib: add signal_name().

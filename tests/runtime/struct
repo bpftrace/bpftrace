@@ -50,3 +50,12 @@ NAME struct with bitfield
 PROG struct foo { unsigned long long x_0:1; unsigned long long x_1:1; unsigned long long x_2:2; } begin { $val = (uint64)0x1e; $f = *(struct foo *)(&$val); print($f); }
 EXPECT { .x_0 = 0, .x_1 = 1, .x_2 = 3 }
 
+NAME struct with attribute
+PROG struct foo { int x; char y; int z; } struct bar { int x; char y; int z; } __attribute__((packed)) struct bar2 { int x; char y; int z; } __attribute__((packed)) __attribute__((aligned(1))) begin { print(sizeof(struct foo)); print(sizeof(struct bar)); print(sizeof(struct bar2)); }
+EXPECT 12
+EXPECT 9
+EXPECT 9
+
+NAME struct with attribute and comment
+PROG struct foo { int x; char y; int z; } /**/ __attribute__ /**/ ((packed)) /**/ begin { print(sizeof(struct foo)); }
+EXPECT 9
