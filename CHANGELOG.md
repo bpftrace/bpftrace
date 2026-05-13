@@ -56,6 +56,8 @@ and this project adheres to
   - [#2801](https://github.com/bpftrace/bpftrace/issues/2801)
 - Fix subtraction and decrement ops not producing the correct type
   - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
+- runtime-tests.sh now self-elevates with `sudo --preserve-env=PATH,PYTHONPATH` so it works inside `nix develop` without manual env preservation, and emits a clear diagnostic when `looseversion` is missing
+  - [#5110](https://github.com/bpftrace/bpftrace/issues/5110)
 #### Security
 #### Docs
 #### Tools
