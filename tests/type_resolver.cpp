@@ -1417,6 +1417,30 @@ TEST_F(TypeResolverTest, for_loop_variable_scope)
                   Struct::CreateTuple({ map_key_type(result, "@mapA"),
                                         map_val_type(result, "@mapA") })));
   }
+  {
+    // The declaration node is not visited directly in
+    // TypeRuleCollector::visit(For). It receives its type through the
+    // For-scoped variable, so sibling range loops with the same declaration
+    // name must remain independent.
+    auto result = test(
+        R"(begin {
+           for ($i : ((uint8)0)..((uint8)3)) { print($i); }
+           for ($i : ((uint16)0)..((uint16)3)) { print($i); } })");
+
+    ast::CollectNodes<ast::Variable> collector;
+    collector.visit(*result.ast.root,
+                    [&](const ast::Variable &v) { return v.ident == "$i"; });
+    ASSERT_EQ(collector.nodes().size(), 4);
+
+    EXPECT_EQ(result.type_map.type(&collector.nodes().at(0).get()),
+              CreateUInt8());
+    EXPECT_EQ(result.type_map.type(&collector.nodes().at(1).get()),
+              CreateUInt8());
+    EXPECT_EQ(result.type_map.type(&collector.nodes().at(2).get()),
+              CreateUInt16());
+    EXPECT_EQ(result.type_map.type(&collector.nodes().at(3).get()),
+              CreateUInt16());
+  }
 }
 
 } // namespace bpftrace::test::type_resolver
