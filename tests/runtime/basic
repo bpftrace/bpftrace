@@ -69,6 +69,12 @@ EXPECT_REGEX fentry:.*
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
+NAME it lists fentry without module
+RUN {{BPFTRACE}} -l 'fentry:vfs_*'
+EXPECT_REGEX fentry:vmlinux:vfs_.*
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME regression for #4162
 RUN {{BPFTRACE}} -l 'fentry:*'
 EXPECT_REGEX fentry:.*

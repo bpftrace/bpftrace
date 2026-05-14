@@ -626,15 +626,27 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
         break;
       }
       case ProbeType::kprobe:
-      case ProbeType::kretprobe:
-      case ProbeType::fentry:
-      case ProbeType::fexit:
-      case ProbeType::rawtracepoint: {
+      case ProbeType::kretprobe: {
         // These can be target:func or just func.
         if (parts.size() > 2) {
           target = parts[1];
         }
         search_input = search_suffix;
+        break;
+      }
+      case ProbeType::fentry:
+      case ProbeType::fexit:
+      case ProbeType::rawtracepoint: {
+        // These can be target:func or just func. For the latter, we have to
+        // explicitly add the "*:" prefix to search_input since symbols
+        // extracted from BTF have the "module:func" form.
+        if (parts.size() > 2) {
+          target = parts[1];
+          search_input = search_suffix;
+        } else {
+          target = "*";
+          search_input = "*:" + search_suffix;
+        }
         break;
       }
       default:
