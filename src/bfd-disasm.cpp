@@ -88,11 +88,7 @@ static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
 
   disassemble_init_for_target(&info);
 
-#ifdef LIBBFD_DISASM_FOUR_ARGS_SIGNATURE
   disassemble = disassembler(info.arch, bfd_big_endian(bfdf), info.mach, bfdf);
-#else
-  disassemble = disassembler(bfdf);
-#endif
 
   uint64_t pc = 0;
   int count;

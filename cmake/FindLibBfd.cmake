@@ -83,21 +83,6 @@ if(STATIC_LINKING OR LIBBFD_STATIC)
 endif()
 INCLUDE(CheckCXXSourceCompiles)
 CHECK_CXX_SOURCE_COMPILES("
-#include <string.h>
-// See comment in bfd-disasm.cpp for why this needs to exist
-#define PACKAGE \"bpftrace-test\"
-#include <bfd.h>
-#include <dis-asm.h>
-int main(void) {
-  bfd *abfd = bfd_openr(NULL, NULL);
-
-  disassembler(bfd_get_arch(abfd),
-               bfd_big_endian(abfd),
-               bfd_get_mach(abfd),
-               abfd);
-  return 0;
-}" LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
-CHECK_CXX_SOURCE_COMPILES("
 // See comment in bfd-disasm.cpp for why this needs to exist
 #define PACKAGE \"bpftrace-test\"
 #include <dis-asm.h>
