@@ -44,7 +44,6 @@ static int fprintf_nop(void *out __attribute__((unused)),
   return 0;
 }
 
-#ifdef LIBBFD_INIT_DISASM_INFO_FOUR_ARGS_SIGNATURE
 // NOLINTNEXTLINE(modernize-avoid-variadic-functions): required by libbfd API
 static int fprintf_styled_nop(void *out __attribute__((unused)),
                               enum disassembler_style s __attribute__((unused)),
@@ -53,7 +52,6 @@ static int fprintf_styled_nop(void *out __attribute__((unused)),
 {
   return 0;
 }
-#endif
 
 static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
 {
@@ -75,11 +73,7 @@ static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
     return AlignState::Fail;
   }
 
-#ifdef LIBBFD_INIT_DISASM_INFO_FOUR_ARGS_SIGNATURE
   init_disassemble_info(&info, stdout, fprintf_nop, fprintf_styled_nop);
-#else
-  init_disassemble_info(&info, stdout, fprintf_nop);
-#endif
 
   info.arch = bfd_get_arch(bfdf);
   info.mach = bfd_get_mach(bfdf);

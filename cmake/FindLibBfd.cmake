@@ -81,16 +81,5 @@ if(STATIC_LINKING OR LIBBFD_STATIC)
 
   set(CMAKE_REQUIRED_FLAGS "-Wl,--start-group -Wl,-Bdynamic -Wl,-Bdynamic -lpthread -Wl,-Bdynamic -ldl")
 endif()
-INCLUDE(CheckCXXSourceCompiles)
-CHECK_CXX_SOURCE_COMPILES("
-// See comment in bfd-disasm.cpp for why this needs to exist
-#define PACKAGE \"bpftrace-test\"
-#include <dis-asm.h>
-
-int main(void) {
-  init_disassemble_info(NULL, NULL, NULL, NULL);
-  return 0;
-}
-" LIBBFD_INIT_DISASM_INFO_FOUR_ARGS_SIGNATURE)
 SET(CMAKE_REQUIRED_LIBRARIES)
 endif()
