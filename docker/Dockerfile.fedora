@@ -23,6 +23,7 @@ RUN dnf install -y \
         libpcap-devel \
         libbpf-devel \
         libbpf-static \
+        libzstd-devel \
         llvm-devel \
         make \
         pahole \

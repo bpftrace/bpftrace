@@ -44,6 +44,9 @@ mark_as_advanced(LIBBFD_INCLUDE_DIRS LIBBFD_LIBRARIES)
 if(${LIBBFD_FOUND})
 find_package(LibOpcodes)
 SET(CMAKE_REQUIRED_LIBRARIES ${LIBBFD_LIBRARIES} ${LIBOPCODES_LIBRARIES})
+if (LIBZSTD_LIBRARIES)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBZSTD_LIBRARIES})
+endif(LIBZSTD_LIBRARIES)
 if(STATIC_LINKING OR LIBBFD_STATIC)
   # libbfd.so is linked with the required libraries but libbfd.a is not.
   # So if we do a static bpftrace build or libbfd.so is not available (e.g. on
@@ -61,12 +64,6 @@ if(STATIC_LINKING OR LIBBFD_STATIC)
   find_library (LIBSFRAME_LIBRARIES
     NAMES
       sframe
-    PATHS
-      ENV LIBRARY_PATH
-      ENV LD_LIBRARY_PATH)
-  find_library (LIBZSTD_LIBRARIES
-    NAMES
-      zstd
     PATHS
       ENV LIBRARY_PATH
       ENV LD_LIBRARY_PATH)

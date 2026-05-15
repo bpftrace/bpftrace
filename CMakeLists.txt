@@ -108,6 +108,13 @@ set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 check_symbol_exists(name_to_handle_at "sys/types.h;sys/stat.h;fcntl.h" HAVE_NAME_TO_HANDLE_AT)
 set(CMAKE_REQUIRED_DEFINITIONS)
 
+# Newer libbfd requires zstd so let's find that first
+find_library(LIBZSTD_LIBRARIES
+  NAMES
+    zstd
+  PATHS
+    ENV LIBRARY_PATH
+    ENV LD_LIBRARY_PATH)
 find_package(LibBfd)
 find_package(LibOpcodes)
 find_package(LibDw)
