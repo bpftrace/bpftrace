@@ -102,7 +102,7 @@ target_link_options(bpftrace BEFORE PRIVATE
 
 target_link_libraries(runtime debugfs output symbols tracefs util)
 target_link_libraries(runtime ${LIBBPF_LIBRARIES} ${ZLIB_LIBRARIES})
-target_link_libraries(libbpftrace runtime symbols aot ast arch util cxxdemangler_llvm)
+target_link_libraries(libbpftrace "-Wl,--start-group" runtime symbols aot ast arch util cxxdemangler_llvm "-Wl,--end-group")
 
 if(LIBPCAP_FOUND)
   target_link_libraries(libbpftrace ${LIBPCAP_LIBRARIES})
