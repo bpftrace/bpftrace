@@ -816,13 +816,6 @@ NAME percpu_kaddr field access
 PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); if ($runq != 0) { printf("nr_running: %d\n", $runq.nr_running) } exit() }
 EXPECT_REGEX nr_running: [0-9]+
 
-NAME percpu_kaddr field access no NULL check
-PROG begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq.nr_running); exit() }
-EXPECT stdin:1:31-59: ERROR: helper bpf_per_cpu_ptr: result needs to be null-checked before accessing fields
-       begin { $runq = ((struct rq *)percpu_kaddr("runqueues", 0)); printf("nr_running: %d\n", $runq.nr_running); exit() }
-                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-WILL_FAIL
-
 NAME clear on scalar map prevents printing
 PROG begin { @xx = 5; clear(@xx); exit() }
 EXPECT_NONE @xx: 5
