@@ -60,6 +60,8 @@ and this project adheres to
   - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
 - Fix for-loop variable scope causing type merging across loops
   - [#5157](https://github.com/bpftrace/bpftrace/pull/5157)
+- Fix verbose listing of some kernel struct types
+  - [#5169](https://github.com/bpftrace/bpftrace/pull/5169)
 #### Security
 #### Docs
 #### Tools

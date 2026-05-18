@@ -1099,7 +1099,10 @@ std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
           type.clear();
           in_def = false;
         }
-      } else if (!line.empty() && line.back() == '{') {
+      } else if ((line.starts_with(STRUCT_PREFIX) ||
+                  line.starts_with(UNION_PREFIX) ||
+                  line.starts_with(ENUM_PREFIX)) &&
+                 line.back() == '{') {
         // start of type definition
         type += line + "\n";
         in_def = true;
