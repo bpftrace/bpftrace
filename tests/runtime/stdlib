@@ -57,8 +57,11 @@ PROG begin { @a[1] = 1; $x = delete(@a, 2); $y = delete(@a, 1); if ($x == false 
 EXPECT SUCCESS
 TIMEOUT 1
 
+# Kernel commit 541003b576c3 ("rename do_filp_open() to do_file_open()") renamed
+# do_filp_open to do_file_open since version 7.0 so use wildcard below to handle
+# both names.
 NAME is_err
-PROG fexit:do_filp_open { if (is_err(retval)) { printf("is_err: %ld\n", (int64)retval); exit(); } }
+PROG fexit:do_fil*_open { if (is_err(retval)) { printf("is_err: %ld\n", (int64)retval); exit(); } }
 EXPECT_REGEX is_err: -[0-9]{1,4}$
 AFTER cat /tmp/bpftrace_nonexistent_file
 REQUIRES_FEATURE btf
