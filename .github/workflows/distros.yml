@@ -20,6 +20,7 @@ jobs:
         - docker/Dockerfile.alpine
         - docker/Dockerfile.debian
         - docker/Dockerfile.fedora
+        - docker/Dockerfile.opensuse
         - docker/Dockerfile.ubuntu
 
     steps:
