@@ -9,6 +9,17 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+#### Added
+#### Deprecated
+#### Removed
+#### Fixed
+#### Security
+#### Docs
+#### Tools
+
+## [0.26.0] TBD
+
+#### Breaking Changes
 - stdlib: Change `pcomm` to an alias of task.real_parent.comm instead of task.group_leader.comm.
   - [#5132](https://github.com/bpftrace/bpftrace/pull/5132)
 - Subtraction and decrement ops now produce an int64 instead of a uint64.
