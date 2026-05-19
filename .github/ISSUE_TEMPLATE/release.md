@@ -24,7 +24,7 @@ For LLVM release schedule, see https://llvm.org/.
 - [ ] Mark the release in [CHANGELOG.md](https://github.com/bpftrace/bpftrace/blob/master/CHANGELOG.md) and create an "Unreleased" section
 - [ ] Set `bpftrace_VERSION_MINOR` to `<minor>` in [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt)
 - [ ] Add `v0.<minor>-rc0` tag to master
-- [ ] Create release branch `release/v0.<minor>.x` (<branching-date>)
+- [ ] Create release branch `release/0.<minor>.x` (<branching-date>)
 - [ ] Add support for LLVM <llvm>
   - [ ] Bump `MAX_LLVM_MAJOR` in [CMakeLists.txt](https://github.com/bpftrace/bpftrace/blob/master/CMakeLists.txt)
   - [ ] Add new Nix target in [flake.nix](https://github.com/bpftrace/bpftrace/blob/master/flake.nix)
