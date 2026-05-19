@@ -1,13 +1,14 @@
 // Check comm and arg1(syscall_id) to make sure these are the nanosleeps we issued
+#include <syscall.h>
 
 rawtracepoint:sys_enter
-/comm == "syscall" && arg1 == 0x23/
+/comm == "syscall" && arg1 == __NR_nanosleep/
 {
   printf("first");
 }
 
 rawtracepoint:sys_enter
-/comm == "syscall" && arg1 == 0x23/
+/comm == "syscall" && arg1 == __NR_nanosleep/
 {
   printf(" second\n");
   exit();
