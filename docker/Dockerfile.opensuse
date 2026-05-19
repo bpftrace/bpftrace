@@ -1,0 +1,41 @@
+# This Dockerfile is used to both document and test building bpftrace on the
+# latest version of OpenSUSE Tumbleweed. We attempt to catch bugs as early as
+# possible which is why we are using latest.
+
+FROM opensuse/tumbleweed:latest
+
+RUN zypper install --no-recommends -y \
+        awk \
+        bcc-devel \
+        bison \
+        binutils-devel \
+        bpftool \
+        cereal-devel \
+        clang-devel \
+        cmake \
+        elfutils \
+        flex \
+        gcc \
+        gcc-c++ \
+        libpcap-devel \
+        libbpf-devel \
+        libbpf-devel-static \
+        libzstd-devel \
+        llvm-devel \
+        make \
+        pahole \
+        xxd \
+        zip \
+        zlib-devel
+
+COPY . /src
+WORKDIR /src
+
+# Use CMAKE_BUILD_TYPE=Release if you don't plan on developing bpftrace
+# We set USE_SYSTEM_LIBBPF=On to test that bpftrace can build with system libbpf
+# (i.e. not using libbpf from the submodule)
+RUN cmake -B /build -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Debug  -DUSE_SYSTEM_LIBBPF=On
+RUN make -C /build -j$(nproc)
+
+ENTRYPOINT ["/build/src/bpftrace"]
+
