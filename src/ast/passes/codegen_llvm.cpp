@@ -1569,7 +1569,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (err < 0 || sym.address == 0)
       call.addError() << "Could not resolve symbol: "
                       << current_attach_point_->target << ":" << name;
-    return ScopedExpr(b_.getInt64(sym.address));
+    // Convert to pointer to match GetType() for pointer types
+    // The pointee size info is preserved in type_map_ and used during deref
+    Value *addr = b_.getInt64(sym.address);
+    Value *ptr = b_.CreateIntToPtr(addr, b_.getPtrTy());
+    return ScopedExpr(ptr);
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
     auto path = call.vargs.at(0).as<String>()->value;
