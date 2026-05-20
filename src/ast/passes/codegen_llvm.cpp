@@ -1565,9 +1565,15 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto sym = bpftrace_.resolve_uname(name, current_attach_point_->target);
     if (!sym) {
       call.addError() << sym.takeError();
-      return ScopedExpr(b_.getInt64(0));
+      // Return null pointer on error
+      Value *null_ptr = b_.CreateIntToPtr(b_.getInt64(0), b_.getPtrTy());
+      return ScopedExpr(null_ptr);
     }
-    return ScopedExpr(b_.getInt64(sym->address));
+    // Convert to pointer to match GetType() for pointer types
+    // The pointee size info is preserved in type_map_ and used during deref
+    Value *addr = b_.getInt64(sym->address);
+    Value *ptr = b_.CreateIntToPtr(addr, b_.getPtrTy());
+    return ScopedExpr(ptr);
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
     auto path = call.vargs.at(0).as<String>()->value;
