@@ -170,6 +170,31 @@ TEST(ap_probe_expansion, kprobe_module_function_wildcard)
        true);
 }
 
+TEST(ap_probe_expansion, kprobe_multi_exact)
+{
+  // Exact function names start with NONE expansion but get promoted to SESSION
+  // when merged with a matching kretprobe.
+  test("kprobe:sys_read { @entry = 1 } kretprobe:sys_read { @exit = 1 }",
+       { "kprobe:sys_read" },
+       { { "sys_read" } },
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(
+               If(Call("__session_is_return", {}),
+                  Block({ AssignScalarMapStatement(Map("@exit"), Integer(1)) },
+                        None()),
+                  Block({ AssignScalarMapStatement(Map("@entry"), Integer(1)) },
+                        None()))) })),
+       true);
+}
+
+TEST(ap_probe_expansion, kprobe_offset_no_multi)
+{
+  // kprobe_multi does not support non-zero offsets, so even with
+  // kprobe_multi enabled, an offset probe must not use multi expansion.
+  test("kprobe:sys_read+10 {}", { "kprobe:sys_read+10" }, { {} }, _, true);
+}
+
 TEST(ap_probe_expansion, uprobe_wildcard)
 {
   // Disabled uprobe_multi - should get full expansion
