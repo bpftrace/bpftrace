@@ -135,6 +135,7 @@ public:
   }
 
   using Visitor<SessionExpander>::visit;
+  void visit(Program &prog);
   void visit(Probe &probe);
 
   Probe expand(Probe &entry, Probe &exit);
@@ -145,6 +146,7 @@ private:
   ASTContext &ast_;
   const BPFtrace &bpftrace_;
   ExpansionResult &expansion_result_;
+  ProbeList probes_to_erase_;
 };
 
 Probe *SessionExpander::find_matching_retprobe(Probe &probe)
@@ -155,6 +157,7 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
   // - has a single kretprobe attach point
   // - attaches to the same target and function as probe
   // - is multi-expanded (session expansion uses the same attach mechanism)
+  // - is not already scheduled for erasure
   std::ranges::copy_if(
       ast_.root->probes, std::back_inserter(retprobes), [&](Probe *other) {
         return other->attach_points.size() == 1 &&
@@ -163,14 +166,16 @@ Probe *SessionExpander::find_matching_retprobe(Probe &probe)
                expansion_result_.get_expansion(*other->attach_points[0]) ==
                    ExpansionType::MULTI &&
                other->attach_points[0]->target == ap->target &&
-               other->attach_points[0]->func == ap->func;
+               other->attach_points[0]->func == ap->func &&
+               std::ranges::find(probes_to_erase_, other) ==
+                   probes_to_erase_.end();
       });
 
   // If there's not exactly one match, we don't know how to do session expansion
-  if (retprobes.size() == 1)
-    return retprobes[0];
-
-  return nullptr;
+  if (retprobes.size() != 1) {
+    return nullptr;
+  }
+  return retprobes[0];
 }
 
 void SessionExpander::visit(Probe &probe)
@@ -206,7 +211,15 @@ void SessionExpander::visit(Probe &probe)
     expansion_result_.set_expansion(*probe.attach_points[0],
                                     ExpansionType::SESSION);
 
-    std::erase(ast_.root->probes, retprobe);
+    probes_to_erase_.push_back(retprobe);
+  }
+}
+
+void SessionExpander::visit(Program &prog)
+{
+  Visitor<SessionExpander>::visit(prog);
+  for (auto *retprobe : probes_to_erase_) {
+    std::erase(prog.probes, retprobe);
   }
 }
 

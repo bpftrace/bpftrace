@@ -440,7 +440,7 @@ public:
 class Builtin : public Node {
 public:
   explicit Builtin(ASTContext &ctx, Location &&loc, std::string ident)
-      : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
+      : Node(ctx, std::move(loc)), ident(std::move(ident)), probe_id(-1) {};
   explicit Builtin(ASTContext &ctx, const Location &loc, const Builtin &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
