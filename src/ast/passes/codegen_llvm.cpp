@@ -3632,7 +3632,6 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
   auto *key_type = ArrayType::get(b_.getInt8Ty(), size);
 
   int offset = 0;
-  bool aligned = true;
   // Construct a map key in the stack
   Value *offset_val = b_.CreateGEP(key_type,
                                    key,
@@ -3640,18 +3639,16 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
   size_t map_key_size = type_map_.map_key_type(map.ident).GetSize();
   size_t expr_size = type_map_.type(key_expr).GetSize();
 
+  bool aligned = (map_key_size % 8) == 0;
+
   if (inBpfMemory(type_map_.type(key_expr))) {
     b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
-    if ((map_key_size % 8) != 0)
-      aligned = false;
   } else {
     if (type_map_.type(key_expr).IsArrayTy() ||
         type_map_.type(key_expr).IsCTypeTy()) {
       // Read the array/struct into the key
       b_.CreateProbeRead(
           offset_val, type_map_.type(key_expr), scoped_expr.value(), map.loc);
-      if ((map_key_size % 8) != 0)
-        aligned = false;
     } else {
       if (aligned)
         b_.CreateStore(scoped_expr.value(), offset_val);

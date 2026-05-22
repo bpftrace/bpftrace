@@ -75,6 +75,8 @@ and this project adheres to
   - [#5169](https://github.com/bpftrace/bpftrace/pull/5169)
 - Enable session probes for kprobes with exact function names (not only wildcards)
   - [#5104](https://github.com/bpftrace/bpftrace/pull/5104)
+- Fix un-aligned map key access for hist/lhist/tseries map types
+  - [#5181](https://github.com/bpftrace/bpftrace/pull/5181)
 #### Security
 #### Docs
 #### Tools
