@@ -110,10 +110,6 @@ stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint, rawtrac
 iter:task { $x = args.foo; }
                  ~~~~
 )");
-  test_error(
-      "fentry:bpf:fake_prog { $x = args.foo; }",
-      "ERROR: The args builtin cannot be used for 'fentry/fexit:bpf' probes");
-
   std::vector<std::string> invalid = { "begin",
                                        "end",
                                        "test:k",

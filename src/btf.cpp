@@ -562,16 +562,27 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
 
 Result<std::shared_ptr<Struct>> BTF::resolve_args(std::string_view func,
                                                   bool ret,
-                                                  bool skip_first_arg)
+                                                  bool skip_first_arg,
+                                                  struct btf *prog_btf)
 {
-  if (!has_data()) {
-    return make_error<ast::ArgParseError>(func, "BTF data not available");
-  }
+  BTFId func_id;
 
-  auto func_id = find_id(func, BTF_KIND_FUNC);
-  if (!func_id.btf) {
-    return make_error<ast::ArgParseError>(
-        func, "BTF data for the function not found");
+  if (prog_btf) {
+    __s32 id = btf__find_by_name_kind(prog_btf, func.data(), BTF_KIND_FUNC);
+    if (id < 0) {
+      return make_error<ast::ArgParseError>(
+          func, "BTF data for the function not found in BPF program");
+    }
+    func_id = { .btf = prog_btf, .id = static_cast<__u32>(id) };
+  } else {
+    if (!has_data()) {
+      return make_error<ast::ArgParseError>(func, "BTF data not available");
+    }
+    func_id = find_id(func, BTF_KIND_FUNC);
+    if (!func_id.btf) {
+      return make_error<ast::ArgParseError>(
+          func, "BTF data for the function not found");
+    }
   }
 
   const struct btf_type *t = btf__type_by_id(func_id.btf, func_id.id);

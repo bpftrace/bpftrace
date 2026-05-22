@@ -256,11 +256,6 @@ std::optional<Expression> Builtins::visit(Builtin &builtin)
     if (type == ProbeType::fentry || type == ProbeType::fexit ||
         type == ProbeType::uprobe || type == ProbeType::rawtracepoint ||
         type == ProbeType::tracepoint) {
-      if ((type == ProbeType::fentry || type == ProbeType::fexit) &&
-          probe->attach_points[0]->target == "bpf") {
-        builtin.addError() << "The args builtin cannot be used for "
-                              "'fentry/fexit:bpf' probes";
-      }
     } else {
       builtin.addError()
           << "The args builtin can only be used with "
