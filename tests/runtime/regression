@@ -160,3 +160,9 @@ NAME probe specific arguments
 PROG fentry:vmlinux:vfs_write { print(args.file); exit(); } t:syscalls:sys_enter_execve { print(args.filename); exit(); }
 EXPECT Attached 2 probes
 TIMEOUT 1
+
+# https://github.com/bpftrace/bpftrace/issues/5180
+NAME maps with hidden key fields aligned access
+PROG begin{ @a[(uint8)1] = hist(3,0); @b = count(); }
+EXPECT Attached 1 probe
+TIMEOUT 1
