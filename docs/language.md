@@ -1534,10 +1534,39 @@ uprobe:/bin/bash@readline.c:362 { ... }
 
 `file` path may be absolute or relative, and `line:col` must refer to a valid statement in that file. Only statements originating from the specified file are considered; statements from included files are ignored.
 
-When tracing C++ programs, it’s possible to turn on automatic symbol demangling by using the `:cpp` prefix:
+When tracing C++ programs, the `cpp` qualifier enables automatic symbol demangling, allowing you to specify function names in their human-readable form instead of the compiler-mangled form.
+
+For example, given this C++ code:
+
+```cpp
+namespace MyApp {
+  class Server {
+  public:
+    void handle_request(int fd) { ... }
+  };
+}
+```
+
+The compiler mangles the function name to `_ZN5MyApp6Server14handle_requestEi`.
+Instead of using that directly, use the `cpp` qualifier:
 
 ```
-# bpftrace:cpp:"bpftrace::BPFtrace::add_probe" { ... }
+# using cpp qualifier with demangled name
+uprobe:/path/to/myapp:cpp:"MyApp::Server::handle_request" { print(ustack); }
+
+# wildcards also work with cpp qualifier
+uprobe:/path/to/myapp:cpp:"MyApp::Server::*" { print(ustack); }
+```
+
+Without the `cpp` qualifier you must use the mangled name directly.
+You can find it using `nm`:
+
+```
+$ nm /path/to/myapp | grep handle_request
+_ZN5MyApp6Server14handle_requestEi
+
+# use the mangled name directly in the probe
+uprobe:/path/to/myapp:"_ZN5MyApp6Server14handle_requestEi" { print(ustack); }
 ```
 
 It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
