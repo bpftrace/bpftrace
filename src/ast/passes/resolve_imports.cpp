@@ -292,6 +292,17 @@ Result<OK> Imports::import_any(Node &node,
   return OK();
 }
 
+static void mark_stdlib_macros(ASTContext &ast)
+{
+  if (!ast.root) {
+    return;
+  }
+
+  for (auto *macro : ast.root->macros) {
+    macro->is_stdlib = true;
+  }
+}
+
 Result<OK> Imports::import_stdlib(
     Node &node,
     const std::string &name,
@@ -327,6 +338,7 @@ Result<OK> Imports::import_stdlib(
     return OK();
   }
   auto &ast = **result;
+  mark_stdlib_macros(ast);
 
   ResolveStdlibMacroImports resolver(*this, macro_name, paths);
   resolver.visit(ast.root);

@@ -33,11 +33,13 @@ public:
   // This may add errors to conflicting macros.
   static MacroRegistry create(ASTContext &ast);
 
-  // Lookup a macro based on a name and set of arguments.
+  // Lookup a macro based on a name, set of arguments, and if it's stdlib
   //
   // If no matching macro is found, `nullptr` is returned.
-  Result<const Macro *> lookup(const std::string &name,
-                               const std::vector<Expression> &args) const;
+  Result<const Macro *> lookup(
+      const std::string &name,
+      const std::vector<Expression> &args,
+      std::optional<bool> is_stdlib = std::nullopt) const;
 
 private:
   // This holds the definitions for all discovered macros.
