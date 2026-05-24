@@ -328,7 +328,6 @@ const std::map<std::string, AnyParser> CONFIG_KEY_MAP = {
   { "show_debug_info", CONFIG_FIELD_PARSER(show_debug_info) },
   { UNSTABLE_IMPORT_STATEMENT, CONFIG_FIELD_PARSER(unstable_import_statement) },
   { UNSTABLE_TSERIES, CONFIG_FIELD_PARSER(unstable_tseries) },
-  { UNSTABLE_ADDR, CONFIG_FIELD_PARSER(unstable_addr) },
   { UNSTABLE_TYPEINFO, CONFIG_FIELD_PARSER(unstable_typeinfo) },
   { UNSTABLE_DW_USTACK, CONFIG_FIELD_PARSER(unstable_dw_ustack) },
 };

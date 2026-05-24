@@ -42,8 +42,6 @@ public:
   explicit UnstableFeature(BPFtrace &bpftrace) : bpftrace_(bpftrace) {};
 
   using Visitor<UnstableFeature>::visit;
-  void visit(MapAddr &map_addr);
-  void visit(VariableAddr &var_addr);
   void visit(StatementImport &imp);
   void visit(Call &call);
   void visit(Typeinfo &typeinfo);
@@ -53,7 +51,6 @@ private:
   // This set is so we don't warn multiple times for the same feature.
   std::unordered_set<std::string> warned_features;
 
-  void check_unstable_addr(Node &node);
   void check_unstable_tseries(Node &node);
   void check_unstable_dw_ustack(Node &node);
 };
@@ -103,20 +100,6 @@ void UnstableFeature::visit(Typeinfo &typeinfo)
   }
 }
 
-void UnstableFeature::check_unstable_addr(Node &node)
-{
-  if (bpftrace_.config_->unstable_addr == ConfigUnstable::error) {
-    node.addError() << get_error(ADDR, UNSTABLE_ADDR);
-    return;
-  }
-
-  if (bpftrace_.config_->unstable_addr == ConfigUnstable::warn &&
-      !warned_features.contains(UNSTABLE_ADDR)) {
-    LOG(WARNING) << get_warning(ADDR, UNSTABLE_ADDR);
-    warned_features.insert(UNSTABLE_ADDR);
-  }
-}
-
 void UnstableFeature::check_unstable_tseries(Node &node)
 {
   if (bpftrace_.config_->unstable_tseries == ConfigUnstable::error) {
@@ -148,16 +131,6 @@ void UnstableFeature::check_unstable_dw_ustack(Node &node)
     warned_features.insert(UNSTABLE_DW_USTACK);
   }
 #endif // HAVE_DW_UNWIND
-}
-
-void UnstableFeature::visit(MapAddr &map_addr)
-{
-  check_unstable_addr(map_addr);
-}
-
-void UnstableFeature::visit(VariableAddr &var_addr)
-{
-  check_unstable_addr(var_addr);
 }
 
 Pass CreateUnstableFeaturePass()
