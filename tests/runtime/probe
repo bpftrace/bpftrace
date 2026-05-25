@@ -599,18 +599,18 @@ EXPECT_REGEX (first)+ second
 
 NAME fexit_order
 RUN {{BPFTRACE}} runtime/scripts/fexit_order.bt
-EXPECT_REGEX (first)+ second
+EXPECT_REGEX ^(first)+ second$
 AFTER ./testprogs/syscall nanosleep 233;
 REQUIRES_FEATURE btf
 
 NAME software_order
 RUN {{BPFTRACE}} runtime/scripts/software_order.bt
-EXPECT_REGEX (first)+ second
+EXPECT_REGEX ^(first)+ second$
 
 NAME signal_order
 RUN {{BPFTRACE}} -e 'self:signal:SIGUSR1 { printf("first"); } self:signal:SIGUSR1 { printf(" second\n"); exit(); }'
 AFTER kill -s USR1 $(pidof bpftrace)
-EXPECT_REGEX (first)+ second
+EXPECT_REGEX ^(first)+ second$
 
 NAME some_missing_probes_default_error
 PROG kprobe:vfs_read { exit(); } t:syscalls:nonsense { exit(); }
