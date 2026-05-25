@@ -1942,7 +1942,8 @@ public:
       : Node(ctx, loc + other.loc),
         name(other.name),
         vargs(clone(ctx, loc, other.vargs)),
-        block(clone(ctx, loc, other.block)) {};
+        block(clone(ctx, loc, other.block)),
+        is_stdlib(other.is_stdlib) {};
 
   bool operator==(const Macro &other) const
   {
@@ -1950,11 +1951,15 @@ public:
       return false;
     if (vargs != other.vargs)
       return false;
+    if (is_stdlib != other.is_stdlib)
+      return false;
     return *block == *other.block;
   }
   std::strong_ordering operator<=>(const Macro &other) const
   {
     if (auto cmp = name <=> other.name; cmp != 0)
+      return cmp;
+    if (auto cmp = is_stdlib <=> other.is_stdlib; cmp != 0)
       return cmp;
     if (vargs.size() != other.vargs.size())
       return vargs.size() <=> other.vargs.size();
@@ -1968,6 +1973,7 @@ public:
   std::string name;
   ExpressionList vargs;
   BlockExpr *block = nullptr;
+  bool is_stdlib = false;
 };
 using MacroList = std::vector<Macro *>;
 
