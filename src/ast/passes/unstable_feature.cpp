@@ -44,7 +44,6 @@ public:
   using Visitor<UnstableFeature>::visit;
   void visit(MapAddr &map_addr);
   void visit(VariableAddr &var_addr);
-  void visit(RootImport &imp);
   void visit(StatementImport &imp);
   void visit(Call &call);
   void visit(Typeinfo &typeinfo);
@@ -80,20 +79,6 @@ void UnstableFeature::visit(StatementImport &imp)
       !warned_features.contains(UNSTABLE_IMPORT_STATEMENT)) {
     LOG(WARNING) << get_warning(IMPORT_STATEMENTS, UNSTABLE_IMPORT_STATEMENT);
     warned_features.insert(UNSTABLE_IMPORT_STATEMENT);
-  }
-}
-
-void UnstableFeature::visit(RootImport &imp)
-{
-  if (bpftrace_.config_->unstable_import == ConfigUnstable::error) {
-    imp.addError() << get_error(IMPORTS, UNSTABLE_IMPORT);
-    return;
-  }
-
-  if (bpftrace_.config_->unstable_import == ConfigUnstable::warn &&
-      !warned_features.contains(UNSTABLE_IMPORT)) {
-    LOG(WARNING) << get_warning(IMPORTS, UNSTABLE_IMPORT);
-    warned_features.insert(UNSTABLE_IMPORT);
   }
 }
 
