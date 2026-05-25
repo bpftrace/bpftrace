@@ -745,6 +745,7 @@ A macro's parameter signature specifies how an argument will be used.
 For example `macro test($a, b, @c)` indicates that `$a` needs to be a scratch variable (which might be mutated), that `b` needs to be an expression that will be inserted where ever `b` is used in the macro body, and that `@c` needs to be a map (which might be mutated).
 A valid use of this macro could be `test($x, 1 + 2, @y)`.
 Variables and maps can also be used for ident parameters that expect expressions and would be the same as writing `{ @y }` (Block Expression).
+Note: User-defined macros with the same name and signature as a standard library macro will override the standard library version. However, standard library macros nested inside of other standard library macros will never use the user-defined version of the same signature.
 
 Here are some valid usages of macros:
 

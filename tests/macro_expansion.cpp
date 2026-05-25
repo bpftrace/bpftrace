@@ -1,4 +1,6 @@
 #include "ast/passes/macro_expansion.h"
+#include "ast/passes/import_scripts.h"
+#include "ast/passes/resolve_imports.h"
 #include "mocks.h"
 #include "parser.h"
 #include "gtest/gtest.h"
@@ -24,6 +26,8 @@ void test(const std::string& input,
                 .put(ast)
                 .put(bpftrace)
                 .add(CreateParsePass())
+                .add(ast::CreateResolveRootImportsPass({}))
+                .add(ast::CreateImportInternalScriptsPass())
                 .add(ast::CreateMacroExpansionPass())
                 .run();
 
@@ -91,6 +95,10 @@ TEST(macro_expansion, basic_checks)
              "1 but got 2");
   test_error("macro set($x, $x) { $x += 1; $x } begin { $a = 1; set($a, 1); }",
              "Variable for macro argument has already been used: $x");
+  test_error("macro set(@x, @x) { @x } begin { @a = 1; set(@a, @a); }",
+             "Map for macro argument has already been used: @x");
+  test_error("macro set(x, x) { x } begin { set(1, 1); }",
+             "Ident for macro argument has already been used: x");
   test_error("macro set($x) { $x += 1; $x } macro set($x) { $x } begin { $a = "
              "1; set($a, 1); }",
              "Redefinition of macro: set");
@@ -211,6 +219,27 @@ stdin:1:12-15: ERROR: syntax: builtin 'pid' can't be used as a macro argument
 macro test(pid) { } begin { }
            ~~~
 )");
+}
+
+TEST(macro_expansion, stdlib_shadowing)
+{
+  // User macro with same name and signature shadows the stdlib version.
+  test("macro cpu() { 42 } begin { print(cpu()); }");
+
+  // User macro with same name but different signature coexists with stdlib.
+  // cpu(x) is user-defined, cpu() is from stdlib — both should work.
+  test("macro cpu(x) { x } begin { print(cpu(1)); print(cpu()); }");
+
+  // User macro shadows matching stdlib overload but non-matching stdlib
+  // overloads remain available. comm() has multiple stdlib overloads.
+  test("macro comm() { \"me\" } begin { print(comm()); }");
+
+  // User-to-user redefinitions should still error.
+  test_error("macro cpu() { 1 } macro cpu() { 2 } begin { print(cpu()); }",
+             "Redefinition of macro: cpu");
+
+  // User macros should not poison builtin/function calls inside stdlib macros.
+  test("macro fail(x) { x } begin { print(strlen(\"hi\")); }");
 }
 
 } // namespace bpftrace::test::macro_expansion
