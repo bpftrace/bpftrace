@@ -30,7 +30,6 @@ enum CompatibleBPFLicense {
   DUAL_MPL_GPL
 };
 
-static const auto UNSTABLE_IMPORT = "unstable_import";
 static const auto UNSTABLE_IMPORT_STATEMENT = "unstable_import_statement";
 static const auto UNSTABLE_TSERIES = "unstable_tseries";
 static const auto UNSTABLE_ADDR = "unstable_addr";
@@ -40,6 +39,7 @@ static const auto UNSTABLE_DW_USTACK = "unstable_dw_ustack";
 static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
   "symbol_source",
   "max_type_res_iterations",
+  "unstable_import",
   "unstable_macro",
   "unstable_map_decl"
 };
@@ -64,7 +64,6 @@ public:
   bool cpp_demangle = true;
   bool lazy_symbolication = true;
   bool print_maps_on_exit = true;
-  ConfigUnstable unstable_import = ConfigUnstable::warn;
   ConfigUnstable unstable_import_statement = ConfigUnstable::error;
   ConfigUnstable unstable_tseries = ConfigUnstable::warn;
   ConfigUnstable unstable_addr = ConfigUnstable::warn;
