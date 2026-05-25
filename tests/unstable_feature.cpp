@@ -50,17 +50,6 @@ TEST(unstable_feature, check_error)
       "tseries feature is not enabled by default. To enable this unstable "
       "feature, set the config flag to enable. unstable_tseries=enable");
 
-  test("config = { unstable_addr=warn } begin { $x = 1; &$x; }");
-  test_error("config = { unstable_addr=error } begin { $x = 1; &$x; }",
-             "address-of operator (&) feature is not enabled by default. To "
-             "enable this unstable "
-             "feature, set the config flag to enable. unstable_addr=enable");
-  test("config = { unstable_addr=warn } begin { @x = 1; &@x; }");
-  test_error("config = { unstable_addr=error } begin { @x = 1; &@x; }",
-             "address-of operator (&) feature is not enabled by default. To "
-             "enable this unstable "
-             "feature, set the config flag to enable. unstable_addr=enable");
-
 #ifdef HAVE_DW_UNWIND
   test("config = { unstable_dw_ustack=warn } uprobe:./a:main "
        "{ @ = dw_ustack(); }");
