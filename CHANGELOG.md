@@ -52,6 +52,8 @@ and this project adheres to
   - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
 - Warn instead of error when there is an integer sign mismatch, except for integer literals that are out of range for the destination type
   - [#5148](https://github.com/bpftrace/bpftrace/pull/5148)
+- Stabilize root imports (remove 'unstable_import' flag)
+  - [#5184](https://github.com/bpftrace/bpftrace/pull/5184)
 #### Deprecated
 #### Removed
 #### Fixed

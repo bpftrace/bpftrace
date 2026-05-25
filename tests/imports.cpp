@@ -83,7 +83,6 @@ void test(const std::string &input,
           std::variant<checkFn, std::string> check)
 {
   BPFtrace bpftrace;
-  bpftrace.config_->unstable_import = ConfigUnstable::enable;
   ast::ASTContext ast("stdin", input);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
