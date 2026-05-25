@@ -22,6 +22,7 @@ static bool validate(Macro *macro)
 {
   std::unordered_set<std::string> seen_mvars;
   std::unordered_set<std::string> seen_mmaps;
+  std::unordered_set<std::string> seen_idents;
   for (const auto &arg : macro->vargs) {
     if (auto *mvar = arg.as<Variable>()) {
       auto inserted = seen_mvars.insert(mvar->ident);
@@ -36,6 +37,13 @@ static bool validate(Macro *macro)
       if (!inserted.second) {
         mmap->addError() << "Map for macro argument has already been used: "
                          << mmap->ident;
+        return false;
+      }
+    } else if (auto *ident = arg.as<Identifier>()) {
+      auto inserted = seen_idents.insert(ident->ident);
+      if (!inserted.second) {
+        ident->addError() << "Ident for macro argument has already been used: "
+                          << ident->ident;
         return false;
       }
     }
@@ -56,7 +64,7 @@ MacroRegistry MacroRegistry::create(ASTContext &ast)
     // However we explicitly allow this, as long as they are added in such a way
     // that they will match with the most precise macros first. The newest macro
     // definition must not match with any existing macro definition.
-    auto exists = registry.lookup(macro->name, macro->vargs);
+    auto exists = registry.lookup(macro->name, macro->vargs, macro->is_stdlib);
     if (exists) {
       auto &err = macro->addError();
       err << "Redefinition of macro: " << macro->name;
@@ -91,9 +99,9 @@ static size_t distance(const Macro *macro, const std::vector<Expression> &args)
   return d;
 }
 
-Result<const Macro *> MacroRegistry::lookup(
-    const std::string &name,
-    const std::vector<Expression> &args) const
+Result<const Macro *> MacroRegistry::lookup(const std::string &name,
+                                            const std::vector<Expression> &args,
+                                            std::optional<bool> is_stdlib) const
 {
   const auto it = macros_.find(name);
   if (it == macros_.end()) {
@@ -106,10 +114,23 @@ Result<const Macro *> MacroRegistry::lookup(
   }
   size_t min_distance = std::numeric_limits<size_t>::max();
   std::vector<const Macro *> closest;
+  const Macro *exact_stdlib_match = nullptr;
+  const Macro *exact_user_match = nullptr;
   for (const auto *m : it->second) {
+    // When a lookup explicitly targets stdlib or user-defined macros, treat
+    // the other class as invisible. This avoids turning unrelated builtin or
+    // function calls into macro mismatch errors.
+    if (is_stdlib && m->is_stdlib != *is_stdlib) {
+      continue;
+    }
+
     size_t d = distance(m, args);
     if (d == 0) {
-      return m; // Matched.
+      if (m->is_stdlib && !exact_stdlib_match) {
+        exact_stdlib_match = m;
+      } else if (!m->is_stdlib && !exact_user_match) {
+        exact_user_match = m;
+      }
     }
     if (d < min_distance) {
       min_distance = d;
@@ -119,6 +140,16 @@ Result<const Macro *> MacroRegistry::lookup(
       closest.push_back(m);
     }
   }
+
+  // When both user and stdlib definitions match, prefer the user-defined
+  // macro. Filtered lookups only populate one of these pointers.
+  if (exact_user_match) {
+    return exact_user_match;
+  }
+  if (exact_stdlib_match) {
+    return exact_stdlib_match;
+  }
+
   return make_error<MacroLookupError>(name, std::move(closest));
 }
 
@@ -294,7 +325,13 @@ void MacroExpander::visit(Expression &expr)
   const std::string &name = ident ? ident->ident : call->func;
   const std::vector<Expression> &args = ident ? empty : call->vargs;
 
-  auto result = registry_.lookup(name, args);
+  // If we're being called from a stdlib macro then only expand other stdlib
+  // macros not user-defined macros that also happen to match
+  std::optional<bool> restrict_to_stdlib = std::nullopt;
+  if (!stack_.empty() && stack_.back()->is_stdlib) {
+    restrict_to_stdlib = true;
+  }
+  auto result = registry_.lookup(name, args, restrict_to_stdlib);
   if (!result) {
     auto done = handleErrors(
         std::move(result), [&](const MacroLookupError &lookupErr) {

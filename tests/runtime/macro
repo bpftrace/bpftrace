@@ -188,3 +188,20 @@ ARCH x86_64
 NAME builtin wrapper username
 PROG begin { if (__builtin_username == username() && __builtin_username == username) { printf("SUCCESS %s\n", username); } }
 EXPECT_REGEX SUCCESS .*
+
+NAME user macros override stdlib
+PROG macro cpu() { "hi" } begin { printf(cpu()); }
+EXPECT_REGEX hi
+
+NAME user macros don't override stdlib if different signature
+PROG macro cpu(x) { x } begin { print(cpu("hi")); printf("SUCCESS %llu\n", cpu()); }
+EXPECT_REGEX hi
+EXPECT_REGEX SUCCESS [0-9]+
+
+NAME user macros don't override indirect stdlib macros
+PROG macro assert_str(exp) { fail("boom") } begin { print(strlen("hi")); }
+EXPECT 2
+
+NAME user macros don't poison stdlib builtin calls
+PROG macro fail(x) { x } begin { print(strlen("hi")); }
+EXPECT 2
