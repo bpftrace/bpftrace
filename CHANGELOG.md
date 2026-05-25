@@ -54,6 +54,8 @@ and this project adheres to
   - [#5148](https://github.com/bpftrace/bpftrace/pull/5148)
 - Stabilize root imports (remove 'unstable_import' flag)
   - [#5184](https://github.com/bpftrace/bpftrace/pull/5184)
+- Stabilize address-of operator `&` (remove 'unstable_addr' flag)
+  - [#5185](https://github.com/bpftrace/bpftrace/pull/5185)
 #### Deprecated
 #### Removed
 #### Fixed

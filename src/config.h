@@ -32,16 +32,12 @@ enum CompatibleBPFLicense {
 
 static const auto UNSTABLE_IMPORT_STATEMENT = "unstable_import_statement";
 static const auto UNSTABLE_TSERIES = "unstable_tseries";
-static const auto UNSTABLE_ADDR = "unstable_addr";
 static const auto UNSTABLE_TYPEINFO = "unstable_typeinfo";
 static const auto UNSTABLE_DW_USTACK = "unstable_dw_ustack";
 
 static std::unordered_set<std::string> DEPRECATED_CONFIGS = {
-  "symbol_source",
-  "max_type_res_iterations",
-  "unstable_import",
-  "unstable_macro",
-  "unstable_map_decl"
+  "symbol_source",   "max_type_res_iterations", "unstable_addr",
+  "unstable_import", "unstable_macro",          "unstable_map_decl"
 };
 
 class Config {
@@ -66,7 +62,6 @@ public:
   bool print_maps_on_exit = true;
   ConfigUnstable unstable_import_statement = ConfigUnstable::error;
   ConfigUnstable unstable_tseries = ConfigUnstable::warn;
-  ConfigUnstable unstable_addr = ConfigUnstable::warn;
   ConfigUnstable unstable_typeinfo = ConfigUnstable::error;
   ConfigUnstable unstable_dw_ustack = ConfigUnstable::warn;
 #ifdef HAVE_BLAZESYM
