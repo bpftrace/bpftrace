@@ -17,7 +17,7 @@ and this project adheres to
 #### Docs
 #### Tools
 
-## [0.26.0] TBD
+## [0.26.0] 2026-06-26
 
 #### Breaking Changes
 - stdlib: Change `pcomm` to an alias of task.real_parent.comm instead of task.group_leader.comm.
@@ -56,8 +56,6 @@ and this project adheres to
   - [#5184](https://github.com/bpftrace/bpftrace/pull/5184)
 - Stabilize address-of operator `&` (remove 'unstable_addr' flag)
   - [#5185](https://github.com/bpftrace/bpftrace/pull/5185)
-#### Deprecated
-#### Removed
 #### Fixed
 - Silence warning hints when warnings are disabled (`--no-warnings`)
   - [#5151](https://github.com/bpftrace/bpftrace/pull/5151)
@@ -81,8 +79,6 @@ and this project adheres to
   - [#5104](https://github.com/bpftrace/bpftrace/pull/5104)
 - Fix un-aligned map key access for hist/lhist/tseries map types
   - [#5181](https://github.com/bpftrace/bpftrace/pull/5181)
-#### Security
-#### Docs
 #### Tools
 - naptime.bt: Filter out failed calls and add clock_nanosleep support
   - [#5117](https://github.com/bpftrace/bpftrace/pull/5117)
