@@ -6,6 +6,7 @@ These tools are a small collection curated by the bpftrace maintainers that have
 
 ### Versioned Tools
 
+- [0.26 tools](https://github.com/bpftrace/bpftrace/tree/release/0.26.x/tools)
 - [0.25 tools](https://github.com/bpftrace/bpftrace/tree/release/0.25.x/tools)
 - [0.24 tools](https://github.com/bpftrace/bpftrace/tree/release/0.24.x/tools)
 - [0.23 tools](https://github.com/bpftrace/bpftrace/tree/release/0.23.x/tools)
