@@ -52,6 +52,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateControlFlowPass());
   passes.emplace_back(CreateMacroExpansionPass());
   passes.emplace_back(CreateParseBTFPass());
+  passes.emplace_back(CreatePreExpansionBuiltinsPass());
   passes.emplace_back(CreateProbeAndApExpansionPass());
   passes.emplace_back(CreateProbePrunePass());
   passes.emplace_back(CreateArgsResolverPass());
