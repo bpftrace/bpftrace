@@ -166,3 +166,11 @@ NAME maps with hidden key fields aligned access
 PROG begin{ @a[(uint8)1] = hist(3,0); @b = count(); }
 EXPECT Attached 1 probe
 TIMEOUT 1
+
+# https://github.com/bpftrace/bpftrace/issues/5194
+NAME session_retval
+RUN {{BPFTRACE}} -e 'kprobe:ksys_read { print("enter"); } kretprobe:ksys_read { print(retval); }'
+AFTER ./testprogs/syscall read
+EXPECT Attached 1 probe
+TIMEOUT 1
+REQUIRES_FEATURE kprobe_session
