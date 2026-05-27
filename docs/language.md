@@ -1606,7 +1606,7 @@ uprobe:/bin/bash@readline.c:362 { ... }
 
 `file` path may be absolute or relative, and `line:col` must refer to a valid statement in that file. Only statements originating from the specified file are considered; statements from included files are ignored.
 
-When tracing C++ programs, the `cpp` qualifier enables automatic symbol demangling, allowing you to specify function names in their human-readable form instead of the compiler-mangled form.
+When tracing C++ programs with `uprobe` or `uretprobe`, the `cpp` qualifier enables automatic symbol demangling, allowing you to specify function names in their human-readable form instead of the compiler-mangled form.
 
 For example, given this C++ code:
 
