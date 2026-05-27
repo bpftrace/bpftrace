@@ -210,34 +210,13 @@ std::optional<Expression> Builtins::visit(Builtin &builtin)
       builtin.addError() << "The func builtin can not be used with '"
                          << probe->attach_points[0]->provider << "' probes";
     }
-  } else if (builtin.ident == "__builtin_retval") {
-    auto *probe = get_probe(builtin, builtin.ident);
-    if (probe == nullptr)
-      return std::nullopt;
-    ProbeType type = probe->get_probetype();
-    if (type != ProbeType::kretprobe && type != ProbeType::uretprobe &&
-        type != ProbeType::fentry && type != ProbeType::fexit) {
-      builtin.addError()
-          << "The retval builtin can only be used with 'kretprobe' and "
-          << "'uretprobe' and 'fentry' probes"
-          << (type == ProbeType::tracepoint ? " (try to use args.ret instead)"
-                                            : "");
-    }
   } else if (builtin.is_argx()) {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)
       return std::nullopt;
     int arg_num = atoi(builtin.ident.substr(3).c_str());
-    ProbeType type = probe->get_probetype();
-    if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
-        type != ProbeType::usdt && type != ProbeType::rawtracepoint) {
-      // N.B. this works for rawtracepoints but it's discouraged
-      builtin.addError() << "The " << builtin.ident
-                         << " builtin can only be used with "
-                         << "'kprobes', 'uprobes' and 'usdt' probes";
-    }
     // argx in USDT probes doesn't need to check against arch::max_arg()
-    if (type != ProbeType::usdt &&
+    if (probe->get_probetype() != ProbeType::usdt &&
         static_cast<size_t>(arg_num) >= arch::Host::arguments().size()) {
       builtin.addError() << arch::Host::Machine << " doesn't support "
                          << builtin.ident;
@@ -319,5 +298,40 @@ Pass CreateBuiltinsPass()
 
   return Pass::create("Builtins", fn);
 };
+
+Pass CreatePreExpansionBuiltinsPass()
+{
+  auto fn = [](ASTContext &ast, BPFtrace &) {
+    for (auto *probe : ast.root->probes) {
+      CollectNodes<Builtin> collector;
+      collector.visit(*probe);
+      for (const Builtin &builtin : collector.nodes()) {
+        for (auto *ap : probe->attach_points) {
+          ProbeType type = probetype(ap->provider);
+          if (builtin.ident == "__builtin_retval") {
+            if (type != ProbeType::kretprobe && type != ProbeType::uretprobe &&
+                type != ProbeType::fentry && type != ProbeType::fexit) {
+              builtin.addError()
+                  << "The retval builtin can only be used with 'kretprobe' "
+                     "and 'uretprobe' and 'fentry' probes"
+                  << (type == ProbeType::tracepoint
+                          ? " (try to use args.ret instead)"
+                          : "");
+            }
+          } else if (builtin.is_argx()) {
+            if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
+                type != ProbeType::usdt && type != ProbeType::rawtracepoint) {
+              builtin.addError() << "The " << builtin.ident
+                                 << " builtin can only be used with "
+                                    "'kprobes', 'uprobes' and 'usdt' probes";
+            }
+          }
+        }
+      }
+    }
+  };
+
+  return Pass::create("BuiltinProbeCheck", fn);
+}
 
 } // namespace bpftrace::ast
