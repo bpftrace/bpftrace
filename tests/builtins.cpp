@@ -29,6 +29,7 @@ void test(const std::string& input,
                 .put(get_mock_function_info())
                 .add(CreateParsePass())
                 .add(ast::CreateParseAttachpointsPass())
+                .add(ast::CreatePreExpansionBuiltinsPass())
                 .add(ast::CreateBuiltinsPass())
                 .run();
 
@@ -260,6 +261,34 @@ fexit:k { __builtin_func }
     test_error(probe + " { __builtin_func }",
                "ERROR: The func builtin can not be used with");
   }
+}
+
+TEST(builtins, retval_in_session_probe)
+{
+  test("kprobe:sys_* { @entry = 1 } kretprobe:sys_* { __builtin_retval }");
+  test("kprobe:sys_read { @entry = 1 } "
+       "kretprobe:sys_read { __builtin_retval }");
+  test_error("kprobe:sys_* { __builtin_retval } kretprobe:sys_* { @exit = 1 }",
+             "ERROR: The retval builtin can only be used with 'kretprobe' and "
+             "'uretprobe' and 'fentry' probes");
+  test_error("kprobe:sys_read { __builtin_retval } "
+             "kretprobe:sys_read { @exit = 1 }",
+             "ERROR: The retval builtin can only be used with 'kretprobe' and "
+             "'uretprobe' and 'fentry' probes");
+}
+
+TEST(builtins, argx_in_session_probe)
+{
+  test("kprobe:sys_* { $x = arg0; } kretprobe:sys_* { @exit = 1 }");
+  test("kprobe:sys_read { $x = arg0; } kretprobe:sys_read { @exit = 1 }");
+  test_error(
+      "kprobe:sys_* { @entry = 1 } kretprobe:sys_* { $x = arg0; }",
+      "ERROR: The arg0 builtin can only be used with 'kprobes', 'uprobes' "
+      "and 'usdt' probes");
+  test_error(
+      "kprobe:sys_read { @entry = 1 } kretprobe:sys_read { $x = arg0; }",
+      "ERROR: The arg0 builtin can only be used with 'kprobes', 'uprobes' "
+      "and 'usdt' probes");
 }
 
 } // namespace bpftrace::test::buitins
