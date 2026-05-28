@@ -602,6 +602,12 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
   }
 
   for (const auto& probe_type_str : probe_types) {
+    if (probe_type_str == "self") {
+      auto self_probes = get_self_probes_for_listing(search_suffix);
+      results.insert(results.end(), self_probes.begin(), self_probes.end());
+      continue;
+    }
+
     auto probe_type = probetype(probe_type_str);
     if (probe_type == ProbeType::invalid)
       continue;
@@ -660,6 +666,25 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
 
     auto param_lists = get_params_for_matches(probe_type, matches);
     format_matches_for_listing(probe_type, matches, param_lists, results);
+  }
+  return results;
+}
+
+std::vector<std::string> ProbeMatcher::get_self_probes_for_listing(
+    const std::string& search_input)
+{
+  std::string probes;
+  for (const auto& signal : SIGNALS) {
+    probes += "signal:" + signal + "\n";
+  }
+
+  std::istringstream probe_stream(probes);
+  std::vector<std::string> results;
+  auto search = search_input.empty() ? "*" : search_input;
+  for (const auto& match : get_matches_in_stream(search,
+                                                 probe_stream,
+                                                 false)) {
+    results.push_back("self:" + match);
   }
   return results;
 }

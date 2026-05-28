@@ -99,6 +99,8 @@ private:
       bool demangle_symbols);
   std::set<std::string> get_matches_in_set(const std::string &search_input,
                                            const std::set<std::string> &set);
+  std::vector<std::string> get_self_probes_for_listing(
+      const std::string &search_input);
 
   virtual std::unique_ptr<std::istream> get_symbols_from_traceable_funcs(
       bool with_modules = false, std::optional<std::string> module = std::nullopt) const;
