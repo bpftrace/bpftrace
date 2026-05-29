@@ -194,6 +194,7 @@ std::optional<size_t> Arch<Machine::MIPS64>::register_to_pt_regs_offset(
     { "cp0_badvaddr", 280 },
     { "cp0_cause", 288 },
     { "cp0_epc", 296 },
+    { "pc", 296 },
   };
 
   auto it = register_offsets.find(name);
