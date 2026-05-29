@@ -30,12 +30,12 @@ std::optional<size_t> Arch<Machine::X86_64>::register_to_pt_regs_offset(
     const std::string& name)
 {
   static const std::unordered_map<std::string, size_t> register_offsets = {
-    { "r15", 0 },  { "r14", 8 },  { "r13", 16 },    { "r12", 24 },
-    { "bp", 32 },  { "bx", 40 },  { "r11", 48 },    { "r10", 56 },
-    { "r9", 64 },  { "r8", 72 },  { "ax", 80 },     { "cx", 88 },
-    { "dx", 96 },  { "si", 104 }, { "di", 112 },    { "orig_rax", 120 },
-    { "ip", 128 }, { "cs", 136 }, { "flags", 144 }, { "sp", 152 },
-    { "ss", 160 },
+    { "r15", 0 },  { "r14", 8 },  { "r13", 16 }, { "r12", 24 },
+    { "bp", 32 },  { "bx", 40 },  { "r11", 48 }, { "r10", 56 },
+    { "r9", 64 },  { "r8", 72 },  { "ax", 80 },  { "cx", 88 },
+    { "dx", 96 },  { "si", 104 }, { "di", 112 }, { "orig_rax", 120 },
+    { "ip", 128 }, { "pc", 128 }, { "cs", 136 }, { "flags", 144 },
+    { "sp", 152 }, { "ss", 160 },
   };
   auto it = register_offsets.find(name);
   if (it != register_offsets.end()) {
