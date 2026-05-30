@@ -1,3 +1,96 @@
 test:noop
 {
 }
+
+test:increment_decrement_map {
+  @x = 10;
+
+  if (@x++ != 10) { return 1; }
+  if (++@x != 12) { return 1; }
+  if (@x-- != 12) { return 1; }
+  if (--@x != 10) { return 1; }
+
+  _ = delete(@x);
+}
+
+test:increment_decrement_variable {
+  $x = 10;
+
+  if ($x++ != 10) { return 1; }
+  if (++$x != 12) { return 1; }
+  if ($x-- != 12) { return 1; }
+  if (--$x != 10) { return 1; }
+}
+
+test:variable_strings_are_memset {
+  $x = "xxxxx";
+  $x = "a";
+
+  @variable_strings_are_memset[$x] = 1;
+  $y = "yyyyy";
+  $y = "a";
+
+  @variable_strings_are_memset[$y] = 1;
+
+  if (len(@variable_strings_are_memset) != 1) {
+    return 1;
+  }
+}
+
+test:map_strings_are_memset {
+  @map_strings_are_memset_x = "xxxxx";
+  @map_strings_are_memset_x = "a";
+  @map_strings_are_memset[@map_strings_are_memset_x] = 1;
+  @map_strings_are_memset_y = "yyyyy";
+  @map_strings_are_memset_y = "a";
+  @map_strings_are_memset[@map_strings_are_memset_y] = 1;
+
+  if (len(@map_strings_are_memset) != 1) {
+    return 1;
+  }
+
+  _ = delete(@map_strings_are_memset_x);
+  _ = delete(@map_strings_are_memset_y);
+}
+
+test:block_expression {
+ let $a = {
+   let $b = 1;
+   $b
+ };
+ if ($a != 1) {
+   return 1;
+ }
+}
+
+test:block_expression_complex {
+  $x = {
+    $y = {
+      $z = 10;
+      $z + 5
+    };
+    $y * 2
+  };
+
+  if ($x != 30) {
+    return 1;
+  }
+}
+
+test:logical_and_with_different_types {
+  $x = 5;
+  $y = true;
+
+  if (!($x && $y)) {
+    return 1;
+  }
+}
+
+test:logical_or_with_different_types {
+  $x = 0;
+  $y = true;
+
+  if (!($x || $y)) {
+    return 1;
+  }
+}
