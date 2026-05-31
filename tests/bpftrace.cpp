@@ -807,6 +807,28 @@ static std::set<std::string> list_modules(std::string_view ap)
   return bpftrace->list_modules(ast, probe_matcher);
 }
 
+static std::vector<std::string> list_probes(std::string_view pattern)
+{
+  auto bpftrace = get_mock_bpftrace();
+  auto &func_info = get_mock_function_info();
+  ProbeMatcher probe_matcher(bpftrace.get(),
+                             func_info.kernel_info(),
+                             func_info.user_info());
+  return probe_matcher.get_probes_for_listing(std::string(pattern));
+}
+
+TEST(bpftrace, list_self_probe)
+{
+  EXPECT_THAT(list_probes("self:*"),
+              ::testing::ElementsAre("self:signal:SIGUSR1"));
+  EXPECT_THAT(list_probes("self:signal:*"),
+              ::testing::ElementsAre("self:signal:SIGUSR1"));
+  EXPECT_THAT(list_probes("self:signal:SIG*"),
+              ::testing::ElementsAre("self:signal:SIGUSR1"));
+  EXPECT_THAT(list_probes("self:*:*"),
+              ::testing::ElementsAre("self:signal:SIGUSR1"));
+}
+
 // Test modules are extracted when module is not explicit in attachpoint
 TEST(bpftrace, list_modules_kprobe_implicit)
 {
