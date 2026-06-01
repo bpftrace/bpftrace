@@ -508,44 +508,48 @@ ssize_t Dwarf::get_bitfield_size(Dwarf_Die &field_die)
   return 0;
 }
 
-std::optional<std::filesystem::path> Dwarf::get_cu_src_path(Dwarf_Die *cudie)
+std::vector<std::filesystem::path> Dwarf::get_cu_src_paths(Dwarf_Die *cudie)
 {
+  std::vector<std::filesystem::path> result;
   Dwarf_Files *files;
   size_t nfiles;
   if (dwarf_getsrcfiles(cudie, &files, &nfiles) == 0 && nfiles > 0) {
-    // The returned source file path may either be absolute or relative.
-    // According to the DWARF standard, source file paths should be locatable by
-    // combining DW_AT_comp_dir with the CU's file name. However, DW_AT_comp_dir
-    // may be missing or empty, therefore callers should not assume the path is
-    // always absolute. https://wiki.dwarfstd.org/Best_Practices.md
-    const char *src = dwarf_filesrc(files, 0, nullptr, nullptr);
-    if (src) {
-      return std::filesystem::path(src);
+    for (size_t i = 0; i < nfiles; i++) {
+      // The returned source file path may either be absolute or relative.
+      // According to the DWARF standard, source file paths should be locatable
+      // by combining DW_AT_comp_dir with the CU's file name. However,
+      // DW_AT_comp_dir may be missing or empty, therefore callers should not
+      // assume the path is always absolute.
+      // https://wiki.dwarfstd.org/Best_Practices.md
+      const char *src = dwarf_filesrc(files, i, nullptr, nullptr);
+      if (src) {
+        result.emplace_back(src);
+      }
     }
   }
 
-  return std::nullopt;
+  return result;
 }
 
 Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(const std::string &source_file) const
 {
   std::optional<CuInfo> matched_cu;
-  std::filesystem::path matched_src_path;
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
-    auto src_path = get_cu_src_path(cu_info.cu_die());
-    if (!src_path)
-      continue;
+    auto src_paths = get_cu_src_paths(cu_info.cu_die());
 
-    if (util::path_ends_with(*src_path, source_file)) {
-      if (!matched_cu) {
-        matched_cu = cu_info;
-        matched_src_path = *src_path;
-      } else {
-        return make_error<DwarfParseError>(
-            "Ambiguous source path, matches multiple files: " +
-            matched_src_path.string() + ", " + src_path->string());
+    for (auto &src_path : src_paths) {
+      if (util::path_ends_with(src_path, source_file)) {
+        if (!matched_cu) {
+          matched_cu = cu_info;
+          matched_cu->source_path = src_path;
+        } else if (matched_cu->source_path &&
+                   src_path != *matched_cu->source_path) {
+          return make_error<DwarfParseError>(
+              "Ambiguous source path, matches multiple files: " +
+              matched_cu->source_path->string() + ", " + src_path.string());
+        }
       }
     }
   }
@@ -566,8 +570,7 @@ Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
     return cu.takeError();
   }
 
-  auto src_path = get_cu_src_path(cu->cu_die());
-  if (!src_path) {
+  if (!cu->source_path) {
     return make_error<DwarfParseError>(
         "Failed to get compilation unit source path");
   }
@@ -599,7 +602,10 @@ Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
 
     // Check if the line source matches the CU's source path, to avoid
     // unintentionally accessing statements from included files.
-    if (util::path_ends_with(linesrc, *src_path) &&
+    //
+    // clang-tidy doesn't like the following line, even with an explicit check
+    // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+    if (util::path_ends_with(linesrc, *cu->source_path) &&
         line_num == static_cast<size_t>(lineno) &&
         (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
       Dwarf_Addr addr;

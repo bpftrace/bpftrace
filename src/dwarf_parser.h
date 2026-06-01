@@ -87,6 +87,9 @@ private:
     {
       return split_cudie ? &split_cudie.value() : cudie;
     }
+
+    // CU source file (filled when searching CU by source file)
+    std::optional<std::filesystem::path> source_path;
   };
 
   Dwarf(BPFtrace *bpftrace,
@@ -116,7 +119,7 @@ private:
   static std::vector<Dwarf_Die> get_all_children_with_tag(Dwarf_Die *die,
                                                           int tag);
 
-  static std::optional<std::filesystem::path> get_cu_src_path(Dwarf_Die *cudie);
+  static std::vector<std::filesystem::path> get_cu_src_paths(Dwarf_Die *cudie);
 
   Dwfl *dwfl = nullptr;
   Dwfl_Callbacks callbacks;
