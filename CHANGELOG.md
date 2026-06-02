@@ -35,6 +35,8 @@ and this project adheres to
 - Subtraction and decrement ops now produce an int64 instead of a uint64.
   - [#5138](https://github.com/bpftrace/bpftrace/pull/5138)
 #### Added
+- Add urgent ringbuf to handle async runtime errors, and use sync action on clear and zero
+  - [#5114](https://github.com/bpftrace/bpftrace/issues/5114)
 - User defined C structs support using `__attribute__`s after the closing curly brace.
   - [#5153](https://github.com/bpftrace/bpftrace/pull/5153)
 - stdlib: add `leader_{tid,comm}` to retrieve the thread group leader.

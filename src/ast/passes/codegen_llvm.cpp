@@ -1901,30 +1901,79 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     AllocaInst *buf = b_.CreateAllocaBPF(event_struct,
                                          call.func + "_" + map.ident);
 
-    auto *aa_ptr = b_.CreateGEP(event_struct,
-                                buf,
-                                { b_.getInt64(0), b_.getInt32(0) });
-    if (call.func == "clear")
-      b_.CreateStore(b_.GetIntSameSize(static_cast<int64_t>(
-                                           async_action::AsyncAction::clear),
-                                       elements.at(0)),
-                     aa_ptr);
-    else
-      b_.CreateStore(b_.GetIntSameSize(static_cast<int64_t>(
-                                           async_action::AsyncAction::zero),
-                                       elements.at(0)),
-                     aa_ptr);
+    auto saved_ip = b_.saveIP();
 
-    int id = bpftrace_.resources.maps_info.at(map.ident).id;
-    if (id == -1) {
-      LOG(BUG) << "map id for map \"" << map.ident << "\" not found";
+    std::array<llvm::Type *, 4> callback_args = {
+      b_.getPtrTy(), // map
+      b_.getPtrTy(), // key
+      b_.getPtrTy(), // value
+      b_.getPtrTy()  // ctx
+    };
+
+    // All callbacks in BPF will be generated with a standard integer return.
+    FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(),
+                                                    callback_args,
+                                                    false);
+    auto *callback = llvm::Function::Create(
+        callback_type,
+        llvm::Function::LinkageTypes::InternalLinkage,
+        call.func + "_callback_" + map.ident,
+        module_.get());
+    callback->setDSOLocal(true);
+    callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
+    callback->setSection(".text");
+    callback->addFnAttr(Attribute::NoUnwind);
+
+    // Add the debug information.
+    Struct debug_args;
+    debug_args.AddField("map", CreatePointer(CreateInt8()));
+    debug_args.AddField("key", CreatePointer(CreateInt8()));
+    debug_args.AddField("value", CreatePointer(CreateInt8()));
+    debug_args.AddField("ctx", CreatePointer(CreateInt8()));
+    scope_ = debug_.createFunctionDebugInfo(*callback,
+                                            CreateInt64(),
+                                            debug_args);
+
+    // Start our basic function block.
+    auto *entry = BasicBlock::Create(module_->getContext(),
+                                     "for_body",
+                                     callback);
+    b_.SetInsertPoint(entry);
+
+    if (call.func == "clear") {
+      // delete the element
+      Value *key_ptr = callback->getArg(1);
+      b_.CreateMapDeleteElem(map.ident, key_ptr, call.loc);
+    } else {
+      // Get value pointer (3rd argument)
+      Value *value_ptr = callback->getArg(2);
+
+      // Get map value
+      auto map_info = bpftrace_.resources.maps_info.find(map.ident);
+      if (map_info == bpftrace_.resources.maps_info.end()) {
+        LOG(BUG) << "map name not found";
+      }
+      auto &val_type = map_info->second.value_type;
+      auto value_size = val_type.GetSize();
+
+      // per-cpu map handling
+      bool is_per_cpu = (map_info->second.bpf_type ==
+                             BPF_MAP_TYPE_PERCPU_ARRAY ||
+                         map_info->second.bpf_type ==
+                             BPF_MAP_TYPE_LRU_PERCPU_HASH);
+      if (is_per_cpu) {
+        value_size *= bpftrace_.ncpus_;
+      }
+
+      b_.CreateMemSet(value_ptr, b_.getInt8(0), value_size, MaybeAlign(1));
     }
-    auto *ident_ptr = b_.CreateGEP(event_struct,
-                                   buf,
-                                   { b_.getInt64(0), b_.getInt32(1) });
-    b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 
-    b_.CreateOutput(buf, getStructSize(event_struct), call.loc);
+    b_.CreateRet(b_.getInt64(0));
+
+    b_.restoreIP(saved_ip);
+
+    b_.CreateForEachMapElem(map, callback, nullptr, call.loc);
+
     return ScopedExpr(buf, [this, buf] { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "stack_len") {
     auto &arg = call.vargs.at(0);
@@ -4342,6 +4391,8 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources)
                         CreateInt32(),
                         CreateInt32());
   }
+
+  // Create ring buffers for kernel/user interactions
   auto num_pages = bpftrace_.get_buffer_pages();
   // The default value exists just to prevent a segfault.
   // The program should terminate as we're adding an error to the ast root
@@ -4357,9 +4408,15 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources)
     buffer_size = *num_pages * sysconf(_SC_PAGE_SIZE);
   }
 
-  createMapDefinition(to_string(MapType::Ringbuf),
+  createMapDefinition(get_bpf_ringbuf_map_str(RingbufMap::Normal),
                       BPF_MAP_TYPE_RINGBUF,
                       buffer_size,
+                      CreateNone(),
+                      CreateNone());
+
+  createMapDefinition(get_bpf_ringbuf_map_str(RingbufMap::Urgent),
+                      BPF_MAP_TYPE_RINGBUF,
+                      sysconf(_SC_PAGE_SIZE), // single page
                       CreateNone(),
                       CreateNone());
 }

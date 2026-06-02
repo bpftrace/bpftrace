@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "async_action.h"
 #include "log.h"
 #include "gtest/gtest.h"
 
@@ -117,6 +118,23 @@ TEST(Log, disable_log_type)
   Log::get().enable(LogType::WARNING);
   LOG(WARNING, ss) << content;
   EXPECT_EQ(ss.str(), "WARNING: " + content + "\n");
+  ss.str({});
+}
+
+TEST(Log, log_async_action)
+{
+  std::ostringstream ss;
+  LOG(ERROR, ss) << bpftrace::async_action::AsyncAction::printf;
+  EXPECT_EQ(ss.str(), "ERROR: printf\n");
+  ss.str({});
+  LOG(ERROR, ss) << bpftrace::async_action::AsyncAction::print_non_map;
+  EXPECT_EQ(ss.str(), "ERROR: print_non_map\n");
+  ss.str({});
+  LOG(ERROR, ss) << bpftrace::async_action::AsyncAction::clear;
+  EXPECT_EQ(ss.str(), "ERROR: clear\n");
+  ss.str({});
+  LOG(ERROR, ss) << bpftrace::async_action::AsyncAction(50000);
+  EXPECT_EQ(ss.str(), "ERROR: unknown (50000)\n");
   ss.str({});
 }
 

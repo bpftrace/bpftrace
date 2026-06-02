@@ -787,6 +787,24 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
   return ret;
 }
 
+void IRBuilderBPF::CreateMapDeleteElem(const std::string &map_ident,
+                                       Value *key,
+                                       const Location &loc)
+{
+  Value *map_ptr = GetMapVar(map_ident);
+
+  FunctionType *delete_func_type = FunctionType::get(
+      getInt64Ty(), { map_ptr->getType(), key->getType() }, false);
+  PointerType *delete_func_ptr_type = PointerType::get(getContext(), 0);
+  Constant *delete_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                getInt64(
+                                                    BPF_FUNC_map_delete_elem),
+                                                delete_func_ptr_type);
+  CallInst *call = createCall(
+      delete_func_type, delete_func, { map_ptr, key }, "delete_elem");
+  CreateHelperErrorCond(call, BPF_FUNC_map_delete_elem, loc);
+}
+
 Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
                                              Value *key,
                                              const SizedType &type,
@@ -1887,17 +1905,22 @@ CallInst *IRBuilderBPF::CreateGetSocketCookie(Value *var, const Location &loc)
                           loc);
 }
 
-void IRBuilderBPF::CreateOutput(Value *data, size_t size, const Location &loc)
+void IRBuilderBPF::CreateOutput(Value *data,
+                                size_t size,
+                                const Location &loc,
+                                bool urgent)
 {
   assert(data && data->getType()->isPointerTy());
-  CreateRingbufOutput(data, size, loc);
+  CreateRingbufOutput(data, size, loc, urgent);
 }
 
 void IRBuilderBPF::CreateRingbufOutput(Value *data,
                                        size_t size,
-                                       const Location &loc)
+                                       const Location &loc,
+                                       bool urgent)
 {
-  Value *map_ptr = GetMapVar(to_string(MapType::Ringbuf));
+  auto rb_map = urgent ? RingbufMap::Urgent : RingbufMap::Normal;
+  Value *map_ptr = GetMapVar(get_bpf_ringbuf_map_str(rb_map));
 
   // long bpf_ringbuf_output(void *ringbuf, void *data, u64 size, u64 flags)
   FunctionType *ringbuf_output_func_type = FunctionType::get(
@@ -2243,7 +2266,7 @@ void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
 
   const auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(runtime_error_struct);
-  CreateOutput(buf, struct_size, loc);
+  CreateOutput(buf, struct_size, loc, true);
   CreateLifetimeEnd(buf);
 }
 
