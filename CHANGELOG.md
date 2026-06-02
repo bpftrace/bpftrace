@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.26.0] 2026-06-26
+## [0.26.1] 2026-06-02
+
+#### Fixed
+- Fix reval and argX for session probes
+  - [#5195](https://github.com/bpftrace/bpftrace/pull/5195)
+- Fix self probe listing
+  - [#5200](https://github.com/bpftrace/bpftrace/pull/5200)
+- Fix statement probes for some compiler versions
+  - [#5201](https://github.com/bpftrace/bpftrace/pull/5201)
+
+## [0.26.0] 2026-05-26
 
 #### Breaking Changes
 - stdlib: Change `pcomm` to an alias of task.real_parent.comm instead of task.group_leader.comm.
