@@ -74,6 +74,8 @@ config = {
 BEGIN
 {
   printf("Tracing XFS operation latency... Hit Ctrl-C to end.\n");
+  @name[0] = ksym(0);
+  @start[0] = 0;
 }
 
 kprobe:xfs_file_read_iter,
