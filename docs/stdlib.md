@@ -355,8 +355,10 @@ kprobe:dummy {
 
 
 ### func
-- `string func()`
-- `string func`
+- `ksym_t func()`
+- `ksym_t func`
+- `usym_t func()`
+- `usym_t func`
 
 Name of the current function being traced (kprobes,uprobes,fentry)
 

@@ -381,7 +381,8 @@ macro find(@map, key, $var) {
   }
 }
 
-// :variant string func()
+// :variant ksym_t func()
+// :variant usym_t func()
 // Name of the current function being traced (kprobes,uprobes,fentry)
 macro func()
 {
