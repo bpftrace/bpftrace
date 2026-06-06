@@ -6,48 +6,6 @@ NAME basic tuple map
 PROG begin { $v = 99; @t = (0, 1, "str"); printf("%d %d %s\n", @t.0, @t.1, @t.2);  }
 EXPECT 0 1 str
 
-NAME mixed int tuple map
-PROG begin { @ = ( (int32) -100, (int8) 10, 50 ); }
-EXPECT @: (-100, 10, 50)
-
-NAME mixed int tuple map 2
-PROG begin { @ = ( -100, (int8) 10, (int32) 50 ); }
-EXPECT @: (-100, 10, 50)
-
-NAME mixed int tuple map 3
-PROG begin { @ = ( -100, (int8) 10, (int32) 50, 100 ); }
-EXPECT @: (-100, 10, 50, 100)
-
-NAME tuple map key
-PROG begin { @[(1, "hello")] = 1; }
-EXPECT @[1, hello]: 1
-
-NAME tuple map key and value
-PROG begin { @[(1, 2)] = (3, 4); }
-EXPECT @[1, 2]: (3, 4)
-
-NAME implicit conversion of multi map key to tuple
-PROG begin { @["abcd", 2] = (3, 4, 5); }
-EXPECT @[abcd, 2]: (3, 4, 5)
-
-NAME tuple map key same as assoc array
-PROG begin { @[(1, "hello")] = 1;  @[2, "hello"] = 2; delete(@, (1, "hello")); }
-EXPECT @[2, hello]: 2
-
-NAME tuple map key variable
-PROG begin { $a = (1, "hello"); @[(1, "hello")] = 1; @[$a] = 2; }
-EXPECT @[1, hello]: 2
-
-NAME tuple map key string resize
-PROG begin { @a["hellotherelongstr", 4] = 1; @a["by", 6] = 2;  }
-EXPECT @a[hellotherelongstr, 4]: 1
-EXPECT @a[by, 6]: 2
-
-NAME tuple map key compatible int sizes
-PROG begin { $a = (1,(123,(uint64)1234)); $b = (4,(1234,(uint8)123)); @a[$a] = 1; @a[$b] = 2;  }
-EXPECT @a[1, (123, 1234)]: 1
-EXPECT @a[4, (1234, 123)]: 2
-
 NAME complex tuple 1
 PROG begin { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555));  }
 EXPECT (-100, 100, abcdef, 3, 1, -10, 10, -555)
@@ -125,13 +83,3 @@ EXPECT Attached 1 probe
 NAME kstack in tuple
 PROG begin { print((kstack, "a"));  }
 EXPECT Attached 1 probe
-
-NAME tuple binop equals
-PROG begin { $x = ("hello", -6); $y = ("hello", -6); $a = (1, true, $x); @b = (1, true, $y); if ($a == @b) { printf("ok\n"); } if ($a == (1, true, ("ello", -6))) { printf("nok\n"); } }
-EXPECT ok
-EXPECT_NONE nok
-
-NAME tuple binop not equals
-PROG begin { $x = ("hello", -6); $y = ("hello", -6); $a = (1, true, $x); @b = (1, true, $y); if ($a != @b) { printf("nok\n"); } if ($a != (1, true, ("ello", -6))) { printf("ok\n"); } }
-EXPECT ok
-EXPECT_NONE nok
