@@ -110,7 +110,8 @@ bool BTF::has_module_btf()
   struct bpf_btf_info info = {};
   info.name = reinterpret_cast<uintptr_t>(name);
   info.name_len = sizeof(name);
-  __u32 id = 0, info_len = sizeof(info);
+  // The vmlinux's BTF ID is always 1
+  __u32 id = 1, info_len = sizeof(info);
   int err = 0, fd = -1;
 
   err = bpf_btf_get_next_id(id, &id);
@@ -141,8 +142,9 @@ void BTF::load_module_btfs(const std::set<std::string> &modules)
     return;
 
   // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object
-  // IDs, so the only way is to iterate through all loaded BTF objects
-  __u32 id = 0;
+  // IDs, so the only way is to iterate through all loaded BTF objects. The BTF
+  // ID of vmlinux is always 1 so we skip it to traverse only modules BTF.
+  __u32 id = 1;
   while (true) {
     if (bpf_btf_get_next_id(id, &id)) {
       if (errno != ENOENT)
