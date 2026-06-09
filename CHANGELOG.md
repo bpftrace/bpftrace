@@ -11,6 +11,8 @@ and this project adheres to
 #### Breaking Changes
 #### Added
 #### Changed
+- List structure with module name in verbose mode
+  - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)
 - Warn if casting to the exact same type
   - [#000](https://github.com/bpftrace/bpftrace/pull/0000)
 #### Deprecated
