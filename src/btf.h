@@ -55,6 +55,10 @@ constexpr std::string_view BTF_ANON_STRUCT_PREFIX = "__bpftrace_btf_anon_";
 
 using FuncParamLists = std::map<std::string, std::vector<std::string>>;
 
+// Save the structure definition and module name/BTF.
+// For example: { "struct task_struct", { "vmlinux", "kvm" } }
+using StructMap = std::map<std::string, std::set<std::string>>;
+
 class BTF {
   enum state {
     INIT,
@@ -101,7 +105,7 @@ public:
   // will be generated.
   std::string c_def(const std::unordered_set<std::string>& set = {});
 
-  std::set<std::string> get_all_structs() const;
+  StructMap get_all_structs() const;
   std::unique_ptr<std::istream> get_all_traceable_funcs(const symbols::KernelInfo &kernel_func_info) const;
   std::unordered_set<std::string> get_all_iters() const;
   std::unique_ptr<std::istream> get_all_raw_tracepoints();
