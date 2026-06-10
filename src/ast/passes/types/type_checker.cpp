@@ -939,11 +939,18 @@ void TypeChecker::visit(Cast &cast)
   }
 
   auto rhs = type_map_.type(cast.expr);
+
   if (rhs.IsCTypeTy()) {
     cast.addError() << "Cannot cast from C type \"" << rhs << "\"";
     return;
   } else if (rhs.IsNoneTy()) {
     cast.addError() << "Cannot cast from \"" << rhs << "\" type";
+    return;
+  }
+
+  if (ty == rhs) {
+    cast.addWarning() << "Unnecessary cast: expression is already of type "
+                      << rhs;
     return;
   }
 

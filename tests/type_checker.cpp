@@ -2411,6 +2411,19 @@ TEST_F(TypeCheckerTest, cast_string)
   test("kprobe:f { $a = (string)5; }", Error{});
 }
 
+TEST_F(TypeCheckerTest, cast_same_type)
+{
+  std::string warn = "Unnecessary cast";
+
+  test("kprobe:f { $a = (uint64)(uint64)1; }", Warning{ warn });
+  test("kprobe:f { $a = (uint8[4])pton(\"127.0.0.1\"); }", Warning{ warn });
+  test("kprobe:f { $a = (string[6])\"hello\"; }", Warning{ warn });
+  test("kprobe:f { $b = true; $a = (bool)$b; }", Warning{ warn });
+
+  test("kprobe:f { $a = (uint64)(int64)1; }", NoWarning{ warn });
+  test("kprobe:f { $a = (string[10])\"hello\"; }", NoWarning{ warn });
+}
+
 TEST_F(TypeCheckerTest, field_access)
 {
   std::string structs = "struct type1 { int field; }";

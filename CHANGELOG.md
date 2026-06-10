@@ -10,6 +10,9 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+#### Changed
+- Warn if casting to the exact same type
+  - [#000](https://github.com/bpftrace/bpftrace/pull/0000)
 #### Deprecated
 #### Removed
 #### Fixed
