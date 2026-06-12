@@ -9,7 +9,17 @@ on:
 
 jobs:
   build-upload:
-    runs-on: ubuntu-latest
+    name: build-upload (${{ matrix.runner }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Only the x86_64 runner builds the arch-independent assets
+          - runner: ubuntu-latest
+            build_shared: "1"
+          - runner: ubuntu-24.04-arm
+            build_shared: "0"
+    runs-on: ${{ matrix.runner }}
     permissions:
       # For flakehub cache
       id-token: write
@@ -24,7 +34,7 @@ jobs:
         determinate: true
     - uses: DeterminateSystems/flakehub-cache-action@v2
     - name: Build artifacts
-      run: nix develop --command bash -c "OUT=./assets ./scripts/create-assets.sh"
+      run: nix develop --command bash -c "OUT=./assets BUILD_SHARED_ASSETS=${{ matrix.build_shared }} ./scripts/create-assets.sh"
 
     - name: Upload artifacts
       env:

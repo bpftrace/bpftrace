@@ -9,7 +9,11 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- Release assets are now suffixed with the architecture
+  - [#000](https://github.com/bpftrace/bpftrace/pull/0000)
 #### Added
+- Publish arm64/aarch64 release artifacts alongside x86_64.
+  - [#000](https://github.com/bpftrace/bpftrace/pull/0000)
 #### Changed
 - Warn if casting to the exact same type
   - [#000](https://github.com/bpftrace/bpftrace/pull/0000)
