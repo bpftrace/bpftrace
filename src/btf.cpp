@@ -1115,14 +1115,21 @@ std::set<std::string> BTF::get_all_structs_from_btf(const struct btf *btf) const
   return struct_set;
 }
 
-std::set<std::string> BTF::get_all_structs() const
+StructMap BTF::get_all_structs() const
 {
-  std::set<std::string> structs;
+  StructMap structs_map;
   for (const auto &btf_obj : btf_objects) {
-    auto mod_structs = get_all_structs_from_btf(btf_obj.btf);
-    structs.insert(mod_structs.begin(), mod_structs.end());
+    for (const auto &s : get_all_structs_from_btf(btf_obj.btf)) {
+      auto it = structs_map.find(s);
+      // The same structure (name) can appear in different BTFs.
+      if (it != structs_map.end()) {
+        it->second.insert(btf_obj.name);
+      } else {
+        structs_map.insert({ s, { btf_obj.name } });
+      }
+    }
   }
-  return structs;
+  return structs_map;
 }
 
 std::unordered_set<std::string> BTF::get_all_iters_from_btf(
