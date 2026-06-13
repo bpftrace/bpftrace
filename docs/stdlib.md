@@ -555,7 +555,7 @@ The pointer type is left unchanged.
 ### kstack
 - `kstack_t kstack([StackMode mode, ][int limit])`
 
-These are implemented using BPF stack maps.
+There are several [formatting/StackMode options](./language.md#stack_mode).
 
 ```
 kprobe:ip_output { @[kstack()] = count(); }
@@ -596,8 +596,7 @@ kprobe:ip_output { @[kstack(3)] = count(); }
 
 Note: If a limit is used and `show_debug_info` is enabled then the number of symbolized frames might exceed that limit in the output as `limit` refers to instruction pointers, which can translate to multiple inlined symbols.
 
-You can also choose a different output format.
-Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
+Example using `perf` StackMode:
 
 ```
 kprobe:ip_output { @[kstack(perf, 3)] = count(); }
@@ -1523,7 +1522,7 @@ Often this is just "root"
 ### ustack
 - `ustack_t ustack([StackMode mode, ][int limit])`
 
-These are implemented using BPF stack maps.
+There are several [formatting/StackMode options](./language.md#stack_mode).
 
 ```
 kprobe:do_sys_open /comm == "bash"/ { @[ustack()] = count(); }
@@ -1579,8 +1578,7 @@ kprobe:ip_output { @[ustack(3)] = count(); }
 
 Note: If a limit is used and `show_debug_info` is enabled then the number of symbolized frames might exceed that limit in the output as `limit` refers to instruction pointers, which can translate to multiple inlined symbols.
 
-You can also choose a different output format.
-Available formats are `bpftrace`, `perf`, and `raw` (no symbolication):
+Example using `perf` StackMode:
 
 ```
 kprobe:ip_output { @[ustack(perf, 3)] = count(); }

@@ -371,12 +371,14 @@ Default: bpftrace
 Output format for ustack and kstack builtins.
 Available modes/formats:
 
-* bpftrace
-* perf
+* bpftrace: symbol + offset (e.g. `do_mmap+1`)
+* perf: linux perf style with leading IP (e.g. `ffffffffb4019501 do_mmap+1`)
 * raw: no symbolication (print instruction pointer)
 * build_id: no symbolication (print build_id and file offset) (ustack only)
 
 This can be overwritten at the call site.
+
+When [debug info](#show_debug_info) is available the file and line is added at the end for `bpftrace` or `perf` stack mode e.g. `spin+37@/home/jordalgo/local/bpftrace/tests/testprogs/uprobe_loop.c:14`.
 
 ### str_trunc_trailer
 
