@@ -611,7 +611,7 @@ bool ClangParser::parse(ast::Program *program,
       .Length = input.size(),
   });
 
-  args = { "-isystem", "/bpftrace/include" };
+  args = { "-I", "/bpftrace/include" };
   auto system_paths = system_include_paths();
   for (auto &path : system_paths) {
     args.push_back("-isystem");
@@ -788,10 +788,12 @@ std::string ClangParser::get_arch_include_path()
   return "/usr/include/" + std::string(utsname.machine) + "-linux-gnu";
 }
 
-static void query_clang_include_dirs(std::vector<std::string> &result)
+static bool try_query_clang_include_dirs(const std::string &clang_name,
+                                         std::vector<std::string> &result)
 {
+  auto old_size = result.size();
   std::vector<std::string> args;
-  args.emplace_back("clang-" + std::to_string(LLVM_VERSION_MAJOR));
+  args.emplace_back(clang_name);
   args.emplace_back("-Wp,-v");
   args.emplace_back("-x");
   args.emplace_back("c");
@@ -801,7 +803,7 @@ static void query_clang_include_dirs(std::vector<std::string> &result)
   if (!check) {
     // Exec failed, ignore and move on.
     consumeError(std::move(check));
-    return;
+    return false;
   }
   std::istringstream lines(*check);
   std::string line;
@@ -810,6 +812,21 @@ static void query_clang_include_dirs(std::vector<std::string> &result)
   }
   while (std::getline(lines, line) && line != "End of search list.")
     result.push_back(util::trim(line));
+  return result.size() > old_size;
+}
+
+static void query_clang_include_dirs(std::vector<std::string> &result)
+{
+  // Prefer a versioned clang matching the libllvm we were built against. Some
+  // environments (e.g. Nix) expose it only through an unversioned wrapper, so
+  // fall back to "clang".
+  if (try_query_clang_include_dirs(
+          "clang-" + std::to_string(LLVM_VERSION_MAJOR), result))
+    return;
+  if (try_query_clang_include_dirs("clang", result))
+    return;
+  LOG(V1) << "Could not query clang for system include paths; falling back "
+          << "to /usr/local/include and /usr/include.";
 }
 
 std::vector<std::string> ClangParser::system_include_paths()

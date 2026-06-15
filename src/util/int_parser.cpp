@@ -6,6 +6,7 @@
 
 #include "util/int_parser.h"
 #include "util/result.h"
+#include "util/strings.h"
 
 namespace bpftrace::util {
 
@@ -97,6 +98,9 @@ Result<uint64_t> to_uint(const std::string &num, int base)
   // treat no suffix as a 64-bit integer type.
   // https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal
   std::string suffix(endptr);
+  // C integer suffixes are case-insensitive. Time unit suffixes are not.
+  if (suffix.find_first_not_of("uUlL") == std::string::npos)
+    suffix = to_lower(suffix);
   // The pair is the maximum value for the type, and the multiplier
   static std::map<std::string, std::pair<uint64_t, uint64_t>> int_config = {
     { "", { std::numeric_limits<uint64_t>::max(), 1 } },

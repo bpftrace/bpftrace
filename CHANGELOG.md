@@ -14,6 +14,11 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix `--include` with system and C stdlib headers (e.g. `linux/sched.h`,
+  `stdint.h`, `limits.h`) by prioritizing bpftrace's headers, isolating their
+  include guards from Clang's, accepting uppercase C integer suffixes, and
+  falling back to plain `clang` when `clang-<N>` is not on PATH.
+  - [#4398](https://github.com/bpftrace/bpftrace/pull/4398)
 #### Security
 #### Docs
 #### Tools

@@ -2581,6 +2581,16 @@ TEST(Parser, int_notation)
            Probe({ "kprobe:f" },
                  { ExprStatement(Call("print", { Integer(1000) })) })));
 
+  test("k:f { print(1_000UL); }",
+       Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { ExprStatement(Call("print", { Integer(1000) })) })));
+
+  test("k:f { print(1_000ULL); }",
+       Program().WithProbe(
+           Probe({ "kprobe:f" },
+                 { ExprStatement(Call("print", { Integer(1000) })) })));
+
   // Time unit tests
   test("k:f { print(1ns); }",
        Program().WithProbe(Probe(
