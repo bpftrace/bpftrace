@@ -115,7 +115,8 @@ public:
   Result<std::shared_ptr<Struct>> resolve_args(
       std::string_view func,
       bool ret,
-      bool skip_first_arg);
+      bool skip_first_arg,
+      struct btf *prog_btf = nullptr);
   Result<std::shared_ptr<Struct>> resolve_raw_tracepoint_args(
       std::string_view func);
   void resolve_fields(const SizedType& type);
