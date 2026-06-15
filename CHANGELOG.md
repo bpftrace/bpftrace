@@ -12,7 +12,7 @@ and this project adheres to
 #### Added
 #### Changed
 - Warn if casting to the exact same type
-  - [#000](https://github.com/bpftrace/bpftrace/pull/0000)
+  - [#5208](https://github.com/bpftrace/bpftrace/pull/5208)
 #### Deprecated
 #### Removed
 #### Fixed
