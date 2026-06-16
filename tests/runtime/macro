@@ -58,6 +58,18 @@ NAME it accepts arbitrary expressions with maps
 PROG macro add_one(x) { x + 1 } begin { @a = 1; print(add_one(@a + 1));  }
 EXPECT 3
 
+NAME it accepts type expressions
+PROG struct Foo { char m; } macro sof(a, b) { sizeof(a[2]) + sizeof(b*) + sizeof(b) } begin { print(sof(uint64*, struct Foo)); }
+EXPECT 25
+
+NAME it accepts type expressions with nested calls
+PROG macro m(t) { sizeof(t) + 2 } macro n(z) { print(m(z)); } begin { n(uint64*); }
+EXPECT 10
+
+NAME it accepts type expressions for nested casts
+PROG macro cst(a) { (a*)-1 } begin { print(cst(uint8)); }
+EXPECT 0xff
+
 NAME can call the same macro multiple times
 PROG macro inc($x) { $x += 1; } begin { $a = 1; inc($a); inc($a); inc($a); print($a);  }
 EXPECT 4

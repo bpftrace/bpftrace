@@ -28,7 +28,7 @@ bool MatchWith(const NodeType& node,
                const TargetType& target);
 
 template <typename NodeType>
-auto CheckField(auto NodeType::*member,
+auto CheckField(auto NodeType::* member,
                 const auto& expected,
                 const std::string& name);
 
@@ -49,7 +49,8 @@ public:
     return static_cast<Derived&>(*this);
   }
 
-  const std::vector<PredicateType>& predicates() const {
+  const std::vector<PredicateType>& predicates() const
+  {
     return predicates_;
   }
 
@@ -65,7 +66,9 @@ class NodeMatcher
 public:
   NodeMatcher() = default;
 
-  using PredicateMatcher<Derived, NodeType, std::function<bool(const NodeType&)>>::predicates;
+  using PredicateMatcher<Derived,
+                         NodeType,
+                         std::function<bool(const NodeType&)>>::predicates;
 
   operator Matcher<const NodeType&>() const
   {
@@ -238,7 +241,7 @@ bool MatchWith(const NodeType& node,
 }
 
 template <typename NodeType>
-auto CheckField(auto NodeType::*member,
+auto CheckField(auto NodeType::* member,
                 const auto& expected,
                 const std::string& name)
 {
@@ -417,6 +420,25 @@ inline ParsedTypeMatcher ParsedType(ast::ParsedType::Kind kind,
                                     const std::string& name)
 {
   return ParsedTypeMatcher().WithKind(kind).WithName(name);
+}
+
+class TypeArgMatcher : public NodeMatcher<TypeArgMatcher, ast::TypeArg> {
+public:
+  TypeArgMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
+  {
+    return Where([type_matcher](const ast::TypeArg& node) {
+      if (!node.parsed_type) {
+        node.addError() << "TypeArg has no parsed_type";
+        return false;
+      }
+      return MatchWith(node, type_matcher, *node.parsed_type);
+    });
+  }
+};
+
+inline TypeArgMatcher TypeArg(const Matcher<const ast::ParsedType&>& type)
+{
+  return TypeArgMatcher().WithType(type);
 }
 
 class ProgramMatcher : public NodeMatcher<ProgramMatcher, ast::Program> {
@@ -978,7 +1000,6 @@ public:
       return MatchWith(node, range_matcher, *node.iterable.as<ast::Range>());
     });
   }
-
 };
 
 inline ForMatcher For(
@@ -1184,7 +1205,8 @@ inline ConfigMatcher Config(
   return ConfigMatcher().WithStatements(statements);
 }
 
-class RootImportMatcher : public NodeMatcher<RootImportMatcher, ast::RootImport> {
+class RootImportMatcher
+    : public NodeMatcher<RootImportMatcher, ast::RootImport> {
 public:
   RootImportMatcher& WithName(const std::string& name)
   {
@@ -1197,7 +1219,8 @@ inline RootImportMatcher RootImport(const std::string& name)
   return RootImportMatcher().WithName(name);
 }
 
-class StatementImportMatcher : public NodeMatcher<StatementImportMatcher, ast::StatementImport> {
+class StatementImportMatcher
+    : public NodeMatcher<StatementImportMatcher, ast::StatementImport> {
 public:
   StatementImportMatcher& WithName(const std::string& name)
   {

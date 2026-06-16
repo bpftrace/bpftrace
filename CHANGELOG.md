@@ -9,7 +9,11 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- Array access for bare identifiers only valid in type expression contexts
+  - [#5217](https://github.com/bpftrace/bpftrace/pull/5217)
 #### Added
+- Add support for type expression substitution for macros
+  - [#5217](https://github.com/bpftrace/bpftrace/pull/5217)
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)
