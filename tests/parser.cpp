@@ -38,6 +38,7 @@ using bpftrace::test::Program;
 
 using bpftrace::test::String;
 using bpftrace::test::Tuple;
+using bpftrace::test::TypeArg;
 using bpftrace::test::Typeof;
 using bpftrace::test::Unop;
 using bpftrace::test::Variable;
@@ -2071,6 +2072,95 @@ TEST(Parser, typeof_unknown_type)
            Probe({ "kprobe:sys_read" },
                  { ExprStatement(
                      Cast(Typeof(Identifier("mytype")), Builtin("arg0"))) })));
+}
+
+TEST(Parser, call_type_arg)
+{
+  test("begin { f(typeof(struct task_struct)); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(Call(
+                     "f",
+                     { TypeArg(Typeof(ParsedType(ast::ParsedType::Kind::Struct,
+                                                 "task_struct"))) })) })));
+
+  test("begin { f(typeof(union my_union)); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(Call(
+                     "f",
+                     { TypeArg(Typeof(ParsedType(ast::ParsedType::Kind::Union,
+                                                 "my_union"))) })) })));
+
+  test("begin { f(typeof(enum my_enum)); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(Call(
+                     "f",
+                     { TypeArg(Typeof(ParsedType(ast::ParsedType::Kind::Enum,
+                                                 "my_enum"))) })) })));
+
+  test("begin { f(typeof(uint64)); }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { ExprStatement(
+               Call("f",
+                    { TypeArg(Typeof(ParsedType(
+                        ast::ParsedType::Kind::Identifier, "uint64"))) })) })));
+
+  test("begin { f(typeof(uint64*)); }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { ExprStatement(Call(
+               "f",
+               { TypeArg(Typeof(
+                   ParsedType(ast::ParsedType::Kind::Pointer)
+                       .WithInner(ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "uint64")))) })) })));
+
+  test("begin { f(typeof(uint64[2])); }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { ExprStatement(Call(
+               "f",
+               { TypeArg(Typeof(
+                   ParsedType(ast::ParsedType::Kind::Array)
+                       .WithArraySize(2)
+                       .WithInner(ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "uint64")))) })) })));
+
+  test("begin { f(typeof(struct task_struct*)); }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { ExprStatement(
+               Call("f",
+                    { TypeArg(Typeof(
+                        ParsedType(ast::ParsedType::Kind::Pointer)
+                            .WithInner(ParsedType(ast::ParsedType::Kind::Struct,
+                                                  "task_struct")))) })) })));
+
+  test("begin { f(1, typeof(struct task_struct), \"x\"); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("f",
+                          { Integer(1),
+                            TypeArg(Typeof(ParsedType(
+                                ast::ParsedType::Kind::Struct, "task_struct"))),
+                            String("x") })) })));
+
+  test("begin { f(foo); }",
+       Program().WithProbe(Probe(
+           { "begin" }, { ExprStatement(Call("f", { Identifier("foo") })) })));
+
+  test_parse_failure("begin { f(struct task_struct*); }", R"(
+stdin:1:18-29: ERROR: syntax: expected ')'
+begin { f(struct task_struct*); }
+                 ~~~~~~~~~~~
+stdin:1:18-29: ERROR: syntax: expected ';'
+begin { f(struct task_struct*); }
+                 ~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, dereference_precedence)

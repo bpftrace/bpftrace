@@ -2556,10 +2556,22 @@ Expression Parser::parse_call_expression(const std::string &name,
 
   ExpressionList args;
   consume_layout();
-  if (peek() != ')') {
+  auto add_expr_or_type_arg = [&, this]() {
+    auto [begin_line, begin_col] = get_current_line_col();
+    if (check_keyword("typeof")) {
+      auto *typeof_node = parse_type_annotation();
+      auto loc = make_loc(begin_line, begin_col, line_, col_);
+      args.emplace_back(ctx_.make_node<TypeArg>(loc, typeof_node));
+      return;
+    }
+
     args.push_back(parse_expression());
+  };
+
+  if (peek() != ')') {
+    add_expr_or_type_arg();
     while (match(',')) {
-      args.push_back(parse_expression());
+      add_expr_or_type_arg();
     }
   }
 

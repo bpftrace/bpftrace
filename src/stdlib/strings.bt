@@ -17,10 +17,11 @@ macro assert_str(exp)
 {
   if comptime (!is_str(exp)) {
     if comptime is_array(exp) {
-      static_assert(typeinfo(exp[0]) == typeinfo(int8),
+      // wrap exp in parens to force it to be evaluated as an expression
+      static_assert(typeinfo((exp)[0]) == typeinfo(int8),
                     "string-like arrays must contain a char-like type");
     } else if comptime is_ptr(exp) {
-      static_assert(typeinfo(exp[0]) == typeinfo(int8),
+      static_assert(typeinfo((exp)[0]) == typeinfo(int8),
                     "string-like pointers must point to a char-like type");
     } else {
       fail("string-like values must be either strings, arrays or pointers");
@@ -84,7 +85,7 @@ macro strcap(exp)
   if comptime is_str(exp) {
     sizeof(exp)
   } else if comptime is_array(exp) {
-    sizeof(exp) / sizeof(exp[0])
+    sizeof(exp) / sizeof((exp)[0])
   } else {
     strlen(exp) // Pointer, so pass by value.
   }

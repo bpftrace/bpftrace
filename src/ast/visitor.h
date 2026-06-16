@@ -91,6 +91,10 @@ public:
   {
     return visitImpl(ofof.record);
   }
+  R visit([[maybe_unused]] TypeArg &type_arg)
+  {
+    return default_value();
+  }
   R visit(Typeof &typeof)
   {
     return visitImpl(typeof.record);

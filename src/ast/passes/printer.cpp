@@ -504,6 +504,24 @@ Buffer Formatter::visit(ParsedType& type)
   return visit(static_cast<const ParsedType&>(type));
 }
 
+Buffer Formatter::visit(TypeArg& type_arg)
+{
+  auto& type_of = *type_arg.type_of;
+  if (std::holds_alternative<Expression>(type_of.record)) {
+    // The expression form already prints as `typeof(expr)`.
+    return visit(type_of);
+  }
+  // A direct type must be wrapped in `typeof(...)` so that it parses back as a
+  // type argument rather than being interpreted as an expression.
+  return Buffer()
+      .text("typeof(")
+      .append(format(*std::get<ParsedType*>(type_of.record),
+                     metadata,
+                     max_width - 8,
+                     true))
+      .text(")");
+}
+
 Buffer Formatter::visit(Typeinfo& typeinfo)
 {
   if (std::holds_alternative<Expression>(typeinfo.typeof->record)) {

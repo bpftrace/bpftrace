@@ -174,6 +174,7 @@ public:
   void visit(Sizeof &sizeof_node);
   void visit(Offsetof &offsetof_node);
   void visit(Typeof &typeof_node);
+  void visit(TypeArg &type_arg);
 
   void visit_expr_or_type(ExprOrType &record);
 
@@ -262,20 +263,126 @@ void MacroExpander::visit(Map &map)
   }
 }
 
-// Don't expand bare identifiers in type contexts (e.g. casts, sizeof,
-// offsetof). A bare identifier here is intended as a type name, not a macro
-// invocation. Use the call syntax (e.g. sizeof(mymacro())) or typeof wrapper
-// (e.g. (typeof(mymacro()))x) to force macro expansion in type contexts.
+// We are in a possible type context so Macro expansion and type param
+// replacement has special behavior. If `record` is an expression then we only
+// care if it's a bare identifier, which we treat either as a type name or as a
+// target for replacement by a TypeArg (not a possible candidate for macro
+// expansion). If the user wants to expand a macro that has no params in this
+// context then we require the macro calling convention (e.g.
+// `sizeof(mymacro())`). If `record` is a ParsedType and not an expression then
+// we need to see if it's a candidate for replacement by a TypeArg. There are
+// some TypeArg replacements that are not valid (e.g. `macro a(t) {
+// sizeof(struct t) } begin { a(typeof(struct b)) }`, which would yield
+// `sizeof(struct struct b)`).
 void MacroExpander::visit_expr_or_type(ExprOrType &record)
 {
   if (auto *expr = std::get_if<Expression>(&record)) {
     auto *ident = expr->as<Identifier>();
-    if (ident && !passed_exprs_.contains(ident->ident)) {
-      // Bare identifier that isn't a macro expression argument — treat it as
-      // a type name rather than expanding it as a macro.
-      return;
+    if (ident) {
+      if (auto it = passed_exprs_.find(ident->ident);
+          it != passed_exprs_.end()) {
+        auto *type_arg = it->second.as<TypeArg>();
+        if (type_arg) {
+          record = clone(ast_, ident->loc, type_arg->type_of->record);
+          return;
+        }
+      } else {
+        // Bare identifier that isn't a macro expression argument — treat it as
+        // a type name rather than expanding it as a macro.
+        return;
+      }
     }
+
     visit(*expr);
+  } else {
+    auto *parsed_type = std::get<ParsedType *>(record);
+    assert(parsed_type != nullptr);
+    ParsedType *parent = nullptr;
+    while (parsed_type->inner) {
+      parent = parsed_type;
+      parsed_type = parsed_type->inner;
+    }
+    if (auto it = passed_exprs_.find(parsed_type->name);
+        it != passed_exprs_.end()) {
+      auto *type_arg = it->second.as<TypeArg>();
+      auto *ident = it->second.as<Identifier>();
+
+      switch (parsed_type->kind) {
+        case ParsedType::Kind::Struct:
+        case ParsedType::Kind::Union:
+        case ParsedType::Kind::Enum: {
+          // struct enum or struct struct is not supported syntax so unless the
+          // expression is a Identifier or a ParsedType Identifier this is an
+          // error
+          if (ident) {
+            parsed_type->name = ident->ident;
+            return;
+          }
+
+          if (type_arg) {
+            if (auto *pt = std::get_if<ParsedType *>(
+                    &type_arg->type_of->record)) {
+              if ((*pt)->kind == ParsedType::Kind::Identifier) {
+                parsed_type->name = (*pt)->name;
+                return;
+              }
+            } else {
+              auto typeof_expr = std::get<Expression>(
+                  type_arg->type_of->record);
+              ident = typeof_expr.as<Identifier>();
+              if (ident) {
+                parsed_type->name = ident->ident;
+                return;
+              }
+            }
+
+            // Fall through to error below
+          }
+          break;
+        }
+        case ParsedType::Kind::Identifier: {
+          if (ident) {
+            parsed_type->name = ident->ident;
+            return;
+          }
+
+          if (type_arg) {
+            if (!parent) {
+              record = clone(ast_, parsed_type->loc, type_arg->type_of->record);
+              return;
+            }
+
+            if (auto *pt = std::get_if<ParsedType *>(
+                    &type_arg->type_of->record)) {
+              parent->inner = clone(ast_, parsed_type->loc, *pt);
+              return;
+            }
+
+            auto typeof_expr = std::get<Expression>(type_arg->type_of->record);
+            auto *typeof_ident = typeof_expr.as<Identifier>();
+            if (typeof_ident) {
+              parent->inner = ast_.make_node<ParsedType>(
+                  parsed_type->loc,
+                  ParsedType::Kind::Identifier,
+                  typeof_ident->ident);
+              return;
+            }
+          }
+          break;
+        }
+        case ParsedType::Kind::Pointer:
+        case ParsedType::Kind::Array: {
+          LOG(BUG) << "ParsedType bottom can't be a pointer or array";
+          break;
+        }
+      }
+
+      it->second.node().addError()
+          << "Invalid replacement for macro '" << stack_.back()->name
+          << "' type parameter '" << parsed_type->name
+          << "' which makes up the type '"
+          << std::get<ParsedType *>(record)->type_name() << "'";
+    }
   }
 }
 
@@ -292,6 +399,11 @@ void MacroExpander::visit(Offsetof &offsetof_node)
 void MacroExpander::visit(Typeof &typeof_node)
 {
   visit_expr_or_type(typeof_node.record);
+}
+
+void MacroExpander::visit(TypeArg &type_arg)
+{
+  visit_expr_or_type(type_arg.type_of->record);
 }
 
 void MacroExpander::visit(Expression &expr)
@@ -491,6 +603,23 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro,
   return cloned_block;
 }
 
+class TypeArgCheck : public Visitor<TypeArgCheck> {
+public:
+  explicit TypeArgCheck(ASTContext &ast) : ast_(ast) {};
+
+  using Visitor<TypeArgCheck>::visit;
+  void visit(TypeArg &type_arg);
+
+private:
+  ASTContext &ast_;
+};
+
+void TypeArgCheck::visit(TypeArg &type_arg)
+{
+  type_arg.addError() << "Typeof expression only valid for macro calls that "
+                         "are expecting a type parameter";
+}
+
 void expand_macro(ASTContext &ast,
                   Expression &expr,
                   const MacroRegistry &registry)
@@ -507,6 +636,9 @@ Pass CreateMacroExpansionPass()
     std::vector<const Macro *> stack;
     MacroExpander expander(ast, macros, stack);
     expander.visit(ast.root);
+
+    TypeArgCheck type_arg_check(ast);
+    type_arg_check.visit(ast.root);
 
     // Macros have now been expanded into their call sites, so remove the
     // definitions from the AST. The registry retains its own pointers to the
