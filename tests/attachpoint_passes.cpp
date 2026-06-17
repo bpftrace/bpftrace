@@ -341,6 +341,10 @@ TEST(attachpoint_checker, tracepoint)
 
 TEST(attachpoint_checker, rawtracepoint)
 {
+  auto bpftrace = get_mock_bpftrace();
+  if (!bpftrace->has_btf_data())
+    GTEST_SKIP();
+
   test("rawtracepoint:event_rt { 1 }");
   test("rawtracepoint:event_rt { arg0 }");
   test("rawtracepoint:vmlinux:event_rt { arg0 }");
