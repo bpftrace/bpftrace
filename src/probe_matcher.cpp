@@ -794,15 +794,36 @@ std::vector<std::string> ProbeMatcher::get_structs_for_listing(
     const std::string& search)
 {
   std::vector<std::string> results;
-  auto structs = bpftrace_->btf_->get_all_structs();
+  std::set<std::string> structs;
+  auto structmap = bpftrace_->btf_->get_all_structs();
 
   std::string search_input = search;
   // If verbose is on, structs will contain full definitions
   if (bt_verbose)
     search_input += " *{*}*";
 
-  for (const auto& match : get_matches_in_set(search_input, structs))
-    results.push_back(match);
+  for (const auto& s : structmap) {
+    structs.insert(s.first);
+  }
+
+  for (const auto& match : get_matches_in_set(search_input, structs)) {
+    auto sm = structmap.find(match);
+    // If in verbose mode, display module information.
+    if (sm != structmap.end() && bt_verbose) {
+      // The exact same structure definition may appear in multiple BTFs. If
+      // the structure is defined in vmlinux, then it does not need to be
+      // printed in other BTFs.
+      if (sm->second.contains("vmlinux")) {
+        results.push_back(std::string("vmlinux: ") + match);
+      } else {
+        for (const auto& mod : sm->second) {
+          results.push_back(mod + std::string(": ") + match);
+        }
+      }
+    } else {
+      results.push_back(match);
+    }
+  }
   return results;
 }
 } // namespace bpftrace

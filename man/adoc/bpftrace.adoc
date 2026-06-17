@@ -376,7 +376,7 @@ uprobe:/bin/bash:rl_set_prompt
     const char *prompt
 
 # bpftrace -lv 'struct css_task_iter'
-struct css_task_iter {
+vmlinux: struct css_task_iter {
         struct cgroup_subsys *ss;
         unsigned int flags;
         struct list_head *cset_pos;

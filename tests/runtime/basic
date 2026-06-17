@@ -204,14 +204,14 @@ EXPECT tracepoint:xdp:mem_connect
 
 NAME it lists struct definitions
 RUN {{BPFTRACE}} -lv 'struct task_struct'
-EXPECT struct task_struct {
+EXPECT vmlinux: struct task_struct {
 TIMEOUT 2
 
 NAME it lists multiple struct definitions
 RUN {{BPFTRACE}} -lv 'struct task_struct,struct file,struct fd'
-EXPECT struct task_struct {
-EXPECT struct file {
-EXPECT struct fd {
+EXPECT vmlinux: struct task_struct {
+EXPECT vmlinux: struct file {
+EXPECT vmlinux: struct fd {
 TIMEOUT 2
 
 NAME it lists probes in a given file
@@ -223,7 +223,7 @@ EXPECT interval:us:
 NAME it lists misc in verbose mode
 RUN {{BPFTRACE}} -lv 'kprobe:vfs_read,struct file'
 EXPECT kprobe:vfs_read
-EXPECT struct file {
+EXPECT vmlinux: struct file {
 TIMEOUT 2
 
 NAME warning on non existent file

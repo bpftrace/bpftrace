@@ -101,7 +101,7 @@ public:
   // will be generated.
   std::string c_def(const std::unordered_set<std::string>& set = {});
 
-  std::set<std::string> get_all_structs() const;
+  std::map<std::string, std::set<std::string>> get_all_structs() const;
   std::unique_ptr<std::istream> get_all_traceable_funcs(const symbols::KernelInfo &kernel_func_info) const;
   std::unordered_set<std::string> get_all_iters() const;
   std::unique_ptr<std::istream> get_all_raw_tracepoints();
