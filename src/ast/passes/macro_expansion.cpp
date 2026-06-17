@@ -23,6 +23,18 @@ static bool validate(Macro *macro)
   std::unordered_set<std::string> seen_mvars;
   std::unordered_set<std::string> seen_mmaps;
   std::unordered_set<std::string> seen_idents;
+  std::unordered_set<std::string> seen_type_params;
+
+  for (const auto &ident : macro->type_params) {
+    auto inserted = seen_type_params.insert(ident->ident);
+    if (!inserted.second) {
+      ident->addError()
+          << "Type param for macro argument has already been used: "
+          << ident->ident;
+      return false;
+    }
+  }
+
   for (const auto &arg : macro->vargs) {
     if (auto *mvar = arg.as<Variable>()) {
       auto inserted = seen_mvars.insert(mvar->ident);
@@ -45,9 +57,15 @@ static bool validate(Macro *macro)
         ident->addError() << "Ident for macro argument has already been used: "
                           << ident->ident;
         return false;
+      } else if (seen_type_params.contains(ident->ident)) {
+        ident->addError() << "Ident for macro argument has already been used "
+                             "as a type param: "
+                          << ident->ident;
+        return false;
       }
     }
   }
+
   return true;
 }
 
@@ -64,7 +82,8 @@ MacroRegistry MacroRegistry::create(ASTContext &ast)
     // However we explicitly allow this, as long as they are added in such a way
     // that they will match with the most precise macros first. The newest macro
     // definition must not match with any existing macro definition.
-    auto exists = registry.lookup(macro->name, macro->vargs, macro->is_stdlib);
+    auto exists = registry.lookup(
+        macro->name, macro->vargs, macro->type_params.size(), macro->is_stdlib);
     if (exists) {
       auto &err = macro->addError();
       err << "Redefinition of macro: " << macro->name;
@@ -81,7 +100,9 @@ MacroRegistry MacroRegistry::create(ASTContext &ast)
   return registry;
 }
 
-static size_t distance(const Macro *macro, const std::vector<Expression> &args)
+static size_t distance(const Macro *macro,
+                       const std::vector<Expression> &args,
+                       size_t num_types)
 {
   // Any missing arguments either way are wrong; these dominate the other
   // differences by far, so we ensure that these are the least close macros.
@@ -90,6 +111,11 @@ static size_t distance(const Macro *macro, const std::vector<Expression> &args)
   size_t d = 1024 * static_cast<size_t>(
                         std::abs(static_cast<long>(macro->vargs.size()) -
                                  static_cast<long>(args.size())));
+  // A differing number of type parameters means a different macro signature,
+  // so this dominates just like a differing number of arguments.
+  d += 1024 * static_cast<size_t>(
+                  std::abs(static_cast<long>(macro->type_params.size()) -
+                           static_cast<long>(num_types)));
   for (size_t i = 0; i < macro->vargs.size() && i < args.size(); i++) {
     if ((macro->vargs[i].is<Map>() && !args[i].is<Map>()) ||
         (macro->vargs[i].is<Variable>() && !args[i].is<Variable>())) {
@@ -101,6 +127,7 @@ static size_t distance(const Macro *macro, const std::vector<Expression> &args)
 
 Result<const Macro *> MacroRegistry::lookup(const std::string &name,
                                             const std::vector<Expression> &args,
+                                            size_t num_types,
                                             std::optional<bool> is_stdlib) const
 {
   const auto it = macros_.find(name);
@@ -124,7 +151,7 @@ Result<const Macro *> MacroRegistry::lookup(const std::string &name,
       continue;
     }
 
-    size_t d = distance(m, args);
+    size_t d = distance(m, args, num_types);
     if (d == 0) {
       if (m->is_stdlib && !exact_stdlib_match) {
         exact_stdlib_match = m;
@@ -176,6 +203,7 @@ public:
   void visit(Typeof &typeof_node);
 
   void visit_expr_or_type(ExprOrType &record);
+  void substitute_type_param(ParsedType *&type);
 
   std::optional<BlockExpr *> expand(const Macro &macro, Call &call);
   std::optional<BlockExpr *> expand(const Macro &macro, Identifier &ident);
@@ -194,6 +222,7 @@ private:
   std::unordered_map<std::string, std::string> vars_;
   std::unordered_set<std::string> renamed_vars_;
   std::unordered_map<std::string, Expression> passed_exprs_;
+  std::unordered_map<std::string, ParsedType *> type_params_;
 };
 
 void MacroExpander::visit(AssignVarStatement &assignment)
@@ -270,12 +299,75 @@ void MacroExpander::visit_expr_or_type(ExprOrType &record)
 {
   if (auto *expr = std::get_if<Expression>(&record)) {
     auto *ident = expr->as<Identifier>();
-    if (ident && !passed_exprs_.contains(ident->ident)) {
-      // Bare identifier that isn't a macro expression argument — treat it as
-      // a type name rather than expanding it as a macro.
-      return;
+    if (ident) {
+      if (auto it = type_params_.find(ident->ident); it != type_params_.end()) {
+        record = clone(ast_, ident->loc, it->second);
+        return;
+      } else if (!passed_exprs_.contains(ident->ident)) {
+        // Bare identifier that isn't a macro expression argument — treat it as
+        // a type name rather than expanding it as a macro.
+        return;
+      }
     }
     visit(*expr);
+  } else {
+    auto *parsed_type = std::get<ParsedType *>(record);
+    substitute_type_param(parsed_type);
+    record = parsed_type;
+  }
+}
+
+// Replace a type parameter referenced within `type` with the type argument it
+// was bound to. The replacement happens at the innermost (leaf) type so that
+// any pointer/array wrappers around the type parameter are preserved, e.g. a
+// type param `b` bound to `uint64*` used as `b*` becomes `uint64**`.
+void MacroExpander::substitute_type_param(ParsedType *&type)
+{
+  ParsedType *parsed_type = type;
+  ParsedType *parent = nullptr;
+  while (parsed_type->inner) {
+    parent = parsed_type;
+    parsed_type = parsed_type->inner;
+  }
+  auto it = type_params_.find(parsed_type->name);
+  if (it == type_params_.end()) {
+    return;
+  }
+  auto *type_param = it->second;
+  assert(type_param != nullptr);
+
+  switch (parsed_type->kind) {
+    case ParsedType::Kind::Struct:
+    case ParsedType::Kind::Union:
+    case ParsedType::Kind::Enum: {
+      // struct enum or struct struct is not supported syntax
+      if (type_param->kind == ParsedType::Kind::Identifier) {
+        parsed_type->name = type_param->name;
+      } else {
+        auto &error = parsed_type->addError();
+        error << "Type arg '" << type_param->type_name()
+              << "' is incompatible with how the type param is used in the "
+                 "macro body.";
+        if (!type_param->inner) {
+          error.addHint() << "Try just passing the raw ident: '"
+                          << type_param->name << "'";
+        }
+      }
+      return;
+    }
+    case ParsedType::Kind::Identifier: {
+      if (!parent) {
+        type = clone(ast_, parsed_type->loc, type_param);
+      } else {
+        parent->inner = clone(ast_, parsed_type->loc, type_param);
+      }
+      return;
+    }
+    case ParsedType::Kind::Pointer:
+    case ParsedType::Kind::Array: {
+      LOG(BUG) << "ParsedType bottom can't be a pointer or array";
+      break;
+    }
   }
 }
 
@@ -319,11 +411,15 @@ void MacroExpander::visit(Expression &expr)
   }
   if (call) {
     visit(call->vargs);
+    for (auto *&type : call->type_args) {
+      substitute_type_param(type);
+    }
   }
 
   std::vector<Expression> empty;
   const std::string &name = ident ? ident->ident : call->func;
   const std::vector<Expression> &args = ident ? empty : call->vargs;
+  const size_t num_types = ident ? 0 : call->type_args.size();
 
   // If we're being called from a stdlib macro then only expand other stdlib
   // macros not user-defined macros that also happen to match
@@ -331,7 +427,7 @@ void MacroExpander::visit(Expression &expr)
   if (!stack_.empty() && stack_.back()->is_stdlib) {
     restrict_to_stdlib = true;
   }
-  auto result = registry_.lookup(name, args, restrict_to_stdlib);
+  auto result = registry_.lookup(name, args, num_types, restrict_to_stdlib);
   if (!result) {
     auto done = handleErrors(
         std::move(result), [&](const MacroLookupError &lookupErr) {
@@ -354,6 +450,15 @@ void MacroExpander::visit(Expression &expr)
                 << "() has a different number of arguments. "
                 << "Expected: " << macro->vargs.size() << " but got "
                 << args.size();
+            return;
+          }
+
+          if (macro->type_params.size() != num_types) {
+            err.addContext(macro->loc)
+                << "The closest definition of " << macro->name
+                << "() has a different number of type parameters. "
+                << "Expected: " << macro->type_params.size() << " but got "
+                << num_types;
             return;
           }
 
@@ -446,7 +551,8 @@ std::string MacroExpander::get_new_var_ident(std::string original_ident)
 
 std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)
 {
-  if (macro.vargs.size() != call.vargs.size()) {
+  if (macro.vargs.size() != call.vargs.size() ||
+      macro.type_params.size() != call.type_args.size()) {
     return std::nullopt;
   }
 
@@ -471,6 +577,14 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)
     }
   }
 
+  for (size_t i = 0; i < macro.type_params.size(); i++) {
+    auto *mident = macro.type_params.at(i);
+    assert(mident != nullptr); // Required by lookup.
+    auto *type = call.type_args.at(i);
+    assert(type != nullptr); // Required by lookup.
+    type_params_[mident->ident] = type;
+  }
+
   auto *cloned_block = clone(ast_, call.loc, macro.block);
   visit(cloned_block);
   return cloned_block;
@@ -491,6 +605,25 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro,
   return cloned_block;
 }
 
+class TypeParamCheck : public Visitor<TypeParamCheck> {
+public:
+  explicit TypeParamCheck(ASTContext &ast) : ast_(ast) {};
+
+  using Visitor<TypeParamCheck>::visit;
+  void visit(Call &call);
+
+private:
+  ASTContext &ast_;
+};
+
+void TypeParamCheck::visit(Call &call)
+{
+  if (!call.type_args.empty()) {
+    call.addError()
+        << "Type args are not supported for function calls only macros";
+  }
+}
+
 void expand_macro(ASTContext &ast,
                   Expression &expr,
                   const MacroRegistry &registry)
@@ -507,6 +640,10 @@ Pass CreateMacroExpansionPass()
     std::vector<const Macro *> stack;
     MacroExpander expander(ast, macros, stack);
     expander.visit(ast.root);
+
+    TypeParamCheck type_param_check(ast);
+    type_param_check.visit(ast.root);
+
     return macros;
   };
 

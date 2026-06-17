@@ -28,7 +28,7 @@ bool MatchWith(const NodeType& node,
                const TargetType& target);
 
 template <typename NodeType>
-auto CheckField(auto NodeType::*member,
+auto CheckField(auto NodeType::* member,
                 const auto& expected,
                 const std::string& name);
 
@@ -49,7 +49,8 @@ public:
     return static_cast<Derived&>(*this);
   }
 
-  const std::vector<PredicateType>& predicates() const {
+  const std::vector<PredicateType>& predicates() const
+  {
     return predicates_;
   }
 
@@ -65,7 +66,9 @@ class NodeMatcher
 public:
   NodeMatcher() = default;
 
-  using PredicateMatcher<Derived, NodeType, std::function<bool(const NodeType&)>>::predicates;
+  using PredicateMatcher<Derived,
+                         NodeType,
+                         std::function<bool(const NodeType&)>>::predicates;
 
   operator Matcher<const NodeType&>() const
   {
@@ -238,7 +241,7 @@ bool MatchWith(const NodeType& node,
 }
 
 template <typename NodeType>
-auto CheckField(auto NodeType::*member,
+auto CheckField(auto NodeType::* member,
                 const auto& expected,
                 const std::string& name)
 {
@@ -645,6 +648,14 @@ public:
       return CheckList(call, call.vargs, args_matchers, "arguments");
     });
   }
+
+  CallMatcher& WithTypes(
+      const std::vector<Matcher<const ast::ParsedType&>>& type_matchers)
+  {
+    return Where([type_matchers](const ast::Call& call) {
+      return CheckList(call, call.type_args, type_matchers, "type arguments");
+    });
+  }
 };
 
 inline CallMatcher Call(
@@ -652,6 +663,14 @@ inline CallMatcher Call(
     const std::vector<Matcher<const ast::Expression&>>& args)
 {
   return CallMatcher().WithFunction(name).WithArgs(args);
+}
+
+inline CallMatcher Call(
+    const std::string& name,
+    const std::vector<Matcher<const ast::Expression&>>& args,
+    const std::vector<Matcher<const ast::ParsedType&>>& types)
+{
+  return CallMatcher().WithFunction(name).WithArgs(args).WithTypes(types);
 }
 
 class MapMatcher : public NodeMatcher<MapMatcher, ast::Map> {};
@@ -978,7 +997,6 @@ public:
       return MatchWith(node, range_matcher, *node.iterable.as<ast::Range>());
     });
   }
-
 };
 
 inline ForMatcher For(
@@ -1184,7 +1202,8 @@ inline ConfigMatcher Config(
   return ConfigMatcher().WithStatements(statements);
 }
 
-class RootImportMatcher : public NodeMatcher<RootImportMatcher, ast::RootImport> {
+class RootImportMatcher
+    : public NodeMatcher<RootImportMatcher, ast::RootImport> {
 public:
   RootImportMatcher& WithName(const std::string& name)
   {
@@ -1197,7 +1216,8 @@ inline RootImportMatcher RootImport(const std::string& name)
   return RootImportMatcher().WithName(name);
 }
 
-class StatementImportMatcher : public NodeMatcher<StatementImportMatcher, ast::StatementImport> {
+class StatementImportMatcher
+    : public NodeMatcher<StatementImportMatcher, ast::StatementImport> {
 public:
   StatementImportMatcher& WithName(const std::string& name)
   {
@@ -1258,6 +1278,15 @@ public:
       return MatchWith(node, block_matcher, *node.block);
     });
   }
+
+  MacroMatcher& WithTypeParams(
+      const std::vector<Matcher<const ast::Identifier&>>& type_param_matchers)
+  {
+    return Where([type_param_matchers](const ast::Macro& node) {
+      return CheckList(
+          node, node.type_params, type_param_matchers, "type parameters");
+    });
+  }
 };
 
 inline MacroMatcher Macro(
@@ -1266,6 +1295,19 @@ inline MacroMatcher Macro(
     const Matcher<const ast::BlockExpr&>& block)
 {
   return MacroMatcher().WithName(name).WithArgs(args).WithBlock(block);
+}
+
+inline MacroMatcher Macro(
+    const std::string& name,
+    const std::vector<Matcher<const ast::Identifier&>>& type_params,
+    const std::vector<Matcher<const ast::Expression&>>& args,
+    const Matcher<const ast::BlockExpr&>& block)
+{
+  return MacroMatcher()
+      .WithName(name)
+      .WithTypeParams(type_params)
+      .WithArgs(args)
+      .WithBlock(block);
 }
 
 class SubprogArgMatcher

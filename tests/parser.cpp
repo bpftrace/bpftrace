@@ -153,6 +153,31 @@ void test(const std::string &input, const MatcherT &matcher)
   test(bpftrace, input, matcher);
 }
 
+// Macros are not emitted by the formatter (they are expanded away before
+// printing), so they cannot be round-tripped through the printer like other
+// top-level constructs. This variant parses and checks the matcher without
+// the format/reparse step.
+template <typename MatcherT>
+void test_macro(const std::string &input, const MatcherT &matcher)
+{
+  std::ostringstream out;
+  BPFtrace bpftrace;
+  ast::ASTContext ast("stdin", input);
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .put(get_mock_function_info())
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .run();
+  ASSERT_TRUE(bool(ok));
+
+  ast.diagnostics().emit(out);
+  ASSERT_TRUE(ast.diagnostics().ok()) << out.str() << input;
+
+  EXPECT_THAT(ast, matcher) << input;
+}
+
 TEST(Parser, builtin_variables)
 {
   test("kprobe:sys_read { pid }",
@@ -2046,6 +2071,82 @@ TEST(Parser, sizeof_macro_call)
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
                  { ExprStatement(Sizeof(Call("mymacro", {}))) })));
+}
+
+TEST(Parser, typed_call)
+{
+  test("kprobe:sys_read { foo[uint64](1); }",
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Call("foo",
+                                { Integer(1) },
+                                { ParsedType(ast::ParsedType::Kind::Identifier,
+                                             "uint64") })) })));
+
+  test("kprobe:sys_read { foo[uint64, struct Foo](1, 2); }",
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(
+               Call("foo",
+                    { Integer(1), Integer(2) },
+                    { ParsedType(ast::ParsedType::Kind::Identifier, "uint64"),
+                      ParsedType(ast::ParsedType::Kind::Struct, "Foo") })) })));
+
+  test("kprobe:sys_read { foo[uint64*](); }",
+       Program().WithProbe(Probe(
+           { "kprobe:sys_read" },
+           { ExprStatement(Call(
+               "foo",
+               {},
+               { ParsedType(ast::ParsedType::Kind::Pointer)
+                     .WithInner(ParsedType(ast::ParsedType::Kind::Identifier,
+                                           "uint64")) })) })));
+
+  // Errors
+  test_parse_failure("kprobe:sys_read { foo[uint64,](1); }", R"(
+stdin:1:30-31: ERROR: syntax: expected type expression
+kprobe:sys_read { foo[uint64,](1); }
+                             ~
+stdin:1:30-31: ERROR: syntax: expected ';'
+kprobe:sys_read { foo[uint64,](1); }
+                             ~
+)");
+  test_parse_failure("kprobe:sys_read { foo[123](1); }", R"(
+stdin:1:23-26: ERROR: syntax: expected type expression
+kprobe:sys_read { foo[123](1); }
+                      ~~~
+stdin:1:23-26: ERROR: syntax: expected ';'
+kprobe:sys_read { foo[123](1); }
+                      ~~~
+)");
+}
+
+TEST(Parser, macro_type_params)
+{
+  test_macro("macro foo[T]($x) {}",
+             Program().WithMacros({ Macro(
+                 "foo", { Identifier("T") }, { Variable("$x") }, Block({})) }));
+
+  test_macro("macro foo[T, U]($x, $y) {}",
+             Program().WithMacros({ Macro("foo",
+                                          { Identifier("T"), Identifier("U") },
+                                          { Variable("$x"), Variable("$y") },
+                                          Block({})) }));
+  test_macro("macro foo[T]() {}",
+             Program().WithMacros(
+                 { Macro("foo", { Identifier("T") }, {}, Block({})) }));
+
+  // Errors
+  test_parse_failure("macro foo[T,]($x) {}", R"(
+stdin:1:13-14: ERROR: syntax: expected type param ident
+macro foo[T,]($x) {}
+            ~
+)");
+  test_parse_failure("macro foo[123]($x) {}", R"(
+stdin:1:11-14: ERROR: syntax: expected type param ident
+macro foo[123]($x) {}
+          ~~~
+)");
 }
 
 TEST(Parser, typeinfo_unknown_type)

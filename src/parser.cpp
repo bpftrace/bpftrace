@@ -489,6 +489,44 @@ Macro *Parser::parse_macro()
   }
   auto name_loc = make_loc(begin_line, begin_col, line_, col_);
 
+  IdentList type_params;
+
+  if (peek() == '[') {
+    size_t after = scan_balanced(pos_, '[', ']');
+    if (after != pos_ && char_at(after - 1) == ']' &&
+        char_at(scan_layout(after)) == '(') {
+      expect('[');
+
+      auto add_type_ident = [&, this]() -> bool {
+        consume_layout();
+        auto [ident_line, ident_col] = get_current_line_col();
+        auto parsed_ident = consume_identifier("expected type param ident");
+        if (!parsed_ident) {
+          return false;
+        }
+        auto loc = make_loc(ident_line, ident_col, line_, col_);
+        type_params.emplace_back(
+            ctx_.make_node<Identifier>(loc, std::move(*parsed_ident)));
+        return true;
+      };
+
+      bool ok = true;
+      if (peek() != ']') {
+        ok = add_type_ident();
+        while (ok && match(',')) {
+          ok = add_type_ident();
+        }
+      }
+
+      if (!ok) {
+        return nullptr;
+      }
+      expect(']');
+    } else {
+      return nullptr;
+    }
+  }
+
   if (!expect('(')) {
     return nullptr;
   }
@@ -512,8 +550,11 @@ Macro *Parser::parse_macro()
     return nullptr;
   }
 
-  return ctx_.make_node<Macro>(
-      name_loc, std::move(*name), std::move(args), block);
+  return ctx_.make_node<Macro>(name_loc,
+                               std::move(*name),
+                               std::move(args),
+                               block,
+                               std::move(type_params));
 }
 
 Expression Parser::parse_macro_arg()
@@ -1592,7 +1633,7 @@ std::optional<size_t> Parser::scan_type_suffixes(size_t pos,
 }
 
 std::optional<std::variant<Expression, ParsedType *>> Parser::
-    try_parse_type_reference(std::string_view end_chars)
+    try_parse_type_reference(std::string_view end_chars, bool parsed_type_only)
 {
   auto sp = save_point();
   consume_layout();
@@ -1648,6 +1689,14 @@ std::optional<std::variant<Expression, ParsedType *>> Parser::
     return std::nullopt;
   }
   auto loc = make_loc(begin_line, begin_col, line_, col_);
+
+  // TODO - Investigate doing this by default
+  if (parsed_type_only) {
+    return ctx_.make_node<ParsedType>(loc,
+                                      ParsedType::Kind::Identifier,
+                                      *parsed_ident);
+  }
+
   auto *id = ctx_.make_node<Identifier>(loc, std::move(*parsed_ident));
   return Expression(id);
 }
@@ -2263,9 +2312,18 @@ Expression Parser::parse_primary()
     }
 
     consume_layout();
+    if (peek() == '[') {
+      size_t after = scan_balanced(pos_, '[', ']');
+      if (after != pos_ && char_at(after - 1) == ']' &&
+          char_at(scan_layout(after)) == '(') {
+        return parse_typed_call_expression(*name, name_loc);
+      }
+    }
+
     if (peek() == '(') {
       return parse_call_expression(*name, name_loc);
     }
+
     if (is_builtin(*name)) {
       auto *builtin = ctx_.make_node<Builtin>(name_loc, std::move(*name));
       return { builtin };
@@ -2556,6 +2614,7 @@ Expression Parser::parse_call_expression(const std::string &name,
 
   ExpressionList args;
   consume_layout();
+
   if (peek() != ')') {
     args.push_back(parse_expression());
     while (match(',')) {
@@ -2568,6 +2627,64 @@ Expression Parser::parse_call_expression(const std::string &name,
   auto loc = make_loc(
       start_loc.begin.line, start_loc.begin.column, line_, col_);
   auto *call = ctx_.make_node<Call>(loc, std::string(name), std::move(args));
+  return { call };
+}
+
+Expression Parser::parse_typed_call_expression(const std::string &name,
+                                               const SourceLocation &start_loc)
+{
+  expect('[');
+
+  TypeList type_args;
+  consume_layout();
+  auto add_parsed_type = [&, this]() -> bool {
+    auto [begin_line, begin_col] = get_current_line_col();
+    if (auto type_ref = try_parse_type_reference(",]", true)) {
+      auto loc = make_loc(begin_line, begin_col, line_, col_);
+      if (auto *type = std::get_if<ParsedType *>(&*type_ref)) {
+        type_args.emplace_back(std::move(*type));
+        return true;
+      }
+    }
+    return false;
+  };
+
+  bool ok = true;
+  if (peek() != ']') {
+    ok = add_parsed_type();
+    while (ok && match(',')) {
+      ok = add_parsed_type();
+    }
+  }
+
+  if (!ok) {
+    error("expected type expression");
+    // return this simple expression to avoid cascading failures
+    auto loc = make_loc(
+        start_loc.begin.line, start_loc.begin.column, line_, col_);
+    auto *junk = ctx_.make_node<Identifier>(loc, "");
+    return { junk };
+  }
+
+  expect(']');
+  expect('(');
+
+  ExpressionList args;
+  consume_layout();
+
+  if (peek() != ')') {
+    args.push_back(parse_expression());
+    while (match(',')) {
+      args.push_back(parse_expression());
+    }
+  }
+
+  expect(')');
+
+  auto loc = make_loc(
+      start_loc.begin.line, start_loc.begin.column, line_, col_);
+  auto *call = ctx_.make_node<Call>(
+      loc, std::string(name), std::move(args), std::move(type_args));
   return { call };
 }
 

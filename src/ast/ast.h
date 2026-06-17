@@ -218,6 +218,8 @@ public:
   bool is_literal() const;
 };
 using ExpressionList = std::vector<Expression>;
+using TypeList = std::vector<ParsedType *>;
+using IdentList = std::vector<Identifier *>;
 
 class ExprStatement;
 class VarDeclStatement;
@@ -481,50 +483,6 @@ public:
   int probe_id;
 };
 
-class Call : public Node {
-public:
-  explicit Call(ASTContext &ctx,
-                Location &&loc,
-                std::string func,
-                ExpressionList &&vargs)
-      : Node(ctx, std::move(loc)),
-        func(std::move(func)),
-        vargs(std::move(vargs)) {};
-  explicit Call(ASTContext &ctx, const Location &loc, const Call &other)
-      : Node(ctx, loc + other.loc),
-        func(other.func),
-        vargs(clone(ctx, loc, other.vargs)),
-        injected_args(other.injected_args) {};
-
-  bool operator==(const Call &other) const
-  {
-    return func == other.func && vargs == other.vargs &&
-           injected_args == other.injected_args;
-  }
-  std::strong_ordering operator<=>(const Call &other) const
-  {
-    if (auto cmp = func <=> other.func; cmp != 0)
-      return cmp;
-    if (vargs.size() != other.vargs.size())
-      return vargs.size() <=> other.vargs.size();
-    for (size_t i = 0; i < vargs.size(); ++i) {
-      if (auto cmp = vargs[i] <=> other.vargs[i]; cmp != 0)
-        return cmp;
-    }
-    return injected_args <=> other.injected_args;
-  }
-
-  std::string func;
-  ExpressionList vargs;
-
-  // Some passes may inject new arguments to the call, which is always
-  // done at the beginning (in order to support variadic arguments) for
-  // later passes. This is a result of "desugaring" some syntax. When this
-  // happens, this number is increased so that later error reporting can
-  // correctly account for this.
-  size_t injected_args = 0;
-};
-
 class ParsedType : public Node {
 public:
   enum class Kind {
@@ -616,6 +574,81 @@ public:
   std::string name;
   uint64_t array_size = 0;
   ParsedType *inner = nullptr;
+};
+
+class Call : public Node {
+public:
+  explicit Call(ASTContext &ctx,
+                Location &&loc,
+                std::string func,
+                ExpressionList &&vargs)
+      : Node(ctx, std::move(loc)),
+        func(std::move(func)),
+        vargs(std::move(vargs)) {};
+  explicit Call(ASTContext &ctx,
+                Location &&loc,
+                std::string func,
+                ExpressionList &&vargs,
+                TypeList &&type_args)
+      : Node(ctx, std::move(loc)),
+        func(std::move(func)),
+        vargs(std::move(vargs)),
+        type_args(std::move(type_args)) {};
+  explicit Call(ASTContext &ctx, const Location &loc, const Call &other)
+      : Node(ctx, loc + other.loc),
+        func(other.func),
+        vargs(clone(ctx, loc, other.vargs)),
+        type_args(clone(ctx, loc, other.type_args)),
+        injected_args(other.injected_args) {};
+
+  bool operator==(const Call &other) const
+  {
+    if (func != other.func || vargs != other.vargs ||
+        injected_args != other.injected_args) {
+      return false;
+    }
+
+    if (type_args.size() != other.type_args.size()) {
+      return false;
+    }
+
+    for (size_t i = 0; i < type_args.size(); ++i) {
+      if (*type_args[i] != *other.type_args[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+  std::strong_ordering operator<=>(const Call &other) const
+  {
+    if (auto cmp = func <=> other.func; cmp != 0)
+      return cmp;
+    if (vargs.size() != other.vargs.size())
+      return vargs.size() <=> other.vargs.size();
+    for (size_t i = 0; i < vargs.size(); ++i) {
+      if (auto cmp = vargs[i] <=> other.vargs[i]; cmp != 0)
+        return cmp;
+    }
+    if (type_args.size() != other.type_args.size())
+      return type_args.size() <=> other.type_args.size();
+    for (size_t i = 0; i < type_args.size(); ++i) {
+      if (auto cmp = *type_args[i] <=> *other.type_args[i]; cmp != 0)
+        return cmp;
+    }
+    return injected_args <=> other.injected_args;
+  }
+
+  std::string func;
+  ExpressionList vargs;
+  TypeList type_args; // Only valid for macro calls
+
+  // Some passes may inject new arguments to the call, which is always
+  // done at the beginning (in order to support variadic arguments) for
+  // later passes. This is a result of "desugaring" some syntax. When this
+  // happens, this number is increased so that later error reporting can
+  // correctly account for this.
+  size_t injected_args = 0;
 };
 
 using ExprOrType = std::variant<Expression, ParsedType *>;
@@ -1938,18 +1971,30 @@ public:
         name(std::move(name)),
         vargs(std::move(vargs)),
         block(block) {};
+  Macro(ASTContext &ctx,
+        Location &&loc,
+        std::string name,
+        ExpressionList &&vargs,
+        BlockExpr *block,
+        IdentList &&type_params)
+      : Node(ctx, std::move(loc)),
+        name(std::move(name)),
+        vargs(std::move(vargs)),
+        block(block),
+        type_params(std::move(type_params)) {};
   explicit Macro(ASTContext &ctx, const Location &loc, const Macro &other)
       : Node(ctx, loc + other.loc),
         name(other.name),
         vargs(clone(ctx, loc, other.vargs)),
         block(clone(ctx, loc, other.block)),
+        type_params(clone(ctx, loc, other.type_params)),
         is_stdlib(other.is_stdlib) {};
 
   bool operator==(const Macro &other) const
   {
     if (name != other.name || vargs != other.vargs)
       return false;
-    if (vargs != other.vargs)
+    if (type_params != other.type_params)
       return false;
     if (is_stdlib != other.is_stdlib)
       return false;
@@ -1967,12 +2012,19 @@ public:
       if (auto cmp = vargs[i] <=> other.vargs[i]; cmp != 0)
         return cmp;
     }
+    if (type_params.size() != other.type_params.size())
+      return type_params.size() <=> other.type_params.size();
+    for (size_t i = 0; i < type_params.size(); ++i) {
+      if (auto cmp = *type_params[i] <=> *other.type_params[i]; cmp != 0)
+        return cmp;
+    }
     return *block <=> *other.block;
   }
 
   std::string name;
   ExpressionList vargs;
   BlockExpr *block = nullptr;
+  IdentList type_params;
   bool is_stdlib = false;
 };
 using MacroList = std::vector<Macro *>;

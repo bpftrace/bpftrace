@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Add type parameters for macros
+  - [#5220](https://github.com/bpftrace/bpftrace/pull/5220)
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)

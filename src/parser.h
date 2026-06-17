@@ -64,7 +64,8 @@ private:
   ast::Typeof *parse_type_annotation(bool type_only = false);
   std::optional<size_t> scan_type_suffixes(size_t pos, bool &saw_suffix) const;
   std::optional<std::variant<ast::Expression, ast::ParsedType *>> try_parse_type_reference(
-      std::string_view end_chars);
+      std::string_view end_chars,
+      bool parsed_type_only = false);
 
   // Expression grammar
   ast::Expression parse_expression();
@@ -76,6 +77,9 @@ private:
   ast::Expression parse_primary();
   ast::Expression parse_call_expression(const std::string &name,
                                         const ast::SourceLocation &start_loc);
+  ast::Expression parse_typed_call_expression(
+      const std::string &name,
+      const ast::SourceLocation &start_loc);
   ast::Expression parse_paren_expr();
   std::optional<ast::Expression> try_parse_record(int begin_line,
                                                   int begin_col);

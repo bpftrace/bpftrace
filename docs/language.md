@@ -745,6 +745,8 @@ A macro's parameter signature specifies how an argument will be used.
 For example `macro test($a, b, @c)` indicates that `$a` needs to be a scratch variable (which might be mutated), that `b` needs to be an expression that will be inserted where ever `b` is used in the macro body, and that `@c` needs to be a map (which might be mutated).
 A valid use of this macro could be `test($x, 1 + 2, @y)`.
 Variables and maps can also be used for ident parameters that expect expressions and would be the same as writing `{ @y }` (Block Expression).
+Additionally, macros and macro calls support type paramaters that allow replacing in static type contexts (casts, `sizeof`, variable declarations, etc.).
+For example: `macro szof_mult[a](x) { sizeof(a) * x }` and the call `szof_mult[uint32](5)`.
 Note: User-defined macros with the same name and signature as a standard library macro will override the standard library version. However, standard library macros nested inside of other standard library macros will never use the user-defined version of the same signature.
 
 Here are some valid usages of macros:
@@ -773,6 +775,10 @@ macro add_two(x) {
   add_one(x) + 1
 }
 
+macro szof_two[a]() {
+  sizeof(a[2])
+}
+
 begin {
   print(one());                   // prints 1
   print(one);                     // prints 1 (bare identifier works if the macro accepts 0 args)
@@ -788,6 +794,7 @@ begin {
   side_effects({ printf("hi") })  // prints hihihi
 
   print(add_two(1));              // prints 3
+  print(szof_two[uint32]());      // prints 8
 }
 ```
 

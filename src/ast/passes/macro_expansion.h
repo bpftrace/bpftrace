@@ -33,12 +33,14 @@ public:
   // This may add errors to conflicting macros.
   static MacroRegistry create(ASTContext &ast);
 
-  // Lookup a macro based on a name, set of arguments, and if it's stdlib
+  // Lookup a macro based on a name, set of arguments, number of type
+  // parameters, and if it's stdlib
   //
   // If no matching macro is found, `nullptr` is returned.
   Result<const Macro *> lookup(
       const std::string &name,
       const std::vector<Expression> &args,
+      size_t num_types,
       std::optional<bool> is_stdlib = std::nullopt) const;
 
 private:
@@ -46,7 +48,9 @@ private:
   std::map<std::string, std::vector<Macro *>> macros_;
 };
 
-void expand_macro(ASTContext &ast, Expression &expr, const MacroRegistry &registry);
+void expand_macro(ASTContext &ast,
+                  Expression &expr,
+                  const MacroRegistry &registry);
 
 // Expand all possible macros. Macros can be defined recursively, and in these
 // cases they are not expanded recursively. Instead, it is the responsibility

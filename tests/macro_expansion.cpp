@@ -1,5 +1,6 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/import_scripts.h"
+#include "ast/passes/printer.h"
 #include "ast/passes/resolve_imports.h"
 #include "mocks.h"
 #include "parser.h"
@@ -10,6 +11,7 @@ namespace bpftrace::test::macro_expansion {
 using ::testing::HasSubstr;
 
 void test(const std::string& input,
+          const std::string& expected_output = "",
           const std::string& error = "",
           const std::string& warn = "")
 {
@@ -47,6 +49,13 @@ void test(const std::string& input,
 
   if (trimmed_error.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
+    if (!expected_output.empty()) {
+      std::stringstream printed;
+      ast::Printer printer(ast, printed);
+      printer.visit(ast.root);
+      EXPECT_THAT(printed.str(), HasSubstr(expected_output))
+          << msg.str() << printed.str();
+    }
     if (!trimmed_warn.empty()) {
       EXPECT_THAT(out.str(), HasSubstr(trimmed_warn)) << msg.str() << out.str();
     }
@@ -58,12 +67,12 @@ void test(const std::string& input,
 
 void test_error(const std::string& input, const std::string& error)
 {
-  test(input, error);
+  test(input, "", error);
 }
 
 void test_warning(const std::string& input, const std::string& warn)
 {
-  test(input, "", warn);
+  test(input, "", "", warn);
 }
 
 TEST(macro_expansion, basic_checks)
@@ -240,6 +249,53 @@ TEST(macro_expansion, stdlib_shadowing)
 
   // User macros should not poison builtin/function calls inside stdlib macros.
   test("macro fail(x) { x } begin { print(strlen(\"hi\")); }");
+}
+
+TEST(macro_expansion, type_params)
+{
+  test("macro sz[T]() { sizeof(T) } begin { print(sz[uint64]()); }",
+       "sizeof(uint64)");
+  test("macro sz[T]() { sizeof(T) } begin { print(sz[struct task_struct]()); }",
+       "sizeof(struct task_struct)");
+  test("macro sz[T]() { sizeof(T*) } begin { print(sz[uint64]()); }",
+       "sizeof(uint64*)");
+  test("macro sz[T]() { sizeof(T*[5]) } begin { print(sz[uint64]()); }",
+       "sizeof(uint64*[5])");
+  test("macro sz[T]() { let $x: T = 1 } begin { print(sz[uint32]()); }",
+       ": uint32 = 1");
+  test("macro two[T, U]() { sizeof(T) + sizeof(U) } "
+       "begin { print(two[uint64, uint32]()); }",
+       "sizeof(uint64) + sizeof(uint32)");
+  test("macro foo() { 1 } macro foo[T]() { sizeof(T) } "
+       "begin { print(foo()); print(foo[uint64]()); }",
+       "sizeof(uint64)");
+  test("macro foo[T]() { (T)1 } macro foo[T, U]() { sizeof(U) } "
+       "begin { print(foo[uint64]()); print(foo[uint32, int8]()); }",
+       "sizeof(int8)");
+  test("macro inner[b](t) { sizeof(b*) } macro outer[a](t) { inner[a*](t) } "
+       "begin { print(outer[uint64*](1)); }",
+       "sizeof(uint64***)");
+
+  test_error("macro foo[T]($x) { $x } "
+             "begin { $y = 1; foo[uint64, uint32]($y); }",
+             "The closest definition of foo() has a different number of type "
+             "parameters. Expected: 1 but got 2");
+  test_error("macro foo[T]($x) { $x } begin { $y = 1; foo($y); }",
+             "The closest definition of foo() has a different number of type "
+             "parameters. Expected: 1 but got 0");
+  test_error("macro foo[T]($x) { $x } macro foo[U]($x) { $x } "
+             "begin { $y = 1; foo[uint64]($y); }",
+             "Redefinition of macro: foo");
+  test_error("macro sz[T]() { sizeof(struct T) } begin { print(sz[struct "
+             "task_struct]()); }",
+             "Type arg 'struct task_struct' is incompatible with how the type "
+             "param is used in the macro body.");
+  test_error("macro sz[T]() { sizeof(enum T) } begin { print(sz[struct "
+             "task_struct]()); }",
+             "Type arg 'struct task_struct' is incompatible with how the type "
+             "param is used in the macro body.");
+  test_error("begin { $y = 1; foo[uint64, uint32]($y); }",
+             "Type args are not supported for function calls only macros");
 }
 
 } // namespace bpftrace::test::macro_expansion

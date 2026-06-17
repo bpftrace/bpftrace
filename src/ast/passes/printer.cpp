@@ -429,8 +429,21 @@ Buffer Formatter::format_list(std::vector<U>& exprs,
 
 Buffer Formatter::visit(Call& call)
 {
+  // Build the call name, including the optional type list of a macro call:
+  //
+  //    foo[uint64, struct Bar](a, b)
+  //
+  Buffer name = Buffer().text(call.func);
+  size_t name_width = call.func.size();
+  if (!call.type_args.empty()) {
+    auto type_args = format_list(
+        call.type_args, ", ", metadata, max_width, true);
+    name_width += type_args.width() + 2; // account for the '[' and ']'
+    name = std::move(name).text("[").append(std::move(type_args)).text("]");
+  }
+
   auto args = format_list(
-      call.vargs, ", ", metadata, max_width - (call.func.size() + 2), true);
+      call.vargs, ", ", metadata, max_width - (name_width + 2), true);
   if (args.width() > max_width) {
     // Return with the newline break style.
     //
@@ -439,7 +452,8 @@ Buffer Formatter::visit(Call& call)
     //      b
     //    );
     return Buffer()
-        .text(call.func + "(")
+        .append(std::move(name))
+        .text("(")
         .append(std::move(args), kIndentWidth)
         .text(")");
   } else {
@@ -451,7 +465,11 @@ Buffer Formatter::visit(Call& call)
     //        b,
     //        c);
     //
-    return Buffer().text(call.func + "(").append(std::move(args)).text(")");
+    return Buffer()
+        .append(std::move(name))
+        .text("(")
+        .append(std::move(args))
+        .text(")");
   }
 }
 
@@ -1279,12 +1297,18 @@ Buffer Formatter::visit(Program& program)
 
 Buffer Formatter::visit(Macro& macro)
 {
+  Buffer name = Buffer().text(macro.name);
+  if (!macro.type_params.empty()) {
+    auto type_params = format_list(
+        macro.type_params, ", ", metadata, max_width - 10, true);
+    name = std::move(name).text("[").append(std::move(type_params)).text("]");
+  }
   auto args = format_list(macro.vargs, ", ", metadata, max_width - 10, true);
   auto block_metadata = metadata.before(macro.block->loc->current.begin);
   auto block = format(*macro.block, metadata, max_width - kIndentWidth);
   return Buffer()
       .text("macro ")
-      .text(macro.name)
+      .append(std::move(name))
       .text("(")
       .append(std::move(args))
       .text(")")
