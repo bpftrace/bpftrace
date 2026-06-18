@@ -3,34 +3,9 @@ PROG begin { print((true, false));  }
 EXPECT (true, false)
 TIMEOUT 1
 
-NAME bool in conditional
-PROG begin { if (true) { print(1); } if (false) { print(2); }  }
-EXPECT 1
-EXPECT_NONE 2
-TIMEOUT 1
-
 NAME bool as map keys and values
 PROG begin { @a[true] = false;  }
 EXPECT @a[true]: false
-TIMEOUT 1
-
-NAME bool as a variable
-PROG begin { $b = true; $c = false; print(($b, $c));  }
-EXPECT (true, false)
-
-NAME cast int to bool
-PROG begin{ print(((bool)1, (bool)0)); exit(); }
-EXPECT (true, false)
-TIMEOUT 1
-
-NAME cast string to bool
-PROG begin{ print(((bool)"hello", (bool)"")); exit(); }
-EXPECT (true, false)
-TIMEOUT 1
-
-NAME cast ptr to bool
-PROG begin { $a = (int64*)0; $b = (int64*)1; print(((bool)$b, (bool)$a));  }
-EXPECT (true, false)
 TIMEOUT 1
 
 NAME cast castable map to bool
@@ -38,28 +13,7 @@ PROG begin{ @a = count(); @b = sum(0); print(((bool)@a, (bool)@b)); exit(); }
 EXPECT (true, false)
 TIMEOUT 1
 
-NAME cast bool to int
-PROG begin{ print(((int64)true, (int64)false)); exit(); }
-EXPECT (1, 0)
-TIMEOUT 1
-
 NAME bool array
 PROG begin { @a = (bool[2])(uint16)1;  }
 EXPECT @a: [true,false]
-TIMEOUT 1
-
-NAME bool logical not
-PROG begin{ $x = 0; print((!0, !10, !$x)); exit(); }
-EXPECT (true, false, true)
-TIMEOUT 1
-
-NAME bool in resized tuples
-PROG begin { @a[false, 1, true] = 1; @a[true, (int32)2, false] = 2;  }
-EXPECT @a[false, 1, true]: 1
-EXPECT @a[true, 2, false]: 2
-TIMEOUT 1
-
-NAME complex bool logical
-PROG BEGIN { $a = 100000; $b = 0; $c = $a > $b; $d = $a && $b; $e = $c || $d; $f = (uint64)$c; print(($c, $d, $e, $f)); }
-EXPECT (true, false, true, 1)
 TIMEOUT 1

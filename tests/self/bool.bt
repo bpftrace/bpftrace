@@ -1,0 +1,136 @@
+test:bool_in_conditional {
+  $x = 0;
+
+  if (true) {
+    $x = 1;
+  }
+
+  if (false) {
+    $x = 2;
+  }
+
+  if ($x != 1) {
+    return 1;
+  }
+}
+
+test:bool_as_a_variable {
+  $b = true;
+  $c = false;
+
+  $t = ($b, $c);
+
+  if (!$t.0) {
+    return 1;
+  }
+
+  if ($t.1) {
+    return 1;
+  }
+}
+
+test:cast_int_to_bool {
+  $t = ((bool)1, (bool)0);
+
+  if (!$t.0) {
+    return 1;
+  }
+  if ($t.1) {
+    return 1;
+  }
+}
+
+test:cast_string_to_bool {
+  $t = ((bool)"hello", (bool)"");
+
+  if (!$t.0) {
+    return 1;
+  }
+
+  if ($t.1) {
+    return 1;
+  }
+}
+
+test:cast_ptr_to_bool {
+  $a = (int64*)0;
+  $b = (int64*)1;
+
+  $t = ((bool)$b, (bool)$a);
+
+  if (!$t.0) {
+    return 1;
+  }
+
+  if ($t.1) {
+    return 1;
+  }
+}
+
+test:cast_bool_to_int {
+  $t = ((int64)true, (int64)false);
+
+  if ($t.0 != 1) {
+    return 1;
+  }
+
+  if ($t.1 != 0) {
+    return 1;
+  }
+}
+
+test:bool_logical_not {
+  $x = 0;
+
+  $t = (!0, !10, !$x);
+
+  if (!$t.0) {
+    return 1;
+  }
+
+  if ($t.1) {
+    return 1;
+  }
+
+  if (!$t.2) {
+    return 1;
+  }
+}
+
+test:bool_in_resized_tuples {
+  @bool_in_resized_tuples_a[false, 1, true] = 1;
+  @bool_in_resized_tuples_a[true, (int32)2, false] = 2;
+
+  if (@bool_in_resized_tuples_a[false, 1, true] != 1) {
+    return 1;
+  }
+
+  if (@bool_in_resized_tuples_a[true, 2, false] != 2) {
+    return 1;
+  }
+}
+
+test:complex_bool_logical {
+  $a = 100000;
+  $b = 0;
+  $c = $a > $b;
+  $d = $a && $b;
+  $e = $c || $d;
+  $f = (uint64)$c;
+
+  if (!$c) {
+    return 1;
+  }
+
+  if ($d) {
+    return 1;
+  }
+
+  if (!$e) {
+    return 1;
+  }
+
+  if ($f != 1) {
+    return 1;
+  }
+}
