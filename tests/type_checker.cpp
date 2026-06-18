@@ -3539,7 +3539,8 @@ TEST_F(TypeCheckerTest, type_ctx)
   EXPECT_TRUE(result.type_map.type(var).IsPtrTy());
 
   class SizedType chartype;
-  if (arch::Host::Machine == arch::Machine::X86_64) {
+  if (arch::Host::Machine == arch::Machine::X86_64 ||
+      arch::Host::Machine == arch::Machine::LOONGARCH64) {
     chartype = CreateInt8();
   } else {
     chartype = CreateUInt8();
