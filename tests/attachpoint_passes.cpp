@@ -339,7 +339,9 @@ TEST(attachpoint_checker, tracepoint)
   test("tracepoint:category:event { 1 }");
 }
 
-TEST(attachpoint_checker, rawtracepoint)
+class attachpoint_checker_btf : public test_btf {};
+
+TEST_F(attachpoint_checker_btf, rawtracepoint)
 {
   test("rawtracepoint:event_rt { 1 }");
   test("rawtracepoint:event_rt { arg0 }");
