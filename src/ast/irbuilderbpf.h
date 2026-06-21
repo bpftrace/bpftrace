@@ -58,6 +58,9 @@ public:
                            Value *val,
                            const Location &loc,
                            int64_t flags = 0);
+  void CreateMapDeleteElem(const std::string &map_ident,
+                           Value *key,
+                           const Location &loc);
   Value *CreateForRange(Value *iters,
                         Value *callback,
                         Value *callback_ctx,
@@ -118,7 +121,7 @@ public:
   CallInst *CreateGetRandom(const Location &loc);
   CallInst *CreateGetStack(Value *ctx,
                            Value *buf,
-                           const StackType& stack_type,
+                           const StackType &stack_type,
                            const Location &loc);
   CallInst *CreateGetFuncIp(Value *ctx, const Location &loc);
   CallInst *CreatePerCpuPtr(Value *var, Value *cpu, const Location &loc);
@@ -131,11 +134,11 @@ public:
                                           const std::string &name,
                                           const Location &loc);
   Value *CreateAnonStructAllocation(const SizedType &tuple_type,
-                               const std::string &name,
-                               const Location &loc);
+                                    const std::string &name,
+                                    const Location &loc);
   Value *CreateCallStackAllocation(const SizedType &stack_type,
-                               const std::string &name,
-                               const Location &loc);
+                                   const std::string &name,
+                                   const Location &loc);
   Value *CreateJoinAllocation(const Location &loc);
   Value *CreateWriteMapValueAllocation(const SizedType &value_type,
                                        const std::string &name,
@@ -159,7 +162,10 @@ public:
                        ArrayRef<Value *> args,
                        const Twine &Name);
   void CreateGetCurrentComm(AllocaInst *buf, size_t size, const Location &loc);
-  void CreateOutput(Value *data, size_t size, const Location &loc);
+  void CreateOutput(Value *data,
+                    size_t size,
+                    const Location &loc,
+                    bool urgent = false);
   void CreateIncEventLossCounter(const Location &loc);
   void CreatePerCpuMapElemInit(const std::string &map_ident,
                                Value *key,
@@ -183,7 +189,7 @@ public:
   void CreateHelperErrorCond(Value *return_value,
                              bpf_func_id func_id,
                              const Location &loc);
-  StructType *GetStackStructType(const StackType& stack_type);
+  StructType *GetStackStructType(const StackType &stack_type);
   StructType *GetStructType(const std::string &name,
                             const std::vector<llvm::Type *> &elements,
                             bool packed = false);
@@ -300,7 +306,10 @@ private:
                              size_t key);
   bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
-  void CreateRingbufOutput(Value *data, size_t size, const Location &loc);
+  void CreateRingbufOutput(Value *data,
+                           size_t size,
+                           const Location &loc,
+                           bool urgent);
 
   void createPerCpuSum(AllocaInst *ret, CallInst *call, const SizedType &type);
   void createPerCpuMinMax(AllocaInst *ret,

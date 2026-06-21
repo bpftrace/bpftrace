@@ -1,0 +1,7 @@
+NAME normal ringbuf
+RUN {{BPFTRACE}} -v -e 'begin { print(0); }'
+EXPECT_REGEX .*\[NORMAL\] Event print async action print_non_map
+
+NAME runtime error uses urgent ringbuf
+RUN {{BPFTRACE}} -v -e 'begin { $zero = 0; $x = 1 / $zero; }'
+EXPECT_REGEX .*\[URGENT\] Event print async action runtime_error

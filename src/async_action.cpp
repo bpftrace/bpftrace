@@ -228,4 +228,41 @@ Result<> AsyncHandlers::printf(const OpaqueValue &data)
   return OK();
 }
 
+std::ostream &operator<<(std::ostream &os, const AsyncAction &action)
+{
+  static std::unordered_map<AsyncAction, std::string> names = {
+    { AsyncAction::printf, "printf" },
+    { AsyncAction::syscall, "syscall" },
+    { AsyncAction::cat, "cat" },
+    { AsyncAction::exit, "exit" },
+    { AsyncAction::print, "print" },
+    { AsyncAction::clear, "clear" },
+    { AsyncAction::zero, "zero" },
+    { AsyncAction::time, "time" },
+    { AsyncAction::join, "join" },
+    { AsyncAction::runtime_error, "runtime_error" },
+    { AsyncAction::print_non_map, "print_non_map" },
+    { AsyncAction::strftime, "strftime" },
+    { AsyncAction::skboutput, "skboutput" },
+  };
+
+  if (action >= AsyncAction::printf && action <= AsyncAction::printf_end) {
+    os << names[AsyncAction::printf];
+  } else if (action >= AsyncAction::syscall &&
+             action <= AsyncAction::syscall_end) {
+    os << names[AsyncAction::syscall];
+  } else if (action >= AsyncAction::cat && action <= AsyncAction::cat_end) {
+    os << names[AsyncAction::cat];
+  } else {
+    auto it = names.find(action);
+    if (it != names.end()) {
+      os << it->second;
+    } else {
+      os << "unknown (" << static_cast<uint32_t>(action) << ")";
+    }
+  }
+
+  return os;
+}
+
 } // namespace bpftrace::async_action
