@@ -72,8 +72,7 @@ private:
     size_t amount;
   };
   using InternalMap =
-      std::map<SourceLocation,
-               std::variant<CommentSentinel, VspaceSentinel>>;
+      std::map<SourceLocation, std::variant<CommentSentinel, VspaceSentinel>>;
   MetadataIndex(std::shared_ptr<ASTSource> source, InternalMap other)
       : source_(std::move(source)), map_(std::move(other)) {};
 

@@ -128,7 +128,6 @@ bpf_map_type get_bpf_map_type(const SizedType &val_type);
 std::optional<bpf_map_type> get_bpf_map_type(const std::string &name);
 std::string get_bpf_map_type_str(bpf_map_type map_type);
 void add_bpf_map_types_hint(std::stringstream &hint);
-bool bpf_map_types_compatible(const SizedType &val_type,
-                              bpf_map_type kind);
+bool bpf_map_types_compatible(const SizedType &val_type, bpf_map_type kind);
 
 } // namespace bpftrace

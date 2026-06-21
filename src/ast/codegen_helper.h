@@ -19,8 +19,8 @@ inline bool shouldBeInBpfMemoryAlready(const SizedType &type)
 {
   return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
          type.IsUsymTy() || type.IsKstackTy() || type.IsUstackTy() ||
-         type.IsTupleTy() || type.IsRecordTy() || type.IsTimestampTy() || type.IsMacAddressTy() ||
-         type.IsCgroupPathTy();
+         type.IsTupleTy() || type.IsRecordTy() || type.IsTimestampTy() ||
+         type.IsMacAddressTy() || type.IsCgroupPathTy();
 }
 
 inline bool inBpfMemory(const SizedType &type)

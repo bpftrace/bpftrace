@@ -68,7 +68,10 @@ public:
   static char ID;
   ParseError(int err) : err_(err >= 0 ? err : -err) {};
   void log(llvm::raw_ostream &OS) const override;
-  int error_code() const { return err_; }
+  int error_code() const
+  {
+    return err_;
+  }
 
 private:
   int err_;
@@ -80,7 +83,10 @@ public:
   static char ID;
   TypeError(int err) : err_(err >= 0 ? err : -err) {};
   void log(llvm::raw_ostream &OS) const override;
-  int error_code() const { return err_; }
+  int error_code() const
+  {
+    return err_;
+  }
 
 private:
   int err_;
@@ -296,10 +302,12 @@ public:
       : Type<Integer, BTF_KIND_INT>(std::move(handle), type_id) {};
 
   size_t bytes() const;
-  bool is_bool() const {
+  bool is_bool() const
+  {
     return btf_int_encoding(btf_type()) & BTF_INT_BOOL;
   }
-  bool is_signed() const {
+  bool is_signed() const
+  {
     return btf_int_encoding(btf_type()) & BTF_INT_SIGNED;
   }
 
@@ -639,7 +647,7 @@ public:
   template <typename U>
   VariantType(const U &value)
     requires((std::is_same_v<U, Ts> || ...))
-      : value_(value){};
+      : value_(value) {};
 
   // Allow conversion between types as long as one is strictly a subset of the
   // other. In general, this allows `ValueType` to `AnyType` implicit
@@ -648,7 +656,7 @@ public:
   VariantType(VariantType<Us...> other)
       : VariantType(
             std::visit([](const auto &v) -> std::variant<Ts...> { return v; },
-                       other.value())){};
+                       other.value())) {};
 
   // Checks to see if this is the given kind.
   template <typename T>
@@ -825,7 +833,8 @@ public:
   Types(const Types &base)
       : handle_(std::make_shared<detail::Handle>(base.handle_)) {};
   Types(struct btf *btf) : handle_(std::make_shared<detail::Handle>(btf)) {};
-  Types(struct btf *btf, const Types &base) : handle_(std::make_shared<detail::Handle>(btf, base.handle_)) {};
+  Types(struct btf *btf, const Types &base)
+      : handle_(std::make_shared<detail::Handle>(btf, base.handle_)) {};
   Types(Types &&other) = default;
   Types &operator=(Types &&other) = default;
 

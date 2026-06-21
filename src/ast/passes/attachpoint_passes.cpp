@@ -540,7 +540,7 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
       }
     } else if (raw[idx] == '"') {
       in_quotes = !in_quotes;
-    // Handle escaped characters in a string
+      // Handle escaped characters in a string
     } else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size())) {
       argument += raw[idx + 1];
       ++idx;

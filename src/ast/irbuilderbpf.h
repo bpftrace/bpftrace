@@ -118,7 +118,7 @@ public:
   CallInst *CreateGetRandom(const Location &loc);
   CallInst *CreateGetStack(Value *ctx,
                            Value *buf,
-                           const StackType& stack_type,
+                           const StackType &stack_type,
                            const Location &loc);
   CallInst *CreateGetFuncIp(Value *ctx, const Location &loc);
   CallInst *CreatePerCpuPtr(Value *var, Value *cpu, const Location &loc);
@@ -131,11 +131,11 @@ public:
                                           const std::string &name,
                                           const Location &loc);
   Value *CreateAnonStructAllocation(const SizedType &tuple_type,
-                               const std::string &name,
-                               const Location &loc);
+                                    const std::string &name,
+                                    const Location &loc);
   Value *CreateCallStackAllocation(const SizedType &stack_type,
-                               const std::string &name,
-                               const Location &loc);
+                                   const std::string &name,
+                                   const Location &loc);
   Value *CreateJoinAllocation(const Location &loc);
   Value *CreateWriteMapValueAllocation(const SizedType &value_type,
                                        const std::string &name,
@@ -183,7 +183,7 @@ public:
   void CreateHelperErrorCond(Value *return_value,
                              bpf_func_id func_id,
                              const Location &loc);
-  StructType *GetStackStructType(const StackType& stack_type);
+  StructType *GetStackStructType(const StackType &stack_type);
   StructType *GetStructType(const std::string &name,
                             const std::vector<llvm::Type *> &elements,
                             bool packed = false);

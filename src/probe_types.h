@@ -114,8 +114,8 @@ struct Probe {
   uint64_t log_size = 1000000;
   int index = 0;
   int freq = 0;
-  uint64_t len = 0;   // for watchpoint probes, size of region
-  std::string mode;   // for watchpoint probes, watch mode (rwx)
+  uint64_t len = 0; // for watchpoint probes, size of region
+  std::string mode; // for watchpoint probes, watch mode (rwx)
   uint64_t address = 0;
   uint64_t func_offset = 0;
   uint64_t bpf_prog_id = 0;

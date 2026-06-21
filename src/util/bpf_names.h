@@ -8,9 +8,8 @@ namespace bpftrace::util {
 std::string sanitise_bpf_program_name(const std::string &name);
 
 // Generate object file function name for a given probe
-inline std::string get_function_name_for_probe(
-    const std::string &probe_name,
-    int index)
+inline std::string get_function_name_for_probe(const std::string &probe_name,
+                                               int index)
 {
   return sanitise_bpf_program_name(probe_name) + "_" + std::to_string(index);
 }

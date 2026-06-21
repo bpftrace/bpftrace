@@ -94,7 +94,7 @@ public:
   template <typename T>
   VariantNode(T *value)
     requires(std::is_same_v<T, Ts> || ...)
-      : value(value){};
+      : value(value) {};
 
   template <typename T>
   bool is() const
@@ -275,9 +275,7 @@ public:
                    Location &&loc,
                    uint64_t n,
                    std::optional<std::string> &&original = std::nullopt)
-      : Node(ctx, std::move(loc)),
-        value(n),
-        original(std::move(original)) {};
+      : Node(ctx, std::move(loc)), value(n), original(std::move(original)) {};
   explicit Integer(ASTContext &ctx, const Location &loc, const Integer &other)
       : Node(ctx, loc + other.loc),
         value(other.value),
@@ -307,7 +305,7 @@ public:
 
   bool operator==(const NegativeInteger &other) const
   {
-     return value == other.value;
+    return value == other.value;
   }
   std::strong_ordering operator<=>(const NegativeInteger &other) const
   {
@@ -397,11 +395,9 @@ public:
 class String : public Node {
 public:
   explicit String(ASTContext &ctx, Location &&loc, std::string str)
-      : Node(ctx, std::move(loc)),
-        value(std::move(str)) {};
+      : Node(ctx, std::move(loc)), value(std::move(str)) {};
   explicit String(ASTContext &ctx, const Location &loc, const String &other)
-      : Node(ctx, loc + other.loc),
-        value(other.value) {};
+      : Node(ctx, loc + other.loc), value(other.value) {};
 
   bool operator==(const String &other) const
   {
@@ -422,8 +418,7 @@ public:
   explicit Identifier(ASTContext &ctx,
                       const Location &loc,
                       const Identifier &other)
-      : Node(ctx, loc + other.loc),
-        ident(other.ident) {};
+      : Node(ctx, loc + other.loc), ident(other.ident) {};
 
   bool operator==(const Identifier &other) const
   {
@@ -705,8 +700,7 @@ public:
   explicit Map(ASTContext &ctx, Location &&loc, std::string ident)
       : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
   explicit Map(ASTContext &ctx, const Location &loc, const Map &other)
-      : Node(ctx, loc + other.loc),
-        ident(other.ident) {};
+      : Node(ctx, loc + other.loc), ident(other.ident) {};
 
   bool operator==(const Map &other) const
   {
@@ -826,8 +820,7 @@ public:
   explicit Variable(ASTContext &ctx, Location &&loc, std::string ident)
       : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
   explicit Variable(ASTContext &ctx, const Location &loc, const Variable &other)
-      : Node(ctx, loc + other.loc),
-        ident(other.ident) {};
+      : Node(ctx, loc + other.loc), ident(other.ident) {};
 
   bool operator==(const Variable &other) const
   {
@@ -848,8 +841,7 @@ public:
   explicit VariableAddr(ASTContext &ctx,
                         const Location &loc,
                         const VariableAddr &other)
-      : Node(ctx, loc + other.loc),
-        var(clone(ctx, loc, other.var)) {};
+      : Node(ctx, loc + other.loc), var(clone(ctx, loc, other.var)) {};
 
   bool operator==(const VariableAddr &other) const
   {
@@ -868,8 +860,7 @@ public:
   explicit MapAddr(ASTContext &ctx, Location &&loc, Map *map)
       : Node(ctx, std::move(loc)), map(map) {};
   explicit MapAddr(ASTContext &ctx, const Location &loc, const MapAddr &other)
-      : Node(ctx, loc + other.loc),
-        map(clone(ctx, loc, other.map)) {};
+      : Node(ctx, loc + other.loc), map(clone(ctx, loc, other.map)) {};
 
   bool operator==(const MapAddr &other) const
   {
@@ -1073,7 +1064,7 @@ public:
 
   bool operator==(const Cast &other) const
   {
-    return *typeof == *other.typeof && expr == other.expr;
+    return *typeof == *other.typeof &&expr == other.expr;
   }
   std::strong_ordering operator<=>(const Cast &other) const
   {
@@ -1091,8 +1082,7 @@ public:
   explicit Tuple(ASTContext &ctx, Location &&loc, ExpressionList &&elems)
       : Node(ctx, std::move(loc)), elems(std::move(elems)) {};
   explicit Tuple(ASTContext &ctx, const Location &loc, const Tuple &other)
-      : Node(ctx, loc + other.loc),
-        elems(clone(ctx, loc, other.elems)) {};
+      : Node(ctx, loc + other.loc), elems(clone(ctx, loc, other.elems)) {};
 
   bool operator==(const Tuple &other) const
   {
@@ -1112,7 +1102,9 @@ public:
                          Location &&loc,
                          std::string name,
                          Expression expr)
-      : Node(ctx, std::move(loc)), name(std::move(name)), expr(std::move(expr)) {};
+      : Node(ctx, std::move(loc)),
+        name(std::move(name)),
+        expr(std::move(expr)) {};
   explicit NamedArgument(ASTContext &ctx,
                          const Location &loc,
                          const NamedArgument &other)
@@ -1139,18 +1131,20 @@ using NamedArgumentList = std::vector<NamedArgument *>;
 
 class Record : public Node {
 public:
-  explicit Record(ASTContext &ctx, Location &&loc, NamedArgumentList &&named_args)
+  explicit Record(ASTContext &ctx,
+                  Location &&loc,
+                  NamedArgumentList &&named_args)
       : Node(ctx, std::move(loc)), elems(std::move(named_args)) {};
   explicit Record(ASTContext &ctx, const Location &loc, const Record &other)
-      : Node(ctx, loc + other.loc),
-        elems(clone(ctx, loc, other.elems)) {};
+      : Node(ctx, loc + other.loc), elems(clone(ctx, loc, other.elems)) {};
 
   bool operator==(const Record &other) const
   {
-    return std::ranges::equal(
-               elems,
-               other.elems,
-               [](const auto *a, const auto *b) { return *a == *b; });
+    return std::ranges::equal(elems,
+                              other.elems,
+                              [](const auto *a, const auto *b) {
+                                return *a == *b;
+                              });
   }
   std::strong_ordering operator<=>(const Record &other) const
   {
@@ -1417,15 +1411,12 @@ public:
 
 class DiscardExpr : public Node {
 public:
-  explicit DiscardExpr(ASTContext &ctx,
-                              Location &&loc,
-                              Expression expr)
+  explicit DiscardExpr(ASTContext &ctx, Location &&loc, Expression expr)
       : Node(ctx, std::move(loc)), expr(std::move(expr)) {};
   explicit DiscardExpr(ASTContext &ctx,
-                              const Location &loc,
-                              const DiscardExpr &other)
-      : Node(ctx, loc + other.loc),
-        expr(clone(ctx, loc, other.expr)) {};
+                       const Location &loc,
+                       const DiscardExpr &other)
+      : Node(ctx, loc + other.loc), expr(clone(ctx, loc, other.expr)) {};
 
   bool operator==(const DiscardExpr &other) const
   {
@@ -1682,7 +1673,8 @@ public:
            target == other.target && lang == other.lang && ns == other.ns &&
            func == other.func && pin == other.pin && freq == other.freq &&
            len == other.len && mode == other.mode && address == other.address &&
-           func_offset == other.func_offset && ignore_invalid == other.ignore_invalid;
+           func_offset == other.func_offset &&
+           ignore_invalid == other.ignore_invalid;
   }
   std::strong_ordering operator<=>(const AttachPoint &other) const
   {
@@ -1739,8 +1731,8 @@ public:
   std::string pin;
   symbols::usdt_probe_entry usdt; // resolved USDT entry
   int64_t freq = 0;
-  uint64_t len = 0;   // for watchpoint probes, the width of watched addr
-  std::string mode;   // for watchpoint probes, the watch mode
+  uint64_t len = 0; // for watchpoint probes, the width of watched addr
+  std::string mode; // for watchpoint probes, the watch mode
 
   uint64_t address = 0;
   uint64_t func_offset = 0;
@@ -1891,7 +1883,9 @@ class RootImport : public Node {
 public:
   explicit RootImport(ASTContext &ctx, Location &&loc, std::string name)
       : Node(ctx, std::move(loc)), name(std::move(name)) {};
-  explicit RootImport(ASTContext &ctx, const Location &loc, const RootImport &other)
+  explicit RootImport(ASTContext &ctx,
+                      const Location &loc,
+                      const RootImport &other)
       : Node(ctx, loc + other.loc), name(other.name) {};
 
   bool operator==(const RootImport &other) const
@@ -1910,7 +1904,9 @@ class StatementImport : public Node {
 public:
   explicit StatementImport(ASTContext &ctx, Location &&loc, std::string name)
       : Node(ctx, std::move(loc)), name(std::move(name)) {};
-  explicit StatementImport(ASTContext &ctx, const Location &loc, const StatementImport &other)
+  explicit StatementImport(ASTContext &ctx,
+                           const Location &loc,
+                           const StatementImport &other)
       : Node(ctx, loc + other.loc), name(other.name) {};
 
   bool operator==(const StatementImport &other) const
@@ -2078,8 +2074,8 @@ std::string opstr(const Unop &unop);
 std::string opstr(const Jump &jump);
 bool is_comparison_op(Operator op);
 
-Record* make_record(ASTContext &ctx,
+Record *make_record(ASTContext &ctx,
                     const Location &loc,
-                    std::vector<std::pair<std::string, Expression>>&& args);
+                    std::vector<std::pair<std::string, Expression>> &&args);
 
 } // namespace bpftrace::ast

@@ -64,7 +64,7 @@ struct Primitive {
   template <typename T>
   Primitive(T&& t)
     requires std::constructible_from<Variant, T>
-      : variant(std::forward<T>(t)){};
+      : variant(std::forward<T>(t)) {};
 
   auto operator<=>(const Primitive& other) const = default;
   bool operator==(const Primitive& other) const = default;
@@ -124,7 +124,7 @@ struct Value {
   template <typename T>
   Value(T&& t)
     requires std::constructible_from<Variant, T>
-      : variant(std::forward<T>(t)){};
+      : variant(std::forward<T>(t)) {};
 
   Variant variant;
 };
