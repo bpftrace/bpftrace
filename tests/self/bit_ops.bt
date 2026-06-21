@@ -1,0 +1,19 @@
+test:bitshift {
+  @bitshift_x = 1 << 10;
+  @bitshift_y = 1024 >> 9;
+
+  if (@bitshift_x != 1024) {
+    return 1;
+  }
+
+  if (@bitshift_y != 2) {
+    return 1;
+  }
+}
+
+test:bitwise_not {
+  @bitwise_not_x = ~10;
+  if (@bitwise_not_x != 18446744073709551605) {
+    return 1;
+  }
+}
