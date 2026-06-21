@@ -78,12 +78,7 @@ enum class UserSymbolCacheType {
   none,
 };
 
-enum class StackMode : uint8_t {
-  bpftrace,
-  perf,
-  raw,
-  build_id
-};
+enum class StackMode : uint8_t { bpftrace, perf, raw, build_id };
 
 const std::map<StackMode, std::string> STACK_MODE_NAME_MAP = {
   { StackMode::bpftrace, "bpftrace" },
@@ -105,17 +100,19 @@ struct ConfigParser<StackMode> {
         return OK();
       }
     }
-    return make_error<ParseError>(key,
-                                  "Invalid value for stack_mode: valid "
-                                  "values are bpftrace, raw, perf, and build_id.");
+    return make_error<ParseError>(
+        key,
+        "Invalid value for stack_mode: valid "
+        "values are bpftrace, raw, perf, and build_id.");
   }
   Result<OK> parse(const std::string &key,
                    [[maybe_unused]] StackMode *target,
                    [[maybe_unused]] uint64_t v)
   {
-    return make_error<ParseError>(key,
-                                  "Invalid value for stack_mode: valid "
-                                  "values are bpftrace, raw, perf, and build_id.");
+    return make_error<ParseError>(
+        key,
+        "Invalid value for stack_mode: valid "
+        "values are bpftrace, raw, perf, and build_id.");
   }
 };
 
@@ -152,10 +149,10 @@ struct StackType {
            std::to_string(limit);
   }
 
-  size_t elem_size() const {
-    return mode == StackMode::build_id
-                              ? sizeof(bpf_stack_build_id)
-                              : sizeof(uint64_t);
+  size_t elem_size() const
+  {
+    return mode == StackMode::build_id ? sizeof(bpf_stack_build_id)
+                                       : sizeof(uint64_t);
   }
 
 private:
@@ -296,8 +293,7 @@ public:
 
   bool IsPrintableTy() const
   {
-    return type_ != Type::none &&
-           type_ != Type::timestamp_mode &&
+    return type_ != Type::none && type_ != Type::timestamp_mode &&
            (!IsCtxAccess() || is_funcarg); // args builtin is printable
   }
 
@@ -336,9 +332,9 @@ public:
     assert(IsIntTy());
     // Truncate integers too large to fit in BPF registers (64-bits).
     bits = std::min<size_t>(bits, 64);
-    // Zero sized integers are not usually valid. However, during type resolution the first pass may not have
-    // enough information to figure out the exact size of the integer. Later
-    // passes infer the exact size.
+    // Zero sized integers are not usually valid. However, during type
+    // resolution the first pass may not have enough information to figure out
+    // the exact size of the integer. Later passes infer the exact size.
     assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
            bits == 64);
     size_bits_ = bits;
@@ -590,7 +586,7 @@ public:
   friend SizedType CreateCStruct(const std::string &name);
   friend SizedType CreateCStruct(std::shared_ptr<Struct> &&record);
   friend SizedType CreateCStruct(const std::string &name,
-                                std::weak_ptr<Struct> record);
+                                 std::weak_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
   friend SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
   friend SizedType CreateRecord(std::shared_ptr<Struct> &&record);

@@ -139,8 +139,10 @@ constexpr std::string_view CHILD_PID = "__bt__child_pid";
 constexpr std::string_view RO_SECTION_NAME = ".rodata";
 constexpr std::string_view FMT_STRINGS_BUFFER_SECTION_NAME =
     ".data.fmt_str_buf";
-constexpr std::string_view ANON_STRUCT_BUFFER_SECTION_NAME = ".data.anon_struct_buf";
-constexpr std::string_view CALL_STACK_BUFFER_SECTION_NAME = ".data.call_stack_buf";
+constexpr std::string_view ANON_STRUCT_BUFFER_SECTION_NAME =
+    ".data.anon_struct_buf";
+constexpr std::string_view CALL_STACK_BUFFER_SECTION_NAME =
+    ".data.call_stack_buf";
 constexpr std::string_view GET_STR_BUFFER_SECTION_NAME = ".data.get_str_buf";
 constexpr std::string_view READ_MAP_VALUE_BUFFER_SECTION_NAME =
     ".data.read_map_val_buf";
@@ -150,8 +152,7 @@ constexpr std::string_view VARIABLE_BUFFER_SECTION_NAME = ".data.var_buf";
 constexpr std::string_view MAP_KEY_BUFFER_SECTION_NAME = ".data.map_key_buf";
 constexpr std::string_view EVENT_LOSS_COUNTER_SECTION_NAME =
     ".data.event_loss_counter";
-constexpr std::string_view JOIN_BUFFER_SECTION_NAME =
-    ".data.join_buf";
+constexpr std::string_view JOIN_BUFFER_SECTION_NAME = ".data.join_buf";
 
 struct GlobalVarConfig {
   std::string section;
@@ -175,16 +176,20 @@ private:
 const std::unordered_map<std::string_view, GlobalVarConfig>
     GLOBAL_VAR_CONFIGS = {
       { NUM_CPUS,
-        { .section = std::string(RO_SECTION_NAME), .type = GlobalVarConfig::opt_unsigned } },
+        { .section = std::string(RO_SECTION_NAME),
+          .type = GlobalVarConfig::opt_unsigned } },
       { MAX_CPU_ID,
-        { .section = std::string(RO_SECTION_NAME), .type = GlobalVarConfig::opt_unsigned } },
+        { .section = std::string(RO_SECTION_NAME),
+          .type = GlobalVarConfig::opt_unsigned } },
       { EVENT_LOSS_COUNTER,
         { .section = std::string(EVENT_LOSS_COUNTER_SECTION_NAME),
           .type = GlobalVarConfig::opt_unsigned } },
       { FMT_STRINGS_BUFFER,
         { .section = std::string(FMT_STRINGS_BUFFER_SECTION_NAME) } },
-      { ANON_STRUCT_BUFFER, { .section = std::string(ANON_STRUCT_BUFFER_SECTION_NAME) } },
-      { CALL_STACK_BUFFER, { .section = std::string(CALL_STACK_BUFFER_SECTION_NAME) } },
+      { ANON_STRUCT_BUFFER,
+        { .section = std::string(ANON_STRUCT_BUFFER_SECTION_NAME) } },
+      { CALL_STACK_BUFFER,
+        { .section = std::string(CALL_STACK_BUFFER_SECTION_NAME) } },
       { GET_STR_BUFFER,
         { .section = std::string(GET_STR_BUFFER_SECTION_NAME) } },
       { READ_MAP_VALUE_BUFFER,
@@ -195,10 +200,10 @@ const std::unordered_map<std::string_view, GlobalVarConfig>
         { .section = std::string(VARIABLE_BUFFER_SECTION_NAME) } },
       { MAP_KEY_BUFFER,
         { .section = std::string(MAP_KEY_BUFFER_SECTION_NAME) } },
-      { JOIN_BUFFER,
-        { .section = std::string(JOIN_BUFFER_SECTION_NAME) } },
+      { JOIN_BUFFER, { .section = std::string(JOIN_BUFFER_SECTION_NAME) } },
       { CHILD_PID,
-        { .section = std::string(RO_SECTION_NAME), .type = GlobalVarConfig::opt_unsigned } },
+        { .section = std::string(RO_SECTION_NAME),
+          .type = GlobalVarConfig::opt_unsigned } },
     };
 
 class GlobalVars {
@@ -221,7 +226,9 @@ public:
   SizedType get_sized_type(const std::string &global_var_name,
                            const RequiredResources &resources,
                            const Config &bpftrace_config) const;
-  void check_index(const std::string &global_var_name, const RequiredResources &resources, size_t index) const;
+  void check_index(const std::string &global_var_name,
+                   const RequiredResources &resources,
+                   size_t index) const;
 
   const std::unordered_map<std::string, GlobalVarConfig> &global_var_map() const
   {

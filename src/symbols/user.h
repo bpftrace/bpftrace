@@ -1,8 +1,8 @@
 #pragma once
 
+#include <map>
 #include <set>
 #include <string>
-#include <map>
 
 #include "symbols/elf_parser.h"
 #include "util/result.h"
@@ -65,17 +65,16 @@ public:
   UserInfoImpl() = default;
   ~UserInfoImpl() override = default;
 
- Result<BinaryFuncMap> func_symbols_for_pid(int pid) const override;
- Result<FunctionSet> func_symbols_for_path(
-    const std::string &path) const override;
+  Result<BinaryFuncMap> func_symbols_for_pid(int pid) const override;
+  Result<FunctionSet> func_symbols_for_path(
+      const std::string &path) const override;
   Result<BinaryUSDTMap> usdt_probes_for_pid(int pid) const override;
   Result<BinaryUSDTMap> usdt_probes_for_all_pids() const override;
-  Result<USDTSet> usdt_probes_for_path(
-      const std::string &path) const override;
+  Result<USDTSet> usdt_probes_for_path(const std::string &path) const override;
 
 private:
   Result<> read_probes_for_pid(int pid) const;
-  Result<> read_probes_for_path(const std::string& path) const;
+  Result<> read_probes_for_path(const std::string &path) const;
 
   // Maps a pid to a set of paths for its probes.
   mutable std::unordered_map<int, std::set<std::string>> pid_to_paths_;

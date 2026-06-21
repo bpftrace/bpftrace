@@ -20,7 +20,8 @@ enum class ConfigUnstable {
   error,
 };
 
-// Taken from here: https://elixir.bootlin.com/linux/v5.16/source/include/linux/license.h
+// Taken from here:
+// https://elixir.bootlin.com/linux/v5.16/source/include/linux/license.h
 enum CompatibleBPFLicense {
   GPL,
   GPL_V2,

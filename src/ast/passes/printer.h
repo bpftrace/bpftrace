@@ -120,7 +120,7 @@ public:
   Buffer visit(Statement &stmt);
   Buffer visit(RootStatement &root);
   Buffer visit(CStatement &cstmt);
-  Buffer visit(NamedArgument& named_arg);
+  Buffer visit(NamedArgument &named_arg);
   Buffer visit(const ParsedType &type);
 
 private:
@@ -166,7 +166,8 @@ public:
   void visit(T &value)
   {
     MetadataIndex metadata = ast_.metadata();
-    out_ << Formatter(mode_, metadata, max_width_, true, type_map_).visit(value);
+    out_
+        << Formatter(mode_, metadata, max_width_, true, type_map_).visit(value);
   }
 
 private:

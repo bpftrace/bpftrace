@@ -102,7 +102,8 @@ public:
   std::string c_def(const std::unordered_set<std::string>& set = {});
 
   std::map<std::string, std::set<std::string>> get_all_structs() const;
-  std::unique_ptr<std::istream> get_all_traceable_funcs(const symbols::KernelInfo &kernel_func_info) const;
+  std::unique_ptr<std::istream> get_all_traceable_funcs(
+      const symbols::KernelInfo& kernel_func_info) const;
   std::unordered_set<std::string> get_all_iters() const;
   std::unique_ptr<std::istream> get_all_raw_tracepoints();
   FuncParamLists get_params(const std::set<std::string>& funcs) const;
@@ -112,10 +113,9 @@ public:
   FuncParamLists get_rawtracepoint_params(
       const std::set<std::string>& rawtracepoints) const;
 
-  Result<std::shared_ptr<Struct>> resolve_args(
-      std::string_view func,
-      bool ret,
-      bool skip_first_arg);
+  Result<std::shared_ptr<Struct>> resolve_args(std::string_view func,
+                                               bool ret,
+                                               bool skip_first_arg);
   Result<std::shared_ptr<Struct>> resolve_raw_tracepoint_args(
       std::string_view func);
   void resolve_fields(const SizedType& type);
@@ -138,7 +138,9 @@ private:
 
   std::string dump_defs_from_btf(const struct btf* btf,
                                  std::unordered_set<std::string>& types) const;
-  std::string get_all_traceable_funcs_from_btf(const symbols::KernelInfo &kernel_func_info, const BTFObj& btf_obj) const;
+  std::string get_all_traceable_funcs_from_btf(
+      const symbols::KernelInfo& kernel_func_info,
+      const BTFObj& btf_obj) const;
   std::string get_all_raw_tracepoints_from_btf(const BTFObj& btf_obj) const;
   FuncParamLists get_params_impl(
       const std::set<std::string>& funcs,
@@ -164,8 +166,8 @@ private:
 
   __u32 start_id(const struct btf* btf) const;
 
-  BTFId parse_anon_btf_name(const std::string &name);
-  std::string create_anon_btf_name(BTFId &btf_id);
+  BTFId parse_anon_btf_name(const std::string& name);
+  std::string create_anon_btf_name(BTFId& btf_id);
 
   struct btf* vmlinux_btf = nullptr;
   __u32 vmlinux_btf_size;

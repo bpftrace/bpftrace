@@ -1,13 +1,13 @@
 #pragma once
 
-#include <string>
-#include <string_view>
-#include <utility>
-#include <vector>
-#include <unistd.h>
 #include <elf.h>
 #include <gelf.h>
 #include <libelf.h>
+#include <string>
+#include <string_view>
+#include <unistd.h>
+#include <utility>
+#include <vector>
 
 #include "util/result.h"
 
@@ -19,7 +19,7 @@ constexpr std::string_view USDT_NOTE_NAME = "stapsdt";
 
 class ELFParseError : public ErrorInfo<ELFParseError> {
 public:
-  ELFParseError(std::string&& msg) : msg_(std::move(msg)){};
+  ELFParseError(std::string&& msg) : msg_(std::move(msg)) {};
   ELFParseError() = default;
   static char ID;
   void log(llvm::raw_ostream& OS) const override;
@@ -60,9 +60,7 @@ struct usdt_probe_entry {
       : provider(std::move(provider)),
         name(std::move(name)),
         sema_addr(sema_addr),
-        sema_offset(sema_offset)
-  {
-  };
+        sema_offset(sema_offset) {};
 
   bool operator==(const usdt_probe_entry& other) const = default;
   auto operator<=>(const usdt_probe_entry& other) const = default;

@@ -13,8 +13,9 @@ namespace bpftrace::ast {
 
 using ScopedVariable = std::pair<Node *, std::string>;
 // Node * is a pointer to an AST node
-// ScopedVariable is for tracking the type of a scratch variable referenced in many AST nodes
-// std::string is for map key and value names as these are often resolved separately by different statements/expressions
+// ScopedVariable is for tracking the type of a scratch variable referenced in
+// many AST nodes std::string is for map key and value names as these are often
+// resolved separately by different statements/expressions
 using TypeVariable = std::variant<Node *, ScopedVariable, std::string>;
 
 struct ScopedVariableHash {
@@ -46,7 +47,8 @@ struct TypeVariableHash {
   }
 };
 
-using ResolvedTypes = std::unordered_map<TypeVariable, SizedType, TypeVariableHash>;
+using ResolvedTypes =
+    std::unordered_map<TypeVariable, SizedType, TypeVariableHash>;
 
 inline std::string get_map_value_name(const std::string &ident)
 {

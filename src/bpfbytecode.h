@@ -21,9 +21,10 @@ namespace bpftrace {
 // General load error with a specific message.
 class BpfLoadError : public ErrorInfo<BpfLoadError> {
 public:
-  BpfLoadError(std::string msg) : msg_(std::move(msg)){};
+  BpfLoadError(std::string msg) : msg_(std::move(msg)) {};
   static char ID;
-  void log(llvm::raw_ostream& OS) const override;
+  void log(llvm::raw_ostream &OS) const override;
+
 private:
   std::string msg_;
 };
@@ -34,8 +35,12 @@ public:
   HelperVerifierError(std::string msg, bpf_func_id func_id_)
       : msg_(std::move(msg)), func_id_(func_id_) {};
   static char ID;
-  void log(llvm::raw_ostream& OS) const override;
-  bpf_func_id func_id() const { return func_id_; }
+  void log(llvm::raw_ostream &OS) const override;
+  bpf_func_id func_id() const
+  {
+    return func_id_;
+  }
+
 private:
   std::string msg_;
   bpf_func_id func_id_;
@@ -60,9 +65,9 @@ public:
                           globalvars::GlobalVarMap &&global_var_vals);
   uint64_t get_event_loss_counter(BPFtrace &bpftrace, int max_cpu_id);
   Result<> load_progs(const RequiredResources &resources,
-                  const BTF &btf,
-                  BPFfeature &feature,
-                  const Config &config);
+                      const BTF &btf,
+                      BPFfeature &feature,
+                      const Config &config);
   void attach_external();
 
   const BpfProgram &getProgramForProbe(const Probe &probe) const;

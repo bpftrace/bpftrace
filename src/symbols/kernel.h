@@ -2,15 +2,15 @@
 
 #include <cstdint>
 #include <fstream>
-#include <optional>
-#include <string>
 #include <map>
+#include <optional>
 #include <set>
+#include <string>
 #include <vector>
 
+#include "btf/btf.h"
 #include "util/result.h"
 #include "util/symbols.h"
-#include "btf/btf.h"
 
 namespace bpftrace::symbols {
 
@@ -31,16 +31,20 @@ public:
   virtual ~KernelInfo() = default;
 
   // Returns the set of available modules.
-  virtual ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
+  virtual ModuleSet get_modules(
+      const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
   // Returns all traceable functions.
-  virtual ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
+  virtual ModulesFuncsMap get_traceable_funcs(
+      const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
   // Returns all raw tracepoints.
-  virtual ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const = 0;
+  virtual ModulesFuncsMap get_raw_tracepoints(
+      const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
   // Returns all known tracepoints.
-  virtual ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const = 0;
+  virtual ModulesFuncsMap get_tracepoints(
+      const std::optional<std::string> &category_name = std::nullopt) const = 0;
 
   // Returns all currently running BPF programs as (id, function_name) pairs.
   virtual std::vector<std::pair<uint32_t, std::string>> get_bpf_progs()
@@ -48,7 +52,8 @@ public:
 
   // Returns the set of modules (or "vmlinux") where the function appears.
   virtual ModuleSet get_func_modules(
-      const std::string &func_name, const std::optional<std::string> &mod_name = std::nullopt) const = 0;
+      const std::string &func_name,
+      const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
   // Loads the BTF for the given modules.
   virtual Result<btf::Types> load_btf(const std::string &mod_name) const = 0;
@@ -56,8 +61,9 @@ public:
   // Returns true if the given function is traceable.
   //
   // This is a simple convenience method.
-  virtual bool is_traceable(const std::string &func_name,
-                            const std::optional<std::string> &mod_name = std::nullopt) const = 0;
+  virtual bool is_traceable(
+      const std::string &func_name,
+      const std::optional<std::string> &mod_name = std::nullopt) const = 0;
 
   // Returns true iff the given module is loaded (has anything traceable).
   //
@@ -65,9 +71,8 @@ public:
   virtual bool is_module_loaded(const std::string &mod_name) const = 0;
 
   // This may be used by derived classes to implement core methods.
-  static ModulesFuncsMap filter(
-    const ModulesFuncsMap &source,
-    const std::optional<std::string> &mod_name);
+  static ModulesFuncsMap filter(const ModulesFuncsMap &source,
+                                const std::optional<std::string> &mod_name);
 };
 
 // Implements the all the basic helpers.
@@ -77,7 +82,8 @@ template <typename T>
 class KernelInfoBase : public KernelInfo {
 public:
   ModuleSet get_func_modules(
-    const std::string &func_name, const std::optional<std::string> &mod_name = std::nullopt) const override
+      const std::string &func_name,
+      const std::optional<std::string> &mod_name = std::nullopt) const override
   {
     const auto *impl = static_cast<const T *>(this);
     ModuleSet result;
@@ -89,16 +95,19 @@ public:
     return result;
   }
 
-  bool is_traceable(const std::string &func_name,
-                    const std::optional<std::string> &mod_name = std::nullopt) const override {
-                      const auto *impl = static_cast<const T *>(this);
-                      auto funcs = impl->get_traceable_funcs(mod_name);
-                      return std::ranges::any_of(funcs, [&func_name](const auto &pair) {
-                        return pair.second->contains(func_name);
-                      });
-                    }
+  bool is_traceable(
+      const std::string &func_name,
+      const std::optional<std::string> &mod_name = std::nullopt) const override
+  {
+    const auto *impl = static_cast<const T *>(this);
+    auto funcs = impl->get_traceable_funcs(mod_name);
+    return std::ranges::any_of(funcs, [&func_name](const auto &pair) {
+      return pair.second->contains(func_name);
+    });
+  }
 
-  bool is_module_loaded(const std::string &mod_name) const override {
+  bool is_module_loaded(const std::string &mod_name) const override
+  {
     const auto *impl = static_cast<const T *>(this);
     return !impl->get_modules(mod_name).empty();
   }
@@ -107,17 +116,23 @@ public:
 // Implementation that reads available functions from the kernel.
 class KernelInfoImpl : public KernelInfoBase<KernelInfoImpl> {
 public:
-  static Result<KernelInfoImpl> open(const std::string &traceable_functions_file);
+  static Result<KernelInfoImpl> open(
+      const std::string &traceable_functions_file);
   KernelInfoImpl(const KernelInfoImpl &other) = delete;
   KernelInfoImpl &operator=(const KernelInfoImpl &other) = delete;
   KernelInfoImpl(KernelInfoImpl &&other) = default;
   KernelInfoImpl &operator=(KernelInfoImpl &&other) = default;
   ~KernelInfoImpl() override = default;
 
-  ModuleSet get_modules(const std::optional<std::string> &mod_name = std::nullopt) const override;
-  ModulesFuncsMap get_traceable_funcs(const std::optional<std::string> &mod_name = std::nullopt) const override;
-  ModulesFuncsMap get_raw_tracepoints(const std::optional<std::string> &mod_name = std::nullopt) const override;
-  ModulesFuncsMap get_tracepoints(const std::optional<std::string> &category_name = std::nullopt) const override;
+  ModuleSet get_modules(
+      const std::optional<std::string> &mod_name = std::nullopt) const override;
+  ModulesFuncsMap get_traceable_funcs(
+      const std::optional<std::string> &mod_name = std::nullopt) const override;
+  ModulesFuncsMap get_raw_tracepoints(
+      const std::optional<std::string> &mod_name = std::nullopt) const override;
+  ModulesFuncsMap get_tracepoints(
+      const std::optional<std::string> &category_name =
+          std::nullopt) const override;
   Result<btf::Types> load_btf(const std::string &mod_name) const override;
 
   std::vector<std::pair<uint32_t, std::string>> get_bpf_progs() const override;
@@ -125,9 +140,13 @@ public:
 private:
   KernelInfoImpl() = default;
 
-  void add_function(const std::string &func_name, const std::string &mod_name) const;
-  void populate_lazy(const std::optional<std::string> &mod_name = std::nullopt) const;
-  ModulesFuncsMap filter_funcs(const ModulesFuncsMap &source, const std::optional<std::string> &mod_name = std::nullopt) const;
+  void add_function(const std::string &func_name,
+                    const std::string &mod_name) const;
+  void populate_lazy(
+      const std::optional<std::string> &mod_name = std::nullopt) const;
+  ModulesFuncsMap filter_funcs(
+      const ModulesFuncsMap &source,
+      const std::optional<std::string> &mod_name = std::nullopt) const;
 
   mutable std::ifstream available_filter_functions_;
   mutable std::string last_checked_line_;

@@ -73,7 +73,8 @@ public:
   // Get termination signal, if any. This should only be called when the child
   // has finished (i.e. when is_alive() returns false).
   //
-  // \return A signal ID or -1 if the child hasn't been terminated (by a signal).
+  // \return A signal ID or -1 if the child hasn't been terminated (by a
+  // signal).
   std::optional<int> term_signal()
   {
     return term_signal_;
@@ -88,6 +89,7 @@ protected:
 Result<std::unique_ptr<Proc>> create_proc(pid_t pid);
 
 // Create a concrete implementation of ChildProc.
-Result<std::unique_ptr<ChildProc>> create_child(const std::string &cmd, bool suppress_stdio = false);
+Result<std::unique_ptr<ChildProc>> create_child(const std::string& cmd,
+                                                bool suppress_stdio = false);
 
 } // namespace bpftrace::util
