@@ -1835,7 +1835,7 @@ void TypeRuleCollector::visit(MapAddr &map_addr)
       .inputs = { map_value_name(map_addr.map->ident) },
       .resolve = [](const std::vector<SizedType> &inputs) -> SizedType {
         const auto &type = inputs[0];
-        return CreatePointer(type, type.GetAS());
+        return CreatePointer(type, AddrSpace::kernel);
       },
   });
 }
@@ -2280,7 +2280,8 @@ void TypeRuleCollector::visit(VariableAddr &var_addr)
       .inputs = { var_addr.var },
       .resolve = [](const std::vector<SizedType> &inputs) -> SizedType {
         const auto &type = inputs[0];
-        return CreatePointer(type, type.GetAS());
+        // Stack variables need kernel address space when their address is taken
+        return CreatePointer(type, AddrSpace::kernel);
       },
   });
 }
