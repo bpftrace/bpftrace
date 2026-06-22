@@ -18,6 +18,12 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix `--include` with system and C stdlib headers (e.g. `linux/sched.h`,
+  `stdint.h`, `limits.h`) by switching `-isystem` to `-I`, dropping the
+  vendored `stdint.h`/`limits.h` that clashed with Clang's, making integer
+  suffix parsing case-insensitive, and falling back to plain `clang` when
+  `clang-<N>` is not on PATH.
+  - [#4398](https://github.com/bpftrace/bpftrace/pull/4398)
 #### Security
 #### Docs
 #### Tools
