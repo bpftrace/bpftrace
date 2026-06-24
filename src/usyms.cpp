@@ -1,6 +1,7 @@
 #include "types.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
+#include <fstream>
 #include <sstream>
 
 #include "config.h"
@@ -369,11 +370,23 @@ std::vector<std::string> Usyms::resolve_blazesym_impl(
     return str_syms;
   }
 
+  // We check that /proc/<pid>/maps has content rather than that /proc/<pid>
+  // merely exists: a process that has exited but not yet been reaped lingers
+  // as a zombie with an empty maps file and no usable map_files entries.
+  // See blazesym docs why setting no_map_files to true is discouraged.
+  bool no_map_files = false;
+  if (cache_type == UserSymbolCacheType::per_pid) {
+    std::ifstream maps("/proc/" + std::to_string(pid) + "/maps");
+    no_map_files = !maps.good() ||
+                   maps.peek() == std::ifstream::traits_type::eof();
+  }
+
   blaze_symbolize_src_process src = {
     .type_size = sizeof(src),
     .pid = static_cast<uint32_t>(pid),
     .debug_syms = show_debug_info,
     .perf_map = true,
+    .no_map_files = no_map_files,
   };
 
   const blaze_syms *syms = blaze_symbolize_process_abs_addrs(

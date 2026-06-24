@@ -80,14 +80,14 @@ EXPECT_REGEX ^func: 'test'$|^func: '0'$
 AFTER ./testprogs/uprobe_symres
 REQUIRES_FEATURE get_func_ip
 
-# Disabled, since BCC code it depends on is prone to race condition,
+# This requires Blazesym since BCC code it depends on is prone to race condition,
 # (https://github.com/iovisor/bcc/pull/4319#issuecomment-1321731687)
 NAME func_uprobe_symcache_preload
 ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PID
-PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(func); exit(); }
-EXPECT test
+PROG uprobe:./testprogs/uprobe_symres_exited_process:test { @a[func] = 1; } i:5s { exit(); }
+EXPECT @a[test]: 1
 BEFORE ./testprogs/uprobe_symres_exited_process
-REQUIRES bash -c "exit 1"
+REQUIRES_FEATURE blazesym
 
 NAME func_uprobe_elf_symtable
 ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
