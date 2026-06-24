@@ -14,10 +14,10 @@ if [[ "$#" -lt 3 ]]; then
   echo "Compare tools' speed between two bpftrace builds"
   echo ""
   echo "USAGE:"
-  echo "$(basename $0) <bpftrace_A> <bpftrace_B> <tooldir> [<testmode>] [<threshold>]"
+  echo "$(basename "$0") <bpftrace_A> <bpftrace_B> <tooldir> [<testmode>] [<threshold>]"
   echo ""
   echo "EXAMPLE:"
-  echo "$(basename $0) bpftrace bpftrace_master ./tools"
+  echo "$(basename "$0") bpftrace bpftrace_master ./tools"
   echo ""
   echo "NOTE: assume that second bpftrace binary is newer"
   exit 1
@@ -32,24 +32,24 @@ BPF_B=$(command -v "$2") || ( echo "ERROR: $2 not found"; exit 1 )
 TMPDIR=$(mktemp -d)
 [[ $? -ne 0 || -z $TMPDIR ]] && (echo "Failed to create tmp dir"; exit 10)
 
-cd $TMPDIR
+cd "$TMPDIR"
 set +e
 
 TESTMODE=${4:-codegen}
 if [[ $TESTMODE != "codegen" ]]; then
-    echo invalid testmode: $TESTMODE
+    echo invalid testmode: "$TESTMODE"
     exit 20
 fi
 THRESHOLD=${5:-1}
 TIME="/usr/bin/time -f%e --"
-FLAGS="--no-warnings --test $TESTMODE"
+FLAGS=(--no-warnings --test "$TESTMODE")
 
-echo $TESTMODE test
+echo "$TESTMODE" test
 echo "Using version $($BPF_A -V) and $($BPF_B -V)"
 
 MAXLEN=0
-for script in ${TOOLDIR}/*.bt; do
-    s=$(basename ${script/.bt/})
+for script in "${TOOLDIR}"/*.bt; do
+    s=$(basename "${script/.bt/}")
     len=${#s}
     if [[ "$MAXLEN" -lt "$len" ]]; then
         MAXLEN=$len
@@ -57,24 +57,23 @@ for script in ${TOOLDIR}/*.bt; do
 done
 
 echo -n "         script"
-for i in `seq 0 1 $((MAXLEN - 6))`; do echo -n ' '; done
+for _ in $(seq 0 1 $((MAXLEN - 6))); do echo -n ' '; done
 echo "A     B     diff"
 
-for script in ${TOOLDIR}/*.bt; do
-    s=$(basename ${script/.bt/})
+for script in "${TOOLDIR}"/*.bt; do
+    s=$(basename "${script/.bt/}")
     len=${#s}
     space=$((MAXLEN - len))
     echo -n "Checking $s"
-    for i in `seq 0 1 $space`; do echo -n ' '; done
-    a=`$TIME $BPF_A $FLAGS "$script" 3>&1 1>&2 2>&3 3>&-`
-    b=`$TIME $BPF_B $FLAGS "$script" 3>&1 1>&2 2>&3 3>&-`
-    if [ $? -ne 0 ]; then
+    for _ in $(seq 0 1 $space); do echo -n ' '; done
+    if ! a=$($TIME "$BPF_A" "${FLAGS[@]}" "$script" 3>&1 1>&2 2>&3 3>&-) ||
+       ! b=$($TIME "$BPF_B" "${FLAGS[@]}" "$script" 3>&1 1>&2 2>&3 3>&-); then
         echo "###############################"
         echo "bpftrace failed on script: ${s}"
         echo "###############################"
         continue
     fi
-    d=$(echo $b - $a | bc)
+    d=$(echo "$b" - "$a" | bc)
     t=$(echo "$d > $THRESHOLD" | bc)
     mark=""
     if [[ "$t" -eq 1 ]]; then

@@ -8,13 +8,13 @@
 set -eux
 
 IMAGE=bpftrace-static
-cd $(git rev-parse --show-toplevel)
+cd "$(git rev-parse --show-toplevel)"
 
 # Build the base image
 docker build -t "$IMAGE" -f docker/Dockerfile.static docker/
 
 # Perform bpftrace static build
-docker run -v $(pwd):$(pwd) -w $(pwd) -i "$IMAGE" <<'EOF'
+docker run -v "$(pwd):$(pwd)" -w "$(pwd)" -i "$IMAGE" <<'EOF'
 set -eux
 BUILD_DIR=build-static
 cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DCMAKE_VERBOSE_MAKEFILE=ON -DBUILD_TESTING=OFF -DSTATIC_LINKING=ON

@@ -12,10 +12,10 @@ if [[ "$#" -ne 4 ]]; then
   echo "Compare IR generated between two bpftrace builds"
   echo ""
   echo "USAGE:"
-  echo "$(basename $0) <bpftrace_A> <bpftrace_B> <objdump> <tooldir>"
+  echo "$(basename "$0") <bpftrace_A> <bpftrace_B> <objdump> <tooldir>"
   echo ""
   echo "EXAMPLE:"
-  echo "$(basename $0) bpftrace_master bpftrace llvm-objdump-7 ./tools"
+  echo "$(basename "$0") bpftrace_master bpftrace llvm-objdump-7 ./tools"
   echo ""
   exit 1
 fi
@@ -29,28 +29,26 @@ TOOLDIR=$4
 TMPDIR=$(mktemp -d)
 [[ $? -ne 0 || -z $TMPDIR ]] && (echo "Failed to create tmp dir"; exit 10)
 
-cd $TMPDIR
+cd "$TMPDIR"
 set +e
 
 function hash() {
-    file="${1}"
     sha1sum "${1}" | awk '{print $1}'
 }
 
 echo "Using version $($BPF_A -V) and $($BPF_B -V)"
 
-for script in ${TOOLDIR}/*.bt; do
-    s=$(basename ${script/.bt/})
+for script in "${TOOLDIR}"/*.bt; do
+    s=$(basename "${script/.bt/}")
     echo "Checking $s"
-    2>&1 $BPF_A --emit-elf "a_${s}" "$script" >/dev/null
-    2>&1 $BPF_B --emit-elf "b_${s}" "$script" >/dev/null
-    if [ $? -ne 0 ]; then
+    if ! $BPF_A --emit-elf "a_${s}" "$script" >/dev/null 2>&1 ||
+       ! $BPF_B --emit-elf "b_${s}" "$script" >/dev/null 2>&1; then
         echo "###############################"
         echo "bpftrace failed on script: ${s}"
         echo "###############################"
         continue
     fi
-    if [[ $(hash "a_${s}") != $(hash "b_${s}")  ]]; then
+    if [[ $(hash "a_${s}") != $(hash "b_${s}") ]]; then
         echo "###############################"
         echo "Change detected for script: ${s}"
         diff -u <($OBJDUMP -S "a_${s}") <($OBJDUMP -S "b_${s}")

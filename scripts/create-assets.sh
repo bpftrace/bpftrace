@@ -23,7 +23,7 @@ command -v zstd >/dev/null 2>&1 || err "zstd command not found, required for rel
 command -v asciidoctor >/dev/null 2>&1 || err "asciidoctor not found, required for manpage"
 
 # Take value from environment if set, otherwise use a tempdir
-: ${OUT:=$(mktemp -d)} || err "Failed to create temp dir"
+: "${OUT:=$(mktemp -d)}" || err "Failed to create temp dir"
 TMP="${OUT}/tmp"
 
 echo "Using '$OUT' as assert dir"

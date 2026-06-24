@@ -31,7 +31,7 @@ usage() {
 }
 
 while getopts ":d:uh" opt; do
-case ${opt} in
+case "${opt}" in
     u )
         FIX=-fix
         ;;
@@ -41,6 +41,10 @@ case ${opt} in
     h )
         usage
         exit 0
+        ;;
+    * )
+        echo "Unknown option ${opt}"
+        exit 1
         ;;
 esac
 done
@@ -55,7 +59,7 @@ run cmake -B "$BUILD_DIR" -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 # We also generate header files here and there. Rather than hard
 # code which files are generated, just build the entire project
 # to keep it simple.
-run make -C "$BUILD_DIR" -j $(nproc)
+run make -C "$BUILD_DIR" -j "$(nproc)"
 
 # Note that `run-clang-tidy` comes from `clang` nix package but shells out to
 # `clang-tidy` and `clang-apply-replacements` from `clang-tools` nix package.
