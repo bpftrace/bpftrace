@@ -208,6 +208,7 @@
                   python3Packages.looseversion
                   qemu_kvm
                   rustc  # For runtime tests
+                  shellcheck
                   strace
                   unixtools.ping
                   util-linux

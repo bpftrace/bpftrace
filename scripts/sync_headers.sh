@@ -167,10 +167,10 @@ function sync() {
   # effectively best-effort.
   local -r tmpfile=$(mktemp --tmpdir "XXXXXX.c")
   echo "#include <$1>" > "${tmpfile}"
-  local nesting
+  local _nesting
   local transitive_header
   clang -H -o /dev/null -c "${tmpfile}" 2>&1 | grep -E '.h$' | \
-  (while read nesting transitive_header; do
+  (while read -r _nesting transitive_header; do
     local relpath="${transitive_header##*/include/}"
     sync "${relpath}"
   done)
