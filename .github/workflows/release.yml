@@ -6,6 +6,12 @@ name: Release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Skip uploading artifacts (for testing the workflow)'
+        type: boolean
+        default: true
 
 jobs:
   build-upload:
@@ -27,6 +33,7 @@ jobs:
       run: nix develop --command bash -c "OUT=./assets ./scripts/create-assets.sh"
 
     - name: Upload artifacts
+      if: ${{ !inputs.dry_run }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: gh release upload ${{ github.ref_name }} ./assets/*
