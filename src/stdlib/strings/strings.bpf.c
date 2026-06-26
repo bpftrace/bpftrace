@@ -67,6 +67,48 @@ int __bpf_strnstr(const char *haystack,
   return -1;
 }
 
+size_t __bpf_str_append(char *dst, size_t dst_sz, const char *src,
+                        size_t src_sz)
+{
+  __u8 i, j;
+  size_t dst_len = __bpf_strnlen(dst, dst_sz);
+  size_t src_len = __bpf_strnlen(src, src_sz);
+
+  // Provide sufficient conditions for the BPF Verifier
+  for (i = dst_len, j = 0; i < dst_sz - 1 && j < src_sz - 1 && src[j] != '\0';
+       j++, i++)
+    dst[i] = src[j];
+
+  dst[i] = '\0';
+
+  return j;
+}
+
+size_t __bpf_str_prepend(char *dst, size_t dst_sz, const char *src,
+                         size_t src_sz)
+{
+  __u8 i;
+  const __u8 dst_len = __bpf_strnlen(dst, dst_sz);
+  const __u8 src_len = __bpf_strnlen(src, src_sz);
+
+  if (dst_len + src_len > dst_sz - 1) {
+    return 0;
+  }
+
+  for (i = 0; i < dst_len && dst[i] != '\0'; i++) {
+    __u8 idx = dst_len - i - 1;
+    dst[src_len + idx] = dst[idx];
+  }
+  dst[src_len + dst_len] = '\0';
+
+  // Provide sufficient conditions for the BPF Verifier
+  for (i = 0; i < src_len && i < dst_sz && i < src_sz && src[i] != '\0'; i++) {
+    dst[i] = src[i];
+  }
+
+  return src_len;
+}
+
 int __strerror(int errno, err_str *out) {
   if (errno < 0) {
     errno = -errno;

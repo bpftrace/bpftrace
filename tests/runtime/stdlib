@@ -70,3 +70,15 @@ TIMEOUT 5
 NAME strlen
 PROG begin { $a = "hello"; print(strlen($a)); }
 EXPECT 5
+
+NAME string append
+PROG begin { let $s : string[64]; $s = "hello"; str_append($s, " world"); printf("%s\n", $s); }
+EXPECT hello world
+
+NAME string prepend
+PROG begin { let $s : string[64]; $s = "world"; str_prepend($s, "hello "); printf("%s\n", $s); }
+EXPECT hello world
+
+NAME abspath
+RUN mkdir -p /root/tmpdir-xyz/; pushd /root/tmpdir-xyz/; {{BPFTRACE}} -e 'begin { let $cwd : string[256]; abspath($cwd, 32); printf("%s\n", $cwd); }'; popd; rmdir /root/tmpdir-xyz/
+EXPECT /root/tmpdir-xyz/

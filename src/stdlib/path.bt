@@ -1,0 +1,71 @@
+// Path helpers.
+
+// Get task filesystem root.
+//
+// :function fs_root
+// :variant struct fs_struct *fs_root();
+macro fs_root() {
+  curtask->fs
+}
+
+// Takes a string-like variable, and converts to an absolute path.
+//
+// :function abspath
+// :variant void abspath(string path, uint64 max_path_depth);
+//
+// In fact, this function concatenates the program's current working directory and the filename to form the absolute path of the file. If an empty string is passed in, the current working directory can be obtained.
+//
+// For example:
+// ```
+// let $cwd : string[256];
+// abspath($cwd, 32);
+// printf("%s\n", $cwd);
+// ```
+macro abspath($path, $max_path_depth)
+{
+  $fs = fs_root;
+  $dentry = $fs->pwd.dentry;
+  $vfsmnt = $fs->pwd.mnt;
+  $mnt = (struct mount *)(((uint64)$vfsmnt) - offsetof(struct mount, mnt));
+  $mnt_root = $vfsmnt.mnt_root;
+
+  for $j : ((uint64)0)..((uint64)$max_path_depth) {
+
+    $d_name = str($dentry.d_name.name);
+    $parent_dentry = $dentry.d_parent;
+
+    if ($dentry == $parent_dentry || $dentry == $mnt_root) {
+      $mnt_parent = (struct mount *)$mnt.mnt_parent;
+
+      // Real root directory
+      if ($mnt == $mnt_parent) {
+        break;
+      }
+
+      $dentry = $mnt.mnt_mountpoint;
+      $mnt = $mnt_parent;
+      $mnt_root = $mnt.mnt.mnt_root;
+      continue;
+    }
+
+    // Sometimes, $d_name will be equal to "/" or start with "/", such as in a
+    // mount point directory.
+    if ($d_name[0] != "/"[0]) {
+      str_prepend($path, "/");
+    }
+    str_prepend($path, $d_name);
+
+    $dentry = $parent_dentry;
+  }
+
+  // Normally, the root directory will be missing a '/'.
+  if ($path[0] != "/"[0]) {
+    str_prepend($path, "/");
+  }
+}
+
+macro abspath($path, max_path_depth)
+{
+  let $max_path_depth = max_path_depth;
+  abspath($path, $max_path_depth);
+}
