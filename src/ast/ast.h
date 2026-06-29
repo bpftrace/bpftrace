@@ -161,6 +161,7 @@ class None;
 class Identifier;
 class Builtin;
 class ParsedType;
+class TypeArg;
 class Call;
 class Sizeof;
 class Offsetof;
@@ -210,7 +211,8 @@ class Expression : public VariantNode<Integer,
                                       BlockExpr,
                                       Typeinfo,
                                       Comptime,
-                                      Record> {
+                                      Record,
+                                      TypeArg> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -639,6 +641,33 @@ inline std::strong_ordering expr_or_type_compare(const ExprOrType &lhs,
   }
   return std::get<Expression>(lhs) <=> std::get<Expression>(rhs);
 }
+
+class TypeArg : public Node {
+public:
+  explicit TypeArg(ASTContext &ctx, Location &&loc, ParsedType *type)
+      : Node(ctx, std::move(loc)), parsed_type(type) {};
+  explicit TypeArg(ASTContext &ctx, const Location &loc, const TypeArg &other)
+      : Node(ctx, loc + other.loc),
+        parsed_type(clone(ctx, loc, other.parsed_type)) {};
+
+  bool operator==(const TypeArg &other) const
+  {
+    return parsed_type == other.parsed_type ||
+           (parsed_type && other.parsed_type &&
+            *parsed_type == *other.parsed_type);
+  }
+  std::strong_ordering operator<=>(const TypeArg &other) const
+  {
+    if (parsed_type && other.parsed_type)
+      return *parsed_type <=> *other.parsed_type;
+    if (!parsed_type && !other.parsed_type)
+      return std::strong_ordering::equal;
+    return parsed_type ? std::strong_ordering::greater
+                       : std::strong_ordering::less;
+  }
+
+  ParsedType *parsed_type;
+};
 
 class Sizeof : public Node {
 public:

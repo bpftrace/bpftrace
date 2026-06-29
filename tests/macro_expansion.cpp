@@ -1,5 +1,6 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/import_scripts.h"
+#include "ast/passes/printer.h"
 #include "ast/passes/resolve_imports.h"
 #include "mocks.h"
 #include "parser.h"
@@ -9,7 +10,11 @@ namespace bpftrace::test::macro_expansion {
 
 using ::testing::HasSubstr;
 
+// Runs the macro expansion pipeline on `input`. When `expected_output` is set,
+// the formatted (expanded) AST is checked to contain it, verifying that the
+// substitution actually happened. Otherwise only diagnostics are checked.
 void test(const std::string& input,
+          const std::string& expected_output = "",
           const std::string& error = "",
           const std::string& warn = "")
 {
@@ -47,6 +52,13 @@ void test(const std::string& input,
 
   if (trimmed_error.empty()) {
     ASSERT_TRUE(ok && ast.diagnostics().ok()) << msg.str() << out.str();
+    if (!expected_output.empty()) {
+      std::stringstream printed;
+      ast::Printer printer(ast, printed);
+      printer.visit(ast.root);
+      EXPECT_THAT(printed.str(), HasSubstr(expected_output))
+          << msg.str() << printed.str();
+    }
     if (!trimmed_warn.empty()) {
       EXPECT_THAT(out.str(), HasSubstr(trimmed_warn)) << msg.str() << out.str();
     }
@@ -58,12 +70,12 @@ void test(const std::string& input,
 
 void test_error(const std::string& input, const std::string& error)
 {
-  test(input, error);
+  test(input, "", error);
 }
 
 void test_warning(const std::string& input, const std::string& warn)
 {
-  test(input, "", warn);
+  test(input, "", "", warn);
 }
 
 TEST(macro_expansion, basic_checks)
@@ -240,6 +252,57 @@ TEST(macro_expansion, stdlib_shadowing)
 
   // User macros should not poison builtin/function calls inside stdlib macros.
   test("macro fail(x) { x } begin { print(strlen(\"hi\")); }");
+}
+
+TEST(macro_expansion, type_arg)
+{
+  test("macro sof(t) { sizeof(t) } begin { print(sof(struct task_struct)); }",
+       "sizeof(struct task_struct)");
+  test("macro sof(t) { sizeof(t) } begin { print(sof(uint64)); }",
+       "sizeof(uint64)");
+  test("macro sof(t) { sizeof(struct t) } begin { print(sof(task_struct)); }",
+       "sizeof(struct task_struct)");
+  test("macro sof(t) { sizeof(t*) } begin { print(sof(uint64)); }",
+       "sizeof(uint64*)");
+  test("macro sof(a, b) { sizeof(a) + sizeof(b[2]) } "
+       "begin { print(sof(struct task_struct, uint64*)); }",
+       "sizeof(struct task_struct) + sizeof(uint64*[2])");
+  test("struct Foo { int x; } macro off(t) { offsetof(t, x) } "
+       "begin { print(off(struct Foo)); }",
+       "offsetof(struct Foo, x)");
+  test("macro c(t) { (typeof(t))0 } begin { print(c(uint64*)); }",
+       "(uint64*)0");
+  test("macro lt(t) { let $x: t = 0; } begin { lt(uint32); }", ": uint32 = 0;");
+  test("macro cst(t) { (t)0; } begin { print(cst(uint32*)); }", "(uint32*)0");
+  test("macro ti(t) { typeinfo(t) } begin { print(ti(struct task_struct)); }",
+       "typeinfo(struct task_struct)");
+  test("macro inner(t) { sizeof(t) } macro outer(t) { inner(t) } "
+       "begin { print(outer(uint64*)); }",
+       "sizeof(uint64*)");
+
+  // Errors
+  test_error(
+      "macro m(x) { x + 1 } begin { print(m(uint64*)); }",
+      "Type expression only valid for macro calls expecting type parameters");
+
+  test_error("macro m(t) { sizeof(struct t) } begin { print(m(uint64*)); }",
+             "Source type template 'struct t' is incompatible with replacement "
+             "type arg 'uint64*'");
+
+  test_error("macro m(t) { sizeof(struct t) } begin { print(m(struct foo)); }",
+             "Try just passing the raw ident: 'foo'");
+
+  test_error(
+      "macro cst(t) { sizeof((t)[0]) } begin { print(cst(uint32*)); }",
+      "Type expression only valid for macro calls expecting type parameters");
+
+  test_error(
+      "macro m(t) { sizeof(struct t) } begin { $x = 1; print(m($x)); }",
+      "Macro 'm' is expecting a ParsedType or Identifier to replace 't'");
+
+  test_error(
+      "begin { print(f(uint64*)); }",
+      "Type expression only valid for macro calls expecting type parameters");
 }
 
 } // namespace bpftrace::test::macro_expansion

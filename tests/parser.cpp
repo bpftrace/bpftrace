@@ -38,6 +38,7 @@ using bpftrace::test::Program;
 
 using bpftrace::test::String;
 using bpftrace::test::Tuple;
+using bpftrace::test::TypeArg;
 using bpftrace::test::Typeof;
 using bpftrace::test::Unop;
 using bpftrace::test::Variable;
@@ -705,6 +706,20 @@ TEST(Parser, booleans)
        Program().WithProbe(
            Probe({ "kprobe:do_nanosleep" },
                  { AssignVarStatement(Variable("$x"), Boolean(false)) })));
+
+  // A boolean literal passed as a call argument must parse as a Boolean node,
+  // not be swallowed as a bare identifier by the type-argument path.
+  test("begin { getopt(\"cc\", true); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("getopt", { String("cc"), Boolean(true) })) })));
+
+  test("begin { getopt(\"cc\", false); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("getopt", { String("cc"), Boolean(false) })) })));
 }
 
 TEST(Parser, map_key)
@@ -2073,6 +2088,86 @@ TEST(Parser, typeof_unknown_type)
                      Cast(Typeof(Identifier("mytype")), Builtin("arg0"))) })));
 }
 
+TEST(Parser, call_type_arg)
+{
+  test("begin { f(struct task_struct); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("f",
+                          { TypeArg(ParsedType(ast::ParsedType::Kind::Struct,
+                                               "task_struct")) })) })));
+
+  test("begin { f(union my_union); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("f",
+                          { TypeArg(ParsedType(ast::ParsedType::Kind::Union,
+                                               "my_union")) })) })));
+
+  test("begin { f(enum my_enum); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("f",
+                          { TypeArg(ParsedType(ast::ParsedType::Kind::Enum,
+                                               "my_enum")) })) })));
+
+  test("begin { f(uint64); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(Call(
+                     "f",
+                     { TypeArg(ParsedType(ast::ParsedType::Kind::Identifier,
+                                          "uint64")) })) })));
+
+  test("begin { f(uint64*); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("f",
+                          { TypeArg(ParsedType(ast::ParsedType::Kind::Pointer)
+                                        .WithInner(ParsedType(
+                                            ast::ParsedType::Kind::Identifier,
+                                            "uint64"))) })) })));
+
+  test("begin { f(uint64[2]); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("f",
+                          { TypeArg(ParsedType(ast::ParsedType::Kind::Array)
+                                        .WithArraySize(2)
+                                        .WithInner(ParsedType(
+                                            ast::ParsedType::Kind::Identifier,
+                                            "uint64"))) })) })));
+
+  test(
+      "begin { f(struct task_struct*); }",
+      Program().WithProbe(Probe(
+          { "begin" },
+          { ExprStatement(Call(
+              "f",
+              { TypeArg(ParsedType(ast::ParsedType::Kind::Pointer)
+                            .WithInner(ParsedType(ast::ParsedType::Kind::Struct,
+                                                  "task_struct"))) })) })));
+
+  test("begin { f(1, struct task_struct, \"x\"); }",
+       Program().WithProbe(
+           Probe({ "begin" },
+                 { ExprStatement(
+                     Call("f",
+                          { Integer(1),
+                            TypeArg(ParsedType(ast::ParsedType::Kind::Struct,
+                                               "task_struct")),
+                            String("x") })) })));
+
+  test("begin { f(foo); }",
+       Program().WithProbe(Probe(
+           { "begin" }, { ExprStatement(Call("f", { Identifier("foo") })) })));
+}
+
 TEST(Parser, dereference_precedence)
 {
   test("kprobe:sys_read { *@x+1 }",
@@ -2157,18 +2252,31 @@ TEST(Parser, field_access_sized_type)
 
 TEST(Parser, array_access)
 {
-  test("kprobe:sys_read { x[index]; }",
-       Program().WithProbe(
-           Probe({ "kprobe:sys_read" },
-                 { ExprStatement(
-                     ArrayAccess(Identifier("x"), Identifier("index"))) })));
+  // Array access on a variable, map, or parenthesized expression is fine.
+  test("kprobe:sys_read { $x[index]; }",
+       Program().WithProbe(Probe({ "kprobe:sys_read" },
+                                 { ExprStatement(ArrayAccess(
+                                     Variable("$x"), Identifier("index"))) })));
 
-  test("kprobe:sys_read { $val = x[index]; }",
+  test("kprobe:sys_read { (x)[0]; }",
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
-                 { AssignVarStatement(Variable("$val"),
-                                      ArrayAccess(Identifier("x"),
-                                                  Identifier("index"))) })));
+                 { ExprStatement(ArrayAccess(Identifier("x"), Integer(0))) })));
+
+  // A bare identifier cannot be indexed as a value: `name[N]` is reserved for
+  // type-array syntax. Users must index a variable, map, or parenthesized
+  // expression instead.
+  test_parse_failure("kprobe:sys_read { x[index]; }", R"(
+stdin:1:19-27: ERROR: syntax: cannot index the bare identifier 'x'; index a variable, map, or parenthesized expression
+kprobe:sys_read { x[index]; }
+                  ~~~~~~~~
+)");
+
+  test_parse_failure("kprobe:sys_read { $val = x[index]; }", R"(
+stdin:1:26-34: ERROR: syntax: cannot index the bare identifier 'x'; index a variable, map, or parenthesized expression
+kprobe:sys_read { $val = x[index]; }
+                         ~~~~~~~~
+)");
 }
 
 TEST(Parser, cstruct)

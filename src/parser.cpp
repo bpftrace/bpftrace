@@ -1611,6 +1611,11 @@ std::optional<std::variant<Expression, ParsedType *>> Parser::
     return std::nullopt;
   }
 
+  if (ident == "true" || ident == "false") {
+    sp.restore();
+    return std::nullopt;
+  }
+
   auto matches_terminator = [&](size_t end_pos) {
     char next = char_at(scan_layout(end_pos));
     return next != '\0' && end_chars.find(next) != std::string_view::npos;
@@ -2270,6 +2275,20 @@ Expression Parser::parse_primary()
       auto *builtin = ctx_.make_node<Builtin>(name_loc, std::move(*name));
       return { builtin };
     }
+    // A bare identifier cannot be indexed as a value. The `name[N]` form is
+    // reserved for type-array syntax. To index a value use a variable, map, or
+    // parenthesize the expression: `$x[N]`, `@x[N]`, `(x)[N]`.
+    if (peek() == '[') {
+      advance();
+      parse_expression();
+      expect(']');
+      error("cannot index the bare identifier '" + *name +
+                "'; index a variable, map, or parenthesized expression",
+            begin_line,
+            begin_col,
+            line_,
+            col_);
+    }
     // Just an identifier.
     auto *ident = ctx_.make_node<Identifier>(name_loc, std::move(*name));
     return { ident };
@@ -2556,10 +2575,24 @@ Expression Parser::parse_call_expression(const std::string &name,
 
   ExpressionList args;
   consume_layout();
-  if (peek() != ')') {
-    args.push_back(parse_expression());
-    while (match(',')) {
+  auto add_expr_or_type_arg = [&, this]() {
+    auto [begin_line, begin_col] = get_current_line_col();
+    if (auto type_ref = try_parse_type_reference(",)")) {
+      auto loc = make_loc(begin_line, begin_col, line_, col_);
+      if (auto *type = std::get_if<ParsedType *>(&*type_ref)) {
+        args.emplace_back(ctx_.make_node<TypeArg>(loc, *type));
+      } else {
+        args.push_back(std::move(std::get<Expression>(*type_ref)));
+      }
+    } else {
       args.push_back(parse_expression());
+    }
+  };
+
+  if (peek() != ')') {
+    add_expr_or_type_arg();
+    while (match(',')) {
+      add_expr_or_type_arg();
     }
   }
 

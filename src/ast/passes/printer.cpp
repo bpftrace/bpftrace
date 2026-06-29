@@ -504,6 +504,11 @@ Buffer Formatter::visit(ParsedType& type)
   return visit(static_cast<const ParsedType&>(type));
 }
 
+Buffer Formatter::visit(TypeArg& type_arg)
+{
+  return visit(static_cast<const ParsedType&>(*type_arg.parsed_type));
+}
+
 Buffer Formatter::visit(Typeinfo& typeinfo)
 {
   if (std::holds_alternative<Expression>(typeinfo.typeof->record)) {
@@ -713,6 +718,11 @@ Buffer Formatter::visit(FieldAccess& acc)
 Buffer Formatter::visit(ArrayAccess& arr)
 {
   auto expr = format(arr.expr, metadata, max_width - 1);
+  // A bare identifier followed by `[` is parsed as a type-array, so it must be
+  // parenthesized to round-trip as a value being indexed (e.g. `(x)[0]`).
+  if (arr.expr.is<Identifier>()) {
+    expr = Buffer().text("(").append(std::move(expr)).text(")");
+  }
   auto indexpr = format(arr.indexpr, metadata, max_width - kIndentWidth);
   if (expr.width() + indexpr.width() + 2 > max_width) {
     return Buffer()

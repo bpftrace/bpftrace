@@ -111,7 +111,7 @@ bpftrace supports accessing one-dimensional arrays like those found in `C`.
 Constructing arrays from scratch, like `int a[] = {1,2,3}` in `C`, is not supported.
 They can only be read into a variable from a pointer.
 
-The `[]` operator is used to access elements.
+The `[]` operator is used to access elements on variables, maps, or parenthesized expressions (e.g. `(expr)[1]` - a bare identifier followed by brackets, `expr[1]`, is parsed as a type).
 
 ```
 struct MyStruct {
@@ -747,6 +747,7 @@ A macro's parameter signature specifies how an argument will be used.
 For example `macro test($a, b, @c)` indicates that `$a` needs to be a scratch variable (which might be mutated), that `b` needs to be an expression that will be inserted where ever `b` is used in the macro body, and that `@c` needs to be a map (which might be mutated).
 A valid use of this macro could be `test($x, 1 + 2, @y)`.
 Variables and maps can also be used for ident parameters that expect expressions and would be the same as writing `{ @y }` (Block Expression).
+Type expression substitution is also supported inside of macros (see below).
 Note: User-defined macros with the same name and signature as a standard library macro will override the standard library version. However, standard library macros nested inside of other standard library macros will never use the user-defined version of the same signature.
 
 Here are some valid usages of macros:
@@ -775,6 +776,10 @@ macro add_two(x) {
   add_one(x) + 1
 }
 
+macro custom_cast(a, b) {
+  (a*)b
+}
+
 begin {
   print(one());                   // prints 1
   print(one);                     // prints 1 (bare identifier works if the macro accepts 0 args)
@@ -790,6 +795,8 @@ begin {
   side_effects({ printf("hi") })  // prints hihihi
 
   print(add_two(1));              // prints 3
+
+  print(custom_cast(uint8, -1));  // prints 0xff
 }
 ```
 

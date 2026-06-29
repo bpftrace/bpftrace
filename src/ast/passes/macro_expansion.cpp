@@ -270,12 +270,95 @@ void MacroExpander::visit_expr_or_type(ExprOrType &record)
 {
   if (auto *expr = std::get_if<Expression>(&record)) {
     auto *ident = expr->as<Identifier>();
-    if (ident && !passed_exprs_.contains(ident->ident)) {
-      // Bare identifier that isn't a macro expression argument — treat it as
-      // a type name rather than expanding it as a macro.
-      return;
+    if (ident) {
+      if (auto it = passed_exprs_.find(ident->ident);
+          it != passed_exprs_.end()) {
+        auto *type_arg = it->second.as<TypeArg>();
+        if (type_arg) {
+          record = clone(ast_, ident->loc, type_arg->parsed_type);
+          return;
+        }
+      } else {
+        // Bare identifier that isn't a macro expression argument — treat it as
+        // a type name rather than expanding it as a macro.
+        return;
+      }
     }
+
     visit(*expr);
+  } else {
+    auto *parsed_type = std::get<ParsedType *>(record);
+    ParsedType *parent = nullptr;
+    while (parsed_type->inner) {
+      parent = parsed_type;
+      parsed_type = parsed_type->inner;
+    }
+    if (auto it = passed_exprs_.find(parsed_type->name);
+        it != passed_exprs_.end()) {
+      auto *type_arg = it->second.as<TypeArg>();
+      auto *ident = it->second.as<Identifier>();
+
+      switch (parsed_type->kind) {
+        case ParsedType::Kind::Struct:
+        case ParsedType::Kind::Union:
+        case ParsedType::Kind::Enum: {
+          // struct enum or struct struct is not supported syntax so unless the
+          // expression is a Identifier or a ParsedType Identifier this is an
+          // error
+          if (ident) {
+            parsed_type->name = ident->ident;
+            return;
+          }
+
+          if (type_arg) {
+            if (type_arg->parsed_type->kind == ParsedType::Kind::Identifier) {
+              parsed_type->name = type_arg->parsed_type->name;
+            } else {
+              auto &error = parsed_type->addError();
+              error << "Source type template '" << parsed_type->type_name()
+                    << "' is incompatible with replacement type arg '"
+                    << type_arg->parsed_type->type_name() << "'";
+              if (!type_arg->parsed_type->inner) {
+                error.addHint() << "Try just passing the raw ident: '"
+                                << type_arg->parsed_type->name << "'";
+              }
+            }
+            return;
+          }
+
+          break;
+        }
+        case ParsedType::Kind::Identifier: {
+          if (ident) {
+            parsed_type->name = ident->ident;
+            return;
+          }
+
+          if (type_arg) {
+            if (!parent) {
+              record = clone(ast_, parsed_type->loc, type_arg->parsed_type);
+            } else {
+              parent->inner = clone(ast_,
+                                    parsed_type->loc,
+                                    type_arg->parsed_type);
+            }
+            return;
+          }
+
+          break;
+        }
+        case ParsedType::Kind::Pointer:
+        case ParsedType::Kind::Array: {
+          LOG(BUG) << "ParsedType bottom can't be a pointer or array";
+          break;
+        }
+      }
+
+      it->second.node().addError()
+          << "Macro '" << stack_.back()->name
+          << "' is expecting a ParsedType or Identifier to replace '"
+          << parsed_type->name << "'";
+    }
   }
 }
 
@@ -491,6 +574,23 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro,
   return cloned_block;
 }
 
+class TypeArgCheck : public Visitor<TypeArgCheck> {
+public:
+  explicit TypeArgCheck(ASTContext &ast) : ast_(ast) {};
+
+  using Visitor<TypeArgCheck>::visit;
+  void visit(TypeArg &type_arg);
+
+private:
+  ASTContext &ast_;
+};
+
+void TypeArgCheck::visit(TypeArg &type_arg)
+{
+  type_arg.addError()
+      << "Type expression only valid for macro calls expecting type parameters";
+}
+
 void expand_macro(ASTContext &ast,
                   Expression &expr,
                   const MacroRegistry &registry)
@@ -507,6 +607,9 @@ Pass CreateMacroExpansionPass()
     std::vector<const Macro *> stack;
     MacroExpander expander(ast, macros, stack);
     expander.visit(ast.root);
+
+    TypeArgCheck type_arg_check(ast);
+    type_arg_check.visit(ast.root);
     return macros;
   };
 
