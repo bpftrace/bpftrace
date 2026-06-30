@@ -10,11 +10,15 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Publish arm64/aarch64 release artifacts alongside x86_64.
+  - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)
 - Warn if casting to the exact same type
   - [#5208](https://github.com/bpftrace/bpftrace/pull/5208)
+- Release assets are now suffixed with the architecture
+  - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
 #### Deprecated
 #### Removed
 #### Fixed
