@@ -1262,13 +1262,8 @@ Buffer Formatter::visit(Program& program)
     auto pre_metadata = metadata.before(entry.node().loc->current.begin);
     auto local_buffer = format(entry, metadata, max_width);
 
-    // Macros are only included during full mode, which is effectively
-    // formatting the AST. Otherwise, it is for debug purposes, including
-    // all types, etc. and we only care about macros post-expansion.
-    if (mode == FormatMode::Full || !entry.is<Macro>()) {
-      buffer = buffer.metadata(std::move(pre_metadata), 0)
-                   .append(std::move(local_buffer));
-    }
+    buffer = buffer.metadata(std::move(pre_metadata), 0)
+                 .append(std::move(local_buffer));
   }
 
   // It's possible that there are trailing comments, not associated with any

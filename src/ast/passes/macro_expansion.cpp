@@ -507,6 +507,13 @@ Pass CreateMacroExpansionPass()
     std::vector<const Macro *> stack;
     MacroExpander expander(ast, macros, stack);
     expander.visit(ast.root);
+
+    // Macros have now been expanded into their call sites, so remove the
+    // definitions from the AST. The registry retains its own pointers to the
+    // (arena-owned) macro nodes, so this only affects later AST traversals and
+    // debug dumps, which should no longer see the consumed definitions.
+    ast.root->macros.clear();
+
     return macros;
   };
 
