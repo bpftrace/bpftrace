@@ -14,6 +14,8 @@ and this project adheres to
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
 - Add support for type expression substitution for macros
   - [#5234](https://github.com/bpftrace/bpftrace/pull/5234)
+- stdlib: add `container_of` mirroring the libbpf macro
+  - [#5236](https://github.com/bpftrace/bpftrace/pull/5236)
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)

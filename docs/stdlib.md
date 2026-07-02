@@ -164,6 +164,12 @@ Name of the current thread or the process with the specified PID
 This utilizes the BPF helper `get_current_comm`
 
 
+### container_of
+- `Container* container_of(Member* ptr, Type type, Identifier member)`
+
+Returns a pointer to an object of the passed `type` given a pointer to the `member` of that object.
+
+
 ### cpid
 - `uint32 cpid()`
 - `uint32 cpid`
