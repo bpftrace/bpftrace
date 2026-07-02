@@ -161,6 +161,7 @@ class None;
 class Identifier;
 class Builtin;
 class ParsedType;
+class TypeArg;
 class Call;
 class Sizeof;
 class Offsetof;
@@ -210,7 +211,8 @@ class Expression : public VariantNode<Integer,
                                       BlockExpr,
                                       Typeinfo,
                                       Comptime,
-                                      Record> {
+                                      Record,
+                                      TypeArg> {
 public:
   using VariantNode::VariantNode;
   Expression() : Expression(static_cast<BlockExpr *>(nullptr)) {};
@@ -734,6 +736,30 @@ public:
   }
 
   ExprOrType record;
+};
+
+class TypeArg : public Node {
+public:
+  explicit TypeArg(ASTContext &ctx, Location &&loc, Typeof *type_of)
+      : Node(ctx, std::move(loc)), type_of(type_of) {};
+  explicit TypeArg(ASTContext &ctx, const Location &loc, const TypeArg &other)
+      : Node(ctx, loc + other.loc), type_of(clone(ctx, loc, other.type_of)) {};
+
+  bool operator==(const TypeArg &other) const
+  {
+    return type_of == other.type_of ||
+           (type_of && other.type_of && *type_of == *other.type_of);
+  }
+  std::strong_ordering operator<=>(const TypeArg &other) const
+  {
+    if (type_of && other.type_of)
+      return *type_of <=> *other.type_of;
+    if (!type_of && !other.type_of)
+      return std::strong_ordering::equal;
+    return type_of ? std::strong_ordering::greater : std::strong_ordering::less;
+  }
+
+  Typeof *type_of;
 };
 
 class Typeinfo : public Node {

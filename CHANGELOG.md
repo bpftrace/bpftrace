@@ -12,6 +12,8 @@ and this project adheres to
 #### Added
 - Publish arm64/aarch64 release artifacts alongside x86_64.
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
+- Add support for type expression substitution for macros
+  - [#5234](https://github.com/bpftrace/bpftrace/pull/5234)
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)

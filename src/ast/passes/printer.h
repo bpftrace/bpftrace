@@ -80,6 +80,7 @@ public:
   Buffer visit(Call &call);
   Buffer visit(Sizeof &szof);
   Buffer visit(Offsetof &ofof);
+  Buffer visit(TypeArg &type_arg);
   Buffer visit(Typeof &typeof);
   Buffer visit(Typeinfo &typeinfo);
   Buffer visit(Comptime &comptime);
