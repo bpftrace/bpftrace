@@ -317,4 +317,19 @@ TEST(macro_expansion, type_arg)
              "a type parameter");
 }
 
+TEST(macro_expansion, offsetof)
+{
+  test("macro off(t, f) { offsetof(t, f) } "
+       "begin { print(off(typeof(struct Foo), x)); }",
+       "offsetof(struct Foo, x)");
+  test("macro off(t, f) { offsetof(t, f) } "
+       "begin { print(off(typeof(struct Foo), a.b.c)); }",
+       "offsetof(struct Foo, a.b.c)");
+
+  test_error("macro off(t, f) { offsetof(t, f) } "
+             "begin { print(off(typeof(struct Foo), foo().b)); }",
+             "FieldAccess expressions must be made up entirely of idents (e.g. "
+             "a.b.c) to replace the second argument in `offsetof`");
+}
+
 } // namespace bpftrace::test::macro_expansion

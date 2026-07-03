@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -394,6 +395,33 @@ void MacroExpander::visit(Sizeof &sizeof_node)
 void MacroExpander::visit(Offsetof &offsetof_node)
 {
   visit_expr_or_type(offsetof_node.record);
+  if (offsetof_node.field.size() == 1) {
+    if (auto it = passed_exprs_.find(offsetof_node.field.back());
+        it != passed_exprs_.end()) {
+      if (auto *ident = it->second.as<Identifier>()) {
+        offsetof_node.field[0] = ident->ident;
+      } else if (it->second.as<FieldAccess>()) {
+        // A FieldAccess made up entirely of identifiers (e.g. a.b.c) can
+        // replace the single field parameter.
+        std::vector<std::string> fields;
+        Expression expr = it->second;
+        while (auto *field_access = expr.as<FieldAccess>()) {
+          fields.push_back(field_access->field);
+          expr = field_access->expr;
+        }
+        auto *base = expr.as<Identifier>();
+        if (!base) {
+          it->second.node().addError()
+              << "FieldAccess expressions must be made up entirely of idents "
+                 "(e.g. a.b.c) to replace the second argument in `offsetof`";
+          return;
+        }
+        fields.push_back(base->ident);
+        std::ranges::reverse(fields);
+        offsetof_node.field = std::move(fields);
+      }
+    }
+  }
 }
 
 void MacroExpander::visit(Typeof &typeof_node)
