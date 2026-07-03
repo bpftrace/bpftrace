@@ -60,6 +60,22 @@ inline std::strong_ordering operator<=>(Operator lhs, Operator rhs)
   return static_cast<int>(lhs) <=> static_cast<int>(rhs);
 }
 
+template <typename T>
+bool ptr_deref_equal(const T *lhs, const T *rhs)
+{
+  return lhs == rhs || (lhs && rhs && *lhs == *rhs);
+}
+
+template <typename T>
+std::strong_ordering ptr_deref_compare(const T *lhs, const T *rhs)
+{
+  if (lhs && rhs)
+    return *lhs <=> *rhs;
+  if (!lhs && !rhs)
+    return std::strong_ordering::equal;
+  return lhs ? std::strong_ordering::greater : std::strong_ordering::less;
+}
+
 class Node {
 public:
   Node(ASTContext &ctx, Location &&loc) : state_(*ctx.state_), loc(loc) {};
@@ -587,8 +603,7 @@ public:
   {
     return kind == other.kind && name == other.name &&
            array_size == other.array_size &&
-           (inner == other.inner ||
-            (inner && other.inner && *inner == *other.inner));
+           ptr_deref_equal(inner, other.inner);
   }
 
   std::strong_ordering operator<=>(const ParsedType &other) const
@@ -602,11 +617,7 @@ public:
     if (auto cmp = array_size <=> other.array_size; cmp != 0) {
       return cmp;
     }
-    if (inner && other.inner)
-      return *inner <=> *other.inner;
-    if (!inner && !other.inner)
-      return std::strong_ordering::equal;
-    return inner ? std::strong_ordering::greater : std::strong_ordering::less;
+    return ptr_deref_compare(inner, other.inner);
   }
 
   Kind kind;
@@ -674,11 +685,11 @@ public:
 
   bool operator==(const Sizeof &other) const
   {
-    return *type_of == *other.type_of;
+    return ptr_deref_equal(type_of, other.type_of);
   }
   std::strong_ordering operator<=>(const Sizeof &other) const
   {
-    return *type_of <=> *other.type_of;
+    return ptr_deref_compare(type_of, other.type_of);
   }
 
   Typeof *type_of = nullptr;
@@ -698,11 +709,11 @@ public:
 
   bool operator==(const Offsetof &other) const
   {
-    return *type_of == *other.type_of && field == other.field;
+    return ptr_deref_equal(type_of, other.type_of) && field == other.field;
   }
   std::strong_ordering operator<=>(const Offsetof &other) const
   {
-    if (auto cmp = *type_of <=> *other.type_of; cmp != 0)
+    if (auto cmp = ptr_deref_compare(type_of, other.type_of); cmp != 0)
       return cmp;
     return field <=> other.field;
   }
@@ -739,16 +750,11 @@ public:
 
   bool operator==(const TypeArg &other) const
   {
-    return type_of == other.type_of ||
-           (type_of && other.type_of && *type_of == *other.type_of);
+    return ptr_deref_equal(type_of, other.type_of);
   }
   std::strong_ordering operator<=>(const TypeArg &other) const
   {
-    if (type_of && other.type_of)
-      return *type_of <=> *other.type_of;
-    if (!type_of && !other.type_of)
-      return std::strong_ordering::equal;
-    return type_of ? std::strong_ordering::greater : std::strong_ordering::less;
+    return ptr_deref_compare(type_of, other.type_of);
   }
 
   Typeof *type_of;
@@ -764,11 +770,11 @@ public:
 
   bool operator==(const Typeinfo &other) const
   {
-    return *typeof == *other.typeof;
+    return ptr_deref_equal(typeof, other.typeof);
   }
   std::strong_ordering operator<=>(const Typeinfo &other) const
   {
-    return *typeof <=> *other.typeof;
+    return ptr_deref_compare(typeof, other.typeof);
   }
 
   Typeof *typeof = nullptr;
@@ -1082,11 +1088,11 @@ public:
 
   bool operator==(const Cast &other) const
   {
-    return *typeof == *other.typeof &&expr == other.expr;
+    return ptr_deref_equal(typeof, other.typeof) && expr == other.expr;
   }
   std::strong_ordering operator<=>(const Cast &other) const
   {
-    if (auto cmp = *typeof <=> *other.typeof; cmp != 0)
+    if (auto cmp = ptr_deref_compare(typeof, other.typeof); cmp != 0)
       return cmp;
     return expr <=> other.expr;
   }
@@ -1219,13 +1225,13 @@ public:
 
   bool operator==(const VarDeclStatement &other) const
   {
-    return *var == *other.var && *typeof == *other.typeof;
+    return *var == *other.var && ptr_deref_equal(typeof, other.typeof);
   }
   std::strong_ordering operator<=>(const VarDeclStatement &other) const
   {
     if (auto cmp = *var <=> *other.var; cmp != 0)
       return cmp;
-    return *typeof <=> *other.typeof;
+    return ptr_deref_compare(typeof, other.typeof);
   }
 
   Variable *var = nullptr;
@@ -1835,13 +1841,13 @@ public:
 
   bool operator==(const SubprogArg &other) const
   {
-    return *var == *other.var && *typeof == *other.typeof;
+    return *var == *other.var && ptr_deref_equal(typeof, other.typeof);
   }
   std::strong_ordering operator<=>(const SubprogArg &other) const
   {
     if (auto cmp = *var <=> *other.var; cmp != 0)
       return cmp;
-    return *typeof <=> *other.typeof;
+    return ptr_deref_compare(typeof, other.typeof);
   }
 
   Variable *var = nullptr;
@@ -1871,14 +1877,15 @@ public:
 
   bool operator==(const Subprog &other) const
   {
-    return name == other.name && return_type == other.return_type &&
+    return name == other.name &&
+           ptr_deref_equal(return_type, other.return_type) &&
            args == other.args && *block == *other.block;
   }
   std::strong_ordering operator<=>(const Subprog &other) const
   {
     if (auto cmp = name <=> other.name; cmp != 0)
       return cmp;
-    if (auto cmp = return_type <=> other.return_type; cmp != 0)
+    if (auto cmp = ptr_deref_compare(return_type, other.return_type); cmp != 0)
       return cmp;
     if (auto cmp = args <=> other.args; cmp != 0)
       return cmp;
