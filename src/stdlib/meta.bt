@@ -84,3 +84,10 @@ macro elf_info()
   assert_userspace_probe("elf_info");
   __builtin_elf_ino
 }
+
+// :variant Container* container_of(Member* ptr, Type type, Identifier member)
+// Returns a pointer to an object of the passed `type` given a pointer to the `member` of that object.
+macro container_of(ptr, type, member) {
+  $vptr = (void *)(ptr);
+  ((type *)($vptr - offsetof(type, member)))
+}

@@ -70,3 +70,9 @@ TIMEOUT 5
 NAME strlen
 PROG begin { $a = "hello"; print(strlen($a)); }
 EXPECT 5
+
+NAME container_of
+PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:n_func { $n = (int *)arg0; $foo_ptr = container_of($n, typeof(struct Foo), n); print(*$foo_ptr); }
+EXPECT { .m = 2, .n = 3 }
+TIMEOUT 4
+AFTER ./testprogs/simple_struct
