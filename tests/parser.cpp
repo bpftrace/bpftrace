@@ -1967,6 +1967,14 @@ TEST(Parser, sizeof_type)
            Probe({ "kprobe:sys_read" },
                  { ExprStatement(Sizeof(ParsedType(
                      ast::ParsedType::Kind::Identifier, "int32"))) })));
+  test("kprobe:sys_read { sizeof(typeof(int32)); }",
+       Program().WithProbe(
+           Probe({ "kprobe:sys_read" },
+                 { ExprStatement(Sizeof(ParsedType(
+                     ast::ParsedType::Kind::Identifier, "int32"))) })));
+  test("kprobe:sys_read { sizeof(typeof(arg0)); }",
+       Program().WithProbe(Probe({ "kprobe:sys_read" },
+                                 { ExprStatement(Sizeof(Builtin("arg0"))) })));
 }
 
 TEST(Parser, offsetof_type)
@@ -1989,6 +1997,15 @@ TEST(Parser, offsetof_type)
                      { ExprStatement(Offsetof(
                          ParsedType(ast::ParsedType::Kind::Struct, "Foo"),
                          { "bar", "x" })) })));
+  test("struct Foo { int x; } begin { offsetof(typeof(struct Foo), x); }",
+       Program()
+           .WithCStatements({ CStatement("struct Foo { int x; };") })
+           .WithProbe(
+               Probe({ "begin" },
+                     { ExprStatement(Offsetof(
+                         ParsedType(ast::ParsedType::Kind::Struct, "Foo"),
+                         { "x" })) })));
+
   test_parse_failure("struct Foo { struct Bar { int x; } *bar; } "
                      "begin { offsetof(struct Foo, bar->x); }",
                      R"(

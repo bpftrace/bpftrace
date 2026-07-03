@@ -1414,24 +1414,26 @@ public:
   SizeofMatcher& WithExpr(const Matcher<const ast::Expression&>& expr_matcher)
   {
     return Where([expr_matcher](const ast::Sizeof& node) {
-      if (!std::holds_alternative<ast::Expression>(node.record)) {
+      if (!node.type_of ||
+          !std::holds_alternative<ast::Expression>(node.type_of->record)) {
         node.addError() << "record is not an expression";
         return false;
       }
       return MatchWith(node,
                        expr_matcher,
-                       std::get<ast::Expression>(node.record));
+                       std::get<ast::Expression>(node.type_of->record));
     });
   }
 
   SizeofMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
   {
     return Where([type_matcher](const ast::Sizeof& node) {
-      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+      if (!node.type_of ||
+          !std::holds_alternative<ast::ParsedType*>(node.type_of->record)) {
         node.addError() << "record is not a ParsedType";
         return false;
       }
-      const auto* type = std::get<ast::ParsedType*>(node.record);
+      const auto* type = std::get<ast::ParsedType*>(node.type_of->record);
       return type && MatchWith(node, type_matcher, *type);
     });
   }
@@ -1452,24 +1454,26 @@ public:
   OffsetofMatcher& WithExpr(const Matcher<const ast::Expression&>& expr_matcher)
   {
     return Where([expr_matcher](const ast::Offsetof& node) {
-      if (!std::holds_alternative<ast::Expression>(node.record)) {
+      if (!node.type_of ||
+          !std::holds_alternative<ast::Expression>(node.type_of->record)) {
         node.addError() << "record is not an expression";
         return false;
       }
       return MatchWith(node,
                        expr_matcher,
-                       std::get<ast::Expression>(node.record));
+                       std::get<ast::Expression>(node.type_of->record));
     });
   }
 
   OffsetofMatcher& WithType(const Matcher<const ast::ParsedType&>& type_matcher)
   {
     return Where([type_matcher](const ast::Offsetof& node) {
-      if (!std::holds_alternative<ast::ParsedType*>(node.record)) {
+      if (!node.type_of ||
+          !std::holds_alternative<ast::ParsedType*>(node.type_of->record)) {
         node.addError() << "record is not a ParsedType";
         return false;
       }
-      const auto* type = std::get<ast::ParsedType*>(node.record);
+      const auto* type = std::get<ast::ParsedType*>(node.type_of->record);
       return type && MatchWith(node, type_matcher, *type);
     });
   }

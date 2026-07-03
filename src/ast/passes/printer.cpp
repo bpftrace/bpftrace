@@ -462,7 +462,7 @@ Buffer Formatter::visit(Sizeof& szof)
       .text("sizeof(")
       .append(std::visit(
           [&](auto& v) { return format(v, metadata, max_width - 8, true); },
-          szof.record))
+          szof.type_of->record))
       .text(")");
 }
 
@@ -476,7 +476,7 @@ Buffer Formatter::visit(Offsetof& ofof)
     }
     fields = fields.text(ofof.field[i]);
   }
-  auto expr = format(ofof.record, metadata, max_width);
+  auto expr = format(ofof.type_of->record, metadata, max_width);
   return Buffer()
       .text("offsetof(")
       .append(std::move(expr))

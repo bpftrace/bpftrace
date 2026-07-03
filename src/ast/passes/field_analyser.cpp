@@ -173,20 +173,12 @@ void FieldAnalyser::visit(MapAccess &acc)
 
 void FieldAnalyser::visit(Sizeof &szof)
 {
-  if (auto *const *type = std::get_if<ParsedType *>(&szof.record)) {
-    resolve_type(**type);
-  } else {
-    visit(szof.record);
-  }
+  visit(*szof.type_of);
 }
 
 void FieldAnalyser::visit(Offsetof &offof)
 {
-  if (auto *const *type = std::get_if<ParsedType *>(&offof.record)) {
-    resolve_type(**type);
-  } else {
-    visit(offof.record);
-  }
+  visit(*offof.type_of);
 }
 
 void FieldAnalyser::visit(Typeof &typeof)

@@ -194,12 +194,7 @@ std::optional<Expression> AstTransformer::visit(FieldAccess &acc)
 
 std::optional<Expression> AstTransformer::visit(Offsetof &offof)
 {
-  SizedType c_type;
-  if (std::holds_alternative<ParsedType *>(offof.record)) {
-    c_type = get_type(std::get<ParsedType *>(offof.record));
-  } else {
-    c_type = get_type(&std::get<Expression>(offof.record).node());
-  }
+  SizedType c_type = get_type(offof.type_of);
 
   if (c_type.IsNoneTy()) {
     return std::nullopt;
@@ -220,22 +215,12 @@ std::optional<Expression> AstTransformer::visit(Offsetof &offof)
 
 std::optional<Expression> AstTransformer::visit(Sizeof &szof)
 {
-  size_t size = 0;
-  if (std::holds_alternative<ParsedType *>(szof.record)) {
-    const auto &ty = get_type(std::get<ParsedType *>(szof.record));
-    if (ty.IsNoneTy()) {
-      return std::nullopt;
-    }
-    size = ty.GetSize();
-  } else {
-    const auto &ty = get_type(&std::get<Expression>(szof.record).node());
-    if (ty.IsNoneTy()) {
-      return std::nullopt;
-    }
-    size = ty.GetSize();
+  const auto &ty = get_type(szof.type_of);
+  if (ty.IsNoneTy()) {
+    return std::nullopt;
   }
 
-  return ast_.make_node<Integer>(Location(szof.loc), size);
+  return ast_.make_node<Integer>(Location(szof.loc), ty.GetSize());
 }
 
 std::optional<Expression> AstTransformer::visit(Typeinfo &typeinfo)

@@ -363,12 +363,12 @@ public:
 
 void MapCheck::visit(Offsetof &offof)
 {
-  AssignMapDisallowed<"offsetof">().visit(offof.record);
+  AssignMapDisallowed<"offsetof">().visit(offof.type_of->record);
 }
 
 void MapCheck::visit(Sizeof &szof)
 {
-  AssignMapDisallowed<"sizeof">().visit(szof.record);
+  AssignMapDisallowed<"sizeof">().visit(szof.type_of->record);
 }
 
 void MapCheck::visit(Typeof &typeof)

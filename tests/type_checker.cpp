@@ -4158,6 +4158,14 @@ TEST_F(TypeCheckerTest, int_ident)
   test("begin { sizeof(int32) }");
 }
 
+TEST_F(TypeCheckerTest, sizeof_offsetof_typeof)
+{
+  test("begin { sizeof(typeof(int32)) }");
+  test("begin { $x = (int64)1; sizeof(typeof($x)) }");
+  test("struct Foo { int x; long l; } \
+        begin { @x = offsetof(typeof(struct Foo), l); }");
+}
+
 TEST_F(TypeCheckerTest, string_size)
 {
   // Size of the variable should be the size of the larger string (incl. null)

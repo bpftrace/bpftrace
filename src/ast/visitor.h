@@ -85,11 +85,11 @@ public:
   }
   R visit(Sizeof &szof)
   {
-    return visitImpl(szof.record);
+    return visitImpl(szof.type_of);
   }
   R visit(Offsetof &ofof)
   {
-    return visitImpl(ofof.record);
+    return visitImpl(ofof.type_of);
   }
   R visit([[maybe_unused]] TypeArg &type_arg)
   {

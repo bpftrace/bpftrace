@@ -389,12 +389,12 @@ void MacroExpander::visit_expr_or_type(ExprOrType &record)
 
 void MacroExpander::visit(Sizeof &sizeof_node)
 {
-  visit_expr_or_type(sizeof_node.record);
+  visit(*sizeof_node.type_of);
 }
 
 void MacroExpander::visit(Offsetof &offsetof_node)
 {
-  visit_expr_or_type(offsetof_node.record);
+  visit(*offsetof_node.type_of);
   if (offsetof_node.field.size() == 1) {
     if (auto it = passed_exprs_.find(offsetof_node.field.back());
         it != passed_exprs_.end()) {
@@ -644,8 +644,9 @@ private:
 
 void TypeArgCheck::visit(TypeArg &type_arg)
 {
-  type_arg.addError() << "Typeof expression only valid for macro calls that "
-                         "are expecting a type parameter";
+  type_arg.addError()
+      << "When used as a call argument, `typeof` builtin only valid for macro "
+         "calls that are expecting a type parameter";
 }
 
 void expand_macro(ASTContext &ast,
