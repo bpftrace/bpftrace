@@ -579,6 +579,24 @@ PROG begin { @x[1] = 5; print(@x[1]); exit() }
 EXPECT 5
 TIMEOUT 1
 
+NAME print_empty_scalar_map
+PROG begin { print(@); } end { @ = 1 }
+EXPECT @: 0
+EXPECT @: 1
+TIMEOUT 1
+
+NAME print_empty_scalar_stats_map
+PROG begin { print(@); } end { @ = stats(1) }
+EXPECT @: { .count = 0, .average = 0, .total = 0 }
+EXPECT @: { .count = 1, .average = 1, .total = 1 }
+TIMEOUT 1
+
+NAME print_empty_scalar_record_map
+PROG begin { print(@); } end { @ = (a=1, b=(2, "hi")) }
+EXPECT @: { .a = 0, .b = (0, ) }
+EXPECT @: { .a = 1, .b = (2, hi) }
+TIMEOUT 1
+
 NAME print_map_item_tuple
 PROG begin { @x[1] = "hi"; print((1, 2, @x[1])); exit() }
 EXPECT (1, 2, hi)
