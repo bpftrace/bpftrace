@@ -295,8 +295,8 @@ TEST(macro_expansion, type_arg)
 
   // Errors
   test_error("macro m(x) { x + 1 } begin { print(m(typeof(uint64*))); }",
-             "Typeof expression only valid for macro calls that are expecting "
-             "a type parameter");
+             "When used as a call argument, `typeof` builtin only valid for "
+             "macro calls that are expecting a type parameter");
 
   test_error(
       "macro m(t) { sizeof(struct t) } begin { print(m(typeof(uint64*))); }",
@@ -308,13 +308,13 @@ TEST(macro_expansion, type_arg)
              "up the type 'struct t'");
 
   test_error("begin { print(f(typeof(uint64*))); }",
-             "Typeof expression only valid for macro calls that are expecting "
-             "a type parameter");
+             "When used as a call argument, `typeof` builtin only valid for "
+             "macro calls that are expecting a type parameter");
 
   test_error("macro out(x) { print(x); } macro inn(b) { out(typeof(b[2])); } "
              "begin { inn(typeof(uint64_t)); }",
-             "Typeof expression only valid for macro calls that are expecting "
-             "a type parameter");
+             "When used as a call argument, `typeof` builtin only valid for "
+             "macro calls that are expecting a type parameter");
 }
 
 TEST(macro_expansion, offsetof)

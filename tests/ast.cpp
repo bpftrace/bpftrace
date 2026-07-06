@@ -161,12 +161,21 @@ std::vector<Sizeof *> variants<Sizeof>(ASTContext &c, SourceLocation l)
   Expression expr = c.make_node<Integer>(l, 42UL);
   return {
     c.make_node<Sizeof>(
-        l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32")),
+        l,
+        c.make_node<Typeof>(
+            l,
+            c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int32"))),
     c.make_node<Sizeof>(
-        l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int64")),
+        l,
+        c.make_node<Typeof>(
+            l,
+            c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "int64"))),
     c.make_node<Sizeof>(
-        l, c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32")),
-    c.make_node<Sizeof>(l, std::move(expr))
+        l,
+        c.make_node<Typeof>(l,
+                            c.make_node<ParsedType>(
+                                l, ParsedType::Kind::Identifier, "uint32"))),
+    c.make_node<Sizeof>(l, c.make_node<Typeof>(l, std::move(expr)))
   };
 }
 
@@ -185,14 +194,21 @@ std::vector<Offsetof *> variants<Offsetof>(ASTContext &c, SourceLocation l)
   return {
     c.make_node<Offsetof>(
         l,
-        c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32"),
+        c.make_node<Typeof>(
+            l,
+            c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint32")),
         field1),
     c.make_node<Offsetof>(
         l,
-        c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint64"),
+        c.make_node<Typeof>(
+            l,
+            c.make_node<ParsedType>(l, ParsedType::Kind::Identifier, "uint64")),
         field2),
-    c.make_node<Offsetof>(l, c.make_node<ParsedType>(l, 64, string), field3),
-    c.make_node<Offsetof>(l, std::move(expr), field4)
+    c.make_node<Offsetof>(
+        l,
+        c.make_node<Typeof>(l, c.make_node<ParsedType>(l, 64, string)),
+        field3),
+    c.make_node<Offsetof>(l, c.make_node<Typeof>(l, std::move(expr)), field4)
   };
 }
 

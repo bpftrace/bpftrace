@@ -642,80 +642,6 @@ inline std::strong_ordering expr_or_type_compare(const ExprOrType &lhs,
   return std::get<Expression>(lhs) <=> std::get<Expression>(rhs);
 }
 
-class Sizeof : public Node {
-public:
-  explicit Sizeof(ASTContext &ctx, Location &&loc, ParsedType *type)
-      : Node(ctx, std::move(loc)), record(std::move(type)) {};
-  explicit Sizeof(ASTContext &ctx, Location &&loc, Expression expr)
-      : Node(ctx, std::move(loc)), record(expr) {};
-  explicit Sizeof(ASTContext &ctx, const Location &loc, const Sizeof &other)
-      : Node(ctx, loc + other.loc), record(clone(ctx, loc, other.record)) {};
-
-  bool operator==(const Sizeof &other) const
-  {
-    return expr_or_type_equal(record, other.record);
-  }
-  std::strong_ordering operator<=>(const Sizeof &other) const
-  {
-    return expr_or_type_compare(record, other.record);
-  }
-
-  ExprOrType record;
-};
-
-class Offsetof : public Node {
-public:
-  explicit Offsetof(ASTContext &ctx,
-                    Location &&loc,
-                    ParsedType *record,
-                    std::vector<std::string> field)
-      : Node(ctx, std::move(loc)),
-        record(std::move(record)),
-        field(std::move(field)) {};
-  explicit Offsetof(ASTContext &ctx,
-                    Location &&loc,
-                    Expression expr,
-                    std::vector<std::string> field)
-      : Node(ctx, std::move(loc)), record(expr), field(std::move(field)) {};
-  explicit Offsetof(ASTContext &ctx, const Location &loc, const Offsetof &other)
-      : Node(ctx, loc + other.loc),
-        record(clone(ctx, loc + other.loc, other.record)),
-        field(other.field) {};
-
-  bool operator==(const Offsetof &other) const
-  {
-    return expr_or_type_equal(record, other.record) && field == other.field;
-  }
-  std::strong_ordering operator<=>(const Offsetof &other) const
-  {
-    if (auto cmp = expr_or_type_compare(record, other.record); cmp != 0)
-      return cmp;
-    return field <=> other.field;
-  }
-
-  ExprOrType record;
-  std::vector<std::string> field;
-};
-
-class Map : public Node {
-public:
-  explicit Map(ASTContext &ctx, Location &&loc, std::string ident)
-      : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
-  explicit Map(ASTContext &ctx, const Location &loc, const Map &other)
-      : Node(ctx, loc + other.loc), ident(other.ident) {};
-
-  bool operator==(const Map &other) const
-  {
-    return ident == other.ident;
-  }
-  std::strong_ordering operator<=>(const Map &other) const
-  {
-    return ident <=> other.ident;
-  }
-
-  std::string ident;
-};
-
 class Typeof : public Node {
 public:
   explicit Typeof(ASTContext &ctx, Location &&loc, ParsedType *record)
@@ -736,6 +662,72 @@ public:
   }
 
   ExprOrType record;
+};
+
+class Sizeof : public Node {
+public:
+  explicit Sizeof(ASTContext &ctx, Location &&loc, Typeof *type_of)
+      : Node(ctx, std::move(loc)), type_of(type_of) {};
+  explicit Sizeof(ASTContext &ctx, const Location &loc, const Sizeof &other)
+      : Node(ctx, loc + other.loc),
+        type_of(clone(ctx, loc + other.loc, other.type_of)) {};
+
+  bool operator==(const Sizeof &other) const
+  {
+    return *type_of == *other.type_of;
+  }
+  std::strong_ordering operator<=>(const Sizeof &other) const
+  {
+    return *type_of <=> *other.type_of;
+  }
+
+  Typeof *type_of = nullptr;
+};
+
+class Offsetof : public Node {
+public:
+  explicit Offsetof(ASTContext &ctx,
+                    Location &&loc,
+                    Typeof *type_of,
+                    std::vector<std::string> field)
+      : Node(ctx, std::move(loc)), type_of(type_of), field(std::move(field)) {};
+  explicit Offsetof(ASTContext &ctx, const Location &loc, const Offsetof &other)
+      : Node(ctx, loc + other.loc),
+        type_of(clone(ctx, loc + other.loc, other.type_of)),
+        field(other.field) {};
+
+  bool operator==(const Offsetof &other) const
+  {
+    return *type_of == *other.type_of && field == other.field;
+  }
+  std::strong_ordering operator<=>(const Offsetof &other) const
+  {
+    if (auto cmp = *type_of <=> *other.type_of; cmp != 0)
+      return cmp;
+    return field <=> other.field;
+  }
+
+  Typeof *type_of = nullptr;
+  std::vector<std::string> field;
+};
+
+class Map : public Node {
+public:
+  explicit Map(ASTContext &ctx, Location &&loc, std::string ident)
+      : Node(ctx, std::move(loc)), ident(std::move(ident)) {};
+  explicit Map(ASTContext &ctx, const Location &loc, const Map &other)
+      : Node(ctx, loc + other.loc), ident(other.ident) {};
+
+  bool operator==(const Map &other) const
+  {
+    return ident == other.ident;
+  }
+  std::strong_ordering operator<=>(const Map &other) const
+  {
+    return ident <=> other.ident;
+  }
+
+  std::string ident;
 };
 
 class TypeArg : public Node {

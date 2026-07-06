@@ -1457,6 +1457,19 @@ Unlike `strftime()` `time()` doesn’t send a timestamp from the probe, instead 
 bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 
 
+### typeof
+- `TYPE typeof(TYPE)`
+- `TYPE typeof(EXPRESSION)`
+
+This is a special builtin that can only be used in the following contexts:
+- variable declarations e.g. `let $a: typeof($b);`
+- cast expressions e.g. `$a = (typeof($b))2;`
+- macro expansion calls to pass a type parameter e.g. `my_macro(typeof(uint64 *));`
+- type accepting builtins: `sizeof`, `offsetof`, `typeinfo`
+
+This builtin evaluates to the static type of either the parsed TYPE or the raw EXPRESSION parameter.
+
+
 ### uaddr
 - `T * uaddr(const string sym)`
 

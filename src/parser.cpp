@@ -2172,54 +2172,22 @@ Expression Parser::parse_primary()
   // sizeof(type_or_expr)
   if (match("sizeof")) {
     expect('(');
-    consume_layout();
-
-    if (auto type_ref = try_parse_type_reference(")")) {
-      expect(')');
-      auto loc = make_loc(begin_line, begin_col, line_, col_);
-      if (auto *type = std::get_if<ParsedType *>(&*type_ref)) {
-        auto *s = ctx_.make_node<Sizeof>(loc, *type);
-        return { s };
-      }
-      auto *s = ctx_.make_node<Sizeof>(
-          loc, std::move(std::get<Expression>(*type_ref)));
-      return { s };
-    }
-    auto expr = parse_expression();
+    auto *typeof_node = parse_type_annotation();
     expect(')');
     auto loc = make_loc(begin_line, begin_col, line_, col_);
-    auto *s = ctx_.make_node<Sizeof>(loc, std::move(expr));
+    auto *s = ctx_.make_node<Sizeof>(loc, typeof_node);
     return { s };
   }
 
-  // offsetof(type, field.field...)
+  // offsetof(type_or_expr, field.field...)
   if (match("offsetof")) {
     expect('(');
-    consume_layout();
-
-    // Try type first (struct Name)
-    auto sp = save_point();
-    auto ident = consume_identifier().value_or("");
-    bool is_struct_type = (ident == "struct" || ident == "union" ||
-                           ident == "enum");
-    sp.restore();
-
-    if (is_struct_type) {
-      auto *type = parse_type();
-      expect(',');
-      auto fields = parse_field_access();
-      expect(')');
-      auto loc = make_loc(begin_line, begin_col, line_, col_);
-      auto *o = ctx_.make_node<Offsetof>(loc, type, std::move(fields));
-      return { o };
-    }
-    // Expression form: offsetof(expr, field)
-    auto expr = parse_expression();
+    auto *typeof_node = parse_type_annotation();
     expect(',');
     auto fields = parse_field_access();
     expect(')');
     auto loc = make_loc(begin_line, begin_col, line_, col_);
-    auto *o = ctx_.make_node<Offsetof>(loc, std::move(expr), std::move(fields));
+    auto *o = ctx_.make_node<Offsetof>(loc, typeof_node, std::move(fields));
     return { o };
   }
 

@@ -1868,33 +1868,22 @@ void TypeRuleCollector::visit(PositionalParameterCount &param)
 
 void TypeRuleCollector::visit(Offsetof &offof)
 {
+  visit(*offof.type_of);
   // This type will change later depending on what integer literal it resolves
   // to in AstTransformer but for now set it to the smallest uint
-  if (std::holds_alternative<ParsedType *>(offof.record)) {
-    auto ty = resolve_parsed_type(std::get<ParsedType *>(offof.record), offof);
-    if (!ty || !check_offsetof_type(offof, *ty)) {
-      return;
-    }
-    resolver_.set_type(&offof, CreateUInt8());
-  } else {
-    auto &expr = std::get<Expression>(offof.record);
-    ++introspection_level_;
-    visit(expr);
-    --introspection_level_;
-    resolver_.add_type_rule({
-        .output = &offof,
-        .inputs = { &expr.node() },
-        .resolve = [this,
-                    &offof](const std::vector<SizedType> &inputs) -> SizedType {
-          auto local_type = inputs[0];
-          resolve_external_type(local_type, offof);
-          if (!check_offsetof_type(offof, local_type)) {
-            return CreateNone();
-          }
-          return CreateUInt8();
-        },
-    });
-  }
+  resolver_.add_type_rule({
+      .output = &offof,
+      .inputs = { offof.type_of },
+      .resolve = [this,
+                  &offof](const std::vector<SizedType> &inputs) -> SizedType {
+        auto local_type = inputs[0];
+        resolve_external_type(local_type, offof);
+        if (!check_offsetof_type(offof, local_type)) {
+          return CreateNone();
+        }
+        return CreateUInt8();
+      },
+  });
 }
 
 void TypeRuleCollector::visit(Probe &probe)
@@ -1929,27 +1918,16 @@ void TypeRuleCollector::visit(Record &record)
 
 void TypeRuleCollector::visit(Sizeof &szof)
 {
+  visit(*szof.type_of);
   // This type will change later depending on what integer literal it resolves
   // to for now set it to the smallest uint
-  if (std::holds_alternative<ParsedType *>(szof.record)) {
-    auto ty = resolve_parsed_type(std::get<ParsedType *>(szof.record), szof);
-    if (!ty) {
-      return;
-    }
-    resolver_.set_type(&szof, CreateUInt8());
-  } else {
-    auto &expr = std::get<Expression>(szof.record);
-    ++introspection_level_;
-    visit(expr);
-    --introspection_level_;
-    resolver_.add_type_rule({
-        .output = &szof,
-        .inputs = { &expr.node() },
-        .resolve = [&szof](const std::vector<SizedType> &) -> SizedType {
-          return CreateUInt8();
-        },
-    });
-  }
+  resolver_.add_type_rule({
+      .output = &szof,
+      .inputs = { szof.type_of },
+      .resolve = [](const std::vector<SizedType> &) -> SizedType {
+        return CreateUInt8();
+      },
+  });
 }
 
 void TypeRuleCollector::visit(String &str)
