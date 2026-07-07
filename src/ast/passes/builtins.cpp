@@ -104,7 +104,7 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
       return ast_.make_node<Integer>(
           node.loc, util::file_ino(probe->attach_points.front()->target));
     }
-  } else if (ident == "config") {
+  } else if (ident == "__builtin_config") {
     std::vector<std::pair<std::string, Expression>> args;
     auto &cfg = bpftrace_.config_;
 
@@ -140,25 +140,40 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
 
     // Enums -> Strings
     auto unstable_str = [](ConfigUnstable u) {
-      return u == ConfigUnstable::enable
-                 ? "enable"
-                 : (u == ConfigUnstable::warn ? "warn" : "error");
+      switch (u) {
+        case ConfigUnstable::enable:
+          return "enable";
+        case ConfigUnstable::warn:
+          return "warn";
+        case ConfigUnstable::error:
+          return "error";
+      }
+      return "error";
     };
+
     add_str("unstable_import_statement",
             unstable_str(cfg->unstable_import_statement));
     add_str("unstable_tseries", unstable_str(cfg->unstable_tseries));
     add_str("unstable_typeinfo", unstable_str(cfg->unstable_typeinfo));
     add_str("unstable_dw_ustack", unstable_str(cfg->unstable_dw_ustack));
 
-    auto missing_str = [](ConfigMissingProbes m) {
-      return m == ConfigMissingProbes::ignore
-                 ? "ignore"
-                 : (m == ConfigMissingProbes::warn ? "warn" : "error");
-    };
-    add_str("missing_probes", missing_str(cfg->missing_probes));
+    std::string missing_str;
+    switch (cfg->missing_probes) {
+      case ConfigMissingProbes::ignore:
+        missing_str = "ignore";
+        break;
+      case ConfigMissingProbes::warn:
+        missing_str = "warn";
+        break;
+      case ConfigMissingProbes::error:
+        missing_str = "error";
+        break;
+    }
 
-    add_str("stack_mode",
-            cfg->stack_mode == StackMode::bpftrace ? "bpftrace" : "perf");
+    add_str("missing_probes", missing_str);
+
+    add_str("stack_mode", STACK_MODE_NAME_MAP.at(cfg->stack_mode));
+
     add_str("license", bpftrace::Config::get_license_str(cfg->license));
     return make_record(ast_, node.loc, std::move(args));
   }

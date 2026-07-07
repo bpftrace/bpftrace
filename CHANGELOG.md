@@ -23,6 +23,8 @@ and this project adheres to
   - [#5208](https://github.com/bpftrace/bpftrace/pull/5208)
 - Release assets are now suffixed with the architecture
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
+- Added config builtin to read bpftrace configuration settings
+ -  [#5241](https://github.com/bpftrace/bpftrace/pull/5241)
 #### Deprecated
 #### Removed
 #### Fixed

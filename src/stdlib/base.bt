@@ -117,22 +117,6 @@ macro cgroup()
 // :function clear
 // :variant void clear(map m)
 //
-
-// :variant Record config()
-// :variant Record config
-//
-// Returns a `Record` containing the current `bpftrace` configuration settings.
-//
-// ```
-// BEGIN {
-//   $c = config;
-//   printf("max_strlen: %d, stack_mode: %s\n", $c.max_strlen, $c.stack_mode);
-//   exit();
-// }
-// ```
-
-
-//
 // **async**
 //
 // Clear all keys/values from map `m`.
@@ -147,6 +131,19 @@ macro cgroup()
 //   clear(@);
 // }
 // ```
+
+// :variant Record config()
+//
+// Returns a `Record` containing the current `bpftrace` configuration settings. [List of config variables](./language.md#config-variables)
+//
+// ```
+// printf("max_strlen: %d, stack_mode: %s\n", config.max_strlen, config.stack_mode);
+// }
+// ```
+macro config()
+{
+  __builtin_config
+}
 
 // :variant string comm()
 // :variant string comm(uint32 pid)
