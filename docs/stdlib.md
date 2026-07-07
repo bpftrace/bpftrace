@@ -135,25 +135,6 @@ BEGIN {
 ```
 
 
-### clear
-- `void clear(map m)`
-
-**async**
-
-Clear all keys/values from map `m`.
-
-```
-interval:ms:100 {
-  @[rand % 10] = count();
-}
-
-interval:s:10 {
-  print(@);
-  clear(@);
-}
-```
-
-
 ### comm
 - `string comm()`
 - `string comm`
@@ -163,17 +144,6 @@ Name of the current thread or the process with the specified PID
 
 This utilizes the BPF helper `get_current_comm`
 
-### config
-- `Record config()`
-- `Record config`
-
-Returns a `Record` containing the current `bpftrace` configuration settings.
-Example : 
-BEGIN {
-	$c = config;
-	printf("max_strlen: %d, stack_mode: %s\n", $c.max_strlen, $c.stack_mode);
-	exit();
-}
 
 ### container_of
 - `Container* container_of(Member* ptr, Type type, Identifier member)`
