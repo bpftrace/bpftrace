@@ -104,12 +104,7 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
       return ast_.make_node<Integer>(
           node.loc, util::file_ino(probe->attach_points.front()->target));
     }
-  } else if (ident == "__builtin_elf_ino") {
-      if (check_probe()) {
-        return ast_.make_node<Integer>(
-            node.loc, util::file_ino(probe->attach_points.front()->target));
-      }
-    } else if (ident == "config") {
+  } else if (ident == "config") {
         std::vector<std::pair<std::string, Expression>> args;
         auto &cfg = bpftrace_.config_;
     
