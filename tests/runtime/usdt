@@ -190,14 +190,11 @@ RUN {{BPFTRACE}} -l 'usdt:*' -p {{BEFORE_PID}}
 EXPECT_REGEX ^usdt:.*/tmp/bpftrace-unshare-mountns-test/usdt_test:tracetest:testprobe$
 BEFORE ./testprogs/mountns_wrapper usdt_test
 
-# TODO(dalehamel): re-enable this test
-# This test relies on the latest version of bcc (expected to be released as 0.13.0)
-# Once we build against this version with USDT fixes, we should re-enable this test.
+
 NAME usdt probes - attach to fully specified probe by pid in separate mountns
 RUN {{BPFTRACE}} -e 'usdt:/tmp/bpftrace-unshare-mountns-test/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
 EXPECT here
 BEFORE ./testprogs/mountns_wrapper usdt_test
-REQUIRES bash -c "exit 1"
 
 NAME usdt quoted probe name
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_quoted_probe:test:"\"probe1\"" { printf("%d\n", arg0); exit(); }' -p {{BEFORE_PID}}
