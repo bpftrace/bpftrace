@@ -87,7 +87,7 @@ include_directories(SYSTEM ${KERNEL_INCLUDE_DIRS})
 find_package(ZLIB REQUIRED)
 include_directories(SYSTEM ${ZLIB_INCLUDE_DIRS})
 
-find_package(LibBcc 0.13.0 REQUIRED)
+find_package(LibBcc REQUIRED)
 include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
 find_package(LibBpf REQUIRED)
