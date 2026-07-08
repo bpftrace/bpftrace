@@ -45,7 +45,6 @@ std::unordered_map<std::string, SizedType (*)()> SIMPLE_BUILTIN_TYPES = {
   { "__builtin_elapsed", CreateUInt64 },
   { "__builtin_cgroup", CreateUInt64 },
   { "__builtin_cpu", CreateUInt64 },
-  { "__builtin_rand", CreateUInt64 },
   { "__builtin_ncpus", CreateUInt64 },
   { "__builtin_usermode", CreateUInt8 },
   { "__builtin_cpid", CreateUInt64 },

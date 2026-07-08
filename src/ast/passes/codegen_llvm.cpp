@@ -842,9 +842,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                                     "num_cpu.cmp"));
   } else if (builtin.ident == "__builtin_curtask") {
     return ScopedExpr(b_.CreateGetCurrentTask(builtin.loc));
-  } else if (builtin.ident == "__builtin_rand") {
-    Value *random = b_.CreateGetRandom(builtin.loc);
-    return ScopedExpr(b_.CreateZExt(random, b_.getInt64Ty()));
   } else if (builtin.ident == "__builtin_comm") {
     AllocaInst *buf = b_.CreateAllocaBPF(type_map_.type(&builtin),
                                          "__builtin_comm");

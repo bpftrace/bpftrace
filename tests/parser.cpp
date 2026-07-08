@@ -180,10 +180,6 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("__builtin_cpu")) })));
 
-  test("kprobe:f { __builtin_rand }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_rand")) })));
-
   test("kprobe:f { ctx }",
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("ctx")) })));
@@ -1543,9 +1539,10 @@ TEST(Parser, wildcard_func)
                                  { ExprStatement(Integer(1)) })));
 
   std::string keywords[] = {
-    "arg0",   "args",   "errorf",   "warnf", "func", "__builtin_rand", "uid",
-    "avg",    "cat",    "exit",     "kaddr", "min",  "printf",         "usym",
-    "kstack", "ustack", "bpftrace", "perf",  "raw",  "uprobe",         "kprobe",
+    "arg0",   "args",   "errorf", "warnf",  "func",     "__builtin_probe",
+    "uid",    "avg",    "cat",    "exit",   "kaddr",    "min",
+    "printf", "usym",   "kstack", "ustack", "bpftrace", "perf",
+    "raw",    "uprobe", "kprobe",
   };
   for (auto kw : keywords) {
     test("usdt:/my/program:" + kw + "*c*d { 1; }",
