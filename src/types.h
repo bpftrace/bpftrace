@@ -49,7 +49,7 @@ enum class Type : uint8_t {
   string,
   ksym_t,
   usym_t,
-  username,
+  username_t,
   inet,
   array,
   buffer,
@@ -493,7 +493,7 @@ public:
   };
   bool IsUsernameTy() const
   {
-    return type_ == Type::username;
+    return type_ == Type::username_t;
   };
   bool IsInetTy() const
   {

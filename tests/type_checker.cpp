@@ -234,9 +234,6 @@ TEST_F(TypeCheckerTest, builtin_variables)
   test("kprobe:f { pid }");
   test("kprobe:f { tid }");
   test("kprobe:f { cgroup }");
-  test("kprobe:f { uid }");
-  test("kprobe:f { username }");
-  test("kprobe:f { gid }");
   test("kprobe:f { nsecs }");
   test("kprobe:f { elapsed }");
   test("kprobe:f { cpu }");
@@ -2409,6 +2406,15 @@ TEST_F(TypeCheckerTest, cast_string)
   test("kprobe:f { $a = (string[2])\"hello\"; }", Error{});
   test("kprobe:f { $a = (string[2])5; }", Error{});
   test("kprobe:f { $a = (string)5; }", Error{});
+}
+
+TEST_F(TypeCheckerTest, cast_username)
+{
+  test("kprobe:f { $a = (username_t)1000; }");
+  test("kprobe:f { $a = (username_t)pid; }");
+
+  // Errors
+  test("kprobe:f { $a = (username_t)comm; }", Error{});
 }
 
 TEST_F(TypeCheckerTest, cast_same_type)

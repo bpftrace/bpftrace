@@ -1714,19 +1714,6 @@ CallInst *IRBuilderBPF::CreateGetCurrentCgroupId(const Location &loc)
                           loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetUidGid(const Location &loc)
-{
-  // u64 bpf_get_current_uid_gid(void)
-  // Return: current_gid << 32 | current_uid
-  FunctionType *getuidgid_func_type = FunctionType::get(getInt64Ty(), false);
-  return CreateHelperCall(BPF_FUNC_get_current_uid_gid,
-                          getuidgid_func_type,
-                          {},
-                          true,
-                          "get_uid_gid",
-                          loc);
-}
-
 CallInst *IRBuilderBPF::CreateGetCpuId(const Location &loc)
 {
   // u32 bpf_get_smp_processor_id(void)
