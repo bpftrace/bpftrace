@@ -492,7 +492,8 @@ macro is_err(ptr)
 // This utilizes the BPF helper `get_jiffies_64`
 macro jiffies()
 {
-  __builtin_jiffies
+  import "stdlib/system/system.bpf.c";
+  __get_jiffies()
 }
 
 // :function join
