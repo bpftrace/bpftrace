@@ -17,7 +17,6 @@ class PortabilityAnalyser : public Visitor<PortabilityAnalyser> {
 public:
   using Visitor<PortabilityAnalyser>::visit;
   void visit(PositionalParameter &param);
-  void visit(Builtin &builtin);
   void visit(Call &call);
   void visit(Cast &cast);
 };
@@ -34,16 +33,6 @@ void PortabilityAnalyser::visit(PositionalParameter &param)
   //   support
   //   * the user can just hard code the values into their script
   param.addError() << "AOT does not yet support positional parameters";
-}
-
-void PortabilityAnalyser::visit(Builtin &builtin)
-{
-  // `struct task_struct` is unstable across kernel versions and configurations.
-  // This makes it inherently unportable. We must block it until we support
-  // field access relocations.
-  if (builtin.ident == "__builtin_curtask") {
-    builtin.addError() << "AOT does not yet support accessing `curtask`";
-  }
 }
 
 void PortabilityAnalyser::visit(Call &call)
@@ -64,6 +53,14 @@ void PortabilityAnalyser::visit(Call &call)
   if (call.func == "kaddr" || call.func == "__builtin_uaddr" ||
       call.func == "cgroupid") {
     call.addError() << "AOT does not yet support " << call.func << "()";
+  }
+
+  // `curtask` is implemented via the `bpf_get_current_task` helper, which
+  // returns a `struct task_struct *`. This struct is unstable across kernel
+  // versions and configurations. This makes it inherently unportable. We must
+  // block it until we support field access relocations.
+  if (call.func == "__get_current_task") {
+    call.addError() << "AOT does not yet support accessing `curtask`";
   }
 }
 

@@ -838,8 +838,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                                     module_->getGlobalVariable(std::string(
                                         bpftrace::globalvars::NUM_CPUS)),
                                     "num_cpu.cmp"));
-  } else if (builtin.ident == "__builtin_curtask") {
-    return ScopedExpr(b_.CreateGetCurrentTask(builtin.loc));
   } else if (builtin.ident == "__builtin_comm") {
     AllocaInst *buf = b_.CreateAllocaBPF(type_map_.type(&builtin),
                                          "__builtin_comm");
