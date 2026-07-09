@@ -16,6 +16,8 @@ and this project adheres to
   - [#5234](https://github.com/bpftrace/bpftrace/pull/5234)
 - stdlib: add `container_of` mirroring the libbpf macro
   - [#5236](https://github.com/bpftrace/bpftrace/pull/5236)
+- stdlib: add `config` to read bpftrace configuration variables
+ -  [#5241](https://github.com/bpftrace/bpftrace/pull/5241)
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)
@@ -23,8 +25,6 @@ and this project adheres to
   - [#5208](https://github.com/bpftrace/bpftrace/pull/5208)
 - Release assets are now suffixed with the architecture
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
-- stdlib: add `config` to read bpftrace configuration variables
- -  [#5241](https://github.com/bpftrace/bpftrace/pull/5241)
 #### Deprecated
 #### Removed
 #### Fixed
