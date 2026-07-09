@@ -217,3 +217,7 @@ EXPECT 2
 NAME user macros don't poison stdlib builtin calls
 PROG macro fail(x) { x } begin { print(strlen("hi")); }
 EXPECT 2
+
+NAME builtin wrapper config
+PROG BEGIN { if (config().max_strlen == __builtin_config.max_strlen) { printf("match"); } exit(); }
+EXPECT match

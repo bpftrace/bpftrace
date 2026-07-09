@@ -296,3 +296,8 @@ PROG i:1ms { print(usermode); exit(); }
 EXPECT_REGEX .*ERROR: 'usermode' builtin is only supported on x86_64.*
 ARCH aarch64
 WILL_FAIL
+
+NAME config builtin reads integer, string, and boolean
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%d %s %d\n", config().max_strlen, config().stack_mode, config().cpp_demangle); exit(); }'
+EXPECT 1024 bpftrace 1
+TIMEOUT 5

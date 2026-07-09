@@ -104,6 +104,78 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
       return ast_.make_node<Integer>(
           node.loc, util::file_ino(probe->attach_points.front()->target));
     }
+  } else if (ident == "__builtin_config") {
+    std::vector<std::pair<std::string, Expression>> args;
+    auto &cfg = bpftrace_.config_;
+
+    auto add_bool = [&](const char *key, bool val) {
+      args.emplace_back(key, ast_.make_node<Boolean>(node.loc, val));
+    };
+    auto add_int = [&](const char *key, uint64_t val) {
+      args.emplace_back(key, ast_.make_node<Integer>(node.loc, val));
+    };
+    auto add_str = [&](const char *key, const std::string &val) {
+      args.emplace_back(key, ast_.make_node<String>(node.loc, val));
+    };
+
+    // Booleans
+    add_bool("cpp_demangle", cfg->cpp_demangle);
+    add_bool("lazy_symbolication", cfg->lazy_symbolication);
+    add_bool("print_maps_on_exit", cfg->print_maps_on_exit);
+    add_bool("use_blazesym", cfg->use_blazesym);
+    add_bool("show_debug_info", cfg->show_debug_info);
+
+    // Integers
+    add_int("log_size", cfg->log_size);
+    add_int("max_bpf_progs", cfg->max_bpf_progs);
+    add_int("max_cat_bytes", cfg->max_cat_bytes);
+    add_int("max_map_keys", cfg->max_map_keys);
+    add_int("max_probes", cfg->max_probes);
+    add_int("max_strlen", cfg->max_strlen);
+    add_int("on_stack_limit", cfg->on_stack_limit);
+    add_int("perf_rb_pages", cfg->perf_rb_pages);
+
+    // Strings
+    add_str("str_trunc_trailer", cfg->str_trunc_trailer);
+
+    // Enums -> Strings
+    auto unstable_str = [](ConfigUnstable u) {
+      switch (u) {
+        case ConfigUnstable::enable:
+          return "enable";
+        case ConfigUnstable::warn:
+          return "warn";
+        case ConfigUnstable::error:
+          return "error";
+      }
+      return "error";
+    };
+
+    add_str("unstable_import_statement",
+            unstable_str(cfg->unstable_import_statement));
+    add_str("unstable_tseries", unstable_str(cfg->unstable_tseries));
+    add_str("unstable_typeinfo", unstable_str(cfg->unstable_typeinfo));
+    add_str("unstable_dw_ustack", unstable_str(cfg->unstable_dw_ustack));
+
+    std::string missing_str;
+    switch (cfg->missing_probes) {
+      case ConfigMissingProbes::ignore:
+        missing_str = "ignore";
+        break;
+      case ConfigMissingProbes::warn:
+        missing_str = "warn";
+        break;
+      case ConfigMissingProbes::error:
+        missing_str = "error";
+        break;
+    }
+
+    add_str("missing_probes", missing_str);
+
+    add_str("stack_mode", STACK_MODE_NAME_MAP.at(cfg->stack_mode));
+
+    add_str("license", bpftrace::Config::get_license_str(cfg->license));
+    return make_record(ast_, node.loc, std::move(args));
   }
 
   return std::nullopt;

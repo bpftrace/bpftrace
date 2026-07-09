@@ -164,6 +164,18 @@ Name of the current thread or the process with the specified PID
 This utilizes the BPF helper `get_current_comm`
 
 
+### config
+- `Record config()`
+- `Record config`
+
+Returns a `Record` containing the current `bpftrace` configuration settings. [List of config variables](./language.md#config-variables)
+
+```
+printf("max_strlen: %d, stack_mode: %s\n", config.max_strlen, config.stack_mode);
+}
+```
+
+
 ### container_of
 - `Container* container_of(Member* ptr, Type type, Identifier member)`
 

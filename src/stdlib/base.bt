@@ -132,6 +132,19 @@ macro cgroup()
 // }
 // ```
 
+// :variant Record config()
+//
+// Returns a `Record` containing the current `bpftrace` configuration settings. [List of config variables](./language.md#config-variables)
+//
+// ```
+// printf("max_strlen: %d, stack_mode: %s\n", config.max_strlen, config.stack_mode);
+// }
+// ```
+macro config()
+{
+  __builtin_config
+}
+
 // :variant string comm()
 // :variant string comm(uint32 pid)
 // Name of the current thread or the process with the specified PID
