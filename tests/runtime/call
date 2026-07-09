@@ -476,13 +476,21 @@ ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
 PROG config = { show_debug_info=0 } uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
 EXPECT_REGEX ^\s+test\+[0-9]+\s+test2\+[0-9]+\s+main\+[0-9]+
 AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
+ARCH x86_64
 # The stack output expects prologue to be skipped on uprobes. See kernel:
 # cfa7f3d2c526 ("perf,x86: avoid missing caller address in stack traces captured in uprobe")
 MIN_KERNEL 6.12
 
+NAME ustack_elf_symtable
+ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
+PROG config = { show_debug_info=0 } uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
+EXPECT_REGEX ^\s+test\+[0-9]+\s+main\+[0-9]+
+AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
+ARCH aarch64
+
 NAME ustack_with_inlined_funcs
 RUN {{BPFTRACE}} -e 'config = { show_debug_info=1 } usdt:./testprogs/usdt_inlined:tracetest:testprobe { if (arg1 == 100) { printf("%s\n", ustack()); exit(); } }' -c ./testprogs/usdt_inlined
-EXPECT_REGEX ^\s*\[inlined\] myclock@[\w\/]+.c:[0-9]+\s+\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+\s+mywrapper\+[0-9]+@[\w\/]+.c:[0-9]+\s+loop\+[0-9]+@[\w\/]+.c:[0-9]+\s+main\+[0-9]+@[\w\/]+.c:[0-9]+\s+_end\+[0-9]+\s+_end\+[0-9]+\s+_start\+[0-9]+$
+EXPECT_REGEX ^\s*\[inlined\] myclock@[\w\/]+.c:[0-9]+\s+\[inlined\] mywrapper_inlined@[\w\/]+.c:[0-9]+\s+mywrapper\+[0-9]+@[\w\/]+.c:[0-9]+\s+loop\+[0-9]+@[\w\/]+.c:[0-9]+\s+main\+[0-9]+@[\w\/]+.c:[0-9]+\s+(_bss_end__|_end)\+[0-9]+\s+(_bss_end__|_end)\+[0-9]+\s+_start\+[0-9]+$
 TIMEOUT 1
 
 # This outputs 4 frames because the limit refers to instruction pointers which may resolve to multiple inlined symbols
