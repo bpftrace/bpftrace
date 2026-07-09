@@ -26,6 +26,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Print zero values for empty scalar maps
+  - [#5239](https://github.com/bpftrace/bpftrace/pull/5239)
 #### Security
 #### Docs
 #### Tools

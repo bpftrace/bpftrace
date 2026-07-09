@@ -1,6 +1,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "ast/async_event_types.h"
 #include "async_action.h"
@@ -109,10 +110,48 @@ Result<> AsyncHandlers::print_map(const OpaqueValue &data)
 {
   auto print = data.bitcast<AsyncEvent::Print>();
   const auto &map = bpftrace.bytecode_.getMap(print.mapid);
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
 
   auto res = format(bpftrace, c_definitions, map, print.top, print.div);
   if (!res) {
     return res.takeError();
+  }
+
+  if (!map_info.is_scalar || map_info.value_type.IsHistTy() ||
+      map_info.value_type.IsLhistTy() || map_info.value_type.IsTSeriesTy()) {
+    out->map(map.name(), *res);
+    return OK();
+  }
+
+  auto emit_empty_scalar = [&](bool stats) -> Result<> {
+    auto scalar = format(bpftrace,
+                         c_definitions,
+                         map_info.value_type,
+                         OpaqueValue::alloc(map_info.value_type.GetSize()));
+
+    if (!scalar) {
+      return scalar.takeError();
+    }
+
+    if (stats) {
+      out->map(map.name(),
+               output::Value(output::Value::Stats(std::move(*scalar))));
+    } else {
+      out->map(map.name(), output::Value(std::move(*scalar)));
+    }
+    return OK();
+  };
+
+  if (auto *m = std::get_if<output::Value::OrderedMap>(&res->variant);
+      m && m->values.empty()) {
+    return emit_empty_scalar(false);
+  }
+
+  if (auto *stats = std::get_if<output::Value::Stats>(&res->variant)) {
+    if (auto *m = std::get_if<output::Value::OrderedMap>(&stats->value);
+        m && m->values.empty()) {
+      return emit_empty_scalar(true);
+    }
   }
 
   out->map(map.name(), *res);
