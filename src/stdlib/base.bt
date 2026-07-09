@@ -72,7 +72,8 @@ macro assert(cond, msg)
 // This utilizes the BPF helper `get_current_cgroup_id`
 macro cgroup()
 {
-  __builtin_cgroup
+  import "stdlib/process/process.bpf.c";
+  __get_cgroup()
 }
 
 // :function cgroupid

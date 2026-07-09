@@ -808,8 +808,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return ScopedExpr(b_.CreateGetPid(builtin.loc, false));
   } else if (builtin.ident == "tid") {
     return ScopedExpr(b_.CreateGetTid(builtin.loc, false));
-  } else if (builtin.ident == "__builtin_cgroup") {
-    return ScopedExpr(b_.CreateGetCurrentCgroupId(builtin.loc));
   } else if (builtin.ident == "__builtin_usermode") {
     if (arch::Host::Machine == arch::Machine::X86_64) {
       auto cs_offset = arch::Host::register_to_pt_regs_offset("cs");

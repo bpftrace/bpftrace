@@ -164,10 +164,6 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("tid")) })));
 
-  test("kprobe:f { __builtin_cgroup }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_cgroup")) })));
-
   test("kprobe:f { nsecs }",
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("nsecs")) })));

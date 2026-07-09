@@ -43,7 +43,6 @@ std::unordered_map<std::string, SizedType (*)()> SIMPLE_BUILTIN_TYPES = {
   { "tid", CreateUInt32 },
   { "nsecs", CreateUInt64 },
   { "__builtin_elapsed", CreateUInt64 },
-  { "__builtin_cgroup", CreateUInt64 },
   { "__builtin_cpu", CreateUInt64 },
   { "__builtin_ncpus", CreateUInt64 },
   { "__builtin_usermode", CreateUInt8 },
