@@ -455,14 +455,58 @@ Buffer Formatter::visit(Call& call)
   }
 }
 
+static bool is_array_access_ident(const Expression& expr)
+{
+  const auto* arr = expr.as<ArrayAccess>();
+  if (arr == nullptr) {
+    return false;
+  }
+  const Expression* base = &arr->expr;
+  while (const auto* inner = base->as<ArrayAccess>()) {
+    base = &inner->expr;
+  }
+  return base->is<Identifier>();
+}
+
+// Check if the expression used as a type-context argument (e.g. to `typeinfo`,
+// `typeof`, `sizeof`, `offsetof`) is an array access on a bare identifier. If
+// so, we need to make sure to wrap this expression in parens to ensure that it
+// re-parses as an expression instead of as a ParsedType (Kind::Array). For
+// example these two parse differently: `typeof(ident[0])` and
+// `typeof((ident[0]))`. The first is a parsed as a type (the first element of
+// an array of type `ident`) while the second is parsed as an ArrayAccess
+// expression of the ident `ident`. This is important because in the second case
+// `ident` could be a macro (with no arguments) that gets expanded, while the
+// former cannot.
+Buffer Formatter::format_expr_as_type(Expression& expr, size_t max_width)
+{
+  auto buffer = format(expr, metadata, max_width, true);
+  if (is_array_access_ident(expr)) {
+    return Buffer().text("(").append(std::move(buffer)).text(")");
+  }
+  return buffer;
+}
+
+Buffer Formatter::format_type_arg(ExprOrType& record, size_t max_width)
+{
+  return std::visit(
+      [&](auto& v) -> Buffer {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, Expression>) {
+          return format_expr_as_type(v, max_width);
+        } else {
+          return format(v, metadata, max_width, true);
+        }
+      },
+      record);
+}
+
 Buffer Formatter::visit(Sizeof& szof)
 {
   // N.B. Does not support splitting.
   return Buffer()
       .text("sizeof(")
-      .append(std::visit(
-          [&](auto& v) { return format(v, metadata, max_width - 8, true); },
-          szof.type_of->record))
+      .append(format_type_arg(szof.type_of->record, max_width - 8))
       .text(")");
 }
 
@@ -476,10 +520,9 @@ Buffer Formatter::visit(Offsetof& ofof)
     }
     fields = fields.text(ofof.field[i]);
   }
-  auto expr = format(ofof.type_of->record, metadata, max_width);
   return Buffer()
       .text("offsetof(")
-      .append(std::move(expr))
+      .append(format_type_arg(ofof.type_of->record, max_width))
       .text(", ")
       .append(std::move(fields))
       .text(")");
@@ -489,8 +532,7 @@ Buffer Formatter::visit(Typeof& typeof)
 {
   if (std::holds_alternative<Expression>(typeof.record)) {
     return Buffer().text("typeof(").append(
-        format(
-            std::get<Expression>(typeof.record), metadata, max_width - 8, true)
+        format_expr_as_type(std::get<Expression>(typeof.record), max_width - 8)
             .text(")"));
   } else {
     // Prefer the simpler form for direct types.
@@ -524,19 +566,10 @@ Buffer Formatter::visit(TypeArg& type_arg)
 
 Buffer Formatter::visit(Typeinfo& typeinfo)
 {
-  if (std::holds_alternative<Expression>(typeinfo.typeof->record)) {
-    // Omit the `typeof` for `typeinfo`.
-    return Buffer()
-        .text("typeinfo(")
-        .append(format(typeinfo.typeof->record, metadata, max_width - 10, true))
-        .text(")");
-  } else {
-    // Use the default representation.
-    return Buffer()
-        .text("typeinfo(")
-        .append(format(typeinfo.typeof, metadata, max_width - 10, true))
-        .text(")");
-  }
+  return Buffer()
+      .text("typeinfo(")
+      .append(format_type_arg(typeinfo.typeof->record, max_width - 10))
+      .text(")");
 }
 
 Buffer Formatter::visit(MapDeclStatement& decl)
