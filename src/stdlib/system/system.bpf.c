@@ -17,3 +17,7 @@ void __override(void * ctx, __u64 rc) {
 long __probe_write_user(void *dst, const void *src, __u32 len) {
     return bpf_probe_write_user(dst, src, len);
 }
+
+unsigned long long __get_jiffies() {
+    return bpf_jiffies64();
+}

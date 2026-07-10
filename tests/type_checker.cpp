@@ -248,7 +248,6 @@ TEST_F(TypeCheckerTest, builtin_variables)
   test("kprobe:f { func }");
   test("uprobe:/bin/sh:f { func }");
   test("kprobe:f { probe }");
-  test("kprobe:f { jiffies }");
   test("kprobe:f { cpid }");
 
   test("kprobe:f { fake }", Error{ R"(

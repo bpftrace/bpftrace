@@ -918,8 +918,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                                     module_->getGlobalVariable(std::string(
                                         bpftrace::globalvars::CHILD_PID)),
                                     "child_pid.cmp"));
-  } else if (builtin.ident == "__builtin_jiffies") {
-    return ScopedExpr(b_.CreateJiffies64(builtin.loc));
   } else {
     LOG(BUG) << "unknown builtin \"" << builtin.ident << "\"";
     __builtin_unreachable();
