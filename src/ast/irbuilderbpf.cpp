@@ -1731,19 +1731,6 @@ CallInst *IRBuilderBPF::CreateGetCurrentTask(const Location &loc)
                           loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetRandom(const Location &loc)
-{
-  // u32 bpf_get_prandom_u32(void)
-  // Return: random
-  FunctionType *getrandom_func_type = FunctionType::get(getInt32Ty(), false);
-  return CreateHelperCall(BPF_FUNC_get_prandom_u32,
-                          getrandom_func_type,
-                          {},
-                          false,
-                          "get_random",
-                          loc);
-}
-
 CallInst *IRBuilderBPF::CreateGetStack(Value *ctx,
                                        Value *buf,
                                        const StackType &stack_type,

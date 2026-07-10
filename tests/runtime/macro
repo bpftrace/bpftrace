@@ -169,12 +169,6 @@ NAME builtin wrapper probetype
 PROG begin { if (__builtin_probetype == probetype() && __builtin_probetype == probetype) { print(probetype); } exit(); }
 EXPECT special
 
-NAME builtin wrapper rand
-PROG begin { printf("SUCCESS1 %llu\n", __builtin_rand); printf("SUCCESS2 %llu\n", rand); printf("SUCCESS3 %llu\n", rand()); }
-EXPECT_REGEX SUCCESS1 [0-9]+
-EXPECT_REGEX SUCCESS2 [0-9]+
-EXPECT_REGEX SUCCESS3 [0-9]+
-
 NAME builtin wrapper retval
 PROG kretprobe:vfs_read { if (__builtin_retval == retval() && __builtin_retval == retval) { printf("SUCCESS %d\n", retval); exit(); } }
 EXPECT_REGEX SUCCESS .*

@@ -1139,7 +1139,8 @@ macro probetype()
 // This utilizes the BPF helper `get_prandom_u32`
 macro rand()
 {
-  __builtin_rand
+  import "stdlib/system/system.bpf.c";
+  __get_rand()
 }
 
 // :function reg

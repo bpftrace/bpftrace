@@ -238,7 +238,6 @@ TEST_F(TypeCheckerTest, builtin_variables)
   test("kprobe:f { elapsed }");
   test("kprobe:f { cpu }");
   test("kprobe:f { ncpus }");
-  test("kprobe:f { rand }");
   test("kprobe:f { ctx }");
   test("kprobe:f { comm }");
   test("kprobe:f { kstack }");

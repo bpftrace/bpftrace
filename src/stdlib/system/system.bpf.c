@@ -21,3 +21,7 @@ long __probe_write_user(void *dst, const void *src, __u32 len) {
 unsigned long long __get_jiffies() {
     return bpf_jiffies64();
 }
+
+unsigned long long __get_rand() {
+    return bpf_get_prandom_u32();
+}
