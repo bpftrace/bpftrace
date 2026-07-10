@@ -168,18 +168,6 @@ TEST(Parser, builtin_variables)
        Program().WithProbe(Probe(
            { "kprobe:f" }, { ExprStatement(Builtin("__builtin_cgroup")) })));
 
-  test("kprobe:f { __builtin_uid }",
-       Program().WithProbe(
-           Probe({ "kprobe:f" }, { ExprStatement(Builtin("__builtin_uid")) })));
-
-  test("kprobe:f { __builtin_username }",
-       Program().WithProbe(Probe(
-           { "kprobe:f" }, { ExprStatement(Builtin("__builtin_username")) })));
-
-  test("kprobe:f { __builtin_gid }",
-       Program().WithProbe(
-           Probe({ "kprobe:f" }, { ExprStatement(Builtin("__builtin_gid")) })));
-
   test("kprobe:f { nsecs }",
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("nsecs")) })));
@@ -734,13 +722,13 @@ TEST(Parser, map_key)
                                 Tuple({ Map("@a"), Map("@b"), Map("@c") }),
                                 Integer(1)) })));
 
-  test("kprobe:sys_read { @x[pid] = 1; @x[tid,__builtin_uid,arg9] = 1; }",
+  test("kprobe:sys_read { @x[pid] = 1; @x[tid,__builtin_probe,arg9] = 1; }",
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
                  { AssignMapStatement(Map("@x"), Builtin("pid"), Integer(1)),
                    AssignMapStatement(Map("@x"),
                                       Tuple({ Builtin("tid"),
-                                              Builtin("__builtin_uid"),
+                                              Builtin("__builtin_probe"),
                                               Builtin("arg9") }),
                                       Integer(1)) })));
 }
@@ -1555,28 +1543,9 @@ TEST(Parser, wildcard_func)
                                  { ExprStatement(Integer(1)) })));
 
   std::string keywords[] = {
-    "arg0",
-    "args",
-    "errorf",
-    "warnf",
-    "func",
-    "__builtin_gid"
-    "__builtin_rand",
-    "uid",
-    "avg",
-    "cat",
-    "exit",
-    "kaddr",
-    "min",
-    "printf",
-    "usym",
-    "kstack",
-    "ustack",
-    "bpftrace",
-    "perf",
-    "raw",
-    "uprobe",
-    "kprobe",
+    "arg0",   "args",   "errorf",   "warnf", "func", "__builtin_rand", "uid",
+    "avg",    "cat",    "exit",     "kaddr", "min",  "printf",         "usym",
+    "kstack", "ustack", "bpftrace", "perf",  "raw",  "uprobe",         "kprobe",
   };
   for (auto kw : keywords) {
     test("usdt:/my/program:" + kw + "*c*d { 1; }",

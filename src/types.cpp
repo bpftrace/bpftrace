@@ -108,7 +108,7 @@ std::string typestr(const SizedType &type)
     case Type::timestamp:
     case Type::ksym_t:
     case Type::usym_t:
-    case Type::username:
+    case Type::username_t:
     case Type::timestamp_mode:
     case Type::cgroup_path_t:
     case Type::hist_t:
@@ -320,7 +320,7 @@ std::string typestr(Type t)
     case Type::string:   return "string";   break;
     case Type::ksym_t:     return "ksym_t";     break;
     case Type::usym_t:     return "usym_t";     break;
-    case Type::username: return "username"; break;
+    case Type::username_t: return "username_t"; break;
     case Type::inet:     return "inet";     break;
     case Type::array:    return "array";    break;
     case Type::buffer:   return "buffer";   break;
@@ -511,7 +511,7 @@ SizedType CreateStats(bool is_signed)
 
 SizedType CreateUsername()
 {
-  return { Type::username, 8 };
+  return { Type::username_t, 8 };
 }
 
 SizedType CreateInet(size_t size)
@@ -619,6 +619,7 @@ std::optional<SizedType> ident_to_builtin_type(const std::string &name)
     { "string", CreateString(0) },
     { "buffer", CreateBuffer(0) },
     { "inet", CreateInet(0) },
+    { "username_t", CreateUsername() },
   };
   auto it = types.find(name);
   if (it != types.end())

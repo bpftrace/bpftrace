@@ -3324,15 +3324,12 @@ bool Parser::is_builtin(std::string_view name)
     "__builtin_dw_ustack",
     "__builtin_elapsed",
     "__builtin_func",
-    "__builtin_gid",
     "__builtin_jiffies",
     "__builtin_ncpus",
     "__builtin_probe",
     "__builtin_rand",
     "__builtin_retval",
-    "__builtin_uid",
     "__builtin_usermode",
-    "__builtin_username",
   };
   if (builtins.contains(name)) {
     return true;

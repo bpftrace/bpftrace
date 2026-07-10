@@ -13,3 +13,7 @@ long __signal_process(__u32 sig) {
 long __signal_thread(__u32 sig) {
     return bpf_send_signal_thread(sig);
 }
+
+unsigned long long __get_current_uid_gid() {
+    return bpf_get_current_uid_gid();
+}

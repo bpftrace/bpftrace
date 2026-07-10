@@ -433,7 +433,8 @@ macro func()
 // This utilizes the BPF helper `get_current_uid_gid`
 macro gid()
 {
-  __builtin_gid
+    import "stdlib/process/process.bpf.c";
+  __get_current_uid_gid() >> 32
 }
 
 // :variant boolean has_key(map m, mapkey k)
@@ -1468,7 +1469,8 @@ macro uaddr(sym)
 // This utilizes the BPF helper `get_current_uid_gid`
 macro uid()
 {
-  __builtin_uid
+  import "stdlib/process/process.bpf.c";
+  __get_current_uid_gid() & 0xffffffff
 }
 
 // :function uptr
@@ -1493,7 +1495,7 @@ macro usermode()
 // Often this is just "root"
 macro username()
 {
-  __builtin_username
+  (username_t)(uid)
 }
 
 // :function ustack

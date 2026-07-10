@@ -215,7 +215,7 @@ static bool IsValidVarDeclType(const SizedType &ty)
     case Type::ksym_t:
     case Type::usym_t:
     case Type::inet:
-    case Type::username:
+    case Type::username_t:
     case Type::string:
     case Type::buffer:
     case Type::pointer:
@@ -962,6 +962,10 @@ void TypeChecker::visit(Cast &cast)
     if (ty.GetSize() < rhs.GetSize()) {
       logError();
     }
+    return;
+  }
+
+  if (ty.IsUsernameTy() && rhs.IsIntegerTy()) {
     return;
   }
 

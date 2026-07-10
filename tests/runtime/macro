@@ -156,10 +156,6 @@ PROG k:vfs_read { if (__builtin_func == func() && __builtin_func == func) { prin
 EXPECT vfs_read
 AFTER ./testprogs/syscall read
 
-NAME builtin wrapper gid
-PROG begin { if (__builtin_gid == gid() && __builtin_gid == gid) { print(gid); } }
-EXPECT_REGEX [0-9][0-9]*
-
 NAME builtin wrapper jiffies
 PROG begin { if (__builtin_jiffies == jiffies() && __builtin_jiffies == jiffies) { printf("SUCCESS %llu\n", jiffies);} }
 EXPECT_REGEX SUCCESS [0-9]+
@@ -188,18 +184,10 @@ PROG kretprobe:vfs_read { if (__builtin_retval == retval() && __builtin_retval =
 EXPECT_REGEX SUCCESS .*
 AFTER ./testprogs/syscall read
 
-NAME builtin wrapper uid
-PROG begin { if (__builtin_uid == uid() && __builtin_uid == uid) { printf("SUCCESS %d\n", uid); } }
-EXPECT_REGEX SUCCESS [0-9]+
-
 NAME builtin wrapper usermode
 PROG begin { if (__builtin_usermode == usermode() && __builtin_usermode == usermode) { printf("SUCCESS %d\n", usermode); } }
 EXPECT_REGEX SUCCESS 1
 ARCH x86_64
-
-NAME builtin wrapper username
-PROG begin { if (__builtin_username == username() && __builtin_username == username) { printf("SUCCESS %s\n", username); } }
-EXPECT_REGEX SUCCESS .*
 
 NAME user macros override stdlib
 PROG macro cpu() { "hi" } begin { printf(cpu()); }

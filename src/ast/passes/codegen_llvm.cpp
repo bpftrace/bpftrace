@@ -810,17 +810,6 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     return ScopedExpr(b_.CreateGetTid(builtin.loc, false));
   } else if (builtin.ident == "__builtin_cgroup") {
     return ScopedExpr(b_.CreateGetCurrentCgroupId(builtin.loc));
-  } else if (builtin.ident == "__builtin_uid" ||
-             builtin.ident == "__builtin_gid" ||
-             builtin.ident == "__builtin_username") {
-    Value *uidgid = b_.CreateGetUidGid(builtin.loc);
-    if (builtin.ident == "__builtin_uid" ||
-        builtin.ident == "__builtin_username") {
-      return ScopedExpr(b_.CreateAnd(uidgid, 0xffffffff));
-    } else if (builtin.ident == "__builtin_gid") {
-      return ScopedExpr(b_.CreateLShr(uidgid, 32));
-    }
-    __builtin_unreachable();
   } else if (builtin.ident == "__builtin_usermode") {
     if (arch::Host::Machine == arch::Machine::X86_64) {
       auto cs_offset = arch::Host::register_to_pt_regs_offset("cs");

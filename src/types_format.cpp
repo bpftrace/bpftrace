@@ -111,7 +111,7 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       return bpftrace.resolve_inet(value.bitcast<uint64_t>(),
                                    value.slice(8).data());
     }
-    case Type::username: {
+    case Type::username_t: {
       return bpftrace.resolve_uid(value.bitcast<uint64_t>());
     }
     case Type::buffer: {
