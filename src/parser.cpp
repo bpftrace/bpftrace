@@ -3316,7 +3316,6 @@ bool Parser::is_builtin(std::string_view name)
     "pid",
     "tid",
     "ustack",
-    "__builtin_cgroup",
     "__builtin_comm",
     "__builtin_cpid",
     "__builtin_cpu",

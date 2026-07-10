@@ -128,10 +128,6 @@ NAME builtin wrapper comm
 PROG begin { if (__builtin_comm == comm() && __builtin_comm == comm) { print(comm); } }
 EXPECT bpftrace
 
-NAME builtin wrapper cgroup
-PROG begin { if (__builtin_cgroup == cgroup() && __builtin_cgroup == cgroup) { printf("SUCCESS %llu\n", cgroup); } }
-EXPECT_REGEX SUCCESS [0-9]+
-
 NAME builtin wrapper cpid
 RUN {{BPFTRACE}} -e 'begin { if (__builtin_cpid == cpid() && __builtin_cpid == cpid) { printf("SUCCESS %llu\n", cpid); } }' -c './testprogs/syscall nanosleep 1e9'
 EXPECT_REGEX SUCCESS [0-9]+

@@ -1692,19 +1692,6 @@ llvm::Type *IRBuilderBPF::BpfPidnsInfoType()
                        false);
 }
 
-CallInst *IRBuilderBPF::CreateGetCurrentCgroupId(const Location &loc)
-{
-  // u64 bpf_get_current_cgroup_id(void)
-  // Return: 64-bit cgroup-v2 id
-  FunctionType *getcgroupid_func_type = FunctionType::get(getInt64Ty(), false);
-  return CreateHelperCall(BPF_FUNC_get_current_cgroup_id,
-                          getcgroupid_func_type,
-                          {},
-                          true,
-                          "get_cgroup_id",
-                          loc);
-}
-
 CallInst *IRBuilderBPF::CreateGetCpuId(const Location &loc)
 {
   // u32 bpf_get_smp_processor_id(void)

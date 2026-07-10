@@ -233,7 +233,6 @@ TEST_F(TypeCheckerTest, builtin_variables)
   // Just check that each one exists as a builtin or macro
   test("kprobe:f { pid }");
   test("kprobe:f { tid }");
-  test("kprobe:f { cgroup }");
   test("kprobe:f { nsecs }");
   test("kprobe:f { elapsed }");
   test("kprobe:f { cpu }");
