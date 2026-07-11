@@ -41,7 +41,7 @@ BEGIN
 kprobe:tcp_v4_syn_recv_sock,
 kprobe:tcp_v6_syn_recv_sock
 {
-  $sock = (struct sock *)arg0;
+  $sock = (struct sock*)arg0;
   @backlog[$sock.sk_max_ack_backlog & 0xffffffff] = hist($sock.sk_ack_backlog);
   if ($sock.sk_ack_backlog > $sock.sk_max_ack_backlog) {
     time("%H:%M:%S dropping a SYN.\n");

@@ -53,7 +53,7 @@ BEGIN
 
 kretprobe:inet_csk_accept
 {
-  $sk = (struct sock *)retval;
+  $sk = (struct sock*)retval;
   $inet_family = $sk.__sk_common.skc_family;
 
   if ($inet_family == AF_INET || $inet_family == AF_INET6) {
