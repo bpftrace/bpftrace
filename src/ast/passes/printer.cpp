@@ -687,6 +687,8 @@ Buffer Formatter::visit(IfExpr& if_expr)
     }
   };
 
+  auto comments = metadata.before(if_expr.loc->current.begin);
+
   auto* it = &if_expr;
   while (it != nullptr) {
     // Special case: comptime is bare for if expressions. We also pull
@@ -714,6 +716,7 @@ Buffer Formatter::visit(IfExpr& if_expr)
 
   // Is this a non-expression statement?
   auto buffer = Buffer();
+  buffer.metadata(comments, 0);
   bool non_expr = (if_expr.left.is<BlockExpr>() &&
                    if_expr.left.as<BlockExpr>()->expr.is<None>()) ||
                   if_expr.right.is<None>();
@@ -721,7 +724,7 @@ Buffer Formatter::visit(IfExpr& if_expr)
     return v.first.lines() > 1 || v.second.lines() > 1;
   });
   if (non_expr || total_width > max_width || if_pairs.size() > 1 ||
-      any_multiline) {
+      any_multiline || (final_else && final_else->lines() > 1)) {
     // Use the multi-line syntax for this.
     for (size_t i = 0; i < if_pairs.size(); i++) {
       buffer = buffer.text(i > 0 ? " else if " : "if ")

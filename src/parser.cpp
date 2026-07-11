@@ -2146,6 +2146,7 @@ Expression Parser::parse_primary()
       cond = parse_unary();
     }
     auto *then_block = parse_block();
+    auto sp = save_point();
     consume_layout();
     Expression else_expr;
     if (match("else")) {
@@ -2160,6 +2161,7 @@ Expression Parser::parse_primary()
         error("expected '{' or 'if' after 'else'");
       }
     } else {
+      sp.restore();
       auto *none = make_none();
       else_expr = Expression(none);
     }
