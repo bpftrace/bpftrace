@@ -817,11 +817,6 @@ void TypeRuleCollector::visit(Builtin &builtin)
       default:
         break;
     }
-  } else if (builtin.ident == "__builtin_curtask") {
-    builtin_type = CreatePointer(CreateCStruct("struct task_struct",
-                                               bpftrace_.structs.Lookup(
-                                                   "struct task_struct")),
-                                 AddrSpace::kernel);
   } else if (builtin.ident == "__builtin_retval") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)

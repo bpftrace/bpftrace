@@ -81,8 +81,6 @@ void FieldAnalyser::visit(Builtin &builtin)
     // make them resolved and available
     if (probe_type_ == ProbeType::iter)
       builtin_type = "struct bpf_iter__" + attach_func_;
-  } else if (builtin.ident == "__builtin_curtask") {
-    builtin_type = "struct task_struct";
   } else if (builtin.ident == "args") {
     if (!probe_)
       return;

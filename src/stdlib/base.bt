@@ -227,7 +227,8 @@ macro cpu()
 // This utilizes the BPF helper `get_current_task`
 macro curtask()
 {
-  __builtin_curtask
+  import "stdlib/process/process.bpf.c";
+  kptr((struct task_struct *)__get_current_task())
 }
 
 // :variant bool delete(map m, mapkey k)

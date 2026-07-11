@@ -111,7 +111,6 @@ public:
                                MDNode *metadata);
   Value *CreateGetNs(TimestampMode ts, const Location &loc);
   CallInst *CreateGetCpuId(const Location &loc);
-  CallInst *CreateGetCurrentTask(const Location &loc);
   CallInst *CreateGetStack(Value *ctx,
                            Value *buf,
                            const StackType &stack_type,

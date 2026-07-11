@@ -5587,9 +5587,10 @@ TEST_F(TypeCheckerTest, record)
   test(R"(begin { $t = (a=1, b=(int64)2); $t = (a=2, b=(int32)3); })");
   test(R"(begin { $t = (a=1, b=(int32)2); $t = (a=2, b=(int64)3); })");
 
-  test(R"(struct task_struct { int x; } begin { $t = (a=1, b=curtask); })");
   test(
-      R"(struct task_struct { int x[4]; } begin { $t = (a=1, b=curtask->x); })");
+      R"(struct task_struct { int x; } begin { $t = (a=1, b=(struct task_struct *)0); })");
+  test(
+      R"(struct task_struct { int x[4]; } begin { $t = (a=1, b=((struct task_struct *)0)->x); })");
 
   // Different field order should be compatible as long as types match
   test(R"(begin { $t = (a=1, b=2); $t = (b=4, a=5); })");
