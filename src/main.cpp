@@ -913,6 +913,85 @@ int main(int argc, char* argv[])
   auto config = std::make_unique<Config>(!args.cmd_str.empty());
   BPFtrace bpftrace(args.no_feature, std::move(config));
 
+  // This is our primary program AST context. Initially it is empty, i.e.
+  // there is no filename set or source file. The way we set it up depends on
+  // the mode of execution below, and we expect that it will be reinitialized.
+  ast::ASTContext ast;
+
+  if (!args.filename.empty()) {
+    std::stringstream buf;
+
+    if (args.filename == "-") {
+      std::string line;
+      while (std::getline(std::cin, line)) {
+        // Note we may add an extra newline if the input doesn't end in a new
+        // line. This should not matter because bpftrace (the language) is not
+        // whitespace sensitive.
+        buf << line << std::endl;
+      }
+
+      ast = ast::ASTContext("stdin", buf.str());
+    } else {
+      std::ifstream file(args.filename);
+      if (file.fail()) {
+        LOG(ERROR) << "failed to open file '" << args.filename
+                   << "': " << std::strerror(errno);
+        exit(1);
+      }
+
+      buf << file.rdbuf();
+      ast = ast::ASTContext(args.filename, buf.str());
+    }
+  } else {
+    // Script is provided as a command line argument.
+    ast = ast::ASTContext("stdin", args.script);
+  }
+
+  // Formatting is a purely local operation: we parse the source and print it
+  // back out, without loading any BPF. Handle it before check_privileges() and
+  // any kernel symbol loading so that it can be run as an unprivileged user.
+  if (args.mode == Mode::FORMAT) {
+    // For formatting, we parse the full file, but don't apply any other passes
+    // or use any other diagnostics. It only matters whether the parse itself
+    // was successful, and then we emit the formatted source code.
+    ast::PassManager pm;
+    pm.put(ast);
+    pm.put(bpftrace);
+    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)));
+    auto ok = pm.run();
+    if (!ok) {
+      std::cerr << ok.takeError() << "\n";
+      return 2;
+    }
+    if (!ast.diagnostics().ok()) {
+      // We didn't successfully parse the file, so can't format it.
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+    if (!args.output_file.empty()) {
+      // To make this operation safe, we open a temporary file next to the
+      // intented output file, and atomically rename when completed.
+      auto file = util::TempFile::create(args.output_file + ".XXXXXX");
+      if (!file) {
+        LOG(ERROR) << "unable to create temporary file: " << file.takeError();
+        return 1;
+      }
+      std::ofstream out(file->path());
+      if (out.fail()) {
+        LOG(ERROR) << "failed to open file '" << file->path()
+                   << "': " << std::strerror(errno);
+        return 1;
+      }
+      ast::Printer printer(ast, out, ast::FormatMode::Full);
+      printer.visit(ast.root);
+      std::filesystem::rename(file->path(), args.output_file);
+    } else {
+      ast::Printer printer(ast, std::cout, ast::FormatMode::Full);
+      printer.visit(ast.root);
+    }
+    return 0; // All done.
+  }
+
   check_privileges();
 
   // Create function info objects for probe matching and pass state.
@@ -960,86 +1039,10 @@ int main(int argc, char* argv[])
     bpftrace.child_ = std::move(*child);
   }
 
-  // This is our primary program AST context. Initially it is empty, i.e.
-  // there is no filename set or source file. The way we set it up depends on
-  // the mode of execution below, and we expect that it will be reinitialized.
-  ast::ASTContext ast;
-
   // Listing probes when there is no program.
   if (args.listing && args.script.empty() && args.filename.empty()) {
     list_probes(bpftrace, args.search, *kernel_func_info, user_func_info);
     return 0;
-  }
-
-  if (!args.filename.empty()) {
-    std::stringstream buf;
-
-    if (args.filename == "-") {
-      std::string line;
-      while (std::getline(std::cin, line)) {
-        // Note we may add an extra newline if the input doesn't end in a new
-        // line. This should not matter because bpftrace (the language) is not
-        // whitespace sensitive.
-        buf << line << std::endl;
-      }
-
-      ast = ast::ASTContext("stdin", buf.str());
-    } else {
-      std::ifstream file(args.filename);
-      if (file.fail()) {
-        LOG(ERROR) << "failed to open file '" << args.filename
-                   << "': " << std::strerror(errno);
-        exit(1);
-      }
-
-      buf << file.rdbuf();
-      ast = ast::ASTContext(args.filename, buf.str());
-    }
-  } else {
-    // Script is provided as a command line argument.
-    ast = ast::ASTContext("stdin", args.script);
-  }
-
-  if (args.mode == Mode::FORMAT) {
-    // For formatting, we parse the full file, but don't apply any other passes
-    // or use any other diagnostics. It only matters whether the parse itself
-    // was successful, and then we emit the formatted source code.
-    ast::PassManager pm;
-    pm.put(ast);
-    pm.put(bpftrace);
-    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)));
-    auto ok = pm.run();
-    if (!ok) {
-      std::cerr << ok.takeError() << "\n";
-      return 2;
-    }
-    if (!ast.diagnostics().ok()) {
-      // We didn't successfully parse the file, so can't format it.
-      ast.diagnostics().emit(std::cerr);
-      return 1;
-    }
-    if (!args.output_file.empty()) {
-      // To make this operation safe, we open a temporary file next to the
-      // intented output file, and atomically rename when completed.
-      auto file = util::TempFile::create(args.output_file + ".XXXXXX");
-      if (!file) {
-        LOG(ERROR) << "unable to create temporary file: " << file.takeError();
-        return 1;
-      }
-      std::ofstream out(file->path());
-      if (out.fail()) {
-        LOG(ERROR) << "failed to open file '" << file->path()
-                   << "': " << std::strerror(errno);
-        return 1;
-      }
-      ast::Printer printer(ast, out, ast::FormatMode::Full);
-      printer.visit(ast.root);
-      std::filesystem::rename(file->path(), args.output_file);
-    } else {
-      ast::Printer printer(ast, std::cout, ast::FormatMode::Full);
-      printer.visit(ast.root);
-    }
-    return 0; // All done.
   }
 
   for (const auto& param : args.params) {
