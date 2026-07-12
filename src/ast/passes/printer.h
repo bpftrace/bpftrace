@@ -22,7 +22,9 @@ public:
   Buffer(const Buffer &) = delete;
   Buffer &operator=(const Buffer &) = delete;
 
-  [[nodiscard]] Buffer &&append(Buffer &&other, size_t indent = 0);
+  [[nodiscard]] Buffer &&append(Buffer &&other,
+                                size_t indent = 0,
+                                bool align = true);
   [[nodiscard]] Buffer &&text(std::string str);
   [[nodiscard]] Buffer &&metadata(
       MetadataIndex metadata,
