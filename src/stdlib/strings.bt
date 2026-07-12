@@ -32,7 +32,7 @@ macro assert_str(exp)
 // Returns the default unbounded length.
 macro default_str_length()
 {
-  sizeof(str((int8 *)0))
+  sizeof(str((int8*)0))
 }
 
 // Returns the length of a string-like object.
@@ -107,7 +107,8 @@ macro strstr($haystack, $needle)
     // Special case: the needle is empty.
     0
   } else {
-    __bpf_strnstr((int8*)&$haystack, (int8*)&$needle, (uint64)$haystack_size, (uint64)$needle_size)
+    __bpf_strnstr((int8*)(&$haystack),
+                  (int8*)(&$needle), (uint64)$haystack_size, (uint64)$needle_size)
   }
 }
 macro strstr($haystack, needle)
