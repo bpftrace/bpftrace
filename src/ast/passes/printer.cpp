@@ -80,7 +80,7 @@ Buffer::Buffer() : state(std::make_unique<BufferState>())
 
 Buffer::~Buffer() = default;
 
-Buffer&& Buffer::append(Buffer&& other, size_t indent)
+Buffer&& Buffer::append(Buffer&& other, size_t indent, bool align)
 {
   if (other.lines() == 0) {
     return std::move(*this);
@@ -105,6 +105,14 @@ Buffer&& Buffer::append(Buffer&& other, size_t indent)
     //     line3
     //   );
     //
+    // When align is false, continuation lines are preserved verbatim (keeping
+    // their own base-relative indentation) rather than aligned to the current
+    // column. This is appropriate for block bodies following assignments, but
+    // wrong for call arguments, e.g.
+    // let $a = {
+    //   let $b = 1;
+    //   $b
+    // };
     size_t col = state->lines.back().columns();
     if (indent > 0) {
       state->lines.emplace_back();
@@ -112,7 +120,7 @@ Buffer&& Buffer::append(Buffer&& other, size_t indent)
     }
     for (size_t i = 0; i < other.state->lines.size(); i++) {
       auto& line = other.state->lines[i];
-      if (col != 0 && state->lines.back().segments.empty()) {
+      if (align && col != 0 && state->lines.back().segments.empty()) {
         state->lines.back().segments.emplace_back(Text(std::string(col, ' ')));
       }
       state->lines.back().segments.insert(
@@ -870,10 +878,12 @@ Buffer Formatter::visit(AssignScalarMapStatement& assignment)
   Buffer expr;
 
   // Is this a compound operator?
+  Expression* rhs = &assignment.expr;
   auto* binop = assignment.expr.as<Binop>();
   if (binop && binop->left.is<Map>() &&
       *binop->left.as<Map>() == *assignment.map) {
     ops = opstr(*binop) + "=";
+    rhs = &binop->right;
     expr = format(binop->right,
                   metadata,
                   max_width - (map.width() + 2 + ops.size()),
@@ -886,13 +896,10 @@ Buffer Formatter::visit(AssignScalarMapStatement& assignment)
                   true);
   }
 
-  return Buffer()
-      .append(std::move(map))
-      .text(" ")
-      .text(ops)
-      .text(" ")
-      .append(std::move(expr))
-      .text(";");
+  auto buffer = Buffer().append(std::move(map)).text(" ").text(ops).text(" ");
+  bool align = !(rhs->is<BlockExpr>() || rhs->is<IfExpr>());
+
+  return buffer.append(std::move(expr), 0, align).text(";");
 }
 
 Buffer Formatter::visit(AssignMapStatement& assignment)
@@ -902,10 +909,12 @@ Buffer Formatter::visit(AssignMapStatement& assignment)
   Buffer expr;
 
   // Is this a compound operator?
+  Expression* rhs = &assignment.expr;
   auto* binop = assignment.expr.as<Binop>();
   if (binop && binop->left.is<MapAccess>() &&
       *binop->left.as<MapAccess>() == *assignment.map_access) {
     ops = opstr(*binop) + "=";
+    rhs = &binop->right;
     expr = format(binop->right,
                   metadata,
                   max_width - (map.width() + 2 + ops.size()),
@@ -918,13 +927,10 @@ Buffer Formatter::visit(AssignMapStatement& assignment)
                   true);
   }
 
-  return Buffer()
-      .append(std::move(map))
-      .text(" ")
-      .text(ops)
-      .text(" ")
-      .append(std::move(expr))
-      .text(";");
+  auto buffer = Buffer().append(std::move(map)).text(" ").text(ops).text(" ");
+  bool align = !(rhs->is<BlockExpr>() || rhs->is<IfExpr>());
+
+  return buffer.append(std::move(expr), 0, align).text(";");
 }
 
 Buffer Formatter::visit(AssignVarStatement& assignment)
@@ -935,10 +941,12 @@ Buffer Formatter::visit(AssignVarStatement& assignment)
 
   // Is this a compound operator?
   std::string ops;
+  Expression* rhs = &assignment.expr;
   auto* binop = assignment.expr.as<Binop>();
   if (binop && binop->left.is<Variable>() &&
       *binop->left.as<Variable>() == *assignment.var()) {
     ops = opstr(*binop) + "=";
+    rhs = &binop->right;
     expr = format(binop->right,
                   metadata,
                   max_width - (var.width() + 2 + ops.size()),
@@ -951,13 +959,10 @@ Buffer Formatter::visit(AssignVarStatement& assignment)
                   true);
   }
 
-  return Buffer()
-      .append(std::move(var))
-      .text(" ")
-      .text(ops)
-      .text(" ")
-      .append(std::move(expr))
-      .text(";");
+  auto buffer = Buffer().append(std::move(var)).text(" ").text(ops).text(" ");
+  bool align = !(rhs->is<BlockExpr>() || rhs->is<IfExpr>());
+
+  return buffer.append(std::move(expr), 0, align).text(";");
 }
 
 Buffer Formatter::visit(AssignConfigVarStatement& assignment)
