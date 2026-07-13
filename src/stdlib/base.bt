@@ -228,7 +228,7 @@ macro cpu()
 macro curtask()
 {
   import "stdlib/process/process.bpf.c";
-  kptr((struct task_struct *)__get_current_task())
+  kptr((struct task_struct*)__get_current_task())
 }
 
 // :variant bool delete(map m, mapkey k)
@@ -278,7 +278,7 @@ macro delete(@map, $key)
 {
   import "stdlib/map/map.bpf.c";
   check_key(@map, $key, "delete() with two arguments");
-  __delete((void *)(&@map), (void *)(&$key)) == 0
+  __delete((void*)(&@map), (void*)(&$key)) == 0
 }
 
 macro delete(@map, key)
@@ -286,7 +286,7 @@ macro delete(@map, key)
   import "stdlib/map/map.bpf.c";
   check_key(@map, key, "delete() with two arguments");
   let $key : typeof(@map) = key;
-  __delete((void *)(&@map), (void *)(&$key)) == 0
+  __delete((void*)(&@map), (void*)(&$key)) == 0
 }
 
 macro delete(@map)
@@ -299,7 +299,7 @@ macro delete(@map)
     false
   } else {
     let $key : int64 = 0;
-    __delete((void *)(&@map), (void *)(&$key)) == 0
+    __delete((void*)(&@map), (void*)(&$key)) == 0
   }
 }
 
@@ -383,13 +383,17 @@ macro elapsed()
 //   }
 // }
 // ```
-macro find(@map, key, $var) {
+macro find(@map, key, $var)
+{
   import "stdlib/map/map.bpf.c";
   check_key(@map, key, "find");
-  let $key: typeof(@map) = key;
-  $result = __lookup_elem((void *)&@map, (void *)&$key);
+  let $key : typeof(@map) = key;
+  $result = __lookup_elem((void*)(&@map), (void*)(&$key));
   if ((bool)$result) {
-    $var = *((typeof({ $a = @map[$key]; &$a }))$result);
+    $var = *((typeof({
+                       $a = @map[$key];
+                       &$a
+                     }))$result);
     true
   } else {
     false
@@ -435,7 +439,7 @@ macro func()
 // This utilizes the BPF helper `get_current_uid_gid`
 macro gid()
 {
-    import "stdlib/process/process.bpf.c";
+  import "stdlib/process/process.bpf.c";
   __get_current_uid_gid() >> 32
 }
 
@@ -458,11 +462,12 @@ macro gid()
 //     }
 // }
 // ```
-macro has_key(@map, key) {
+macro has_key(@map, key)
+{
   import "stdlib/map/map.bpf.c";
   check_key(@map, key, "has_key()");
-  let $key: typeof(@map) = key;
-  (bool)__lookup_elem((void *)&@map, (void *)&$key)
+  let $key : typeof(@map) = key;
+  (bool)__lookup_elem((void*)(&@map), (void*)(&$key))
 }
 
 // :variant bool is_err(void * ptr)
@@ -483,7 +488,7 @@ macro has_key(@map, key) {
 // ```
 macro is_err(ptr)
 {
-  (int64)ptr < 0 && (int64)ptr >= -4095
+  ((int64)ptr) < 0 && ((int64)ptr) >= (-4095)
 }
 
 // :variant uint64 jiffies()
@@ -633,13 +638,14 @@ macro len(@map)
   if comptime is_scalar(@map) {
     fail("call to len() expects a map with explicit keys (non-scalar map)")
   } else {
-    (int64)__elem_count((void *)(&@map))
+    (int64)__elem_count((void*)(&@map))
   }
 }
 
 macro len(e)
 {
-  if comptime (typeinfo(e).base_type != typeinfo(ustack).base_type && typeinfo(e).base_type != typeinfo(kstack).base_type) {
+  if comptime (typeinfo(e).base_type != typeinfo(ustack).base_type &&
+               typeinfo(e).base_type != typeinfo(kstack).base_type) {
     fail("call to len() expects a map, ustack, or kstack")
   } else {
     // This is handled in codegen for now
@@ -793,7 +799,7 @@ macro override(expr)
   } else if comptime (typeinfo(expr).base_type != typeinfo(0).base_type) {
     fail("override() only supports int arguments (%s provided)", typeinfo(expr).base_type);
   } else {
-    __override((void *)ctx, (uint64)expr);
+    __override((void*)ctx, (uint64)expr);
   }
 }
 
@@ -825,7 +831,7 @@ macro write_user(dst, src, len)
   if comptime __builtin_safe_mode {
     fail("write_user() is unsafe. To use you need the --unsafe flag");
   } else {
-    __probe_write_user((void *)dst, (void *)src, (uint32)len) == 0;
+    __probe_write_user((void*)dst, (void*)src, (uint32)len) == 0;
   }
 }
 
@@ -1499,7 +1505,7 @@ macro usermode()
 // Often this is just "root"
 macro username()
 {
-  (username_t)(uid)
+  (username_t)uid
 }
 
 // :function ustack
@@ -1605,17 +1611,20 @@ macro username()
 // ```
 //
 // For usage examples see [ustack](#ustack).
-macro dw_ustack(mode, limit) {
+macro dw_ustack(mode, limit)
+{
   import "stdlib/stack/dwunwind.bpf.c";
   __builtin_dw_ustack(mode, limit)
 }
 
-macro dw_ustack(mode) {
+macro dw_ustack(mode)
+{
   import "stdlib/stack/dwunwind.bpf.c";
   __builtin_dw_ustack(mode)
 }
 
-macro dw_ustack() {
+macro dw_ustack()
+{
   import "stdlib/stack/dwunwind.bpf.c";
   __builtin_dw_ustack
 }

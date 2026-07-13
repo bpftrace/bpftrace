@@ -46,8 +46,8 @@ BEGIN
 
 profile:hz:99
 {
-  $task = (struct task_struct *)curtask;
-  $my_q = (struct cfs_rq *)$task.se.cfs_rq;
+  $task = (struct task_struct*)curtask;
+  $my_q = (struct cfs_rq*)$task.se.cfs_rq;
   $len = (uint64)$my_q.nr_queued;
   $len = ($len > 0) ? ($len - 1) : 0;
   // subtract currently running task

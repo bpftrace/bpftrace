@@ -30,7 +30,8 @@ macro is_integer(expr)
 // Determine whether the given expression is an unsigned integer.
 macro is_unsigned_integer(expr)
 {
-  typeinfo(expr).base_type == typeinfo(0).base_type && typeinfo(expr).full_type[0] == "u"[0]
+  typeinfo(expr).base_type == typeinfo(0).base_type &&
+  typeinfo(expr).full_type[0] == "u"[0]
 }
 
 // :variant void static_assert(bool condition, string msg)
@@ -66,9 +67,9 @@ macro is_literal(expr)
   __builtin_is_literal(expr)
 }
 
-macro assert_userspace_probe(func) {
-  if comptime (probetype != "uprobe" && probetype != "uretprobe" &&
-               probetype != "usdt") {
+macro assert_userspace_probe(func)
+{
+  if comptime (probetype != "uprobe" && probetype != "uretprobe" && probetype != "usdt") {
     fail("%s can not be used for this probetype: %s", func, probetype);
   }
 }
@@ -87,7 +88,8 @@ macro elf_info()
 
 // :variant Container* container_of(Member* ptr, Type type, Identifier member)
 // Returns a pointer to an object of the passed `type` given a pointer to the `member` of that object.
-macro container_of(ptr, type, member) {
-  $vptr = (void *)(ptr);
-  ((type *)($vptr - offsetof(type, member)))
+macro container_of(ptr, type, member)
+{
+  $vptr = (void*)ptr;
+  (type*)($vptr - offsetof(type, member))
 }

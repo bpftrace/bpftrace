@@ -5,7 +5,7 @@ struct C {
 
 uprobe:./testprogs/struct_walk:clear
 {
-  $c = (struct C *)arg0;
+  $c = (struct C*)arg0;
   $size = (uint32)arg1;
 
   if ($size != 10) {

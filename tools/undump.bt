@@ -67,7 +67,7 @@ kretprobe:unix_stream_recvmsg
 kprobe:skb_copy_datagram_iter
 /has_key(@start_recv, tid)/
 {
-  @skbs[tid] = (struct sk_buff *)arg0;
+  @skbs[tid] = (struct sk_buff*)arg0;
 }
 
 kretprobe:skb_copy_datagram_iter

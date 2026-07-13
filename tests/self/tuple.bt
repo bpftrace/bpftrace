@@ -1,4 +1,5 @@
-test:tuple_binop_equals {
+test:tuple_binop_equals
+{
   $x = ("hello", -6);
   $y = ("hello", -6);
   $a = (1, true, $x);
@@ -21,12 +22,13 @@ test:tuple_binop_equals {
   }
 }
 
-test:mixed_int_tuple_map {
-  @mixed_int_tuple_map_a = ((int32) -100, (int8) 10, 50);
-  @mixed_int_tuple_map_b = (-100, (int8) 10, (int32) 50);
-  @mixed_int_tuple_map_c = (-100, (int8) 10, (int32) 50, 100);
+test:mixed_int_tuple_map
+{
+  @mixed_int_tuple_map_a = ((int32)(-100), (int8)10, 50);
+  @mixed_int_tuple_map_b = (-100, (int8)10, (int32)50);
+  @mixed_int_tuple_map_c = (-100, (int8)10, (int32)50, 100);
 
-  if (@mixed_int_tuple_map_a.0 != -100) {
+  if (@mixed_int_tuple_map_a.0 != (-100)) {
     return 1;
   }
   if (@mixed_int_tuple_map_a.1 != 10) {
@@ -36,7 +38,7 @@ test:mixed_int_tuple_map {
     return 1;
   }
 
-  if (@mixed_int_tuple_map_b.0 != -100) {
+  if (@mixed_int_tuple_map_b.0 != (-100)) {
     return 1;
   }
   if (@mixed_int_tuple_map_b.1 != 10) {
@@ -46,7 +48,7 @@ test:mixed_int_tuple_map {
     return 1;
   }
 
-  if (@mixed_int_tuple_map_c.0 != -100) {
+  if (@mixed_int_tuple_map_c.0 != (-100)) {
     return 1;
   }
   if (@mixed_int_tuple_map_c.1 != 10) {
@@ -60,24 +62,27 @@ test:mixed_int_tuple_map {
   }
 }
 
-test:tuple_map_key {
-  @tuple_map_key_a[(1, "hello")] = 1;
+test:tuple_map_key
+{
+  @tuple_map_key_a[1, "hello"] = 1;
 
   if (@tuple_map_key_a[1, "hello"] != 1) {
-    return 1;
- }
-}
-
-test:tuple_map_key_and_value {
-  @tuple_map_key_and_value_a[(1, 2)] = (3, 4);
-
-  if (@tuple_map_key_and_value_a[(1, 2)] != (3, 4)) {
     return 1;
   }
 }
 
-test:tuple_map_key_same_as_assoc_array {
-  @tuple_map_key_same_as_assoc_array_a[(1, "hello")] = 1;
+test:tuple_map_key_and_value
+{
+  @tuple_map_key_and_value_a[1, 2] = (3, 4);
+
+  if (@tuple_map_key_and_value_a[1, 2] != (3, 4)) {
+    return 1;
+  }
+}
+
+test:tuple_map_key_same_as_assoc_array
+{
+  @tuple_map_key_same_as_assoc_array_a[1, "hello"] = 1;
   @tuple_map_key_same_as_assoc_array_a[2, "hello"] = 2;
 
   if (!delete(@tuple_map_key_same_as_assoc_array_a, (1, "hello"))) {
@@ -89,10 +94,11 @@ test:tuple_map_key_same_as_assoc_array {
   }
 }
 
-test:implicit_conversion_of_multi_map_key_to_tuple {
+test:implicit_conversion_of_multi_map_key_to_tuple
+{
   @implicit_conversion_of_multi_map_key_to_tuple_a["abcd", 2] = (3, 4, 5);
 
-  for ($kv : @implicit_conversion_of_multi_map_key_to_tuple_a) {
+  for $kv : @implicit_conversion_of_multi_map_key_to_tuple_a {
     if ($kv.0 != ("abcd", 2)) {
       return 1;
     }
@@ -103,17 +109,19 @@ test:implicit_conversion_of_multi_map_key_to_tuple {
   }
 }
 
-test:tuple_map_key_variable {
+test:tuple_map_key_variable
+{
   $a = (1, "hello");
-  @tuple_map_key_variable_a[(1, "hello")] = 1;
+  @tuple_map_key_variable_a[1, "hello"] = 1;
   @tuple_map_key_variable_a[$a] = 2;
 
-  if (@tuple_map_key_variable_a[(1, "hello")] != 2) {
+  if (@tuple_map_key_variable_a[1, "hello"] != 2) {
     return 1;
   }
 }
 
-test:tuple_map_key_string_resize {
+test:tuple_map_key_string_resize
+{
   @tuple_map_key_string_resize_a["hellotherelongstr", 4] = 1;
   @tuple_map_key_string_resize_a["by", 6] = 2;
 
@@ -126,9 +134,10 @@ test:tuple_map_key_string_resize {
   }
 }
 
-test:tuple_map_key_compatible_int_size {
-  $a = (1, (123, (uint64) 1234));
-  $b = (4, (1234, (uint8) 123));
+test:tuple_map_key_compatible_int_size
+{
+  $a = (1, (123, (uint64)1234));
+  $b = (4, (1234, (uint8)123));
 
   @tuple_map_key_compatible_int_size_a[$a] = 1;
   @tuple_map_key_compatible_int_size_a[$b] = 2;
