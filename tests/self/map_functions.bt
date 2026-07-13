@@ -1,11 +1,12 @@
-test:has_key {
+test:has_key
+{
   @has_key_a[1] = 0;
 
   if (!has_key(@has_key_a, 1)) {
     return 1;
   }
 
-  if (has_key(@has_key_a, 2)) {
+  if has_key(@has_key_a, 2) {
     return 1;
   }
 
@@ -15,7 +16,7 @@ test:has_key {
   }
 
   @has_key_b["longerstr"] = 0;
-  if (has_key(@has_key_b, "byeasdfasdfasdfasdfasdfasdf")) {
+  if has_key(@has_key_b, "byeasdfasdfasdfasdfasdfasdf") {
     return 1;
   }
 
@@ -23,12 +24,12 @@ test:has_key {
     return 1;
   }
 
-  @has_key_c[1, ("hello", ((int8)5))] = 0;
+  @has_key_c[1, ("hello", (int8)5)] = 0;
   if (!has_key(@has_key_c, (1, ("hello", 5)))) {
     return 1;
   }
 
-  if (has_key(@has_key_c, (1, ("bye", ((uint16)5))))) {
+  if has_key(@has_key_c, (1, ("bye", (uint16)5))) {
     return 1;
   }
 

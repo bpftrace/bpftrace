@@ -16,10 +16,10 @@ struct C {
 
 uprobe:./testprogs/struct_array:clear
 {
-  let $c : struct C *;
+  let $c : struct C*;
   let $w : struct W[10];
 
-  $c = (struct C *)arg0;
+  $c = (struct C*)arg0;
   $w = $c.w;
 
   printf("%d ", $w[0].a);

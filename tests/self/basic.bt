@@ -1,28 +1,46 @@
 test:noop
-{
-}
+{}
 
-test:increment_decrement_map {
+test:increment_decrement_map
+{
   @x = 10;
 
-  if (@x++ != 10) { return 1; }
-  if (++@x != 12) { return 1; }
-  if (@x-- != 12) { return 1; }
-  if (--@x != 10) { return 1; }
+  if ((@x++) != 10) {
+    return 1;
+  }
+  if ((++@x) != 12) {
+    return 1;
+  }
+  if ((@x--) != 12) {
+    return 1;
+  }
+  if ((--@x) != 10) {
+    return 1;
+  }
 
   _ = delete(@x);
 }
 
-test:increment_decrement_variable {
+test:increment_decrement_variable
+{
   $x = 10;
 
-  if ($x++ != 10) { return 1; }
-  if (++$x != 12) { return 1; }
-  if ($x-- != 12) { return 1; }
-  if (--$x != 10) { return 1; }
+  if (($x++) != 10) {
+    return 1;
+  }
+  if ((++$x) != 12) {
+    return 1;
+  }
+  if (($x--) != 12) {
+    return 1;
+  }
+  if ((--$x) != 10) {
+    return 1;
+  }
 }
 
-test:variable_strings_are_memset {
+test:variable_strings_are_memset
+{
   $x = "xxxxx";
   $x = "a";
 
@@ -37,7 +55,8 @@ test:variable_strings_are_memset {
   }
 }
 
-test:map_strings_are_memset {
+test:map_strings_are_memset
+{
   @map_strings_are_memset_x = "xxxxx";
   @map_strings_are_memset_x = "a";
   @map_strings_are_memset[@map_strings_are_memset_x] = 1;
@@ -53,17 +72,19 @@ test:map_strings_are_memset {
   _ = delete(@map_strings_are_memset_y);
 }
 
-test:block_expression {
- let $a = {
-   let $b = 1;
-   $b
- };
- if ($a != 1) {
-   return 1;
- }
+test:block_expression
+{
+  let $a = {
+    let $b = 1;
+    $b
+  };
+  if ($a != 1) {
+    return 1;
+  }
 }
 
-test:block_expression_complex {
+test:block_expression_complex
+{
   $x = {
     $y = {
       $z = 10;
@@ -77,7 +98,8 @@ test:block_expression_complex {
   }
 }
 
-test:logical_and_with_different_types {
+test:logical_and_with_different_types
+{
   $x = 5;
   $y = true;
 
@@ -86,7 +108,8 @@ test:logical_and_with_different_types {
   }
 }
 
-test:logical_or_with_different_types {
+test:logical_or_with_different_types
+{
   $x = 0;
   $y = true;
 

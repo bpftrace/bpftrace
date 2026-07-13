@@ -1,11 +1,12 @@
-test:bool_in_conditional {
+test:bool_in_conditional
+{
   $x = 0;
 
-  if (true) {
+  if true {
     $x = 1;
   }
 
-  if (false) {
+  if false {
     $x = 2;
   }
 
@@ -14,7 +15,8 @@ test:bool_in_conditional {
   }
 }
 
-test:bool_as_a_variable {
+test:bool_as_a_variable
+{
   $b = true;
   $c = false;
 
@@ -24,35 +26,38 @@ test:bool_as_a_variable {
     return 1;
   }
 
-  if ($t.1) {
+  if $t.1 {
     return 1;
   }
 }
 
-test:cast_int_to_bool {
+test:cast_int_to_bool
+{
   $t = ((bool)1, (bool)0);
 
   if (!$t.0) {
     return 1;
   }
-  if ($t.1) {
+  if $t.1 {
     return 1;
   }
 }
 
-test:cast_string_to_bool {
+test:cast_string_to_bool
+{
   $t = ((bool)"hello", (bool)"");
 
   if (!$t.0) {
     return 1;
   }
 
-  if ($t.1) {
+  if $t.1 {
     return 1;
   }
 }
 
-test:cast_ptr_to_bool {
+test:cast_ptr_to_bool
+{
   $a = (int64*)0;
   $b = (int64*)1;
 
@@ -62,12 +67,13 @@ test:cast_ptr_to_bool {
     return 1;
   }
 
-  if ($t.1) {
+  if $t.1 {
     return 1;
   }
 }
 
-test:cast_bool_to_int {
+test:cast_bool_to_int
+{
   $t = ((int64)true, (int64)false);
 
   if ($t.0 != 1) {
@@ -79,7 +85,8 @@ test:cast_bool_to_int {
   }
 }
 
-test:bool_logical_not {
+test:bool_logical_not
+{
   $x = 0;
 
   $t = (!0, !10, !$x);
@@ -88,7 +95,7 @@ test:bool_logical_not {
     return 1;
   }
 
-  if ($t.1) {
+  if $t.1 {
     return 1;
   }
 
@@ -97,7 +104,8 @@ test:bool_logical_not {
   }
 }
 
-test:bool_in_resized_tuples {
+test:bool_in_resized_tuples
+{
   @bool_in_resized_tuples_a[false, 1, true] = 1;
   @bool_in_resized_tuples_a[true, (int32)2, false] = 2;
 
@@ -110,7 +118,8 @@ test:bool_in_resized_tuples {
   }
 }
 
-test:complex_bool_logical {
+test:complex_bool_logical
+{
   $a = 100000;
   $b = 0;
   $c = $a > $b;
@@ -122,7 +131,7 @@ test:complex_bool_logical {
     return 1;
   }
 
-  if ($d) {
+  if $d {
     return 1;
   }
 

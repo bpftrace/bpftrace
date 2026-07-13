@@ -68,8 +68,8 @@ tracepoint:skb:kfree_skb
   let $daddr;
   let $saddr;
   $reason = args.reason;
-  $skb = (struct sk_buff *)args.skbaddr;
-  $sk = (struct sock *)$skb.sk;
+  $skb = (struct sk_buff*)args.skbaddr;
+  $sk = (struct sock*)$skb.sk;
   $inet_family = $sk.__sk_common.skc_family;
 
   if ($reason > SKB_DROP_REASON_NOT_SPECIFIED &&

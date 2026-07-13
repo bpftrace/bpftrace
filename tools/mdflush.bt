@@ -45,5 +45,5 @@ BEGIN
 kprobe:md_flush_request
 {
   time("%H:%M:%S ");
-  printf("%-6d %-16s %s\n", pid, comm, ((struct bio *)arg1).bi_bdev.bd_disk.disk_name);
+  printf("%-6d %-16s %s\n", pid, comm, ((struct bio*)arg1).bi_bdev.bd_disk.disk_name);
 }
