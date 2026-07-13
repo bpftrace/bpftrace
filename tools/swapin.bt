@@ -50,7 +50,7 @@ config = {
 kprobe:swap_readpage,
 kprobe:swap_read_folio
 {
-  @[comm,pid] = count();
+  @[comm, pid] = count();
 }
 
 interval:1s

@@ -44,17 +44,17 @@ BEGIN
 
 tracepoint:block:block_io_start
 {
-  $key = (args.dev,args.sector);
+  $key = (args.dev, args.sector);
   @start[$key] = nsecs;
   @iopid[$key] = pid;
   @iocomm[$key] = comm;
 }
 
 tracepoint:block:block_io_done
-/has_key(@start, (args.dev,args.sector)) &&
- has_key(@iopid, (args.dev,args.sector)) && has_key(@iocomm, (args.dev,args.sector))/
+/has_key(@start, (args.dev, args.sector)) &&
+ has_key(@iopid, (args.dev, args.sector)) && has_key(@iocomm, (args.dev, args.sector))/
 {
-  $key = (args.dev,args.sector);
+  $key = (args.dev, args.sector);
   $now = nsecs;
   $major = args.dev >> 20;
   $minor = args.dev & ((1 << 20) - 1);

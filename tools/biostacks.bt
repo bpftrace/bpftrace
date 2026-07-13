@@ -73,15 +73,15 @@ BEGIN
 
 tracepoint:block:block_io_start
 {
-  $key = (args.dev,args.sector);
+  $key = (args.dev, args.sector);
   @reqstack[$key] = kstack;
   @reqts[$key] = nsecs;
 }
 
 tracepoint:block:block_rq_issue
-/@reqts[args.dev,args.sector]/
+/@reqts[args.dev, args.sector]/
 {
-  $key = (args.dev,args.sector);
+  $key = (args.dev, args.sector);
   @usecs[@reqstack[$key]] = hist(nsecs - @reqts[$key]);
   delete(@reqstack, $key);
   delete(@reqts, $key);

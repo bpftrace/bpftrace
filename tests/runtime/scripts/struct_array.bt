@@ -16,7 +16,7 @@ struct C {
 
 uprobe:./testprogs/struct_array:clear
 {
-  $c = (struct C *)arg0;
+  $c = (struct C*)arg0;
 
   printf("%d ", $c.w[0].a);
   printf("%d ", $c.w[2].a);

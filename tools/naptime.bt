@@ -48,7 +48,7 @@ tracepoint:syscalls:sys_enter_nanosleep
 
 tracepoint:syscalls:sys_exit_clock_nanosleep,
 tracepoint:syscalls:sys_exit_nanosleep
-/ has_key(@rqtp, tid) /
+/has_key(@rqtp, tid)/
 {
   if (args.ret == 0) {
     time("%H:%M:%S ");

@@ -37,11 +37,11 @@ macro memcmp_record(left, right, count)
   let $left = left;
   // This ensures that the $right variable type has fields
   // in the exact same order as the $left
-  let $right: typeof($left) = right;
+  let $right : typeof($left) = right;
   memcmp($left, $right, count)
 }
 
 macro usdt_arg(x)
 {
-  __usdt_arg((void *)ctx, (int64)x)
+  __usdt_arg((void*)ctx, (int64)x)
 }

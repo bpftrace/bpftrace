@@ -1,4 +1,5 @@
-test:bitshift {
+test:bitshift
+{
   @bitshift_x = 1 << 10;
   @bitshift_y = 1024 >> 9;
 
@@ -11,7 +12,8 @@ test:bitshift {
   }
 }
 
-test:bitwise_not {
+test:bitwise_not
+{
   @bitwise_not_x = ~10;
   if (@bitwise_not_x != 18446744073709551605) {
     return 1;

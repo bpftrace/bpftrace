@@ -46,7 +46,7 @@ BEGIN
 
 kprobe:tcp_set_state
 {
-  $sk = (struct sock *)arg0;
+  $sk = (struct sock*)arg0;
   $newstate = arg1;
 
   // This tool includes PID and comm context. From TCP this is best
@@ -76,7 +76,7 @@ kprobe:tcp_set_state
     $lport = $sk.__sk_common.skc_num;
     $dport = $sk.__sk_common.skc_dport;
     $dport = bswap($dport);
-    $tp = (struct tcp_sock *)$sk;
+    $tp = (struct tcp_sock*)$sk;
     $pid = @skpid[$sk];
     $comm = @skcomm[$sk];
     if ($comm == "") {

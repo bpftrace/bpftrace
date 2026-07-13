@@ -73,16 +73,16 @@ macro getcwd(@paths)
 {
   $dentry = curtask.fs.pwd.dentry;
   $vfsmnt = curtask.fs.pwd.mnt;
-  $mnt = (struct mount *)(((uint64)$vfsmnt) - offsetof(struct mount, mnt));
+  $mnt = (struct mount*)(((uint64)$vfsmnt) - offsetof(struct mount, mnt));
   $mnt_root = $vfsmnt.mnt_root;
 
   for $j : ((uint64)0)..((uint64)max_path_depth) {
 
-    @paths[tid,$j] = str($dentry.d_name.name);
+    @paths[tid, $j] = str($dentry.d_name.name);
     $parent_dentry = $dentry.d_parent;
 
     if ($dentry == $parent_dentry || $dentry == $mnt_root) {
-      $mnt_parent = (struct mount *)$mnt.mnt_parent;
+      $mnt_parent = (struct mount*)$mnt.mnt_parent;
 
       // Real root directory
 
@@ -103,7 +103,7 @@ macro getcwd(@paths)
 macro printcwd(@paths)
 {
   for $j : ((uint64)0)..((uint64)max_path_depth) {
-    let $key = (tid,(uint64)((max_path_depth() - $j) - 1));
+    let $key = (tid, (uint64)((max_path_depth() - $j) - 1));
     let $name = @paths[$key];
     // If it is a mount point, there will be a '/', because
     // the '/' will be added below, so just skip this '/'.
