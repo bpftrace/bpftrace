@@ -218,7 +218,7 @@ WILL_FAIL
 
 NAME kprobe_offset_module_error
 RUN {{BPFTRACE}} -e 'kprobe:nf_tables_newtable+0x1 { printf("hit\n"); exit(); }'
-EXPECT ERROR: Unable to attach probe: kprobe:nf_tables_newtable+0x1. If this is expected, set the 'missing_probes' config variable to 'warn'.
+EXPECT ERROR: Unable to attach probe: kprobe:nf_tables_newtable+1. If this is expected, set the 'missing_probes' config variable to 'warn'.
 ARCH aarch64|ppc64le|ppc64
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL
@@ -578,6 +578,13 @@ NAME rawtracepoint_order
 RUN {{BPFTRACE}} runtime/scripts/rawtracepoint_order.bt
 EXPECT_REGEX (first)+ second
 AFTER ./testprogs/syscall nanosleep 233;
+ARCH x86_64
+
+NAME rawtracepoint_order
+RUN {{BPFTRACE}} runtime/scripts/rawtracepoint_order_aarch64.bt
+EXPECT_REGEX (first)+ second
+AFTER ./testprogs/syscall nanosleep 233;
+ARCH aarch64
 
 NAME usdt_order
 RUN {{BPFTRACE}} runtime/scripts/usdt_order.bt
@@ -719,3 +726,7 @@ TIMEOUT 1
 NAME uprobe_zip_archive
 RUN {{BPFTRACE}} -e 'uprobe:"./testprogs/archive.zip!/true":main {} begin { exit() }'
 EXPECT_REGEX Attached 2 probes
+ARCH x86_64
+# ZIP alignment is not guaranteed, on aarch64 the uprobe offset
+# is not 4-byte aligned, failing the kernel's IS_ALIGNED check, 
+# run this test on x86_64 only
