@@ -1806,6 +1806,25 @@ $s = (string[64])arg0;    // string with capacity 64 bytes
 $b = (buffer[256])arg0;   // buffer of 256 bytes
 ```
 
+### Type Context Builtins
+
+The following functions accept a type OR an expression, which is evaluated in order to get a type:
+- `sizeof`
+- `offsetof`
+- `typeof`
+- `typeinfo` (unstable)
+
+Examples:
+```
+print(sizeof(uint32));               // prints 4 as uint32 is parsed as a type
+print(sizeof({ $a = (int8)1; $a })); // prints 1 as the expression evaluates to $a whose type is int8
+print(sizeof(uint32*[10]));          // prints 80 as the type is an array of 10 pointers to uint32
+```
+
+Note: any expression passed to these functions is removed before actual runtime e.g. in `print(sizeof({ $a = (int8)1; print("hi"); $a }));` the "hi" is never printed and maps and variables are not mutated.
+
+If passing a type to a macro call, you must wrap that type in a `typeof` e.g. `my_macro($a, typeof(struct task))`.
+
 ### Pointers
 
 Pointers in bpftrace are similar to those found in `C`.
@@ -1885,8 +1904,8 @@ interval:s:1 {
 Integer and pointer types can be converted using explicit type conversion with an expression like:
 
 ```
-$y = (uint32) $z;
-$py = (int16 *) $pz;
+$y = (uint32)$z;
+$py = (int16 *)$pz;
 ```
 
 Integer casts to a higher rank are sign extended.
@@ -1895,8 +1914,8 @@ Conversion to a lower rank is done by zeroing leading bits.
 It is also possible to cast between integers and integer arrays using the same syntax:
 
 ```
-$a = (uint8[8]) 12345;
-$x = (uint64) $a;
+$a = (uint8[8])12345;
+$x = (uint64)$a;
 ```
 
 Both the cast and the destination type must have the same size.
@@ -1915,7 +1934,7 @@ $y = (pid)*tid; // parsed a multiplication of the pid builtin and the tid builti
 $z = (myident)*arg0; // parsed as a cast to myident with a dereference of builtin arg0
 ```
 
-Bare identifiers in type contexts (casts, `sizeof`, etc.) are always treated
+Bare identifiers in type contexts (casts, `sizeof`, `typeof`, etc.) are always treated
 as type names and are never expanded as macros. To force macro expansion in a
 type context, use the call syntax or wrap with `typeof`:
 
@@ -1924,6 +1943,13 @@ macro uint64_t() { 1 }
 $x = sizeof(uint64_t);           // uint64_t is treated as a type name and $x evaluates to 8
 $x = sizeof(uint64_t());         // call syntax forces macro expansion and $x evaluates to 1
 $y = (typeof(uint64_t()))$z;     // typeof wrapper for casts and this becomes $y = (typeof({ 1 }))$z;
+```
+
+Additionally, in a type context the array syntax is always treated as a type unless surrounded by parenthesis.
+```
+$x = sizeof(ident[1]);   // parsed as an array of type ident with 1 element
+$x = sizeof((ident)[1]); // parsed as an expression accessing the first element of ident (useful in macro contexts)
+$x = sizeof((ident[1])); // parsed as an expression accessing the first element of ident (useful in macro contexts)
 ```
 
 #### Array Casts
