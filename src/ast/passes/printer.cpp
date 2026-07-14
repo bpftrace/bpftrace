@@ -831,13 +831,12 @@ Buffer Formatter::visit(Cast& cast)
 
 Buffer Formatter::visit(Tuple& tuple)
 {
-  // N.B. tuples are packed, separated by `,` instead of `, `.
   Buffer elems;
   if (tuple.elems.size() == 1) {
-    elems = format(tuple.elems[0], metadata, max_width - 3).text(",");
+    elems = format(tuple.elems[0], metadata, max_width - 3, true).text(",");
   } else {
     elems = format_list(
-        tuple.elems, ",", metadata, max_width - kIndentWidth - 1);
+        tuple.elems, ", ", metadata, max_width - kIndentWidth, true);
   }
   if (bare) {
     return elems;
@@ -851,13 +850,11 @@ Buffer Formatter::visit(Tuple& tuple)
 
 Buffer Formatter::visit(Record& record)
 {
-  // N.B. records are packed, separated by `,` instead of `, `.
   Buffer elems;
   if (record.elems.size() == 1) {
     elems = format(record.elems[0], metadata, max_width - 2);
   } else {
-    elems = format_list(
-        record.elems, ",", metadata, max_width - kIndentWidth - 1);
+    elems = format_list(record.elems, ", ", metadata, max_width - kIndentWidth);
   }
   if (elems.lines() > 1) {
     return Buffer().text("(").append(std::move(elems), kIndentWidth).text(")");
