@@ -14,6 +14,7 @@
 
 namespace bpftrace::test::parser {
 
+using bpftrace::test::ArrayAccess;
 using bpftrace::test::AssignMapStatement;
 using bpftrace::test::AssignScalarMapStatement;
 using bpftrace::test::AssignVarStatement;
@@ -25,6 +26,7 @@ using bpftrace::test::Cast;
 using bpftrace::test::CStatement;
 using bpftrace::test::ExprStatement;
 using bpftrace::test::FieldAccess;
+using bpftrace::test::Identifier;
 using bpftrace::test::Integer;
 using bpftrace::test::Map;
 using bpftrace::test::MapAddr;
@@ -36,9 +38,11 @@ using bpftrace::test::PositionalParameterCount;
 using bpftrace::test::Probe;
 using bpftrace::test::Program;
 
+using bpftrace::test::Sizeof;
 using bpftrace::test::String;
 using bpftrace::test::Tuple;
 using bpftrace::test::TypeArg;
+using bpftrace::test::Typeinfo;
 using bpftrace::test::Typeof;
 using bpftrace::test::Unop;
 using bpftrace::test::Variable;
@@ -2042,6 +2046,42 @@ TEST(Parser, typeinfo_macro_call)
        Program().WithProbe(
            Probe({ "kprobe:sys_read" },
                  { ExprStatement(Typeinfo(Typeof(Call("mymacro", {})))) })));
+}
+
+TEST(Parser, array_access_in_type_context)
+{
+  // `(exp)[0]` or `(exp[0]) is parsed as an Array Access expression on the bare
+  // identifier `exp`, while the unparenthesized `exp[0]` is parsed as the array
+  // type `exp[0]`. The formatter must keep the parens so the reparsed output
+  // stays an expression.
+  auto exp_index = [] { return ArrayAccess(Identifier("exp"), Integer(0)); };
+  auto exp_array_type = [] {
+    return ParsedType(ast::ParsedType::Kind::Array)
+        .WithArraySize(0)
+        .WithInner(ParsedType(ast::ParsedType::Kind::Identifier, "exp"));
+  };
+  auto check = [](const std::string &src, const auto &expr) {
+    test(src,
+         Program().WithProbe(
+             Probe({ "kprobe:sys_read" }, { ExprStatement(expr) })));
+  };
+
+  // With parens: parsed as an expression. Both paren placements are
+  // equivalent.
+  check("kprobe:sys_read { typeinfo((exp)[0]); }",
+        Typeinfo(Typeof(exp_index())));
+  check("kprobe:sys_read { typeinfo((exp[0])); }",
+        Typeinfo(Typeof(exp_index())));
+  check("kprobe:sys_read { sizeof((exp)[0]); }", Sizeof(exp_index()));
+  check("kprobe:sys_read { offsetof((exp)[0], field); }",
+        Offsetof(exp_index(), { "field" }));
+
+  // Without parens: parsed as the array type instead.
+  check("kprobe:sys_read { typeinfo(exp[0]); }",
+        Typeinfo(Typeof(exp_array_type())));
+  check("kprobe:sys_read { sizeof(exp[0]); }", Sizeof(exp_array_type()));
+  check("kprobe:sys_read { offsetof(exp[0], field); }",
+        Offsetof(exp_array_type(), { "field" }));
 }
 
 TEST(Parser, typeof_unknown_type)

@@ -134,6 +134,9 @@ private:
     return Formatter(mode, metadata, max_width, bare, type_map).visit(value);
   }
 
+  Buffer format_expr_as_type(Expression &expr, size_t max_width);
+  Buffer format_type_arg(ExprOrType &record, size_t max_width);
+
   template <typename U>
   Buffer format_list(std::vector<U> &exprs,
                      const std::string &sep,
