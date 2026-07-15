@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate docs/stdlib.md using `bpftrace doc`.
+Generate docs/stdlib.md using `bpftrace --doc`.
 """
 
 import glob
@@ -23,7 +23,7 @@ def generate_helpers_markdown(stdlib_files: list[str]) -> str:
         sys.exit(1)
 
     result = subprocess.run(
-        [bpftrace, "doc", *stdlib_files],
+        [bpftrace, "--doc", *stdlib_files],
         capture_output=True,
         check=False,
         text=True,

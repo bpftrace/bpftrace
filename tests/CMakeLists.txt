@@ -15,6 +15,7 @@ add_executable(bpftrace_test
   pre_type_check.cpp
   child.cpp
   clang_parser.cpp
+  cli.cpp
   named_param.cpp
   config.cpp
   collect_nodes.cpp

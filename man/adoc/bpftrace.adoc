@@ -16,7 +16,7 @@ bpftrace - a high-level tracing language
 
 *bpftrace* [_OPTIONS_] _FILENAME_ +
 *bpftrace* [_OPTIONS_] -e 'program code' +
-*bpftrace* `doc` [_OPTIONS_] _FILENAME_...
+*bpftrace* `--doc[=NAME]` [_OPTIONS_] _FILENAME_...
 
 When _FILENAME_ is "_-_", bpftrace will read program code from stdin.
 
@@ -54,7 +54,7 @@ List all the probes attached in the program::
 
 Extract the documentation for a stdlib helper::
 ----
-# bpftrace doc --name cgroup src/stdlib/base.bt
+# bpftrace --doc=cgroup src/stdlib/base.bt
 ----
 
 == Options
@@ -122,13 +122,12 @@ The JSON output is compatible with NDJSON and JSON Lines, meaning each line of t
 
 Output standard format for the bpftrace file _FILENAME_.
 
-=== *doc* [_OPTIONS_] _FILENAME_...
+=== *--doc*[=_NAME_] [_OPTIONS_] _FILENAME_...
 
 Extract documentation comments for macros, functions, and probes from the provided input files.
-When `--name` is specified only matching entries are emitted.
+When _NAME_ is specified only matching entries are emitted.
 
 The available options are::
-*-n, --name* _NAME_ to filter by a specific macro, function, or probe +
 *-o, --output* _FILE_ to write the extracted markdown to _FILE_ +
 *-h, --help* to print the subcommand help
 

@@ -85,6 +85,7 @@ enum Options {
   CMD,
   DEBUG,
   DEBUGINFO,
+  DOC,
   DRY_RUN,
   DWARF_PID,
   EMIT_ELF,
@@ -127,7 +128,7 @@ void usage(std::ostream& out)
   out << "    bpftrace [options] filename" << std::endl;
   out << "    bpftrace [options] - <stdin input>" << std::endl;
   out << "    bpftrace [options] -e 'program'" << std::endl;
-  out << "    bpftrace doc [options] filename..." << std::endl;
+  out << "    bpftrace --doc[=NAME] [options] filename..." << std::endl;
   out << "    use -- after filename/-e 'program' for named script parameters" << std::endl;
   out << std::endl;
   out << "OPTIONS:" << std::endl;
@@ -175,7 +176,7 @@ void usage(std::ostream& out)
   out << "    --probe-filter REGEX" << std::endl;
   out << "                   only run probes whose name matches REGEX" << std::endl;
   out << "    --fmt          format the input script and print it" << std::endl;
-  out << "    doc            extract documentation from input files" << std::endl;
+  out << "    --doc[=NAME]   extract documentation from input files" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    --dry-run      terminate execution right after attaching all the probes" << std::endl;
@@ -222,11 +223,14 @@ void usage(std::ostream& out)
 void doc_usage(std::ostream &out)
 {
   out << "USAGE:" << std::endl;
-  out << "    bpftrace doc [options] filename..." << std::endl;
+  out << "    bpftrace --doc[=NAME] [options] filename..." << std::endl;
+  out << "    bpftrace doc [options] filename... (legacy alias)" << std::endl;
   out << std::endl;
   out << "OPTIONS:" << std::endl;
+  out << "    --doc[=NAME]  only emit docs for the named macro, function, or probe"
+      << std::endl;
   out << "    -n, --name NAME" << std::endl;
-  out << "                   only emit docs for the named macro, function, or probe"
+  out << "                   legacy alias for --doc=NAME with `bpftrace doc`"
       << std::endl;
   out << "    -o, --output FILE" << std::endl;
   out << "                   redirect extracted docs to FILE" << std::endl;
@@ -239,7 +243,7 @@ struct DocArgs {
   std::vector<std::string> filenames;
 };
 
-DocArgs parse_doc_args(int argc, char *argv[])
+DocArgs parse_legacy_doc_args(int argc, char *argv[])
 {
   DocArgs args;
 
@@ -285,16 +289,15 @@ DocArgs parse_doc_args(int argc, char *argv[])
   }
 
   if (args.filenames.empty()) {
-    LOG(ERROR) << "USAGE: bpftrace doc requires at least one filename.";
+    LOG(ERROR) << "USAGE: --doc requires at least one filename.";
     exit(1);
   }
 
   return args;
 }
 
-int doc_main(int argc, char *argv[])
+int doc_main(const DocArgs &args)
 {
-  auto args = parse_doc_args(argc, argv);
   std::vector<doc::Entry> docs;
 
   for (const auto &filename : args.filenames) {
@@ -372,6 +375,11 @@ int doc_main(int argc, char *argv[])
   }
 
   return 0;
+}
+
+int legacy_doc_main(int argc, char *argv[])
+{
+  return doc_main(parse_legacy_doc_args(argc, argv));
 }
 
 static void enforce_infinite_rlimit_memlock()
@@ -507,6 +515,8 @@ struct Args {
   std::string pid_str;
   std::vector<std::string> dwarf_pids_str;
   std::string cmd_str;
+  std::optional<std::string> doc_name;
+  std::vector<std::string> doc_filenames;
   bool listing = false;
   bool safe_mode = true;
   bool usdt_file_activation = false;
@@ -613,6 +623,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = required_argument,
             .flag = nullptr,
             .val = Options::DEBUGINFO },
+    option{ .name = "doc",
+            .has_arg = optional_argument,
+            .flag = nullptr,
+            .val = Options::DOC },
     option{ .name = "dry-run",
             .has_arg = no_argument,
             .flag = nullptr,
@@ -801,6 +815,13 @@ Args parse_args(int argc, char* argv[])
         if (!parse_debug_stages(optarg))
           exit(1);
         break;
+      case Options::DOC:
+        if (args.doc_name.has_value()) {
+          LOG(ERROR) << "USAGE: --doc can only be specified once.";
+          exit(1);
+        }
+        args.doc_name = optarg != nullptr ? optarg : "";
+        break;
       case 'q':
       case Options::QUIET:
         bt_quiet = true;
@@ -869,7 +890,11 @@ Args parse_args(int argc, char* argv[])
         break;
       case 'h':
       case Options::HELP:
-        usage(std::cout);
+        if (args.doc_name.has_value()) {
+          doc_usage(std::cout);
+        } else {
+          usage(std::cout);
+        }
         exit(0);
       case 'V':
       case Options::VERSION:
@@ -913,6 +938,58 @@ Args parse_args(int argc, char* argv[])
   if (args.warning_level == 2 && args.build_mode == BuildMode::AHEAD_OF_TIME) {
     LOG(ERROR) << "Cannot use -k with --aot";
     exit(1);
+  }
+
+  if (args.doc_name.has_value()) {
+    if (!args.script.empty()) {
+      LOG(ERROR) << "USAGE: --doc conflicts with -e.";
+      exit(1);
+    }
+    if (args.listing) {
+      LOG(ERROR) << "USAGE: --doc conflicts with -l.";
+      exit(1);
+    }
+    if (!args.cmd_str.empty()) {
+      LOG(ERROR) << "USAGE: --doc conflicts with -c.";
+      exit(1);
+    }
+    if (!args.pid_str.empty()) {
+      LOG(ERROR) << "USAGE: --doc conflicts with -p.";
+      exit(1);
+    }
+#ifdef HAVE_DW_UNWIND
+    if (!args.dwarf_pids_str.empty()) {
+      LOG(ERROR) << "USAGE: --doc conflicts with --dwarf-pid.";
+      exit(1);
+    }
+#endif
+    if (args.mode != Mode::NONE) {
+      LOG(ERROR) << "USAGE: --doc conflicts with --mode.";
+      exit(1);
+    }
+    if (args.build_mode != BuildMode::DYNAMIC) {
+      LOG(ERROR) << "USAGE: --doc conflicts with --aot.";
+      exit(1);
+    }
+    if (!args.output_elf.empty()) {
+      LOG(ERROR) << "USAGE: --doc conflicts with --emit-elf.";
+      exit(1);
+    }
+    if (!args.output_llvm.empty()) {
+      LOG(ERROR) << "USAGE: --doc conflicts with --emit-llvm.";
+      exit(1);
+    }
+
+    while (optind < argc) {
+      args.doc_filenames.emplace_back(argv[optind++]);
+    }
+
+    if (args.doc_filenames.empty()) {
+      LOG(ERROR) << "USAGE: --doc requires at least one filename.";
+      exit(1);
+    }
+
+    return args;
   }
 
   if (args.listing) {
@@ -1054,10 +1131,17 @@ uint64_t parse_pid(std::string const& pid_str)
 int main(int argc, char* argv[])
 {
   if (argc > 1 && std::strcmp(argv[1], "doc") == 0) {
-    return doc_main(argc - 1, argv + 1);
+    return legacy_doc_main(argc - 1, argv + 1);
   }
   Log::get().set_colorize(is_colorize());
   Args args = parse_args(argc, argv);
+
+  if (args.doc_name.has_value()) {
+    return doc_main(
+        DocArgs{ .name = *args.doc_name,
+                 .output_file = args.output_file,
+                 .filenames = args.doc_filenames });
+  }
 
   switch (args.obc) {
     case OutputBufferConfig::UNSET:
