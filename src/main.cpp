@@ -114,6 +114,7 @@ enum Options {
 constexpr auto FULL_SEARCH = "*:*";
 
 constexpr auto DEFAULT_DEBUG_INFO_PATHS = ":.debug:/usr/lib/debug";
+constexpr auto TEMP_FILE_TEMPLATE = ".XXXXXX";
 
 } // namespace
 
@@ -338,15 +339,7 @@ int doc_main(int argc, char *argv[])
                   [&](const auto &entry) { return entry.name != args.name; });
   }
 
-  std::ranges::sort(docs, [](const auto &lhs, const auto &rhs) {
-    if (lhs.name != rhs.name) {
-      return lhs.name < rhs.name;
-    }
-    if (lhs.source_file != rhs.source_file) {
-      return lhs.source_file < rhs.source_file;
-    }
-    return lhs.line < rhs.line;
-  });
+  std::ranges::sort(docs, doc::less_than);
 
   if (docs.empty()) {
     if (args.name.empty()) {
@@ -359,7 +352,7 @@ int doc_main(int argc, char *argv[])
 
   auto write_docs = [&](std::ostream &out) { doc::write_markdown(out, docs); };
   if (!args.output_file.empty()) {
-    auto file = util::TempFile::create(args.output_file + ".XXXXXX");
+    auto file = util::TempFile::create(args.output_file + TEMP_FILE_TEMPLATE);
     if (!file) {
       LOG(ERROR) << "unable to create temporary file: " << file.takeError();
       return 1;

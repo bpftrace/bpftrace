@@ -11,6 +11,8 @@ import sys
 
 
 def generate_helpers_markdown(stdlib_files: list[str]) -> str:
+    # Default to the in-tree build output so the generator can be run directly
+    # after a normal `cmake -B build && cmake --build build`.
     bpftrace = os.environ.get("BPFTRACE", "build/src/bpftrace")
     if not pathlib.Path(bpftrace).exists():
         print(

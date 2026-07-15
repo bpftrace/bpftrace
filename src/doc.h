@@ -26,6 +26,8 @@ struct Entry {
 
 std::vector<Entry> extract(const ast::ASTContext &ast);
 
+bool less_than(const Entry &lhs, const Entry &rhs);
+
 void write_markdown(std::ostream &out, const std::vector<Entry> &entries);
 
 } // namespace bpftrace::doc

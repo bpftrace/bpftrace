@@ -113,7 +113,9 @@ std::optional<Entry> parse_block(const Block &block, const ast::Node *node)
       auto variant = line.substr(sizeof(":variant ") - 1);
       entry.variants.push_back(variant);
       if (variant.find("()") != std::string::npos) {
-        entry.variants.push_back(variant.replace(variant.find("()"), 2, ""));
+        auto no_args_variant = variant;
+        no_args_variant.replace(no_args_variant.find("()"), 2, "");
+        entry.variants.push_back(std::move(no_args_variant));
       }
     } else if (line.starts_with(":deprecated_variant ")) {
       entry.deprecated_variants.push_back(
@@ -219,17 +221,20 @@ std::vector<Entry> extract(const ast::ASTContext &ast)
 
   append_entries(entries, split_blocks(metadata.all()), nullptr);
 
-  std::ranges::sort(entries, [](const Entry &lhs, const Entry &rhs) {
-    if (lhs.name != rhs.name) {
-      return lhs.name < rhs.name;
-    }
-    if (lhs.source_file != rhs.source_file) {
-      return lhs.source_file < rhs.source_file;
-    }
-    return lhs.line < rhs.line;
-  });
+  std::ranges::sort(entries, less_than);
 
   return entries;
+}
+
+bool less_than(const Entry &lhs, const Entry &rhs)
+{
+  if (lhs.name != rhs.name) {
+    return lhs.name < rhs.name;
+  }
+  if (lhs.source_file != rhs.source_file) {
+    return lhs.source_file < rhs.source_file;
+  }
+  return lhs.line < rhs.line;
 }
 
 void write_markdown(std::ostream &out, const std::vector<Entry> &entries)
