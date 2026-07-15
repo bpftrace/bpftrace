@@ -17,6 +17,18 @@ Note that the checked in code may not adhere to these guidelines yet.
 This document is intended to be referenced for new code. Ideally we also
 modify checked-in code to follow these guidelines (if/when there is time).
 
+## Quick reference
+
+Use this document as the canonical source for semantic coding expectations.
+
+- Recoverable errors should be returned, not thrown
+- Unrecoverable user-facing failures should prefer `FatalUserException`
+- Use `struct` only for passive data objects; otherwise use `class`
+- Use `snake_case` for variables
+- Give private members a trailing underscore; do not do this for public members
+  or struct fields
+- Use the documented `LOG()` levels consistently with their intended severity
+
 ## Error handling and exceptions
 
 If an error is recoverable (meaning downstream callers of the code should

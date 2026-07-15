@@ -4,6 +4,27 @@ There are four different types of tests: [unit](#unit-tests), [self](#self-tests
 
 Every contribution should (1) not break the existing tests and (2) introduce new tests if relevant.
 
+## Quick test selection
+
+Use this document as the source of truth for test coverage decisions.
+
+- Parser, semantic analysis, codegen, or internal C++ behavior:
+  [Unit tests](#unit-tests)
+- Core language behavior or stdlib behavior expressed as `test:` probes:
+  [Self tests](#self-tests)
+- End-to-end runtime behavior, probe attachment, CLI interactions, uprobes, or
+  USDT behavior: [Runtime tests](#runtime-tests)
+- Shipped tools in `tools/`: [Tool parsing tests](#tool-parsing-tests)
+
+Common commands:
+
+- `./build/tests/bpftrace_test`
+- `./build/tests/bpftrace_test --gtest_filter='Parser.*'`
+- `sudo ./build/tests/self-tests.sh`
+- `sudo --preserve-env=PATH --preserve-env=PYTHONPATH ./build/tests/runtime-tests.sh`
+- `sudo ./build/tests/runtime-tests.sh --filter='^uprobe.*:-list'`
+- `sudo ./build/tests/tools-parsing-test.sh`
+
 ## Unit tests
 
 Unit tests for individual components (semantic analyser, codegen, etc.) are based on the GoogleTest framework. These tests can be run with the `bpftrace_test` executable. Tests can be selected with the `--gtest_filter` flag or the `GTEST_FILTER` environment variable, see `--help` for more information. These are located in `tests/*.cpp` and are executed by `<builddir>/tests/bpftrace_test`.

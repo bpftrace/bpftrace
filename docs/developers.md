@@ -4,6 +4,19 @@ This document features basic guidelines and recommendations on how to do
 bpftrace development. Please read it carefully before submitting pull requests
 to simplify reviewing and speed up the merge process.
 
+## Quick navigation
+
+Use this document as the canonical reference for the following:
+
+- Repository setup, submodules, and recommended environment: [Building](#building)
+- Preferred build commands and outputs: [Building](#building)
+- Test expectations and CI behavior: [Tests](#tests) and
+  [Continuous integration](#continuous-integration)
+- Formatting rules and comment style: [Code style](#code-style)
+- Merge and changelog expectations: [Merging pull requests](#merging-pull-requests)
+  and [Changelog](#changelog)
+- Deeper implementation details: [internals_development.md](internals_development.md)
+
 ## Building
 
 bpftrace uses [git submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules),
@@ -73,6 +86,7 @@ Key cmake options: `-DBUILD_TESTING=ON` (default),
 ### Build output
 
 The built binary is at `build/src/bpftrace`.
+The unit test binary is at `build/tests/bpftrace_test`.
 
 ### Troubleshooting
 

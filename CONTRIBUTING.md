@@ -6,6 +6,15 @@ Contributions are welcome! Please see the [development section](#development) be
 * Development IRC: #bpftrace at irc.oftc.net
 * [Good first issues](https://github.com/bpftrace/bpftrace/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)
 
+## Quick navigation
+
+Use this document as the source of truth for contribution process rules.
+
+- Tool contribution guidance: [Contributing Tools](#contributing-tools)
+- Contributor references and supporting docs: [Development](#development)
+- When an RFC is required: [RFC Process](#rfc-process)
+- Sign-off requirements for commits: [Developer's Certificate of Origin](#developers-certificate-of-origin)
+
 ## Contributing Tools
 
 We encourage everyone to write and share bpftrace tools! Feel free to write your own tools and host them wherever you like.
