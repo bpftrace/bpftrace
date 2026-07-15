@@ -278,17 +278,20 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
 
       std::stringstream errmsg;
       errmsg << "Error loading BPF program for " << name
-             << ". Error code: " << res << ".";
+             << ". Error code: " << res << " ("
+             << strerror(res < 0 ? -res : res) << ").";
       if (bt_verbose) {
         errmsg << std::endl
                << "Kernel error log: " << std::endl
                << log << std::endl;
-        if (is_log_trimmed(log)) {
+        if (res == -ENOSPC || is_log_trimmed(log)) {
           LOG(WARNING, errmsg)
               << "Kernel log seems to be trimmed. This may be due to buffer "
                  "not being big enough, try increasing the BPFTRACE_LOG_SIZE "
                  "environment variable beyond the current value of "
-              << log_bufs[name].size() << " bytes";
+              << log_bufs[name].size()
+              << " bytes. Or, add the configuration "
+                 "`config = { log_size = N; }` to the script.";
         }
       } else {
         errmsg << " Use -v for full kernel error log.";
