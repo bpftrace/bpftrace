@@ -16,6 +16,38 @@ macro assert(cond, msg)
 //
 // `bswap` reverses the order of the bytes in integer `n`. In case of 8 bit integers, `n` is returned without being modified.
 // The return type is an unsigned integer of the same width as `n`.
+macro bswap($n)
+{
+  if comptime (!is_integer($n)) {
+    fail("bswap() only supports integer arguments (%s provided)", typeinfo($n).base_type);
+  } else if comptime (sizeof($n) == 1) {
+    (uint8)$n
+  } else if comptime (sizeof($n) == 2) {
+    let $v = (uint16)$n;
+    (($v >> 8) & ((uint16)0x00ff)) | (($v & ((uint16)0x00ff)) << 8)
+  } else if comptime (sizeof($n) == 4) {
+    let $v = (uint32)$n;
+    (((($v >> 24) & ((uint32)0x000000ff)) | (($v >> 8) & ((uint32)0x0000ff00))) |
+     (($v << 8) & ((uint32)0x00ff0000))) |
+    (($v << 24) & ((uint32)0xff000000))
+  } else {
+    let $v = (uint64)$n;
+    (((((((($v >> 56) & ((uint64)0x00000000000000ff)) |
+          (($v >> 40) & ((uint64)0x000000000000ff00))) |
+         (($v >> 24) & ((uint64)0x0000000000ff0000))) |
+        (($v >> 8) & ((uint64)0x00000000ff000000))) |
+       (($v << 8) & ((uint64)0x000000ff00000000))) |
+      (($v << 24) & ((uint64)0x0000ff0000000000))) |
+     (($v << 40) & ((uint64)0x00ff000000000000))) |
+    (($v << 56) & ((uint64)0xff00000000000000))
+  }
+}
+
+macro bswap(n)
+{
+  let $n = n;
+  bswap($n)
+}
 
 // :function buf
 // :variant buffer buf(void * data, [int64 length])

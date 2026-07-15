@@ -2008,26 +2008,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
           buf, type_map_.type(macaddr), scoped_arg.value(), call.loc);
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "bswap") {
-    auto &arg = call.vargs.at(0);
-    auto scoped_arg = visit(arg);
-
-    assert(type_map_.type(arg).IsIntegerTy());
-    if (type_map_.type(arg).GetSize() > 1) {
-      llvm::Type *arg_type = b_.GetType(type_map_.type(arg));
-#if LLVM_VERSION_MAJOR >= 20
-      llvm::Function *swap_fun = Intrinsic::getOrInsertDeclaration(
-          module_.get(), Intrinsic::bswap, { arg_type });
-#else
-      llvm::Function *swap_fun = Intrinsic::getDeclaration(module_.get(),
-                                                           Intrinsic::bswap,
-                                                           { arg_type });
-#endif
-
-      return ScopedExpr(b_.CreateCall(swap_fun, { scoped_arg.value() }),
-                        std::move(scoped_arg));
-    }
-    return scoped_arg;
   } else if (call.func == "skboutput") {
     auto elements = AsyncEvent::SkbOutput().asLLVMType(b_);
     StructType *hdr_t = b_.GetStructType("hdr_t", elements, false);

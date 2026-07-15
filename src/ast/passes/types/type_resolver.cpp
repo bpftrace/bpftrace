@@ -1201,25 +1201,6 @@ void TypeRuleCollector::visit(Call &call)
           },
       });
       return;
-    } else if (call.func == "bswap") {
-      resolver_.add_type_rule({
-          .output = &call,
-          .inputs = { &call.vargs.at(0).node() },
-          .resolve =
-              [this, &call](const std::vector<SizedType> &inputs) -> SizedType {
-            const auto &type = inputs[0];
-            auto int_bit_width = 1;
-            if (!type.IsIntTy()) {
-              call.addError()
-                  << call.func << "() only supports integer arguments ("
-                  << type.GetTy() << " provided)";
-              return CreateNone();
-            }
-            int_bit_width = type.GetIntBitWidth();
-            return CreateUInt(int_bit_width);
-          },
-      });
-      return;
     } else if (call.func == "nsecs") {
       if (call.vargs.size() == 1) {
         resolver_.add_type_rule({
