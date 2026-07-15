@@ -8,6 +8,18 @@ RUN {{BPFTRACE}} -h
 EXPECT USAGE:
 TIMEOUT 1
 
+NAME it shows doc usage with help flag
+RUN {{BPFTRACE}} doc --help
+EXPECT USAGE:
+TIMEOUT 1
+
+NAME it extracts stdlib helper docs
+RUN {{BPFTRACE}} doc --name cgroup ../../src/stdlib/base.bt
+EXPECT ### cgroup
+EXPECT - `uint64 cgroup()`
+EXPECT - `uint64 cgroup`
+TIMEOUT 1
+
 NAME it shows usage with bad flag
 RUN {{BPFTRACE}} -idonotexist
 EXPECT USAGE:

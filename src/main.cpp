@@ -6,9 +6,11 @@
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <algorithm>
 #include <limits>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <sys/resource.h>
 #include <sys/utsname.h>
 #include <unistd.h>
@@ -40,6 +42,7 @@
 #include "btf.h"
 #include "build_info.h"
 #include "config.h"
+#include "doc.h"
 #include "globalvars.h"
 #include "lockdown.h"
 #include "log.h"
@@ -123,6 +126,7 @@ void usage(std::ostream& out)
   out << "    bpftrace [options] filename" << std::endl;
   out << "    bpftrace [options] - <stdin input>" << std::endl;
   out << "    bpftrace [options] -e 'program'" << std::endl;
+  out << "    bpftrace doc [options] filename..." << std::endl;
   out << "    use -- after filename/-e 'program' for named script parameters" << std::endl;
   out << std::endl;
   out << "OPTIONS:" << std::endl;
@@ -170,6 +174,7 @@ void usage(std::ostream& out)
   out << "    --probe-filter REGEX" << std::endl;
   out << "                   only run probes whose name matches REGEX" << std::endl;
   out << "    --fmt          format the input script and print it" << std::endl;
+  out << "    doc            extract documentation from input files" << std::endl;
   out << std::endl;
   out << "TROUBLESHOOTING OPTIONS:" << std::endl;
   out << "    --dry-run      terminate execution right after attaching all the probes" << std::endl;
@@ -211,6 +216,169 @@ void usage(std::ostream& out)
   out << "    https://bpftrace.org" << std::endl;
   out << "    https://github.com/bpftrace/bpftrace" << std::endl;
   // clang-format on
+}
+
+void doc_usage(std::ostream &out)
+{
+  out << "USAGE:" << std::endl;
+  out << "    bpftrace doc [options] filename..." << std::endl;
+  out << std::endl;
+  out << "OPTIONS:" << std::endl;
+  out << "    -n, --name NAME" << std::endl;
+  out << "                   only emit docs for the named macro, function, or probe"
+      << std::endl;
+  out << "    -o, --output FILE" << std::endl;
+  out << "                   redirect extracted docs to FILE" << std::endl;
+  out << "    -h, --help     show this help message" << std::endl;
+}
+
+struct DocArgs {
+  std::string name;
+  std::string output_file;
+  std::vector<std::string> filenames;
+};
+
+DocArgs parse_doc_args(int argc, char *argv[])
+{
+  DocArgs args;
+
+  constexpr char short_options[] = "hn:o:";
+  option long_options[] = {
+    option{ .name = "help", .has_arg = no_argument, .flag = nullptr, .val = 'h' },
+    option{ .name = "name",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = 'n' },
+    option{ .name = "output",
+            .has_arg = required_argument,
+            .flag = nullptr,
+            .val = 'o' },
+    option{ .name = nullptr, .has_arg = 0, .flag = nullptr, .val = 0 },
+  };
+
+  optind = 1;
+  while (true) {
+    int c = getopt_long(argc, argv, short_options, long_options, nullptr);
+    if (c == -1) {
+      break;
+    }
+
+    switch (c) {
+      case 'h':
+        doc_usage(std::cout);
+        exit(0);
+      case 'n':
+        args.name = optarg;
+        break;
+      case 'o':
+        args.output_file = optarg;
+        break;
+      default:
+        doc_usage(std::cerr);
+        exit(1);
+    }
+  }
+
+  while (optind < argc) {
+    args.filenames.emplace_back(argv[optind++]);
+  }
+
+  if (args.filenames.empty()) {
+    LOG(ERROR) << "USAGE: bpftrace doc requires at least one filename.";
+    exit(1);
+  }
+
+  return args;
+}
+
+int doc_main(int argc, char *argv[])
+{
+  auto args = parse_doc_args(argc, argv);
+  std::vector<doc::Entry> docs;
+
+  for (const auto &filename : args.filenames) {
+    BPFtrace bpftrace;
+    std::stringstream buf;
+    if (filename == "-") {
+      std::string line;
+      while (std::getline(std::cin, line)) {
+        buf << line << std::endl;
+      }
+    } else {
+      std::ifstream file(filename);
+      if (file.fail()) {
+        LOG(ERROR) << "failed to open file '" << filename
+                   << "': " << std::strerror(errno);
+        return 1;
+      }
+      buf << file.rdbuf();
+    }
+
+    ast::ASTContext ast(filename == "-" ? "stdin" : filename, buf.str());
+    ast::PassManager pm;
+    pm.put(ast);
+    pm.put(bpftrace);
+    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)));
+    auto ok = pm.run();
+    if (!ok) {
+      std::cerr << ok.takeError() << "\n";
+      return 2;
+    }
+    if (!ast.diagnostics().ok()) {
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+
+    auto file_docs = doc::extract(ast);
+    docs.insert(docs.end(), file_docs.begin(), file_docs.end());
+  }
+
+  if (!args.name.empty()) {
+    std::erase_if(docs,
+                  [&](const auto &entry) { return entry.name != args.name; });
+  }
+
+  std::ranges::sort(docs, [](const auto &lhs, const auto &rhs) {
+    if (lhs.name != rhs.name) {
+      return lhs.name < rhs.name;
+    }
+    if (lhs.source_file != rhs.source_file) {
+      return lhs.source_file < rhs.source_file;
+    }
+    return lhs.line < rhs.line;
+  });
+
+  if (docs.empty()) {
+    if (args.name.empty()) {
+      LOG(ERROR) << "No documentation entries found.";
+    } else {
+      LOG(ERROR) << "No documentation found for '" << args.name << "'";
+    }
+    return 1;
+  }
+
+  auto write_docs = [&](std::ostream &out) { doc::write_markdown(out, docs); };
+  if (!args.output_file.empty()) {
+    auto file = util::TempFile::create(args.output_file + ".XXXXXX");
+    if (!file) {
+      LOG(ERROR) << "unable to create temporary file: " << file.takeError();
+      return 1;
+    }
+
+    std::ofstream out(file->path());
+    if (out.fail()) {
+      LOG(ERROR) << "failed to open file '" << file->path()
+                 << "': " << std::strerror(errno);
+      return 1;
+    }
+
+    write_docs(out);
+    std::filesystem::rename(file->path(), args.output_file);
+  } else {
+    write_docs(std::cout);
+  }
+
+  return 0;
 }
 
 static void enforce_infinite_rlimit_memlock()
@@ -892,6 +1060,9 @@ uint64_t parse_pid(std::string const& pid_str)
 
 int main(int argc, char* argv[])
 {
+  if (argc > 1 && std::strcmp(argv[1], "doc") == 0) {
+    return doc_main(argc - 1, argv + 1);
+  }
   Log::get().set_colorize(is_colorize());
   Args args = parse_args(argc, argv);
 

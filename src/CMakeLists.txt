@@ -45,6 +45,7 @@ add_library(runtime STATIC
 
 add_library(libbpftrace STATIC
   build_info.cpp
+  doc.cpp
   lockdown.cpp
   parser.cpp
 )

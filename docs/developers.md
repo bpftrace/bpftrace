@@ -87,6 +87,9 @@ Secure Boot), bpftrace will be blocked. To disable:
 Every contribution should (1) not break the existing tests and (2) introduce new
 tests if relevant. See existing tests for inspiration on how to write new ones. [Read more on the different kinds and how to run them](../tests/README.md).
 
+To regenerate the standard library helper docs in `docs/stdlib.md`, build
+`bpftrace` and then run `./scripts/generate_stdlib_docs.py`.
+
 ## Performance
 
 We aim to not be wasteful, but always keep in mind that performance of the BPF

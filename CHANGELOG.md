@@ -18,6 +18,7 @@ and this project adheres to
   - [#5236](https://github.com/bpftrace/bpftrace/pull/5236)
 - stdlib: add `config` to read bpftrace configuration variables
  -  [#5241](https://github.com/bpftrace/bpftrace/pull/5241)
+- Add a `bpftrace doc` command for extracting documented helpers and probes
 #### Changed
 - List structure with module name in verbose mode
   - [#5212](https://github.com/bpftrace/bpftrace/pull/5212)

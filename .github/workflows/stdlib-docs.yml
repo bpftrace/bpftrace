@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - "src/stdlib/**/*.bt"
+      - "src/**/*.cpp"
+      - "src/**/*.h"
       - "scripts/generate_stdlib_docs.py"
       - "docs/stdlib.md"
 
@@ -17,20 +19,31 @@ concurrency:
 jobs:
   check-stdlib-docs:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        submodules: true
+    - uses: DeterminateSystems/nix-installer-action@v17
+      with:
+        determinate: true
+    - uses: DeterminateSystems/flakehub-cache-action@v2
+    - name: Build bpftrace
+      run: |
+        nix develop --command bash -lc '
+          cmake -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build -j$(nproc)
+        '
     - name: Generate stdlib documentation
-      run: ./scripts/generate_stdlib_docs.py
+      run: BPFTRACE=./build/src/bpftrace ./scripts/generate_stdlib_docs.py
     - name: Check for changes in docs/stdlib.md
       run: |
         if git diff --exit-code docs/stdlib.md; then
           echo "✅ docs/stdlib.md is up to date"
         else
-          echo "❌ docs/stdlib.md is out of date. Please run './scripts/generate_stdlib_docs.py src/stdlib/base.bt' and commit the changes."
+          echo "❌ docs/stdlib.md is out of date. Please run './scripts/generate_stdlib_docs.py' and commit the changes."
           echo "Changes detected:"
           git diff docs/stdlib.md
           exit 1
