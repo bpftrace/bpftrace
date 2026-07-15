@@ -12,8 +12,24 @@ Use this document as the source of truth for contribution process rules.
 
 - Tool contribution guidance: [Contributing Tools](#contributing-tools)
 - Contributor references and supporting docs: [Development](#development)
+- PR checklist expectations for docs, changelog entries, and tests:
+  [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)
 - When an RFC is required: [RFC Process](#rfc-process)
 - Sign-off requirements for commits: [Developer's Certificate of Origin](#developers-certificate-of-origin)
+- Maintainer approval expectations: [GOVERNANCE.md](GOVERNANCE.md)
+
+## Pull request checklist expectations
+
+Before opening or updating a pull request, check these repository rules:
+
+- Language changes should update `docs/language.md`, `docs/stdlib.md`, or
+  `man/adoc/bpftrace.adoc`
+- User-visible and non-trivial changes should update `CHANGELOG.md`
+- New behavior should be covered by tests
+
+See [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) for
+the checklist and [`docs/developers.md`](docs/developers.md#changelog) for the
+changelog policy, including when a changelog entry is not needed.
 
 ## Contributing Tools
 

@@ -44,6 +44,11 @@ over duplicating their contents here.
 
 - Contribution workflow and RFC expectations:
   [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- PR checklist expectations for docs, changelog entries, and tests:
+  [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)
+- Changelog policy, including when entries are required:
+  [`docs/developers.md`](docs/developers.md)
+- Review and maintainer approval expectations: [`GOVERNANCE.md`](GOVERNANCE.md)
 - Project design principles:
   [`docs/design_principles.md`](docs/design_principles.md)
 

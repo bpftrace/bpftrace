@@ -13,8 +13,8 @@ Use this document as the canonical reference for the following:
 - Test expectations and CI behavior: [Tests](#tests) and
   [Continuous integration](#continuous-integration)
 - Formatting rules and comment style: [Code style](#code-style)
-- Merge and changelog expectations: [Merging pull requests](#merging-pull-requests)
-  and [Changelog](#changelog)
+- Merge expectations: [Merging pull requests](#merging-pull-requests)
+- When a changelog entry is required, and when it is not: [Changelog](#changelog)
 - Deeper implementation details: [internals_development.md](internals_development.md)
 
 ## Building
