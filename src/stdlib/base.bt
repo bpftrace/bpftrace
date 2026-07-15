@@ -16,6 +16,28 @@ macro assert(cond, msg)
 //
 // `bswap` reverses the order of the bytes in integer `n`. In case of 8 bit integers, `n` is returned without being modified.
 // The return type is an unsigned integer of the same width as `n`.
+macro bswap($n)
+{
+  import "stdlib/base.bpf.c";
+  if comptime (!is_integer($n)) {
+    fail("bswap() only supports integer arguments (%s provided)",
+         typeinfo($n).base_type);
+  } else if comptime (sizeof($n) == 1) {
+    __bswap8((uint8)$n)
+  } else if comptime (sizeof($n) == 2) {
+    __bswap16((uint16)$n)
+  } else if comptime (sizeof($n) == 4) {
+    __bswap32((uint32)$n)
+  } else {
+    __bswap64((uint64)$n)
+  }
+}
+
+macro bswap(n)
+{
+  let $n = n;
+  bswap($n)
+}
 
 // :function buf
 // :variant buffer buf(void * data, [int64 length])
@@ -1304,6 +1326,25 @@ macro signal_thread(expr)
 // [1K, 2K)               0 |                                                    |
 // [2K, 4K)               1 |@@@@@@@@@@@@@                                       |
 // ```
+macro socket_cookie($sk)
+{
+  import "stdlib/base.bpf.c";
+  if comptime (!is_ptr($sk)) {
+    fail("socket_cookie() only supports pointer arguments (%s provided)",
+         typeinfo($sk).base_type);
+  } else if comptime (typeinfo(($sk)[0]).full_type != "struct sock") {
+    fail("socket_cookie() only supports 'struct sock *' as the argument ('%s *' provided)",
+         typeinfo(($sk)[0]).full_type);
+  } else {
+    __get_socket_cookie($sk)
+  }
+}
+
+macro socket_cookie(sk)
+{
+  let $sk = sk;
+  socket_cookie($sk)
+}
 
 // :function str
 // :variant string str(char * data [, uint32 length)

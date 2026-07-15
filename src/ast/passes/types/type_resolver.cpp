@@ -57,8 +57,6 @@ std::unordered_map<std::string, SizedType (*)()> SIMPLE_CALL_TYPES = {
   { "stack_len", CreateInt64 },
   { "macaddr", CreateMacAddress },
   { "skboutput", CreateUInt32 },
-  { "strncmp", CreateUInt64 },
-  { "socket_cookie", CreateUInt64 },
 };
 
 const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
@@ -1198,25 +1196,6 @@ void TypeRuleCollector::visit(Call &call)
             result.SetAS(call.func == "kptr" ? AddrSpace::kernel
                                              : AddrSpace::user);
             return result;
-          },
-      });
-      return;
-    } else if (call.func == "bswap") {
-      resolver_.add_type_rule({
-          .output = &call,
-          .inputs = { &call.vargs.at(0).node() },
-          .resolve =
-              [this, &call](const std::vector<SizedType> &inputs) -> SizedType {
-            const auto &type = inputs[0];
-            auto int_bit_width = 1;
-            if (!type.IsIntTy()) {
-              call.addError()
-                  << call.func << "() only supports integer arguments ("
-                  << type.GetTy() << " provided)";
-              return CreateNone();
-            }
-            int_bit_width = type.GetIntBitWidth();
-            return CreateUInt(int_bit_width);
           },
       });
       return;

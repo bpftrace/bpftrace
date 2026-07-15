@@ -67,6 +67,20 @@ int __bpf_strnstr(const char *haystack,
   return -1;
 }
 
+int64_t __strncmp(const char *left, const char *right, size_t count)
+{
+  for (size_t i = 0; i < count; ++i) {
+    if (left[i] != right[i]) {
+      return 1;
+    }
+    if (left[i] == 0) {
+      return 0;
+    }
+  }
+
+  return 0;
+}
+
 int __strerror(int errno, err_str *out) {
   if (errno < 0) {
     errno = -errno;
