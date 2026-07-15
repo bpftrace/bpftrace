@@ -1,7 +1,8 @@
 /.idea
 build/
 build-*/
-tests/runtime/*.pyc
+__pycache__/
+*.py[cod]
 .direnv
 .vagrant
 .vmtest.log
