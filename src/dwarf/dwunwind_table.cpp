@@ -331,7 +331,8 @@ std::vector<uint8_t> dwunwind_build_table(
 
     auto diff = static_cast<signed long>(buf.size()) -
                 static_cast<signed long>(max_size);
-    auto adj = std::max(static_cast<size_t>(labs(diff) / 2.6), 1UL);
+    auto adj = std::max(static_cast<size_t>(labs(diff) / 2.6),
+                        static_cast<size_t>(1));
     if (buf.size() > max_size) {
       right = n - 1;
       n = std::max(n - adj, left);
