@@ -25,3 +25,30 @@ int __memcmp(const char * mem_left, const char * mem_right, size_t count) {
 
   return 0;
 }
+
+__u8 __bswap8(__u8 value)
+{
+  return value;
+}
+
+__u16 __bswap16(__u16 value)
+{
+  return __builtin_bswap16(value);
+}
+
+__u32 __bswap32(__u32 value)
+{
+  return __builtin_bswap32(value);
+}
+
+__u64 __bswap64(__u64 value)
+{
+  return __builtin_bswap64(value);
+}
+
+struct sock;
+
+__u64 __get_socket_cookie(struct sock *sk)
+{
+  return bpf_get_socket_cookie(sk);
+}

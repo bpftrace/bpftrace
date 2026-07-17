@@ -1977,20 +1977,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ustack(type_map_.type(&call), call.loc);
   } else if (call.func == "__builtin_dw_ustack") {
     return dw_ustack(type_map_.type(&call), call.loc);
-  } else if (call.func == "strncmp") {
-    auto &left_arg = call.vargs.at(0);
-    auto &right_arg = call.vargs.at(1);
-    auto size_opt = call.vargs.at(2).as<Integer>()->value;
-    uint64_t size = std::min(
-        { size_opt,
-          static_cast<uint64_t>(type_map_.type(left_arg).GetSize()),
-          static_cast<uint64_t>(type_map_.type(right_arg).GetSize()) });
-
-    auto left_string = visit(&left_arg);
-    auto right_string = visit(&right_arg);
-
-    return ScopedExpr(b_.CreateStrncmp(
-        left_string.value(), right_string.value(), size, false));
   } else if (call.func == "kptr" || call.func == "uptr") {
     return visit(call.vargs.at(0));
   } else if (call.func == "macaddr") {
@@ -2008,26 +1994,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
           buf, type_map_.type(macaddr), scoped_arg.value(), call.loc);
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "bswap") {
-    auto &arg = call.vargs.at(0);
-    auto scoped_arg = visit(arg);
-
-    assert(type_map_.type(arg).IsIntegerTy());
-    if (type_map_.type(arg).GetSize() > 1) {
-      llvm::Type *arg_type = b_.GetType(type_map_.type(arg));
-#if LLVM_VERSION_MAJOR >= 20
-      llvm::Function *swap_fun = Intrinsic::getOrInsertDeclaration(
-          module_.get(), Intrinsic::bswap, { arg_type });
-#else
-      llvm::Function *swap_fun = Intrinsic::getDeclaration(module_.get(),
-                                                           Intrinsic::bswap,
-                                                           { arg_type });
-#endif
-
-      return ScopedExpr(b_.CreateCall(swap_fun, { scoped_arg.value() }),
-                        std::move(scoped_arg));
-    }
-    return scoped_arg;
   } else if (call.func == "skboutput") {
     auto elements = AsyncEvent::SkbOutput().asLLVMType(b_);
     StructType *hdr_t = b_.GetStructType("hdr_t", elements, false);
@@ -2072,10 +2038,6 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     bool force_init = shouldForceInitPidNs(call.vargs);
 
     return ScopedExpr(b_.CreateGetTid(call.loc, force_init));
-  } else if (call.func == "socket_cookie") {
-    auto scoped_arg = visit(call.vargs.at(0));
-
-    return ScopedExpr(b_.CreateGetSocketCookie(scoped_arg.value(), call.loc));
   } else {
     auto *func = extern_funcs_[call.func];
     if (!func) {
