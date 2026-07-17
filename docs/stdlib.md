@@ -722,6 +722,7 @@ Number of CPUs
 
 ### nsecs
 - `timestamp nsecs([TimestampMode mode])`
+- `timestamp nsecs`
 - `nsecs(monotonic) - nanosecond timestamp since boot, exclusive of time the system spent suspended (CLOCK_MONOTONIC)`
 - `nsecs(boot) - nanoseconds since boot, inclusive of time the system spent suspended (CLOCK_BOOTTIME)`
 - `nsecs(tai) - TAI timestamp in nanoseconds (CLOCK_TAI)`
