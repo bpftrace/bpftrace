@@ -171,6 +171,8 @@ TEST_F(AsyncActionTest, time_invalid_format)
   testing::internal::CaptureStderr();
 
   auto out = handlers.time(OpaqueValue::from(time_event));
+  testing::internal::GetCapturedStderr();
+
   ASSERT_FALSE(bool(out));
   EXPECT_THAT(llvm::toString(out.takeError()),
               testing::HasSubstr("strftime returned"));
