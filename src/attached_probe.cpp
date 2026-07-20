@@ -330,56 +330,11 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
   return offset;
 }
 
-struct bcc_sym_cb_data {
-  std::vector<std::string> &syms;
-  std::set<uint64_t> &offsets;
-};
-
-static int bcc_sym_cb(const char *symname,
-                      uint64_t start,
-                      uint64_t /*unused*/,
-                      void *p)
-{
-  auto *data = static_cast<struct bcc_sym_cb_data *>(p);
-  std::vector<std::string> &syms = data->syms;
-
-  if (std::ranges::binary_search(syms, symname)) {
-    data->offsets.insert(start);
-  }
-
-  return 0;
-}
-
-struct addr_offset {
-  uint64_t addr;
-  uint64_t offset;
-};
-
-static int bcc_load_cb(uint64_t v_addr,
-                       uint64_t mem_sz,
-                       uint64_t file_offset,
-                       void *p)
-{
-  auto *addrs = static_cast<std::vector<struct addr_offset> *>(p);
-
-  for (auto &a : *addrs) {
-    if (a.addr >= v_addr && a.addr < (v_addr + mem_sz)) {
-      a.offset = a.addr - v_addr + file_offset;
-    }
-  }
-
-  return 0;
-}
-
 Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
     Probe &probe,
     std::vector<std::string> &syms)
 {
-  std::vector<unsigned long> offsets;
-  struct bcc_symbol_option option = {};
-  int err;
-
-  // Parse symbols names into syms vector
+  std::set<std::string> names;
   for (const std::string &func : probe.funcs) {
     auto pos = func.find(':');
 
@@ -387,46 +342,19 @@ Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
       return make_error<AttachError>("Error resolving probe: " + probe.name);
     }
 
-    syms.push_back(func.substr(pos + 1));
+    auto name = func.substr(pos + 1);
+    syms.push_back(name);
+    names.insert(std::move(name));
   }
 
-  std::ranges::sort(syms);
-
-  option.use_debug_file = 1;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
-
-  std::vector<struct addr_offset> addrs;
-  std::set<uint64_t> set;
-  struct bcc_sym_cb_data data = {
-    .syms = syms,
-    .offsets = set,
-  };
-
-  // Resolve symbols into addresses
-  err = bcc_elf_foreach_sym(probe.path.c_str(), bcc_sym_cb, &option, &data);
-  if (err) {
-    return make_error<AttachError>("Failed to list symbols for probe: " +
-                                   probe.name);
+  auto symbols = util::resolve_symbols(probe.path, names);
+  if (!symbols) {
+    return make_error<AttachError>(llvm::toString(symbols.takeError()));
   }
 
-  for (auto a : set) {
-    struct addr_offset addr = {
-      .addr = a,
-      .offset = 0x0,
-    };
-
-    addrs.push_back(addr);
-  }
-
-  // Translate addresses into offsets
-  err = bcc_elf_foreach_load_section(probe.path.c_str(), bcc_load_cb, &addrs);
-  if (err) {
-    return make_error<AttachError>(
-        "Failed to resolve symbols offsets for probe: " + probe.name);
-  }
-
-  for (auto a : addrs) {
-    offsets.push_back(a.offset);
+  std::vector<unsigned long> offsets;
+  for (const auto &sym : *symbols) {
+    offsets.push_back(sym.file_offset);
   }
 
   return offsets;

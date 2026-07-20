@@ -20,6 +20,8 @@
 
 namespace bpftrace::util {
 
+char SymbolError::ID;
+
 std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
     const std::string &elf_file)
 {
@@ -85,6 +87,70 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
            symbol.substr(idx1 + strlen("\t"), idx2 - idx1 - strlen("\t")),
            symbol.substr(idx2 + strlen(" ["),
                          symbol.length() - idx2 - strlen(" []")) };
+}
+
+struct resolve_symbols_data {
+  const std::set<std::string> &names;
+  std::vector<symbol> &symbols;
+};
+
+static int resolve_symbols_cb(const char *symname,
+                              uint64_t start,
+                              uint64_t size,
+                              void *p)
+{
+  auto *data = static_cast<struct resolve_symbols_data *>(p);
+
+  if (data->names.contains(symname)) {
+    data->symbols.push_back({ .name = symname, .start = start, .size = size });
+  }
+
+  return 0;
+}
+
+static int load_section_cb(uint64_t v_addr,
+                           uint64_t mem_sz,
+                           uint64_t file_offset,
+                           void *p)
+{
+  auto *syms = static_cast<std::vector<symbol> *>(p);
+
+  for (auto &sym : *syms) {
+    if (sym.start >= v_addr && sym.start < (v_addr + mem_sz)) {
+      sym.file_offset = sym.start - v_addr + file_offset;
+    }
+  }
+
+  return 0;
+}
+
+Result<std::vector<symbol>> resolve_symbols(const std::string &path,
+                                            const std::set<std::string> &names)
+{
+  std::vector<symbol> symbols;
+  struct bcc_symbol_option option;
+  memset(&option, 0, sizeof(option));
+  option.use_debug_file = 1;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
+
+  struct resolve_symbols_data data = {
+    .names = names,
+    .symbols = symbols,
+  };
+
+  int err = bcc_elf_foreach_sym(
+      path.c_str(), resolve_symbols_cb, &option, &data);
+  if (err) {
+    return make_error<SymbolError>("Failed to list symbols in " + path);
+  }
+
+  err = bcc_elf_foreach_load_section(path.c_str(), load_section_cb, &symbols);
+  if (err) {
+    return make_error<SymbolError>("Failed to resolve symbol offsets in " +
+                                   path);
+  }
+
+  return symbols;
 }
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name)

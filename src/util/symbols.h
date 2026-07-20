@@ -2,15 +2,37 @@
 
 #include <cstdint>
 #include <map>
+#include <set>
 #include <string>
+#include <vector>
+
+#include "util/result.h"
 
 namespace bpftrace::util {
+
+class SymbolError : public ErrorInfo<SymbolError> {
+public:
+  SymbolError(std::string msg) : msg_(std::move(msg)) {};
+  static char ID;
+  void log(llvm::raw_ostream &OS) const override
+  {
+    OS << msg_;
+  }
+  const std::string &msg() const
+  {
+    return msg_;
+  }
+
+private:
+  std::string msg_;
+};
 
 struct symbol {
   std::string name;
   uint64_t start;
   uint64_t size;
   uint64_t address;
+  uint64_t file_offset;
 };
 
 inline int sym_name_cb(const char *symname,
@@ -61,6 +83,9 @@ struct elf_symbol {
 // address inside a range using std::map::lower_bound.
 std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
     const std::string &elf_file);
+
+Result<std::vector<symbol>> resolve_symbols(const std::string &path,
+                                            const std::set<std::string> &names);
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
 
