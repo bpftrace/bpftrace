@@ -1,0 +1,78 @@
+test:casting_ints
+{
+  $a = (uint8)(-10);
+  $b = (uint16)131087;
+
+  if ($a != 246) {
+    return 1;
+  }
+
+  if ($b != 15) {
+    return 1;
+  }
+}
+
+test:binop_on_32bit_int
+{
+  $x = (uint32)5;
+  $x += (uint32)1;
+
+  if ($x != 6) {
+    return 1;
+  }
+
+  let $y: uint32 = 0xffffffff;
+  $y = (uint32)($y + 1);
+
+  if ($y != 0) {
+    return 1;
+  }
+}
+
+test:binop_on_16bit_int
+{
+  $x = (uint16)0xFF;
+  $x &= (uint16)0xF;
+
+  if ($x != 15) {
+    return 1;
+  }
+
+  let $y: uint16 = 0xffff;
+  $y = (uint16)($y + 1);
+
+  if ($y != 0) {
+    return 1;
+  }
+}
+
+test:binop_on_8bit_int
+{
+  $x = (uint8)0xF;
+  $x |= (uint8)0xF0;
+
+  if ($x != 255) {
+    return 1;
+  }
+
+  let $y: uint8 = 0xff;
+  $y = (uint8)($y + 1);
+
+  if ($y != 0) {
+    return 1;
+  }
+}
+
+test:binop_promotion
+{
+  $x = (uint32)0;
+  $x = (uint32)5 + (uint16)1;
+
+  if ($x != 6) {
+    return 1;
+  }
+
+  if (sizeof($x) != 8) {
+    return 1;
+  }
+}
