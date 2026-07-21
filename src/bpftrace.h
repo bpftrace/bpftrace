@@ -40,7 +40,7 @@
 
 namespace bpftrace {
 
-using util::symbol;
+using util::Symbol;
 
 const int timeout_ms = 100;
 
@@ -148,9 +148,8 @@ public:
                           uint64_t timestamp_ns,
                           uint64_t *nsecs);
   uint64_t resolve_kname(const std::string &name) const;
-  virtual int resolve_uname(const std::string &name,
-                            struct symbol *sym,
-                            const std::string &path) const;
+  virtual Result<Symbol> resolve_uname(const std::string &name,
+                                       const std::string &path) const;
   std::string resolve_mac_address(const char *mac_addr) const;
   std::string resolve_cgroup_path(uint64_t cgroup_path_id,
                                   uint64_t cgroup_id) const;

@@ -1151,28 +1151,24 @@ void TypeRuleCollector::visit(Call &call)
       if (probe == nullptr)
         return;
 
-      struct symbol sym = {};
+      size_t pointee_size = 64;
 
       if (!call.vargs.empty() && call.vargs.at(0).is<String>()) {
         auto name = call.vargs.at(0).as<String>()->value;
         const auto &target = probe->attach_points[0]->target;
 
-        int err = bpftrace_.resolve_uname(name, &sym, target);
-        if (err < 0 || sym.address == 0) {
-          call.addError() << "Could not resolve symbol: " << target << ":"
-                          << name;
+        auto sym = bpftrace_.resolve_uname(name, target);
+        if (sym) {
+          switch (sym->size) {
+            case 1:
+            case 2:
+            case 4:
+              pointee_size = sym->size * 8;
+              break;
+          }
+        } else {
+          call.addError() << sym.takeError();
         }
-      }
-
-      size_t pointee_size = 0;
-      switch (sym.size) {
-        case 1:
-        case 2:
-        case 4:
-          pointee_size = sym.size * 8;
-          break;
-        default:
-          pointee_size = 64;
       }
 
       return_type = CreatePointer(CreateInt(pointee_size), AddrSpace::user);

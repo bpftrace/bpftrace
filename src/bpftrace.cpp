@@ -1292,7 +1292,7 @@ static int sym_resolve_callback(const char *name,
                                 uint64_t size,
                                 void *payload)
 {
-  auto *sym = static_cast<struct symbol *>(payload);
+  auto *sym = static_cast<Symbol *>(payload);
   if (!strcmp(name, sym->name.c_str())) {
     sym->address = addr;
     sym->size = size;
@@ -1301,17 +1301,24 @@ static int sym_resolve_callback(const char *name,
   return 0;
 }
 
-int BPFtrace::resolve_uname(const std::string &name,
-                            struct symbol *sym,
-                            const std::string &path) const
+Result<Symbol> BPFtrace::resolve_uname(const std::string &name,
+                                       const std::string &path) const
 {
-  sym->name = name;
+  Symbol sym = {};
+  sym.name = name;
   struct bcc_symbol_option option;
   memset(&option, 0, sizeof(option));
   option.use_symbol_type = (1 << STT_OBJECT | 1 << STT_FUNC |
                             1 << STT_GNU_IFUNC);
 
-  return bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, sym);
+  int err = bcc_elf_foreach_sym(
+      path.c_str(), sym_resolve_callback, &option, &sym);
+  if (err < 0 || sym.address == 0) {
+    return make_error<util::SymbolError>("Could not resolve symbol: " + path +
+                                         ":" + name);
+  }
+
+  return sym;
 }
 
 std::string BPFtrace::resolve_mac_address(const char *mac_addr) const

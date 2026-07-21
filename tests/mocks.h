@@ -83,23 +83,24 @@ public:
     return resources.benchmark_probes;
   }
 
-  int resolve_uname(const std::string &name,
-                    struct symbol *sym,
-                    const std::string &path) const override
+  Result<Symbol> resolve_uname(const std::string &name,
+                               const std::string &path) const override
   {
     (void)path;
-    sym->name = name;
+    Symbol sym = {};
+    sym.name = name;
     if (name == "cpp_mangled(int)") {
-      return -1;
+      return make_error<util::SymbolError>("Could not resolve symbol: " + path +
+                                           ":" + name);
     } else if (name[0] >= 'A' && name[0] <= 'z') {
-      sym->address = 12345;
-      sym->size = 4;
+      sym.address = 12345;
+      sym.size = 4;
     } else {
       auto fields = util::split_string(name, '_');
-      sym->address = std::stoull(fields.at(0));
-      sym->size = std::stoull(fields.at(1));
+      sym.address = std::stoull(fields.at(0));
+      sym.size = std::stoull(fields.at(1));
     }
-    return 0;
+    return sym;
   }
 
   Result<uint64_t> get_buffer_pages(

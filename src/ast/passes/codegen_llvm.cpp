@@ -1562,14 +1562,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     return ScopedExpr(b_.CreatePtrToInt(percpu_ptr, b_.getInt64Ty()));
   } else if (call.func == "__builtin_uaddr") {
     auto name = call.vargs.at(0).as<String>()->value;
-    struct symbol sym = {};
-    int err = bpftrace_.resolve_uname(name,
-                                      &sym,
-                                      current_attach_point_->target);
-    if (err < 0 || sym.address == 0)
-      call.addError() << "Could not resolve symbol: "
-                      << current_attach_point_->target << ":" << name;
-    return ScopedExpr(b_.getInt64(sym.address));
+    auto sym = bpftrace_.resolve_uname(name, current_attach_point_->target);
+    if (!sym) {
+      call.addError() << sym.takeError();
+      return ScopedExpr(b_.getInt64(0));
+    }
+    return ScopedExpr(b_.getInt64(sym->address));
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
     auto path = call.vargs.at(0).as<String>()->value;
