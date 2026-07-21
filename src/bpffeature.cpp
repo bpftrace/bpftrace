@@ -466,6 +466,7 @@ std::string BPFfeature::report()
     { "get_tai_ns", to_str(has_helper_ktime_get_tai_ns()) },
     { "get_func_ip", to_str(has_helper_get_func_ip()) },
     { "lookup_percpu_elem", to_str(has_helper_map_lookup_percpu_elem()) },
+    { "loop", to_str(has_helper_loop()) }
   };
 
   std::vector<std::pair<std::string, std::string>> features = {
