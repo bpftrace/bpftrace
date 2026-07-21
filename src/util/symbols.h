@@ -87,6 +87,8 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
 Result<std::vector<Symbol>> resolve_symbols(const std::string &path,
                                             const std::set<std::string> &names);
 
+Result<Symbol> resolve_symbol(const std::string &path, uint64_t address);
+
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
 
 std::pair<std::string, std::string> split_symbol_module(
