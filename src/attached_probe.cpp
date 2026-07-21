@@ -170,28 +170,6 @@ Result<uint64_t> resolve_offset_kprobe(Probe &probe)
   return offset;
 }
 
-Result<uint64_t> resolve_offset(Probe &probe)
-{
-  bcc_symbol bcc_sym;
-
-  if (bcc_resolve_symname(probe.path.c_str(),
-                          probe.attach_point.c_str(),
-                          probe.loc,
-                          0,
-                          nullptr,
-                          &bcc_sym)) {
-    return make_error<AttachError>("Could not resolve symbol: " + probe.path +
-                                   ":" + probe.attach_point);
-  }
-
-  // Have to free sym.module, see:
-  // https://github.com/iovisor/bcc/blob/ba73657cb8c4dab83dfb89eed4a8b3866255569a/src/cc/bcc_syms.h#L98-L99
-  if (bcc_sym.module)
-    ::free(const_cast<char *>(bcc_sym.module));
-
-  return bcc_sym.offset;
-}
-
 static constexpr std::string_view hint_unsafe =
     "\nUse --unsafe to force attachment. WARNING: This option could lead to "
     "data corruption in the target process.";
@@ -248,17 +226,16 @@ Result<> check_alignment(Probe &probe,
 
 Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 {
-  struct bcc_symbol_option option = {};
-  Symbol sym = {};
   std::string &symbol = probe.attach_point;
   uint64_t func_offset = probe.func_offset;
 
-  sym.name = "";
-  option.use_debug_file = 1;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
-
   if (symbol.empty()) {
+    Symbol sym = {};
     sym.address = probe.address;
+
+    struct bcc_symbol_option option = {};
+    option.use_debug_file = 1;
+    option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
     bcc_elf_foreach_sym(
         probe.path.c_str(), util::sym_address_cb, &option, &sym);
 
@@ -279,15 +256,17 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 
     symbol = sym.name;
     func_offset = probe.address - sym.start;
-  } else {
-    sym.name = symbol;
-    bcc_elf_foreach_sym(probe.path.c_str(), util::sym_name_cb, &option, &sym);
-
-    if (!sym.start) {
-      return make_error<AttachError>("Could not resolve symbol: " + probe.path +
-                                     ":" + symbol);
-    }
   }
+
+  auto symbols = util::resolve_symbols(probe.path, { symbol });
+  if (!symbols) {
+    return make_error<AttachError>(llvm::toString(symbols.takeError()));
+  }
+  if (symbols->empty()) {
+    return make_error<AttachError>("Could not resolve symbol: " + probe.path +
+                                   ":" + symbol);
+  }
+  auto &sym = symbols->front();
 
   if (probe.type == ProbeType::uretprobe && func_offset != 0) {
     return make_error<AttachError>("uretprobes cannot be attached at function "
@@ -308,20 +287,13 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
                                    std::to_string(sym.size) + ")");
   }
 
-  auto sym_offset = resolve_offset(probe);
-  if (!sym_offset) {
-    return sym_offset.takeError();
-  }
+  uint64_t offset = sym.file_offset + func_offset;
 
-  uint64_t offset = *sym_offset + func_offset;
-
-  // If we are not aligned to the start of the symbol,
-  // check if we are on the instruction boundary.
   if (func_offset == 0)
     return offset;
 
   auto align_ok = check_alignment(
-      probe, symbol, *sym_offset, func_offset, safe_mode);
+      probe, symbol, sym.file_offset, func_offset, safe_mode);
 
   if (!align_ok) {
     return align_ok.takeError();
