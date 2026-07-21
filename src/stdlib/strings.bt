@@ -127,6 +127,41 @@ macro strstr(haystack, needle)
   strstr($haystack, needle)
 }
 
+// Concatenate two strings into a new string.
+// Returns the new string.
+//
+// :variant string str_concat(string s1, string s2)
+macro str_concat($s1, $s2) {
+  import "stdlib/strings/strings.bpf.c";
+
+  let $new : string[1024];
+
+  assert_str($s1);
+  assert_str($s2);
+
+  let $new_sz = strcap($new);
+
+  __bpf_str_concat((int8 *)&$new, (uint64)$new_sz, (int8 *)&$s1);
+  __bpf_str_concat((int8 *)&$new, (uint64)$new_sz, (int8 *)&$s2);
+
+  $new
+}
+
+macro str_concat($s1, s2) {
+  let $s2 = s2;
+  str_concat($s1, $s2)
+}
+
+macro str_concat(s1, $s2) {
+  let $s1 = s1;
+  str_concat($s1, $s2)
+}
+
+macro str_concat(s1, s2) {
+  let $s1 = s1;
+  str_concat($s1, s2)
+}
+
 // :variant bool strcontains(string haystack, string needle)
 // Compares whether the string haystack contains the string needle.
 //
