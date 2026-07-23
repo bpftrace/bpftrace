@@ -1296,6 +1296,14 @@ In case the string is longer than the specified length only `length - 1` bytes a
 bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
 
 
+### str_concat
+- `string str_concat(string s1, string s2)`
+
+Concatenate two strings into a new string.
+Returns the new string.
+
+
+
 ### strcap
 - `int64 strcap(string exp)`
 - `int64 strcap(int8 exp[])`

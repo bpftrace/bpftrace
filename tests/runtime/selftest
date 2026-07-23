@@ -5,3 +5,7 @@ NAME command doesn't respond to SIGTERM
 RUN trap '' TERM; echo __BPFTRACE_NOTIFY_PROBES_ATTACHED && sleep 999 && echo "shouldn't echo"
 TIMEOUT 1
 EXPECT_NONE shouldn't echo
+
+NAME str_concat
+PROG begin { $a = "hello1"; print(str_concat(str_concat("hello", "0"), str_concat($a, "hello2"))); }
+EXPECT hello0hello1hello2
