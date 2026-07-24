@@ -91,7 +91,7 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
 
 struct resolve_symbols_data {
   const std::set<std::string> &names;
-  std::vector<symbol> &symbols;
+  std::vector<Symbol> &symbols;
 };
 
 static int resolve_symbols_cb(const char *symname,
@@ -113,7 +113,7 @@ static int load_section_cb(uint64_t v_addr,
                            uint64_t file_offset,
                            void *p)
 {
-  auto *syms = static_cast<std::vector<symbol> *>(p);
+  auto *syms = static_cast<std::vector<Symbol> *>(p);
 
   for (auto &sym : *syms) {
     if (sym.start >= v_addr && sym.start < (v_addr + mem_sz)) {
@@ -124,10 +124,10 @@ static int load_section_cb(uint64_t v_addr,
   return 0;
 }
 
-Result<std::vector<symbol>> resolve_symbols(const std::string &path,
+Result<std::vector<Symbol>> resolve_symbols(const std::string &path,
                                             const std::set<std::string> &names)
 {
-  std::vector<symbol> symbols;
+  std::vector<Symbol> symbols;
   struct bcc_symbol_option option;
   memset(&option, 0, sizeof(option));
   option.use_debug_file = 1;

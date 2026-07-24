@@ -27,7 +27,7 @@ private:
   std::string msg_;
 };
 
-struct symbol {
+struct Symbol {
   std::string name;
   uint64_t start;
   uint64_t size;
@@ -40,7 +40,7 @@ inline int sym_name_cb(const char *symname,
                        uint64_t size,
                        void *p)
 {
-  auto *sym = static_cast<struct symbol *>(p);
+  auto *sym = static_cast<Symbol *>(p);
 
   if (sym->name == symname) {
     sym->start = start;
@@ -56,7 +56,7 @@ inline int sym_address_cb(const char *symname,
                           uint64_t size,
                           void *p)
 {
-  auto *sym = static_cast<struct symbol *>(p);
+  auto *sym = static_cast<Symbol *>(p);
 
   // When size is 0, then [start, start + size) = [start, start) = ø.
   // So we need a special case when size=0, but address matches the symbol's
@@ -84,7 +84,7 @@ struct elf_symbol {
 std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
     const std::string &elf_file);
 
-Result<std::vector<symbol>> resolve_symbols(const std::string &path,
+Result<std::vector<Symbol>> resolve_symbols(const std::string &path,
                                             const std::set<std::string> &names);
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);

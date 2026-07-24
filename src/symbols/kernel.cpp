@@ -170,7 +170,7 @@ const struct vmlinux_location vmlinux_locs[] = {
 
 static std::optional<std::string> find_vmlinux(
     struct vmlinux_location const *locs,
-    struct util::symbol *sym)
+    util::Symbol *sym)
 {
   for (size_t i = 0; !locs[i].path.empty(); ++i) {
     const auto &loc = locs[i];
@@ -209,7 +209,7 @@ static std::optional<std::string> find_vmlinux(
 
 // find vmlinux file.
 // if sym is not null, check vmlinux contains the given symbol information
-std::optional<std::string> find_vmlinux(struct util::symbol *sym)
+std::optional<std::string> find_vmlinux(util::Symbol *sym)
 {
   const char *path = std::getenv("BPFTRACE_VMLINUX");
   if (path != nullptr) {

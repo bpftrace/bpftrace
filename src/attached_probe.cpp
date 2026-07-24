@@ -150,7 +150,7 @@ Result<uint64_t> resolve_offset_kprobe(Probe &probe)
   // kernel. This function is only called for sym+offset kprobes.
   assert(is_symbol_kprobe);
 
-  struct symbol sym = {};
+  Symbol sym = {};
   sym.name = probe.attach_point;
 
   auto path = symbols::find_vmlinux(&sym);
@@ -249,7 +249,7 @@ Result<> check_alignment(Probe &probe,
 Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 {
   struct bcc_symbol_option option = {};
-  struct symbol sym = {};
+  Symbol sym = {};
   std::string &symbol = probe.attach_point;
   uint64_t func_offset = probe.func_offset;
 
@@ -330,9 +330,7 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
   return offset;
 }
 
-Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
-    Probe &probe,
-    std::vector<std::string> &syms)
+Result<std::vector<Symbol>> resolve_offsets_uprobe_multi(Probe &probe)
 {
   std::set<std::string> names;
   for (const std::string &func : probe.funcs) {
@@ -342,9 +340,7 @@ Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
       return make_error<AttachError>("Error resolving probe: " + probe.name);
     }
 
-    auto name = func.substr(pos + 1);
-    syms.push_back(name);
-    names.insert(std::move(name));
+    names.insert(func.substr(pos + 1));
   }
 
   auto symbols = util::resolve_symbols(probe.path, names);
@@ -352,12 +348,7 @@ Result<std::vector<unsigned long>> resolve_offsets_uprobe_multi(
     return make_error<AttachError>(llvm::toString(symbols.takeError()));
   }
 
-  std::vector<unsigned long> offsets;
-  for (const auto &sym : *symbols) {
-    offsets.push_back(sym.file_offset);
-  }
-
-  return offsets;
+  return symbols;
 }
 
 class AttachedKprobeProbe : public AttachedProbe {
@@ -631,20 +622,21 @@ size_t AttachedMultiUprobeProbe::probe_count() const
 Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
     make(Probe &probe, const BpfProgram &prog, std::optional<int> pid)
 {
-  std::vector<std::string> syms;
-  unsigned int i;
+  auto symbols = resolve_offsets_uprobe_multi(probe);
+  if (!symbols) {
+    return symbols.takeError();
+  }
 
-  // Resolve probe_.funcs into offsets and syms vector
-  auto offset_res = resolve_offsets_uprobe_multi(probe, syms);
-  if (!offset_res) {
-    return offset_res.takeError();
+  std::vector<unsigned long> offsets;
+  for (const auto &sym : *symbols) {
+    offsets.push_back(sym.file_offset);
   }
 
   // Attach uprobe through uprobe_multi link
   DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
   opts.uprobe_multi.path = probe.path.c_str();
-  opts.uprobe_multi.offsets = offset_res->data();
-  opts.uprobe_multi.cnt = offset_res->size();
+  opts.uprobe_multi.offsets = offsets.data();
+  opts.uprobe_multi.cnt = offsets.size();
   opts.uprobe_multi.flags = probe.type == ProbeType::uretprobe
                                 ? BPF_F_UPROBE_MULTI_RETURN
                                 : 0;
@@ -654,8 +646,8 @@ Result<std::unique_ptr<AttachedMultiUprobeProbe>> AttachedMultiUprobeProbe::
 
   if (bt_verbose) {
     LOG(V1) << "Attaching to " << probe.funcs.size() << " functions";
-    for (i = 0; i < syms.size(); i++) {
-      LOG(V1) << probe.path << ":" << syms[i];
+    for (const auto &sym : *symbols) {
+      LOG(V1) << probe.path << ":" << sym.name;
     }
   }
 
