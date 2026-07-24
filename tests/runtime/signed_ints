@@ -16,11 +16,6 @@ PROG begin { @ = -11;  }
 EXPECT @: -11
 TIMEOUT 1
 
-NAME sum negative maps
-PROG begin { @ = -11; @+=@; exit() }
-EXPECT @: -22
-TIMEOUT 1
-
 NAME Comparison should print as 0 or 1
 PROG struct x { uint64_t x; }; begin { $a = (*(struct x*)0).x; printf("%d %d\n", $a > 0, $a < 1);  }
 EXPECT 0 1
@@ -29,31 +24,6 @@ TIMEOUT 1
 NAME sum with negative value
 PROG begin { @=sum(10); @=sum(-20);  }
 EXPECT @: -10
-TIMEOUT 1
-
-NAME cast negative to unsigned
-PROG begin { printf("%lu\n", (uint64)(-4095)); }
-EXPECT 18446744073709547521
-TIMEOUT 1
-
-NAME subtraction produces negative
-PROG begin { $a = (uint8)1 - 2; printf("%d\n", $a); }
-EXPECT -1
-TIMEOUT 1
-
-NAME decrement map below zero
-PROG begin { @x = 0; --@x; printf("%d\n", @x); }
-EXPECT -1
-TIMEOUT 1
-
-NAME increment then decrement map below zero
-PROG begin { @x = 0; ++@x; --@x; --@x; printf("%d\n", @x); }
-EXPECT -1
-TIMEOUT 1
-
-NAME uint64 subtraction stays unsigned with cast
-PROG begin { $a = (uint64)((uint64)5 - (uint64)3); printf("%lu\n", $a); }
-EXPECT 2
 TIMEOUT 1
 
 NAME uint64 subtraction underflow with cast

@@ -1,0 +1,63 @@
+test:sum_negative_maps
+{
+  @sum_negative_maps = -11;
+
+  @sum_negative_maps += @sum_negative_maps;
+
+  if (@sum_negative_maps != -22) {
+    return 1;
+  }
+}
+
+test:cast_negative_to_unsigned
+{
+  $a = (uint64)(-4095);
+
+  if ($a != 18446744073709547521) {
+    return 1;
+  }
+}
+
+test:subtraction_produces_negative
+{
+  $a = (uint8)1 - 2;
+
+  if ($a != -1) {
+    return 1;
+  }
+
+  if (sizeof($a) != 8) {
+    return 1;
+  }
+}
+
+test:decrement_map_below_zero
+{
+  @decrement_map_below_zero = 0;
+  --@decrement_map_below_zero;
+
+  if (@decrement_map_below_zero != -1) {
+    return 1;
+  }
+}
+
+test:increment_then_decrement_map_below_zero
+{
+  @increment_then_decrement_map_below_zero = 0;
+  ++@increment_then_decrement_map_below_zero;
+  --@increment_then_decrement_map_below_zero;
+  --@increment_then_decrement_map_below_zero;
+
+  if (@increment_then_decrement_map_below_zero != -1) {
+    return 1;
+  }
+}
+
+test:uint64_subtraction_stays_unsigned_with_cast
+{
+  $a = (uint64)((uint64)5 - (uint64)3);
+
+  if ($a != 2) {
+    return 1;
+  }
+}
