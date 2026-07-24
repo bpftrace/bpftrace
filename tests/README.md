@@ -37,7 +37,9 @@ Required directives: `NAME`, (`RUN` or `PROG`), (one or more [`EXPECT`, `EXPECT_
 * `AFTER`: Run the command in a shell after running bpftrace (after the probes
   are attached). The command will be terminated after the testcase is over.
 * `ARCH`: Only run testcase on provided architectures. Supports `|` to logical
-  OR multiple arches.
+  OR multiple arches. In addition to architecture names (for example
+  `x86_64` or `s390x`), this also accepts `be` and `le` to match host
+  endianness.
 * `BEFORE`: Run the command in a shell before running bpftrace. The command
   will run while bpftrace is running and be terminated after the test case
   finishes. Can be used multiple times, commands will run in parallel.

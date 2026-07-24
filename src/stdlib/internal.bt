@@ -43,5 +43,5 @@ macro memcmp_record(left, right, count)
 
 macro usdt_arg(x)
 {
-  __usdt_arg((void*)ctx, (int64)x)
+  uptr(__usdt_arg((void *)ctx, (int64)x))
 }

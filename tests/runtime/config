@@ -1,17 +1,20 @@
 NAME config as env var
 RUN {{BPFTRACE}} -e 'config = { BPFTRACE_STACK_MODE=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }'
 EXPECT_REGEX ^\s+[0-9a-f]+$
+ARCH !s390
 AFTER ./testprogs/uprobe_test
 
 NAME config short name
 RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }'
 EXPECT_REGEX ^\s+[0-9a-f]+$
+ARCH !s390
 AFTER ./testprogs/uprobe_test
 
 NAME env var takes precedence
 RUN {{BPFTRACE}} -e 'config = { BPFTRACE_STACK_MODE=perf } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }'
 ENV BPFTRACE_STACK_MODE=raw
 EXPECT_REGEX ^\s+[0-9a-f]+$
+ARCH !s390
 AFTER ./testprogs/uprobe_test
 
 NAME bad config

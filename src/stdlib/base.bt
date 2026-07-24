@@ -1140,6 +1140,11 @@ macro probetype()
 // `pton` converts a text representation of an IPv4 or IPv6 address to byte array.
 // `pton` infers the address family based on `.` or `:` in the given argument.
 // `pton` comes in handy when we need to select packets with certain IP addresses.
+//
+// When casting the result of `pton()` to an integer (e.g. `(uint32)pton("127.0.0.1")`), the resulting value depends on the system's endianness. The byte array returned by `pton()` is stored in network byte order (big-endian), and when cast to an integer, it is interpreted according to the system's native byte order:
+// **Little-endian systems**: The bytes are reversed when interpreted as an integer. For example, `(uint32)pton("127.0.0.1")` yields `0x100007f` (bytes: `[0x7f, 0x00, 0x00, 0x01]` interpreted as little-endian).
+// **Big-endian systems**: The bytes maintain their network byte order. For example, `(uint32)pton("127.0.0.1")` yields `0x7f000001` (bytes: `[0x7f, 0x00, 0x00, 0x01]` interpreted as big-endian).
+// This behavior is consistent with how the underlying `inet_pton()` function works.
 
 // :variant uint32 rand()
 // Get a pseudo random number
@@ -1317,12 +1322,13 @@ macro signal_thread(expr)
 // bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
 
 // :function strftime
-// :variant timestamp strftime(const string fmt, int64 timestamp_ns)
+// :variant timestamp strftime(const string fmt, uint64 timestamp_ns)
 //
 // **async**
 //
 // Format the nanoseconds since boot timestamp `timestamp_ns` according to the format specified by `fmt`.
 // The time conversion and formatting happens in user space, therefore  the `timestamp` value returned can only be used for printing using the `%s` format specifier.
+// **Note:** `timestamp_ns` must be non-negative. Negative timestamp literals are rejected.
 //
 // bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 //
@@ -1461,14 +1467,15 @@ macro signal_thread(expr)
 macro uaddr(sym)
 {
   import "stdlib/task/vma.bpf.c";
-  let $addr = (uint64)__builtin_uaddr(sym);
+  let $addr = __builtin_uaddr(sym);
 
   // There are three types of ELF that use uprobe: PIE, EXEC, and dynamic
   // libraries. Among them, PIE and dynamic libraries need to correct the
   // symbol address according to the actual load address.
   if comptime (!elf_is_exe) {
     $offset = (uint64)__bpf_task_map_file_min_addr((uint64)elf_info);
-    $addr += $offset;
+    // Recast to the original pointer type to preserve dereference size.
+    $addr = (typeof($addr))((uint64)$addr + $offset);
   }
   $addr
 }

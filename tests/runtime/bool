@@ -16,4 +16,11 @@ TIMEOUT 1
 NAME bool array
 PROG begin { @a = (bool[2])(uint16)1;  }
 EXPECT @a: [true,false]
+ARCH le
+TIMEOUT 1
+
+NAME bool array
+PROG begin { @a = (bool[2])(uint16)1;  }
+EXPECT @a: [false,true]
+ARCH be
 TIMEOUT 1

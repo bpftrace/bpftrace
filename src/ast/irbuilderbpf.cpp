@@ -2020,12 +2020,26 @@ Value *IRBuilderBPF::CreateKFuncArg(Value *ctx,
                                     std::string &name)
 {
   assert(type.IsIntTy() || type.IsPtrTy() || type.IsBoolTy());
-  Value *expr = CreateLoad(
-      GetType(type),
+
+  Value *raw = CreateLoad(
+      getInt64Ty(),
       CreateSafeGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),
       true, /*volatile*/
       name);
-  return expr;
+
+  if (type.IsPtrTy()) {
+    return CreateIntToPtr(raw, GetType(type), name);
+  }
+
+  if (type.IsBoolTy()) {
+    return CreateTrunc(raw, GetType(type), name);
+  }
+
+  if (type.IsIntTy() && type.GetSize() < 8) {
+    return CreateTrunc(raw, GetType(type), name);
+  }
+
+  return raw;
 }
 
 Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,

@@ -82,7 +82,7 @@ BEFORE ./testprogs/uprobe_test
 
 # Attaching probes using source code location
 NAME uprobe source location - attach probe to source line
-PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:22 { printf("0x%lx\n", reg("ip")); exit(); }
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:22 { printf("0x%lx\n", reg("pc")); exit(); }
 EXPECT_REGEX ^0x[0-9A-Fa-f]+$
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
@@ -98,8 +98,8 @@ BEFORE ./testprogs/uprobe_test
 ARCH aarch64
 
 NAME uprobe source location - source line to address validation
-PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:22 { @a = reg("ip"); }
-     uprobe:./testprogs/uprobe_test:uprobeFunction1 { @b = reg("ip"); if (@b == @a) { printf("0x%lx == 0x%lx\n", @a, @b); exit(); } }
+PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:22 { @a = reg("pc"); }
+     uprobe:./testprogs/uprobe_test:uprobeFunction1 { @b = reg("pc"); if (@b == @a) { printf("0x%lx == 0x%lx\n", @a, @b); exit(); } }
 EXPECT_REGEX ^0x[0-9A-Fa-f]+ == 0x[0-9A-Fa-f]+$
 REQUIRES_FEATURE dwarf
 TIMEOUT 5

@@ -1,7 +1,10 @@
 # https://github.com/bpftrace/bpftrace/pull/566#issuecomment-487295113
 NAME codegen_struct_save_nested
-PROG struct Foo { int m; struct { int x; int y; } bar; int n; } begin { @foo = (struct Foo *)0; @bar = @foo.bar; @x = @foo.bar.x; printf("_%s_\n", "done");  }
+PROG struct Foo { int m; struct { int x; int y; } bar; int n; } uprobe:./testprogs/nested_struct_test:test_nested_struct { @foo = (struct Foo *)arg0; @bar = @foo.bar; @x = @foo.bar.x; printf("_%s_\n", "done"); exit(); }
 EXPECT _done_
+EXPECT @bar: { .x = 20, .y = 30 }
+EXPECT @x: 20
+AFTER ./testprogs/nested_struct_test
 TIMEOUT 1
 
 NAME logical_and_or_different_sizes

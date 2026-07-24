@@ -3,6 +3,7 @@
 from collections import namedtuple
 import os
 import platform
+import sys
 from runner import Runner
 
 DEFAULT_TIMEOUT = 5
@@ -102,7 +103,27 @@ class TestParser(object):
                 if line == '\n' or line_num == len(lines):
                     if test_lines:
                         test_struct = TestParser.__read_test_struct(test_lines, test_suite)
-                        if not test_struct.arch or (platform.machine().lower() in test_struct.arch):
+                        # Build set of current host's architecture identifiers and endianness
+                        host_arch_identifiers = {
+                            platform.machine().lower(),
+                            "be" if sys.byteorder == "big" else "le",
+                        }
+                        # Check if test should run based on ARCH directive
+                        should_run_test = True
+                        if test_struct.arch:
+                            # Separate positive and negative arch requirements
+                            positive_archs = set()
+                            negative_archs = set()
+                            for arch in test_struct.arch:
+                                if arch.startswith('!'):
+                                    negative_archs.add(arch[1:])
+                                else:
+                                    positive_archs.add(arch)
+                            if positive_archs:
+                                should_run_test = bool(host_arch_identifiers.intersection(positive_archs))
+                            if negative_archs and should_run_test:
+                                should_run_test = not bool(host_arch_identifiers.intersection(negative_archs))
+                        if should_run_test:
                             tests.append(test_struct)
                         test_lines = []
 

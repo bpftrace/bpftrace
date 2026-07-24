@@ -1984,6 +1984,77 @@ fentry:tcp_connect {
 }
 ```
 
+##### Endianness and Memory Layout
+
+When casting an integer to an array, bpftrace initializes the array from the
+source integer's underlying representation. No byte swapping is performed, so
+the result depends on the source integer type, the target array element type,
+and the system's native byte order (endianness)
+
+For example, when casting `(uint16)1` to `bool[2]`, each `bool` element is
+initialized from one byte of the `uint16` representation:
+
+```
+// On little-endian systems:
+begin { @a = (bool[2])(uint16)1; }
+// Output: @a: [true, false]
+// Explanation: uint16 value 1 = 0x0001 is represented as:
+//              [0x01, 0x00]
+//              array[0] is initialized from 0x01 (true)
+//              array[1] is initialized from 0x00 (false)
+
+// On big-endian systems:
+begin { @a = (bool[2])(uint16)1; }
+// Output: @a: [false, true]
+// Explanation: uint16 value 1 = 0x0001 is represented as:
+//              [0x00, 0x01]
+//              array[0] is initialized from 0x00 (false)
+//              array[1] is initialized from 0x01 (true)
+```
+
+Similarly, bpftrace interprets value `12345` as 2 bytes. When casting it to
+`int8[8]`, the significant bytes are copied in native byte order and the
+remaining elements are zero-filled:
+
+```
+// On little-endian systems:
+begin { printf("first byte: %x\n", ((int8[8])12345)[0]); }
+// Output: first byte: 39
+// Explanation: 12345 = 0x3039 is represented as:
+//              [0x39, 0x30, 0x00, 0x00, ...]
+//              array[0] is initialized from 0x39.
+
+// On big-endian systems:
+begin { printf("first byte: %x\n", ((int8[8])12345)[0]); }
+// Output: first byte: 30
+// Explanation: 12345 = 0x3039 is represented as:
+//              [0x30, 0x39, 0x00, 0x00, ...]
+//              array[0] is initialized from 0x30.
+```
+
+The source integer type also affects the representation used for the array
+initialization. If the value is explicitly cast to a wider integer type first,
+then the array is initialized from that wider representation.
+
+For example, `(uint64)12345` is `0x0000000000003039`, so casting it to
+`int8[8]` uses the full 8-byte representation:
+
+```
+// On little-endian systems:
+begin { printf("first byte: %x\n", ((int8[8])(uint64)12345)[0]); }
+// Output: first byte: 39
+// Explanation: (uint64)12345 = 0x0000000000003039 is represented as:
+//              [0x39, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+//              array[0] is initialized from 0x39.
+
+// On big-endian systems:
+begin { printf("first byte: %x\n", ((int8[8])(uint64)12345)[0]); }
+// Output: first byte: 0
+// Explanation: (uint64)12345 = 0x0000000000003039 is represented as:
+//              [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x30, 0x39]
+//              array[0] is initialized from 0x00.
+```
+
 ## Variables and Maps
 
 bpftrace knows two types of variables, 'scratch' and 'map'.

@@ -1101,6 +1101,11 @@ For example: `kprobe`, `special`, `tracepoint`
 `pton` infers the address family based on `.` or `:` in the given argument.
 `pton` comes in handy when we need to select packets with certain IP addresses.
 
+When casting the result of `pton()` to an integer (e.g. `(uint32)pton("127.0.0.1")`), the resulting value depends on the system's endianness. The byte array returned by `pton()` is stored in network byte order (big-endian), and when cast to an integer, it is interpreted according to the system's native byte order:
+**Little-endian systems**: The bytes are reversed when interpreted as an integer. For example, `(uint32)pton("127.0.0.1")` yields `0x100007f` (bytes: `[0x7f, 0x00, 0x00, 0x01]` interpreted as little-endian).
+**Big-endian systems**: The bytes maintain their network byte order. For example, `(uint32)pton("127.0.0.1")` yields `0x7f000001` (bytes: `[0x7f, 0x00, 0x00, 0x01]` interpreted as big-endian).
+This behavior is consistent with how the underlying `inet_pton()` function works.
+
 
 ### rand
 - `uint32 rand()`
@@ -1330,12 +1335,13 @@ begin {
 
 
 ### strftime
-- `timestamp strftime(const string fmt, int64 timestamp_ns)`
+- `timestamp strftime(const string fmt, uint64 timestamp_ns)`
 
 **async**
 
 Format the nanoseconds since boot timestamp `timestamp_ns` according to the format specified by `fmt`.
 The time conversion and formatting happens in user space, therefore  the `timestamp` value returned can only be used for printing using the `%s` format specifier.
+**Note:** `timestamp_ns` must be non-negative. Negative timestamp literals are rejected.
 
 bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 

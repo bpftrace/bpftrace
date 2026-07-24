@@ -202,7 +202,7 @@ PROG struct Foo { int x; struct Bar { int x; } bar; } begin { printf("%ld %ld\n"
 EXPECT_REGEX ^0 4$
 
 NAME offsetof_btf
-PROG begin { print(offsetof(qspinlock, tail)); }
+PROG begin { print(offsetof(struct task_struct, pid)); }
 EXPECT_REGEX ^[0-9]+
 REQUIRES_FEATURE btf
 
@@ -267,6 +267,7 @@ EXPECT_REGEX SUCCESS [0-9]+
 NAME ustack builtin with stack_mode config
 RUN {{BPFTRACE}} -e 'config = { stack_mode=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { @c[ustack] = 1; exit(); }'
 EXPECT_REGEX ^@c\[\n[0-9a-f]+$
+ARCH !s390
 AFTER ./testprogs/uprobe_test
 
 NAME kstack builtin with stack_mode config

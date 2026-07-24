@@ -1569,7 +1569,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     if (err < 0 || sym.address == 0)
       call.addError() << "Could not resolve symbol: "
                       << current_attach_point_->target << ":" << name;
-    return ScopedExpr(b_.getInt64(sym.address));
+    // Convert to pointer to match GetType() for pointer types
+    // The pointee size info is preserved in type_map_ and used during deref
+    Value *addr = b_.getInt64(sym.address);
+    Value *ptr = b_.CreateIntToPtr(addr, b_.getPtrTy());
+    return ScopedExpr(ptr);
   } else if (call.func == "cgroupid") {
     uint64_t cgroupid;
     auto path = call.vargs.at(0).as<String>()->value;
@@ -1967,8 +1971,18 @@ ScopedExpr CodegenLLVM::visit(Call &call)
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     auto &arg = call.vargs.at(1);
     auto scoped_expr = visit(arg);
+
+    // Ensure the value is 64-bit to match the struct field type (uint64_t
+    // nsecs)
+    llvm::Value *nsecs_value = scoped_expr.value();
+    llvm::Type *value_type = nsecs_value->getType();
+    if (value_type->isIntegerTy() && value_type->getIntegerBitWidth() < 64) {
+      // Zero-extend smaller integers to 64 bits
+      nsecs_value = b_.CreateZExt(nsecs_value, b_.getInt64Ty());
+    }
+
     b_.CreateStore(
-        scoped_expr.value(),
+        nsecs_value,
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "kstack") {
@@ -4709,10 +4723,13 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
   auto start = visit(range.start);
   auto end = visit(range.end);
   Value *iters = b_.CreateBinOp(Instruction::Sub, end.value(), start.value());
+  // Get the actual loop variable type from type checker
+  const auto &decl_type = type_map_.type(f.decl);
+  llvm::Type *loop_var_type = b_.GetType(decl_type);
 
   // Construct the context and callback with extra fields add to the context,
   // which track the starting value and the current value of the iteration.
-  auto [ctx_t, ctx] = createForContext(f, { b_.getInt64Ty(), b_.getInt64Ty() });
+  auto [ctx_t, ctx] = createForContext(f, { loop_var_type, loop_var_type });
   const auto sz = type_map_.type(&f).GetFields().size();
   b_.CreateStore(start.value(),
                  b_.CreateSafeGEP(ctx_t,
@@ -4753,9 +4770,11 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
         // value of the current variable in the context. The starting value is
         // not available to the user, simply the value of the current
         // iteration.
-        b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(),
+        b_.CreateStore(b_.CreateAdd(b_.CreateLoad(loop_var_type,
                                                   start_field_ptr),
-                                    callback->getArg(0)),
+                                    b_.CreateIntCast(callback->getArg(0),
+                                                     loop_var_type,
+                                                     true)),
                        current_field_ptr);
         return current_field_ptr;
       });

@@ -50,11 +50,11 @@ std::optional<size_t> Arch<Machine::S390X>::register_to_pt_regs_offset(
     const std::string& name)
 {
   static const std::unordered_map<std::string, size_t> register_offsets = {
-    { "arg", 0 },   { "pswmask", 8 }, { "pswaddr", 16 }, { "r0", 24 },
-    { "r1", 32 },   { "r2", 40 },     { "r3", 48 },      { "r4", 56 },
-    { "r5", 64 },   { "r6", 72 },     { "r7", 80 },      { "r8", 88 },
-    { "r9", 96 },   { "r10", 104 },   { "r11", 112 },    { "r12", 120 },
-    { "r13", 128 }, { "r14", 136 },   { "r15", 144 },
+    { "arg", 0 },   { "pswmask", 8 }, { "pswaddr", 16 }, { "pc", 16 },
+    { "r0", 24 },   { "r1", 32 },     { "r2", 40 },      { "r3", 48 },
+    { "r4", 56 },   { "r5", 64 },     { "r6", 72 },      { "r7", 80 },
+    { "r8", 88 },   { "r9", 96 },     { "r10", 104 },    { "r11", 112 },
+    { "r12", 120 }, { "r13", 128 },   { "r14", 136 },    { "r15", 144 },
   };
   auto it = register_offsets.find(name);
   if (it != register_offsets.end()) {
