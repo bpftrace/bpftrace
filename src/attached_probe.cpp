@@ -246,7 +246,7 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
     }
 
     symbol = sym->name;
-    func_offset = probe.address - sym->start;
+    func_offset = probe.address - sym->address;
   }
 
   auto symbols = util::resolve_symbols(probe.path, { symbol });

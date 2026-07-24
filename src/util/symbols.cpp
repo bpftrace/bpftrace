@@ -103,7 +103,8 @@ static int resolve_symbols_cb(const char *symname,
   auto *data = static_cast<struct resolve_symbols_data *>(p);
 
   if (data->names.contains(symname)) {
-    data->symbols.push_back({ .name = symname, .start = start, .size = size });
+    data->symbols.push_back(
+        { .name = symname, .address = start, .size = size });
   }
 
   return 0;
@@ -117,8 +118,8 @@ static int load_section_cb(uint64_t v_addr,
   auto *syms = static_cast<std::vector<Symbol> *>(p);
 
   for (auto &sym : *syms) {
-    if (sym.start >= v_addr && sym.start < (v_addr + mem_sz)) {
-      sym.file_offset = sym.start - v_addr + file_offset;
+    if (sym.address >= v_addr && sym.address < (v_addr + mem_sz)) {
+      sym.file_offset = sym.address - v_addr + file_offset;
     }
   }
 
@@ -166,7 +167,7 @@ Result<Symbol> resolve_symbol(const std::string &path, uint64_t address)
 
   bcc_elf_foreach_sym(path.c_str(), sym_address_cb, &option, &sym);
 
-  if (!sym.start) {
+  if (!sym.size) {
     std::stringstream ss;
     ss << "0x" << std::hex << address;
     return make_error<SymbolError>("Could not resolve address: " + path + ":" +
