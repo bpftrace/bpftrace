@@ -93,11 +93,11 @@ public:
       return make_error<util::SymbolError>("Could not resolve symbol: " + path +
                                            ":" + name);
     } else if (name[0] >= 'A' && name[0] <= 'z') {
-      sym.address = 12345;
+      sym.v_addr = 12345;
       sym.size = 4;
     } else {
       auto fields = util::split_string(name, '_');
-      sym.address = std::stoull(fields.at(0));
+      sym.v_addr = std::stoull(fields.at(0));
       sym.size = std::stoull(fields.at(1));
     }
     return sym;

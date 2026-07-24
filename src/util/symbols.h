@@ -29,9 +29,8 @@ private:
 
 struct Symbol {
   std::string name;
-  uint64_t start;
+  uint64_t v_addr;
   uint64_t size;
-  uint64_t address;
   uint64_t file_offset;
 };
 
@@ -43,7 +42,7 @@ inline int sym_name_cb(const char *symname,
   auto *sym = static_cast<Symbol *>(p);
 
   if (sym->name == symname) {
-    sym->start = start;
+    sym->v_addr = start;
     sym->size = size;
     return -1;
   }
@@ -60,9 +59,9 @@ inline int sym_address_cb(const char *symname,
 
   // When size is 0, then [start, start + size) = [start, start) = ø.
   // So we need a special case when size=0, but address matches the symbol's
-  if (sym->address == start ||
-      (sym->address > start && sym->address < (start + size))) {
-    sym->start = start;
+  if (sym->v_addr == start ||
+      (sym->v_addr > start && sym->v_addr < (start + size))) {
+    sym->v_addr = start;
     sym->size = size;
     sym->name = symname;
     return -1;

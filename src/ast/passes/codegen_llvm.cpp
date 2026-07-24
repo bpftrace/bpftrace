@@ -1571,7 +1571,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     }
     // Convert to pointer to match GetType() for pointer types
     // The pointee size info is preserved in type_map_ and used during deref
-    Value *addr = b_.getInt64(sym->address);
+    Value *addr = b_.getInt64(sym->v_addr);
     Value *ptr = b_.CreateIntToPtr(addr, b_.getPtrTy());
     return ScopedExpr(ptr);
   } else if (call.func == "cgroupid") {

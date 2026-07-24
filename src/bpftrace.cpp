@@ -1294,7 +1294,7 @@ static int sym_resolve_callback(const char *name,
 {
   auto *sym = static_cast<Symbol *>(payload);
   if (!strcmp(name, sym->name.c_str())) {
-    sym->address = addr;
+    sym->v_addr = addr;
     sym->size = size;
     return -1;
   }
@@ -1313,7 +1313,7 @@ Result<Symbol> BPFtrace::resolve_uname(const std::string &name,
 
   int err = bcc_elf_foreach_sym(
       path.c_str(), sym_resolve_callback, &option, &sym);
-  if (err < 0 || sym.address == 0) {
+  if (err < 0 || sym.v_addr == 0) {
     return make_error<util::SymbolError>("Could not resolve symbol: " + path +
                                          ":" + name);
   }
