@@ -127,13 +127,15 @@ static int load_section_cb(uint64_t v_addr,
 }
 
 Result<std::vector<Symbol>> resolve_symbols(const std::string &path,
-                                            const std::set<std::string> &names)
+                                            const std::set<std::string> &names,
+                                            bool resolve_offsets)
 {
   std::vector<Symbol> symbols;
   struct bcc_symbol_option option;
   memset(&option, 0, sizeof(option));
   option.use_debug_file = 1;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
+  option.use_symbol_type = (1 << STT_FUNC | 1 << STT_GNU_IFUNC |
+                            1 << STT_OBJECT);
 
   struct resolve_symbols_data data = {
     .names = names,
@@ -146,10 +148,12 @@ Result<std::vector<Symbol>> resolve_symbols(const std::string &path,
     return make_error<SymbolError>("Failed to list symbols in " + path);
   }
 
-  err = bcc_elf_foreach_load_section(path.c_str(), load_section_cb, &symbols);
-  if (err) {
-    return make_error<SymbolError>("Failed to resolve symbol offsets in " +
-                                   path);
+  if (resolve_offsets) {
+    err = bcc_elf_foreach_load_section(path.c_str(), load_section_cb, &symbols);
+    if (err) {
+      return make_error<SymbolError>("Failed to resolve symbol offsets in " +
+                                     path);
+    }
   }
 
   return symbols;
@@ -163,7 +167,8 @@ Result<Symbol> resolve_symbol(const std::string &path, uint64_t address)
   struct bcc_symbol_option option;
   memset(&option, 0, sizeof(option));
   option.use_debug_file = 1;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
+  option.use_symbol_type = (1 << STT_FUNC | 1 << STT_GNU_IFUNC |
+                            1 << STT_OBJECT);
 
   bcc_elf_foreach_sym(path.c_str(), sym_address_cb, &option, &sym);
 
