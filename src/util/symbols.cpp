@@ -10,6 +10,7 @@
 #include <link.h>
 #include <linux/limits.h>
 #include <linux/version.h>
+#include <sstream>
 #include <sys/auxv.h>
 #include <sys/stat.h>
 #include <sys/utsname.h>
@@ -151,6 +152,28 @@ Result<std::vector<Symbol>> resolve_symbols(const std::string &path,
   }
 
   return symbols;
+}
+
+Result<Symbol> resolve_symbol(const std::string &path, uint64_t address)
+{
+  Symbol sym = {};
+  sym.address = address;
+
+  struct bcc_symbol_option option;
+  memset(&option, 0, sizeof(option));
+  option.use_debug_file = 1;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
+
+  bcc_elf_foreach_sym(path.c_str(), sym_address_cb, &option, &sym);
+
+  if (!sym.start) {
+    std::stringstream ss;
+    ss << "0x" << std::hex << address;
+    return make_error<SymbolError>("Could not resolve address: " + path + ":" +
+                                   ss.str());
+  }
+
+  return sym;
 }
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
