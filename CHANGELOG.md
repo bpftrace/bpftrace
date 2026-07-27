@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Add reg("pc") as an alias for the instruction pointer
+  - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
 - Publish arm64/aarch64 release artifacts alongside x86_64.
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
 - Add support for type expression substitution for macros
@@ -28,6 +30,18 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix address space handling for map and variable addresses
+  - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
+- Fix uaddr() to preserve pointer type for correct dereference size
+  - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
+- Fix fentry/fexit argument decoding
+  - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
+- Set user address space for USDT arguments
+  - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
+- Fix strftime() on big endian systems
+  - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
+- Fix for loop variable type mismatch
+  - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
 - Print zero values for empty scalar maps
   - [#5239](https://github.com/bpftrace/bpftrace/pull/5239)
 #### Security
