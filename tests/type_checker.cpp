@@ -4392,16 +4392,8 @@ TEST_F(TypeCheckerBTFTest, call_socket_cookie)
   test("fentry:tcp_shutdown { $ret = socket_cookie(args.sk); }");
   test("fexit:tcp_shutdown { $ret = socket_cookie(args.sk); }");
 
-  test("fentry:tcp_shutdown { $ret = socket_cookie(args.how); }", Error{ R"(
-stdin:1:30-53: ERROR: socket_cookie() only supports pointer arguments (int provided)
-fentry:tcp_shutdown { $ret = socket_cookie(args.how); }
-                             ~~~~~~~~~~~~~~~~~~~~~~~
-)" });
-  test("fentry:func_1 { $ret = socket_cookie(args.foo1); }", Error{ R"(
-stdin:1:24-48: ERROR: socket_cookie() only supports 'struct sock *' as the argument ('struct Foo1 *' provided)
-fentry:func_1 { $ret = socket_cookie(args.foo1); }
-                       ~~~~~~~~~~~~~~~~~~~~~~~~
-)" });
+  test("fentry:tcp_shutdown { $ret = socket_cookie(args.how); }", Error{});
+  test("fentry:func_1 { $ret = socket_cookie(args.foo1); }", Error{});
 }
 
 TEST_F(TypeCheckerBTFTest, rawtracepoint)

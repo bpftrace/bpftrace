@@ -684,10 +684,6 @@ void CallPreCheck::visit(Call &call)
                         << "'fentry', 'fexit', 'iter' probes";
       }
     }
-  } else if (call.func == "strncmp") {
-    if (!call.vargs.at(2).is<Integer>()) {
-      call.addError() << "Builtin strncmp requires a non-negative literal";
-    }
   } else if (call.func == "pid" || call.func == "tid") {
     if (call.vargs.size() == 1) {
       auto &arg = call.vargs.at(0);

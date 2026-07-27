@@ -136,6 +136,44 @@ macro strcontains(haystack, needle)
   strstr(haystack, needle) >= 0
 }
 
+macro __strncmp_data($var)
+{
+  if comptime (is_str($var) || is_array($var)) {
+    (int8*)(&($var[0]))
+  } else {
+    (int8*)$var
+  }
+}
+
+macro strncmp($left, $right, count)
+{
+  import "stdlib/strings/strings.bpf.c";
+  assert_str($left);
+  assert_str($right);
+  if comptime (!is_literal(count) || !is_integer(count)) {
+    fail("Builtin strncmp requires a non-negative literal");
+  }
+
+  let $count = (uint64)count;
+  let $left_size = strcap($left);
+  let $right_size = strcap($right);
+  if ($left_size < $count) {
+    $count = $left_size;
+  }
+  if ($right_size < $count) {
+    $count = $right_size;
+  }
+
+  __strncmp(__strncmp_data($left), __strncmp_data($right), (size_t)$count)
+}
+
+macro strncmp(left, right, count)
+{
+  let $left = left;
+  let $right = right;
+  strncmp($left, $right, count)
+}
+
 // :variant string strerror(int error)
 //
 // Convert errno code to string.
