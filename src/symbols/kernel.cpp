@@ -197,7 +197,7 @@ static std::optional<std::string> find_vmlinux(
         continue;
       }
 
-      if (sym->start) {
+      if (sym->v_addr) {
         LOG(V1) << "vmlinux: using " << loc.path;
         return loc.path;
       }
