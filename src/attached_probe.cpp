@@ -230,22 +230,13 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
   uint64_t func_offset = probe.func_offset;
 
   if (symbol.empty()) {
-    Symbol sym = {};
-    sym.address = probe.address;
+    auto sym = util::resolve_symbol(probe.path, probe.address);
 
-    struct bcc_symbol_option option = {};
-    option.use_debug_file = 1;
-    option.use_symbol_type = BCC_SYM_ALL_TYPES ^ (1 << STT_NOTYPE);
-    bcc_elf_foreach_sym(
-        probe.path.c_str(), util::sym_address_cb, &option, &sym);
-
-    if (!sym.start) {
+    if (!sym) {
       if (safe_mode) {
-        std::stringstream ss;
-        ss << "0x" << std::hex << probe.address;
-        return make_error<AttachError>(
-            "Could not resolve address: " + probe.path + ":" + ss.str());
+        return make_error<AttachError>(llvm::toString(sym.takeError()));
       } else {
+        consumeError(sym.takeError());
         LOG(WARNING) << "Could not determine instruction boundary for "
                      << probe.name
                      << " (binary appears stripped). Misaligned probes "
@@ -254,8 +245,8 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
       }
     }
 
-    symbol = sym.name;
-    func_offset = probe.address - sym.start;
+    symbol = sym->name;
+    func_offset = probe.address - sym->start;
   }
 
   auto symbols = util::resolve_symbols(probe.path, { symbol });
