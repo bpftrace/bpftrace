@@ -84,7 +84,8 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
     const std::string &elf_file);
 
 Result<std::vector<Symbol>> resolve_symbols(const std::string &path,
-                                            const std::set<std::string> &names);
+                                            const std::set<std::string> &names,
+                                            bool resolve_offsets = true);
 
 Result<Symbol> resolve_symbol(const std::string &path, uint64_t address);
 
