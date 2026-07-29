@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- stdlib: Add `abs_path` and `cwd`.
+  - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
 #### Changed
 #### Deprecated
 #### Removed

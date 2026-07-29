@@ -3,6 +3,7 @@
 from collections import namedtuple
 import os
 import platform
+import re
 import sys
 from runner import Runner
 
@@ -21,7 +22,8 @@ class InvalidFieldError(Exception):
 
 class Expect:
   def __init__(self, expect, mode):
-    self.expect = expect
+    real_expect = re.sub("{{CWD}}", os.getcwd(), expect)
+    self.expect = real_expect
     self.mode = mode
 
 # Remember to update tests/README.md if adding a new directive!
