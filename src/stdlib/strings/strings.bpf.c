@@ -97,8 +97,10 @@ int __bpf_strnstr(const char *haystack,
 long __bpf_str_concat(char *dst, size_t dst_sz, const char *src)
 {
   long dst_len = __bpf_strnlen(dst, dst_sz);
-  if (dst_len < 0 || dst_len >= dst_sz)
-    return 0;
+  if (dst_len < 0)
+    return dst_len;
+  if (dst_len >= dst_sz)
+    return -E2BIG;
   return bpf_probe_read_kernel_str(dst + dst_len, dst_sz - dst_len, src);
 }
 
