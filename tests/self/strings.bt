@@ -1,0 +1,14 @@
+test:str_contat
+{
+  $log = "log";
+  $filename = "system.journal";
+
+  $path = str_concat("var", "/");
+  $path = str_concat("/", $path);
+  $path = str_concat($path, "log/");
+  $path = str_concat($path, $filename);
+
+  if ($path != "/var/log/system.journal") {
+    return 1;
+  }
+}

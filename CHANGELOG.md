@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- stdlib: add `str_concat()`.
+  - [#5265](https://github.com/bpftrace/bpftrace/pull/5265)
 - Add reg("pc") as an alias for the instruction pointer
   - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
 - Publish arm64/aarch64 release artifacts alongside x86_64.
