@@ -220,16 +220,43 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
                          &module_);
 }
 
+void IRBuilderBPF::SetInsertPoint(BasicBlock *bb)
+{
+  IRBuilder<>::SetInsertPoint(bb);
+  SetCurrentDebugLocation(llvm::DebugLoc());
+}
+
+void IRBuilderBPF::SetInsertPoint(Instruction *inst)
+{
+  IRBuilder<>::SetInsertPoint(inst);
+  SetCurrentDebugLocation(llvm::DebugLoc());
+}
+
+void IRBuilderBPF::SetInsertPoint(BasicBlock *bb, BasicBlock::iterator ip)
+{
+  IRBuilder<>::SetInsertPoint(bb, ip);
+  SetCurrentDebugLocation(llvm::DebugLoc());
+}
+
+void IRBuilderBPF::SetInsertPoint(BasicBlock::iterator ip)
+{
+  IRBuilder<>::SetInsertPoint(ip);
+  SetCurrentDebugLocation(llvm::DebugLoc());
+}
+
+void IRBuilderBPF::restoreIP(InsertPoint ip)
+{
+  IRBuilder<>::restoreIP(ip);
+  SetCurrentDebugLocation(llvm::DebugLoc());
+}
+
 void IRBuilderBPF::hoist(const std::function<void()> &functor)
 {
   llvm::Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
 
   auto ip = saveIP();
-  if (entry_block.empty())
-    SetInsertPoint(&entry_block);
-  else
-    SetInsertPoint(&entry_block.front());
+  SetInsertPoint(&entry_block, entry_block.begin());
 
   functor();
   restoreIP(ip);
