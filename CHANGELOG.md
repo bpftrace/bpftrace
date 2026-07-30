@@ -32,6 +32,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix crash caused by debug locations leaking between generated functions
+  - [#5278](https://github.com/bpftrace/bpftrace/pull/5278)
 - Fix address space handling for map and variable addresses
   - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
 - Fix uaddr() to preserve pointer type for correct dereference size

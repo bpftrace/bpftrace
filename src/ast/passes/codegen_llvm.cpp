@@ -2128,13 +2128,8 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     }
 
     auto *inst = b_.CreateCall(func, arg_values, call.func);
-    return ScopedExpr(inst, [this, inst, &call] {
-      // We set the debug location on the call instructions only after the
-      // scoped expression is no longer used. Otherwise the instruction emitter
-      // seems to use this location for everything, which results in problems.
-      inst->setDebugLoc(
-          debug_.createDebugLocation(llvm_ctx_, scope_, call.loc));
-    });
+    inst->setDebugLoc(debug_.createDebugLocation(llvm_ctx_, scope_, call.loc));
+    return ScopedExpr(inst);
   }
 }
 
@@ -4892,12 +4887,8 @@ ScopedExpr CodegenLLVM::createExternFuncCall(
   }
 
   auto *inst = b_.CreateCall(func, arg_values, name);
-  return ScopedExpr(inst, [this, inst, loc] {
-    // We set the debug location on the call instructions only after the
-    // scoped expression is no longer used. Otherwise the instruction emitter
-    // seems to use this location for everything, which results in problems.
-    inst->setDebugLoc(debug_.createDebugLocation(llvm_ctx_, scope_, loc));
-  });
+  inst->setDebugLoc(debug_.createDebugLocation(llvm_ctx_, scope_, loc));
+  return ScopedExpr(inst);
 }
 
 /// This should emit

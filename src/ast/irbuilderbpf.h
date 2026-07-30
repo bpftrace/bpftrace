@@ -28,6 +28,19 @@ public:
   // this wrapper guards against calling lifetime.end on non-alloca values.
   void CreateLifetimeEnd(Value *val);
 
+  // The builder must never carry a debug location: we attach locations to
+  // individual instructions instead. Several IRBuilder::SetInsertPoint
+  // overloads copy the !dbg of the instruction they land on, which then sticks
+  // to everything emitted afterwards, which can cause leaking and segfaults if
+  // a location outlives the function it came from. These wrappers clear it so
+  // no insertion point change can carry a location along.
+  // https://github.com/bpftrace/bpftrace/pull/5278
+  void SetInsertPoint(BasicBlock *bb);
+  void SetInsertPoint(Instruction *inst);
+  void SetInsertPoint(BasicBlock *bb, BasicBlock::iterator ip);
+  void SetInsertPoint(BasicBlock::iterator ip);
+  void restoreIP(InsertPoint ip);
+
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name = "");
   AllocaInst *CreateAllocaBPF(const SizedType &stype,
                               const std::string &name = "");
