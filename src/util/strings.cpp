@@ -11,14 +11,67 @@ std::vector<std::string> split_string(const std::string &str,
                                       bool remove_empty)
 {
   std::vector<std::string> elems;
-  std::stringstream ss(str);
-  std::string value;
-  while (std::getline(ss, value, delimiter)) {
-    if (remove_empty && value.empty())
-      continue;
+  std::string current;
+  current.reserve(str.size());
 
-    elems.push_back(value);
+  bool in_single = false;
+  bool in_double = false;
+  bool has_token = false; // tracks explicit empty tokens like ""
+
+  auto flush = [&]() {
+    if (!current.empty() || has_token) {
+      if (!(remove_empty && current.empty() && !has_token))
+        elems.push_back(current);
+    }
+    current.clear();
+    has_token = false;
+  };
+
+  for (size_t i = 0; i < str.size(); ++i) {
+    char c = str[i];
+
+    if (in_single) {
+      if (c == '\'')
+        in_single = false;
+      else
+        current += c;
+    } else if (in_double) {
+      if (c == '"') {
+        in_double = false;
+      } else if (c == '\\' && i + 1 < str.size()) {
+        char next = str[i + 1];
+        // In double quotes, only these are escapable
+        if (next == '\\' || next == '"' || next == '$' || next == '`' ||
+            next == '\n') {
+          current += next;
+          ++i;
+        } else {
+          current += c; // keep backslash literally
+        }
+      } else {
+        current += c;
+      }
+    } else {
+      if (c == '\'') {
+        in_single = true;
+        has_token = true;
+      } else if (c == '"') {
+        in_double = true;
+        has_token = true;
+      } else if (c == '\\' && i + 1 < str.size()) {
+        current += str[++i];
+      } else if (c == delimiter) {
+        flush();
+      } else {
+        current += c;
+      }
+    }
   }
+
+  if (in_single || in_double)
+    throw std::runtime_error("split_string_shell: unterminated quote");
+
+  flush();
   return elems;
 }
 
