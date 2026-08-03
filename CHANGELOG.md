@@ -48,6 +48,8 @@ and this project adheres to
   - [#5272](https://github.com/bpftrace/bpftrace/pull/5272)
 - Print zero values for empty scalar maps
   - [#5239](https://github.com/bpftrace/bpftrace/pull/5239)
+- Fix to use vendored BPF UAPI headers across entire codebase to prevent build failures and inconsistencies
+  - [#5277](https://github.com/bpftrace/bpftrace/pull/5277)
 #### Security
 #### Docs
 #### Tools

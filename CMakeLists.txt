@@ -91,9 +91,14 @@ find_package(LibBcc REQUIRED)
 include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
 find_package(LibBpf REQUIRED)
-include_directories(SYSTEM ${LIBBPF_INCLUDE_DIRS})
 if(USE_SYSTEM_LIBBPF)
+  include_directories(SYSTEM ${LIBBPF_INCLUDE_DIRS})
   message(WARNING "Using system libbpf, please ensure that the version is greater than or equal to the submodule")
+else()
+  include_directories(BEFORE SYSTEM
+    ${LIBBPF_INCLUDE_DIRS}
+    ${CMAKE_SOURCE_DIR}/libbpf/include/uapi
+    ${CMAKE_SOURCE_DIR}/libbpf/include)
 endif()
 
 find_package(LibElf REQUIRED)
