@@ -1,4 +1,4 @@
-test:str_contat
+test:str_concat
 {
   $log = "log";
   $filename = "system.journal";
