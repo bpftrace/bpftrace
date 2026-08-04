@@ -32,6 +32,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Ensure that string allocation and usage are consistent in size.
+  - [#5279](https://github.com/bpftrace/bpftrace/pull/5279)
 - Fix crash caused by debug locations leaking between generated functions
   - [#5278](https://github.com/bpftrace/bpftrace/pull/5278)
 - Fix address space handling for map and variable addresses

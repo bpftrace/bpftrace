@@ -1406,7 +1406,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr();
   } else if (call.func == "str") {
-    const auto max_strlen = bpftrace_.config_->max_strlen;
+    const auto max_strlen = bpftrace_.config_->pad_max_strlen();
     // Largest read we'll allow = our global string buffer size
     Value *strlen = b_.getInt64(max_strlen);
     if (call.vargs.size() > 1) {
@@ -1426,24 +1426,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       strlen = b_.CreateSelect(Cmp, proposed_strlen, strlen, "str.min.select");
     }
 
-    // Note that the successful copying of the string will always include the
-    // NULL byte, so we explicitly poison the string value up front. This
-    // allows the conversion to know when the string has been truncated. We
-    // have added an extra byte to the kernel copy to account for this.
-    // Anything copied out of this will be copied as a str[N] type that may
-    // omit the NUL byte (which indicates that it has been truncated).
-    uint64_t padding = 0;
-    Value *readlen = strlen;
-    if (max_strlen < 1024) {
-      padding = 1;
-      readlen = b_.CreateAdd(readlen, b_.getInt64(padding));
-    }
-    Value *buf = b_.CreateGetStrAllocation("str", call.loc, padding);
-    b_.CreateMemsetBPF(buf, b_.getInt8(0xff), max_strlen + padding);
+    Value *buf = b_.CreateGetStrAllocation("str", call.loc);
+    b_.CreateMemsetBPF(buf, b_.getInt8(0xff), max_strlen);
     auto &arg0 = call.vargs.front();
     auto scoped_expr = visit(call.vargs.front());
     b_.CreateProbeReadStr(buf,
-                          readlen,
+                          strlen,
                           scoped_expr.value(),
                           type_map_.type(arg0).GetAS(),
                           call.loc);
