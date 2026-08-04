@@ -10,7 +10,7 @@ struct Foo {
 };
 
 void test_nested_struct(struct Foo *foo) {
-    printf("test\n");
+    printf("test %llu\n", (long long unsigned)foo);
 }
 
 int main() {

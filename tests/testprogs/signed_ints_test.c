@@ -6,7 +6,7 @@ struct x {
 };
 
 void test_signed_ints(struct x *ptr) {
-    printf("test\n");
+    printf("test %llu\n", (long long unsigned)ptr);
 }
 
 int main() {
