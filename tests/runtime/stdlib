@@ -76,3 +76,15 @@ PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:n_func { $n = (int
 EXPECT { .m = 2, .n = 3 }
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
+
+NAME abs_path
+PROG begin { print(abs_path("a.out", 32)); }
+EXPECT {{CWD}}/a.out
+
+NAME abs_path pass absolute path
+PROG begin { print(abs_path("/etc/passwd", 32)); }
+EXPECT /etc/passwd
+
+NAME cwd
+PROG begin { print(cwd); }
+EXPECT {{CWD}}

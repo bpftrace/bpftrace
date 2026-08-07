@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- stdlib: Add path-related functions.
+  - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
 - stdlib: add `str_concat()`.
   - [#5265](https://github.com/bpftrace/bpftrace/pull/5265)
 - Add reg("pc") as an alias for the instruction pointer

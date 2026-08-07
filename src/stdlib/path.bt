@@ -1,0 +1,117 @@
+// Path helpers.
+
+// Takes a string-like variable, and converts to an absolute path.
+//
+// :function abs_path
+// :variant string abs_path(string path, uint64 max_path_depth);
+//
+// Returns the absolute path for the passed relative path or filename . If an empty string is passed in, the current working directory is returned.
+//
+// For example:
+// ```
+// $ cat open.bt
+// tracepoint:syscalls:sys_enter_openat {
+//   print(str(args.filename));
+// }
+// ```
+// The test procedure is `(1)->(2)->(3)->(4)`:
+// ```
+// (1) $ cd /home/rongtao/
+// (3) $ vim .bashrc
+// (2) $ sudo ./open.bt
+// (4) .bashrc
+// ```
+// Use `abs_path()` to get the absolute path of a file:
+// ```
+// tracepoint:syscalls:sys_enter_openat {
+//   print(abs_path(str(args.filename), 32));
+// }
+// ```
+// Then:
+// ```
+// (4) /home/rongtao/.bashrc
+// ```
+//
+// see also `cwd`.
+macro abs_path($filename, $max_path_depth)
+{
+  assert_str($filename);
+
+  let $abspath : string[256];
+  $abspath = "";
+
+  if ($filename[0] == "/"[0]) {
+    $abspath = $filename;
+  } else {
+
+    $fs = curtask->fs;
+    $dentry = $fs->pwd.dentry;
+    $vfsmnt = $fs->pwd.mnt;
+    $mnt = (struct mount *)(((int64)$vfsmnt) - offsetof(struct mount, mnt));
+    $mnt_root = $vfsmnt.mnt_root;
+
+    $abspath = str_concat($abspath, $filename);
+
+    for $j : ((uint64)0)..((uint64)$max_path_depth) {
+
+      $d_name = str($dentry.d_name.name);
+      $parent_dentry = $dentry.d_parent;
+
+      if ($dentry == $parent_dentry || $dentry == $mnt_root) {
+        $mnt_parent = $mnt.mnt_parent;
+
+        // Real root directory
+        if ($mnt == $mnt_parent) {
+          break;
+        }
+
+        $dentry = $mnt.mnt_mountpoint;
+        $mnt = $mnt_parent;
+        $mnt_root = $mnt.mnt.mnt_root;
+        continue;
+      }
+
+      // Sometimes, $d_name will be equal to "/" or start with "/", such as in
+      // a mount point directory.
+      // If the $filename is empty, and it is the first loop iteration, it means
+      // to get the current working directory (see `cwd()`). In this case, no
+      // extra slash is needed.
+      if ($d_name[0] != "/"[0] && !($filename == "" && $j == 0)) {
+        $abspath = str_concat("/", $abspath);
+      }
+      $abspath = str_concat($d_name, $abspath);
+
+      $dentry = $parent_dentry;
+    }
+
+    // Normally, the root directory will be missing a '/'.
+    if ($abspath[0] != "/"[0]) {
+      $abspath = str_concat("/", $abspath);
+    }
+  }
+
+  $abspath
+}
+
+macro abs_path($filename, max_path_depth)
+{
+  let $max_path_depth = max_path_depth;
+  abs_path($filename, $max_path_depth)
+}
+
+macro abs_path(filename, max_path_depth)
+{
+  let $filename = filename;
+  abs_path($filename, max_path_depth)
+}
+
+// get current working directory
+//
+// :function cwd
+// :variant string cwd();
+//
+// see also `abs_path()`.
+macro cwd()
+{
+  abs_path("", 32)
+}

@@ -134,15 +134,22 @@ macro strstr(haystack, needle)
 macro str_concat($s1, $s2) {
   import "stdlib/strings/strings.bpf.c";
 
-  let $new : string[1024];
+  let $new : string[256];
+
+  $new = "";
 
   assert_str($s1);
   assert_str($s2);
 
   let $new_sz = strcap($new);
 
-  __bpf_str_concat((int8 *)&$new, (uint64)$new_sz, (int8 *)&$s1);
-  __bpf_str_concat((int8 *)&$new, (uint64)$new_sz, (int8 *)&$s2);
+  let $err = __bpf_str_concat((int8 *)&$new, (uint64)$new_sz, (int8 *)&$s1);
+  if ($err >= 0) {
+    $err = __bpf_str_concat((int8 *)&$new, (uint64)$new_sz, (int8 *)&$s2);
+  }
+  if ($err < 0) {
+      errorf("Concatenating strings failed, err %d", $err);
+  }
 
   $new
 }
