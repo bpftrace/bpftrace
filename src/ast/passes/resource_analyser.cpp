@@ -391,7 +391,7 @@ void ResourceAnalyser::visit(Call &call)
   }
 
   if (call.func == "str" || call.func == "buf" || call.func == "path") {
-    const auto max_strlen = bpftrace_.config_->max_strlen;
+    const auto max_strlen = bpftrace_.config_->pad_max_strlen();
     if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;
   }
@@ -456,7 +456,7 @@ void ResourceAnalyser::visit(Map &map)
                                            it->second.value,
                                            it->second.description);
     if (std::holds_alternative<std::string>(it->second.value)) {
-      const auto max_strlen = bpftrace_.config_->max_strlen;
+      const auto max_strlen = bpftrace_.config_->pad_max_strlen();
       if (exceeds_stack_limit(max_strlen))
         resources_.str_buffers++;
     }
@@ -567,7 +567,7 @@ void ResourceAnalyser::visit(IfExpr &if_expr)
   // blow it up. So we need a scratch buffer for it.
 
   if (type_map_.type(&if_expr).IsStringTy()) {
-    const auto max_strlen = bpftrace_.config_->max_strlen;
+    const auto max_strlen = bpftrace_.config_->pad_max_strlen();
     if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;
   }

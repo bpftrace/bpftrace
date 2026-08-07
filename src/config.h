@@ -87,6 +87,8 @@ public:
 
   // Initialized in the constructor.
   UserSymbolCacheType user_symbol_cache_type;
+
+  uint64_t pad_max_strlen() const;
 };
 
 // Specific key has been renamed, must be handled by caller. This may be
