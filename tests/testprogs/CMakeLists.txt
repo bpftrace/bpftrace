@@ -154,19 +154,26 @@ list(APPEND testprogtargets ${EXTERNAL_DEBUG_DIR}/dwo/uprobe_test-split)
 
 # Build a binary with split debuginfo and bundle the .dwo files into a DWARF Package (.dwp)
 # archive; to verify parsing of the packaged format.
-find_program(LLVM_DWP llvm-dwp REQUIRED)
-add_custom_command(
-  OUTPUT
+#
+# Disable llvm-dwp tests on s390 and with LLVM versions earlier than 23,
+# due to failures when using the -gsplit-dwarf flag. The issue is caused
+# by an endianness bug in llvm-dwp.
+# https://github.com/llvm/llvm-project/pull/203424
+if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "s390x" AND LLVM_VERSION_MAJOR LESS 23))
+  find_program(LLVM_DWP llvm-dwp REQUIRED)
+  add_custom_command(
+    OUTPUT
+      ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
+      ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp
+    COMMAND ${CMAKE_C_COMPILER} -g -O0 -gsplit-dwarf ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c -o ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
+    COMMAND ${LLVM_DWP} -e ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split -o ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${EXTERNAL_DEBUG_DIR}/dwp/*.dwo
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c
+  )
+  list(APPEND testprogtargets
     ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
-    ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp
-  COMMAND ${CMAKE_C_COMPILER} -g -O0 -gsplit-dwarf ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c -o ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
-  COMMAND ${LLVM_DWP} -e ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split -o ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp
-  COMMAND ${CMAKE_COMMAND} -E rm -f ${EXTERNAL_DEBUG_DIR}/dwp/*.dwo
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/uprobe_test.c
-)
-list(APPEND testprogtargets
-  ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split
-  ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp)
+    ${EXTERNAL_DEBUG_DIR}/dwp/uprobe_test-split.dwp)
+endif()
 
 add_custom_target(testprogs ALL DEPENDS ${testprogtargets})
 
