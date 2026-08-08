@@ -681,7 +681,7 @@ macro ncpus()
 
 // :function nsecs
 // :variant timestamp nsecs([TimestampMode mode])
-//
+// :variant timestamp nsecs
 // Returns a timestamp in nanoseconds, as given by the requested kernel clock.
 // Defaults to `boot` if no clock is explicitly requested.
 //
