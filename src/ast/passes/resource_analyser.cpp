@@ -39,6 +39,7 @@ public:
   void visit(Subprog &subprog);
   void visit(Builtin &builtin);
   void visit(Call &call);
+  void visit(Cast &cast);
   void visit(Map &map);
   void visit(MapAccess &acc);
   void visit(MapDeclStatement &decl);
@@ -431,6 +432,19 @@ void ResourceAnalyser::visit(Call &call)
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
+  }
+}
+
+void ResourceAnalyser::visit(Cast &cast)
+{
+  Visitor<ResourceAnalyser>::visit(cast);
+
+  const auto &ty = type_map_.type(&cast);
+
+  if (ty.IsStringTy()) {
+    const auto max_strlen = bpftrace_.config_->pad_max_strlen();
+    if (exceeds_stack_limit(max_strlen))
+      resources_.str_buffers++;
   }
 }
 
