@@ -670,9 +670,18 @@ void CallPreCheck::visit(Call &call)
     }
   } else if (call.func == "path") {
     if (call.vargs.size() == 2) {
-      if (!call.vargs.at(1).is<Integer>()) {
+      auto *size = call.vargs.at(1).as<Integer>();
+      if (!size) {
         call.addError() << call.func
                         << ": invalid size value, need non-negative literal";
+      } else {
+        const auto max_strlen = bpftrace_.config_->max_strlen;
+        if (size->value > max_strlen) {
+          auto &err = call.addError();
+          err << call.func << ": size is too long (over " << max_strlen
+              << " bytes): " << size->value;
+          err.addHint() << "Increase BPFTRACE_MAX_STRLEN.";
+        }
       }
     }
 

@@ -2406,6 +2406,42 @@ TEST_F(TypeCheckerTest, cast_string)
   test("kprobe:f { $a = (string)5; }", Error{});
 }
 
+TEST_F(TypeCheckerTest, string_too_long)
+{
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->config_->max_strlen = 64;
+
+  test("kprobe:f { $a = (string[64])\"hello\"; }", Mock{ *bpftrace });
+
+  test("kprobe:f { $a = (string[65])\"hello\"; }",
+       Mock{ *bpftrace },
+       Error{ R"_(
+stdin:1:17-29: ERROR: String type is too long (over 64 bytes): string[65]
+kprobe:f { $a = (string[65])"hello"; }
+                ~~~~~~~~~~~~
+)_" });
+
+  test("kprobe:f { let $a : string[64]; }", Mock{ *bpftrace });
+  test("fn f($s : string[64]): void { print($s); }", Mock{ *bpftrace });
+  test("fn f(): string[64] { return \"hello\"; }", Mock{ *bpftrace });
+
+  test("kprobe:f { let $a : string[65]; }", Mock{ *bpftrace }, Error{ R"(
+stdin:1:21-31: ERROR: String type is too long (over 64 bytes): string[65]
+kprobe:f { let $a : string[65]; }
+                    ~~~~~~~~~~
+)" });
+
+  test("fn f($s : string[65]): void { print($s); }",
+       Mock{ *bpftrace },
+       Error{ "String type is too long (over 64 bytes): string[65]" });
+  test("fn f(): string[65] { return \"hello\"; }",
+       Mock{ *bpftrace },
+       Error{ "String type is too long (over 64 bytes): string[65]" });
+
+  // No allocation
+  test("kprobe:f { $a = sizeof(string[65]); }", Mock{ *bpftrace });
+}
+
 TEST_F(TypeCheckerTest, cast_username)
 {
   test("kprobe:f { $a = (username_t)1000; }");
