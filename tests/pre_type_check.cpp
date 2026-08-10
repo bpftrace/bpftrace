@@ -40,6 +40,7 @@ void test(const std::string &input,
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeAndApExpansionPass())
+                .add(ast::CreateConfigBuiltinsPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateBuiltinsPass())
                 .add(ast::CreateMapSugarPass())

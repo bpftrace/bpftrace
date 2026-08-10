@@ -8,6 +8,9 @@ namespace bpftrace::ast {
 // merges probes (e.g. session expansion merging kprobe + kretprobe).
 Pass CreatePreExpansionBuiltinsPass();
 
+// Expand builtins that must be available before literal folding.
+Pass CreateConfigBuiltinsPass();
+
 // Fill in the values of all intrinsics.
 Pass CreateBuiltinsPass();
 
