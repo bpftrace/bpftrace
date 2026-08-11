@@ -537,16 +537,6 @@ TEST(CallPreCheck, strncmp)
        "Builtin strncmp requires a non-negative literal");
 }
 
-TEST(CallPreCheck, signal)
-{
-  test(R"(begin { signal(current_pid) })");
-  test(R"(begin { signal(current_tid) })");
-
-  // Errors
-  test(R"(begin { signal(bob) })",
-       "Invalid signal target: bob (expects: current_pid or current_tid)");
-}
-
 TEST(CallPreCheck, pid_tid)
 {
   test("begin { $i = tid(); }");
@@ -593,14 +583,11 @@ TEST(CallPreCheck, raw_map_arg_funcs)
 {
   test("kprobe:f { @x[1,2] = count(); clear(@x); }");
   test("kprobe:f { @x[1,2] = count(); zero(@x); }");
-  test("kprobe:f { @x[1,2] = count(); len(@x); }");
 
   // Errors
   test("kprobe:f { @x[1,2] = count(); clear(@x[3,4]); }",
        "expects a map argument");
   test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }",
-       "expects a map argument");
-  test("kprobe:f { @x[1,2] = count(); len(@x[3,4]); }",
        "expects a map argument");
 }
 

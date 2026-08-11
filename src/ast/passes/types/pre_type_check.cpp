@@ -709,12 +709,6 @@ void CallPreCheck::visit(Identifier &identifier)
           << "Invalid PID namespace mode: " << identifier.ident
           << " (expects: curr_ns or init)";
     }
-  } else if (func_ == "signal") {
-    if (identifier.ident != "current_pid" &&
-        identifier.ident != "current_tid") {
-      identifier.addError() << "Invalid signal target: " << identifier.ident
-                            << " (expects: current_pid or current_tid)";
-    }
   }
 }
 
