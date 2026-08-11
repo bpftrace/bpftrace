@@ -83,6 +83,7 @@ private:
                                size_t index,
                                const arg_type_spec &spec);
   [[nodiscard]] bool check_call(Call &call);
+  bool check_string_size(Node &node, const SizedType &ty);
 
   bool check_arg(Call &call,
                  Type type,
@@ -953,6 +954,10 @@ void TypeChecker::visit(Cast &cast)
     return;
   }
 
+  if (!check_string_size(cast, ty)) {
+    return;
+  }
+
   if (ty == rhs) {
     cast.addWarning() << "Unnecessary cast: expression is already of type "
                       << rhs;
@@ -1118,6 +1123,8 @@ void TypeChecker::visit(VarDeclStatement &decl)
     if (!ty.IsNoneTy()) {
       if (!IsValidVarDeclType(ty)) {
         decl.typeof->addError() << "Invalid variable declaration type: " << ty;
+      } else {
+        check_string_size(*decl.typeof, ty);
       }
     } else {
       // We couldn't resolve that specific type by now.
@@ -1142,6 +1149,8 @@ void TypeChecker::visit(Subprog &subprog)
   for (SubprogArg *arg : subprog.args) {
     if (type_map_.type(arg->typeof).IsNoneTy()) {
       arg->addError() << "Unable to resolve argument type.";
+    } else {
+      check_string_size(*arg->typeof, type_map_.type(arg->typeof));
     }
   }
 
@@ -1153,7 +1162,22 @@ void TypeChecker::visit(Subprog &subprog)
   if (type_map_.type(subprog.return_type).IsNoneTy()) {
     subprog.return_type->addError()
         << "Unable to resolve suitable return type.";
+  } else {
+    check_string_size(*subprog.return_type,
+                      type_map_.type(subprog.return_type));
   }
+}
+
+bool TypeChecker::check_string_size(Node &node, const SizedType &ty)
+{
+  const auto max_strlen = bpftrace_.config_->max_strlen;
+  if (!ty.IsStringTy() || ty.GetSize() <= max_strlen) {
+    return true;
+  }
+  auto &err = node.addError();
+  err << "String type is too long (over " << max_strlen << " bytes): " << ty;
+  err.addHint() << "Increase BPFTRACE_MAX_STRLEN.";
+  return false;
 }
 
 void TypeChecker::visit(Program &program)

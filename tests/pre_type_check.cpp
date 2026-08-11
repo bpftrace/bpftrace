@@ -4,9 +4,12 @@
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
+#include "ast/passes/config_analyser.h"
 #include "ast/passes/fold_literals.h"
+#include "ast/passes/import_scripts.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/passes/resolve_imports.h"
 #include "ast/passes/types/pre_type_check.h"
 #include "mocks.h"
 #include "parser.h"
@@ -37,6 +40,9 @@ void test(const std::string &input,
                 .put(bpftrace)
                 .put(get_mock_function_info())
                 .add(CreateParsePass())
+                .add(ast::CreateConfigPass())
+                .add(ast::CreateResolveRootImportsPass())
+                .add(ast::CreateImportInternalScriptsPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeAndApExpansionPass())
@@ -521,12 +527,15 @@ TEST(CallPreCheck, debugf)
 TEST(CallPreCheck, path)
 {
   test("fentry:f { path(\"adf\", 1); }");
+  test("fentry:f { path(\"adf\", config.max_strlen); }");
 
   // Errors
   test(R"(fentry:f { path("adf", "Na"); })",
        "path: invalid size value, need non-negative literal");
   test("fentry:f { path(\"adf\", -1); }",
        "path: invalid size value, need non-negative literal");
+  test("fentry:f { path(\"adf\", config.max_strlen + 1); }",
+       "path: size is too long");
 }
 
 TEST(CallPreCheck, strncmp)
