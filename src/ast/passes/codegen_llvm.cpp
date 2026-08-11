@@ -2928,12 +2928,15 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     }
     return scoped_expr;
   } else if (ty.IsStringTy()) {
-    auto *v = b_.CreateAllocaBPF(ty);
-    b_.CreateMemsetBPF(v, b_.getInt8(0), ty.GetSize());
-    b_.CreateMemcpyBPF(v,
+    auto *buf = b_.CreateGetStrAllocation("cast", cast.loc);
+    const auto max_strlen = bpftrace_.config_->max_strlen;
+    b_.CreateMemsetBPF(buf, b_.getInt8(0), max_strlen);
+    b_.CreateMemcpyBPF(buf,
                        scoped_expr.value(),
                        type_map_.type(cast.expr).GetSize());
-    return ScopedExpr(v, [this, v] { b_.CreateLifetimeEnd(v); });
+    if (dyn_cast<AllocaInst>(buf))
+      return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
+    return ScopedExpr(buf);
   } else {
     // FIXME(amscanne): The existing behavior is to simply pass the existing
     // expression back up when it is neither an integer nor an array.
