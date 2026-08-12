@@ -95,10 +95,7 @@ if(USE_SYSTEM_LIBBPF)
   include_directories(SYSTEM ${LIBBPF_INCLUDE_DIRS})
   message(WARNING "Using system libbpf, please ensure that the version is greater than or equal to the submodule")
 else()
-  include_directories(BEFORE SYSTEM
-    ${LIBBPF_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}/libbpf/include/uapi
-    ${CMAKE_SOURCE_DIR}/libbpf/include)
+  include_directories(BEFORE SYSTEM ${LIBBPF_INCLUDE_DIRS})
 endif()
 
 find_package(LibElf REQUIRED)
