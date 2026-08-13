@@ -10,6 +10,17 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+#### Changed
+#### Deprecated
+#### Removed
+#### Fixed
+#### Security
+#### Docs
+#### Tools
+
+## [0.27.0] TBD
+
+#### Added
 - stdlib: add `str_concat()`.
   - [#5265](https://github.com/bpftrace/bpftrace/pull/5265)
 - Add reg("pc") as an alias for the instruction pointer
@@ -29,8 +40,6 @@ and this project adheres to
   - [#5208](https://github.com/bpftrace/bpftrace/pull/5208)
 - Release assets are now suffixed with the architecture
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
-#### Deprecated
-#### Removed
 #### Fixed
 - Ensure that string allocation and usage are consistent in size.
   - [#5279](https://github.com/bpftrace/bpftrace/pull/5279)
@@ -54,9 +63,6 @@ and this project adheres to
   - [#5288](https://github.com/bpftrace/bpftrace/pull/5288)
 - Fix large string allocations for casts
   - [#5286](https://github.com/bpftrace/bpftrace/pull/5286)
-#### Security
-#### Docs
-#### Tools
 
 ## [0.26.1] 2026-06-02
 
