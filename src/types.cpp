@@ -280,7 +280,7 @@ bool SizedType::IsStack() const
   return type_ == Type::ustack_t || type_ == Type::kstack_t;
 }
 
-std::string addrspacestr(AddrSpace as)
+std::string_view addrspacestr(AddrSpace as)
 {
   switch (as) {
     case AddrSpace::kernel:

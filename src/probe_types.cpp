@@ -43,6 +43,9 @@ std::string expand_probe_name(const std::string &orig_name)
   return expanded_name;
 }
 
+// probetypeName is often used in string concatenations so do not use
+// string_view to avoid extra casts
+// NOLINTNEXTLINE(modernize-use-string-view)
 std::string probetypeName(ProbeType t)
 {
   // clang-format off
