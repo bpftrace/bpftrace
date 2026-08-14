@@ -30,12 +30,12 @@
           pkgs = import nixpkgs { inherit system; };
 
           # The default LLVM version is the latest supported release
-          defaultLlvmVersion = 22;
+          defaultLlvmVersion = 23;
 
           # Override to specify the bcc build we want.
           # We need specific patches in BCC which resolve build failures with
-          # LLVM 22 and are not a part of any official release, yet.
-          bccVersion = "2cc6d1ade647db5bf1dab91be3b18569868779ce";
+          # LLVM 23 and are not a part of any official release, yet.
+          bccVersion = "dad0db93fd0f443b2a4f43bc2f23c621c9202516";
           bcc = (pkgs.bcc.override {
             llvmPackages = pkgs."llvmPackages_${toString defaultLlvmVersion}";
           }).overridePythonAttrs (oldAttrs: {
@@ -45,7 +45,7 @@
               repo = "bcc";
               rev = "${bccVersion}";
               # See above
-              sha256 = "sha256-eHPhNGjtFXOGHLGCANsyl+MrUhsCVvQ2lOKI/lcbd/8=";
+              sha256 = "sha256-js1NZumvODHrLXyaRaBMYJZtmTU63a3tl1+VJj0/y+E=";
             };
             # Use shared libclang-cpp.so instead of individual static libs.
             # New LLVM 22 static libs (e.g. clangAnalysisLifetimeSafety) are
@@ -257,11 +257,11 @@
             default = self.packages.${system}."bpftrace-llvm${toString defaultLlvmVersion}";
 
             # Support matrix of llvm versions
+            bpftrace-llvm23 = mkBpftrace 23;
             bpftrace-llvm22 = mkBpftrace 22;
             bpftrace-llvm21 = mkBpftrace 21;
             bpftrace-llvm20 = mkBpftrace 20;
             bpftrace-llvm19 = mkBpftrace 19;
-            bpftrace-llvm18 = mkBpftrace 18;
 
             # Self-contained static binary with all dependencies
             appimage = nix-appimage.lib.${system}.mkAppImage {
@@ -311,18 +311,18 @@
           devShells = rec {
             default = self.devShells.${system}."bpftrace-llvm${toString defaultLlvmVersion}";
 
+            bpftrace-llvm23 = mkBpftraceDevShell 23;
             bpftrace-llvm22 = mkBpftraceDevShell 22;
             bpftrace-llvm21 = mkBpftraceDevShell 21;
             bpftrace-llvm20 = mkBpftraceDevShell 20;
             bpftrace-llvm19 = mkBpftraceDevShell 19;
-            bpftrace-llvm18 = mkBpftraceDevShell 18;
 
-            # Note that we depend on LLVM 18 explicitly for the fuzz shell, and
+            # Note that we depend on LLVM 22 explicitly for the fuzz shell, and
             # this is managed separately. The version of LLVM used to build the
             # tool must be the same as the version linked as a dependency, or
             # strange things happen. Hopefully this is a simple update, where
             # both numbers are bumped at the same time.
-            bpftrace-fuzz = mkBpftraceFuzzShell 18 self.devShells.${system}."bpftrace-llvm18";
+            bpftrace-fuzz = mkBpftraceFuzzShell 22 self.devShells.${system}."bpftrace-llvm22";
           };
         });
 }
