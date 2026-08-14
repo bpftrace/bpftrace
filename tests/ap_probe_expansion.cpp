@@ -68,12 +68,14 @@ TEST(ap_probe_expansion, session_ast)
        {},
        Program().WithProbe(Probe(
            { "kprobe:sys_*" },
-           { ExprStatement(
-               If(Call("__session_is_return", {}),
-                  Block({ AssignScalarMapStatement(Map("@exit"), Integer(1)) },
-                        None()),
-                  Block({ AssignScalarMapStatement(Map("@entry"), Integer(1)) },
-                        None()))) })),
+           { ExprStatement(If(
+               Call("__session_is_return",
+                    { Cast(Typeof(ParsedType(ast::ParsedType::Kind::Pointer)),
+                           Builtin("ctx")) }),
+               Block({ AssignScalarMapStatement(Map("@exit"), Integer(1)) },
+                     None()),
+               Block({ AssignScalarMapStatement(Map("@entry"), Integer(1)) },
+                     None()))) })),
        true);
 }
 
@@ -179,12 +181,14 @@ TEST(ap_probe_expansion, kprobe_multi_exact)
        { { "sys_read" } },
        Program().WithProbe(Probe(
            { "kprobe:sys_read" },
-           { ExprStatement(
-               If(Call("__session_is_return", {}),
-                  Block({ AssignScalarMapStatement(Map("@exit"), Integer(1)) },
-                        None()),
-                  Block({ AssignScalarMapStatement(Map("@entry"), Integer(1)) },
-                        None()))) })),
+           { ExprStatement(If(
+               Call("__session_is_return",
+                    { Cast(Typeof(ParsedType(ast::ParsedType::Kind::Pointer)),
+                           Builtin("ctx")) }),
+               Block({ AssignScalarMapStatement(Map("@exit"), Integer(1)) },
+                     None()),
+               Block({ AssignScalarMapStatement(Map("@entry"), Integer(1)) },
+                     None()))) })),
        true);
 }
 
