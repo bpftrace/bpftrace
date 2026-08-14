@@ -212,11 +212,25 @@ void SessionExpander::visit(Probe &probe)
       return;
 
     AttachPointList attach_points = probe.attach_points;
+
+    auto *ctx_builtin = ast_.make_node<Builtin>(probe.block->loc, "ctx");
+    auto *void_type = ast_.make_node<ParsedType>(probe.block->loc,
+                                                 ParsedType::Kind::Identifier,
+                                                 "void");
+    auto *void_ptr_type = ast_.make_node<ParsedType>(probe.block->loc,
+                                                     void_type);
+    auto *typeof_node = ast_.make_node<Typeof>(probe.block->loc, void_ptr_type);
+    auto *ctx_cast = ast_.make_node<Cast>(probe.block->loc,
+                                          typeof_node,
+                                          ctx_builtin);
+    ExpressionList call_args;
+    call_args.emplace_back(ctx_cast);
+
     auto *expr = ast_.make_node<IfExpr>(
         probe.block->loc,
         ast_.make_node<Call>(probe.block->loc,
                              "__session_is_return",
-                             ExpressionList{}),
+                             call_args),
         retprobe->block,
         probe.block);
     auto *stmt = ast_.make_node<ExprStatement>(probe.block->loc, expr);
