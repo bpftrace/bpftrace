@@ -41,6 +41,8 @@ and this project adheres to
 - Release assets are now suffixed with the architecture
   - [#5213](https://github.com/bpftrace/bpftrace/pull/5213)
 #### Fixed
+- Fix session probes support for kernel version 7.0
+  - [#5294](https://github.com/bpftrace/bpftrace/pull/5294)
 - Propagate address space for sized variable declarations
   - [#5294](https://github.com/bpftrace/bpftrace/pull/5294)
 - Ensure that string allocation and usage are consistent in size.
