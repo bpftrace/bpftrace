@@ -14,7 +14,7 @@ protected:                                                                     \
   std::optional<bool> has_##name##_;                                           \
                                                                                \
 public:                                                                        \
-  bool has_helper_##name(void)                                                 \
+  bool has_helper_##name()                                                     \
   {                                                                            \
     if (!has_##name##_.has_value())                                            \
       has_##name##_ = std::make_optional<bool>(                                \

@@ -609,43 +609,37 @@ void TextOutput::attached_probes(uint64_t num_probes)
 
 void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
 {
-  switch (info.error_id) {
-    case RuntimeErrorId::HELPER_ERROR: {
-      std::string msg;
-      if (info.func_id == BPF_FUNC_map_update_elem && retcode == -E2BIG) {
-        msg = "Map full; can't update element. Try increasing max_map_keys "
-              "config "
-              "or manually setting the max entries in a map declaration e.g. "
-              "`let "
-              "@a = hash(5000)`";
-      } else if (info.func_id == BPF_FUNC_map_delete_elem &&
-                 retcode == -ENOENT) {
-        msg = "Can't delete map element because it does not exist.";
-      }
-      // bpftrace sets the return code to 0 for map_lookup_elem failures
-      // which is why we're not also checking the retcode
-      else if (info.func_id == BPF_FUNC_map_lookup_elem) {
-        msg = "Can't lookup map element because it does not exist.";
-      } else {
-        msg = strerror(-retcode);
-      }
+  if (info.error_id == RuntimeErrorId::HELPER_ERROR) {
+    std::string msg;
+    if (info.func_id == BPF_FUNC_map_update_elem && retcode == -E2BIG) {
+      msg = "Map full; can't update element. Try increasing max_map_keys "
+            "config "
+            "or manually setting the max entries in a map declaration e.g. "
+            "`let "
+            "@a = hash(5000)`";
+    } else if (info.func_id == BPF_FUNC_map_delete_elem && retcode == -ENOENT) {
+      msg = "Can't delete map element because it does not exist.";
+    }
+    // bpftrace sets the return code to 0 for map_lookup_elem failures
+    // which is why we're not also checking the retcode
+    else if (info.func_id == BPF_FUNC_map_lookup_elem) {
+      msg = "Can't lookup map element because it does not exist.";
+    } else {
+      msg = strerror(-retcode);
+    }
 
-      LOG(WARNING,
-          std::string(info.locations.begin()->source_location),
-          std::vector(info.locations.begin()->source_context),
-          err_)
-          << msg << "\nAdditional Info - helper: " << info.func_id
-          << ", retcode: " << retcode;
-      break;
-    }
-    default: {
-      LOG(WARNING,
-          std::string(info.locations.begin()->source_location),
-          std::vector(info.locations.begin()->source_context),
-          err_)
-          << info;
-      break;
-    }
+    LOG(WARNING,
+        std::string(info.locations.begin()->source_location),
+        std::vector(info.locations.begin()->source_context),
+        err_)
+        << msg << "\nAdditional Info - helper: " << info.func_id
+        << ", retcode: " << retcode;
+  } else {
+    LOG(WARNING,
+        std::string(info.locations.begin()->source_location),
+        std::vector(info.locations.begin()->source_context),
+        err_)
+        << info;
   }
 
   // Print the chain

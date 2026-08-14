@@ -75,7 +75,7 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       auto num_frames = value.bitcast<uint64_t>(0);
       auto limit = type.stack_type.limit;
       constexpr size_t stack_offset = sizeof(uint64_t);
-      auto len = static_cast<size_t>(type.stack_type.elem_size() * limit);
+      auto len = type.stack_type.elem_size() * limit;
       const auto raw_stack = value.slice(stack_offset, len);
 
       return bpftrace.get_stack(
@@ -89,7 +89,7 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
       auto limit = type.stack_type.limit;
       constexpr size_t stack_offset = sizeof(uint64_t) * 2;
 
-      auto len = static_cast<size_t>(type.stack_type.elem_size() * limit);
+      auto len = type.stack_type.elem_size() * limit;
       const auto raw_stack = value.slice(stack_offset, len);
 
       if (type.stack_type.mode == StackMode::build_id) {
