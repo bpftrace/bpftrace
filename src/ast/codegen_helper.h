@@ -30,7 +30,7 @@ inline bool inBpfMemory(const SizedType &type)
 
 inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {
-  return (shouldBeInBpfMemoryAlready(ty)) ? AddrSpace::kernel : ty.GetAS();
+  return shouldBeInBpfMemoryAlready(ty) ? AddrSpace::kernel : ty.GetAS();
 }
 
 // This applies to both map keys and map values
