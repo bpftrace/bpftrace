@@ -4,7 +4,7 @@
 
 namespace bpftrace {
 
-static std::string logtype_str(LogType t)
+static std::string_view logtype_str(LogType t)
 {
   switch (t) {
       // clang-format off
@@ -67,8 +67,7 @@ void Log::take_input(LogType type,
   if (source_location) {
     out << *source_location << ": ";
   }
-  const std::string& typestr = logtype_str(type);
-  out << typestr << msg << color_end << std::endl;
+  out << logtype_str(type) << msg << color_end << std::endl;
 
   if (source_context) {
     for (const auto& s : *source_context) {

@@ -90,20 +90,8 @@ bpf_prog_type progtype(ProbeType t)
   return {}; // unreached
 }
 
-std::string progtypeName(bpf_prog_type t)
-{
-  switch (t) {
-      // clang-format off
-    case BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
-    case BPF_PROG_TYPE_TRACEPOINT: return "BPF_PROG_TYPE_TRACEPOINT"; break;
-    case BPF_PROG_TYPE_PERF_EVENT: return "BPF_PROG_TYPE_PERF_EVENT"; break;
-    case BPF_PROG_TYPE_TRACING:    return "BPF_PROG_TYPE_TRACING";    break;
-    // clang-format on
-    default:
-      LOG(BUG) << "invalid program type: " << t;
-  }
-}
-
+// eventprefix is always used as std::string
+// NOLINTNEXTLINE(modernize-use-string-view)
 std::string eventprefix(ProbeType t)
 {
   return is_return_type(t) ? "r_" : "p_";
