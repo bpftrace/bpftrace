@@ -32,7 +32,10 @@ Checks:
   - -readability-isolate-declaration
   - -readability-magic-numbers
   - -readability-make-member-function-const
+  - -readability-redundant-lambda-parameter-list
+  - -readability-redundant-nested-if
   - -readability-suspicious-call-argument
+  - -readability-trailing-comma
 
 CheckOptions:
   # gcc and llvm did not introduce <format> when supporting C++20, so using
