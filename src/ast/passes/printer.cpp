@@ -1425,7 +1425,7 @@ Buffer Formatter::visit(NamedArgument& named_arg)
 {
   Buffer elem;
   // -1 for the equals
-  size_t width = max_width - (named_arg.name.size()) - 1;
+  size_t width = max_width - named_arg.name.size() - 1;
   auto elem_buf = format(named_arg.expr, metadata, width);
   elem = Buffer().text(named_arg.name).text("=").append(std::move(elem_buf));
   return elem;
