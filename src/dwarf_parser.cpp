@@ -84,7 +84,16 @@ static int kernel_module_section_address(Dwfl_Module *mod,
                                          const GElf_Shdr *shdr,
                                          Dwarf_Addr *addr)
 {
-  if (std::string_view(secname) == "__versions") {
+  const std::string_view section(secname);
+
+  // The kernel does not expose these sections in
+  // /sys/module/<name>/sections after loading. Older libdwfl versions either
+  // do not recognize __versions or check the legacy .data.percpu spelling
+  // instead of the .data..percpu spelling used by affected modules.
+  // A zero-sized section has no runtime contents or address to resolve.
+  if ((shdr != nullptr && shdr->sh_size == 0) ||
+      section == "__versions" ||
+      section == ".data..percpu") {
     *addr = static_cast<Dwarf_Addr>(-1L);
     return DWARF_CB_OK;
   }
@@ -101,8 +110,10 @@ Dwarf::Dwarf(BPFtrace *bpftrace, std::string debuginfo_path)
   debuginfo_path_cstr_ = debuginfo_path_.c_str();
   callbacks.find_elf = dwfl_linux_kernel_find_elf;
   callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
-  // Wrapper callback preventing libdw to mistakenly fail due to missing
-  // __versions section in /sys/module/<name>/sections/ at runtime.
+  // Wrapper callback preventing libdw from failing when a loaded module does
+  // not expose a section that has no runtime contents or address. All other
+  // sections are still handled by the standard libdwfl kernel module
+  // callback.
   callbacks.section_address = kernel_module_section_address;
   callbacks.debuginfo_path = const_cast<char **>(&debuginfo_path_cstr_);
   dwfl = dwfl_begin(&callbacks);
