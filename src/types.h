@@ -661,7 +661,7 @@ std::optional<SizedType> get_promoted_record(const SizedType &currentType,
 std::optional<SizedType> get_promoted_type(const SizedType &currentType,
                                            const SizedType &newType);
 
-std::string addrspacestr(AddrSpace as);
+std::string_view addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string typestr(const SizedType &type);
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
