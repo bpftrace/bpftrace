@@ -700,7 +700,7 @@ void CallPreCheck::visit(Call &call)
   } else if (call.func == "pid" || call.func == "tid") {
     if (call.vargs.size() == 1) {
       auto &arg = call.vargs.at(0);
-      if (!(arg.as<Identifier>())) {
+      if (!arg.as<Identifier>()) {
         call.addError() << call.func
                         << "() only supports curr_ns and init as the argument";
       }
