@@ -17,7 +17,7 @@
 namespace bpftrace::ast {
 
 namespace {
-std::string probeReadHelperName(bpf_func_id id)
+std::string_view probeReadHelperName(bpf_func_id id)
 {
   switch (id) {
     case BPF_FUNC_probe_read:

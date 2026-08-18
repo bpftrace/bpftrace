@@ -14,7 +14,7 @@ namespace bpftrace {
 
 bool is_return_type(ProbeType t);
 bpf_prog_type progtype(ProbeType t);
-std::string progtypeName(bpf_prog_type t);
+std::string_view progtypeName(bpf_prog_type t);
 
 class AttachError : public ErrorInfo<AttachError> {
 public:
