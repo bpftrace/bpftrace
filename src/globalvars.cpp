@@ -145,7 +145,7 @@ void update_global_vars_rodata(
           break;
         }
         case GlobalVarConfig::opt_string: {
-          auto *var = reinterpret_cast<char *>(global_vars_buf + offset);
+          auto *var = global_vars_buf + offset;
           const auto &val = std::get<std::string>(it->second);
           strncpy(var, val.c_str(), val.size() + 1);
           break;

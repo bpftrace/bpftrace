@@ -474,27 +474,22 @@ void JsonOutput::attached_probes(uint64_t num_probes)
 
 void JsonOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
 {
-  switch (info.error_id) {
-    case RuntimeErrorId::HELPER_ERROR: {
-      out_ << R"({"type": "helper_error")";
-      out_ << R"(, "msg": )";
-      JsonEmitter<std::string>::emit(out_, strerror(-retcode));
-      out_ << R"(, "helper": )";
-      std::stringstream ss;
-      ss << info.func_id;
-      JsonEmitter<std::string>::emit(out_, ss.str());
-      out_ << R"(, "retcode": )";
-      JsonEmitter<int64_t>::emit(out_, retcode);
-      break;
-    }
-    default: {
-      out_ << R"({"type": "runtime_error")";
-      out_ << R"(, "msg": )";
-      std::stringstream ss;
-      ss << info;
-      JsonEmitter<std::string>::emit(out_, ss.str());
-      break;
-    }
+  if (info.error_id == RuntimeErrorId::HELPER_ERROR) {
+    out_ << R"({"type": "helper_error")";
+    out_ << R"(, "msg": )";
+    JsonEmitter<std::string>::emit(out_, strerror(-retcode));
+    out_ << R"(, "helper": )";
+    std::stringstream ss;
+    ss << info.func_id;
+    JsonEmitter<std::string>::emit(out_, ss.str());
+    out_ << R"(, "retcode": )";
+    JsonEmitter<int64_t>::emit(out_, retcode);
+  } else {
+    out_ << R"({"type": "runtime_error")";
+    out_ << R"(, "msg": )";
+    std::stringstream ss;
+    ss << info;
+    JsonEmitter<std::string>::emit(out_, ss.str());
   }
 
   // Json only prints the top level location
