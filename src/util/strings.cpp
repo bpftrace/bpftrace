@@ -22,6 +22,63 @@ std::vector<std::string> split_string(const std::string &str,
   return elems;
 }
 
+std::vector<std::string> split_string_quotes(const std::string &str,
+                                             char delimiter,
+                                             bool remove_empty)
+{
+  std::vector<std::string> elems;
+  if (str.empty())
+    return elems;
+
+  std::string value;
+  char quote = '\0';
+  bool escaped = false;
+  bool quoted = false; // current token contains a quoted section
+
+  for (char c : str) {
+    if (escaped) {
+      // Backslash escapes the next character: keep it verbatim and
+      // don't treat it as a quote or delimiter.
+      value += c;
+      escaped = false;
+    } else if (c == '\\') {
+      // Keep the backslash itself and escape the following character.
+      value += c;
+      escaped = true;
+    } else if (quote != '\0') {
+      if (c == quote) {
+        quote = '\0';
+      } else {
+        value += c;
+      }
+    } else if (c == '\'' || c == '"') {
+      quote = c;
+      quoted = true;
+    } else if (c == delimiter) {
+      // An explicitly quoted empty argument is kept even when
+      // remove_empty is set: it is a real argument, not a gap.
+      if (!remove_empty || !value.empty() || quoted) {
+        elems.push_back(value);
+        value.clear();
+        quoted = false;
+      }
+    } else {
+      value += c;
+    }
+  }
+
+  // Flush the final token. An unclosed quote is kept verbatim (the
+  // opening quote char is prepended) so we never silently drop input.
+  if (quote != '\0') {
+    value = std::string(1, quote) + value;
+  }
+  if (!remove_empty || !value.empty() || quoted) {
+    elems.push_back(value);
+  }
+
+  return elems;
+}
+
 /// Erase prefix up to the first colon (:) from str and return the prefix
 std::string erase_prefix(std::string &str)
 {

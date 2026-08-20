@@ -526,7 +526,7 @@ Result<std::unique_ptr<ChildProc>> create_child(const std::string& cmd,
   }
 
   // Construct our arguments for the child.
-  auto args = util::split_string(cmd, ' ');
+  auto args = util::split_string_quotes(cmd, ' ');
   auto binary = extract_binary(args);
   if (!binary) {
     return binary.takeError();

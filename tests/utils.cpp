@@ -55,6 +55,53 @@ TEST(utils, split_string)
   EXPECT_EQ(split_string("foo-bar", '-'), tokens_foo_bar);
 }
 
+TEST(utils, split_string_quotes)
+{
+  std::vector<std::string> tokens_empty = {};
+  std::vector<std::string> tokens_echo_hello_world = { "echo",
+                                                       "hello",
+                                                       "world" };
+  std::vector<std::string> tokens_echo_hello_world_q = { "echo",
+                                                         "hello world" };
+  std::vector<std::string> tokens_echo_mixed = { "echo", "a'b", "c\"d" };
+  std::vector<std::string> tokens_echo_backslash = { "echo", "a\\ b" };
+  std::vector<std::string> tokens_echo_verbatim = { "echo", "$HOME", "*" };
+  std::vector<std::string> tokens_empty_arg = { "echo", "" };
+
+  // Plain splitting without quotes behaves like split_string.
+  EXPECT_EQ(split_string_quotes("echo hello world", ' '),
+            tokens_echo_hello_world);
+  EXPECT_EQ(split_string_quotes("", ' '), tokens_empty);
+
+  // Quotes group tokens; the quotes themselves are stripped.
+  EXPECT_EQ(split_string_quotes("echo \"hello world\"", ' '),
+            tokens_echo_hello_world_q);
+  EXPECT_EQ(split_string_quotes("echo 'hello world'", ' '),
+            tokens_echo_hello_world_q);
+
+  // A quote inside the other quote type is an ordinary character.
+  EXPECT_EQ(split_string_quotes("echo \"a'b\" 'c\"d'", ' '), tokens_echo_mixed);
+
+  // Backslash is kept verbatim and escapes the following character, so
+  // the space does not split the token.
+  EXPECT_EQ(split_string_quotes("echo a\\ b", ' '), tokens_echo_backslash);
+
+  // $ and * are passed through without expansion.
+  EXPECT_EQ(split_string_quotes("echo $HOME *", ' '), tokens_echo_verbatim);
+
+  // Empty quoted arguments are preserved even with remove_empty: they
+  // are explicit empty arguments, not gaps between delimiters.
+  EXPECT_EQ(split_string_quotes("echo \"\"", ' '), tokens_empty_arg);
+  EXPECT_EQ(split_string_quotes("echo \"\"", ' ', true), tokens_empty_arg);
+  // ...while plain gaps between delimiters are dropped with remove_empty.
+  EXPECT_EQ(split_string_quotes("echo   a", ' ', true),
+            std::vector<std::string>({ "echo", "a" }));
+
+  // An unclosed quote is kept verbatim rather than silently dropped.
+  EXPECT_EQ(split_string_quotes("echo \"abc", ' '),
+            std::vector<std::string>({ "echo", "\"abc" }));
+}
+
 TEST(utils, split_addrrange_symbol_module)
 {
   std::tuple<std::string, std::string, std::string> tokens_ar_sym = {
