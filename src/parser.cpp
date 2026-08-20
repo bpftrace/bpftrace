@@ -3326,6 +3326,7 @@ bool Parser::is_builtin(std::string_view name)
     "__builtin_func",
     "__builtin_ncpus",
     "__builtin_probe",
+    "__builtin_probefunc",
     "__builtin_retval",
     "__builtin_usermode",
   };

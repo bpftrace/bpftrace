@@ -1131,6 +1131,14 @@ macro probetype()
   __builtin_probetype
 }
 
+// :variant string probefunc()
+// Name of the probe function.
+// Note: `begin` and `end` probes have empty function.
+macro probefunc()
+{
+  __builtin_probefunc
+}
+
 // :function pton
 // :variant char addr[4] pton(const string *addr_v4)
 // :variant char addr[16] pton(const string *addr_v6)

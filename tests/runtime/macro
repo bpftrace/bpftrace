@@ -161,6 +161,11 @@ NAME builtin wrapper probetype
 PROG begin { if (__builtin_probetype == probetype() && __builtin_probetype == probetype) { print(probetype); } exit(); }
 EXPECT special
 
+NAME builtin wrapper probefunc
+PROG k:do_nanosleep { if (__builtin_probefunc == probefunc() && __builtin_probefunc == probefunc) { print(probefunc); } exit(); }
+EXPECT do_nanosleep
+AFTER ./testprogs/syscall nanosleep 1e8
+
 NAME builtin wrapper retval
 PROG kretprobe:vfs_read { if (__builtin_retval == retval() && __builtin_retval == retval) { printf("SUCCESS %d\n", retval); exit(); } }
 EXPECT_REGEX SUCCESS .*

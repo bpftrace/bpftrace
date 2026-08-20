@@ -190,21 +190,20 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
     return ast_.make_node<String>(node.loc, ss.str());
   } else if (ident == "__builtin_safe_mode") {
     return ast_.make_node<Boolean>(node.loc, bpftrace_.safe_mode_);
-  } else if (ident == "__builtin_probe") {
+  } else if (ident == "__builtin_probe" || ident == "__builtin_probetype" ||
+             ident == "__builtin_probefunc") {
     if (check_probe()) {
+      std::string name;
+      if (ident == "__builtin_probe") {
+        name = probe->attach_points.front()->name();
+      } else if (ident == "__builtin_probefunc") {
+        name = probe->attach_points.front()->func;
+      } else if (ident == "__builtin_probetype") {
+        name = probetypeName(probetype(probe->attach_points.front()->provider));
+      }
       return ast_.make_node<String>(node.loc,
-                                    probe->attach_points.empty()
-                                        ? "none"
-                                        : probe->attach_points.front()->name());
-    }
-  } else if (ident == "__builtin_probetype") {
-    if (check_probe()) {
-      return ast_.make_node<String>(
-          node.loc,
-          probe->attach_points.empty()
-              ? "none"
-              : probetypeName(
-                    probetype(probe->attach_points.front()->provider)));
+                                    probe->attach_points.empty() ? "none"
+                                                                 : name);
     }
   } else if (ident == "__builtin_elf_is_exe") {
     if (check_probe()) {

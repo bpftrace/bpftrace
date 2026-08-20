@@ -1082,6 +1082,14 @@ Name of the fully expanded probe
 For example: `kprobe:do_nanosleep`
 
 
+### probefunc
+- `string probefunc()`
+- `string probefunc`
+
+Name of the probe function.
+Note: `begin` and `end` probes have empty function.
+
+
 ### probetype
 - `string probetype()`
 - `string probetype`
