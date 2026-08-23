@@ -22,8 +22,9 @@
  *
 \*===----------------------------------------------------------------------===*/
 
-#ifndef __CLANG_STDINT_H
-#define __CLANG_STDINT_H
+/* Do not reuse Clang's guard: this header may include_next Clang's copy. */
+#ifndef BPFTRACE_STDINT_H
+#define BPFTRACE_STDINT_H
 
 /* If we're hosted, fall back to the system's stdint.h, which might have
  * additional definitions.
@@ -701,4 +702,14 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define UINTMAX_C(v) __int_c(v, __UINTMAX_C_SUFFIX__)
 
 #endif /* __STDC_HOSTED__ */
-#endif /* __CLANG_STDINT_H */
+
+/*
+ * Clang 18's detailed preprocessing record does not expose
+ * __UINTPTR_MAX__, so bpftrace cannot recursively expand Clang's definition
+ * of UINTPTR_MAX. Pointer and long have the same width on supported Linux
+ * targets; spell out the equivalent expression using the available builtin.
+ */
+#undef UINTPTR_MAX
+#define UINTPTR_MAX (__LONG_MAX__*2UL+1UL)
+
+#endif /* BPFTRACE_STDINT_H */
