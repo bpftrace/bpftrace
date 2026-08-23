@@ -138,6 +138,7 @@ not known until test time. The following runtime variables are available for the
 
 * `{{BPFTRACE}}`: Path to bpftrace executable
 * `{{BEFORE_PID}}`: Process ID of the process in the first `BEFORE` directive
+* `{{CWD}}`: Current working directory
 
 ### Test programs
 
