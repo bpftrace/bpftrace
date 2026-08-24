@@ -15,6 +15,7 @@ These are `test:` probes written to test core functionality, and standard librar
 * Run: `sudo <builddir>/tests/self-tests.sh`
 * To debug a test, you can run an individual file directly, e.g. `<builddir>src/bpftrace --test <builddir>/tests/<testfile>`
 * To run only specific self tests, use `--probe-filter REGEX` to select tests by name, e.g. `<builddir>src/bpftrace --test --probe-filter 'map_' <builddir>/tests/<testfile>`
+* Use the `--filter` arg when running `self-tests.sh` to only run a subset of the tests. Implement the filter using the `bpftrace --probe-filter` parameter.
 
 ## Runtime tests
 
