@@ -219,6 +219,13 @@ TEST(Parser, builtin_variables)
   test("kprobe:f { args }",
        Program().WithProbe(
            Probe({ "kprobe:f" }, { ExprStatement(Builtin("args")) })));
+
+  test_parse_failure("macro test(__builtin_uaddr) { } begin { }",
+                     R"(
+stdin:1:12-27: ERROR: syntax: builtin '__builtin_uaddr' can't be used as a macro argument
+macro test(__builtin_uaddr) { } begin { }
+           ~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, positional_param)
