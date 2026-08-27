@@ -31,6 +31,7 @@ RUN apk add --update \
   llvm18-dev \
   llvm18-gtest \
   llvm18-static \
+  musl-fts-dev \
   musl-obstack-dev \
   openssl-dev \
   pahole \
