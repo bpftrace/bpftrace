@@ -1430,7 +1430,11 @@ kretprobe:d_lookup
 }
 ```
 
-If DWARF debugging symbols are availaible for kernel and/or kernel modules, `kprobe` s can be attached via `file:line[:col]` source file location, requiring the `--unsafe` flag. `file` path may be absolute or relative, and `line:col` must refer to a valid statement in that file. Useful for probing inside a functions body.
+If DWARF debugging symbols are available for the kernel and/or kernel modules,
+`kprobe` can be attached via a `file:line[:col]` source location. This
+requires the `--unsafe` flag. The file path may be absolute or relative, and
+`line:col` must refer to a valid statement in that file. This is useful for
+probing inside a function body.
 
 ```
 kprobe@fs/open.c:1077

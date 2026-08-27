@@ -1503,7 +1503,12 @@ Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
   auto probe_type = probetype(attachpoint.provider);
   if (probe_type == ProbeType::uprobe || probe_type == ProbeType::uretprobe)
     return get_dwarf(attachpoint.target);
-  if (probe_type == ProbeType::kprobe || probe_type == ProbeType::kretprobe)
+  // Ordinary kprobes use BTF for kernel type information.  Only source
+  // location kprobes need the live kernel DWARF object; loading it for every
+  // kprobe also reports all live modules and can make otherwise unrelated
+  // probes unnecessarily expensive.
+  if ((probe_type == ProbeType::kprobe || probe_type == ProbeType::kretprobe) &&
+      !attachpoint.source_file.empty())
     return get_kernel_dwarf();
 
   return nullptr;

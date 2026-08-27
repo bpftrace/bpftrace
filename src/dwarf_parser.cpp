@@ -28,20 +28,37 @@ struct FuncInfo {
   Dwarf_Die die;
 };
 
+static int kernel_module_section_address(Dwfl_Module *mod,
+                                         void **userdata,
+                                         const char *modname,
+                                         Dwarf_Addr base,
+                                         const char *secname,
+                                         Elf32_Word shndx,
+                                         const GElf_Shdr *shdr,
+                                         Dwarf_Addr *addr);
+
 Dwarf::Dwarf(BPFtrace *bpftrace,
-             const std::string &file_path,
-             std::string debuginfo_path)
+             std::string file_path,
+             std::string debuginfo_path,
+             bool is_kernel)
     : bpftrace_(bpftrace),
-      file_path_(file_path),
-      debuginfo_path_(std::move(debuginfo_path))
+      file_path_(std::move(file_path)),
+      debuginfo_path_(std::move(debuginfo_path)),
+      is_kernel_(is_kernel)
 {
   debuginfo_path_cstr_ = debuginfo_path_.c_str();
-  callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
-  callbacks.section_address = dwfl_offline_section_address;
+  if (is_kernel_) {
+    callbacks.find_elf = dwfl_linux_kernel_find_elf;
+    callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
+    // Wrapper callback preventing libdw from mistakenly failing due to a
+    // missing __versions section in /sys/module/<name>/sections at runtime.
+    callbacks.section_address = kernel_module_section_address;
+  } else {
+    callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
+    callbacks.section_address = dwfl_offline_section_address;
+  }
   callbacks.debuginfo_path = const_cast<char **>(&debuginfo_path_cstr_);
   dwfl = dwfl_begin(&callbacks);
-  dwfl_report_offline(dwfl, file_path.c_str(), file_path.c_str(), -1);
-  dwfl_report_end(dwfl, nullptr, nullptr);
 }
 
 static bool debug_alt_link_missing(::Dwarf *dwarf)
@@ -56,7 +73,15 @@ std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
                                             const std::string &file_path,
                                             const std::string &debuginfo_path)
 {
-  std::unique_ptr<Dwarf> dwarf(new Dwarf(bpftrace, file_path, debuginfo_path));
+  std::unique_ptr<Dwarf> dwarf(
+      new Dwarf(bpftrace, file_path, debuginfo_path, false));
+  if (!dwarf->dwfl ||
+      !dwfl_report_offline(
+          dwarf->dwfl, file_path.c_str(), file_path.c_str(), -1) ||
+      dwfl_report_end(dwarf->dwfl, nullptr, nullptr) != 0) {
+    return nullptr;
+  }
+
   Dwarf_Addr bias;
   Dwarf_Die *cudie = dwfl_nextcu(dwarf->dwfl, nullptr, &bias);
   if (cudie == nullptr)
@@ -68,7 +93,7 @@ std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
   // data from crashing the runtime.
   Dwfl_Module *mod = dwfl_cumodule(cudie);
   ::Dwarf *dw = dwfl_module_getdwarf(mod, &bias);
-  if (debug_alt_link_missing(dw)) {
+  if (dw && debug_alt_link_missing(dw)) {
     return nullptr;
   }
 
@@ -84,7 +109,15 @@ static int kernel_module_section_address(Dwfl_Module *mod,
                                          const GElf_Shdr *shdr,
                                          Dwarf_Addr *addr)
 {
-  if (std::string_view(secname) == "__versions") {
+  const std::string_view section(secname);
+
+  // The kernel does not expose these sections in
+  // /sys/module/<name>/sections after loading. Older libdwfl versions either
+  // do not recognize __versions or check the legacy .data.percpu spelling
+  // instead of the .data..percpu spelling used by affected modules.
+  // A zero-sized section has no runtime contents or address to resolve.
+  if ((shdr != nullptr && shdr->sh_size == 0) || section == "__versions" ||
+      section == ".data..percpu") {
     *addr = static_cast<Dwarf_Addr>(-1L);
     return DWARF_CB_OK;
   }
@@ -93,28 +126,16 @@ static int kernel_module_section_address(Dwfl_Module *mod,
       mod, userdata, modname, base, secname, shndx, shdr, addr);
 }
 
-Dwarf::Dwarf(BPFtrace *bpftrace, std::string debuginfo_path)
-    : bpftrace_(bpftrace),
-      debuginfo_path_(std::move(debuginfo_path)),
-      is_kernel(true)
-{
-  debuginfo_path_cstr_ = debuginfo_path_.c_str();
-  callbacks.find_elf = dwfl_linux_kernel_find_elf;
-  callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
-  // Wrapper callback preventing libdw to mistakenly fail due to missing
-  // __versions section in /sys/module/<name>/sections/ at runtime.
-  callbacks.section_address = kernel_module_section_address;
-  callbacks.debuginfo_path = const_cast<char **>(&debuginfo_path_cstr_);
-  dwfl = dwfl_begin(&callbacks);
-  dwfl_linux_kernel_report_kernel(dwfl);
-  dwfl_linux_kernel_report_modules(dwfl);
-  dwfl_report_end(dwfl, nullptr, nullptr);
-}
-
 std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
                                             const std::string &debuginfo_path)
 {
-  std::unique_ptr<Dwarf> dwarf(new Dwarf(bpftrace, debuginfo_path));
+  std::unique_ptr<Dwarf> dwarf(new Dwarf(bpftrace, "", debuginfo_path, true));
+  if (!dwarf->dwfl || dwfl_linux_kernel_report_kernel(dwarf->dwfl) != 0 ||
+      dwfl_linux_kernel_report_modules(dwarf->dwfl) != 0 ||
+      dwfl_report_end(dwarf->dwfl, nullptr, nullptr) != 0) {
+    return nullptr;
+  }
+
   Dwarf_Addr bias;
 
   if (dwfl_nextcu(dwarf->dwfl, nullptr, &bias) == nullptr)
@@ -125,7 +146,8 @@ std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
 
 Dwarf::~Dwarf()
 {
-  dwfl_end(dwfl);
+  if (dwfl)
+    dwfl_end(dwfl);
 }
 
 bool Dwarf::next_cu_info(CuInfo *cu_info) const
@@ -658,7 +680,7 @@ Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
       Dwarf_Addr addr;
       if (dwarf_lineaddr(line, &addr) == 0) {
         // Add KASLR offset if in kernel mode
-        return is_kernel ? addr + cu->mod_bias : addr;
+        return is_kernel_ ? addr + cu->mod_bias : addr;
       }
     }
   }

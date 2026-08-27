@@ -737,8 +737,12 @@ AttachPoint *Parser::parse_attach_point()
 
     // '/' could be a predicate start or part of a path. It's a path
     // component if we've seen a ':' in the raw text (paths appear after
-    // the provider separator, e.g. uprobe:/my/program:func).
-    if (c == '/' && !raw.empty() && raw.find(':') == std::string::npos) {
+    // the provider separator, e.g. uprobe:/my/program:func), or if this is
+    // the source-file portion of a kprobe@FILE:LINE attachpoint. The latter
+    // has no ':' before the first slash, so checking only for ':' incorrectly
+    // tokenizes kprobe@fs/open.c:LINE as a predicate.
+    if (c == '/' && !raw.empty() && raw.find(':') == std::string::npos &&
+        raw.find('@') == std::string::npos) {
       // No ':' seen yet — this '/' can't be a path, it's a predicate but check
       // it's not a comment.
       char next = peek(1);

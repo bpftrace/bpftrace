@@ -106,12 +106,14 @@ TEST(attachpoint_parser, uprobe_lang)
 
 TEST(attachpoint_parser, kprobe_src_loc)
 {
+  test_error("kprobe@fs/open.c:1077 { 1 }",
+             R"(Probing by source location requires --unsafe)");
   test_error(
       "kprobe@fs/open.c: { 1 }",
-      R"(Invalid kprobe arguments, expected format: kprobe:TARGET@FILE:LINE[:COL])");
+      R"(Invalid kprobe arguments, expected format: kprobe@FILE:LINE[:COL])");
   test_error(
       "kprobe@fs/open.c:1077:1:2 { 1 }",
-      R"(Invalid kprobe arguments, expected format: kprobe:TARGET@FILE:LINE[:COL])");
+      R"(Invalid kprobe arguments, expected format: kprobe@FILE:LINE[:COL])");
   test_error("kprobe@fs/open.c:invalid { 1 }",
              R"(Invalid line number: invalid integer: invalid)");
   test_error("kprobe@fs/open.c:1077:invalid { 1 }",

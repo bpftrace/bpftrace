@@ -98,10 +98,13 @@ private:
     std::optional<std::filesystem::path> source_path;
   };
 
+  // The DWFL setup is shared by offline binaries and the running kernel.
+  // Kernel mode reports the kernel and loaded modules instead of an offline
+  // file and applies the module load bias to addresses.
   Dwarf(BPFtrace *bpftrace,
-        const std::string &file_path,
-        std::string debuginfo_path);
-  Dwarf(BPFtrace *bpftrace, std::string debuginfo_path);
+        std::string file_path,
+        std::string debuginfo_path,
+        bool is_kernel);
 
   bool next_cu_info(CuInfo *cu_info) const;
   std::vector<Dwarf_Die> function_param_dies(const std::string &function) const;
@@ -129,7 +132,7 @@ private:
   static std::vector<std::filesystem::path> get_cu_src_paths(Dwarf_Die *cudie);
 
   Dwfl *dwfl = nullptr;
-  Dwfl_Callbacks callbacks;
+  Dwfl_Callbacks callbacks = {};
 
   BPFtrace *bpftrace_;
   std::string file_path_;
@@ -143,7 +146,7 @@ private:
   // char** to Dwfl_Callbacks.
   std::string debuginfo_path_;
   const char *debuginfo_path_cstr_;
-  bool is_kernel = false;
+  bool is_kernel_ = false;
 };
 
 } // namespace bpftrace
