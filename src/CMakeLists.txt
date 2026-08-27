@@ -178,6 +178,16 @@ if (LIBDW_FOUND)
 
     set(LIBDW_LIBS LIBBZ2 LIBELF LIBLZMA)
 
+    # Some libc implementations, such as musl, provide fts(3) in a separate
+    # library. libdwfl's kernel module helpers use these symbols, so propagate
+    # the optional static library when it is available.
+    find_library(LIBFTS_LIBRARIES NAMES fts)
+    if (LIBFTS_LIBRARIES)
+      add_library(LIBFTS STATIC IMPORTED)
+      set_property(TARGET LIBFTS PROPERTY IMPORTED_LOCATION ${LIBFTS_LIBRARIES})
+      set(LIBDW_LIBS ${LIBDW_LIBS} LIBFTS)
+    endif()
+
     if (${LIBEBL_FOUND})
       # libebl is not necessary on some systems (e.g. Alpine)
       add_library(LIBEBL STATIC IMPORTED)
