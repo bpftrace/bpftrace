@@ -98,8 +98,20 @@
             '';
           };
 
+          # crates.io rejects requests whose User-Agent starts with "curl/",
+          # which is what nixpkgs' fetchurl sends. Instantiate naersk with a
+          # fetchurl that sends an identifying User-Agent instead.
+          # Remove once naersk or nixpkgs handles this upstream:
+          # https://github.com/nix-community/naersk/issues/390
+          naerskLib = pkgs.callPackage "${naersk}/default.nix" {
+            fetchurl = args: pkgs.fetchurl (args // {
+              curlOptsList = (args.curlOptsList or [ ]) ++
+                [ "--user-agent" "bpftrace (https://github.com/bpftrace/bpftrace)" ];
+            });
+          };
+
           # Build blazesym
-          blazesym_c = naersk.lib.${system}.buildPackage {
+          blazesym_c = naerskLib.buildPackage {
             root = blazesym;
             cargoBuildOptions = x: x ++ [ "-p" "blazesym-c" "--features" "blazesym/xz" ];
             copyLibs = true;
