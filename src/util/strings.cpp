@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <sstream>
 
+#include "util/result.h"
 #include "util/strings.h"
 
 namespace bpftrace::util {
@@ -22,61 +23,71 @@ std::vector<std::string> split_string(const std::string &str,
   return elems;
 }
 
-std::vector<std::string> split_string_quotes(const std::string &str,
-                                             char delimiter,
-                                             bool remove_empty)
+Result<std::vector<std::string>> split_string_quotes(const std::string &str)
 {
-  std::vector<std::string> elems;
-  if (str.empty())
-    return elems;
+  std::vector<std::string> args;
+  std::string current;
+  bool in_quotes = false;
+  char quote_char = '\0';
+  bool has_token = false;
 
-  std::string value;
-  char quote = '\0';
-  bool escaped = false;
-  bool quoted = false; // current token contains a quoted section
+  for (size_t i = 0; i < str.size(); ++i) {
+    char c = str[i];
 
-  for (char c : str) {
-    if (escaped) {
-      // Backslash escapes the next character: keep it verbatim and
-      // don't treat it as a quote or delimiter.
-      value += c;
-      escaped = false;
-    } else if (c == '\\') {
-      // Keep the backslash itself and escape the following character.
-      value += c;
-      escaped = true;
-    } else if (quote != '\0') {
-      if (c == quote) {
-        quote = '\0';
+    if (in_quotes) {
+      if (c == quote_char) {
+        // Closing quote
+        in_quotes = false;
+        quote_char = '\0';
+      } else if (quote_char == '"' && c == '\\' && i + 1 < str.size()) {
+        char next = str[i + 1];
+        // POSIX rule: inside double quotes, \ only escapes ", \, $, `, and \n
+        if (next == '"' || next == '\\' || next == '$' || next == '`' ||
+            next == '\n') {
+          current += next;
+          i++;
+        } else {
+          current += c;
+        }
       } else {
-        value += c;
-      }
-    } else if (c == '\'' || c == '"') {
-      quote = c;
-      quoted = true;
-    } else if (c == delimiter) {
-      // An explicitly quoted empty argument is kept even when
-      // remove_empty is set: it is a real argument, not a gap.
-      if (!remove_empty || !value.empty() || quoted) {
-        elems.push_back(value);
-        value.clear();
-        quoted = false;
+        current += c;
       }
     } else {
-      value += c;
+      if (c == '\'' || c == '"') {
+        in_quotes = true;
+        quote_char = c;
+        has_token = true;
+      } else if (c == '\\') {
+        // Outside quotes: backslash escapes the following character
+        if (i + 1 < str.size()) {
+          current += str[++i];
+          has_token = true;
+        } else {
+          return make_error<SystemError>(
+              "Trailing backslash in command string: " + str);
+        }
+      } else if (std::isspace(static_cast<unsigned char>(c))) {
+        if (has_token) {
+          args.push_back(std::move(current));
+          current.clear();
+          has_token = false;
+        }
+      } else {
+        current += c;
+        has_token = true;
+      }
     }
   }
 
-  // Flush the final token. An unclosed quote is kept verbatim (the
-  // opening quote char is prepended) so we never silently drop input.
-  if (quote != '\0') {
-    value = std::string(1, quote) + value;
-  }
-  if (!remove_empty || !value.empty() || quoted) {
-    elems.push_back(value);
+  if (in_quotes) {
+    return make_error<SystemError>("Unclosed quote in command string: " + str);
   }
 
-  return elems;
+  if (has_token) {
+    args.push_back(std::move(current));
+  }
+
+  return args;
 }
 
 /// Erase prefix up to the first colon (:) from str and return the prefix

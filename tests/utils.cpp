@@ -64,42 +64,54 @@ TEST(utils, split_string_quotes)
   std::vector<std::string> tokens_echo_hello_world_q = { "echo",
                                                          "hello world" };
   std::vector<std::string> tokens_echo_mixed = { "echo", "a'b", "c\"d" };
-  std::vector<std::string> tokens_echo_backslash = { "echo", "a\\ b" };
+  std::vector<std::string> tokens_echo_backslash = { "echo", "a b" };
   std::vector<std::string> tokens_echo_verbatim = { "echo", "$HOME", "*" };
   std::vector<std::string> tokens_empty_arg = { "echo", "" };
 
-  // Plain splitting without quotes behaves like split_string.
-  EXPECT_EQ(split_string_quotes("echo hello world", ' '),
-            tokens_echo_hello_world);
-  EXPECT_EQ(split_string_quotes("", ' '), tokens_empty);
+  // Plain splitting without quotes
+  EXPECT_EQ(*split_string_quotes("echo hello world"), tokens_echo_hello_world);
+  EXPECT_EQ(*split_string_quotes(""), tokens_empty);
+  EXPECT_EQ(*split_string_quotes("   "), tokens_empty);
 
-  // Quotes group tokens; the quotes themselves are stripped.
-  EXPECT_EQ(split_string_quotes("echo \"hello world\"", ' '),
+  // Quotes group tokens; quotes themselves are stripped
+  EXPECT_EQ(*split_string_quotes("echo \"hello world\""),
             tokens_echo_hello_world_q);
-  EXPECT_EQ(split_string_quotes("echo 'hello world'", ' '),
+  EXPECT_EQ(*split_string_quotes("echo 'hello world'"),
             tokens_echo_hello_world_q);
 
-  // A quote inside the other quote type is an ordinary character.
-  EXPECT_EQ(split_string_quotes("echo \"a'b\" 'c\"d'", ' '), tokens_echo_mixed);
+  // Quotes inside the other quote type
+  EXPECT_EQ(*split_string_quotes("echo \"a'b\" 'c\"d'"), tokens_echo_mixed);
 
-  // Backslash is kept verbatim and escapes the following character, so
-  // the space does not split the token.
-  EXPECT_EQ(split_string_quotes("echo a\\ b", ' '), tokens_echo_backslash);
+  // Unquoted backslash escapes space, but backslash is stripped
+  EXPECT_EQ(*split_string_quotes("echo a\\ b"), tokens_echo_backslash);
 
-  // $ and * are passed through without expansion.
-  EXPECT_EQ(split_string_quotes("echo $HOME *", ' '), tokens_echo_verbatim);
+  // Single quotes do NOT interpret backslashes
+  EXPECT_EQ(*split_string_quotes("echo 'a\\ b'"),
+            std::vector<std::string>({ "echo", "a\\ b" }));
 
-  // Empty quoted arguments are preserved even with remove_empty: they
-  // are explicit empty arguments, not gaps between delimiters.
-  EXPECT_EQ(split_string_quotes("echo \"\"", ' '), tokens_empty_arg);
-  EXPECT_EQ(split_string_quotes("echo \"\"", ' ', true), tokens_empty_arg);
-  // ...while plain gaps between delimiters are dropped with remove_empty.
-  EXPECT_EQ(split_string_quotes("echo   a", ' ', true),
-            std::vector<std::string>({ "echo", "a" }));
+  // Double quotes only escape ", \, $, `, \n
+  EXPECT_EQ(*split_string_quotes("echo \"a\\\"b\""),
+            std::vector<std::string>({ "echo", "a\"b" }));
+  EXPECT_EQ(*split_string_quotes("echo \"a\\t\""),
+            std::vector<std::string>({ "echo", "a\\t" }));
 
-  // An unclosed quote is kept verbatim rather than silently dropped.
-  EXPECT_EQ(split_string_quotes("echo \"abc", ' '),
-            std::vector<std::string>({ "echo", "\"abc" }));
+  // Trailing whitespace should not produce an empty token
+  EXPECT_EQ(*split_string_quotes("sleep 5 "),
+            std::vector<std::string>({ "sleep", "5" }));
+  EXPECT_EQ(*split_string_quotes("  sleep   5   "),
+            std::vector<std::string>({ "sleep", "5" }));
+
+  // Explicit empty quotes produce an empty token
+  EXPECT_EQ(*split_string_quotes("echo \"\""), tokens_empty_arg);
+  EXPECT_EQ(*split_string_quotes("echo ''"), tokens_empty_arg);
+
+  // Shell variables/globs are preserved verbatim (no expansion)
+  EXPECT_EQ(*split_string_quotes("echo $HOME *"), tokens_echo_verbatim);
+
+  // Error handling on unterminated quotes / trailing backslash
+  EXPECT_FALSE(split_string_quotes("echo 'unterminated"));
+  EXPECT_FALSE(split_string_quotes("echo \"unterminated"));
+  EXPECT_FALSE(split_string_quotes("echo trailing\\"));
 }
 
 TEST(utils, split_addrrange_symbol_module)

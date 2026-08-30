@@ -272,6 +272,8 @@ and this project adheres to
   - [#5022](https://github.com/bpftrace/bpftrace/pull/5022)
 - Fix handling of void ptr and function ptr BTF types
   - [#5042](https://github.com/bpftrace/bpftrace/pull/5042)
+- Fix command splitting with quotes and escapes for child command (`-c`)
+  - [#5301](https://github.com/bpftrace/bpftrace/pull/5301)
 #### Security
 #### Docs
 #### Tools

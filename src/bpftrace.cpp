@@ -1050,9 +1050,13 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   if (child_) {
     // We can ignore all error checking here b/c child.cpp:validate_cmd() has
     // already done it
-    auto args = util::split_string_quotes(cmd_, ' ', /* remove_empty */ true);
-    assert(!args.empty());
-    return util::resolve_binary_path(args[0]).front();
+    auto args = util::split_string_quotes(cmd_);
+    if (!args) {
+      LOG(ERROR) << "Bad child command. Error: " << args.takeError();
+      return std::nullopt;
+    }
+    assert(!args->empty());
+    return util::resolve_binary_path((*args)[0]).front();
   } else if (pid().has_value()) {
     return "/proc/" + std::to_string(pid().value_or(0)) + "/exe";
   } else {

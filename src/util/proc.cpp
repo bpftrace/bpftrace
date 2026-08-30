@@ -526,13 +526,16 @@ Result<std::unique_ptr<ChildProc>> create_child(const std::string& cmd,
   }
 
   // Construct our arguments for the child.
-  auto args = util::split_string_quotes(cmd, ' ');
-  auto binary = extract_binary(args);
+  auto args = util::split_string_quotes(cmd);
+  if (!args) {
+    return args.takeError();
+  }
+  auto binary = extract_binary(*args);
   if (!binary) {
     return binary.takeError();
   }
   std::vector<char*> argv;
-  for (auto& arg : args) {
+  for (auto& arg : *args) {
     argv.push_back(const_cast<char*>(arg.c_str()));
   }
   argv.push_back(nullptr);
