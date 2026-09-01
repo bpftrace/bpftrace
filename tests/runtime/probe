@@ -293,6 +293,13 @@ EXPECT links: 1
 REQUIRES bpftool
 REQUIRES_FEATURE kprobe_session
 
+NAME kprobe_session_func
+RUN {{BPFTRACE}} -e 'kprobe:ksys_read { printf("entry func = %s\n", func); } kretprobe:ksys_read { printf("exit func = %s\n", func); exit(); }'
+AFTER ./testprogs/syscall read
+EXPECT entry func = ksys_read
+EXPECT exit func = ksys_read
+REQUIRES_FEATURE kprobe_session
+
 NAME uprobe
 PROG uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}
 EXPECT_REGEX arg0: [0-9]*

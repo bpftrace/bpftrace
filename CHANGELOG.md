@@ -16,6 +16,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix `func` builtin for session probe return/exit branches
+  - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
 #### Security
 #### Docs
 #### Tools
