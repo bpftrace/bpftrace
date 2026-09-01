@@ -63,6 +63,8 @@ and this project adheres to
   - [#5288](https://github.com/bpftrace/bpftrace/pull/5288)
 - Fix large string allocations for casts
   - [#5286](https://github.com/bpftrace/bpftrace/pull/5286)
+- Fix `func` builtin for session probe return/exit branches
+  - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
 
 ## [0.26.1] 2026-06-02
 

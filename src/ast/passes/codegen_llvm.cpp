@@ -430,6 +430,7 @@ private:
   uint64_t probe_count_ = 0;
   int next_probe_index_ = 1;
   bool inside_subprog_ = false;
+  bool in_session_return_branch_ = false;
 
   std::vector<Node *> scope_stack_;
   std::unordered_map<Node *, std::map<std::string, VariableLLVM>> variables_;
@@ -865,7 +866,7 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
     auto probe_type = probetype(current_attach_point_->provider);
     if (probe_type == ProbeType::fentry || probe_type == ProbeType::fexit ||
         probe_type == ProbeType::kretprobe ||
-        probe_type == ProbeType::uretprobe) {
+        probe_type == ProbeType::uretprobe || in_session_return_branch_) {
       value = b_.CreateGetFuncIp(ctx_, builtin.loc);
     } else {
       value = b_.CreateRegisterRead(ctx_, builtin.ident);
@@ -2576,7 +2577,18 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
              type_map_.type(&if_expr).IsVoidTy()) {
     // Type::none
     b_.SetInsertPoint(left_block);
+
+    bool prev_in_session_return = in_session_return_branch_;
+    if (auto *call = if_expr.cond.as<Call>()) {
+      if (call->func == "__session_is_return") {
+        in_session_return_branch_ = true;
+      }
+    }
+
     visit(if_expr.left);
+
+    in_session_return_branch_ = prev_in_session_return;
+
     if (!b_.HasTerminator()) {
       b_.CreateBr(lazy_done());
     }
