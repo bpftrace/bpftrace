@@ -1,0 +1,209 @@
+struct pointer_math_struct {
+  int a;
+  int b;
+  char c[28];
+};
+
+test:u8_pointer_increment
+{
+  $p = (int8*)0x32;
+  $p += 1;
+
+  if ($p != 0x33) {
+    return 1;
+  }
+}
+
+test:u16_pointer_increment
+{
+  $p = (int16*)0x32;
+  $p += 1;
+
+  if ($p != 0x34) {
+    return 1;
+  }
+}
+
+test:u32_pointer_increment
+{
+  $p = (int32*)0x32;
+  $p += 1;
+
+  if ($p != 0x36) {
+    return 1;
+  }
+}
+
+test:u64_pointer_increment
+{
+  $p = (int64*)0x32;
+  $p += 1;
+
+  if ($p != 0x3a) {
+    return 1;
+  }
+}
+
+test:u8_pointer_post_increment
+{
+  $p = (int8*)0x32;
+  $p++;
+
+  if ($p != 0x33) {
+    return 1;
+  }
+}
+
+test:u16_pointer_post_increment
+{
+  $p = (int16*)0x32;
+  $p++;
+
+  if ($p != 0x34) {
+    return 1;
+  }
+}
+
+test:u32_pointer_post_increment
+{
+  $p = (int32*)0x32;
+  $p++;
+
+  if ($p != 0x36) {
+    return 1;
+  }
+}
+
+test:u64_pointer_post_increment
+{
+  $p = (int64*)0x32;
+  $p++;
+
+  if ($p != 0x3a) {
+    return 1;
+  }
+}
+
+test:u8_pointer_pre_increment
+{
+  $p = (int8*)0x32;
+  ++$p;
+
+  if ($p != 0x33) {
+    return 1;
+  }
+}
+
+test:u16_pointer_pre_increment
+{
+  $p = (int16*)0x32;
+  ++$p;
+
+  if ($p != 0x34) {
+    return 1;
+  }
+}
+
+test:u32_pointer_pre_increment
+{
+  $p = (int32*)0x32;
+  ++$p;
+
+  if ($p != 0x36) {
+    return 1;
+  }
+}
+
+test:u64_pointer_pre_increment
+{
+  $p = (int64*)0x32;
+  ++$p;
+
+  if ($p != 0x3a) {
+    return 1;
+  }
+}
+
+test:pointer_decrement
+{
+  $p = (int32*)0x32;
+  $p -= 1;
+
+  if ($p != 0x2e) {
+    return 1;
+  }
+}
+
+test:pointer_post_decrement
+{
+  $p = (int32*)0x32;
+  $p--;
+
+  if ($p != 0x2e) {
+    return 1;
+  }
+}
+
+test:pointer_increment_6
+{
+  $p = (int32*)0x32;
+  $p += 6;
+
+  if ($p != 0x4a) {
+    return 1;
+  }
+}
+
+test:pointer_decrement_6
+{
+  $p = (int32*)0x32;
+  $p -= 6;
+
+  if ($p != 0x1a) {
+    return 1;
+  }
+}
+
+test:struct_pointer_math
+{
+  $p = (struct pointer_math_struct*)1024;
+
+  if (sizeof(struct pointer_math_struct) != 36) {
+    return 1;
+  }
+
+  if (($p - 5) != 844) {
+    return 1;
+  }
+}
+
+test:map_pointer_increment
+{
+  @pointer_inc = (int8*)0x32;
+  @pointer_inc += 1;
+
+  if (@pointer_inc != 0x33) {
+    return 1;
+  }
+}
+
+test:pointer_decrement_with_map
+{
+  @pointer_dec = 4;
+  @pointer_val = (int32*)0x32;
+  @pointer_val -= @pointer_dec;
+
+  if (@pointer_val != 0x22) {
+    return 1;
+  }
+}
+
+test:pointer_int_comparison
+{
+  $p = (int64*)0x32;
+  $p++;
+
+  if (!(0x32 < $p && $p > 0x32)) {
+    return 1;
+  }
+}
