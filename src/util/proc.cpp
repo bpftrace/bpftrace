@@ -26,7 +26,7 @@ namespace bpftrace::util {
 namespace {
 class ProcImpl : public Proc {
 public:
-  ProcImpl(pid_t pid, util::FD pidfd) : pid_(pid), pidfd_(std::move(pidfd)) {};
+  ProcImpl(pid_t pid, util::FD pidfd) : pid_(pid), pidfd_(std::move(pidfd)){};
 
   bool is_alive() override;
   pid_t pid() override
@@ -52,7 +52,7 @@ public:
       : child_pid_(child_pid),
         pidfd_(std::move(pidfd)),
         command_fd_(std::move(command_fd)),
-        result_fd_(std::move(result_fd)) {};
+        result_fd_(std::move(result_fd)){};
 
   // Parse command and fork a child process. The child is run with the same
   // permissions and environment variables as bpftrace.

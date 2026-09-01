@@ -200,7 +200,7 @@ struct PerfEventContext {
   PerfEventContext(BPFtrace &b,
                    async_action::AsyncHandlers &handlers,
                    output::Output &o)
-      : bpftrace(b), handlers(handlers), output(o) {};
+      : bpftrace(b), handlers(handlers), output(o){};
   BPFtrace &bpftrace;
   async_action::AsyncHandlers &handlers;
   output::Output &output;
@@ -1417,7 +1417,8 @@ int BPFtrace::resume_tracee(pid_t tracee_pid)
 
 const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
 {
-  static std::optional<struct stat> pidns = []() -> std::optional<struct stat> {
+  static std::optional<struct stat> pidns = []() -> std::optional<struct stat>
+  {
     struct stat s;
     if (::stat("/proc/self/ns/pid", &s)) {
       if (errno == ENOENT)
@@ -1427,7 +1428,8 @@ const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
           std::strerror(errno));
     }
     return s;
-  }();
+  }
+  ();
 
   return pidns;
 }

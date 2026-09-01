@@ -38,7 +38,8 @@ std::vector<std::string> split_string(const std::string &str,
 // - Unquoted backslashes escape the next character.
 // - Whitespace outside quotes separates arguments.
 //
-// Returns SystemError if there are unclosed quotes or trailing escape backslashes.
+// Returns SystemError if there are unclosed quotes or trailing escape
+// backslashes.
 Result<std::vector<std::string>> split_string_quotes(const std::string &str);
 
 std::string str_join(const std::vector<std::string> &list,
