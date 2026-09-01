@@ -31,7 +31,8 @@ Result<std::vector<std::string>> split_string_quotes(const std::string &str)
   char quote_char = '\0';
   bool has_token = false;
 
-  for (size_t i = 0; i < str.size(); ++i) {
+  size_t i = 0;
+  while (i < str.size()) {
     char c = str[i];
 
     if (in_quotes) {
@@ -39,29 +40,34 @@ Result<std::vector<std::string>> split_string_quotes(const std::string &str)
         // Closing quote
         in_quotes = false;
         quote_char = '\0';
+        i++;
       } else if (quote_char == '"' && c == '\\' && i + 1 < str.size()) {
         char next = str[i + 1];
         // POSIX rule: inside double quotes, \ only escapes ", \, $, `, and \n
         if (next == '"' || next == '\\' || next == '$' || next == '`' ||
             next == '\n') {
           current += next;
-          i++;
+          i += 2;
         } else {
           current += c;
+          i++;
         }
       } else {
         current += c;
+        i++;
       }
     } else {
       if (c == '\'' || c == '"') {
         in_quotes = true;
         quote_char = c;
         has_token = true;
+        i++;
       } else if (c == '\\') {
         // Outside quotes: backslash escapes the following character
         if (i + 1 < str.size()) {
-          current += str[++i];
+          current += str[i + 1];
           has_token = true;
+          i += 2;
         } else {
           return make_error<SystemError>(
               "Trailing backslash in command string: " + str);
@@ -72,9 +78,11 @@ Result<std::vector<std::string>> split_string_quotes(const std::string &str)
           current.clear();
           has_token = false;
         }
+        i++;
       } else {
         current += c;
         has_token = true;
+        i++;
       }
     }
   }
