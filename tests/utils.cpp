@@ -109,9 +109,20 @@ TEST(utils, split_string_quotes)
   EXPECT_EQ(*split_string_quotes("echo $HOME *"), tokens_echo_verbatim);
 
   // Error handling on unterminated quotes / trailing backslash
-  EXPECT_FALSE(split_string_quotes("echo 'unterminated"));
-  EXPECT_FALSE(split_string_quotes("echo \"unterminated"));
-  EXPECT_FALSE(split_string_quotes("echo trailing\\"));
+  auto unclosed_single = split_string_quotes("echo 'unterminated");
+  EXPECT_FALSE(unclosed_single);
+  EXPECT_THAT(llvm::toString(unclosed_single.takeError()),
+              testing::HasSubstr("Unclosed quote in command string"));
+
+  auto unclosed_double = split_string_quotes("echo \"unterminated");
+  EXPECT_FALSE(unclosed_double);
+  EXPECT_THAT(llvm::toString(unclosed_double.takeError()),
+              testing::HasSubstr("Unclosed quote in command string"));
+
+  auto trailing_backslash = split_string_quotes("echo trailing\\");
+  EXPECT_FALSE(trailing_backslash);
+  EXPECT_THAT(llvm::toString(trailing_backslash.takeError()),
+              testing::HasSubstr("Trailing backslash in command string"));
 }
 
 TEST(utils, split_addrrange_symbol_module)

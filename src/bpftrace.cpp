@@ -1048,8 +1048,6 @@ void BPFtrace::poll_event_loss(output::Output &out)
 std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
 {
   if (child_) {
-    // We can ignore all error checking here b/c child.cpp:validate_cmd() has
-    // already done it
     auto args = util::split_string_quotes(cmd_);
     if (!args) {
       LOG(ERROR) << "Bad child command. Error: " << args.takeError();
