@@ -21,7 +21,3 @@ unsigned long long __get_current_uid_gid() {
 unsigned long long __get_cgroup() {
     return bpf_get_current_cgroup_id();
 }
-
-unsigned long long __get_current_task() {
-    return bpf_get_current_task();
-}

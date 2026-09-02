@@ -834,6 +834,8 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
   } else if (builtin.ident == "__builtin_cpu") {
     Value *cpu = b_.CreateGetCpuId(builtin.loc);
     return ScopedExpr(b_.CreateZExt(cpu, b_.getInt64Ty()));
+  } else if (builtin.ident == "__builtin_curtask") {
+    return ScopedExpr(b_.CreateGetCurrentTask(builtin.loc));
   } else if (builtin.ident == "__builtin_ncpus") {
     return ScopedExpr(b_.CreateLoad(b_.getInt64Ty(),
                                     module_->getGlobalVariable(std::string(

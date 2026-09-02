@@ -3323,6 +3323,7 @@ bool Parser::is_builtin(std::string_view name)
     "__builtin_config",
     "__builtin_cpid",
     "__builtin_cpu",
+    "__builtin_curtask",
     "__builtin_dw_ustack",
     "__builtin_elapsed",
     "__builtin_elf_ino",
