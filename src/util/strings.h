@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "util/result.h"
+
 namespace bpftrace::util {
 
 // trim from end of string (right)
@@ -28,6 +30,17 @@ inline std::string &trim(std::string &s)
 std::vector<std::string> split_string(const std::string &str,
                                       char delimiter,
                                       bool remove_empty = false);
+
+// Splits a command string into arguments according to POSIX shell quote and
+// escape rules:
+// - Double quotes allow \ escapes for ", \, $, `, and newline.
+// - Single quotes preserve literal contents verbatim (no \ escaping).
+// - Unquoted backslashes escape the next character.
+// - Whitespace outside quotes separates arguments.
+//
+// Returns SystemError if there are unclosed quotes or trailing escape
+// backslashes.
+Result<std::vector<std::string>> split_string_quotes(const std::string &str);
 
 std::string str_join(const std::vector<std::string> &list,
                      const std::string &delim);

@@ -111,7 +111,7 @@ EXPECT {"type": "syscall", "data": "a b c\n"}
 
 NAME join_delim
 RUN {{BPFTRACE}} --unsafe -f json -e 'tracepoint:syscalls:sys_enter_execve { join(args.argv, ","); }' -c "./testprogs/syscall execve /bin/echo 'A'"
-EXPECT {"type": "join", "data": "/bin/echo,'A'"}
+EXPECT {"type": "join", "data": "/bin/echo,A"}
 
 NAME cat
 RUN {{BPFTRACE}} -f json -e 'begin { cat("/proc/uptime");  }'

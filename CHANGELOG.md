@@ -18,6 +18,8 @@ and this project adheres to
 #### Fixed
 - Fix `func` builtin for session probe return/exit branches
   - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
+- Fix command splitting with quotes and escapes for child command (`-c`)
+  - [#5301](https://github.com/bpftrace/bpftrace/pull/5301)
 #### Security
 #### Docs
 #### Tools

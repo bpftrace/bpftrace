@@ -200,7 +200,7 @@ struct PerfEventContext {
   PerfEventContext(BPFtrace &b,
                    async_action::AsyncHandlers &handlers,
                    output::Output &o)
-      : bpftrace(b), handlers(handlers), output(o) {};
+      : bpftrace(b), handlers(handlers), output(o){};
   BPFtrace &bpftrace;
   async_action::AsyncHandlers &handlers;
   output::Output &output;
@@ -1048,11 +1048,13 @@ void BPFtrace::poll_event_loss(output::Output &out)
 std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
 {
   if (child_) {
-    // We can ignore all error checking here b/c child.cpp:validate_cmd() has
-    // already done it
-    auto args = util::split_string(cmd_, ' ', /* remove_empty */ true);
-    assert(!args.empty());
-    return util::resolve_binary_path(args[0]).front();
+    auto args = util::split_string_quotes(cmd_);
+    if (!args) {
+      LOG(ERROR) << "Bad child command. Error: " << args.takeError();
+      return std::nullopt;
+    }
+    assert(!args->empty());
+    return util::resolve_binary_path((*args)[0]).front();
   } else if (pid().has_value()) {
     return "/proc/" + std::to_string(pid().value_or(0)) + "/exe";
   } else {
@@ -1415,7 +1417,8 @@ int BPFtrace::resume_tracee(pid_t tracee_pid)
 
 const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
 {
-  static std::optional<struct stat> pidns = []() -> std::optional<struct stat> {
+  static std::optional<struct stat> pidns = []() -> std::optional<struct stat>
+  {
     struct stat s;
     if (::stat("/proc/self/ns/pid", &s)) {
       if (errno == ENOENT)
@@ -1425,7 +1428,8 @@ const std::optional<struct stat> &BPFtrace::get_pidns_self_stat() const
           std::strerror(errno));
     }
     return s;
-  }();
+  }
+  ();
 
   return pidns;
 }
