@@ -73,9 +73,10 @@ The child process runs with the same privileges as bpftrace itself (usually root
 
 The command is split into arguments without invoking a shell. Single and double
 quotes group words into a single argument and are stripped; a backslash escapes
-the following character (outside quotes, and inside double quotes for `"`, `\\`,
-'$', '`' and newline only). '\$' and '\*' are passed through verbatim without
-shell expansion. An unclosed quote or a trailing backslash is an error.
+the following character (outside quotes, and inside double quotes for `"`, `\`,
+`$`, ``` and newline only). The command is executed directly, so variables (such
+as `$HOME`) and wildcards are not expanded. An unclosed quote or a trailing
+backslash is an error.
 
 Unless otherwise specified, bpftrace does not perform any implicit filtering. Therefore, if you are only interested in
 events in _COMMAND_, you may want to filter based on the child PID. The child PID is available to programs as the 'cpid' builtin.

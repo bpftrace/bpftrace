@@ -1,15 +1,15 @@
 NAME child command splits double-quoted args
-RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c "echo 'hello world'"
-EXPECT echo|hello world
+RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c "/bin/echo 'hello world'"
+EXPECT /bin/echo|hello world
 
 NAME child command splits single-quoted args
-RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c 'echo "hello world"'
-EXPECT echo|hello world
+RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c '/bin/echo "hello world"'
+EXPECT /bin/echo|hello world
 
 NAME child command backslash escapes space
-RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c "echo a\ b"
-EXPECT echo|a b
+RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c "/bin/echo a\ b"
+EXPECT /bin/echo|a b
 
 NAME child command trailing space does not add empty arg
-RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c "sleep 5 "
-EXPECT sleep|5
+RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_execve /pid == cpid/ { join(args.argv, "|"); exit(); }' -c "/bin/sleep 5 "
+EXPECT /bin/sleep|5

@@ -70,7 +70,7 @@ Result<std::vector<std::string>> split_string_quotes(const std::string &str)
           i += 2;
         } else {
           return make_error<SystemError>(
-              "Trailing backslash in command string: " + str);
+              "Trailing backslash in command string: " + str, 0);
         }
       } else if (std::isspace(static_cast<unsigned char>(c))) {
         if (has_token) {
@@ -88,7 +88,8 @@ Result<std::vector<std::string>> split_string_quotes(const std::string &str)
   }
 
   if (in_quotes) {
-    return make_error<SystemError>("Unclosed quote in command string: " + str);
+    return make_error<SystemError>("Unclosed quote in command string: " + str,
+                                   0);
   }
 
   if (has_token) {
