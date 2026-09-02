@@ -1601,7 +1601,7 @@ public:
   Expression end;
 };
 
-class Iterable : public VariantNode<Map, Range> {
+class Iterable : public VariantNode<Map, Range, Call> {
 public:
   using VariantNode::VariantNode;
   Iterable() : Iterable(static_cast<Map *>(nullptr)) {};

@@ -1000,6 +1000,15 @@ public:
       return MatchWith(node, range_matcher, *node.iterable.as<ast::Range>());
     });
   }
+
+  ForMatcher& WithIterCall(const Matcher<const ast::Call&>& call_matcher)
+  {
+    return Where([call_matcher](const ast::For& node) {
+      if (!node.iterable.is<ast::Call>())
+        return false;
+      return MatchWith(node, call_matcher, *node.iterable.as<ast::Call>());
+    });
+  }
 };
 
 inline ForMatcher For(
@@ -1017,6 +1026,15 @@ inline ForMatcher For(
     const std::vector<Matcher<const ast::Statement&>>& statements)
 {
   return ForMatcher().WithVariable(var).WithRange(range).WithStatements(
+      statements);
+}
+
+inline ForMatcher For(
+    const Matcher<const ast::Variable&>& var,
+    const Matcher<const ast::Call&>& iter,
+    const std::vector<Matcher<const ast::Statement&>>& statements)
+{
+  return ForMatcher().WithVariable(var).WithIterCall(iter).WithStatements(
       statements);
 }
 

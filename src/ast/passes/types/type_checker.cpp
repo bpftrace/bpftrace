@@ -11,6 +11,7 @@
 #include "ast/passes/types/type_checker.h"
 #include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_system.h"
+#include "bpf_iters.h"
 #include "bpftrace.h"
 #include "btf/compat.h"
 #include "config.h"
@@ -552,6 +553,33 @@ void TypeChecker::visit(Call &call)
       FormatString fs(call.vargs[0].as<String>()->value);
       call.addError() << fs.format(args);
     }
+  } else if (call.func == "iter_task" || call.func == "iter_threads") {
+    // OK
+  } else if (call.func == "iter_task_threads" || call.func == "iter_task_vma") {
+    auto logError = [&]<typename T>(T name) {
+      call.addError() << call.func
+                      << "() only supports 'struct task_struct *' as the "
+                         "first argument ("
+                      << name << " provided)";
+    };
+
+    const auto &task = type_map_.type(call.vargs.at(0));
+    if (!task.IsPtrTy() || !task.GetPointeeTy().IsCTypeTy()) {
+      logError(task.GetTy());
+    } else if (!task.GetPointeeTy().IsCompatible(
+                   CreateCStruct("struct task_struct"))) {
+      logError("'" + task.GetPointeeTy().GetName() + " *'");
+    }
+
+    if (call.func == "iter_task_vma" && call.vargs.size() == 2) {
+      const auto &addr = type_map_.type(call.vargs.at(1));
+      if (!addr.IsIntTy()) {
+        call.addError() << call.func
+                        << "() only supports an integer as the second "
+                           "argument ("
+                        << addr.GetTy() << " provided)";
+      }
+    }
   } else {
     // Check here if this corresponds to an external function. We convert the
     // external type metadata into the internal `SizedType` representation and
@@ -848,18 +876,29 @@ void TypeChecker::visit(For &f)
 
   visit(f.iterable);
 
+  if (auto *it = f.iterable.as<Call>()) {
+    const auto *info = find_bpf_iter(it->func);
+    if (!bpftrace_.feature_->has_kfunc(info->kfunc + "_new")) {
+      it->addError() << "Missing required kernel feature: " << info->kfunc
+                     << " (open-coded iterators require kernel 6.7 or later)";
+    }
+  }
+
   loop_depth_++;
   visit(f.block);
   loop_depth_--;
 
-  // Currently, we do not pass BPF context to the callback so disable builtins
-  // which require ctx access.
-  CollectNodes<Builtin> builtins;
-  builtins.visit(f.block);
-  for (Builtin &builtin : builtins.nodes()) {
-    if (type_map_.type(&builtin).IsCtxAccess()) {
-      builtin.addError() << "'" << builtin.ident
-                         << "' builtin is not allowed in a for-loop";
+  // Loops lowered to a callback do not receive the BPF context, so builtins
+  // which require ctx access are unavailable there. Open-coded iterators are
+  // lowered inline and keep the enclosing probe's context.
+  if (!f.iterable.is<Call>()) {
+    CollectNodes<Builtin> builtins;
+    builtins.visit(f.block);
+    for (Builtin &builtin : builtins.nodes()) {
+      if (type_map_.type(&builtin).IsCtxAccess()) {
+        builtin.addError() << "'" << builtin.ident
+                           << "' builtin is not allowed in a for-loop";
+      }
     }
   }
 }
