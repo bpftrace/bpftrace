@@ -155,3 +155,63 @@ EXPECT true
 NAME external function call range
 PROG begin { @map[1] = 1; $x = 1; for ($i : 0..1) { print(has_key(@map, $x)); }  }
 EXPECT true
+
+NAME iter_task finds init
+PROG begin { for ($t : iter_task()) { if ($t->pid == 1) { print("found"); } } }
+EXPECT found
+MIN_KERNEL 6.7
+
+NAME iter_task with break
+PROG begin { $n = 0; for ($t : iter_task()) { $n++; if ($n == 2) { break; } } print($n); }
+EXPECT 2
+MIN_KERNEL 6.7
+
+NAME iter_task with continue
+PROG begin { $seen = 0; for ($t : iter_task()) { if ($t->pid != 1) { continue; } $seen = 1; } print($seen); }
+EXPECT 1
+MIN_KERNEL 6.7
+
+NAME iter_task with return
+PROG begin { for ($t : iter_task()) { if ($t->pid == 1) { return; } } print("end"); }
+EXPECT_NONE end
+MIN_KERNEL 6.7
+
+NAME iter_task writes map
+PROG begin { for ($t : iter_task()) { if ($t->pid == 1) { @[$t->pid] = 1; } } print(@); }
+EXPECT @[1]: 1
+MIN_KERNEL 6.7
+
+NAME iter_threads ran
+PROG begin { $seen = 0; for ($t : iter_threads()) { $seen = 1; } print($seen); }
+EXPECT 1
+MIN_KERNEL 6.7
+
+# This would trigger a verifier error if inner variables weren't put into per-cpu scratch maps
+NAME iter_threads external variable
+PROG begin { $seen = 0; for ($t : iter_threads()) { $seen++; } if ($seen > 1) { print($seen); } }
+EXPECT_REGEX [0-9]+
+MIN_KERNEL 6.7
+
+NAME iter_task_threads ran
+PROG begin { $seen = 0; for ($t : iter_task_threads(curtask)) { $seen = 1; } print($seen); }
+EXPECT 1
+MIN_KERNEL 6.7
+
+NAME iter_task_vma ran
+PROG begin { $seen = 0; for ($v : iter_task_vma(curtask)) { $seen = 1; } print($seen); }
+EXPECT 1
+MIN_KERNEL 6.7
+
+NAME iter nested in range
+PROG begin { $n = 0; for ($i : 0..2) { for ($t : iter_task()) { $n++; if ($n > 0) { break; } } } print($n); }
+EXPECT 2
+MIN_KERNEL 6.7
+
+# An unconditional break leaves bpf_iter_task_next with no back-edge, so the
+# kernel assigns it no SCC, yet re-entering the bpf_loop callback still makes
+# is_state_visited() record a backedge for it. Kernels 6.17 - 6.18 abort with
+# "verifier bug: add backedge: no SCC in verification path".
+NAME iter nested in range with unconditional break
+PROG begin { $n = 0; for ($i : 0..2) { for ($t : iter_task()) { $n++; break; } } print($n); }
+EXPECT 2
+MIN_KERNEL 7.1

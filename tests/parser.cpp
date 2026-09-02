@@ -3309,6 +3309,53 @@ begin { for ($i : ..10) { print($i) } }
 )");
 }
 
+TEST(Parser, for_iter)
+{
+  test("begin { for ($t : iter_task()) { print($t) } }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { For(Variable("$t"),
+                 Call("iter_task", {}),
+                 { ExprStatement(Call("print", { Variable("$t") })) }) })));
+
+  test("begin { for ($t : iter_threads()) { print($t) } }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { For(Variable("$t"),
+                 Call("iter_threads", {}),
+                 { ExprStatement(Call("print", { Variable("$t") })) }) })));
+
+  test("begin { for ($v : iter_task_vma(curtask)) { print($v) } }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { For(Variable("$v"),
+                 Call("iter_task_vma", { Identifier("curtask") }),
+                 { ExprStatement(Call("print", { Variable("$v") })) }) })));
+
+  test(
+      "begin { for ($v : iter_task_vma(curtask, 4096)) { print($v) } }",
+      Program().WithProbe(Probe(
+          { "begin" },
+          { For(Variable("$v"),
+                Call("iter_task_vma", { Identifier("curtask"), Integer(4096) }),
+                { ExprStatement(Call("print", { Variable("$v") })) }) })));
+
+  // Any call parses as an iterator; the name is validated during pre type
+  // checking, not here.
+  test("begin { for ($x : str($y)) { print($x) } }",
+       Program().WithProbe(Probe(
+           { "begin" },
+           { For(Variable("$x"),
+                 Call("str", { Variable("$y") }),
+                 { ExprStatement(Call("print", { Variable("$x") })) }) })));
+
+  test_parse_failure("begin { for ($x : 1) { print($x) } }", R"(
+stdin:1:22-23: ERROR: syntax: expected map, range, or iterator in for loop
+begin { for ($x : 1) { print($x) } }
+                     ~
+)");
+}
+
 TEST(Parser, variable_declarations)
 {
   // N.B. we check that the variable decl is defined, and also that is does not

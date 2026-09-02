@@ -4441,6 +4441,20 @@ fentry:func_1 { $ret = socket_cookie(args.foo1); }
 )" });
 }
 
+TEST_F(TypeCheckerBTFTest, open_coded_iter_args)
+{
+  test("begin { for ($t : iter_task_threads(1)) { print($t) } }",
+       Error{ "iter_task_threads() only supports 'struct task_struct *' as "
+              "the first argument (int provided)" });
+  test(
+      "fentry:func_1 { for ($t : iter_task_threads(args.foo1)) { print($t) } }",
+      Error{ "iter_task_threads() only supports 'struct task_struct *' as "
+             "the first argument ('struct Foo1 *' provided)" });
+  test("begin { for ($v : iter_task_vma(curtask, \"x\")) { print($v) } }",
+       Error{ "iter_task_vma() only supports an integer as the second "
+              "argument (string provided)" });
+}
+
 TEST_F(TypeCheckerBTFTest, rawtracepoint)
 {
   test("rawtracepoint:event_rt { args.first_real_arg }");

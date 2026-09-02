@@ -15,6 +15,7 @@
 #include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_system.h"
 #include "ast/visitor.h"
+#include "bpf_iters.h"
 #include "bpftrace.h"
 #include "btf/compat.h"
 #include "config.h"
@@ -1638,13 +1639,27 @@ void TypeRuleCollector::visit(For &f)
           return get_range_type(inputs[0], inputs[1], range);
         },
     });
+  } else if (auto *it = f.iterable.as<Call>()) {
+    for (auto &varg : it->vargs) {
+      visit(varg);
+    }
+    const auto *info = find_bpf_iter(it->func);
+    auto yielded = bpftrace_.btf_->get_stype(info->yields);
+    if (yielded.IsNoneTy()) {
+      it->addError() << "Cannot resolve \"" << info->yields << "\" required by "
+                     << it->func << "(); kernel BTF may be unavailable";
+    } else {
+      resolver_.set_type(scoped_var, CreatePointer(yielded, AddrSpace::kernel));
+    }
   }
 
   visit(f.block);
 
   scope_stack_.pop_back();
 
-  {
+  // Open-coded iterators are lowered to an inline loop rather than a callback,
+  // so outer variables are used directly and need no context struct.
+  if (!f.iterable.is<Call>()) {
     std::vector<TypeVariable> ctx_inputs;
     for (Variable &var : collector.nodes()) {
       ctx_inputs.emplace_back(&var);
