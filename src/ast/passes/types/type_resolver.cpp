@@ -833,6 +833,15 @@ void TypeRuleCollector::visit(Builtin &builtin)
       default:
         break;
     }
+  } else if (builtin.ident == "__builtin_curtask") {
+    auto record = bpftrace_.structs.Lookup("struct task_struct");
+    if (record.expired()) {
+      builtin.addError() << "Cannot resolve \"struct task_struct\"; kernel BTF "
+                            "may be unavailable";
+    } else {
+      builtin_type = CreatePointer(CreateCStruct("struct task_struct", record),
+                                   AddrSpace::kernel);
+    }
   } else if (builtin.ident == "__builtin_retval") {
     auto *probe = get_probe(builtin, builtin.ident);
     if (probe == nullptr)

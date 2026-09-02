@@ -19,7 +19,9 @@ extern struct vm_area_struct *bpf_iter_task_vma_next(
 extern void bpf_iter_task_vma_destroy(
     struct __compat_bpf_iter_task_vma *it) __ksym __weak;
 
-unsigned long __bpf_task_map_file_min_addr(unsigned long ino)
+unsigned long __bpf_task_map_file_min_addr(
+    struct task_struct *task __arg_trusted,
+    unsigned long ino)
 {
   // linux >= 6.7
   if (!bpf_iter_task_vma_new || !bpf_iter_task_vma_destroy ||
@@ -28,10 +30,9 @@ unsigned long __bpf_task_map_file_min_addr(unsigned long ino)
 
   struct __compat_bpf_iter_task_vma vma_it;
   struct vm_area_struct *vma;
-  struct task_struct *cur_task = bpf_get_current_task_btf();
   unsigned long off = 0;
 
-  if (bpf_iter_task_vma_new(&vma_it, cur_task, 0)) {
+  if (bpf_iter_task_vma_new(&vma_it, task, 0)) {
     bpf_iter_task_vma_destroy(&vma_it);
     return 0;
   }

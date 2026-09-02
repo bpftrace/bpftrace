@@ -123,6 +123,7 @@ public:
                                const Location &loc,
                                MDNode *metadata);
   Value *CreateGetNs(TimestampMode ts, const Location &loc);
+  CallInst *CreateGetCurrentTask(const Location &loc);
   CallInst *CreateGetCpuId(const Location &loc);
   CallInst *CreateGetStack(Value *ctx,
                            Value *buf,
