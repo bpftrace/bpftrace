@@ -2,6 +2,7 @@
 #include <unordered_set>
 
 #include "btf/btf.h"
+#include "btf/compat.h"
 #include "btf/helpers.h"
 #include "data/data_source_btf.h"
 #include "gtest/gtest.h"
@@ -9,6 +10,9 @@
 namespace bpftrace::test::btf {
 
 using namespace bpftrace::btf;
+
+// Disambiguate from `bpftrace::Struct`, which `compat.h` brings into scope.
+using bpftrace::btf::Struct;
 
 static std::string to_str(const AnyType &type)
 {
@@ -547,6 +551,43 @@ TEST(btf, helper_functions)
   EXPECT_EQ(retrieved_info->nr_elements, 100);
   EXPECT_TRUE(retrieved_info->key.is<Integer>());
   EXPECT_TRUE(retrieved_info->value.is<Integer>());
+}
+
+TEST(btf, compat_record_name_and_size)
+{
+  auto btf = Types::parse(reinterpret_cast<const char *>(btf_data),
+                          sizeof(btf_data));
+  ASSERT_TRUE(bool(btf));
+
+  auto task_struct = btf->lookup<Struct>("task_struct");
+  ASSERT_TRUE(bool(task_struct));
+
+  auto ty = getCompatType(*task_struct);
+  ASSERT_TRUE(bool(ty));
+
+  EXPECT_TRUE(ty->IsCTypeTy());
+  EXPECT_EQ(ty->GetName(), "struct task_struct");
+  EXPECT_EQ(ty->GetSize(), sizeof(int *));
+  EXPECT_EQ(ty->GetFieldCount(), 2);
+}
+
+TEST(btf, compat_anonymous_record)
+{
+  Types btf;
+  auto int32 = btf.add<Integer>("int32", 4, 1);
+  ASSERT_TRUE(bool(int32));
+  std::vector<std::pair<std::string, ValueType>> fields = {
+    { "a", ValueType(*int32) }
+  };
+  auto anon = btf.add<Struct>("", fields);
+  ASSERT_TRUE(bool(anon));
+
+  auto ty = getCompatType(*anon);
+  ASSERT_TRUE(bool(ty));
+
+  EXPECT_TRUE(ty->IsCTypeTy());
+  EXPECT_TRUE(ty->GetName().empty());
+  EXPECT_EQ(ty->GetSize(), 4);
 }
 
 } // namespace bpftrace::test::btf
