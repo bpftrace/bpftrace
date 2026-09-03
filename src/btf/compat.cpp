@@ -59,6 +59,27 @@ Result<SizedType> getCompatType(const Array &type, CompatTypeCache &type_cache)
   return CreateArray(type.element_count(), *ty);
 }
 
+// We can only generate the fields based on the offsets.
+static Result<bpftrace::Fields> resolveFields(
+    std::vector<std::pair<std::string, FieldInfo>> &&fields,
+    CompatTypeCache &type_cache)
+{
+  bpftrace::Fields resolved;
+  for (const auto &[name, info] : fields) {
+    auto ft = getCompatType(info.type, type_cache);
+    if (!ft) {
+      return ft.takeError();
+    }
+    resolved.emplace_back(Field{
+        .name = name,
+        .type = *ft,
+        .offset = static_cast<ssize_t>(info.bit_offset / 8),
+        .bitfield = std::nullopt,
+    });
+  }
+  return resolved;
+}
+
 Result<SizedType> asRecord(
     uint32_t type_id,
     const std::string &name,
@@ -66,33 +87,53 @@ Result<SizedType> asRecord(
     std::vector<std::pair<std::string, FieldInfo>> &&fields,
     CompatTypeCache &type_cache)
 {
-  auto it = type_cache.find(type_id);
-  if (it != type_cache.end()) {
-    return CreateRecord(std::shared_ptr<bpftrace::Struct>(it->second));
-  }
+  // While this record's fields are being resolved, the cache holds a null
+  // entry for it. Since this function recurses this null entry is used to
+  // determine if we're also dealing with a recursive type.
+  auto [it, first_visit] = type_cache.records.try_emplace(type_id, nullptr);
 
-  // The record start empty, and we construct below.
-  auto s = bpftrace::Struct::CreateRecord({}, {});
-  s->size = static_cast<int>(size);
-  type_cache.emplace(type_id, std::shared_ptr<bpftrace::Struct>(s));
-
-  // We can only generate a type based on the offsets.
-  std::vector<std::string_view> idents;
-  std::vector<FieldInfo> infos;
-  std::vector<SizedType> types;
-  for (const auto &[name, info] : fields) {
-    auto ft = getCompatType(info.type, type_cache);
-    if (!ft) {
-      return ft.takeError();
+  if (!name.empty()) {
+    auto record = type_cache.structs.LookupOrAdd(name, size).lock();
+    if (first_visit && !record->HasFields()) {
+      auto resolved = resolveFields(std::move(fields), type_cache);
+      if (!resolved) {
+        type_cache.records.erase(it);
+        return resolved.takeError();
+      }
+      // Another BTF type with the same name may have filled in this record
+      // while its fields were being resolved; don't clobber it.
+      if (!record->HasFields()) {
+        record->fields = std::move(*resolved);
+      }
     }
-    s->fields.emplace_back(Field{
-        .name = name,
-        .type = *ft,
-        .offset = static_cast<ssize_t>(info.bit_offset / 8),
-        .bitfield = std::nullopt,
-    });
+    return CreateCStruct(name, std::weak_ptr<bpftrace::Struct>(record));
   }
-  return CreateCStruct(name, std::move(s));
+
+  // Anonymous records have no name to share them under, so they are owned by
+  // the type that refers to them.
+  auto make_record = [size](bpftrace::Fields &&fields) {
+    auto record = bpftrace::Struct::CreateRecord({}, {});
+    record->size = static_cast<int>(size);
+    record->fields = std::move(fields);
+    return record;
+  };
+
+  if (!first_visit) {
+    if (it->second) {
+      return CreateCStruct(name, std::shared_ptr<bpftrace::Struct>(it->second));
+    }
+    // This type is still being resolved. We need to break the recursion cycle
+    // by returning an empty record of the right size.
+    return CreateCStruct(name, make_record({}));
+  }
+
+  auto resolved = resolveFields(std::move(fields), type_cache);
+  if (!resolved) {
+    type_cache.records.erase(it);
+    return resolved.takeError();
+  }
+  it->second = make_record(std::move(*resolved));
+  return CreateCStruct(name, std::shared_ptr<bpftrace::Struct>(it->second));
 }
 
 Result<SizedType> getCompatType(const Struct &type, CompatTypeCache &type_cache)
