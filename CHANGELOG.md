@@ -71,6 +71,8 @@ and this project adheres to
   - [#5288](https://github.com/bpftrace/bpftrace/pull/5288)
 - Fix large string allocations for casts
   - [#5286](https://github.com/bpftrace/bpftrace/pull/5286)
+- Fix recursive BTF compat types
+  - [#5322](https://github.com/bpftrace/bpftrace/pull/5322)
 
 ## [0.26.1] 2026-06-02
 

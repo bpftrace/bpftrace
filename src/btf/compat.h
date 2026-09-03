@@ -4,6 +4,10 @@
 #include "types.h"
 #include "util/result.h"
 
+namespace bpftrace {
+class StructManager;
+} // namespace bpftrace
+
 namespace bpftrace::btf {
 
 class CompatTypeError : public ErrorInfo<CompatTypeError> {
@@ -26,9 +30,18 @@ private:
   std::string msg_;
 };
 
-// For struct resolution, this indicates the set of structs
-// that have already been resolved for the purposes of cycles.
-using CompatTypeCache = std::map<uint32_t, std::shared_ptr<bpftrace::Struct>>;
+using BtfTypeId = uint32_t;
+
+// The state for a single conversion.
+//
+// Named records are owned by the `StructManager` and referred to weakly, which
+// is how a type that refers back to itself is represented without forming a
+// reference cycle. Anonymous records have no name to share them under, so they
+// are owned by the type instead.
+struct CompatTypeCache {
+  StructManager &structs;
+  std::map<BtfTypeId, std::shared_ptr<bpftrace::Struct>> records;
+};
 
 template <typename T>
 struct compatTypeFor {
@@ -88,9 +101,9 @@ Result<SizedType> getCompatType(const T &type, CompatTypeCache &type_cache)
 }
 
 template <typename T>
-Result<SizedType> getCompatType(const T &type)
+Result<SizedType> getCompatType(const T &type, StructManager &structs)
 {
-  CompatTypeCache type_cache; // Empty initial cache.
+  CompatTypeCache type_cache{ .structs = structs, .records = {} };
   return getCompatType(type, type_cache);
 }
 

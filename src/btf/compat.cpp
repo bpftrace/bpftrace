@@ -59,6 +59,27 @@ Result<SizedType> getCompatType(const Array &type, CompatTypeCache &type_cache)
   return CreateArray(type.element_count(), *ty);
 }
 
+// We can only generate the fields based on the offsets.
+static Result<bpftrace::Fields> resolveFields(
+    std::vector<std::pair<std::string, FieldInfo>> &&fields,
+    CompatTypeCache &type_cache)
+{
+  bpftrace::Fields resolved;
+  for (const auto &[name, info] : fields) {
+    auto ft = getCompatType(info.type, type_cache);
+    if (!ft) {
+      return ft.takeError();
+    }
+    resolved.emplace_back(Field{
+        .name = name,
+        .type = *ft,
+        .offset = static_cast<ssize_t>(info.bit_offset / 8),
+        .bitfield = std::nullopt,
+    });
+  }
+  return resolved;
+}
+
 Result<SizedType> asRecord(
     uint32_t type_id,
     const std::string &name,
@@ -66,32 +87,43 @@ Result<SizedType> asRecord(
     std::vector<std::pair<std::string, FieldInfo>> &&fields,
     CompatTypeCache &type_cache)
 {
-  auto it = type_cache.find(type_id);
-  if (it != type_cache.end()) {
-    return CreateRecord(std::shared_ptr<bpftrace::Struct>(it->second));
+  // A null entry marks the record as being resolved; finding one means that
+  // this type refers back to itself.
+  auto [it, was_added] = type_cache.records.try_emplace(type_id, nullptr);
+
+  if (!name.empty()) {
+    auto record = type_cache.structs.LookupOrAdd(name, size).lock();
+    if (was_added && !record->HasFields()) {
+      auto resolved = resolveFields(std::move(fields), type_cache);
+      if (!resolved) {
+        type_cache.records.erase(it);
+        return resolved.takeError();
+      }
+      if (!record->HasFields()) {
+        record->fields = std::move(*resolved);
+      }
+    }
+    return CreateCStruct(name, std::weak_ptr<bpftrace::Struct>(record));
   }
 
-  // The record start empty, and we construct below.
+  if (!was_added) {
+    if (it->second) {
+      return CreateCStruct(name, std::shared_ptr<bpftrace::Struct>(it->second));
+    }
+    auto s = bpftrace::Struct::CreateRecord({}, {});
+    s->size = static_cast<int>(size);
+    return CreateCStruct(name, std::move(s));
+  }
+
+  auto resolved = resolveFields(std::move(fields), type_cache);
+  if (!resolved) {
+    type_cache.records.erase(it);
+    return resolved.takeError();
+  }
   auto s = bpftrace::Struct::CreateRecord({}, {});
   s->size = static_cast<int>(size);
-  type_cache.emplace(type_id, std::shared_ptr<bpftrace::Struct>(s));
-
-  // We can only generate a type based on the offsets.
-  std::vector<std::string_view> idents;
-  std::vector<FieldInfo> infos;
-  std::vector<SizedType> types;
-  for (const auto &[name, info] : fields) {
-    auto ft = getCompatType(info.type, type_cache);
-    if (!ft) {
-      return ft.takeError();
-    }
-    s->fields.emplace_back(Field{
-        .name = name,
-        .type = *ft,
-        .offset = static_cast<ssize_t>(info.bit_offset / 8),
-        .bitfield = std::nullopt,
-    });
-  }
+  s->fields = std::move(*resolved);
+  it->second = s;
   return CreateCStruct(name, std::move(s));
 }
 

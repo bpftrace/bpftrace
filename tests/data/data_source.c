@@ -42,6 +42,13 @@ struct Foo4 {
   unsigned int d : 20;
 };
 
+struct FooRecursive {
+  int a;
+  struct FooRecursive *next;
+};
+
+struct FooRecursive foo_recursive;
+
 enum FooEnum {
   VALUE
 };
