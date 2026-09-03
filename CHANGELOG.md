@@ -9,6 +9,11 @@ and this project adheres to
 ## Unreleased
 
 #### Breaking Changes
+- Make `clear()` synchronous: the map is emptied in-kernel at the point of the
+  call instead of through an asynchronous notification. As a result, a `print()`
+  emitted before `clear()` in the same block no longer observes the deleted
+  entries.
+  - [#3549](https://github.com/bpftrace/bpftrace/issues/3549)
 #### Added
 - stdlib: Add `abs_path` and `cwd`.
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)

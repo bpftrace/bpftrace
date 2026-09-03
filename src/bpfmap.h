@@ -80,7 +80,6 @@ public:
   virtual Result<TSeriesMap> collect_tseries_data(const MapInfo &map_info,
                                                   int nvalues) const;
   Result<> zero_out(int nvalues) const;
-  Result<> clear() const;
   Result<> update_elem(const void *key, const void *value) const;
   Result<> lookup_elem(const void *key, void *value) const;
   Result<> resize(uint32_t new_size) const;

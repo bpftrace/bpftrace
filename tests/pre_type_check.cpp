@@ -401,7 +401,7 @@ TEST(CallPreCheck, nargs)
   // clear
   test("kprobe:f { @x = count(); clear(@x); }");
   test("kprobe:f { @x = count(); clear(@x, 1); }",
-       "clear() requires one argument (2 provided)");
+       "Call to clear() has arguments that do not match any definition.");
 
   // zero
   test("kprobe:f { @x = count(); zero(@x); }");
@@ -596,7 +596,7 @@ TEST(CallPreCheck, raw_map_arg_funcs)
 
   // Errors
   test("kprobe:f { @x[1,2] = count(); clear(@x[3,4]); }",
-       "expects a map argument");
+       "Call to clear() has arguments that do not match any definition.");
   test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }",
        "expects a map argument");
 }

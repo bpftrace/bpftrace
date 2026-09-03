@@ -166,13 +166,6 @@ Result<> AsyncHandlers::zero_map(const OpaqueValue &data)
   return map.zero_out(nvalues);
 }
 
-Result<> AsyncHandlers::clear_map(const OpaqueValue &data)
-{
-  auto mapevent = data.bitcast<AsyncEvent::MapEvent>();
-  const auto &map = bpftrace.bytecode_.getMap(mapevent.mapid);
-  return map.clear();
-}
-
 Result<> AsyncHandlers::skboutput(const OpaqueValue &data)
 {
   auto hdr = data.bitcast<AsyncEvent::SkbOutput>();

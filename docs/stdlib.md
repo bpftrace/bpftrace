@@ -155,9 +155,11 @@ BEGIN {
 ### clear
 - `void clear(map m)`
 
-**async**
-
-Clear all keys/values from map `m`.
+Clear all keys/values from map `m`. Deletion happens in-kernel at the
+point of the call, making `clear()` synchronous: any `print()` emitted
+before `clear()` in the same block will no longer observe the deleted
+entries, and entries can never be left over (e.g. due to full ring
+buffers) when the program moves on.
 
 ```
 interval:ms:100 {

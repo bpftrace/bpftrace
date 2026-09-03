@@ -27,7 +27,10 @@ const std::unordered_set<std::string> &getAssignRewriteFuncs()
 const std::unordered_set<std::string> &getRawMapArgFuncs()
 {
   static std::unordered_set<std::string> RAW_MAP_ARG = {
-    "print", "clear", "zero", "len", "is_scalar",
+    "print",
+    "zero",
+    "len",
+    "is_scalar",
   };
   return RAW_MAP_ARG;
 }
