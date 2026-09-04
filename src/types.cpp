@@ -448,11 +448,14 @@ SizedType CreateCStruct(const std::string &name)
   return ty;
 }
 
-SizedType CreateCStruct(std::shared_ptr<Struct> &&record)
+SizedType CreateCStruct(const std::string &name,
+                        std::shared_ptr<Struct> &&record)
 {
-  // A local anonymous record.
+  // A local record, owned by the type rather than the `StructManager`. It is
+  // anonymous unless a name is given.
   assert(record);
   auto ty = SizedType(Type::c_type, record->size);
+  ty.name_ = name;
   ty.inner_struct_ = std::move(record);
   return ty;
 }

@@ -61,6 +61,8 @@ Result<SizedType> getCompatType(const Array &type, CompatTypeCache &type_cache)
 
 Result<SizedType> asRecord(
     uint32_t type_id,
+    const std::string &name,
+    size_t size,
     std::vector<std::pair<std::string, FieldInfo>> &&fields,
     CompatTypeCache &type_cache)
 {
@@ -71,6 +73,7 @@ Result<SizedType> asRecord(
 
   // The record start empty, and we construct below.
   auto s = bpftrace::Struct::CreateRecord({}, {});
+  s->size = static_cast<int>(size);
   type_cache.emplace(type_id, std::shared_ptr<bpftrace::Struct>(s));
 
   // We can only generate a type based on the offsets.
@@ -89,7 +92,7 @@ Result<SizedType> asRecord(
         .bitfield = std::nullopt,
     });
   }
-  return CreateCStruct(std::move(s));
+  return CreateCStruct(name, std::move(s));
 }
 
 Result<SizedType> getCompatType(const Struct &type, CompatTypeCache &type_cache)
@@ -98,7 +101,16 @@ Result<SizedType> getCompatType(const Struct &type, CompatTypeCache &type_cache)
   if (!f) {
     return f.takeError();
   }
-  return asRecord(type.type_id(), std::move(*f), type_cache);
+  auto sz = type.size();
+  if (!sz) {
+    return sz.takeError();
+  }
+  auto name = type.name();
+  return asRecord(type.type_id(),
+                  name.empty() ? name : "struct " + name,
+                  *sz,
+                  std::move(*f),
+                  type_cache);
 }
 
 Result<SizedType> getCompatType(const Union &type, CompatTypeCache &type_cache)
@@ -107,7 +119,16 @@ Result<SizedType> getCompatType(const Union &type, CompatTypeCache &type_cache)
   if (!f) {
     return f.takeError();
   }
-  return asRecord(type.type_id(), std::move(*f), type_cache);
+  auto sz = type.size();
+  if (!sz) {
+    return sz.takeError();
+  }
+  auto name = type.name();
+  return asRecord(type.type_id(),
+                  name.empty() ? name : "union " + name,
+                  *sz,
+                  std::move(*f),
+                  type_cache);
 }
 
 Result<SizedType> getCompatType(const Enum &type,
