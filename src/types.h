@@ -584,7 +584,8 @@ public:
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
   friend SizedType CreateCStruct(const std::string &name);
-  friend SizedType CreateCStruct(std::shared_ptr<Struct> &&record);
+  friend SizedType CreateCStruct(const std::string &name,
+                                 std::shared_ptr<Struct> &&record);
   friend SizedType CreateCStruct(const std::string &name,
                                  std::weak_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
@@ -616,7 +617,8 @@ SizedType CreatePointer(const SizedType &pointee_type,
                         AddrSpace as = AddrSpace::none);
 
 SizedType CreateCStruct(const std::string &name);
-SizedType CreateCStruct(std::shared_ptr<Struct> &&record);
+SizedType CreateCStruct(const std::string &name,
+                        std::shared_ptr<Struct> &&record);
 SizedType CreateCStruct(const std::string &name, std::weak_ptr<Struct> record);
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple);
 SizedType CreateRecord(std::shared_ptr<Struct> &&record);
