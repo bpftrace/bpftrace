@@ -222,12 +222,12 @@ This utilizes the BPF helper `raw_smp_processor_id`
 
 
 ### curtask
-- `uint64 curtask()`
-- `uint64 curtask`
+- `struct task_struct * curtask()`
+- `struct task_struct * curtask`
 
 Pointer to `struct task_struct` of the current task
 
-This utilizes the BPF helper `get_current_task`
+This utilizes the BPF helper `bpf_get_current_task_btf`
 
 
 ### cwd
