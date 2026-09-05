@@ -54,6 +54,10 @@ public:
       const std::string &file_path,
       const std::string &debuginfo_path);
 
+  static std::unique_ptr<Dwarf> GetFromKernel(
+      BPFtrace *bpftrace,
+      const std::string &debuginfo_path);
+
   std::vector<std::string> get_function_params(
       const std::string &function) const;
   std::shared_ptr<Struct> resolve_args(const std::string &function);
@@ -82,6 +86,8 @@ private:
     // automatically resolves references between the skeleton and split CU.
     std::optional<Dwarf_Die> split_cudie;
 
+    Dwarf_Addr mod_bias = 0;
+
     // Returns split CU DIE if present (skeleton CU), otherwise cudie.
     Dwarf_Die *cu_die()
     {
@@ -92,9 +98,13 @@ private:
     std::optional<std::filesystem::path> source_path;
   };
 
+  // The DWFL setup is shared by offline binaries and the running kernel.
+  // Kernel mode reports the kernel and loaded modules instead of an offline
+  // file and applies the module load bias to addresses.
   Dwarf(BPFtrace *bpftrace,
-        const std::string &file_path,
-        std::string debuginfo_path);
+        std::string file_path,
+        std::string debuginfo_path,
+        bool is_kernel);
 
   bool next_cu_info(CuInfo *cu_info) const;
   std::vector<Dwarf_Die> function_param_dies(const std::string &function) const;
@@ -122,7 +132,7 @@ private:
   static std::vector<std::filesystem::path> get_cu_src_paths(Dwarf_Die *cudie);
 
   Dwfl *dwfl = nullptr;
-  Dwfl_Callbacks callbacks;
+  Dwfl_Callbacks callbacks = {};
 
   BPFtrace *bpftrace_;
   std::string file_path_;
@@ -136,6 +146,7 @@ private:
   // char** to Dwfl_Callbacks.
   std::string debuginfo_path_;
   const char *debuginfo_path_cstr_;
+  bool is_kernel_ = false;
 };
 
 } // namespace bpftrace
@@ -153,6 +164,14 @@ public:
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace
                                               __attribute__((unused)),
                                               const std::string &file_path_
+                                              __attribute__((unused)),
+                                              const std::string &debuginfo_path
+                                              __attribute__((unused)))
+  {
+    return nullptr;
+  }
+
+  static std::unique_ptr<Dwarf> GetFromKernel(BPFtrace *bpftrace
                                               __attribute__((unused)),
                                               const std::string &debuginfo_path
                                               __attribute__((unused)))

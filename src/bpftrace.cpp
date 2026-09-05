@@ -1479,6 +1479,13 @@ Result<uint64_t> BPFtrace::get_buffer_pages_per_cpu() const
   return get_buffer_pages(true);
 }
 
+Dwarf *BPFtrace::get_kernel_dwarf()
+{
+  if (!kernel_dwarf_)
+    kernel_dwarf_ = Dwarf::GetFromKernel(this, debuginfo_path_);
+  return kernel_dwarf_.get();
+}
+
 Dwarf *BPFtrace::get_dwarf(const std::string &filename)
 {
   auto dwarf = dwarves_.find(filename);
@@ -1494,10 +1501,17 @@ Dwarf *BPFtrace::get_dwarf(const std::string &filename)
 Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
 {
   auto probe_type = probetype(attachpoint.provider);
-  if (probe_type != ProbeType::uprobe && probe_type != ProbeType::uretprobe)
-    return nullptr;
+  if (probe_type == ProbeType::uprobe || probe_type == ProbeType::uretprobe)
+    return get_dwarf(attachpoint.target);
+  // Ordinary kprobes use BTF for kernel type information.  Only source
+  // location kprobes need the live kernel DWARF object; loading it for every
+  // kprobe also reports all live modules and can make otherwise unrelated
+  // probes unnecessarily expensive.
+  if ((probe_type == ProbeType::kprobe || probe_type == ProbeType::kretprobe) &&
+      !attachpoint.source_file.empty())
+    return get_kernel_dwarf();
 
-  return get_dwarf(attachpoint.target);
+  return nullptr;
 }
 
 int BPFtrace::create_pcaps()

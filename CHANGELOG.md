@@ -98,6 +98,8 @@ and this project adheres to
   - [#5098](https://github.com/bpftrace/bpftrace/pull/5098)
 - Add DWARF-based user-space stack unwinding via `dw_ustack()` for x86_64 (requires LLVM >= 21).
   - [#4964](https://github.com/bpftrace/bpftrace/pull/4964)
+- Add `kprobe` support for source location attachpoints.
+  - [#5115](https://github.com/bpftrace/bpftrace/pull/5115)
 - Extend support for DWARF formats
   - [#5095](https://github.com/bpftrace/bpftrace/pull/5095)
 - Ternary operator supports an empty second operand.
