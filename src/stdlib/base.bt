@@ -165,7 +165,7 @@ macro comm($pid)
 
   let $name : string[64];
   if comptime kfunc_allowed("bpf_task_from_pid") {
-    let $ret = (int32)__bpf_task_comm_from_pid((int32)$pid, &$name);
+    let $ret = __bpf_task_comm_from_pid((int32)$pid, &$name);
     // EOPNOTSUPP: Operation not supported
     if ($ret == ((int32)(-95))) {
       warnf(
@@ -638,7 +638,7 @@ macro len(@map)
   if comptime is_scalar(@map) {
     fail("call to len() expects a map with explicit keys (non-scalar map)")
   } else {
-    (int64)__elem_count((void*)(&@map))
+    __elem_count((void*)(&@map))
   }
 }
 
@@ -1473,7 +1473,7 @@ macro uaddr(sym)
   // libraries. Among them, PIE and dynamic libraries need to correct the
   // symbol address according to the actual load address.
   if comptime (!elf_is_exe) {
-    $offset = (uint64)__bpf_task_map_file_min_addr((uint64)elf_info);
+    $offset = __bpf_task_map_file_min_addr((uint64)elf_info);
     // Recast to the original pointer type to preserve dereference size.
     $addr = (typeof($addr))((uint64)$addr + $offset);
   }
