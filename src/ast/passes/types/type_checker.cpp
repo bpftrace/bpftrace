@@ -590,7 +590,7 @@ void TypeChecker::visit(Call &call)
     for (size_t i = 0; i < argument_types->size(); i++) {
       const auto &[name, type] = argument_types->at(i);
       const auto &varg_type = type_map_.type(call.vargs[i]);
-      auto compat_arg_type = getCompatType(type);
+      auto compat_arg_type = getCompatType(type, bpftrace_.structs);
       if (!compat_arg_type) {
         // If the required type is a **pointer**, and the provided type is
         // a **pointer**, then we let it slide. Just assume the user knows
