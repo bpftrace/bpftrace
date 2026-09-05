@@ -1862,7 +1862,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
                                 { b_.getInt64(0), b_.getInt32(1) }));
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
-  } else if (call.func == "clear" || call.func == "zero") {
+  } else if (call.func == "zero") {
     auto elements = AsyncEvent::MapEvent().asLLVMType(b_);
     StructType *event_struct = b_.GetStructType(call.func + "_t",
                                                 elements,
@@ -1877,16 +1877,10 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto *aa_ptr = b_.CreateGEP(event_struct,
                                 buf,
                                 { b_.getInt64(0), b_.getInt32(0) });
-    if (call.func == "clear")
-      b_.CreateStore(b_.GetIntSameSize(static_cast<int64_t>(
-                                           async_action::AsyncAction::clear),
-                                       elements.at(0)),
-                     aa_ptr);
-    else
-      b_.CreateStore(b_.GetIntSameSize(static_cast<int64_t>(
-                                           async_action::AsyncAction::zero),
-                                       elements.at(0)),
-                     aa_ptr);
+    b_.CreateStore(b_.GetIntSameSize(static_cast<int64_t>(
+                                         async_action::AsyncAction::zero),
+                                     elements.at(0)),
+                   aa_ptr);
 
     int id = bpftrace_.resources.maps_info.at(map.ident).id;
     if (id == -1) {

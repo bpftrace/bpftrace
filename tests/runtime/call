@@ -645,22 +645,22 @@ EXPECT 1.000123
 TIMEOUT 1
 
 NAME print_avg_map_args
-PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@);  }
+PROG config = { print_maps_on_exit = false } begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); }
 EXPECT_FILE  runtime/outputs/print_avg_map_args.txt
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
-PROG begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); clear(@);  }
+PROG config = { print_maps_on_exit = false } begin { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); }
 EXPECT_FILE runtime/outputs/print_avg_map_with_large_top.txt
 TIMEOUT 1
 
 NAME print_hist_with_top_arg
-PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("end"); clear(@);  }
+PROG config = { print_maps_on_exit = false } begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("end"); }
 EXPECT_REGEX begin\n@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 
 NAME print_hist_with_large_top_arg
-PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("end"); clear(@);  }
+PROG config = { print_maps_on_exit = false } begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("end"); }
 EXPECT_REGEX begin\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 

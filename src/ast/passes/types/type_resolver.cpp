@@ -34,8 +34,8 @@ namespace bpftrace::ast {
 namespace {
 
 std::unordered_set<std::string> VOID_RETURNING_FUNCS = {
-  "join", "printf", "errorf", "warnf", "system", "cat",     "debugf",
-  "exit", "print",  "clear",  "zero",  "time",   "unwatch", "fail"
+  "join", "printf", "errorf", "warnf", "system",  "cat", "debugf",
+  "exit", "print",  "zero",   "time",  "unwatch", "fail"
 };
 
 std::unordered_map<std::string, SizedType (*)()> SIMPLE_BUILTIN_TYPES = {

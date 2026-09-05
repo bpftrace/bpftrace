@@ -16,7 +16,6 @@ enum class AsyncAction {
   cat_end     = 29999,
   exit        = 30000,
   print,
-  clear,
   zero,
   time,
   join,
@@ -43,7 +42,6 @@ public:
   Result<> print_non_map(const OpaqueValue &data);
   Result<> print_map(const OpaqueValue &data);
   Result<> zero_map(const OpaqueValue &data);
-  Result<> clear_map(const OpaqueValue &data);
   Result<> skboutput(const OpaqueValue &data);
   Result<> syscall(const OpaqueValue &data);
   Result<> cat(const OpaqueValue &data);

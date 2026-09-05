@@ -382,7 +382,7 @@ void ResourceAnalyser::visit(Call &call)
     resources_.using_skboutput = true;
   }
 
-  if (call.func == "print" || call.func == "clear" || call.func == "zero") {
+  if (call.func == "print" || call.func == "zero") {
     if (auto *map = call.vargs.at(0).as<Map>()) {
       auto &name = map->ident;
       auto &map_info = resources_.maps_info[name];

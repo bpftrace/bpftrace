@@ -91,18 +91,6 @@ Result<> BpfMap::zero_out(int nvalues) const
   return OK();
 }
 
-Result<> BpfMap::clear() const
-{
-  auto keys = collect_keys();
-  for (auto &k : keys) {
-    int err = bpf_map_delete_elem(fd(), k.data());
-    if (err && err != -ENOENT) {
-      return make_error<BpfMapError>(name_, "clear", err);
-    }
-  }
-  return OK();
-}
-
 Result<> BpfMap::update_elem(const void *key, const void *value) const
 {
   auto err = bpf_map_update_elem(fd(), key, value, BPF_ANY);

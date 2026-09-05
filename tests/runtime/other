@@ -243,6 +243,11 @@ PROG begin{ @[1] = tseries(1, 1ms, 5); clear(@); exit() }
 EXPECT_REGEX_NONE @
 TIMEOUT 1
 
+NAME print before clear is empty
+PROG begin { @x[1] = 1; @x[2] = 2; print(@x); clear(@x); exit(); }
+EXPECT_REGEX_NONE @
+TIMEOUT 1
+
 NAME sigint under heavy load
 RUN {{BPFTRACE}} --unsafe -e 'tracepoint:sched:sched_switch { system("echo foo"); } end { print("end"); }'
 EXPECT end

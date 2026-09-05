@@ -291,7 +291,6 @@ const std::map<std::string, nargs_spec> CALL_NARGS = {
   { "cat",            { .min_args=1, .max_args=128 } },
   { "cgroup_path",    { .min_args=1, .max_args=2 } },
   { "cgroupid",       { .min_args=1, .max_args=1 } },
-  { "clear",          { .min_args=1, .max_args=1 } },
   { "count",          { .min_args=2, .max_args=2 } },
   { "debugf",         { .min_args=1, .max_args=128 } },
   { "errorf",         { .min_args=1, .max_args=128 } },
