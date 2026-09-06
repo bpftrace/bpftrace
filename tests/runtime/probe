@@ -322,7 +322,7 @@ WILL_FAIL
 
 NAME uprobe_address_fail_resolve
 PROG uprobe:/bin/bash:10 { printf("arg0: %d\n", arg0); exit();}
-EXPECT ERROR: Could not resolve address: /bin/bash:0xa
+EXPECT ERROR: Could not determine instruction boundary for uprobe:/bin/bash:10 (binary appears stripped).
 WILL_FAIL
 
 NAME uprobe_library
