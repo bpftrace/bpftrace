@@ -784,6 +784,16 @@ TEST(bpftrace, resolve_timestamp)
       "1736725827.000000");
 }
 
+TEST(bpftrace, resolve_mac_address)
+{
+  const unsigned char mac_addr[] = { 0x80, 0xFF, 0x03, 0xA5, 0x01, 0xFE };
+  BPFtrace bpftrace;
+
+  EXPECT_EQ(bpftrace.resolve_mac_address(
+                reinterpret_cast<const char *>(mac_addr)),
+            "80:FF:03:A5:01:FE");
+}
+
 static std::set<std::string> list_modules(std::string_view ap)
 {
   ast::ASTContext ast("stdin", ap.data());

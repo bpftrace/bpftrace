@@ -18,6 +18,8 @@ and this project adheres to
 #### Fixed
 - Fix `func` builtin for session probe return/exit branches
   - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
+- Fix formatting of MAC address bytes with the high bit set
+  - [#5326](https://github.com/bpftrace/bpftrace/issues/5326)
 #### Security
 #### Docs
 #### Tools
