@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <sstream>
 
+#include "util/result.h"
 #include "util/strings.h"
 
 namespace bpftrace::util {
@@ -20,6 +21,82 @@ std::vector<std::string> split_string(const std::string &str,
     elems.push_back(value);
   }
   return elems;
+}
+
+Result<std::vector<std::string>> split_string_quotes(const std::string &str)
+{
+  std::vector<std::string> args;
+  std::string current;
+  bool in_quotes = false;
+  char quote_char = '\0';
+  bool has_token = false;
+
+  size_t i = 0;
+  while (i < str.size()) {
+    char c = str[i];
+
+    if (in_quotes) {
+      if (c == quote_char) {
+        // Closing quote
+        in_quotes = false;
+        quote_char = '\0';
+        i++;
+      } else if (quote_char == '"' && c == '\\' && i + 1 < str.size()) {
+        char next = str[i + 1];
+        // POSIX rule: inside double quotes, \ only escapes ", \, $, `, and \n
+        if (next == '"' || next == '\\' || next == '$' || next == '`' ||
+            next == '\n') {
+          current += next;
+          i += 2;
+        } else {
+          current += c;
+          i++;
+        }
+      } else {
+        current += c;
+        i++;
+      }
+    } else {
+      if (c == '\'' || c == '"') {
+        in_quotes = true;
+        quote_char = c;
+        has_token = true;
+        i++;
+      } else if (c == '\\') {
+        // Outside quotes: backslash escapes the following character
+        if (i + 1 < str.size()) {
+          current += str[i + 1];
+          has_token = true;
+          i += 2;
+        } else {
+          return make_error<SystemError>(
+              "Trailing backslash in command string: " + str, 0);
+        }
+      } else if (std::isspace(static_cast<unsigned char>(c))) {
+        if (has_token) {
+          args.push_back(std::move(current));
+          current.clear();
+          has_token = false;
+        }
+        i++;
+      } else {
+        current += c;
+        has_token = true;
+        i++;
+      }
+    }
+  }
+
+  if (in_quotes) {
+    return make_error<SystemError>("Unclosed quote in command string: " + str,
+                                   0);
+  }
+
+  if (has_token) {
+    args.push_back(std::move(current));
+  }
+
+  return args;
 }
 
 /// Erase prefix up to the first colon (:) from str and return the prefix

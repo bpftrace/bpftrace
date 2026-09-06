@@ -55,6 +55,76 @@ TEST(utils, split_string)
   EXPECT_EQ(split_string("foo-bar", '-'), tokens_foo_bar);
 }
 
+TEST(utils, split_string_quotes)
+{
+  std::vector<std::string> tokens_empty = {};
+  std::vector<std::string> tokens_echo_hello_world = { "echo",
+                                                       "hello",
+                                                       "world" };
+  std::vector<std::string> tokens_echo_hello_world_q = { "echo",
+                                                         "hello world" };
+  std::vector<std::string> tokens_echo_mixed = { "echo", "a'b", "c\"d" };
+  std::vector<std::string> tokens_echo_backslash = { "echo", "a b" };
+  std::vector<std::string> tokens_echo_verbatim = { "echo", "$HOME", "*" };
+  std::vector<std::string> tokens_empty_arg = { "echo", "" };
+
+  // Plain splitting without quotes
+  EXPECT_EQ(*split_string_quotes("echo hello world"), tokens_echo_hello_world);
+  EXPECT_EQ(*split_string_quotes(""), tokens_empty);
+  EXPECT_EQ(*split_string_quotes("   "), tokens_empty);
+
+  // Quotes group tokens; quotes themselves are stripped
+  EXPECT_EQ(*split_string_quotes("echo \"hello world\""),
+            tokens_echo_hello_world_q);
+  EXPECT_EQ(*split_string_quotes("echo 'hello world'"),
+            tokens_echo_hello_world_q);
+
+  // Quotes inside the other quote type
+  EXPECT_EQ(*split_string_quotes("echo \"a'b\" 'c\"d'"), tokens_echo_mixed);
+
+  // Unquoted backslash escapes space, but backslash is stripped
+  EXPECT_EQ(*split_string_quotes("echo a\\ b"), tokens_echo_backslash);
+
+  // Single quotes do NOT interpret backslashes
+  EXPECT_EQ(*split_string_quotes("echo 'a\\ b'"),
+            std::vector<std::string>({ "echo", "a\\ b" }));
+
+  // Double quotes only escape ", \, $, `, \n
+  EXPECT_EQ(*split_string_quotes("echo \"a\\\"b\""),
+            std::vector<std::string>({ "echo", "a\"b" }));
+  EXPECT_EQ(*split_string_quotes("echo \"a\\t\""),
+            std::vector<std::string>({ "echo", "a\\t" }));
+
+  // Trailing whitespace should not produce an empty token
+  EXPECT_EQ(*split_string_quotes("sleep 5 "),
+            std::vector<std::string>({ "sleep", "5" }));
+  EXPECT_EQ(*split_string_quotes("  sleep   5   "),
+            std::vector<std::string>({ "sleep", "5" }));
+
+  // Explicit empty quotes produce an empty token
+  EXPECT_EQ(*split_string_quotes("echo \"\""), tokens_empty_arg);
+  EXPECT_EQ(*split_string_quotes("echo ''"), tokens_empty_arg);
+
+  // Shell variables/globs are preserved verbatim (no expansion)
+  EXPECT_EQ(*split_string_quotes("echo $HOME *"), tokens_echo_verbatim);
+
+  // Error handling on unterminated quotes / trailing backslash
+  auto unclosed_single = split_string_quotes("echo 'unterminated");
+  EXPECT_FALSE(unclosed_single);
+  EXPECT_THAT(llvm::toString(unclosed_single.takeError()),
+              testing::HasSubstr("Unclosed quote in command string"));
+
+  auto unclosed_double = split_string_quotes("echo \"unterminated");
+  EXPECT_FALSE(unclosed_double);
+  EXPECT_THAT(llvm::toString(unclosed_double.takeError()),
+              testing::HasSubstr("Unclosed quote in command string"));
+
+  auto trailing_backslash = split_string_quotes("echo trailing\\");
+  EXPECT_FALSE(trailing_backslash);
+  EXPECT_THAT(llvm::toString(trailing_backslash.takeError()),
+              testing::HasSubstr("Trailing backslash in command string"));
+}
+
 TEST(utils, split_addrrange_symbol_module)
 {
   std::tuple<std::string, std::string, std::string> tokens_ar_sym = {
