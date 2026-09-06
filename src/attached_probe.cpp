@@ -222,7 +222,10 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 
     if (!sym) {
       if (safe_mode) {
-        return make_error<AttachError>(llvm::toString(sym.takeError()));
+        consumeError(sym.takeError());
+        return make_error<AttachError>(
+            "Could not determine instruction boundary for " + probe.name +
+            " (binary appears stripped)." + std::string{ hint_unsafe });
       } else {
         consumeError(sym.takeError());
         LOG(WARNING) << "Could not determine instruction boundary for "
