@@ -1302,15 +1302,16 @@ std::string BPFtrace::resolve_mac_address(const char *mac_addr) const
 {
   const size_t SIZE = 18;
   char addr[SIZE];
+  const auto *bytes = reinterpret_cast<const unsigned char *>(mac_addr);
   snprintf(addr,
            SIZE,
            "%02X:%02X:%02X:%02X:%02X:%02X",
-           mac_addr[0],
-           mac_addr[1],
-           mac_addr[2],
-           mac_addr[3],
-           mac_addr[4],
-           mac_addr[5]);
+           static_cast<unsigned int>(bytes[0]),
+           static_cast<unsigned int>(bytes[1]),
+           static_cast<unsigned int>(bytes[2]),
+           static_cast<unsigned int>(bytes[3]),
+           static_cast<unsigned int>(bytes[4]),
+           static_cast<unsigned int>(bytes[5]));
   return addr;
 }
 
