@@ -735,12 +735,13 @@ AttachPoint *Parser::parse_attach_point()
       break;
     }
 
-    // '/' could be a predicate start or part of a path. It's a path
-    // component if we've seen a ':' in the raw text (paths appear after
-    // the provider separator, e.g. uprobe:/my/program:func).
-    if (c == '/' && !raw.empty() && raw.find(':') == std::string::npos) {
-      // No ':' seen yet — this '/' can't be a path, it's a predicate but check
-      // it's not a comment.
+    // '/' can start a predicate or be part of a path. A ':' identifies
+    // path-bearing attachpoints while '@' identifies source-location kprobes.
+    // Therefore, a slash after kprobe@ must remain part of the source path.
+    if (c == '/' && !raw.empty() && raw.find(':') == std::string::npos &&
+        raw.find('@') == std::string::npos) {
+      // No ':' or '@' has appeared, so this '/' is a predicate delimiter
+      // unless it starts a comment.
       char next = peek(1);
       if (next != '/' && next != '*') {
         break;

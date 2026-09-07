@@ -12,6 +12,8 @@ and this project adheres to
 #### Added
 - stdlib: Add `abs_path` and `cwd`.
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
+- Add `kprobe` support for source location attachpoints.
+  - [#5308](https://github.com/bpftrace/bpftrace/pull/5308)
 #### Changed
 #### Deprecated
 #### Removed

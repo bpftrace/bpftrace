@@ -110,8 +110,6 @@ enum Options {
 
 constexpr auto FULL_SEARCH = "*:*";
 
-constexpr auto DEFAULT_DEBUG_INFO_PATHS = ":.debug:/usr/lib/debug";
-
 } // namespace
 
 void usage(std::ostream& out)
@@ -1013,7 +1011,7 @@ int main(int argc, char* argv[])
   bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
   bpftrace.probe_filter_ = args.probe_filter;
-  bpftrace.debuginfo_path_ = args.debuginfo_path + DEFAULT_DEBUG_INFO_PATHS;
+  bpftrace.debuginfo_path_ = args.debuginfo_path + default_debuginfo_paths;
 
   if (!args.pid_str.empty()) {
     auto pid = parse_pid(args.pid_str);
