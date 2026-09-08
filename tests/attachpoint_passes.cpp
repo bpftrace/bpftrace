@@ -7,6 +7,7 @@
 
 #ifdef HAVE_LIBDW
 #include "dwarf_common.h"
+#include "dwarf_parser.h"
 #endif // HAVE_LIBDW
 
 namespace bpftrace::test {
@@ -193,6 +194,27 @@ TEST_F(attachpoint_parser_dwarf, uprobe)
   test_error(
       "uprobe:@main.c:123 { 1 }",
       R"(Unspecified target binary, cannot attach by source code location.)");
+}
+
+// Source locations are resolved to both an address and the module owning the
+// matched compilation unit. Kernel kprobes use the module name to restrict BTF
+// loading to that single module.
+TEST_F(attachpoint_parser_dwarf, line_to_addr_reports_module)
+{
+  auto mock_bpftrace = get_mock_bpftrace();
+  auto dwarf = Dwarf::GetFromBinary(mock_bpftrace.get(), bin_, "");
+  ASSERT_TRUE(dwarf != nullptr);
+
+  std::string module = "unset";
+  auto address = dwarf->line_to_addr("data_source.c", 195, 0, &module);
+  ASSERT_TRUE(bool(address)) << address.takeError();
+  EXPECT_FALSE(module.empty());
+  EXPECT_NE(module, "unset");
+
+  // The out-parameter is optional and resolution must not depend on it.
+  auto address_no_module = dwarf->line_to_addr("data_source.c", 195);
+  ASSERT_TRUE(bool(address_no_module)) << address_no_module.takeError();
+  EXPECT_EQ(*address, *address_no_module);
 }
 
 #endif // HAVE_LIBDW

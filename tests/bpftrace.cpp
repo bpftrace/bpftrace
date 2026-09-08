@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/args_resolver.h"
@@ -794,7 +795,9 @@ TEST(bpftrace, resolve_mac_address)
             "80:FF:03:A5:01:FE");
 }
 
-static std::set<std::string> list_modules(std::string_view ap)
+static std::set<std::string> list_modules(
+    std::string_view ap,
+    const std::function<void(ast::ASTContext &)> &mutate = {})
 {
   ast::ASTContext ast("stdin", ap.data());
   auto bpftrace = get_mock_bpftrace();
@@ -809,6 +812,9 @@ static std::set<std::string> list_modules(std::string_view ap)
   std::stringstream out;
   ast.diagnostics().emit(out);
   EXPECT_TRUE(ok && ast.diagnostics().ok()) << out.str();
+
+  if (mutate)
+    mutate(ast);
 
   auto &func_info = get_mock_function_info();
   ProbeMatcher probe_matcher(bpftrace.get(),
@@ -857,6 +863,36 @@ TEST(bpftrace, list_modules_kprobe_explicit)
   EXPECT_EQ(modules.size(), 2);
   EXPECT_THAT(modules, Contains("vmlinux"));
   EXPECT_THAT(modules, Contains("kernel_mod_1"));
+}
+
+// A source location attachpoint resolves to an address and to the module owning
+// the matched compilation unit. Only that module's BTF must be listed; an empty
+// target would be treated as a wildcard and pull in every loaded module.
+// The parser needs kernel DWARF to resolve a source location, which is not
+// available in unit tests, so emulate the state it leaves behind.
+TEST(bpftrace, list_modules_kprobe_source_location)
+{
+  auto set_source_location = [](const std::string &module) {
+    return [module](ast::ASTContext &ast) {
+      for (auto *probe : ast.root->probes) {
+        for (auto *ap : probe->attach_points) {
+          ap->func.clear();
+          ap->source_file = "fs/open.c";
+          ap->line_num = 1077;
+          ap->address = 0xffffffff81000000;
+          ap->target = module;
+        }
+      }
+    };
+  };
+
+  auto vmlinux_modules = list_modules("k:queued_spin_lock_slowpath{}",
+                                      set_source_location("vmlinux"));
+  EXPECT_THAT(vmlinux_modules, ::testing::ElementsAre("vmlinux"));
+
+  auto mod_modules = list_modules("k:queued_spin_lock_slowpath{}",
+                                  set_source_location("kernel_mod_1"));
+  EXPECT_THAT(mod_modules, ::testing::ElementsAre("kernel_mod_1"));
 }
 
 // Implicit fentry/fexit is not tested b/c the mocks are currently wired

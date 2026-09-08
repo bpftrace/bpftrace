@@ -65,9 +65,13 @@ public:
   SizedType get_stype(const std::string &type_name) const;
   void resolve_fields(const SizedType &type) const;
 
+  // Resolves a source location to an address. If module is not null, it is set
+  // to the name of the module owning the matching compilation unit, which for
+  // the kernel is either "vmlinux" or a kernel module name.
   Result<uint64_t> line_to_addr(const std::string &source_file,
                                 size_t line_num,
-                                size_t col_num = 0) const;
+                                size_t col_num = 0,
+                                std::string *module = nullptr) const;
 
 private:
   // Compilation unit wrapper, abstracting over regular and split (DWO/DWP)
@@ -204,7 +208,9 @@ public:
   Result<uint64_t> line_to_addr(const std::string &source_file
                                 __attribute__((unused)),
                                 size_t line_num __attribute__((unused)),
-                                size_t col_num __attribute__((unused))) const
+                                size_t col_num __attribute__((unused)),
+                                std::string *module
+                                __attribute__((unused)) = nullptr) const
   {
     return make_error<DwarfParseError>();
   }

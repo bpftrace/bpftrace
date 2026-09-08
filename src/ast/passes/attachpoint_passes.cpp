@@ -691,14 +691,18 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
 
     Dwarf *dwarf = bpftrace_.get_kernel_dwarf();
     if (dwarf) {
-      auto address = dwarf->line_to_addr(ap_->source_file,
-                                         ap_->line_num,
-                                         ap_->col_num);
+      // Record the module owning the source location so that only its BTF is
+      // parsed later on. An empty target is otherwise turned into a wildcard by
+      // list_modules, which loads the BTF of every single loaded module.
+      std::string module;
+      auto address = dwarf->line_to_addr(
+          ap_->source_file, ap_->line_num, ap_->col_num, &module);
       if (!address) {
         errs_ << address.takeError() << std::endl;
         return INVALID;
       }
       ap_->address = *address;
+      ap_->target = module;
 
       return OK;
     }

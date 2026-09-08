@@ -629,9 +629,30 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(const std::string &source_file) const
   return std::move(*matched_cu);
 }
 
+// Returns the name of the module owning a compilation unit. libdwfl reports the
+// main kernel binary as "kernel", whereas bpftrace refers to it as the
+// "vmlinux" pseudo-module, so translate that name here.
+static std::optional<std::string> cu_module_name(Dwarf_Die *cudie)
+{
+  Dwfl_Module *mod = dwfl_cumodule(cudie);
+  if (!mod)
+    return std::nullopt;
+
+  const char *name = dwfl_module_info(
+      mod, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+  if (!name)
+    return std::nullopt;
+
+  if (std::strcmp(name, "kernel") == 0)
+    return "vmlinux";
+
+  return name;
+}
+
 Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
                                      size_t line_num,
-                                     size_t col_num) const
+                                     size_t col_num,
+                                     std::string *module) const
 {
   auto cu = get_cu_by_src(source_file);
   if (!cu) {
@@ -678,6 +699,12 @@ Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
         (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
       Dwarf_Addr addr;
       if (dwarf_lineaddr(line, &addr) == 0) {
+        // dwfl_cumodule requires the CU DIE managed by the dwfl session, so
+        // always use cudie here rather than a manually loaded split CU DIE.
+        if (module) {
+          if (auto name = cu_module_name(cu->cudie))
+            *module = std::move(*name);
+        }
         // Add KASLR offset if in kernel mode
         return is_kernel_ ? addr + cu->mod_bias : addr;
       }

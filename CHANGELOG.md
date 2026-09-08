@@ -22,6 +22,8 @@ and this project adheres to
   - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
 - Fix formatting of MAC address bytes with the high bit set
   - [#5326](https://github.com/bpftrace/bpftrace/issues/5326)
+- Only load the owning module's BTF for source-location kprobes
+  - [#5329](https://github.com/bpftrace/bpftrace/issues/5329)
 #### Security
 #### Docs
 #### Tools
