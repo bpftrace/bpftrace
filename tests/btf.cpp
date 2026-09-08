@@ -5,6 +5,7 @@
 #include "btf/compat.h"
 #include "btf/helpers.h"
 #include "data/data_source_btf.h"
+#include "struct.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::btf {
@@ -562,13 +563,70 @@ TEST(btf, compat_record_name_and_size)
   auto task_struct = btf->lookup<Struct>("task_struct");
   ASSERT_TRUE(bool(task_struct));
 
-  auto ty = getCompatType(*task_struct);
+  bpftrace::StructManager structs;
+  auto ty = getCompatType(*task_struct, structs);
   ASSERT_TRUE(bool(ty));
 
   EXPECT_TRUE(ty->IsCTypeTy());
   EXPECT_EQ(ty->GetName(), "struct task_struct");
   EXPECT_EQ(ty->GetSize(), sizeof(int *));
   EXPECT_EQ(ty->GetFieldCount(), 2);
+  EXPECT_EQ(ty->GetStruct(), structs.Lookup("struct task_struct").lock());
+}
+
+TEST(btf, compat_record_reuses_resolved_struct)
+{
+  auto btf = Types::parse(reinterpret_cast<const char *>(btf_data),
+                          sizeof(btf_data));
+  ASSERT_TRUE(bool(btf));
+
+  auto task_struct = btf->lookup<Struct>("task_struct");
+  ASSERT_TRUE(bool(task_struct));
+
+  // A record that has already been resolved elsewhere, e.g. from the kernel's
+  // BTF, is used as-is rather than being resolved again.
+  bpftrace::StructManager structs;
+  auto record = structs.Add("struct task_struct", 8).lock();
+  record->AddField("resolved_elsewhere", CreateInt32(), 0);
+
+  auto ty = getCompatType(*task_struct, structs);
+  ASSERT_TRUE(bool(ty));
+  ASSERT_EQ(ty->GetFieldCount(), 1);
+  EXPECT_EQ(ty->GetField(0).name, "resolved_elsewhere");
+}
+
+TEST(btf, compat_recursive_record)
+{
+  auto btf = Types::parse(reinterpret_cast<const char *>(btf_data),
+                          sizeof(btf_data));
+  ASSERT_TRUE(bool(btf));
+
+  auto foo = btf->lookup<Struct>("FooRecursive");
+  ASSERT_TRUE(bool(foo));
+
+  std::weak_ptr<const bpftrace::Struct> record;
+  {
+    bpftrace::StructManager structs;
+    auto ty = getCompatType(*foo, structs);
+    ASSERT_TRUE(bool(ty));
+    EXPECT_EQ(ty->GetName(), "struct FooRecursive");
+    EXPECT_EQ(ty->GetFieldCount(), 2);
+
+    const auto &next = ty->GetField("next").type;
+    ASSERT_TRUE(next.IsPtrTy());
+    const auto &pointee = next.GetPointeeTy();
+    EXPECT_EQ(pointee.GetName(), "struct FooRecursive");
+    EXPECT_EQ(pointee.GetStruct(), ty->GetStruct());
+    EXPECT_TRUE(pointee.HasField("a"));
+    EXPECT_TRUE(pointee.GetField("next").type.GetPointeeTy().HasField("a"));
+
+    EXPECT_TRUE(structs.Has("struct FooRecursive"));
+
+    record = ty->GetStruct();
+    EXPECT_FALSE(record.expired());
+  }
+
+  EXPECT_TRUE(record.expired());
 }
 
 TEST(btf, compat_anonymous_record)
@@ -582,12 +640,15 @@ TEST(btf, compat_anonymous_record)
   auto anon = btf.add<Struct>("", fields);
   ASSERT_TRUE(bool(anon));
 
-  auto ty = getCompatType(*anon);
+  bpftrace::StructManager structs;
+  auto ty = getCompatType(*anon, structs);
   ASSERT_TRUE(bool(ty));
 
   EXPECT_TRUE(ty->IsCTypeTy());
   EXPECT_TRUE(ty->GetName().empty());
   EXPECT_EQ(ty->GetSize(), 4);
+
+  EXPECT_FALSE(structs.Has(""));
 }
 
 } // namespace bpftrace::test::btf

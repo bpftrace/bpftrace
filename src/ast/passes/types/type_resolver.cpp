@@ -1298,7 +1298,8 @@ void TypeRuleCollector::visit(Call &call)
                         << btf_return_type.takeError();
         return;
       }
-      auto compat_return_type = getCompatType(*btf_return_type);
+      auto compat_return_type = getCompatType(*btf_return_type,
+                                              bpftrace_.structs);
       if (!compat_return_type) {
         call.addError() << "Unable to convert return type: "
                         << compat_return_type.takeError();

@@ -80,6 +80,8 @@ TEST(TypeSystemTest, basic)
     "const struct bpf_map",
     "struct sock",
     "struct sock*",
+    "struct FooRecursive",
+    "struct FooRecursive*",
     "const struct bpf_map*",
     "struct ArrayWithCompoundData*",
     "struct Arrays*",
