@@ -108,16 +108,16 @@ PROG i:ms:1 { time("%H-%M:%S\n"); exit();}
 EXPECT_REGEX [0-9]*-[0-9]*
 
 NAME join
-RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo '_A_'"); } t:syscalls:sys_enter_execve { join(args.argv); exit();}'
-EXPECT _A_
+RUN {{BPFTRACE}} --unsafe -e 'i:ms:100 { system("echo '_A_'"); } t:syscalls:sys_enter_execve / str(args.argv[2], 5) == "echo" / { join(args.argv); exit();}'
+EXPECT_REGEX .*echo _A_$
 
 NAME join_delim
-RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo '_A_'"); } t:syscalls:sys_enter_execve { join(args.argv, ","); exit();}'
-EXPECT _A_
+RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo '_A_'"); } t:syscalls:sys_enter_execve / str(args.argv[2], 5) == "echo" / { join(args.argv, ","); exit();}'
+EXPECT_REGEX .*,echo _A_$
 
 NAME join_multi_arg
-RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo 1 2 3 4 5 6"); } t:syscalls:sys_enter_execve { join(args.argv); exit();}'
-EXPECT 1 2 3 4 5 6
+RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo 1 2 3 4 5 6"); } t:syscalls:sys_enter_execve / str(args.argv[2], 5) == "echo" / { join(args.argv); exit();}'
+EXPECT_REGEX .*echo 1 2 3 4 5 6$
 
 NAME str
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
