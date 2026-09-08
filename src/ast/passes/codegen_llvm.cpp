@@ -48,6 +48,7 @@
 #include "ast/passes/types/type_map.h"
 #include "ast/visitor.h"
 #include "async_action.h"
+#include "bpf_iters.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "config.h"
@@ -237,6 +238,7 @@ public:
   ScopedExpr visit(While &while_block);
   ScopedExpr visit(For &f, Map &map);
   ScopedExpr visit(For &f, Range &range);
+  ScopedExpr visit(For &f, Call &iter);
   ScopedExpr visit(For &f);
   ScopedExpr visit(Jump &jump);
   ScopedExpr visit(Probe &probe);
@@ -383,6 +385,12 @@ private:
       llvm::Type *ctx_t,
       std::function<llvm::Value *(llvm::Function *)> decl);
 
+  llvm::Function *createKfuncDecl(const std::string &name,
+                                  llvm::Type *ret,
+                                  ArrayRef<llvm::Type *> args,
+                                  DIType *debug_ret,
+                                  const Struct &debug_args);
+
   llvm::Function *createForEachMapCallback(const For &f,
                                            const Map &map,
                                            llvm::Type *ctx_t);
@@ -434,6 +442,7 @@ private:
 
   std::vector<Node *> scope_stack_;
   std::unordered_map<Node *, std::map<std::string, VariableLLVM>> variables_;
+  std::unordered_set<std::string> iter_loop_vars_;
 
   std::unordered_map<std::string, bpf_map_type> map_types_;
 
@@ -3124,7 +3133,8 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
     alloca_type = CreatePointer(pointee_type, var_type.GetAS());
   }
 
-  auto *val = b_.CreateVariableAllocationInit(alloca_type, var_ident, loc);
+  auto *val = b_.CreateVariableAllocationInit(
+      alloca_type, var_ident, loc, iter_loop_vars_.contains(var_ident));
   variables_[scope_stack_.back()][var_ident] = VariableLLVM{
     .value = val, .type = b_.GetType(alloca_type)
   };
@@ -3387,6 +3397,7 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 
 ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 {
+  iter_loop_vars_ = collectIterLoopVars(subprog);
   scope_stack_.push_back(&subprog);
   std::vector<llvm::Type *> arg_types;
   // First argument is for passing ctx pointer for output, rest are proper
@@ -3499,6 +3510,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
   // can restore it for the next pass (printf_id_, time_id_).
   async_ids_.create_reset_ids();
   assert(probe.attach_points.size() == 1);
+  iter_loop_vars_ = collectIterLoopVars(probe);
   current_attach_point_ = probe.attach_points.at(0);
   probe.set_index(getNextIndexForProbe());
 
@@ -4781,6 +4793,150 @@ ScopedExpr CodegenLLVM::visit(For &f, Range &range)
 
   // Execute the loop.
   b_.CreateForRange(iters, cb, ctx, f.loc);
+  return ScopedExpr();
+}
+
+llvm::Function *CodegenLLVM::createKfuncDecl(const std::string &name,
+                                             llvm::Type *ret,
+                                             ArrayRef<llvm::Type *> args,
+                                             DIType *debug_ret,
+                                             const Struct &debug_args)
+{
+  if (auto *existing = module_->getFunction(name)) {
+    return existing;
+  }
+
+  FunctionType *func_type = FunctionType::get(ret, args, false);
+  auto *fn = llvm::Function::Create(
+      func_type,
+      llvm::Function::LinkageTypes::ExternalWeakLinkage,
+      name,
+      module_.get());
+  fn->setDSOLocal(true);
+  fn->setSection(".ksyms");
+
+  debug_.createFunctionDebugInfo(*fn,
+                                 debug_ret,
+                                 debug_args,
+                                 /*is_declaration=*/true);
+  return fn;
+}
+
+ScopedExpr CodegenLLVM::visit(For &f, Call &it)
+{
+  const auto *info = find_bpf_iter(it.func);
+
+  // Declare the bpf_iter_<kind>_{new,next,destroy} trio. Several bpftrace
+  // iterators may share one trio, so these are cached per module.
+  //
+  // This flow mimics this bpf.c code:
+  // struct bpf_iter_task task_it;
+  // bpf_iter_task_new(&task_it, NULL, FLAGS);
+  //
+  // while ((task = bpf_iter_task_next(&task_it))) {
+  //   body
+  // }
+  //
+  // bpf_iter_task_destroy(&task_it);
+  const std::string state_type_name = "__compat_" + info->kfunc;
+  auto state_type = CreateCStruct(
+      state_type_name,
+      bpftrace_.structs.LookupOrAdd(state_type_name, info->iter_size));
+  auto ptr_to_state = CreatePointer(state_type);
+  auto yielded = CreatePointer(bpftrace_.btf_->get_stype(info->yields),
+                               AddrSpace::kernel);
+  auto start_arg = CreatePointer(
+      bpftrace_.btf_->get_stype("struct task_struct"), AddrSpace::kernel);
+  auto last_arg = info->flags ? CreateUInt32() : CreateUInt64();
+
+  Struct new_args;
+  new_args.AddField("it", ptr_to_state);
+  new_args.AddField("start", start_arg);
+  new_args.AddField(info->flags ? "flags" : "addr", last_arg);
+  auto *new_fn = createKfuncDecl(
+      info->kfunc + "_new",
+      b_.getInt32Ty(),
+      { b_.getPtrTy(), b_.getPtrTy(), b_.GetType(last_arg) },
+      debug_.GetType(CreateInt32()),
+      new_args);
+
+  Struct iter_only_args;
+  iter_only_args.AddField("it", ptr_to_state);
+  auto *next_fn = createKfuncDecl(info->kfunc + "_next",
+                                  b_.getPtrTy(),
+                                  { b_.getPtrTy() },
+                                  debug_.GetType(yielded),
+                                  iter_only_args);
+  auto *destroy_fn = createKfuncDecl(info->kfunc + "_destroy",
+                                     b_.getVoidTy(),
+                                     { b_.getPtrTy() },
+                                     nullptr,
+                                     iter_only_args);
+
+  llvm::Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *iter_cond = BasicBlock::Create(module_->getContext(),
+                                             "iter_cond",
+                                             parent);
+  BasicBlock *iter_body = BasicBlock::Create(module_->getContext(),
+                                             "iter_body",
+                                             parent);
+  BasicBlock *iter_destroy = BasicBlock::Create(module_->getContext(),
+                                                "iter_destroy",
+                                                parent);
+  BasicBlock *iter_end = BasicBlock::Create(module_->getContext(),
+                                            "iter_end",
+                                            parent);
+
+  auto *state = b_.CreateAllocaBPF(b_.GetType(state_type), "iter_state");
+  state->setAlignment(Align(8));
+  auto *decl_type = b_.GetType(type_map_.type(f.decl));
+  auto *decl = b_.CreateAllocaBPF(decl_type, f.decl->ident);
+  variables_[scope_stack_.back()][f.decl->ident] = VariableLLVM{
+    .value = decl, .type = decl_type
+  };
+
+  std::vector<ScopedExpr> scoped_args;
+  Value *start = b_.GetNull();
+  Value *last = nullptr;
+  for (size_t i = 0; i < it.vargs.size(); i++) {
+    scoped_args.emplace_back(visit(it.vargs.at(i)));
+    auto *value = scoped_args.back().value();
+    if (i == 0) {
+      start = value;
+    } else {
+      last = b_.CreateIntCast(value, b_.getInt64Ty(), false);
+    }
+  }
+
+  if (info->flags) {
+    last = b_.getInt32(static_cast<uint32_t>(*info->flags));
+  } else if (last == nullptr) {
+    last = b_.getInt64(0);
+  }
+
+  auto *rc = b_.CreateCall(new_fn, { state, start, last }, "iter_new");
+  b_.CreateCondBr(b_.CreateICmpNE(rc, b_.getInt32(0), "iter_new_failed"),
+                  iter_destroy,
+                  iter_cond);
+
+  b_.SetInsertPoint(iter_cond);
+  auto *elem = b_.CreateCall(next_fn, { state }, "iter_next");
+  b_.CreateCondBr(b_.CreateIsNotNull(elem, "iter_more"),
+                  iter_body,
+                  iter_destroy);
+
+  loops_.emplace_back([&] { return iter_cond; }, [&] { return iter_destroy; });
+  b_.SetInsertPoint(iter_body);
+  b_.CreateStore(elem, decl);
+  visit(f.block);
+  loops_.pop_back();
+
+  b_.SetInsertPoint(iter_destroy);
+  b_.CreateCall(destroy_fn, { state });
+  b_.CreateBr(iter_end);
+
+  b_.SetInsertPoint(iter_end);
+  variables_[scope_stack_.back()].erase(f.decl->ident);
   return ScopedExpr();
 }
 

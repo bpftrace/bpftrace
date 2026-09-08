@@ -19,6 +19,10 @@ public:
                                         const SizedType &ret_type,
                                         const Struct &args,
                                         bool is_declaration = false);
+  DILocalScope *createFunctionDebugInfo(llvm::Function &func,
+                                        DIType *ret_type,
+                                        const Struct &args,
+                                        bool is_declaration = false);
   DILocalScope *createProbeDebugInfo(llvm::Function &probe_func);
 
   DIType *getInt8Ty();

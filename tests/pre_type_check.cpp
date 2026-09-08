@@ -601,6 +601,32 @@ TEST(CallPreCheck, raw_map_arg_funcs)
        "expects a map argument");
 }
 
+TEST(CallPreCheck, open_coded_iter_nargs)
+{
+  test("begin { for ($t : iter_task()) { print($t) } }");
+  test("begin { for ($t : iter_task_threads(curtask)) { print($t) } }");
+  test("begin { for ($v : iter_task_vma(curtask)) { print($v) } }");
+  test("begin { for ($v : iter_task_vma(curtask, 4096)) { print($v) } }");
+
+  // Errors
+  test("begin { for ($t : iter_task(curtask)) { print($t) } }",
+       "iter_task() requires no arguments (1 provided)");
+  test("begin { for ($t : iter_task_threads()) { print($t) } }",
+       "iter_task_threads() requires one argument (0 provided)");
+  test("begin { for ($v : iter_task_vma()) { print($v) } }",
+       "iter_task_vma() requires at least one argument (0 provided)");
+  test("begin { for ($v : iter_task_vma(curtask, 4096, 1)) { print($v) } }",
+       "iter_task_vma() takes up to 2 arguments (3 provided)");
+}
+
+TEST(CallPreCheck, open_coded_iter_unknown)
+{
+  test("begin { for ($x : str($y)) { print($x) } }",
+       "str() is not a valid iterator");
+  test("begin { for ($x : no_such_iter()) { print($x) } }",
+       "no_such_iter() is not a valid iterator");
+}
+
 TEST(MapPreCheck, no_meta_map_assignments)
 {
   test("begin { let $b : typeof({ @a = 1; 1 }) = 1; }",

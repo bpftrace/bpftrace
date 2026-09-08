@@ -14,6 +14,8 @@ and this project adheres to
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
 - Add `kprobe` support for source location attachpoints.
   - [#5308](https://github.com/bpftrace/bpftrace/pull/5308)
+- Add open-coded iterators to `for` loops: `iter_task`, `iter_threads`,
+  `iter_task_threads` and `iter_task_vma`.
 #### Changed
 #### Deprecated
 #### Removed

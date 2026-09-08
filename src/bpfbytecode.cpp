@@ -201,6 +201,19 @@ static bool is_stack_size_error(std::string_view log)
   return util::wildcard_match(log, tokens, true, true);
 }
 
+// Linux 6.17 - 6.18 abort with a verifier bug when an open-coded iterator
+// loop that unconditionally breaks is nested inside another for loop. The
+// break leaves the iterator's next() call without a back-edge, so the kernel
+// assigns it no SCC, but re-entering the enclosing loop's callback still makes
+// is_state_visited() record a backedge against that missing SCC.
+static bool is_iter_backedge_error(std::string_view log)
+{
+  static const std::vector<std::string> tokens = {
+    "add backedge", "no SCC in verification path"
+  };
+  return util::wildcard_match(log, tokens, true, true);
+}
+
 Result<> BpfBytecode::load_progs(const RequiredResources &resources,
                                  const BTF &btf,
                                  BPFfeature &feature,
@@ -274,6 +287,14 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
             "Stack size is too large. Trying moving some scratch variables "
             "into maps or try setting a lower on_stack_limit (e.g. `config = { "
             "on_stack_limit=16 }`)");
+      }
+
+      if (is_iter_backedge_error(log)) {
+        return make_error<BpfLoadError>(
+            "Hit a known kernel verifier bug (Linux 6.17 - 6.18) affecting an "
+            "iterator loop that unconditionally breaks inside another for "
+            "loop. Try making the break conditional (e.g. `if (...) { break; "
+            "}`) or moving the iterator loop out of the enclosing for loop.");
       }
 
       std::stringstream errmsg;

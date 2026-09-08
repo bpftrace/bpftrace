@@ -10,6 +10,7 @@ add_compile_options($<$<BOOL:${BUILD_UBSAN}>:-fsanitize=undefined>)
 add_library(required_resources required_resources.cpp)
 
 add_library(compiler_core STATIC
+  bpf_iters.cpp
   functions.cpp
   struct.cpp
   types.cpp

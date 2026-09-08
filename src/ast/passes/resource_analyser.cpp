@@ -76,6 +76,9 @@ private:
 
   // Current probe we're analysing
   Probe *probe_{ nullptr };
+  // All variables inside an open-coded iterator get promoted to a scratch map
+  // to prevent verifier errors
+  std::unordered_set<std::string> iter_loop_vars_;
   std::unordered_map<std::string, std::pair<bpf_map_type, int>> map_decls_;
 
   int next_map_id_ = 0;
@@ -148,12 +151,14 @@ RequiredResources ResourceAnalyser::resources()
 void ResourceAnalyser::visit(Probe &probe)
 {
   probe_ = &probe;
+  iter_loop_vars_ = collectIterLoopVars(probe);
   Visitor<ResourceAnalyser>::visit(probe);
 }
 
 void ResourceAnalyser::visit(Subprog &subprog)
 {
   probe_ = nullptr;
+  iter_loop_vars_ = collectIterLoopVars(subprog);
   Visitor<ResourceAnalyser>::visit(subprog);
 }
 
@@ -595,7 +600,8 @@ void ResourceAnalyser::update_variable_info(Variable &var)
   // we would need to track scopes like TypeChecker and CodegenLLVM
   // and duplicate scope tracking in a third module.
   const auto &ty = type_map_.type(&var);
-  if (exceeds_stack_limit(ty.GetSize())) {
+  if (exceeds_stack_limit(ty.GetSize()) ||
+      iter_loop_vars_.contains(var.ident)) {
     resources_.variable_buffers++;
     resources_.max_variable_size = std::max(resources_.max_variable_size,
                                             ty.GetSize());
