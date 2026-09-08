@@ -1718,6 +1718,18 @@ llvm::Type *IRBuilderBPF::BpfPidnsInfoType()
                        false);
 }
 
+CallInst *IRBuilderBPF::CreateGetCurrentTask(const Location &loc)
+{
+  // struct task_struct *bpf_get_current_task_btf(void)
+  FunctionType *fn_type = FunctionType::get(getPtrTy(), false);
+  return CreateHelperCall(BPF_FUNC_get_current_task_btf,
+                          fn_type,
+                          {},
+                          true,
+                          "get_current_task_btf",
+                          loc);
+}
+
 CallInst *IRBuilderBPF::CreateGetCpuId(const Location &loc)
 {
   // u32 bpf_get_smp_processor_id(void)
