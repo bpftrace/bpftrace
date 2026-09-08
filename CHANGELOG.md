@@ -71,6 +71,8 @@ and this project adheres to
   - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
 - Fix formatting of MAC address bytes with the high bit set
   - [#5326](https://github.com/bpftrace/bpftrace/issues/5326)
+- Fix recursive BTF compat types
+  - [#5322](https://github.com/bpftrace/bpftrace/pull/5322)
 
 ## [0.26.1] 2026-06-02
 

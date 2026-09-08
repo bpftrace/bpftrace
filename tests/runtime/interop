@@ -1,3 +1,8 @@
 NAME interop return types
 PROG import "stdlib/test"; begin { print(__always_true()); exit(); }
 EXPECT 1
+
+NAME interop struct pointer return type
+PROG import "stdlib/test"; begin { $t = __test_get_current_task(); printf("%d %d %d\n", $t->pid == tid, $t->tgid == pid, $t->parent->pid == curtask->parent->pid); exit(); }
+EXPECT 1 1 1
+REQUIRES_FEATURE btf
