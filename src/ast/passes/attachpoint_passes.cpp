@@ -691,14 +691,15 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
 
     Dwarf *dwarf = bpftrace_.get_kernel_dwarf();
     if (dwarf) {
-      auto address = dwarf->line_to_addr(ap_->source_file,
-                                         ap_->line_num,
-                                         ap_->col_num);
-      if (!address) {
-        errs_ << address.takeError() << std::endl;
+      auto location = dwarf->line_to_addr(ap_->source_file,
+                                          ap_->line_num,
+                                          ap_->col_num);
+      if (!location) {
+        errs_ << location.takeError() << std::endl;
         return INVALID;
       }
-      ap_->address = *address;
+      ap_->address = location->address;
+      ap_->target = location->kernel_module;
 
       return OK;
     }
@@ -854,14 +855,14 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
 
     Dwarf *dwarf = bpftrace_.get_dwarf(ap_->target);
     if (dwarf) {
-      auto address = dwarf->line_to_addr(ap_->source_file,
-                                         ap_->line_num,
-                                         ap_->col_num);
-      if (!address) {
-        errs_ << address.takeError() << std::endl;
+      auto location = dwarf->line_to_addr(ap_->source_file,
+                                          ap_->line_num,
+                                          ap_->col_num);
+      if (!location) {
+        errs_ << location.takeError() << std::endl;
         return INVALID;
       }
-      ap_->address = *address;
+      ap_->address = location->address;
       return OK;
     }
 
