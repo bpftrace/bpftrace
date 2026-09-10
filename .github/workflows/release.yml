@@ -52,4 +52,4 @@ jobs:
       if: ${{ !inputs.dry_run }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload ${{ input.release || github.ref_name }} ./assets/*
+      run: gh release upload ${{ inputs.release || github.ref_name }} ./assets/*
