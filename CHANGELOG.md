@@ -18,15 +18,11 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
-- Fix `func` builtin for session probe return/exit branches
-  - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
-- Fix formatting of MAC address bytes with the high bit set
-  - [#5326](https://github.com/bpftrace/bpftrace/issues/5326)
 #### Security
 #### Docs
 #### Tools
 
-## [0.27.0] TBD
+## [0.27.0] 2026-09-10
 
 #### Added
 - stdlib: add `str_concat()`.
@@ -75,6 +71,10 @@ and this project adheres to
   - [#5288](https://github.com/bpftrace/bpftrace/pull/5288)
 - Fix large string allocations for casts
   - [#5286](https://github.com/bpftrace/bpftrace/pull/5286)
+- Fix `func` builtin for session probe return/exit branches
+  - [#5302](https://github.com/bpftrace/bpftrace/issues/5302)
+- Fix formatting of MAC address bytes with the high bit set
+  - [#5326](https://github.com/bpftrace/bpftrace/issues/5326)
 - Fix recursive BTF compat types
   - [#5322](https://github.com/bpftrace/bpftrace/pull/5322)
 
