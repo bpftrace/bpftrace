@@ -12,6 +12,11 @@ on:
         description: 'Skip uploading artifacts (for testing the workflow)'
         type: boolean
         default: true
+      release:
+        description: 'Target release (tag) to upload artifacts to'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build-upload:
@@ -47,4 +52,4 @@ jobs:
       if: ${{ !inputs.dry_run }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload ${{ github.ref_name }} ./assets/*
+      run: gh release upload ${{ input.release || github.ref_name }} ./assets/*
