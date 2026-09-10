@@ -1934,6 +1934,14 @@ kprobe:vfs_read {
 @
 ```
 
+Individual fields of a `stats_t` map can also be accessed synchronously using `.count`, `.total`, and `.avg`:
+
+```
+interval:s:1 {
+  printf("Count: %d, Total: %d, Avg: %d\n", @bytes["bash"].count, @bytes["bash"].total, @bytes["bash"].avg);
+}
+```
+
 ### sum
 
 * `sum_t sum(int64 n)`

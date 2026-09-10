@@ -816,7 +816,8 @@ Value *IRBuilderBPF::CreateMapLookupElem(const std::string &map_name,
 Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
                                              Value *key,
                                              const SizedType &type,
-                                             const Location &loc)
+                                             const Location &loc,
+                                             std::string_view field)
 {
   // int ret = 0;
   // int i = 0;
@@ -833,6 +834,10 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
   //   i++;
   // }
   // return ret;
+
+  if (!field.empty() && !type.IsStatsTy()) {
+    LOG(BUG) << "field specified for non-stats_t map type: " << type;
+  }
 
   const std::string &map_name = map.ident;
 
@@ -887,7 +892,7 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
 
   if (type.IsMinTy() || type.IsMaxTy()) {
     createPerCpuMinMax(val_1, val_2, call, type);
-  } else if (type.IsAvgTy()) {
+  } else if (type.IsAvgTy() || type.IsStatsTy()) {
     createPerCpuAvg(val_1, val_2, call, type);
   } else if (type.IsSumTy() || type.IsCountTy()) {
     createPerCpuSum(val_1, call, type);
@@ -934,7 +939,11 @@ Value *IRBuilderBPF::CreatePerCpuMapAggElems(Map &map,
 
   Value *ret_reg;
 
-  if (type.IsAvgTy()) {
+  if (field == "count") {
+    ret_reg = CreateLoad(getInt64Ty(), val_2);
+  } else if (field == "total") {
+    ret_reg = CreateLoad(getInt64Ty(), val_1);
+  } else if (type.IsAvgTy() || field == "avg") {
     AllocaInst *ret = CreateAllocaBPF(getInt64Ty(), "ret");
     // BPF doesn't yet support a signed division so we have to check if
     // the value is negative, flip it, do an unsigned division, and then

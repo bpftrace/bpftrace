@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Allow access to individual fields (.count, .total, .avg) of `stats_t` created by `stats()`
+  - [#5227](https://github.com/bpftrace/bpftrace/issues/5227)
 - stdlib: Add `abs_path` and `cwd`.
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
 - Add `kprobe` support for source location attachpoints.

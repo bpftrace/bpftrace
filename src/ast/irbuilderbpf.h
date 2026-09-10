@@ -65,7 +65,8 @@ public:
   Value *CreatePerCpuMapAggElems(Map &map,
                                  Value *key,
                                  const SizedType &type,
-                                 const Location &loc);
+                                 const Location &loc,
+                                 std::string_view field = "");
   void CreateMapUpdateElem(const std::string &map_ident,
                            Value *key,
                            Value *val,

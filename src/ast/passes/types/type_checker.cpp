@@ -873,6 +873,14 @@ void TypeChecker::visit(FieldAccess &acc)
     type = type.GetPointeeTy();
   }
 
+  if (type.IsStatsTy()) {
+    if (acc.field != "count" && acc.field != "total" && acc.field != "avg") {
+      acc.addError() << "Invalid stats_t field '" << acc.field
+                     << "'. Valid fields are: count, total, avg.";
+    }
+    return;
+  }
+
   if (!type.IsCTypeTy() && !type.IsTupleTy() && !type.IsRecordTy()) {
     return;
   }
