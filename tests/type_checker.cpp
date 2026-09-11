@@ -4839,48 +4839,6 @@ TEST_F(TypeCheckerTest, for_range_nested_range)
        "} } }");
 }
 
-TEST_F(TypeCheckerTest, castable_map_missing_feature)
-{
-  test("k:f {  @a = count(); }", NoFeatures::Enable);
-  test("k:f {  @a = count(); print(@a) }", NoFeatures::Enable);
-  test("k:f {  @a = count(); clear(@a) }", NoFeatures::Enable);
-  test("k:f {  @a = count(); zero(@a) }", NoFeatures::Enable);
-
-  test("begin { @a = count(); print((uint64)@a) }",
-       NoFeatures::Enable,
-       Error{ R"(
-stdin:1:37-39: ERROR: Missing required kernel feature: map_lookup_percpu_elem
-begin { @a = count(); print((uint64)@a) }
-                                    ~~
-)" });
-
-  test("begin { @a = count(); print((@a, 1)) }", NoFeatures::Enable, Error{ R"(
-stdin:1:30-32: ERROR: Missing required kernel feature: map_lookup_percpu_elem
-begin { @a = count(); print((@a, 1)) }
-                             ~~
-)" });
-
-  test("begin { @a[1] = count(); print(@a[1]) }", NoFeatures::Enable, Error{ R"(
-stdin:1:32-37: ERROR: Missing required kernel feature: map_lookup_percpu_elem
-begin { @a[1] = count(); print(@a[1]) }
-                               ~~~~~
-)" });
-
-  test("begin { @a = count(); $b = @a; }", NoFeatures::Enable, Error{ R"(
-stdin:1:28-30: ERROR: Missing required kernel feature: map_lookup_percpu_elem
-begin { @a = count(); $b = @a; }
-                           ~~
-)" });
-
-  test("begin { @a = count(); @b = (uint8)1; @b = @a; }",
-       NoFeatures::Enable,
-       Error{ R"(
-stdin:1:43-45: ERROR: Missing required kernel feature: map_lookup_percpu_elem
-begin { @a = count(); @b = (uint8)1; @b = @a; }
-                                          ~~
-)" });
-}
-
 TEST_F(TypeCheckerTest, for_loop_no_ctx_access)
 {
   test("kprobe:f { @map[0] = 1; for ($kv : @map) { ctx } }", Error{ R"(

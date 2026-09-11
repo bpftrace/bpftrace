@@ -897,11 +897,6 @@ void TypeChecker::visit(MapAccess &acc)
   visit(acc.map);
   visit(acc.key);
 
-  if (type_map_.map_value_type(acc.map->ident).IsCastableMapTy() &&
-      !bpftrace_.feature_->has_helper_map_lookup_percpu_elem()) {
-    acc.addError() << "Missing required kernel feature: map_lookup_percpu_elem";
-  }
-
   // Validate map key type
   const auto &key_type = type_map_.type(acc.key);
   if (key_type.IsPtrTy() && key_type.IsCtxAccess()) {

@@ -323,7 +323,6 @@ TIMEOUT 1
 WILL_FAIL
 
 NAME print_per_cpu_map_vals
-REQUIRES_FEATURE lookup_percpu_elem
 PROG begin { @a = avg(5); @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@a, @c, @s, @mn, @mx));  }
 EXPECT (5, 1, 5, 1, -1)
 TIMEOUT 3
