@@ -40,6 +40,7 @@ public:
   void visit(Builtin &builtin);
   void visit(Call &call);
   void visit(Cast &cast);
+  void visit(FieldAccess &acc);
   void visit(Map &map);
   void visit(MapAccess &acc);
   void visit(MapDeclStatement &decl);
@@ -254,7 +255,7 @@ void ResourceAnalyser::visit(Call &call)
     resources_.join_args_id_map[&call] = resources_.join_args.size();
     resources_.join_args.push_back(delim);
   } else if (call.func == "count" || call.func == "sum" || call.func == "min" ||
-             call.func == "max" || call.func == "avg") {
+             call.func == "max" || call.func == "avg" || call.func == "stats") {
     resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
   } else if (call.func == "hist") {
     Map *map = call.vargs.at(0).as<Map>();
@@ -445,6 +446,16 @@ void ResourceAnalyser::visit(Cast &cast)
     const auto max_strlen = bpftrace_.config_->pad_max_strlen();
     if (exceeds_stack_limit(max_strlen))
       resources_.str_buffers++;
+  }
+}
+
+void ResourceAnalyser::visit(FieldAccess &acc)
+{
+  Visitor<ResourceAnalyser>::visit(acc);
+
+  const auto &type = type_map_.type(acc.expr);
+  if (type.IsStatsTy()) {
+    resources_.global_vars.add_known(bpftrace::globalvars::NUM_CPUS);
   }
 }
 

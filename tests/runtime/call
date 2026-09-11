@@ -365,6 +365,16 @@ NAME stats
 PROG begin { @stats = stats(1); @stats = stats(2); @stats = stats(3); }
 EXPECT @stats: { .count = 3, .average = 2, .total = 6 }
 
+NAME stats_field_access
+PROG begin { @stats = stats(4); @stats = stats(8); printf("%d %d %d\n", @stats.count, @stats.total, @stats.avg); }
+EXPECT @stats: { .count = 2, .average = 6, .total = 12 }
+EXPECT 2 12 6
+
+NAME stats_field_access_keyed
+PROG begin { @stats[10] = stats(4); @stats[10] = stats(8); printf("%d %d %d\n", @stats[10].count, @stats[10].total, @stats[10].avg); }
+EXPECT @stats[10]: { .count = 2, .average = 6, .total = 12 }
+EXPECT 2 12 6
+
 NAME hist
 PROG begin { @=hist(-1); @=hist(2); @=hist(3); @=hist(7); @=hist(20); }
 EXPECT_FILE runtime/outputs/hist.txt

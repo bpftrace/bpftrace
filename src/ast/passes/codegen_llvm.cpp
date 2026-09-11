@@ -2641,6 +2641,18 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
 ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 {
   const SizedType &type = type_map_.type(acc.expr);
+
+  if (type.IsStatsTy()) {
+    auto *map_acc = acc.expr.as<MapAccess>();
+    if (!map_acc) {
+      LOG(BUG) << "stats_t field access expression must be a MapAccess node";
+    }
+    auto scoped_key = getMapKey(*map_acc->map, map_acc->key);
+    Value *val = b_.CreatePerCpuMapAggElems(
+        *map_acc->map, scoped_key.value(), type, acc.loc, acc.field);
+    return ScopedExpr(val, std::move(scoped_key));
+  }
+
   auto scoped_arg = visit(acc.expr);
 
   assert(type.IsRecordTy() || type.IsCTypeTy());

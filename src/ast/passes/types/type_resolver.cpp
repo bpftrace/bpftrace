@@ -587,8 +587,7 @@ bool TypeRuleCollector::check_offsetof_type(Offsetof &offof, SizedType c_type)
   // Check if all sub-fields are present.
   for (const auto &field : offof.field) {
     if (!c_type.IsCTypeTy()) {
-      offof.addError() << "'" << c_type << "' "
-                       << "is not a C type.";
+      offof.addError() << "'" << c_type << "' " << "is not a C type.";
       return false;
     } else if (!bpftrace_.structs.Has(c_type.GetName())) {
       offof.addError() << "'" << c_type.GetName() << "' does not exist.";
@@ -1472,6 +1471,10 @@ void TypeRuleCollector::visit(FieldAccess &acc)
         }
 
         SizedType result_type = CreateNone();
+
+        if (expr_type.IsStatsTy()) {
+          return expr_type.IsSigned() ? CreateInt64() : CreateUInt64();
+        }
 
         if (!expr_type.IsCTypeTy() && !expr_type.IsRecordTy()) {
           acc.addError() << "Can not access field '" << acc.field

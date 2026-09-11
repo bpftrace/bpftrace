@@ -780,6 +780,14 @@ TEST_F(TypeCheckerTest, call_stats)
   test("kprobe:f { @[stats(123)] = 1; }", Error{});
   test("kprobe:f { if(stats(1)) { 123 } }", Error{});
   test("kprobe:f { stats(1) ? 0 : 1; }", Error{});
+  test("kprobe:f { @x = stats(123); $c = @x.count; $t = @x.total; $a = "
+       "@x.avg; }");
+  test("kprobe:f { @x[1] = stats(123); $c = @x[1].count; }");
+  test("kprobe:f { @x = stats(123); $foo = @x.foo; }", Error{ R"(
+stdin:1:36-42: ERROR: Invalid stats_t field 'foo'. Valid fields are: count, total, avg.
+kprobe:f { @x = stats(123); $foo = @x.foo; }
+                                   ~~~~~~
+)" });
 }
 
 TEST_F(TypeCheckerTest, call_delete)
