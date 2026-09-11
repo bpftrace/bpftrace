@@ -171,6 +171,31 @@ interval:s:10 {
 ```
 
 
+### clear_sync
+- `void clear_sync(map m)`
+
+**sync**
+
+Clear all keys/values from map `m`, synchronously.
+
+Unlike `clear()`, which is processed asynchronously in userspace,
+`clear_sync()` deletes the entries in-kernel at the point of the call. The
+entries are gone before the program continues, and the operation cannot be
+dropped when the ring buffer is full. Since a `print()` is consumed by
+userspace, a `print()` emitted before `clear_sync()` in the same block will
+observe the map after the deletion.
+
+```
+interval:ms:100 {
+  @[rand % 10] = count();
+}
+
+interval:s:10 {
+  clear_sync(@);
+}
+```
+
+
 ### comm
 - `string comm()`
 - `string comm`

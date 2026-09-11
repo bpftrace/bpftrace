@@ -10,6 +10,10 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- Add `clear_sync()`, which empties a map in-kernel at the point of the call.
+  Unlike `clear()`, it is not subject to asynchronous processing, so clear
+  events cannot be dropped when the ring buffer is full.
+  - [#3549](https://github.com/bpftrace/bpftrace/issues/3549)
 - stdlib: Add `abs_path` and `cwd`.
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
 - Add `kprobe` support for source location attachpoints.
