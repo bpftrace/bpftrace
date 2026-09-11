@@ -60,7 +60,6 @@ public:
   bool has_kprobe_multi();
   bool has_kprobe_session();
   bool has_uprobe_multi();
-  virtual bool has_iter(std::string name);
 
   std::string report();
 
@@ -81,17 +80,12 @@ protected:
 
 private:
   bool detect_helper(bpf_func_id func_id, bpf_prog_type prog_type);
-  bool detect_prog_type(bpf_prog_type prog_type,
-                        const char* name,
-                        std::optional<bpf_attach_type> attach_type,
-                        int* outfd = nullptr);
 
   bool try_load(bpf_prog_type prog_type,
                 struct bpf_insn* insns,
                 size_t len,
                 const char* name = nullptr,
-                std::optional<bpf_attach_type> attach_type = std::nullopt,
-                int* outfd = nullptr);
+                std::optional<bpf_attach_type> attach_type = std::nullopt);
   bool try_load_btf(const void* btf_data, size_t btf_size);
 
   BPFnofeature no_feature_;

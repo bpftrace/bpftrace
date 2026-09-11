@@ -702,22 +702,18 @@ EXPECT @[1]: 05:04:03:02:01:02
 NAME iter:task
 PROG iter:task { printf("comm: %s\n", ctx.task.comm); exit(); }
 EXPECT comm: bpftrace
-REQUIRES_FEATURE iter
 
 NAME iter:task_file
 PROG iter:task_file { printf("comm: %s\n", ctx.task.comm); exit(); }
 EXPECT comm: bpftrace
-REQUIRES_FEATURE iter
 
 NAME iter:task_vma
 PROG iter:task_vma { printf("comm: %s\n", ctx.task.comm); exit(); }
 EXPECT comm: bpftrace
-REQUIRES_FEATURE iter
 
 NAME iter printf multiple values
 PROG iter:task { printf("%s: %d\n", "hello", 0); exit(); }
 EXPECT hello: 0
-REQUIRES_FEATURE iter
 
 NAME cgroup_path
 PROG begin { print(cgroup_path(cgroup & ((1 << 32) - 1)));  }

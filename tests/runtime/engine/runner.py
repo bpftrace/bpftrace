@@ -153,7 +153,6 @@ class Runner(object):
         bpffeature["fentry"] = output.find("fentry: yes") != -1
         bpffeature["dpath"] = output.find("dpath: yes") != -1
         bpffeature["signal"] = output.find("send_signal: yes") != -1
-        bpffeature["iter"] = output.find("iter: yes") != -1
         bpffeature["libpath_resolv"] = output.find("bcc library path resolution: yes") != -1
         bpffeature["dwarf"] = output.find("libdw (DWARF support): yes") != -1
         bpffeature["kprobe_multi"] = output.find("kprobe_multi: yes") != -1
