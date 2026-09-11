@@ -155,11 +155,9 @@ BEGIN {
 ### clear
 - `void clear(map m)`
 
-Clear all keys/values from map `m`. Deletion happens in-kernel at the
-point of the call, making `clear()` synchronous: any `print()` emitted
-before `clear()` in the same block will no longer observe the deleted
-entries, and entries can never be left over (e.g. due to full ring
-buffers) when the program moves on.
+**async**
+
+Clear all keys/values from map `m`.
 
 ```
 interval:ms:100 {
@@ -169,6 +167,31 @@ interval:ms:100 {
 interval:s:10 {
   print(@);
   clear(@);
+}
+```
+
+
+### clear_sync
+- `void clear_sync(map m)`
+
+**sync**
+
+Clear all keys/values from map `m`, synchronously.
+
+Unlike `clear()`, which is processed asynchronously in userspace,
+`clear_sync()` deletes the entries in-kernel at the point of the call. The
+entries are gone before the program continues, and the operation cannot be
+dropped when the ring buffer is full. Since a `print()` is consumed by
+userspace, a `print()` emitted before `clear_sync()` in the same block will
+observe the map after the deletion.
+
+```
+interval:ms:100 {
+  @[rand % 10] = count();
+}
+
+interval:s:10 {
+  clear_sync(@);
 }
 ```
 

@@ -112,9 +112,10 @@ std::string_view clean_prefix(std::string_view view)
   return view;
 }
 
-// Type metadata declaring the imported `__clear` function, as a full
-// compilation would provide it (see stdlib/map/map.bpf.c).
-static ast::TypeMetadata clear_types()
+// Type metadata declaring the imported `__clear` function used by the
+// `clear_sync()` macro, as a full compilation would provide it (see
+// stdlib/map/map.bpf.c).
+static ast::TypeMetadata clear_sync_types()
 {
   ast::TypeMetadata types;
   auto vd_ty = types.global.lookup<btf::Void>("void");
@@ -298,8 +299,7 @@ TEST_F(TypeCheckerTest, builtin_functions)
   test("kprobe:f { @x = avg(pid) }");
   test("kprobe:f { @x = stats(pid) }");
   test("kprobe:f { @x = 1; print(@x) }");
-  auto clear_metadata = clear_types();
-  test("kprobe:f { @x = 1; clear(@x) }", Types{ clear_metadata });
+  test("kprobe:f { @x = 1; clear(@x) }");
   test("kprobe:f { @x = 1; zero(@x) }");
   test("kprobe:f { @x = 1; @y[1] = 1; $a = is_scalar(@x); $b = is_scalar(@y); "
        "}");
@@ -1025,20 +1025,43 @@ TEST_F(TypeCheckerTest, call_print_non_map)
 
 TEST_F(TypeCheckerTest, call_clear)
 {
-  auto types = clear_types();
-  test("kprobe:f { @x = count(); clear(@x); }", Types{ types });
-  test("kprobe:f { @x = count(); @x = clear(); }", Error{}, Types{ types });
+  test("kprobe:f { @x = count(); clear(@x); }");
+  test("kprobe:f { @x = count(); @x = clear(); }", Error{});
 
-  test("kprobe:f { clear(@x); @x[1,2] = count(); }", Types{ types });
-  test("kprobe:f { @x[1,2] = count(); clear(@x); }", Types{ types });
+  test("kprobe:f { clear(@x); @x[1,2] = count(); }");
+  test("kprobe:f { @x[1,2] = count(); clear(@x); }");
 
-  test("kprobe:f { @x = count(); @ = clear(@x); }", Error{}, Types{ types });
-  test("kprobe:f { @x = count(); $y = clear(@x); }", Error{}, Types{ types });
-  test("kprobe:f { @x = count(); @[clear(@x)] = 1; }", Error{}, Types{ types });
-  test("kprobe:f { @x = count(); if(clear(@x)) { 123 } }",
+  test("kprobe:f { @x = count(); @ = clear(@x); }", Error{});
+  test("kprobe:f { @x = count(); $y = clear(@x); }", Error{});
+  test("kprobe:f { @x = count(); @[clear(@x)] = 1; }", Error{});
+  test("kprobe:f { @x = count(); if(clear(@x)) { 123 } }", Error{});
+  test("kprobe:f { @x = count(); clear(@x) ? 0 : 1; }", Error{});
+}
+
+TEST_F(TypeCheckerTest, call_clear_sync)
+{
+  auto types = clear_sync_types();
+  test("kprobe:f { @x = count(); clear_sync(@x); }", Types{ types });
+  test("kprobe:f { @x = count(); @x = clear_sync(); }",
        Error{},
        Types{ types });
-  test("kprobe:f { @x = count(); clear(@x) ? 0 : 1; }",
+
+  test("kprobe:f { clear_sync(@x); @x[1,2] = count(); }", Types{ types });
+  test("kprobe:f { @x[1,2] = count(); clear_sync(@x); }", Types{ types });
+
+  test("kprobe:f { @x = count(); @ = clear_sync(@x); }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x = count(); $y = clear_sync(@x); }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x = count(); @[clear_sync(@x)] = 1; }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x = count(); if(clear_sync(@x)) { 123 } }",
+       Error{},
+       Types{ types });
+  test("kprobe:f { @x = count(); clear_sync(@x) ? 0 : 1; }",
        Error{},
        Types{ types });
 }
@@ -4876,10 +4899,11 @@ TEST_F(TypeCheckerTest, castable_map_missing_feature)
 {
   test("k:f {  @a = count(); }", NoFeatures::Enable);
   test("k:f {  @a = count(); print(@a) }", NoFeatures::Enable);
-  auto clear_metadata = clear_types();
-  test("k:f {  @a = count(); clear(@a) }",
+  test("k:f {  @a = count(); clear(@a) }", NoFeatures::Enable);
+  auto clear_sync_metadata = clear_sync_types();
+  test("k:f {  @a = count(); clear_sync(@a) }",
        NoFeatures::Enable,
-       Types{ clear_metadata });
+       Types{ clear_sync_metadata });
   test("k:f {  @a = count(); zero(@a) }", NoFeatures::Enable);
 
   test("begin { @a = count(); print((uint64)@a) }",

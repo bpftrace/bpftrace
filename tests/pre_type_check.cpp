@@ -401,7 +401,12 @@ TEST(CallPreCheck, nargs)
   // clear
   test("kprobe:f { @x = count(); clear(@x); }");
   test("kprobe:f { @x = count(); clear(@x, 1); }",
-       "Call to clear() has arguments that do not match any definition.");
+       "clear() requires one argument (2 provided)");
+
+  // clear_sync (stdlib macro; arity errors come from macro matching)
+  test("kprobe:f { @x = count(); clear_sync(@x); }");
+  test("kprobe:f { @x = count(); clear_sync(@x, 1); }",
+       "Call to clear_sync() has arguments that do not match any definition.");
 
   // zero
   test("kprobe:f { @x = count(); zero(@x); }");
@@ -593,12 +598,15 @@ TEST(CallPreCheck, raw_map_arg_funcs)
 {
   test("kprobe:f { @x[1,2] = count(); clear(@x); }");
   test("kprobe:f { @x[1,2] = count(); zero(@x); }");
+  test("kprobe:f { @x[1,2] = count(); clear_sync(@x); }");
 
   // Errors
   test("kprobe:f { @x[1,2] = count(); clear(@x[3,4]); }",
-       "Call to clear() has arguments that do not match any definition.");
+       "expects a map argument");
   test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }",
        "expects a map argument");
+  test("kprobe:f { @x[1,2] = count(); clear_sync(@x[3,4]); }",
+       "Call to clear_sync() has arguments that do not match any definition.");
 }
 
 TEST(MapPreCheck, no_meta_map_assignments)

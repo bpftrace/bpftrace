@@ -18,7 +18,7 @@ long __delete(void *map, void *key) {
 static long __clear_map_elem_cb(void *map, const void *key, void *value, void *ctx)
 {
     // The for_each callback must return 0 or 1. Deletion errors are
-    // intentionally ignored: clear() is best effort.
+    // intentionally ignored: clear_sync() is best effort.
     bpf_map_delete_elem(map, key);
     return 0;
 }
