@@ -224,13 +224,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       std::string ret;
       auto iters = bpftrace_->btf_->get_all_iters();
       for (const auto& iter : iters) {
-        // second check
-        if (bpftrace_->feature_->has_iter(iter))
-          ret += iter + "\n";
-        else
-          LOG(WARNING) << "The kernel contains bpf_iter__" << iter
-                       << " struct but does not support loading an iterator"
-                          " program against it. Please report this bug.";
+        ret += iter + "\n";
       }
       symbol_stream = std::make_unique<std::istringstream>(ret);
       break;
