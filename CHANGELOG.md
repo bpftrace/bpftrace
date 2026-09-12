@@ -22,6 +22,8 @@ and this project adheres to
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 - Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
   - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
+- Treat tracepoint `args` as a Record, which allows it to be printed and stored into maps and scratch variables.
+  - [#5347](https://github.com/bpftrace/bpftrace/pull/5347)
 #### Changed
 - Structs and arrays are copied for scratch variable assignment
   - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)
