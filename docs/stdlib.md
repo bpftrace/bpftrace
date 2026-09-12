@@ -158,6 +158,8 @@ BEGIN {
 **async**
 
 Clear all keys/values from map `m`.
+The deletion is processed asynchronously in userspace. To delete the
+entries synchronously in-kernel, use `delete(@map)`.
 
 ```
 interval:ms:100 {
@@ -167,31 +169,6 @@ interval:ms:100 {
 interval:s:10 {
   print(@);
   clear(@);
-}
-```
-
-
-### clear_sync
-- `void clear_sync(map m)`
-
-**sync**
-
-Clear all keys/values from map `m`, synchronously.
-
-Unlike `clear()`, which is processed asynchronously in userspace,
-`clear_sync()` deletes the entries in-kernel at the point of the call. The
-entries are gone before the program continues, and the operation cannot be
-dropped when the ring buffer is full. Since a `print()` is consumed by
-userspace, a `print()` emitted before `clear_sync()` in the same block will
-observe the map after the deletion.
-
-```
-interval:ms:100 {
-  @[rand % 10] = count();
-}
-
-interval:s:10 {
-  clear_sync(@);
 }
 ```
 
@@ -270,10 +247,12 @@ Returns the default unbounded length.
 
 ### delete
 - `bool delete(map m, mapkey k)`
+- `bool delete(map m)`
 - deprecated `bool delete(mapkey k)`
 
 Delete a single key from a map.
-For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
+For scalar maps (e.g. no explicit keys), the key is omitted and only the single stored value is deleted.
+When `delete` is called with just the map as argument, all keys/values of the map are deleted. The deletion happens in-kernel at the point of the call (synchronously), so the entries are gone before the program continues and the operation cannot be dropped when the ring buffer is full - unlike `clear`, which is asynchronous.
 For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
 
 If deletion fails (e.g. the key doesn’t exist) the function returns false (0).
@@ -304,7 +283,7 @@ kprobe:dummy {
   delete(@single, "hello"); // ok
   @associative[1,2] = 1;
   delete(@associative, (1,2)); // ok
-  delete(@associative); // error
+  delete(@associative); // ok, deletes all entries
   delete(@associative, 1); // error
 
     // deprecated but ok

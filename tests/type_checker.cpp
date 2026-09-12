@@ -112,34 +112,6 @@ std::string_view clean_prefix(std::string_view view)
   return view;
 }
 
-// Type metadata declaring the imported `__clear` function used by the
-// `clear_sync()` macro, as a full compilation would provide it (see
-// stdlib/map/map.bpf.c).
-static ast::TypeMetadata clear_sync_types()
-{
-  ast::TypeMetadata types;
-  auto vd_ty = types.global.lookup<btf::Void>("void");
-  if (!vd_ty) {
-    return types;
-  }
-  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
-  if (!vd_ptr) {
-    return types;
-  }
-  std::vector<std::pair<std::string, btf::ValueType>> args = {
-    { "map", btf::ValueType(*vd_ptr) }
-  };
-  auto clear_proto = types.global.add<btf::FunctionProto>(
-      btf::ValueType(*vd_ty), args);
-  if (!clear_proto) {
-    return types;
-  }
-  types.global.add<btf::Function>("__clear",
-                                  btf::Function::Linkage::Global,
-                                  *clear_proto);
-  return types;
-}
-
 // This exists as a test fixture because the types may refer to `bpftrace`, so
 // this objects lifetime must exceed the tests lifetime. This is easier with a
 // fixture, and allows us to have a single harness.
@@ -834,6 +806,16 @@ TEST_F(TypeCheckerTest, call_delete)
       "__delete", btf::Function::Linkage::Global, *delete_proto);
   ASSERT_TRUE(bool(delete_func));
 
+  std::vector<std::pair<std::string, btf::ValueType>> delete_all_args = {
+    { "map", btf::ValueType(*vd_ptr) }
+  };
+  auto delete_all_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*long_ty), delete_all_args);
+  ASSERT_TRUE(bool(delete_all_proto));
+  auto delete_all_func = types.global.add<btf::Function>(
+      "__delete_all", btf::Function::Linkage::Global, *delete_all_proto);
+  ASSERT_TRUE(bool(delete_all_func));
+
   test("kprobe:f { @x = 1; delete(@x); }", Types{ types });
   test("kprobe:f { @y[5] = 5; delete(@y, "
        "5); }",
@@ -898,7 +880,6 @@ ERROR: Argument mismatch for @y: trying to access with arguments: '(int8,int8)' 
 )" },
        Types{ types });
 
-  test("kprobe:f { @y[1] = 2; delete(@y); }", Error{}, Types{ types });
   test("kprobe:f { @a[1] = 1; "
        "delete(@a, @a); }",
        Error{ R"(
@@ -935,6 +916,14 @@ ERROR: Argument mismatch for @x: trying to access with arguments: '(string[3],in
        Types{ types });
 
   test("kprobe:f { @x = 1; delete(@x[1]); }", Error{}, Types{ types });
+
+  // Single-map-argument delete() on maps with explicit keys deletes all
+  // entries in-kernel (see stdlib/map/map.bpf.c __delete_all)
+  test("kprobe:f { @y[1] = 1; @y[2] = 2; delete(@y); }", Types{ types });
+  test("kprobe:f { @y[(1, 2)] = 1; delete(@y); }", Types{ types });
+  test("kprobe:f { @y[1] = count(); delete(@y); }", Types{ types });
+  test("kprobe:f { @y[1] = 1; if (delete(@y)) { 123 } }", Types{ types });
+  test("kprobe:f { @y[1] = 1; $x = delete(@y); }", Types{ types });
 }
 
 TEST_F(TypeCheckerTest, call_exit)
@@ -1036,34 +1025,6 @@ TEST_F(TypeCheckerTest, call_clear)
   test("kprobe:f { @x = count(); @[clear(@x)] = 1; }", Error{});
   test("kprobe:f { @x = count(); if(clear(@x)) { 123 } }", Error{});
   test("kprobe:f { @x = count(); clear(@x) ? 0 : 1; }", Error{});
-}
-
-TEST_F(TypeCheckerTest, call_clear_sync)
-{
-  auto types = clear_sync_types();
-  test("kprobe:f { @x = count(); clear_sync(@x); }", Types{ types });
-  test("kprobe:f { @x = count(); @x = clear_sync(); }",
-       Error{},
-       Types{ types });
-
-  test("kprobe:f { clear_sync(@x); @x[1,2] = count(); }", Types{ types });
-  test("kprobe:f { @x[1,2] = count(); clear_sync(@x); }", Types{ types });
-
-  test("kprobe:f { @x = count(); @ = clear_sync(@x); }",
-       Error{},
-       Types{ types });
-  test("kprobe:f { @x = count(); $y = clear_sync(@x); }",
-       Error{},
-       Types{ types });
-  test("kprobe:f { @x = count(); @[clear_sync(@x)] = 1; }",
-       Error{},
-       Types{ types });
-  test("kprobe:f { @x = count(); if(clear_sync(@x)) { 123 } }",
-       Error{},
-       Types{ types });
-  test("kprobe:f { @x = count(); clear_sync(@x) ? 0 : 1; }",
-       Error{},
-       Types{ types });
 }
 
 TEST_F(TypeCheckerTest, call_zero)
@@ -4900,10 +4861,36 @@ TEST_F(TypeCheckerTest, castable_map_missing_feature)
   test("k:f {  @a = count(); }", NoFeatures::Enable);
   test("k:f {  @a = count(); print(@a) }", NoFeatures::Enable);
   test("k:f {  @a = count(); clear(@a) }", NoFeatures::Enable);
-  auto clear_sync_metadata = clear_sync_types();
-  test("k:f {  @a = count(); clear_sync(@a) }",
+  ast::TypeMetadata delete_all_metadata;
+  {
+    auto vd_ty = delete_all_metadata.global.lookup<btf::Void>("void");
+    ASSERT_TRUE(bool(vd_ty));
+    auto vd_ptr = delete_all_metadata.global.add<btf::Pointer>(*vd_ty);
+    ASSERT_TRUE(bool(vd_ptr));
+    auto long_ty = delete_all_metadata.global.add<btf::Integer>("long", 4, 0);
+    ASSERT_TRUE(bool(long_ty));
+    std::vector<std::pair<std::string, btf::ValueType>> delete_args = {
+      { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
+    };
+    auto delete_proto = delete_all_metadata.global.add<btf::FunctionProto>(
+        btf::ValueType(*long_ty), delete_args);
+    ASSERT_TRUE(bool(delete_proto));
+    auto delete_func = delete_all_metadata.global.add<btf::Function>(
+        "__delete", btf::Function::Linkage::Global, *delete_proto);
+    ASSERT_TRUE(bool(delete_func));
+    std::vector<std::pair<std::string, btf::ValueType>> delete_all_args = {
+      { "map", btf::ValueType(*vd_ptr) }
+    };
+    auto delete_all_proto = delete_all_metadata.global.add<btf::FunctionProto>(
+        btf::ValueType(*long_ty), delete_all_args);
+    ASSERT_TRUE(bool(delete_all_proto));
+    auto delete_all_func = delete_all_metadata.global.add<btf::Function>(
+        "__delete_all", btf::Function::Linkage::Global, *delete_all_proto);
+    ASSERT_TRUE(bool(delete_all_func));
+  }
+  test("k:f {  @a = count(); delete(@a) }",
        NoFeatures::Enable,
-       Types{ clear_sync_metadata });
+       Types{ delete_all_metadata });
   test("k:f {  @a = count(); zero(@a) }", NoFeatures::Enable);
 
   test("begin { @a = count(); print((uint64)@a) }",

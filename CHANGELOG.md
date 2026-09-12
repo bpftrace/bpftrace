@@ -10,9 +10,10 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
-- Add `clear_sync()`, which empties a map in-kernel at the point of the call.
-  Unlike `clear()`, it is not subject to asynchronous processing, so clear
-  events cannot be dropped when the ring buffer is full.
+- Allow `delete()` to be called with just a map (e.g. `delete(@map)`), which
+  deletes all entries of the map synchronously in-kernel. This provides a
+  synchronous alternative to the asynchronous `clear()`, and the deletion
+  cannot be dropped when the ring buffer is full.
   - [#3549](https://github.com/bpftrace/bpftrace/issues/3549)
 - stdlib: Add `abs_path` and `cwd`.
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
