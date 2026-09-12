@@ -16,6 +16,7 @@ and this project adheres to
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
 - Add `kprobe` support for source location attachpoints.
   - [#5308](https://github.com/bpftrace/bpftrace/pull/5308)
+- Support printing tracepoint `args`, copying it into variables and maps, and using it as a map key.
 #### Changed
 #### Deprecated
 #### Removed

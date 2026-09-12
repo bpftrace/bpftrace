@@ -92,7 +92,7 @@ The amount of args passed in registers depends on the CPU architecture.
 
 ### args
 
-This keyword represents the struct of all arguments of the traced function.
+This keyword represents the arguments of the traced function or tracepoint.
 You can print the entire structure via `print(args)` or access particular fields using the dot syntax, e.g., `$x = str(args.filename);`.
 To see the args for a particular function, you can use [verbose listing mode](../man/adoc/bpftrace.adoc#listing-probes).
 Example:
@@ -1551,6 +1551,24 @@ tracepoint:syscalls:sys_enter_openat {
 ```
 
 Tracepoint arguments are available in the `args` struct which can be inspected with verbose listing, see the [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes) section for more details.
+
+You can print the complete `args` record, copy it into a variable or map, or use it as a map key.
+The common tracepoint fields (`common_*`) are excluded.
+
+```bpftrace
+tracepoint:syscalls:sys_enter_read {
+  $saved = args;
+  print($saved);
+  @last = args;
+  @[args] = count();
+}
+```
+
+Copying `args` copies field values, including inline character arrays.
+Pointer fields retain their addresses; the data they point to is not copied.
+Likewise, `__data_loc` fields hold decoded addresses into the current tracepoint context, rather than copies of the dynamic data.
+Use `str(args.field)` to read a string during the probe invocation, and save that string separately if it is needed later.
+Saving the record in a map does not extend the lifetime of the referenced data.
 
 ```
 # bpftrace -lv "tracepoint:*"
