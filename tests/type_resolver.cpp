@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "ast/ast.h"
+#include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/clang_parser.h"
 #include "ast/passes/collect_nodes.h"
@@ -62,21 +63,24 @@ std::string_view clean_prefix(std::string_view view)
 
 class TypeResolverHarness {
 public:
-  TestResult test(std::string_view input,
-                  std::optional<Error> error = std::nullopt)
+  TestResult test(
+      std::string_view input,
+      std::optional<Error> error = std::nullopt,
+      std::unique_ptr<MockBPFtrace> mock_bpftrace = get_mock_bpftrace())
   {
     ast::ASTContext ast("stdin", std::string(clean_prefix(input)));
 
     ast::TypeMetadata no_types; // No external types defined.
-    auto mock_bpftrace = get_mock_bpftrace();
     BPFtrace &bpftrace = *mock_bpftrace;
 
     auto ok = ast::PassManager()
                   .put(ast)
                   .put(bpftrace)
                   .put(no_types)
+                  .put(get_mock_function_info())
                   .add(CreateParsePass())
                   .add(ast::CreateMacroExpansionPass())
+                  .add(ast::CreateParseAttachpointsPass())
                   .add(ast::CreateClangParsePass())
                   .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateBuiltinsPass())
@@ -1416,6 +1420,60 @@ TEST_F(TypeResolverTest, for_loop_variable_scope)
               CreateTuple(
                   Struct::CreateTuple({ map_key_type(result, "@mapA"),
                                         map_val_type(result, "@mapA") })));
+  }
+}
+
+TEST_F(TypeResolverTest, tracepoint_args_skips_unsupported_fields)
+{
+  auto bpftrace = get_mock_bpftrace();
+  auto original =
+      bpftrace->structs.Lookup("struct tracepoint:sched:sched_one_args").lock();
+  original->AddField("common_type", CreateUInt16(), 0);
+  original->AddField("common_flags", CreateUInt8(), 2);
+  original->AddField("common_preempt_count", CreateUInt8(), 3);
+  original->AddField("common_pid", CreateUInt32(), 4);
+  original->AddField("unsupported_field", CreateNone(), 16);
+  original->AddField("unsupported_array", CreateArray(4, CreateNone()), 20);
+  original->AddField("empty_array", CreateArray(0, CreateUInt64()), 24);
+
+  auto result = test(
+      "tracepoint:sched:sched_one { $x = args; $y = args.common_field; }",
+      std::nullopt,
+      std::move(bpftrace));
+
+  auto saved_type = var_type(result, "$x");
+  ASSERT_TRUE(saved_type.IsRecordTy());
+  EXPECT_EQ(saved_type.GetFieldCount(), 1);
+  EXPECT_EQ(saved_type.GetField(0).name, "common_field");
+  EXPECT_EQ(saved_type.GetField(0).offset, 0);
+  EXPECT_FALSE(saved_type.IsCtxAccess());
+  EXPECT_EQ(var_type(result, "$y"), CreateUInt64());
+  EXPECT_EQ(original->GetField("common_field").offset, 8);
+
+  std::stringstream warnings;
+  result.ast.diagnostics().emit(warnings, ast::Diagnostics::Severity::Warning);
+  for (const auto *field :
+       { "unsupported_field", "unsupported_array", "empty_array" }) {
+    EXPECT_THAT(warnings.str(),
+                HasSubstr("tracepoint field '" + std::string(field) + "'"));
+  }
+}
+
+TEST_F(TypeResolverTest, tracepoint_args_without_supported_fields)
+{
+  for (bool unsupported : { false, true }) {
+    auto bpftrace = get_mock_bpftrace();
+    auto original = bpftrace->structs
+                        .Lookup("struct tracepoint:sched:sched_one_args")
+                        .lock();
+    original->ClearFields();
+    original->AddField("common_pid", CreateUInt32(), 4);
+    if (unsupported)
+      original->AddField("unsupported_field", CreateNone(), 8);
+
+    test("tracepoint:sched:sched_one { $x = args; }",
+         Error{ "Tracepoint args has no supported fields" },
+         std::move(bpftrace));
   }
 }
 

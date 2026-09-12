@@ -24,9 +24,10 @@ using bpftrace::ast::AttachPoint;
 using bpftrace::ast::AttachPointList;
 using bpftrace::ast::Probe;
 
-void gen_bytecode(const std::string &input, std::stringstream &out)
+void gen_bytecode(const std::string &input,
+                  std::stringstream &out,
+                  std::unique_ptr<MockBPFtrace> bpftrace = get_mock_bpftrace())
 {
-  auto bpftrace = get_mock_bpftrace();
   ast::ASTContext ast("stdin", input);
 
   ast::CDefinitions no_c_defs; // Output from clang parser.
@@ -93,6 +94,57 @@ TEST(probe, case_insensitive)
                    "traCepoInt:sched:sched_one { args }");
   compare_bytecode("kprobe:f { pid }", "KPROBE:f { pid }");
   compare_bytecode("BEGIN { pid }", "begin { pid }");
+}
+
+TEST(probe, tracepoint_args_copied_aggregates)
+{
+  auto bpftrace = get_mock_bpftrace();
+  auto original =
+      bpftrace->structs.Lookup("struct tracepoint:sched:sched_one_args").lock();
+  original->AddField("unsupported", CreateNone(), 16);
+  original->AddField("values", CreateArray(4, CreateUInt64()), 16);
+  auto nested = bpftrace->structs.Add("struct nested", 8);
+  nested.lock()->AddField("value", CreateUInt64(), 0);
+  original->AddField("nested", CreateCStruct("struct nested", nested), 48);
+  original->size = 56;
+
+  std::stringstream output;
+  gen_bytecode("tracepoint:sched:sched_one { $saved = args; "
+               "@array = $saved.values[0]; @nested = $saved.nested.value; }",
+               output,
+               std::move(bpftrace));
+  EXPECT_FALSE(output.str().empty());
+}
+
+TEST(probe, tracepoint_args_large_inline_strings)
+{
+  auto bpftrace = get_mock_bpftrace();
+  auto original =
+      bpftrace->structs.Lookup("struct tracepoint:sched:sched_one_args").lock();
+  original->AddField("first", CreateString(300), 16);
+  original->AddField("second", CreateString(300), 316);
+  original->size = 616;
+
+  std::stringstream output;
+  gen_bytecode("tracepoint:sched:sched_one { @saved = args; }",
+               output,
+               std::move(bpftrace));
+  EXPECT_FALSE(output.str().empty());
+}
+
+TEST(probe, tracepoint_args_direct_access_skips_large_fields)
+{
+  auto bpftrace = get_mock_bpftrace();
+  auto original =
+      bpftrace->structs.Lookup("struct tracepoint:sched:sched_one_args").lock();
+  original->AddField("unused", CreateString(600), 16);
+  original->size = 616;
+
+  std::stringstream output;
+  gen_bytecode("tracepoint:sched:sched_one { @saved = args.common_field; }",
+               output,
+               std::move(bpftrace));
+  EXPECT_FALSE(output.str().empty());
 }
 
 class probe_btf : public test_btf {};
