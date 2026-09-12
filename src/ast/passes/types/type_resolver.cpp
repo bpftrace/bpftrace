@@ -918,12 +918,39 @@ void TypeRuleCollector::visit(Builtin &builtin)
       if (type == ProbeType::uprobe)
         builtin_type.is_internal = true;
     } else if (type == ProbeType::tracepoint) {
-      builtin_type = CreateCStruct(*type_name,
-                                   bpftrace_.structs.Lookup(*type_name));
+      auto original = bpftrace_.structs.Lookup(*type_name).lock();
+
+      std::vector<SizedType> fields;
+      std::vector<std::string_view> names;
+
+      for (const auto &field : original->fields) {
+        if (field.IsCommonTracepointField())
+          continue;
+
+        // Unresolved and zero-sized fields cannot be laid out in a record.
+        // Omit them so supported fields remain accessible.
+        if (field.type.IsNoneTy() || field.type.GetSize() == 0) {
+          builtin.addWarning() << "tracepoint field '" << field.name
+                               << "' has an unsupported type and is not "
+                                  "available in the args record";
+          continue;
+        }
+
+        fields.emplace_back(field.type);
+        names.emplace_back(field.name);
+      }
+
+      if (fields.empty()) {
+        builtin.addError() << "Tracepoint args has no supported fields";
+        return;
+      }
+
+      // Record offsets differ from ctx offsets. Codegen uses the original
+      // struct for direct field reads, rather than marking this record as ctx.
+      builtin_type = CreateRecord(Struct::CreateRecord(fields, names));
       builtin_type.SetAS(probe->attach_points.front()->target == "syscalls"
                              ? AddrSpace::user
                              : AddrSpace::kernel);
-      builtin_type.MarkCtxAccess();
     }
   } else {
     LOG(BUG) << "Unknown builtin variable: '" << builtin.ident << "'";

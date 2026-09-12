@@ -211,6 +211,45 @@ PROG fentry:vfs_open { print(args); exit(); }
 EXPECT_REGEX { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
 AFTER ./testprogs/syscall open
 
+NAME print args in tracepoint
+PROG tracepoint:syscalls:sys_enter_read { print(args); exit(); }
+EXPECT_REGEX { .__syscall_nr = [0-9]+, .fd = [0-9]+, .buf = 0x[0-9a-f]+, .count = [0-9]+ }
+AFTER ./testprogs/syscall read
+
+NAME print args in tracepoint with data_loc after copy
+PROG tracepoint:sched:sched_process_exec /str(args.filename) == "./testprogs/true"/ { $saved = args; print($saved); printf("filename=%s\n", str($saved.filename)); exit(); }
+AFTER ./testprogs/syscall execve ./testprogs/true
+EXPECT_REGEX { .filename = -?[0-9]+, .pid = [0-9]+, .old_pid = [0-9]+ }
+EXPECT_REGEX filename=\./testprogs/true
+
+NAME args in tracepoint store in map
+PROG tracepoint:syscalls:sys_enter_read { @ = args; exit(); }
+EXPECT_REGEX @: { .__syscall_nr = [0-9]+, .fd = [0-9]+, .buf = 0x[0-9a-f]+, .count = [0-9]+ }
+AFTER ./testprogs/syscall read
+
+NAME args in tracepoint as a map key
+PROG tracepoint:syscalls:sys_enter_read { @[args] = 1; exit(); }
+EXPECT_REGEX @\[{ .__syscall_nr = [0-9]+, .fd = [0-9]+, .buf = 0x[0-9a-f]+, .count = [0-9]+ }\]: 1
+AFTER ./testprogs/syscall read
+
+NAME print args in tracepoint off stack
+PROG config = { on_stack_limit = 0 } tracepoint:syscalls:sys_enter_read { print(args); exit(); }
+EXPECT_REGEX { .__syscall_nr = [0-9]+, .fd = [0-9]+, .buf = 0x[0-9a-f]+, .count = [0-9]+ }
+AFTER ./testprogs/syscall read
+
+NAME args in tracepoint copy userspace pointer
+PROG tracepoint:syscalls:sys_enter_execve /str(args.argv[0]) == "./testprogs/true"/ { $saved = args; print(str($saved.argv[1], 5)); exit(); }
+AFTER ./testprogs/true zztest
+EXPECT zzte
+
+NAME args in tracepoint copy array
+RUN {{BPFTRACE}} -e 'tracepoint:raw_syscalls:sys_enter /pid == cpid/ { $saved = args; @saved = args; printf("%d %d\n", $saved.args[0] == args.args[0], @saved.args[0] == args.args[0]); clear(@saved); exit(); }' -c './testprogs/syscall read'
+EXPECT 1 1
+
+NAME args in tracepoint copy array off stack
+RUN {{BPFTRACE}} -e 'config = { on_stack_limit = 0 } tracepoint:raw_syscalls:sys_enter /pid == cpid/ { $saved = args; @saved = args; printf("%d %d\n", $saved.args[0] == args.args[0], @saved.args[0] == args.args[0]); clear(@saved); exit(); }' -c './testprogs/syscall read'
+EXPECT 1 1
+
 NAME args in fentry store in map
 PROG fentry:vfs_open { @= args; exit(); }
 EXPECT_REGEX @: { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
