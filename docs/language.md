@@ -92,8 +92,9 @@ The number of arguments passed in registers depends on the CPU architecture.
 
 ### args
 
-This keyword represents the struct of all arguments of the traced function.
-You can print the entire structure via `print(args)` or access particular fields using the dot syntax, e.g., `$x = str(args.filename);`.
+This keyword represents the struct of all arguments of the traced function or tracepoint.
+You can print the entire structure via `print(args)`, copy it into scratch variables and maps, or use it as a map key.
+You can access particular fields using the dot syntax, e.g., `$x = str(args.filename);`.
 To see the args for a particular function, you can use [verbose listing mode](../man/adoc/bpftrace.adoc#listing-probes).
 Example:
 ```
@@ -103,6 +104,12 @@ fentry:tcp_reset
     struct sock * sk
     struct sk_buff * skb
 ```
+
+For tracepoints, `args` is a [Record](#records).
+The four common tracepoint header fields (`common_type`, `common_flags`,
+`common_preempt_count`, and `common_pid`) are excluded from the Record.
+Unsupported or zero-sized fields are omitted, with a warning in verbose mode
+(`-v`); using `args` when no supported fields remain produces an error.
 
 ## Arrays
 
@@ -1656,7 +1663,7 @@ tracepoint:syscalls:sys_enter_openat {
 }
 ```
 
-Tracepoint arguments are available in the `args` struct which can be inspected with verbose listing, see the [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes) section for more details.
+Tracepoint arguments are available in the [`args`](#args) Record, which can be inspected with verbose listing; see [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes) for details.
 
 ```
 # bpftrace -lv "tracepoint:*"
@@ -1670,9 +1677,6 @@ tracepoint:xhci-hcd:xhci_setup_device_slot
 ```
 
 Alternatively members for each tracepoint can be listed from their /format file in /sys.
-
-Apart from the filename member, we can also print flags, mode, and more.
-After the "common" members listed first, the members are specific to the tracepoint.
 
 **Additional information**
 
