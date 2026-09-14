@@ -21,6 +21,7 @@ add_executable(bpftrace_test
   control_flow_analyser.cpp
   deprecated.cpp
   diagnostic.cpp
+  dwarf_parser.cpp
   field_analyser.cpp
   fold_literals.cpp
   function_registry.cpp
@@ -62,6 +63,9 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
 
 add_subdirectory(data)
 add_dependencies(bpftrace_test data_source_dwarf data_source_btf)
+add_dependencies(bpftrace_test dwarf_origin_fixture)
+target_compile_definitions(bpftrace_test PRIVATE
+  DWARF_ORIGIN_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_origin")
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

@@ -441,7 +441,7 @@ std::vector<std::string> Dwarf::get_function_params(
   for (auto &param_die : function_param_dies(function)) {
     Dwarf_Die type_die = type_of(param_die);
     const std::string type_name = get_type_name(type_die);
-    if (dwarf_hasattr(&param_die, DW_AT_name))
+    if (dwarf_hasattr_integrate(&param_die, DW_AT_name))
       result.push_back(type_name + " " + get_die_name(&param_die));
     else
       result.push_back(type_name);
@@ -458,7 +458,7 @@ std::shared_ptr<Struct> Dwarf::resolve_args(const std::string &function)
     SizedType arg_type = get_stype(type_die);
     arg_type.is_funcarg = true;
     arg_type.funcarg_idx = i++;
-    const std::string name = dwarf_hasattr(&param_die, DW_AT_name)
+    const std::string name = dwarf_hasattr_integrate(&param_die, DW_AT_name)
                                  ? get_die_name(&param_die)
                                  : "";
     result->AddField(name, arg_type, result->size);

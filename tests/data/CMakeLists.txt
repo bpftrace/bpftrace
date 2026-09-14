@@ -1,6 +1,18 @@
 include(BuildBPF)
 include(Embed)
 
+# Define the DIE order explicitly: compiler-generated DWARF may put the
+# abstract function first and leave inherited parameter names untested.
+add_custom_command(
+  OUTPUT dwarf_origin
+  COMMAND ${GCC} -no-pie ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_origin.c
+          ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_origin.S
+          -o ${CMAKE_CURRENT_BINARY_DIR}/dwarf_origin
+  DEPENDS dwarf_origin.c dwarf_origin.S
+  VERBATIM
+)
+add_custom_target(dwarf_origin_fixture DEPENDS dwarf_origin)
+
 bpf(
   data_source
   BTF       data_source.btf
