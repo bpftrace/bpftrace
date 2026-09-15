@@ -20,6 +20,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Resolve uprobe argument names inherited through DWARF abstract origins.
+  - [#5344](https://github.com/bpftrace/bpftrace/issues/5344)
 #### Security
 #### Docs
 #### Tools
