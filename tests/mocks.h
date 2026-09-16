@@ -158,7 +158,6 @@ class MockBPFfeature : public BPFfeature {
 public:
   MockBPFfeature(bool has_features = true) : BPFfeature(bpf_nofeature, btf_obj)
   {
-    has_features_ = has_features;
     has_d_path_ = std::make_optional<bool>(has_features);
     has_kprobe_multi_ = std::make_optional<bool>(has_features);
     has_kprobe_session_ = std::make_optional<bool>(has_features);
@@ -167,13 +166,6 @@ public:
     has_get_func_ip_ = std::make_optional<bool>(has_features);
     has_loop_ = std::make_optional<bool>(has_features);
   };
-
-  bool has_iter(std::string name __attribute__((unused))) override
-  {
-    return has_features_;
-  }
-
-  bool has_features_;
 };
 
 class MockChildProc : public util::ChildProc {

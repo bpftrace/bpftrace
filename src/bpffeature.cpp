@@ -51,8 +51,7 @@ static bool try_load_(const char* name,
                       size_t insns_cnt,
                       int loglevel,
                       char* logbuf,
-                      size_t logbuf_size,
-                      int* outfd = nullptr)
+                      size_t logbuf_size)
 {
   const KernelVersionMethod methods[] = { KernelVersionMethod::vDSO,
                                           KernelVersionMethod::UTS,
@@ -82,11 +81,7 @@ static bool try_load_(const char* name,
 
     int ret = bpf_prog_load(prog_type, name, "GPL", insns, insns_cnt, &opts);
     if (ret >= 0) {
-      if (outfd)
-        *outfd = ret;
-      else
-        close(ret);
-
+      close(ret);
       return true;
     }
   }
@@ -98,8 +93,7 @@ bool BPFfeature::try_load(enum bpf_prog_type prog_type,
                           struct bpf_insn* insns,
                           size_t len,
                           const char* name,
-                          std::optional<bpf_attach_type> attach_type,
-                          int* outfd)
+                          std::optional<bpf_attach_type> attach_type)
 {
   constexpr int log_size = 4096;
   char logbuf[log_size] = {};
@@ -116,16 +110,8 @@ bool BPFfeature::try_load(enum bpf_prog_type prog_type,
       return false;
   }
 
-  return try_load_(name,
-                   prog_type,
-                   attach_type,
-                   btf_id,
-                   insns,
-                   len,
-                   0,
-                   logbuf,
-                   log_size,
-                   outfd);
+  return try_load_(
+      name, prog_type, attach_type, btf_id, insns, len, 0, logbuf, log_size);
 }
 
 bool BPFfeature::try_load_btf(const void* btf_data, size_t btf_size)
@@ -237,16 +223,6 @@ bool BPFfeature::has_kfunc(std::string kfunc)
     btf_id = btf_.get_btf_id(kfunc, "vmlinux");
   }
   return btf_id > 0;
-}
-
-bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type,
-                                  const char* name,
-                                  std::optional<bpf_attach_type> attach_type,
-                                  int* outfd)
-{
-  struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
-  return try_load(
-      prog_type, insns, ARRAY_SIZE(insns), name, attach_type, outfd);
 }
 
 bool BPFfeature::has_btf()
@@ -478,7 +454,6 @@ std::string BPFfeature::report()
     { "kprobe_multi", to_str(has_kprobe_multi()) },
     { "uprobe_multi", to_str(has_uprobe_multi()) },
     { "kprobe_session", to_str(has_kprobe_session()) },
-    { "iter", to_str(has_iter("task")) }
   };
 
   buf << "Kernel helpers" << std::endl;
@@ -494,14 +469,6 @@ std::string BPFfeature::report()
   buf << std::endl;
 
   return buf.str();
-}
-
-bool BPFfeature::has_iter(std::string name)
-{
-  auto tracing_name = "bpf_iter_" + name;
-  return detect_prog_type(BPF_PROG_TYPE_TRACING,
-                          tracing_name.c_str(),
-                          BPF_TRACE_ITER);
 }
 
 } // namespace bpftrace
