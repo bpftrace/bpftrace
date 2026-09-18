@@ -322,6 +322,15 @@ EXPECT stdin:1:15-35: ERROR: Failed to resolve kernel symbol: asdfzzzzzzz
 TIMEOUT 1
 WILL_FAIL
 
+NAME kaddr module symbol fails
+PROG begin { print(kaddr("zzzznomod:zzzznosym")) }
+EXPECT stdin:1:15-43: ERROR: Failed to resolve kernel symbol: zzzznomod:zzzznosym
+       begin { print(kaddr("zzzznomod:zzzznosym")) }
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+EXPECT HINT: Check /proc/kallsyms. A symbol which lives in a kernel module can be qualified with the name of that module, e.g. kaddr("nfsd:nfsd_filecache_count").
+TIMEOUT 1
+WILL_FAIL
+
 NAME print_per_cpu_map_vals
 PROG begin { @a = avg(5); @c = count(); @s = sum(5); @mn = min(1); @mx = max(-1); print((@a, @c, @s, @mn, @mx));  }
 EXPECT (5, 1, 5, 1, -1)
