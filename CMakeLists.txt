@@ -167,7 +167,8 @@ endif()
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}: ${LLVM_CMAKE_DIR}")
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND "${LLVM_DEFINITIONS}")
+add_definitions(${LLVM_DEFINITIONS_LIST})
 
 string(REGEX REPLACE "(-rc[0-9]+|git)" "" CLANG_VERSION ${LLVM_PACKAGE_VERSION})
 
