@@ -21,6 +21,8 @@ void DwarfParseError::log(llvm::raw_ostream &OS) const
 #include <elfutils/libdw.h>
 #include <elfutils/libdwelf.h>
 
+#include <cstring>
+
 namespace bpftrace {
 
 struct FuncInfo {
@@ -629,9 +631,27 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(const std::string &source_file) const
   return std::move(*matched_cu);
 }
 
-Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
-                                     size_t line_num,
-                                     size_t col_num) const
+static std::string cu_kernel_module_name(Dwarf_Die *cudie)
+{
+  Dwfl_Module *mod = dwfl_cumodule(cudie);
+  if (!mod)
+    return "";
+
+  const char *name = dwfl_module_info(
+      mod, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+  if (!name)
+    return "";
+
+  if (std::strcmp(name, "kernel") == 0)
+    return "vmlinux";
+
+  return name;
+}
+
+Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
+    const std::string &source_file,
+    size_t line_num,
+    size_t col_num) const
 {
   auto cu = get_cu_by_src(source_file);
   if (!cu) {
@@ -679,7 +699,10 @@ Result<uint64_t> Dwarf::line_to_addr(const std::string &source_file,
       Dwarf_Addr addr;
       if (dwarf_lineaddr(line, &addr) == 0) {
         // Add KASLR offset if in kernel mode
-        return is_kernel_ ? addr + cu->mod_bias : addr;
+        return SourceLocation{
+          .address = is_kernel_ ? addr + cu->mod_bias : addr,
+          .kernel_module = is_kernel_ ? cu_kernel_module_name(cu->cudie) : "",
+        };
       }
     }
   }
