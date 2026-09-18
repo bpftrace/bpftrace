@@ -1343,7 +1343,7 @@ fexit:fget {
 * `kprobe[:module]:fn`
 * `kprobe[:module]:fn+offset`
 * `kprobe:addr`
-* `kprobe@file:line[:col]`
+* `kprobe@[module:]file:line[:col]`
 * `kretprobe[:module]:fn`
 * `kretprobe:addr`
 
@@ -1438,6 +1438,18 @@ probing inside a function body.
 
 ```
 kprobe@fs/open.c:1077
+{
+  printf("0x%lx\n", reg("ip"));
+  exit();
+}
+```
+
+The same source path can occur in more than one kernel module. Prefix the
+location with a module name to select one of them, using `vmlinux` for the
+kernel itself.
+
+```
+kprobe@my_module:drivers/my_module/main.c:42
 {
   printf("0x%lx\n", reg("ip"));
   exit();

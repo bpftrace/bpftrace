@@ -109,12 +109,12 @@ TEST(attachpoint_parser, kprobe_src_loc)
   test_error("kprobe@fs/open.c:1077 { 1 }",
              "No DWARF debug info found for kernel, cannot attach by source "
              "code location.");
-  test_error(
-      "kprobe@fs/open.c: { 1 }",
-      R"(Invalid kprobe arguments, expected format: kprobe@FILE:LINE[:COL])");
-  test_error(
-      "kprobe@fs/open.c:1077:1:2 { 1 }",
-      R"(Invalid kprobe arguments, expected format: kprobe@FILE:LINE[:COL])");
+  test_error("kprobe@fs/open.c: { 1 }",
+             R"(Invalid kprobe arguments, expected format: )"
+             R"(kprobe@[MODULE:]FILE:LINE[:COL])");
+  test_error("kprobe@fs/open.c:1077:1:2 { 1 }",
+             R"(Invalid kprobe arguments, expected format: )"
+             R"(kprobe@[MODULE:]FILE:LINE[:COL])");
   test_error("kprobe@fs/open.c:invalid { 1 }",
              R"(Invalid line number: invalid integer: invalid)");
   test_error("kprobe@fs/open.c:1077:invalid { 1 }",
