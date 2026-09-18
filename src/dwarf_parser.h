@@ -70,11 +70,10 @@ public:
     std::string kernel_module;
   };
 
-  Result<SourceLocation> line_to_addr(
-      const std::string &source_file,
-      size_t line_num,
-      size_t col_num = 0,
-      const std::string &kernel_module = "") const;
+  Result<SourceLocation> line_to_addr(const std::string &source_file,
+                                      size_t line_num,
+                                      size_t col_num,
+                                      const std::string &kernel_module) const;
 
 private:
   // Compilation unit wrapper, abstracting over regular and split (DWO/DWP)
@@ -219,7 +218,7 @@ public:
                                       size_t line_num __attribute__((unused)),
                                       size_t col_num __attribute__((unused)),
                                       const std::string &kernel_module
-                                      __attribute__((unused)) = "") const
+                                      __attribute__((unused))) const
   {
     return make_error<DwarfParseError>();
   }
