@@ -601,12 +601,36 @@ std::vector<std::filesystem::path> Dwarf::get_cu_src_paths(Dwarf_Die *cudie)
   return result;
 }
 
-Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(const std::string &source_file) const
+static std::string cu_kernel_module_name(Dwarf_Die *cudie)
+{
+  Dwfl_Module *mod = dwfl_cumodule(cudie);
+  if (!mod)
+    return "";
+
+  const char *name = dwfl_module_info(
+      mod, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+  if (!name)
+    return "";
+
+  if (std::strcmp(name, "kernel") == 0)
+    return "vmlinux";
+
+  return name;
+}
+
+Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
+    const std::string &source_file,
+    const std::string &kernel_module) const
 {
   std::optional<CuInfo> matched_cu;
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
+    if (!kernel_module.empty() &&
+        cu_kernel_module_name(cu_info.cudie) != kernel_module) {
+      continue;
+    }
+
     auto src_paths = get_cu_src_paths(cu_info.cu_die());
 
     for (auto &src_path : src_paths) {
@@ -631,29 +655,13 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(const std::string &source_file) const
   return std::move(*matched_cu);
 }
 
-static std::string cu_kernel_module_name(Dwarf_Die *cudie)
-{
-  Dwfl_Module *mod = dwfl_cumodule(cudie);
-  if (!mod)
-    return "";
-
-  const char *name = dwfl_module_info(
-      mod, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
-  if (!name)
-    return "";
-
-  if (std::strcmp(name, "kernel") == 0)
-    return "vmlinux";
-
-  return name;
-}
-
 Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
     const std::string &source_file,
     size_t line_num,
-    size_t col_num) const
+    size_t col_num,
+    const std::string &kernel_module) const
 {
-  auto cu = get_cu_by_src(source_file);
+  auto cu = get_cu_by_src(source_file, kernel_module);
   if (!cu) {
     return cu.takeError();
   }
