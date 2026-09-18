@@ -1582,12 +1582,9 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
     return ScopedExpr(buf);
   } else if (call.func == "kaddr") {
-    uint64_t addr;
     auto name = call.vargs.at(0).as<String>()->value;
-    addr = bpftrace_.resolve_kname(name);
-    if (!addr)
-      call.addError() << "Failed to resolve kernel symbol: " << name;
-    return ScopedExpr(b_.getInt64(addr));
+    auto sym = bpftrace_.resolve_kname(name);
+    return ScopedExpr(b_.getInt64(sym ? sym->address : 0));
   } else if (call.func == "percpu_kaddr") {
     auto name = call.vargs.at(0).as<String>()->value;
     auto *var = DeclareKernelVar(name);

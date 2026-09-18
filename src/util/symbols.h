@@ -2,8 +2,10 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "util/result.h"
@@ -96,5 +98,16 @@ std::pair<std::string, std::string> split_symbol_module(
 
 std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
     const std::string &symbol);
+
+struct KallsymsEntry {
+  uint64_t address = 0;
+  char type = '\0';
+  std::string name;
+  std::string kernel_module;
+};
+
+std::pair<std::string_view, std::string_view> split_kallsyms_module(
+    std::string_view symbol);
+std::optional<KallsymsEntry> parse_kallsyms_line(std::string_view line);
 
 } // namespace bpftrace::util

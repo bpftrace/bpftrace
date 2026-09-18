@@ -20,6 +20,8 @@ and this project adheres to
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
+- Resolve kernel module symbols in `kaddr`, including the `kaddr("module:symbol")` form.
+  - [#2899](https://github.com/bpftrace/bpftrace/issues/2899)
 #### Changed
 #### Deprecated
 #### Removed
