@@ -87,6 +87,7 @@ private:
   void check_external_call(Call &call);
   void check_kfunc(Call &call);
   void check_helper(Call &call);
+  void check_kernel_symbol(const std::string &name, const Call &call);
   bool check_string_size(Node &node, const SizedType &ty);
 
   bool check_arg(Call &call,
@@ -353,6 +354,8 @@ void TypeChecker::visit(Call &call)
       call.addError() << "() only supports int or pointer arguments" << " ("
                       << arg_type.GetTy() << " provided)";
     }
+  } else if (call.func == "kaddr") {
+    check_kernel_symbol(call.vargs.at(0).as<String>()->value, call);
   } else if (call.func == "percpu_kaddr") {
     const auto &symbol = call.vargs.at(0).as<String>()->value;
     if (bpftrace_.btf_->get_var_type(symbol).IsNoneTy()) {
@@ -716,6 +719,37 @@ void TypeChecker::check_external_call(Call &call)
   if (!ok) {
     call.addError() << fullmsg.str();
     return;
+  }
+}
+
+void TypeChecker::check_kernel_symbol(const std::string &name, const Call &call)
+{
+  auto sym = bpftrace_.resolve_kname(name);
+  if (!sym || sym->address == 0) {
+    auto &err = call.addError();
+    err << "Failed to resolve kernel symbol: " << name;
+    if (sym) {
+      err.addHint() << name
+                    << " is listed in /proc/kallsyms but its address reads "
+                       "as zero, which usually means that kernel addresses "
+                       "are hidden (kernel.kptr_restrict).";
+    } else {
+      err.addHint() << "Check /proc/kallsyms. A symbol which lives in a "
+                       "kernel module can be qualified with the name of "
+                       "that module, e.g. "
+                       "kaddr(\"nf_conntrack:nf_conntrack_max\").";
+    }
+    return;
+  }
+
+  if (sym->kernel_modules.size() > 1) {
+    auto &warn = call.addWarning();
+    warn << "Kernel symbol " << name << " is defined in "
+         << sym->kernel_modules.size() << " modules; using the one from "
+         << sym->kernel_modules.front();
+    warn.addHint() << "Qualify the name with a module to select another "
+                      "one, e.g. kaddr(\""
+                   << sym->kernel_modules.back() << ":" << name << "\").";
   }
 }
 
