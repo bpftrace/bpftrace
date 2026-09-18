@@ -209,7 +209,12 @@ template <>
 struct TextEmitter<Value::Histogram> {
   static void emit(std::ostream &out, const Value::Histogram &hist)
   {
-    uint64_t max_value = 0;
+    // Start at one, not zero: the `div` passed to `print` is applied to each
+    // bucket only after the histogram has been found to be non-empty, so a
+    // large enough `div` can leave every count here at zero, and the bar
+    // widths below would then be computed as 0/0 (a NaN, which has no valid
+    // conversion to `int`).
+    uint64_t max_value = 1;
     for (const auto &v : hist.counts) {
       max_value = std::max(max_value, v);
     }
