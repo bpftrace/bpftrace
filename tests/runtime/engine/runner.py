@@ -160,7 +160,7 @@ class Runner(object):
         bpffeature["uprobe_multi"] = output.find("uprobe_multi: yes") != -1
         bpffeature["aot"] = cmake_vars.LIBBCC_BPF_CONTAINS_RUNTIME
         bpffeature["skboutput"] = output.find("skboutput: yes") != -1
-        bpffeature["get_tai_ns"] = output.find("get_ktime_ns: yes") != -1
+        bpffeature["get_tai_ns"] = output.find("get_tai_ns: yes") != -1
         bpffeature["get_func_ip"] = output.find("get_func_ip: yes") != -1
         bpffeature["jiffies64"] = output.find("jiffies64: yes") != -1
         bpffeature["dwunwind"] = output.find("dwunwind (DWARF stack unwinding): yes") != -1
