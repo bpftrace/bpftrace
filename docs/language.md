@@ -2353,6 +2353,8 @@ begin {
 
 x86_64, arm64, arm, s390x, loongarch64, mips64, ppc64le, ppc64, riscv64
 
+These are also the values that the [arch](stdlib.md#arch) builtin can return.
+
 ### Systemd support
 
 If bpftrace has been built with `-DENABLE_SYSTEMD=1`, one can run bpftrace in
