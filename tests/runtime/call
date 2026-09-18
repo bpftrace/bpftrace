@@ -674,6 +674,13 @@ PROG begin { print("begin"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); 
 EXPECT_REGEX begin\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+end
 TIMEOUT 1
 
+# A div larger than every bucket count scales the whole histogram to zero,
+# which must still print rather than crash.
+NAME print_hist_with_div_larger_than_counts
+PROG begin { print("begin"); @ = hist(5); print(@, 0, 1000000); print("end"); clear(@);  }
+EXPECT_REGEX begin\n@:\n\[4, 8\) +0 \| +\|\n\nend
+TIMEOUT 1
+
 NAME path
 RUN {{BPFTRACE}} -ve 'fentry:security_file_open { if (!strncmp(path(args.file.f_path), "/tmp/bpftrace_runtime_test_syscall_gen_open_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK
