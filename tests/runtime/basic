@@ -301,12 +301,10 @@ TIMEOUT 1
 NAME basic while loop
 PROG begin { $a = 0; while ($a <= 100) { @=avg($a++) }  }
 EXPECT @: 50
-REQUIRES_FEATURE loop
 
 NAME nested while loop
 PROG begin { $i = 0; while ($i < 3) { $j = 0; while ($j < 2) { @count = count(); $j++; } $i++; } }
 EXPECT @count: 6
-REQUIRES_FEATURE loop
 
 NAME disable warnings
 RUN {{BPFTRACE}} --no-warnings -e 'begin { @x = stats(10); print(@x, 2); clear(@x); }' 2>&1| grep -c -E "WARNING|invalid option"

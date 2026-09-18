@@ -147,7 +147,6 @@ class Runner(object):
         )
         output = p.communicate()[0]
         bpffeature = {}
-        bpffeature["loop"] = output.find("Loop support: yes") != -1
         bpffeature["probe_read_kernel"] = output.find("probe_read_kernel: yes") != -1
         bpffeature["btf"] = output.find("btf: yes") != -1
         bpffeature["fentry"] = output.find("fentry: yes") != -1
