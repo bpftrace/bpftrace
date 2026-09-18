@@ -22,6 +22,9 @@ and this project adheres to
 #### Fixed
 - Resolve uprobe argument names inherited through DWARF abstract origins.
   - [#5344](https://github.com/bpftrace/bpftrace/issues/5344)
+- Fix crash printing a `hist()` map when the `print()` divisor scales every
+  bucket to zero.
+  - [#5346](https://github.com/bpftrace/bpftrace/pull/5346)
 #### Security
 #### Docs
 #### Tools
