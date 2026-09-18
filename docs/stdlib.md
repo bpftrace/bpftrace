@@ -570,6 +570,20 @@ interval:s:1 {
 
 You can find all kernel symbols at `/proc/kallsyms`.
 
+Symbols of loadable kernel modules are supported too. A bare name resolves
+to the first match in `/proc/kallsyms`, which means that the kernel image
+takes precedence over modules. To pick a specific module, qualify the name
+with it, where `vmlinux` refers to the kernel image itself:
+
+```
+begin {
+  $count = *kaddr("nfsd:nfsd_filecache_count");
+}
+```
+
+The address is resolved when the program is compiled and is then baked into
+it, so a module which is unloaded and loaded again invalidates it.
+
 
 ### kfunc_allowed
 - `boolean kfunc_allowed(const string kfunc)`

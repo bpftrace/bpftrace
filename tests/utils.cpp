@@ -73,6 +73,53 @@ TEST(utils, split_addrrange_symbol_module)
             tokens_ar_sym_mod);
 }
 
+static void expect_kallsyms_line(std::string_view line,
+                                 uint64_t address,
+                                 char type,
+                                 std::string_view name,
+                                 std::string_view module)
+{
+  auto entry = parse_kallsyms_line(line);
+  ASSERT_TRUE(entry.has_value()) << "failed to parse: " << line;
+  EXPECT_EQ(entry->address, address);
+  EXPECT_EQ(entry->type, type);
+  EXPECT_EQ(entry->name, name);
+  EXPECT_EQ(entry->module, module);
+}
+
+TEST(utils, parse_kallsyms_line)
+{
+  expect_kallsyms_line(
+      "ffffffff81000000 T _stext", 0xffffffff81000000, 'T', "_stext", "");
+  // The module suffix is separated by a tab, not a space.
+  expect_kallsyms_line("ffffffffc0ab8e18 b nfsd_filecache_count\t[nfsd]",
+                       0xffffffffc0ab8e18,
+                       'b',
+                       "nfsd_filecache_count",
+                       "nfsd");
+  // Pseudo modules look just like real ones.
+  expect_kallsyms_line("ffffffffc0123456 t bpf_prog_6deef7357e7b4530\t[bpf]",
+                       0xffffffffc0123456,
+                       't',
+                       "bpf_prog_6deef7357e7b4530",
+                       "bpf");
+  // Symbol names can contain brackets themselves.
+  expect_kallsyms_line(
+      "ffffffff81000100 t weird[1]", 0xffffffff81000100, 't', "weird[1]", "");
+  // kernel.kptr_restrict hides the address but keeps the line well formed.
+  expect_kallsyms_line(
+      "0000000000000000 A fixed_percpu_data", 0, 'A', "fixed_percpu_data", "");
+
+  EXPECT_FALSE(parse_kallsyms_line("").has_value());
+  EXPECT_FALSE(parse_kallsyms_line("garbage").has_value());
+  EXPECT_FALSE(parse_kallsyms_line("zzzz T foo").has_value());
+  EXPECT_FALSE(parse_kallsyms_line("ffffffffg1000000 T foo").has_value());
+  EXPECT_FALSE(parse_kallsyms_line("ffffffff81000000 T").has_value());
+  EXPECT_FALSE(parse_kallsyms_line("ffffffff81000000 T ").has_value());
+  EXPECT_FALSE(parse_kallsyms_line(" ffffffff81000000 T foo").has_value());
+  EXPECT_FALSE(parse_kallsyms_line("ffffffff81000000 TT foo").has_value());
+}
+
 static void test_erase_parameter_list(std::string input,
                                       std::string_view expected)
 {

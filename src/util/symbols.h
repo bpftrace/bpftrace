@@ -2,8 +2,10 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "util/result.h"
@@ -96,5 +98,23 @@ std::pair<std::string, std::string> split_symbol_module(
 
 std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
     const std::string &symbol);
+
+// A single entry of /proc/kallsyms.
+struct KallsymsEntry {
+  uint64_t address = 0;
+  char type = '\0';
+  // Symbol name, without the module suffix.
+  std::string name;
+  // Module the symbol belongs to, empty for the kernel image itself.
+  std::string module;
+};
+
+// Parse one line of /proc/kallsyms. The kernel writes symbols of the kernel
+// image as "<address> <type> <name>" and symbols of loadable modules as
+// "<address> <type> <name>\t[<module>]" (see s_show() in kernel/kallsyms.c).
+// Note that the module suffix is separated by a tab, not a space.
+//
+// Returns nullopt for a line which doesn't have that shape.
+std::optional<KallsymsEntry> parse_kallsyms_line(std::string_view line);
 
 } // namespace bpftrace::util
