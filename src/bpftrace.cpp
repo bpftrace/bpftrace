@@ -1502,13 +1502,10 @@ Dwarf *BPFtrace::get_dwarf(const std::string &filename)
 Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
 {
   auto probe_type = probetype(attachpoint.provider);
-  if (probe_type == ProbeType::uprobe || probe_type == ProbeType::uretprobe)
-    return get_dwarf(attachpoint.target);
-  if ((probe_type == ProbeType::kprobe || probe_type == ProbeType::kretprobe) &&
-      !attachpoint.source_file.empty())
-    return get_kernel_dwarf();
+  if (probe_type != ProbeType::uprobe && probe_type != ProbeType::uretprobe)
+    return nullptr;
 
-  return nullptr;
+  return get_dwarf(attachpoint.target);
 }
 
 int BPFtrace::create_pcaps()
