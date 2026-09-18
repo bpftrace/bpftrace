@@ -16,6 +16,8 @@ and this project adheres to
   - [#5276](https://github.com/bpftrace/bpftrace/pull/5276)
 - Add `kprobe` support for source location attachpoints.
   - [#5308](https://github.com/bpftrace/bpftrace/pull/5308)
+- Add module-qualified source location kprobes (`kprobe@MODULE:FILE:LINE`).
+  - [#5357](https://github.com/bpftrace/bpftrace/pull/5357)
 - stdlib: Add the compile-time `arch` builtin.
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
 #### Changed
