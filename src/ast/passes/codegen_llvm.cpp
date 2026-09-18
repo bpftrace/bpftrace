@@ -273,6 +273,9 @@ private:
       const std::vector<std::pair<llvm::Value *, Location>> &vals,
       const std::string &name,
       const Location &loc);
+
+  ScopedExpr createTracepointArgsRecord(Builtin &builtin);
+
   ScopedExpr createAnonStructAccess(const SizedType &stype,
                                     ScopedExpr &&expr_value,
                                     size_t field_idx);
@@ -783,6 +786,72 @@ int CodegenLLVM::get_probe_id()
   return std::distance(begin, found);
 }
 
+ScopedExpr CodegenLLVM::createTracepointArgsRecord(Builtin &builtin)
+{
+  auto type_name = std::string(STRUCT_PREFIX) + current_attach_point_->name() +
+                   "_args";
+
+  auto original_struct = bpftrace_.structs.Lookup(type_name).lock();
+  assert(original_struct);
+
+  auto original_type = CreateCStruct(type_name, original_struct);
+  original_type.SetAS(current_attach_point_->target == "syscalls"
+                          ? AddrSpace::user
+                          : AddrSpace::kernel);
+  original_type.MarkCtxAccess();
+
+  std::vector<std::pair<Value *, Location>> vals;
+  std::vector<ScopedExpr> scoped_vals;
+
+  vals.reserve(type_map_.type(&builtin).GetFieldCount());
+  scoped_vals.reserve(type_map_.type(&builtin).GetFieldCount());
+
+  for (const auto &field : original_struct->fields) {
+    // Common tracepoint fields are not part of args.
+    if (field.offset < 8)
+      continue;
+
+    // Tracepoint format parsing does not populate bitfield metadata.
+    assert(!field.bitfield.has_value());
+
+    if (field.is_data_loc) {
+      assert(field.type.IsIntTy());
+      assert(field.type.GetIntBitWidth() == 64);
+
+      // The lower 16 bits contain the offset from the tracepoint context.
+      Value *descriptor = b_.CreateLoad(
+          b_.getInt32Ty(),
+          b_.CreateSafeGEP(b_.getInt8Ty(), ctx_, b_.getInt64(field.offset)));
+      Value *offset = b_.CreateAnd(descriptor, b_.getInt32(0xFFFF));
+      offset = b_.CreateIntCast(offset, b_.getInt64Ty(), false);
+
+      Value *address = b_.CreateSafeGEP(b_.getInt8Ty(), ctx_, offset);
+      Value *value = b_.CreatePtrToInt(address, b_.getInt64Ty());
+
+      vals.emplace_back(value, builtin.loc);
+      continue;
+    }
+
+    auto value = probereadDatastructElem(ScopedExpr(ctx_),
+                                         b_.getInt64(field.offset),
+                                         original_type,
+                                         field.type,
+                                         builtin.loc,
+                                         "args." + field.name);
+
+    vals.emplace_back(value.value(), builtin.loc);
+    scoped_vals.emplace_back(std::move(value));
+  }
+
+  auto *buf = createAnonStruct(
+      type_map_.type(&builtin), vals, "args", builtin.loc);
+
+  if (isa<AllocaInst>(buf))
+    return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
+
+  return ScopedExpr(buf);
+}
+
 ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs") {
@@ -900,7 +969,10 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                         [this, value]() { b_.CreateLifetimeEnd(value); });
     }
     return ScopedExpr(value);
-
+  } else if (builtin.ident == "args" &&
+             probetype(current_attach_point_->provider) ==
+                 ProbeType::tracepoint) {
+    return createTracepointArgsRecord(builtin);
   } else if (builtin.ident == "args" &&
              probetype(current_attach_point_->provider) == ProbeType::uprobe) {
     // uprobe args record is built on stack
@@ -2640,7 +2712,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
 
 ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 {
-  const SizedType &type = type_map_.type(acc.expr);
+  SizedType type = type_map_.type(acc.expr);
 
   if (type.IsStatsTy()) {
     auto *map_acc = acc.expr.as<MapAccess>();
@@ -2653,7 +2725,25 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     return ScopedExpr(val, std::move(scoped_key));
   }
 
-  auto scoped_arg = visit(acc.expr);
+  auto scoped_arg = [&]() -> ScopedExpr {
+    auto *builtin = acc.expr.as<Builtin>();
+    if (builtin && builtin->ident == "args" &&
+        probetype(current_attach_point_->provider) == ProbeType::tracepoint) {
+      auto type_name = std::string(STRUCT_PREFIX) +
+                       current_attach_point_->name() + "_args";
+      auto original = bpftrace_.structs.Lookup(type_name).lock();
+      assert(original);
+
+      type = CreateCStruct(type_name, original);
+      type.SetAS(current_attach_point_->target == "syscalls"
+                     ? AddrSpace::user
+                     : AddrSpace::kernel);
+      type.MarkCtxAccess();
+      return ScopedExpr(ctx_);
+    }
+
+    return visit(acc.expr);
+  }();
 
   assert(type.IsRecordTy() || type.IsCTypeTy());
 

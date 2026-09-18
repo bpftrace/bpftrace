@@ -180,6 +180,13 @@ void ResourceAnalyser::visit(Builtin &builtin)
     }
   } else if (builtin.ident == "__builtin_elapsed") {
     resources_.needs_elapsed_map = true;
+  } else if (builtin.ident == "args") {
+    const auto &ty = type_map_.type(&builtin);
+    if (ty.IsRecordTy() && exceeds_stack_limit(ty.GetSize())) {
+      resources_.anon_struct_buffers++;
+      resources_.max_anon_struct_size = std::max(
+          resources_.max_anon_struct_size, ty.GetSize());
+    }
   }
 }
 
@@ -451,6 +458,13 @@ void ResourceAnalyser::visit(Cast &cast)
 
 void ResourceAnalyser::visit(FieldAccess &acc)
 {
+  auto *builtin = acc.expr.as<Builtin>();
+  if (builtin && builtin->ident == "args" && probe_ &&
+      probe_->get_probetype() == ProbeType::tracepoint) {
+    // Codegen reads the field directly without constructing an args record.
+    return;
+  }
+
   Visitor<ResourceAnalyser>::visit(acc);
 
   const auto &type = type_map_.type(acc.expr);
