@@ -156,4 +156,41 @@ TEST(TextOutput, lhist_underflow_only)
             out.str());
 }
 
+TEST(TextOutput, hist_div_zeroes_every_bucket)
+{
+  std::stringstream out;
+  ::bpftrace::output::TextOutput output(out, out);
+
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->resources.maps_info["@mymap"] = MapInfo{
+    .key_type = CreateInt64(),
+    .value_type = SizedType{ Type::hist_t, 8 },
+    .detail = HistogramArgs{ .bits = 0 },
+    .id = {},
+    .is_scalar = true,
+  };
+
+  // The raw buckets are non-empty, but every one of them is smaller than the
+  // divisor below and therefore scales down to zero.
+  const HistogramMap values_by_key = {
+    { OpaqueValue::from<uint64_t>(0), { 0, 1, 2, 3 } },
+  };
+
+  auto mock_map = std::make_unique<MockBpfMap>(BPF_MAP_TYPE_HASH, "@mymap");
+  EXPECT_CALL(*mock_map, collect_histogram_data(testing::_, testing::_))
+      .WillOnce(testing::Return(testing::ByMove(HistogramMap(values_by_key))));
+
+  auto hist = format(*bpftrace, no_c_defs, *mock_map, 0, 10);
+  ASSERT_TRUE(bool(hist));
+  output.map(mock_map->name(), *hist);
+
+  EXPECT_EQ(R"(@mymap:
+[0]                    0 |                                                    |
+[1]                    0 |                                                    |
+[2, 4)                 0 |                                                    |
+
+)",
+            out.str());
+}
+
 } // namespace bpftrace::test::output
