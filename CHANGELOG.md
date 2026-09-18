@@ -22,6 +22,8 @@ and this project adheres to
 #### Fixed
 - Resolve uprobe argument names inherited through DWARF abstract origins.
   - [#5344](https://github.com/bpftrace/bpftrace/issues/5344)
+- Correctly pass multiple LLVM compile definitions from `LLVM_DEFINITIONS` to the compiler.
+  - [#5348](https://github.com/bpftrace/bpftrace/issues/5348)
 #### Security
 #### Docs
 #### Tools
