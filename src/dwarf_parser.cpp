@@ -623,6 +623,8 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
     const std::string &kernel_module) const
 {
   std::optional<CuInfo> matched_cu;
+  Dwfl_Module *matched_module = nullptr;
+  std::string matched_module_name;
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
@@ -635,22 +637,52 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
 
     for (auto &src_path : src_paths) {
       if (util::path_ends_with(src_path, source_file)) {
+        auto *current_module = is_kernel_ ? dwfl_cumodule(cu_info.cudie)
+                                          : nullptr;
+        auto current_module_name = is_kernel_
+                                       ? cu_kernel_module_name(cu_info.cudie)
+                                       : "";
         if (!matched_cu) {
           matched_cu = cu_info;
           matched_cu->source_path = src_path;
+          matched_module = current_module;
+          matched_module_name = std::move(current_module_name);
         } else if (matched_cu->source_path &&
-                   src_path != *matched_cu->source_path) {
-          return make_error<DwarfParseError>(
-              "Ambiguous source path, matches multiple files: " +
-              matched_cu->source_path->string() + ", " + src_path.string());
+                   (src_path != *matched_cu->source_path ||
+                    (is_kernel_ && kernel_module.empty() &&
+                     (current_module != matched_module ||
+                      current_module_name != matched_module_name)))) {
+          std::string msg;
+          if (is_kernel_) {
+            std::string first_match = (matched_module_name.empty()
+                                           ? ""
+                                           : matched_module_name + ":") +
+                                      matched_cu->source_path->string();
+            std::string current_match = (current_module_name.empty()
+                                             ? ""
+                                             : current_module_name + ":") +
+                                        src_path.string();
+            msg = "Ambiguous source path, matches multiple files or modules: " +
+                  first_match + ", " + current_match;
+          } else {
+            msg = "Ambiguous source path, matches multiple files: " +
+                  matched_cu->source_path->string() + ", " + src_path.string();
+          }
+          if (is_kernel_ && kernel_module.empty())
+            msg += ". Specify the owning module: kprobe@MODULE:FILE:LINE";
+          return make_error<DwarfParseError>(msg);
         }
       }
     }
   }
 
-  if (!matched_cu)
+  if (!matched_cu) {
+    if (!kernel_module.empty())
+      return make_error<DwarfParseError>("Module " + kernel_module +
+                                         " does not contain " + source_file);
     return make_error<DwarfParseError>("No compilation unit matches " +
                                        source_file);
+  }
 
   return std::move(*matched_cu);
 }
