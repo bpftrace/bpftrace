@@ -853,6 +853,34 @@ PROG begin { @ = 0; printf("map len: %d\n", len(@));  }
 EXPECT_REGEX .* ERROR: call to len\(\) expects a map with explicit keys \(non-scalar map\).*
 WILL_FAIL
 
+NAME kaddr module symbol
+PROG begin { $addr = kaddr("nf_tables:nft_register_chain_type"); print(ksym($addr)); if (kaddr("nft_register_chain_type") == $addr) { print("bare OK") } if (kaddr("nft_register_chain_type\t[nf_tables]") == $addr) { print("verbatim OK") } exit() }
+EXPECT nft_register_chain_type
+EXPECT bare OK
+EXPECT verbatim OK
+TIMEOUT 5
+REQUIRES awk '$3 == "nft_register_chain_type" && $4 == "[nf_tables]" { found = 1 } END { exit !found }' /proc/kallsyms
+
+NAME kaddr ambiguous module symbol
+PROG begin { print(kaddr("__this_module") != 0); exit() }
+EXPECT_REGEX WARNING: Kernel symbol __this_module is defined in [0-9]+ modules; using the one from
+EXPECT true
+TIMEOUT 5
+REQUIRES awk '$3 == "__this_module" && $4 != "" { if (!seen[$4]++) n++ } END { exit (n < 2) }' /proc/kallsyms
+
+NAME kaddr vmlinux qualified
+PROG begin { if (kaddr("vmlinux:_stext") == kaddr("_stext")) { print("OK") } exit() }
+EXPECT OK
+TIMEOUT 5
+
+NAME kaddr module symbol fails
+PROG begin { print(kaddr("whooshwhoosh:_stext")) }
+EXPECT stdin:1:15-43: ERROR: Failed to resolve kernel symbol: whooshwhoosh:_stext
+       begin { print(kaddr("whooshwhoosh:_stext")) }
+                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+TIMEOUT 1
+WILL_FAIL
+
 NAME percpu_kaddr
 PROG begin { printf("processes: %d\n", *percpu_kaddr("process_counts", 0));  }
 EXPECT_REGEX processes: -?[0-9]+
