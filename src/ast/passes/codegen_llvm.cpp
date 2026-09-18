@@ -1534,12 +1534,34 @@ ScopedExpr CodegenLLVM::visit(Call &call)
       return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
     return ScopedExpr(buf);
   } else if (call.func == "kaddr") {
-    uint64_t addr;
     auto name = call.vargs.at(0).as<String>()->value;
-    addr = bpftrace_.resolve_kname(name);
-    if (!addr)
-      call.addError() << "Failed to resolve kernel symbol: " << name;
-    return ScopedExpr(b_.getInt64(addr));
+    auto sym = bpftrace_.resolve_kname(name);
+    if (!sym || sym->address == 0) {
+      auto &err = call.addError();
+      err << "Failed to resolve kernel symbol: " << name;
+      if (sym) {
+        err.addHint() << name
+                      << " is listed in /proc/kallsyms but its address reads "
+                         "as zero, which usually means that kernel addresses "
+                         "are hidden (kernel.kptr_restrict).";
+      } else {
+        err.addHint() << "Check /proc/kallsyms. A symbol which lives in a "
+                         "kernel module can be qualified with the name of "
+                         "that module, e.g. "
+                         "kaddr(\"nfsd:nfsd_filecache_count\").";
+      }
+      return ScopedExpr(b_.getInt64(0));
+    }
+    if (sym->modules.size() > 1) {
+      auto &warn = call.addWarning();
+      warn << "Kernel symbol " << name << " is defined in "
+           << sym->modules.size() << " modules; using the one from "
+           << sym->modules.front();
+      warn.addHint() << "Qualify the name with a module to select another "
+                        "one, e.g. kaddr(\""
+                     << sym->modules.back() << ":" << name << "\").";
+    }
+    return ScopedExpr(b_.getInt64(sym->address));
   } else if (call.func == "percpu_kaddr") {
     auto name = call.vargs.at(0).as<String>()->value;
     auto *var = DeclareKernelVar(name);

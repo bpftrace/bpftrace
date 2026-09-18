@@ -22,6 +22,8 @@ and this project adheres to
 #### Fixed
 - Resolve uprobe argument names inherited through DWARF abstract origins.
   - [#5344](https://github.com/bpftrace/bpftrace/issues/5344)
+- Resolve kernel module symbols in `kaddr`, including the `kaddr("module:symbol")` form.
+  - [#2899](https://github.com/bpftrace/bpftrace/issues/2899)
 #### Security
 #### Docs
 #### Tools

@@ -96,6 +96,16 @@ private:
   std::string msg_;
 };
 
+// A kernel symbol resolved against /proc/kallsyms.
+struct KernelSymbol {
+  uint64_t address = 0;
+  // All modules defining a symbol with this name, in /proc/kallsyms order,
+  // with "vmlinux" standing for the kernel image itself. The address above is
+  // the one from the first of them; more than one entry means that the name
+  // was ambiguous.
+  std::vector<std::string> modules;
+};
+
 class BPFtrace : public ast::State<"bpftrace"> {
 public:
   BPFtrace(BPFnofeature no_feature = BPFnofeature(),
@@ -150,7 +160,7 @@ public:
   time_t time_since_epoch(uint32_t mode,
                           uint64_t timestamp_ns,
                           uint64_t *nsecs);
-  uint64_t resolve_kname(const std::string &name) const;
+  std::optional<KernelSymbol> resolve_kname(const std::string &name) const;
   virtual Result<Symbol> resolve_uname(const std::string &name,
                                        const std::string &path) const;
   std::string resolve_mac_address(const char *mac_addr) const;
@@ -257,7 +267,6 @@ private:
   void teardown_output();
   void poll_output(output::Output &out, bool drain = false);
   void poll_event_loss(output::Output &out);
-  static uint64_t read_address_from_output(std::string output);
   struct bcc_symbol_option &get_symbol_opts();
   Probe generate_probe(const ast::AttachPoint &ap,
                        const ast::Probe &p,

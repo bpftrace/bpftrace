@@ -1,6 +1,7 @@
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <cassert>
+#include <charconv>
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
@@ -88,6 +89,44 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
            symbol.substr(idx1 + strlen("\t"), idx2 - idx1 - strlen("\t")),
            symbol.substr(idx2 + strlen(" ["),
                          symbol.length() - idx2 - strlen(" []")) };
+}
+
+std::optional<KallsymsEntry> parse_kallsyms_line(std::string_view line)
+{
+  size_t addr_end = line.find(' ');
+  if (addr_end == 0 || addr_end == std::string_view::npos)
+    return std::nullopt;
+
+  // Note that std::from_chars, unlike std::stoull, doesn't throw on a line
+  // which isn't shaped like a kallsyms line at all.
+  uint64_t address = 0;
+  const char *begin = line.data();
+  const char *end = begin + addr_end;
+  auto parsed = std::from_chars(begin, end, address, 16);
+  if (parsed.ec != std::errc{} || parsed.ptr != end)
+    return std::nullopt;
+
+  // The type is a single character, and each field is separated by exactly
+  // one space. The name must be non-empty.
+  if (line.size() < addr_end + 4 || line[addr_end + 2] != ' ')
+    return std::nullopt;
+
+  KallsymsEntry entry;
+  entry.address = address;
+  entry.type = line[addr_end + 1];
+
+  auto name = line.substr(addr_end + 3);
+  if (name.back() == ']') {
+    if (size_t mod_start = name.rfind("\t[");
+        mod_start != std::string_view::npos && mod_start > 0) {
+      entry.module = name.substr(mod_start + strlen("\t["),
+                                 name.size() - mod_start - strlen("\t[]"));
+      name = name.substr(0, mod_start);
+    }
+  }
+  entry.name = name;
+
+  return entry;
 }
 
 struct resolve_symbols_data {
