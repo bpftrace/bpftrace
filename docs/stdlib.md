@@ -30,6 +30,20 @@ tracepoint:syscalls:sys_enter_openat {
 see also `cwd`.
 
 
+### arch
+- `string arch()`
+- `string arch`
+
+**compile time**
+
+Name of the architecture bpftrace was built for. One of: `x86_64`, `arm64`,
+`arm`, `s390x`, `ppc64le`, `ppc64`, `mips64`, `riscv64`, `loongarch64`.
+
+Note this is the architecture of the bpftrace binary itself, which is not
+necessarily what `uname -m` reports: a 32 bit arm build running on an arm64
+kernel yields `arm`.
+
+
 ### assert
 - `void assert(bool condition, string message)`
 

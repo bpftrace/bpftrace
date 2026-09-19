@@ -2351,7 +2351,9 @@ begin {
 
 ### Supported architectures
 
-x86_64, arm64, s390x, arm32, loongarch64, mips64, ppc64, riscv64
+x86_64, arm64, arm, s390x, loongarch64, mips64, ppc64le, ppc64, riscv64
+
+These are also the values that the [arch](stdlib.md#arch) builtin can return.
 
 ### Systemd support
 

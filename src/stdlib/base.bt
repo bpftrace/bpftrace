@@ -1,3 +1,18 @@
+// :variant string arch()
+//
+// **compile time**
+//
+// Name of the architecture bpftrace was built for. One of: `x86_64`, `arm64`,
+// `arm`, `s390x`, `ppc64le`, `ppc64`, `mips64`, `riscv64`, `loongarch64`.
+//
+// Note this is the architecture of the bpftrace binary itself, which is not
+// necessarily what `uname -m` reports: a 32 bit arm build running on an arm64
+// kernel yields `arm`.
+macro arch()
+{
+  __builtin_arch
+}
+
 // :variant void assert(bool condition, string message)
 // Simple assertion macro that will exit the entire script with an error code if the condition is not met.
 macro assert(cond, msg)
