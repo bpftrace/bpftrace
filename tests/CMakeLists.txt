@@ -11,7 +11,6 @@ add_executable(bpftrace_test
   bpfbytecode.cpp
   bpftrace.cpp
   btf.cpp
-  builtins.cpp
   pre_type_check.cpp
   child.cpp
   clang_parser.cpp

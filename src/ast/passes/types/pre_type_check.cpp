@@ -1,5 +1,6 @@
 #include "ast/passes/types/pre_type_check.h"
 
+#include <cstdlib>
 #include <regex>
 #include <set>
 #include <sstream>
@@ -9,7 +10,9 @@
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/helpers.h"
+#include "ast/passes/collect_nodes.h"
 #include "ast/passes/map_sugar.h"
+#include "ast/signal_bt.h"
 #include "ast/visitor.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
@@ -283,6 +286,10 @@ struct nargs_spec {
 
 // clang-format off
 const std::map<std::string, nargs_spec> CALL_NARGS = {
+  { "__builtin_is_literal", { .min_args=1, .max_args=1 } },
+  { "__builtin_kfunc_allowed", { .min_args=1, .max_args=1 } },
+  { "__builtin_kfunc_exist", { .min_args=1, .max_args=1 } },
+  { "__builtin_signal_num", { .min_args=1, .max_args=1 } },
   { "__builtin_dw_ustack", { .min_args=0, .max_args=2 } },
   { "__builtin_uaddr", { .min_args=1, .max_args=1 } },
   { "avg",            { .min_args=3, .max_args=3 } },
@@ -374,6 +381,172 @@ void MapCheck::visit(Sizeof &szof)
 void MapCheck::visit(Typeof &typeof)
 {
   AssignMapDisallowed<"typeof or typeinfo">().visit(typeof.record);
+}
+
+class BuiltinPreCheck : public Visitor<BuiltinPreCheck> {
+public:
+  explicit BuiltinPreCheck(BPFtrace &bpftrace) : bpftrace_(bpftrace)
+  {
+  }
+
+  using Visitor<BuiltinPreCheck>::visit;
+
+  void visit(Builtin &builtin);
+  void visit(Call &call);
+  void visit(For &f);
+  void visit(Probe &probe);
+  void visit(Subprog &subprog);
+
+private:
+  Probe *require_probe(Node &node, const std::string &ident);
+
+  BPFtrace &bpftrace_;
+  Node *top_level_node_ = nullptr;
+};
+
+Probe *BuiltinPreCheck::require_probe(Node &node, const std::string &ident)
+{
+  auto *probe = dynamic_cast<Probe *>(top_level_node_);
+  if (probe == nullptr) {
+    node.addError() << "Builtin " << ident << " not supported outside probe";
+  }
+  return probe;
+}
+
+void BuiltinPreCheck::visit(Builtin &builtin)
+{
+  if (builtin.ident == "ctx") {
+    auto *probe = require_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return;
+
+    ProbeType pt = probe->get_probetype();
+    bpf_prog_type bt = progtype(pt);
+    bool has_error = false;
+    switch (bt) {
+      case BPF_PROG_TYPE_KPROBE:
+      case BPF_PROG_TYPE_PERF_EVENT:
+        break;
+      case BPF_PROG_TYPE_TRACEPOINT:
+        builtin.addError() << "Use args instead of ctx in tracepoint";
+        break;
+      case BPF_PROG_TYPE_TRACING:
+        if (pt != ProbeType::iter) {
+          has_error = true;
+        }
+        break;
+      default:
+        has_error = true;
+        break;
+    }
+
+    if (has_error) {
+      builtin.addError() << "The " << builtin.ident
+                         << " builtin can not be used with '"
+                         << probe->attach_points[0]->provider << "' probes";
+    }
+  } else if (builtin.ident == "__builtin_func") {
+    auto *probe = require_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return;
+
+    ProbeType type = probe->get_probetype();
+    if (type == ProbeType::kprobe || type == ProbeType::uprobe) {
+      return;
+    }
+    if (type == ProbeType::kretprobe || type == ProbeType::uretprobe ||
+        type == ProbeType::fentry || type == ProbeType::fexit) {
+      if (!bpftrace_.feature_->has_helper_get_func_ip()) {
+        builtin.addError()
+            << "BPF_FUNC_get_func_ip not available for your kernel version. "
+               "Consider using the 'probe' builtin instead.";
+      }
+      return;
+    }
+
+    builtin.addError() << "The func builtin can not be used with '"
+                       << probe->attach_points[0]->provider << "' probes";
+  } else if (builtin.is_argx()) {
+    auto *probe = require_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return;
+
+    int arg_num = atoi(builtin.ident.substr(3).c_str());
+    if (probe->get_probetype() != ProbeType::usdt &&
+        static_cast<size_t>(arg_num) >= arch::Host::arguments().size()) {
+      builtin.addError() << arch::Host::Machine << " doesn't support "
+                         << builtin.ident;
+    }
+  } else if (builtin.ident == "__builtin_usermode") {
+    if (arch::Host::Machine != arch::Machine::X86_64) {
+      builtin.addError() << "'usermode' builtin is only supported on x86_64";
+    }
+  } else if (builtin.ident == "args") {
+    auto *probe = require_probe(builtin, builtin.ident);
+    if (probe == nullptr)
+      return;
+
+    ProbeType type = probe->get_probetype();
+    if (type == ProbeType::fentry || type == ProbeType::fexit ||
+        type == ProbeType::uprobe || type == ProbeType::rawtracepoint ||
+        type == ProbeType::tracepoint) {
+      if ((type == ProbeType::fentry || type == ProbeType::fexit) &&
+          probe->attach_points[0]->target == "bpf") {
+        builtin.addError() << "The args builtin cannot be used for "
+                              "'fentry/fexit:bpf' probes";
+      }
+      return;
+    }
+
+    builtin.addError()
+        << "The args builtin can only be used with "
+           "tracepoint, rawtracepoint, fentry/fexit, and uprobe probes ("
+        << type << " used here)";
+  } else if (builtin.ident == "__builtin_probe" ||
+             builtin.ident == "__builtin_probetype" ||
+             builtin.ident == "__builtin_elf_is_exe" ||
+             builtin.ident == "__builtin_elf_ino") {
+    require_probe(builtin, builtin.ident);
+  }
+}
+
+void BuiltinPreCheck::visit(Call &call)
+{
+  if (call.func == "__builtin_kfunc_allowed") {
+    require_probe(call, call.func);
+  }
+
+  Visitor<BuiltinPreCheck>::visit(call);
+}
+
+void BuiltinPreCheck::visit(For &f)
+{
+  CollectNodes<Builtin> builtins;
+  builtins.visit(f.block);
+  for (const Builtin &builtin : builtins.nodes()) {
+    if (builtin.is_argx() || builtin.ident == "__builtin_retval") {
+      builtin.addError() << "'" << builtin.ident
+                         << "' builtin is not allowed in a for-loop";
+    }
+  }
+
+  Visitor<BuiltinPreCheck>::visit(f);
+}
+
+void BuiltinPreCheck::visit(Probe &probe)
+{
+  auto *old = top_level_node_;
+  top_level_node_ = &probe;
+  Visitor<BuiltinPreCheck>::visit(probe);
+  top_level_node_ = old;
+}
+
+void BuiltinPreCheck::visit(Subprog &subprog)
+{
+  auto *old = top_level_node_;
+  top_level_node_ = &subprog;
+  Visitor<BuiltinPreCheck>::visit(subprog);
+  top_level_node_ = old;
 }
 
 class CallPreCheck : public Visitor<CallPreCheck> {
@@ -540,9 +713,7 @@ void CallPreCheck::visit(Call &call)
     }
     if (call.vargs.size() == 4) {
       const auto *bits = call.vargs.at(3).as<Integer>();
-      if (!bits) {
-        LOG(BUG) << call.func << ": invalid bits value, need integer literal";
-      } else if (bits->value > 5) {
+      if (bits && bits->value > 5) {
         call.addError() << call.func << ": bits " << bits->value
                         << " must be 0..5";
       }
@@ -707,6 +878,12 @@ void CallPreCheck::visit(Call &call)
     }
   } else if (call.func == "__builtin_uaddr") {
     check_symbol(call);
+  } else if (call.func == "__builtin_signal_num") {
+    if (auto *str = call.vargs.at(0).as<String>()) {
+      if (signal_name_to_num(str->value) < 1) {
+        call.addError() << "Invalid string for signal: " << str->value;
+      }
+    }
   }
 }
 
@@ -779,6 +956,7 @@ Pass CreatePreTypeCheckPass()
     }
 
     MapCheck().visit(ast.root);
+    BuiltinPreCheck(bpftrace).visit(ast.root);
 
     CallPreCheck call_checker(ast, bpftrace);
     call_checker.visit(ast.root);

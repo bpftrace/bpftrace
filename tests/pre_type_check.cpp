@@ -1,7 +1,7 @@
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
 
-#include "ast/passes/ap_probe_expansion.h"
+#include "arch/arch.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
 #include "ast/passes/config_analyser.h"
@@ -28,11 +28,13 @@ std::string_view clean_prefix(std::string_view view)
 void test(const std::string &input,
           const std::string &expected_error = "",
           const std::string &expected_warning = "",
-          bool safe_mode = true)
+          bool safe_mode = true,
+          bool features = true)
 {
   auto mock_bpftrace = get_mock_bpftrace();
   BPFtrace &bpftrace = *mock_bpftrace;
   bpftrace.safe_mode_ = safe_mode;
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(features);
 
   ast::ASTContext ast("stdin", input);
   auto ok = ast::PassManager()
@@ -45,8 +47,7 @@ void test(const std::string &input,
                 .add(ast::CreateImportInternalScriptsPass())
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
-                .add(ast::CreateProbeAndApExpansionPass())
-                .add(ast::CreateConfigBuiltinsPass())
+                .add(ast::CreatePreExpansionBuiltinsPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateBuiltinsPass())
                 .add(ast::CreateMapSugarPass())
@@ -282,6 +283,216 @@ TEST(CallPreCheck, probe_availability)
   test("end { $k = path(1) }",
        "The path function can only be used with "
        "'fentry', 'fexit', 'iter' probes");
+}
+
+TEST(BuiltinPreCheck, ctx)
+{
+  std::vector<std::string> valid = {
+    "uprobe:sh:k",           "uretprobe:sh:k",    "kprobe:k",
+    "kretprobe:k",           "usdt:sh:k",         "profile:s:10",
+    "interval:s:10",         "software:faults:1", "hardware:cpu-cycles:1",
+    "watchpoint:0x1234:8:r", "iter:task"
+  };
+
+  for (const auto &probe : valid) {
+    test(probe + " { $x = ctx; }");
+  }
+
+  test("tracepoint:mod:k { $x = ctx; }",
+       "ERROR: Use args instead of ctx in tracepoint");
+
+  std::vector<std::string> invalid = { "begin", "end", "test:k" };
+  for (const auto &probe : invalid) {
+    test(probe + " { $x = ctx; }", "ERROR: The ctx builtin can not be used");
+  }
+}
+
+TEST(BuiltinPreCheck, args)
+{
+  std::vector<std::string> valid = {
+    "fentry:k", "fexit:k", "rawtracepoint:k", "uprobe:sh:k", "tracepoint:mod:k",
+  };
+
+  for (const auto &probe : valid) {
+    test(probe + " { $x = args.foo; }");
+  }
+
+  test("iter:task { $x = args.foo; }", R"(
+stdin:1:18-22: ERROR: The args builtin can only be used with tracepoint, rawtracepoint, fentry/fexit, and uprobe probes (iter used here)
+iter:task { $x = args.foo; }
+                 ~~~~
+)");
+  test("fentry:bpf:fake_prog { $x = args.foo; }",
+       "ERROR: The args builtin cannot be used for 'fentry/fexit:bpf' probes");
+
+  std::vector<std::string> invalid = { "begin",
+                                       "end",
+                                       "test:k",
+                                       "kprobe:k",
+                                       "kretprobe:k",
+                                       "uretprobe:sh:k",
+                                       "usdt:sh:k",
+                                       "profile:s:10",
+                                       "interval:s:10",
+                                       "software:faults:1",
+                                       "hardware:cpu-cycles:1",
+                                       "watchpoint:0x1234:8:r",
+                                       "iter:task" };
+
+  for (const auto &probe : invalid) {
+    test(probe + " { $x = args.foo; }",
+         "ERROR: The args builtin can only be used with "
+         "tracepoint, rawtracepoint, fentry/fexit, and uprobe probes");
+  }
+}
+
+TEST(BuiltinPreCheck, retval)
+{
+  std::vector<std::string> valid = {
+    "fentry:k", "fexit:k", "kretprobe:k", "uretprobe:sh:k"
+  };
+
+  for (const auto &probe : valid) {
+    test(probe + " { __builtin_retval }");
+  }
+
+  test("kretprobe:k { @map[0] = 1; for ($kv : @map) { __builtin_retval } }",
+       "ERROR: '__builtin_retval' builtin is not allowed in a for-loop");
+  test("iter:task { __builtin_retval }", R"(
+stdin:1:13-29: ERROR: The retval builtin can only be used with 'kretprobe' and 'uretprobe' and 'fentry' probes
+iter:task { __builtin_retval }
+            ~~~~~~~~~~~~~~~~
+)");
+
+  std::vector<std::string> invalid = { "begin",
+                                       "end",
+                                       "test:k",
+                                       "kprobe:k",
+                                       "rawtracepoint:k",
+                                       "uprobe:sh:k",
+                                       "usdt:sh:k",
+                                       "tracepoint:mod:k",
+                                       "profile:s:10",
+                                       "interval:s:10",
+                                       "software:faults:1",
+                                       "hardware:cpu-cycles:1",
+                                       "watchpoint:0x1234:8:r",
+                                       "iter:task" };
+
+  for (const auto &probe : invalid) {
+    test(probe + " { __builtin_retval }",
+         "ERROR: The retval builtin can only be used with 'kretprobe' "
+         "and 'uretprobe' and 'fentry' probes");
+  }
+}
+
+TEST(BuiltinPreCheck, argX)
+{
+  std::vector<std::string> valid = {
+    "kprobe:k",
+    "uprobe:sh:k",
+    "usdt:sh:k",
+    "rawtracepoint:k",
+  };
+
+  for (const auto &probe : valid) {
+    test(probe + " { $x = arg0; $y = arg1; }");
+  }
+
+  test("kprobe:k { @map[0] = 1; for ($kv : @map) { $x = arg0; } }",
+       "ERROR: 'arg0' builtin is not allowed in a for-loop");
+  test("kprobe:k { $x = arg" + std::to_string(arch::Host::arguments().size()) +
+           "; }",
+       "ERROR");
+  test("begin { $x = arg0; }", R"(
+stdin:1:14-18: ERROR: The arg0 builtin can only be used with 'kprobes', 'uprobes' and 'usdt' probes
+begin { $x = arg0; }
+             ~~~~
+)");
+
+  std::vector<std::string> invalid = { "begin",
+                                       "end",
+                                       "test:k",
+                                       "kretprobe:k",
+                                       "uretprobe:sh:k",
+                                       "fentry:k",
+                                       "fexit:k",
+                                       "tracepoint:mod:k",
+                                       "profile:s:10",
+                                       "interval:s:10",
+                                       "software:faults:1",
+                                       "hardware:cpu-cycles:1",
+                                       "watchpoint:0x1234:8:r",
+                                       "iter:task" };
+
+  for (const auto &probe : invalid) {
+    test(probe + " { $x = arg0; }",
+         "ERROR: The arg0 builtin can only be used with 'kprobes', "
+         "'uprobes' and 'usdt' probes");
+  }
+}
+
+TEST(BuiltinPreCheck, func)
+{
+  std::vector<std::string> valid = { "kprobe:k",    "uprobe:sh:k",
+                                     "kretprobe:k", "uretprobe:sh:k",
+                                     "fentry:k",    "fexit:k" };
+
+  for (const auto &probe : valid) {
+    test(probe + " { __builtin_func }");
+  }
+
+  test("begin { __builtin_func }", R"(
+stdin:1:9-23: ERROR: The func builtin can not be used with 'begin' probes
+begin { __builtin_func }
+        ~~~~~~~~~~~~~~
+)");
+
+  test("fexit:k { __builtin_func }",
+       R"(
+stdin:1:11-25: ERROR: BPF_FUNC_get_func_ip not available for your kernel version. Consider using the 'probe' builtin instead.
+fexit:k { __builtin_func }
+          ~~~~~~~~~~~~~~
+)",
+       "",
+       true,
+       false);
+
+  std::vector<std::string> invalid = { "begin",
+                                       "end",
+                                       "test:k",
+                                       "rawtracepoint:k",
+                                       "tracepoint:mod:k",
+                                       "profile:s:10",
+                                       "interval:s:10",
+                                       "software:faults:1",
+                                       "hardware:cpu-cycles:1",
+                                       "watchpoint:0x1234:8:r",
+                                       "iter:task" };
+
+  for (const auto &probe : invalid) {
+    test(probe + " { __builtin_func }",
+         "ERROR: The func builtin can not be used with");
+  }
+}
+
+TEST(BuiltinPreCheck, kfunc_allowed)
+{
+  test(R"(kprobe:k { $x = __builtin_kfunc_allowed("bpf_probe_read"); })");
+  test(R"(fn f(): void { $x = __builtin_kfunc_allowed("bpf_probe_read"); })",
+       "ERROR: Builtin __builtin_kfunc_allowed not supported outside probe");
+}
+
+TEST(BuiltinPreCheck, argx_in_session_probe)
+{
+  test("kprobe:sys_* { $x = arg0; } kretprobe:sys_* { @exit = 1 }");
+  test("kprobe:sys_read { $x = arg0; } kretprobe:sys_read { @exit = 1 }");
+  test("kprobe:sys_* { @entry = 1 } kretprobe:sys_* { $x = arg0; }",
+       "ERROR: The arg0 builtin can only be used with 'kprobes', 'uprobes' "
+       "and 'usdt' probes");
+  test("kprobe:sys_read { @entry = 1 } kretprobe:sys_read { $x = arg0; }",
+       "ERROR: The arg0 builtin can only be used with 'kprobes', 'uprobes' "
+       "and 'usdt' probes");
 }
 
 TEST(CallPreCheck, nargs)
