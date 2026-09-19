@@ -18,6 +18,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/named_param.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/types/pre_type_check.h"
 #include "ast/passes/types/type_map.h"
 #include "ast/passes/types/type_resolver.h"
 #include "ast/passes/types/type_system.h"
@@ -180,6 +181,7 @@ public:
                   .add(ast::CreateCMacroExpansionPass())
                   .add(ast::CreateMapSugarPass())
                   .add(ast::CreateNamedParamsPass())
+                  .add(ast::CreatePreTypeCheckPass())
                   .add(ast::CreateTypeResolverPass())
                   .run();
     EXPECT_TRUE(bool(ok));
