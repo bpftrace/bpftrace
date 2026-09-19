@@ -14,20 +14,20 @@ namespace bpftrace::ast {
 
 namespace {
 
-class ConfigBuiltins
-    : public Visitor<ConfigBuiltins, std::optional<Expression>> {
+class PreFoldBuiltins
+    : public Visitor<PreFoldBuiltins, std::optional<Expression>> {
 public:
-  ConfigBuiltins(ASTContext &ast, BPFtrace &bpftrace)
+  PreFoldBuiltins(ASTContext &ast, BPFtrace &bpftrace)
       : ast_(ast), bpftrace_(bpftrace)
   {
   }
 
-  using Visitor<ConfigBuiltins, std::optional<Expression>>::visit;
+  using Visitor<PreFoldBuiltins, std::optional<Expression>>::visit;
 
   std::optional<Expression> visit(Expression &expr)
   {
     auto replacement =
-        Visitor<ConfigBuiltins, std::optional<Expression>>::visit(expr.value);
+        Visitor<PreFoldBuiltins, std::optional<Expression>>::visit(expr.value);
     if (replacement) {
       expr.value = replacement->value;
     }
@@ -36,23 +36,29 @@ public:
 
   std::optional<Expression> visit(Builtin &builtin)
   {
-    if (builtin.ident == "__builtin_config") {
-      return expand_config(builtin.loc);
-    }
-
-    return std::nullopt;
+    return expand(builtin.ident, builtin.loc);
   }
 
   std::optional<Expression> visit(Identifier &identifier)
   {
-    if (identifier.ident == "__builtin_config") {
-      return expand_config(identifier.loc);
+    return expand(identifier.ident, identifier.loc);
+  }
+
+private:
+  std::optional<Expression> expand(const std::string &ident,
+                                   const Location &loc)
+  {
+    if (ident == "__builtin_config") {
+      return expand_config(loc);
+    } else if (ident == "__builtin_arch") {
+      std::stringstream ss;
+      ss << bpftrace::arch::current();
+      return ast_.make_node<String>(loc, ss.str());
     }
 
     return std::nullopt;
   }
 
-private:
   std::optional<Expression> expand_config(const Location &loc)
   {
     std::vector<std::pair<std::string, Expression>> args;
@@ -181,14 +187,15 @@ std::optional<Expression> Builtins::check(const std::string &ident, Node &node)
   // provider, etc.) but it presently cannot due to the expansion rules. All
   // builtins should be added here once probes are fully-expanded up front.
   //
+  // Conversely, builtins that do not need expansion at all belong in
+  // PreFoldBuiltins, which runs before literal folding. Only builtins folded
+  // there can be used in an `if comptime` condition that has to prune a branch
+  // the other passes would otherwise reject.
+  //
   // All of these builtins should be directly evaluated and folded and not
   // associated with any code generation. These builtins should be kept to the
   // minimum possible set to support the standard library.
-  if (ident == "__builtin_arch") {
-    std::stringstream ss;
-    ss << bpftrace::arch::current();
-    return ast_.make_node<String>(node.loc, ss.str());
-  } else if (ident == "__builtin_safe_mode") {
+  if (ident == "__builtin_safe_mode") {
     return ast_.make_node<Boolean>(node.loc, bpftrace_.safe_mode_);
   } else if (ident == "__builtin_probe") {
     if (check_probe()) {
@@ -411,14 +418,14 @@ Pass CreateBuiltinsPass()
   return Pass::create("Builtins", fn);
 };
 
-Pass CreateConfigBuiltinsPass()
+Pass CreatePreFoldBuiltinsPass()
 {
   auto fn = [&](ASTContext &ast, BPFtrace &bpftrace) {
-    ConfigBuiltins config_builtins(ast, bpftrace);
-    config_builtins.visit(ast.root);
+    PreFoldBuiltins pre_fold_builtins(ast, bpftrace);
+    pre_fold_builtins.visit(ast.root);
   };
 
-  return Pass::create("ConfigBuiltins", fn);
+  return Pass::create("PreFoldBuiltins", fn);
 };
 
 Pass CreatePreExpansionBuiltinsPass()
