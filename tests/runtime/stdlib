@@ -1,6 +1,6 @@
 NAME assert_macro
 PROG BEGIN { assert(false, "My error message"); }
-EXPECT stdlib/base.bt:6:5-37: ERROR: assert failed: My error message
+EXPECT_REGEX stdlib/base\.bt:[0-9]+:5-37: ERROR: assert failed: My error message
 WILL_FAIL
 
 NAME ppid_macro
@@ -88,3 +88,14 @@ EXPECT /etc/passwd
 NAME cwd
 PROG begin { print(cwd); }
 EXPECT {{CWD}}
+
+NAME arch
+PROG begin { print(arch); exit(); }
+EXPECT_REGEX ^(x86_64|arm64|arm|s390x|ppc64le|ppc64|mips64|riscv64|loongarch64)$
+TIMEOUT 5
+
+NAME arch on x86_64
+ARCH x86_64
+PROG begin { print(arch); exit(); }
+EXPECT x86_64
+TIMEOUT 5
