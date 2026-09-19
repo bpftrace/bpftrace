@@ -58,8 +58,10 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateArgsResolverPass());
   passes.emplace_back(CreateFieldAnalyserPass());
   passes.emplace_back(CreateClangParsePass(std::move(extra_flags)));
-  // separate pass so we can fold accesses to configs e.g. `config.max_strlen`
-  passes.emplace_back(CreateConfigBuiltinsPass());
+  // separate pass so we can fold expansion-independent builtins e.g.
+  // `config.max_strlen` and `arch`, which lets `if comptime` on them prune the
+  // untaken branch before anything else looks at it
+  passes.emplace_back(CreatePreFoldBuiltinsPass());
   passes.emplace_back(CreateFoldLiteralsPass());
   passes.emplace_back(CreateBuiltinsPass());
   passes.emplace_back(CreateCMacroExpansionPass());

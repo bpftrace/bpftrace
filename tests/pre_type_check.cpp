@@ -1,6 +1,7 @@
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
 
+#include "arch/arch.h"
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/builtins.h"
@@ -46,7 +47,7 @@ void test(const std::string &input,
                 .add(ast::CreateMacroExpansionPass())
                 .add(ast::CreateParseAttachpointsPass())
                 .add(ast::CreateProbeAndApExpansionPass())
-                .add(ast::CreateConfigBuiltinsPass())
+                .add(ast::CreatePreFoldBuiltinsPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateBuiltinsPass())
                 .add(ast::CreateMapSugarPass())
@@ -599,6 +600,35 @@ TEST(CallPreCheck, raw_map_arg_funcs)
        "expects a map argument");
   test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }",
        "expects a map argument");
+}
+
+TEST(CallPreCheck, builtin_arch_comptime_pruning)
+{
+  std::stringstream ss;
+  ss << arch::current();
+  const std::string host = ss.str();
+
+  // The point of __builtin_arch is guarding code that is invalid everywhere
+  // else, so the untaken branch has to be gone before anything validates it.
+  // That only holds if it is folded before the parse pipeline folds literals,
+  // which is also what separates this from a test of `if comptime` in general:
+  // a branch guarded by a plain literal is pruned by the folder itself, and a
+  // branch holding something like an undefined function survives all the way
+  // to the type resolver, which runs after this pass. A bad register name is
+  // rejected right here, so these only pass if __builtin_arch is already a
+  // literal by the time the folder sees it.
+  test("kprobe:f { if comptime (__builtin_arch == \"" + host +
+       "\") { print(1); } else { reg(\"nonexistent\"); } }");
+  test("kprobe:f { if comptime (__builtin_arch != \"" + host +
+       "\") { reg(\"nonexistent\"); } else { print(1); } }");
+
+  // Errors
+  //
+  // The branch that survives is still checked, so this is not a blanket
+  // exemption for anything sitting under a __builtin_arch comparison.
+  test("kprobe:f { if comptime (__builtin_arch == \"" + host +
+           "\") { reg(\"nonexistent\"); } }",
+       "'nonexistent' is not a valid register on this architecture");
 }
 
 TEST(MapPreCheck, no_meta_map_assignments)
