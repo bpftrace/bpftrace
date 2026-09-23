@@ -1,0 +1,84 @@
+test:range_with_zero_iterations
+{
+  $count = 0;
+
+  for $i : 1..0 {
+    $count++;
+  }
+
+  if ($count != 0) {
+    return 1;
+  }
+}
+
+test:range_with_same_start_and_end
+{
+  $count = 0;
+
+  for $i : 5..5 {
+    $count++;
+  }
+
+  if ($count != 0) {
+    return 1;
+  }
+}
+
+test:range_with_variable_modification
+{
+  $sum = 0;
+
+  for $i : 1..5 {
+    $sum += $i;
+  }
+
+  if ($sum != 10) {
+    return 1;
+  }
+}
+
+test:range_using_a_map
+{
+  @range_using_a_map = 10;
+  $count = 0;
+  $sum = 0;
+
+  for $i : 0..(@range_using_a_map) {
+    $count++;
+    $sum += $i;
+  }
+
+  if ($count != 10 || $sum != 45) {
+    return 1;
+  }
+}
+
+test:range_with_map_takes_map_snapshot
+{
+  @range_with_map_takes_map_snapshot = 10;
+  $count = 0;
+
+  for $i : 0..(@range_with_map_takes_map_snapshot) {
+    @range_with_map_takes_map_snapshot = 0;
+    $count++;
+  }
+
+  if ($count != 10) {
+    return 1;
+  }
+}
+
+test:external_function_call_range
+{
+  @external_function_call_range[1] = 1;
+  $x = 1;
+  $found = false;
+
+  for $i : 0..1 {
+    $found = has_key(@external_function_call_range, $x);
+  }
+
+  if (!$found) {
+    return 1;
+  }
+}
