@@ -649,7 +649,8 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
                                                           bool allow_src_loc)
 {
   auto num_parts = parts_.size();
-  // kprobe attached by source code location (kprobe@source_file:line[:col])
+  // kprobe attached by source code location
+  // (kprobe@[module:]source_file:line[:col])
   const bool source_location = num_parts > 1 && parts_[1] == "@";
   if (!source_location && num_parts != 2 && num_parts != 3) {
     if (ap_->ignore_invalid)
@@ -664,24 +665,35 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
       return INVALID;
     }
 
-    if ((parts_.size() != 4 && parts_.size() != 5) ||
-        (parts_[2].empty() || parts_[3].empty())) {
+    const bool module_qualified = (parts_.size() == 5 || parts_.size() == 6) &&
+                                  !parts_[2].empty() && !parts_[3].empty() &&
+                                  !util::to_uint(parts_[3]) &&
+                                  parts_[2].find('/') == std::string::npos;
+
+    const size_t file_idx = module_qualified ? 3 : 2;
+    const size_t expected_parts = module_qualified ? 5 : 4;
+
+    if ((parts_.size() != expected_parts &&
+         parts_.size() != expected_parts + 1) ||
+        parts_[file_idx].empty() || parts_[file_idx + 1].empty()) {
       errs_ << "Invalid kprobe arguments, "
-            << "expected format: kprobe@FILE:LINE[:COL]" << std::endl;
+            << "expected format: kprobe@[MODULE:]FILE:LINE[:COL]" << std::endl;
       return INVALID;
     }
 
-    ap_->source_file = parts_[2];
+    const std::string kernel_module = module_qualified ? parts_[2] : "";
 
-    auto line = util::to_uint(parts_[3]);
+    ap_->source_file = parts_[file_idx];
+
+    auto line = util::to_uint(parts_[file_idx + 1]);
     if (!line) {
       errs_ << "Invalid line number: " << line.takeError() << std::endl;
       return INVALID;
     }
     ap_->line_num = *line;
 
-    if (parts_.size() == 5) {
-      auto col = util::to_uint(parts_[4]);
+    if (parts_.size() == file_idx + 3) {
+      auto col = util::to_uint(parts_[file_idx + 2]);
       if (!col) {
         errs_ << "Invalid column number: " << col.takeError() << std::endl;
         return INVALID;
@@ -691,9 +703,8 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
 
     Dwarf *dwarf = bpftrace_.get_kernel_dwarf();
     if (dwarf) {
-      auto location = dwarf->line_to_addr(ap_->source_file,
-                                          ap_->line_num,
-                                          ap_->col_num);
+      auto location = dwarf->line_to_addr(
+          ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
       if (!location) {
         errs_ << location.takeError() << std::endl;
         return INVALID;
