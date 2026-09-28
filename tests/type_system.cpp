@@ -123,7 +123,7 @@ TEST(TypeSystemTest, basic)
     "void tcp_shutdown(struct sock* sk, int how)",
     ".data..percpu",
   };
-  for (const auto &v : types.global) {
+  for (const auto &v : types.kernel) {
     std::stringstream ss;
     ss << v;
     const auto s = ss.str();

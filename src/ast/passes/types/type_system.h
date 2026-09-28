@@ -8,17 +8,18 @@
 
 namespace bpftrace::ast {
 
-// TypeMetadata contains metadata related to the set of external types that are
-// available to each probe. Note that this does not currently cover any of the
-// existing `SizedType` implementations.
+// TypeMetadata holds the external BTF types: `global` is built from the
+// standard library and imported C modules, and `kernel` is loaded from
+// vmlinux. It does not cover any of the existing `SizedType` implementations.
 //
-// For now, this consistent of a single `global` set of types that are
-// available from the extern interop modules. In the future this may be
-// extended to "per-probe" types, e.g. the types loaded from the kernel, per
-// module or associated with user binaries.
+// Currently this is only consulted to resolve calls to external functions,
+// which are looked up in `global`. In the future this may be extended to
+// "per-probe" types, e.g. the types loaded per kernel module or associated
+// with user binaries.
 class TypeMetadata : public ast::State<"type-metadata"> {
 public:
   btf::Types global;
+  btf::Types kernel;
 };
 
 Pass CreateTypeSystemPass();
