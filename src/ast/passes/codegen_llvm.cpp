@@ -215,6 +215,7 @@ public:
   ScopedExpr visit(Identifier &identifier);
   ScopedExpr visit(Builtin &builtin);
   ScopedExpr visit(Call &call);
+  ScopedExpr kfunc_call(Call &call);
   ScopedExpr visit(Map &map);
   ScopedExpr visit(MapAddr &map_addr);
   ScopedExpr visit(Variable &var);
@@ -920,8 +921,55 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
   }
 }
 
+ScopedExpr CodegenLLVM::kfunc_call(Call &call)
+{
+  const auto &ret_type = type_map_.type(&call);
+  bool returns_void = ret_type.IsVoidTy() || ret_type.IsNoneTy();
+
+  llvm::Function *fn = module_->getFunction(call.func);
+  if (fn == nullptr) {
+    SmallVector<llvm::Type *> arg_types;
+    Struct debug_args;
+    for (size_t i = 0; i < call.vargs.size(); i++) {
+      const auto &arg_type = type_map_.type(call.vargs.at(i));
+      arg_types.push_back(b_.GetType(arg_type));
+      debug_args.AddField("arg" + std::to_string(i), arg_type);
+    }
+
+    FunctionType *func_type = FunctionType::get(
+        returns_void ? b_.getVoidTy() : b_.GetType(ret_type), arg_types, false);
+    fn = llvm::Function::Create(func_type,
+                                llvm::Function::LinkageTypes::ExternalLinkage,
+                                call.func,
+                                module_.get());
+    fn->setDSOLocal(true);
+    fn->setSection(".ksyms");
+    fn->addFnAttr(Attribute::NoUnwind);
+
+    debug_.createFunctionDebugInfo(*fn,
+                                   returns_void ? nullptr
+                                                : debug_.GetType(ret_type),
+                                   debug_args,
+                                   /*is_declaration=*/true);
+  }
+
+  std::vector<ScopedExpr> args;
+  SmallVector<llvm::Value *> arg_values;
+  args.reserve(call.vargs.size());
+  for (auto &expr : call.vargs) {
+    args.emplace_back(visit(expr));
+    arg_values.push_back(args.back().value());
+  }
+
+  return ScopedExpr(b_.CreateCall(fn, arg_values));
+}
+
 ScopedExpr CodegenLLVM::visit(Call &call)
 {
+  if (call.is_kfunc()) {
+    return kfunc_call(call);
+  }
+
   if (call.func == "count") {
     Map &map = *call.vargs.at(0).as<Map>();
     auto scoped_key = getMapKey(map, call.vargs.at(1));

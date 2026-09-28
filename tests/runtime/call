@@ -893,3 +893,38 @@ NAME write_user_basic
 RUN {{BPFTRACE}} --unsafe -e 'tracepoint:syscalls:sys_enter_openat /pid == 0xffffffff/ { write_user(args.filename, "x", 1); }' -e 'BEGIN { exit(); }'
 EXPECT Attached 1 probe
 TIMEOUT 5
+
+NAME kfunc calls single arg
+PROG tracepoint:syscalls:sys_enter_read { $t = kfunc::bpf_task_from_pid(1); if ($t != 0) { printf("pid1 tgid=%d\n", $t->tgid); kfunc::bpf_task_release($t); } exit(); }
+EXPECT pid1 tgid=1
+REQUIRES_FEATURE btf
+
+NAME kfunc calls with multiple args
+PROG tracepoint:syscalls:sys_enter_read { $c = kfunc::bpf_cgroup_from_id(cgroup); if ($c != 0) { print(kfunc::bpf_task_under_cgroup(curtask, $c)); kfunc::bpf_cgroup_release($c); } exit(); }
+EXPECT 1
+REQUIRES_FEATURE btf
+MIN_KERNEL 6.5
+
+NAME kfunc call conflicts with imported definition
+PROG import "stdlib/test"; tracepoint:syscalls:sys_enter_read { $t = kfunc::bpf_task_from_pid(1); exit(); }
+EXPECT_REGEX .*ERROR: `kfunc::bpf_task_from_pid` conflicts with function `bpf_task_from_pid` defined in an imported file.*
+WILL_FAIL
+REQUIRES_FEATURE btf
+
+NAME kfunc call unknown name
+PROG begin { $x = kfunc::definitely_not_a_kernel_function(); }
+EXPECT_REGEX .*ERROR: Unknown kernel function: 'definitely_not_a_kernel_function'.*
+WILL_FAIL
+REQUIRES_FEATURE btf
+
+NAME kfunc call wrong probe context
+PROG tracepoint:syscalls:sys_enter_read { $x = kfunc::vfs_read(0, 0, 0, 0); }
+EXPECT_REGEX .*ERROR: Kernel function `vfs_read` is not callable from a "tracepoint" probe.*
+WILL_FAIL
+REQUIRES_FEATURE btf
+
+NAME kfunc call wrong argument type
+PROG tracepoint:syscalls:sys_enter_read { $t = kfunc::bpf_task_from_pid("x"); }
+EXPECT_REGEX .*ERROR: Expected int32 for argument `pid` got string.*
+WILL_FAIL
+REQUIRES_FEATURE btf

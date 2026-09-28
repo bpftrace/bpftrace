@@ -1038,6 +1038,50 @@ TEST(Parser, call)
                    ExprStatement(Call("delete", { Map("@x") })) })));
 }
 
+TEST(Parser, namespaced_call)
+{
+  test("kprobe:sys_open { kfunc::bpf_task_release(curtask) }",
+       Program().WithProbe(
+           Probe({ "kprobe:sys_open" },
+                 { ExprStatement(KfuncCall("bpf_task_release",
+                                           { Identifier("curtask") })) })));
+
+  test("kprobe:sys_open { $t = kfunc::bpf_task_from_pid(1) }",
+       Program().WithProbe(
+           Probe({ "kprobe:sys_open" },
+                 { AssignVarStatement(Variable("$t"),
+                                      KfuncCall("bpf_task_from_pid",
+                                                { Integer(1) })) })));
+
+  test("kprobe:sys_open { kfunc(1) }",
+       Program().WithProbe(
+           Probe({ "kprobe:sys_open" },
+                 { ExprStatement(Call("kfunc", { Integer(1) })) })));
+
+  test_parse_failure(
+      "kprobe:sys_open { kfunc::() }",
+      R"(stdin:1:26-27: ERROR: syntax: expected a function name after 'kfunc::'
+kprobe:sys_open { kfunc::() }
+                         ~
+stdin:1:26-27: ERROR: syntax: expected ';'
+kprobe:sys_open { kfunc::() }
+                         ~
+)");
+
+  test_parse_failure(
+      "kprobe:sys_open { kfunc::foo }",
+      R"(stdin:1:30-31: ERROR: syntax: expected '(' after 'kfunc::foo'
+kprobe:sys_open { kfunc::foo }
+                             ~
+)");
+
+  test_parse_failure("kprobe:sys_open { $a = tomato::bob(); }",
+                     R"(stdin:1:24-30: ERROR: syntax: unknown namespace 'tomato'
+kprobe:sys_open { $a = tomato::bob(); }
+                       ~~~~~~
+)");
+}
+
 TEST(Parser, call_function)
 {
   // builtin func

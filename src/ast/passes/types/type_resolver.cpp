@@ -388,6 +388,7 @@ private:
 
   std::optional<SizedType> resolve_parsed_type(ParsedType *type, Node &node);
   bool resolve_external_type(SizedType &type, Node &node);
+  void resolve_btf_function(Call &call);
   bool check_offsetof_type(Offsetof &offof, SizedType c_type);
 
   SizedType get_var_type(const ScopedVariable &scoped_var,
@@ -957,6 +958,11 @@ void TypeRuleCollector::visit(Call &call)
     visit(varg);
   }
 
+  if (call.is_kfunc()) {
+    resolve_btf_function(call);
+    return;
+  }
+
   // These map aggregate functions are the only ones that can set the map value
   // types to the corresponding aggregate types. For example `@a = count();`
   // gets desuggared to `count(@a, 0)` However some of these aggregation types
@@ -1277,45 +1283,55 @@ void TypeRuleCollector::visit(Call &call)
     if (!return_type.IsNoneTy()) {
       resolver_.set_type(&call, return_type);
     } else {
-      // BTF function lookup
-      auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
-      if (!maybe_func) {
-        call.addError() << "Unknown function: '" << call.func << "'";
-        return;
-      }
-
-      const auto &func = *maybe_func;
-
-      if (func.linkage() != btf::Function::Linkage::Global &&
-          func.linkage() != btf::Function::Linkage::Extern) {
-        call.addError() << "Unsupported function linkage: '" << call.func
-                        << "'";
-        return;
-      }
-
-      auto proto = func.type();
-      if (!proto) {
-        call.addError() << "Unable to find function proto: "
-                        << proto.takeError();
-        return;
-      }
-      // Extract our return type.
-      auto btf_return_type = proto->return_type();
-      if (!btf_return_type) {
-        call.addError() << "Unable to read return type: "
-                        << btf_return_type.takeError();
-        return;
-      }
-      auto compat_return_type = getCompatType(*btf_return_type,
-                                              bpftrace_.structs);
-      if (!compat_return_type) {
-        call.addError() << "Unable to convert return type: "
-                        << compat_return_type.takeError();
-        return;
-      }
-      resolver_.set_type(&call, *compat_return_type);
+      resolve_btf_function(call);
     }
   }
+}
+
+void TypeRuleCollector::resolve_btf_function(Call &call)
+{
+  auto maybe_func = type_metadata_.for_call(call).lookup<btf::Function>(
+      call.func);
+  if (!maybe_func) {
+    if (call.is_kfunc()) {
+      call.addError() << "Unknown kernel function: '" << call.func
+                      << "'; it is not present in kernel BTF";
+    } else {
+      call.addError() << "Unknown function: '" << call.func << "'";
+    }
+    return;
+  }
+
+  const auto &func = *maybe_func;
+
+  if (!call.is_kfunc() && func.linkage() != btf::Function::Linkage::Global &&
+      func.linkage() != btf::Function::Linkage::Extern) {
+    call.addError() << "Unknown function: '" << call.func << "'";
+    return;
+  }
+
+  auto proto = func.type();
+  if (!proto) {
+    call.addError() << "Unable to find function proto: " << proto.takeError();
+    return;
+  }
+  // Extract our return type.
+  auto btf_return_type = proto->return_type();
+  if (!btf_return_type) {
+    call.addError() << "Unable to read return type: "
+                    << btf_return_type.takeError();
+    return;
+  }
+  auto compat_return_type = getCompatType(*btf_return_type, bpftrace_.structs);
+  if (!compat_return_type) {
+    call.addError() << "Unable to convert return type: "
+                    << compat_return_type.takeError();
+    return;
+  }
+  if (call.is_kfunc() && compat_return_type->IsPtrTy()) {
+    compat_return_type->SetAS(AddrSpace::kernel);
+  }
+  resolver_.set_type(&call, *compat_return_type);
 }
 
 void TypeRuleCollector::visit(Binop &op)

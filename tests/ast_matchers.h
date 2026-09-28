@@ -667,13 +667,27 @@ public:
       return CheckList(call, call.vargs, args_matchers, "arguments");
     });
   }
+
+  CallMatcher& WithNamespace(ast::Call::Namespace ns)
+  {
+    return Where(CheckField(&ast::Call::ns, ns, "namespace"));
+  }
 };
 
 inline CallMatcher Call(
     const std::string& name,
     const std::vector<Matcher<const ast::Expression&>>& args)
 {
-  return CallMatcher().WithFunction(name).WithArgs(args);
+  return CallMatcher().WithFunction(name).WithArgs(args).WithNamespace(
+      ast::Call::Namespace::Default);
+}
+
+inline CallMatcher KfuncCall(
+    const std::string& name,
+    const std::vector<Matcher<const ast::Expression&>>& args)
+{
+  return CallMatcher().WithFunction(name).WithArgs(args).WithNamespace(
+      ast::Call::Namespace::KFunc);
 }
 
 class MapMatcher : public NodeMatcher<MapMatcher, ast::Map> {};

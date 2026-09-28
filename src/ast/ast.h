@@ -4,7 +4,9 @@
 #include <compare>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -496,27 +498,37 @@ public:
 
 class Call : public Node {
 public:
+  enum class Namespace {
+    Default,
+    KFunc,
+  };
+
   explicit Call(ASTContext &ctx,
                 Location &&loc,
                 std::string func,
-                ExpressionList &&vargs)
+                ExpressionList &&vargs,
+                Namespace ns = Namespace::Default)
       : Node(ctx, std::move(loc)),
         func(std::move(func)),
-        vargs(std::move(vargs)) {};
+        vargs(std::move(vargs)),
+        ns(ns) {};
   explicit Call(ASTContext &ctx, const Location &loc, const Call &other)
       : Node(ctx, loc + other.loc),
         func(other.func),
         vargs(clone(ctx, loc, other.vargs)),
+        ns(other.ns),
         injected_args(other.injected_args) {};
 
   bool operator==(const Call &other) const
   {
-    return func == other.func && vargs == other.vargs &&
+    return func == other.func && vargs == other.vargs && ns == other.ns &&
            injected_args == other.injected_args;
   }
   std::strong_ordering operator<=>(const Call &other) const
   {
     if (auto cmp = func <=> other.func; cmp != 0)
+      return cmp;
+    if (auto cmp = ns <=> other.ns; cmp != 0)
       return cmp;
     if (vargs.size() != other.vargs.size())
       return vargs.size() <=> other.vargs.size();
@@ -527,8 +539,18 @@ public:
     return injected_args <=> other.injected_args;
   }
 
+  static std::optional<Namespace> namespace_from_name(std::string_view name);
+  static std::string_view namespace_name(Namespace ns);
+
+  bool is_kfunc() const
+  {
+    return ns == Namespace::KFunc;
+  }
+
   std::string func;
   ExpressionList vargs;
+
+  Namespace ns = Namespace::Default;
 
   // Some passes may inject new arguments to the call, which is always
   // done at the beginning (in order to support variadic arguments) for

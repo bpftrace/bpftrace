@@ -576,6 +576,24 @@ This imports all supported files in the `my_lib/` directory.
 - Imported `.bt` scripts can themselves contain `import` statements.
 - An imported `.bt` script cannot contain a `config` block. Only one config block is allowed in the root script.
 
+## Kernel Functions
+
+Kernel functions (kfuncs) can be called directly with the `kfunc::` prefix:
+
+```
+tracepoint:syscalls:sys_enter_read {
+  $t = kfunc::bpf_task_from_pid(1);
+  if ($t != 0) {
+    printf("pid 1 is %s\n", $t->comm);
+    kfunc::bpf_task_release($t);
+  }
+}
+```
+
+bpftrace checks at compile time that the target really is a kfunc and that it is callable from the probe type you used.
+
+**Use at your own risk.** bpftrace cannot check the rules the verifier applies to kfuncs so make sure to check the kfunc documentation and proper usage.
+
 ## Identifiers
 
 Identifiers must match the following regular expression: `[_a-zA-Z][_a-zA-Z0-9]*`

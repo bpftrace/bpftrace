@@ -6,10 +6,12 @@
 
 namespace bpftrace {
 
-// N.B. there are other unsafe builtins but they are being checked
+// N.B. there are other unsafe functions but they are being checked
 // inside the macros themselves
-static std::unordered_set<std::string> UNSAFE_BUILTIN_FUNCS = {
+static std::unordered_set<std::string> UNSAFE_FUNCS = {
   "system",
+  "crash_kexec",
+  "bpf_send_signal_task",
 };
 
 static std::unordered_set<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
@@ -18,7 +20,7 @@ static std::unordered_set<std::string> UPROBE_LANGS = { "cpp" };
 
 bool is_unsafe_func(const std::string &func_name)
 {
-  return UNSAFE_BUILTIN_FUNCS.contains(func_name);
+  return UNSAFE_FUNCS.contains(func_name);
 }
 
 bool is_compile_time_func(const std::string &func_name)

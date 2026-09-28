@@ -664,6 +664,15 @@ void CallPreCheck::visit(Call &call)
     std::string old_func_;
   };
 
+  if (call.is_kfunc()) {
+    func_setter scope_bound_func_setter{ *this, call.func };
+    for (size_t i = 0; i < call.vargs.size(); ++i) {
+      func_arg_idx_ = i;
+      visit(call.vargs.at(i));
+    }
+    return;
+  }
+
   // Check probe availability
   if (auto *probe = dynamic_cast<Probe *>(top_level_node_)) {
     for (auto *ap : probe->attach_points) {

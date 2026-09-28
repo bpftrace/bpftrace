@@ -18,6 +18,8 @@ and this project adheres to
   - [#5308](https://github.com/bpftrace/bpftrace/pull/5308)
 - stdlib: Add the compile-time `arch` builtin.
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
+- Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
+  - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 #### Changed
 #### Deprecated
 #### Removed

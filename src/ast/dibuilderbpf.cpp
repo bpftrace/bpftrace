@@ -20,10 +20,18 @@ DILocalScope *DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
                                                     const Struct &args,
                                                     bool is_declaration)
 {
+  return createFunctionDebugInfo(func, GetType(ret_type), args, is_declaration);
+}
+
+DILocalScope *DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
+                                                    DIType *ret_type,
+                                                    const Struct &args,
+                                                    bool is_declaration)
+{
   // Return type should be at index 0
   SmallVector<Metadata *> types;
   types.reserve(args.fields.size() + 1);
-  types.push_back(GetType(ret_type));
+  types.push_back(ret_type);
   for (const auto &arg : args.fields)
     types.push_back(GetType(arg.type));
 
@@ -48,14 +56,16 @@ DILocalScope *DIBuilderBPF::createFunctionDebugInfo(llvm::Function &func,
                                          DINode::FlagPrototyped,
                                          flags);
 
-  for (size_t i = 0; i < args.fields.size(); i++) {
-    createParameterVariable(subprog,
-                            args.fields.at(i).name,
-                            i + 1,
-                            file,
-                            0,
-                            static_cast<DIType *>(types[i + 1]),
-                            true);
+  if (!is_declaration) {
+    for (size_t i = 0; i < args.fields.size(); i++) {
+      createParameterVariable(subprog,
+                              args.fields.at(i).name,
+                              i + 1,
+                              file,
+                              0,
+                              static_cast<DIType *>(types[i + 1]),
+                              true);
+    }
   }
 
   func.setSubprogram(subprog);
