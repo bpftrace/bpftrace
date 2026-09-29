@@ -138,3 +138,85 @@ NAME map struct key elements
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @[*((struct Foo *)arg0)] = 1; for ($kv : @) { printf("key: %d %d\n", $kv.0.m, $kv.0.n); } exit(); }
 EXPECT key: 2 3
 AFTER ./testprogs/simple_struct
+
+NAME iter_task with break
+PROG begin { $n = 0; for ($t : iter_task()) { $n++; if ($n == 2) { break; } } print($n); }
+EXPECT 2
+MIN_KERNEL 6.7
+
+NAME iter_task with continue
+PROG begin { $seen = 0; for ($t : iter_task()) { if ($t->pid != 1) { continue; } $seen = 1; } print($seen); }
+EXPECT 1
+MIN_KERNEL 6.7
+
+NAME iter_task with return
+PROG begin { for ($t : iter_task()) { if ($t->pid == 1) { return; } } print("end"); }
+EXPECT_NONE end
+MIN_KERNEL 6.7
+
+NAME iter_task writes map
+PROG begin { for ($t : iter_task()) { if ($t->pid == 1) { @[$t->pid] = 1; } } print(@); }
+EXPECT @[1]: 1
+MIN_KERNEL 6.7
+
+# This would trigger a verifier error if inner variables weren't put into per-cpu scratch maps
+NAME iter_threads external variable
+PROG begin { $seen = 0; for ($t : iter_threads()) { $seen++; } if ($seen > 1) { print($seen); } }
+EXPECT_REGEX [0-9]+
+MIN_KERNEL 6.7
+
+NAME iter_threads loop-local variable
+PROG begin { $n = 0; for ($t : iter_threads()) { $x = $t->pid; let $y = $x + 1; $y++; if ($y == $x + 2) { $n++; } } if ($n > 1) { print("ok"); } }
+EXPECT ok
+MIN_KERNEL 6.7
+
+NAME iter_task state stays on stack
+PROG config = { on_stack_limit = 0 } begin { $n = 0; for ($t : iter_task()) { $n++; } if ($n > 1) { print("ok"); } }
+EXPECT ok
+MIN_KERNEL 6.7
+
+NAME iter_task_threads ran
+PROG begin { $seen = 0; for ($t : iter_task_threads(curtask)) { $seen = 1; } print($seen); }
+EXPECT 1
+MIN_KERNEL 6.7
+
+NAME iter nested in range
+PROG begin { $n = 0; for ($i : 0..2) { for ($t : iter_task()) { $n++; if ($n > 0) { break; } } } print($n); }
+EXPECT 2
+MIN_KERNEL 6.7
+
+# An unconditional break leaves bpf_iter_task_next with no back-edge, so the
+# kernel assigns it no SCC, yet re-entering the bpf_loop callback still makes
+# is_state_visited() record a backedge for it. Kernels 6.17 - 6.18 abort with
+# "verifier bug: add backedge: no SCC in verification path".
+NAME iter nested in range with unconditional break
+PROG begin { $n = 0; for ($i : 0..2) { for ($t : iter_task()) { $n++; break; } } print($n); }
+EXPECT 2
+MIN_KERNEL 7.1
+
+NAME iter_task_vma reads fields
+PROG begin { $n = 0; for ($v : iter_task_vma(curtask)) { $n++; if ($v->vm_end > $v->vm_start) { print("ok"); break; } } }
+EXPECT ok
+MIN_KERNEL 6.7
+
+NAME iter_task_threads rejects non-task
+PROG begin { for ($t : iter_task_threads(1)) { print($t) } }
+EXPECT_REGEX .*ERROR: Expected struct task_struct \* for argument.*
+WILL_FAIL
+MIN_KERNEL 6.7
+
+NAME iter_task_vma rejects non-integer addr
+PROG begin { for ($v : iter_task_vma(curtask, "x")) { print($v) } }
+EXPECT_REGEX .*ERROR: Expected uint64 for argument `addr` got string\[2\].*
+WILL_FAIL
+MIN_KERNEL 6.7
+
+NAME iter nested in iter
+PROG begin { $c = 0; for ($t : iter_task()) { for ($v : iter_task_vma($t)) { $c++; break; } } if ($c > 0) { print("ok"); } }
+EXPECT ok
+MIN_KERNEL 6.7
+
+NAME iter nested in iter outer-loop variable
+PROG begin { $c = 0; for ($t : iter_task()) { let $y = 0; for ($v : iter_task_vma($t)) { $y++; break; } $c += $y; } if ($c > 0) { print("ok"); } }
+EXPECT ok
+MIN_KERNEL 6.7

@@ -14,6 +14,7 @@
 #include "ast/passes/map_sugar.h"
 #include "ast/signal_bt.h"
 #include "ast/visitor.h"
+#include "bpf_iters.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "format_string.h"
@@ -559,6 +560,7 @@ public:
   using Visitor<CallPreCheck>::visit;
 
   void visit(Call &call);
+  void visit(For &f);
   void visit(Identifier &identifier);
   void visit(Probe &probe);
   void visit(String &string);
@@ -905,6 +907,31 @@ void CallPreCheck::visit(Identifier &identifier)
           << " (expects: curr_ns or init)";
     }
   }
+}
+
+void CallPreCheck::visit(For &f)
+{
+  visit(f.decl);
+  if (auto *call = f.iterable.as<Call>()) {
+    const auto *info = find_bpf_iter(call->func);
+    if (info == nullptr) {
+      auto &err = call->addError();
+      err << call->func << "() is not a valid iterator";
+      auto &hint = err.addHint();
+      hint << "Valid iterators are: ";
+      size_t i = 0;
+      for (const auto &iter : BPF_ITER_LIST) {
+        hint << iter.name;
+        if (i++ != BPF_ITER_LIST.size() - 1) {
+          hint << ", ";
+        }
+      }
+      return;
+    }
+  }
+
+  visit(f.iterable);
+  visit(f.block);
 }
 
 void CallPreCheck::visit(Probe &probe)

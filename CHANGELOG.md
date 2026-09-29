@@ -22,6 +22,9 @@ and this project adheres to
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 - Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
   - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
+- Add open-coded iterators to `for` loops: `iter_task`, `iter_threads`,
+  `iter_task_threads` and `iter_task_vma`.
+  - [#5386](https://github.com/bpftrace/bpftrace/pull/5386)
 #### Changed
 #### Deprecated
 #### Removed

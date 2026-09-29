@@ -657,7 +657,7 @@ Strings support the following escape sequences:
 
 ### For
 
-`for` loops can be used to iterate over elements in a map, or over a range of integers, provided as two unary expressions separated by `..`.
+`for` loops can be used to iterate over elements in a map, over a range of integers, provided as two unary expressions separated by `..`, or over specific kernel objects using an iterator.
 
 ```
 for ($kv : @map) {
@@ -667,6 +667,12 @@ for ($kv : @map) {
 
 ```
 for ($i : start..end) {
+  block;
+}
+```
+
+```
+for ($task : iter_task()) {
   block;
 }
 ```
@@ -714,7 +720,35 @@ for ($i : 0..$a) {
 }
 ```
 
-Both `for` loops support the following control flow statements:
+#### Iterators
+
+Iterators walk a set of kernel objects, and the loop variable is a pointer to the current object.
+These are implemented using [open coded iterators](https://docs.kernel.org/bpf/bpf_iterators.html#open-coded-bpf-iterators) and require kernel 6.7 or later.
+
+| iterator | yields | |
+| --- | --- | --- |
+| `iter_task()` | `struct task_struct *` | every process |
+| `iter_threads()` | `struct task_struct *` | every thread |
+| `iter_task_threads(task)` | `struct task_struct *` | the threads of `task` |
+| `iter_task_vma(task[, addr])` | `struct vm_area_struct *` | the memory mappings of `task`, optionally starting at `addr` |
+
+```
+interval:s:10 {
+  for ($task : iter_task()) {
+    printf("%-6d %s\n", $task->pid, $task->comm);
+  }
+}
+```
+
+```
+tracepoint:syscalls:sys_enter_execve {
+  for ($vma : iter_task_vma(curtask)) {
+    printf("%lx-%lx\n", $vma->vm_start, $vma->vm_end);
+  }
+}
+```
+
+All three `for` loops support the following control flow statements:
 
 |     |     |
 | --- | --- |
@@ -1216,6 +1250,7 @@ interval:1s { print(@syscalls); clear(@syscalls); }
 
 These are eBPF iterator probes that allow iteration over kernel objects.
 An iterator probe can’t be mixed with any other probe, not even another iterator.
+However, some of these iterators are available in `for` loops, which can be used within most probes.
 Each iterator probe provides a set of fields that could be accessed with the
 `ctx` pointer. Users can display the set of available fields for each iterator via
 the `-lv` option as described below.
