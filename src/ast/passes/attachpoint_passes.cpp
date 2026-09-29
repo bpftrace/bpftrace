@@ -715,8 +715,20 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
       auto location = dwarf->line_to_addr(
           ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
       if (!location) {
+        if (bpftrace_.listing_kprobe_lines_) {
+          consumeError(location.takeError());
+          return OK;
+        }
         errs_ << location.takeError() << std::endl;
         return INVALID;
+      }
+      if (auto function_info = dwarf->get_function_info(
+              ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
+          function_info && !function_info->name.empty() &&
+          function_info->low_pc &&
+          location->address >= *function_info->low_pc) {
+        location->symbol = function_info->name;
+        location->symbol_offset = location->address - *function_info->low_pc;
       }
       ap_->address = location->address;
       ap_->target = location->kernel_module;

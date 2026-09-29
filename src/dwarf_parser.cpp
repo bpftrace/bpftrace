@@ -22,6 +22,12 @@ void DwarfParseError::log(llvm::raw_ostream &OS) const
 #include <elfutils/libdwelf.h>
 
 #include <cstring>
+#include <fcntl.h>
+#include <fstream>
+#include <limits>
+#include <set>
+#include <string_view>
+#include <unistd.h>
 
 namespace bpftrace {
 
@@ -749,7 +755,329 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
 
   return make_error<DwarfParseError>(
       "Unable to map '" + source_file + ":" + std::to_string(line_num) +
-      (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address");
+          (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address",
+      DwarfParseError::Kind::LineNotMapped);
+}
+
+static std::optional<Dwarf_Die> get_die_reference(Dwarf_Die *die, int attr_tag)
+{
+  Dwarf_Attribute attr;
+  if (dwarf_attr_integrate(die, attr_tag, &attr) == nullptr)
+    return std::nullopt;
+
+  Dwarf_Die referenced = {};
+  if (dwarf_formref_die(&attr, &referenced) != nullptr)
+    return std::nullopt;
+
+  return referenced;
+}
+
+static Dwarf_Die get_declaration_die(Dwarf_Die *die)
+{
+  if (auto origin = get_die_reference(die, DW_AT_abstract_origin))
+    return *origin;
+  if (auto specification = get_die_reference(die, DW_AT_specification))
+    return *specification;
+  return *die;
+}
+
+static std::string get_call_file(Dwarf_Die *die, Dwarf_Die *cudie)
+{
+  Dwarf_Attribute attr;
+  Dwarf_Word file_index = 0;
+  if (dwarf_attr_integrate(die, DW_AT_call_file, &attr) == nullptr ||
+      dwarf_formudata(&attr, &file_index) != 0 || file_index == 0)
+    return "";
+
+  Dwarf_Files *files = nullptr;
+  size_t file_count = 0;
+  if (dwarf_getsrcfiles(cudie, &files, &file_count) != 0 ||
+      file_index >= file_count)
+    return "";
+
+  const char *path = dwarf_filesrc(files, file_index, nullptr, nullptr);
+  return path ? path : "";
+}
+
+using PcRange = std::pair<Dwarf_Addr, Dwarf_Addr>;
+
+static std::vector<PcRange> get_pc_ranges(Dwarf_Die *die)
+{
+  std::vector<PcRange> ranges;
+  ptrdiff_t offset = 0;
+  Dwarf_Addr base = 0;
+  Dwarf_Addr start = 0;
+  Dwarf_Addr end = 0;
+  while ((offset = dwarf_ranges(die, offset, &base, &start, &end)) > 0) {
+    if (start < end)
+      ranges.emplace_back(start, end);
+  }
+
+  std::ranges::sort(ranges);
+  ranges.erase(std::ranges::unique(ranges,
+                                   [](const auto &lhs, const auto &rhs) {
+                                     return lhs == rhs;
+                                   })
+                   .begin(),
+               ranges.end());
+  return ranges;
+}
+
+static std::optional<PcRange> find_pc_range(const std::vector<PcRange> &ranges,
+                                            Dwarf_Addr address)
+{
+  for (const auto &range : ranges)
+    if (address >= range.first && address < range.second)
+      return range;
+  return std::nullopt;
+}
+
+struct FunctionDieMatch {
+  Dwarf_Addr address = 0;
+  Dwarf_Die die = {};
+  Dwarf_Addr range_size = 0;
+  bool found = false;
+};
+
+static int find_function_die_cb(Dwarf_Die *die, void *arg)
+{
+  auto *match = static_cast<FunctionDieMatch *>(arg);
+  if (dwarf_tag(die) != DW_TAG_subprogram)
+    return DWARF_CB_OK;
+
+  if (dwarf_haspc(die, match->address) != 1)
+    return DWARF_CB_OK;
+
+  Dwarf_Addr range_size = std::numeric_limits<Dwarf_Addr>::max();
+  for (const auto &range : get_pc_ranges(die))
+    if (match->address >= range.first && match->address < range.second)
+      range_size = std::min(range_size, range.second - range.first);
+
+  if (!match->found || range_size < match->range_size) {
+    match->die = *die;
+    match->range_size = range_size;
+    match->found = true;
+  }
+  return DWARF_CB_OK;
+}
+
+std::optional<DwarfFunctionInfo> Dwarf::get_function_info(
+    const std::string &source_file,
+    size_t line_num,
+    size_t col_num,
+    const std::string &kernel_module) const
+{
+  auto cu = get_cu_by_src(source_file, kernel_module);
+  if (!cu)
+    return std::nullopt;
+  const auto source_path = cu->source_path;
+  if (!source_path)
+    return std::nullopt;
+
+  Dwarf_Lines *lines = nullptr;
+  size_t num_lines = 0;
+  if (dwarf_getsrclines(cu->cu_die(), &lines, &num_lines) != 0)
+    return std::nullopt;
+
+  Dwarf_Addr target_address = 0;
+  bool found_target = false;
+  for (size_t i = 0; i < num_lines; ++i) {
+    Dwarf_Line *line = dwarf_onesrcline(lines, i);
+    if (!line)
+      continue;
+
+    int lineno = 0;
+    int linecol = 0;
+    const char *linesrc = dwarf_linesrc(line, nullptr, nullptr);
+    if (!linesrc || !util::path_ends_with(linesrc, source_path.value()) ||
+        dwarf_lineno(line, &lineno) != 0 ||
+        dwarf_linecol(line, &linecol) != 0 ||
+        static_cast<size_t>(lineno) != line_num ||
+        (col_num != 0 && static_cast<size_t>(linecol) != col_num) ||
+        dwarf_lineaddr(line, &target_address) != 0)
+      continue;
+
+    found_target = true;
+    break;
+  }
+  if (!found_target)
+    return std::nullopt;
+
+  Dwarf_Die *target_scopes = nullptr;
+  const int target_scope_count = dwarf_getscopes(cu->cu_die(),
+                                                 target_address,
+                                                 &target_scopes);
+
+  Dwarf_Die function_die = {};
+  bool found_function = false;
+  for (int i = 0; i < std::max(target_scope_count, 0); ++i) {
+    if (dwarf_tag(&target_scopes[i]) == DW_TAG_subprogram) {
+      function_die = target_scopes[i];
+      found_function = true;
+      break;
+    }
+  }
+  if (!found_function) {
+    FunctionDieMatch match{ .address = target_address };
+    dwarf_getfuncs(cu->cu_die(), find_function_die_cb, &match, 0);
+    if (match.found) {
+      function_die = match.die;
+      found_function = true;
+    }
+  }
+  if (!found_function) {
+    std::free(target_scopes);
+    return std::nullopt;
+  }
+
+  DwarfFunctionInfo info;
+  Dwarf_Die declaration_die = get_declaration_die(&function_die);
+  info.name = get_die_name(&declaration_die);
+  if (const char *file = dwarf_decl_file(&declaration_die))
+    info.declaration_file = file;
+  int declaration_line = 0;
+  if (dwarf_decl_line(&declaration_die, &declaration_line) == 0 &&
+      declaration_line > 0)
+    info.declaration_line = static_cast<size_t>(declaration_line);
+
+  if (auto range = find_pc_range(get_pc_ranges(&function_die),
+                                 target_address)) {
+    info.low_pc = range->first;
+    info.high_pc = range->second;
+  }
+
+  for (int i = 0; i < std::max(target_scope_count, 0); ++i) {
+    if (dwarf_tag(&target_scopes[i]) != DW_TAG_inlined_subroutine)
+      continue;
+
+    DwarfInlineInfo inline_info;
+    Dwarf_Die inline_declaration = get_declaration_die(&target_scopes[i]);
+    inline_info.name = get_die_name(&inline_declaration);
+    if (const char *file = dwarf_decl_file(&inline_declaration))
+      inline_info.declaration_file = file;
+    int inline_declaration_line = 0;
+    if (dwarf_decl_line(&inline_declaration, &inline_declaration_line) == 0 &&
+        inline_declaration_line > 0)
+      inline_info.declaration_line = static_cast<size_t>(
+          inline_declaration_line);
+    inline_info.call_file = get_call_file(&target_scopes[i], cu->cu_die());
+    Dwarf_Word call_line = 0;
+    Dwarf_Attribute call_line_attr;
+    if (dwarf_attr_integrate(&target_scopes[i],
+                             DW_AT_call_line,
+                             &call_line_attr) != nullptr &&
+        dwarf_formudata(&call_line_attr, &call_line) == 0)
+      inline_info.call_line = static_cast<size_t>(call_line);
+
+    const bool declaration_matches =
+        inline_info.declaration_file.empty() ||
+        util::path_ends_with(inline_info.declaration_file, source_file);
+    const bool before_declaration = declaration_matches &&
+                                    inline_info.declaration_line != 0 &&
+                                    line_num < inline_info.declaration_line;
+    const bool after_callsite = !inline_info.call_file.empty() &&
+                                inline_info.call_line != 0 &&
+                                util::path_ends_with(inline_info.call_file,
+                                                     source_file) &&
+                                line_num >= inline_info.call_line;
+    if (declaration_matches && !before_declaration && !after_callsite)
+      info.inline_function = std::move(inline_info);
+    break;
+  }
+
+  std::free(target_scopes);
+  const char *vmlinux = std::getenv("BPFTRACE_VMLINUX");
+  const bool offline_kernel = is_kernel_ && vmlinux != nullptr &&
+                              *vmlinux != '\0' &&
+                              cu_kernel_module_name(cu->cudie) == "vmlinux";
+  if (is_kernel_ && !offline_kernel && cu->mod_bias != 0) {
+    if (info.low_pc)
+      *info.low_pc += cu->mod_bias;
+    if (info.high_pc)
+      *info.high_pc += cu->mod_bias;
+  }
+  return info;
+}
+
+std::optional<Dwarf_Addr> Dwarf::source_dwarf_pc(CuInfo *cu,
+                                                 size_t line_num,
+                                                 size_t col_num) const
+{
+  const auto source_path = cu->source_path;
+  if (!source_path)
+    return std::nullopt;
+
+  Dwarf_Lines *lines = nullptr;
+  size_t num_lines = 0;
+  if (dwarf_getsrclines(cu->cu_die(), &lines, &num_lines) != 0)
+    return std::nullopt;
+
+  for (size_t i = 0; i < num_lines; ++i) {
+    Dwarf_Line *line = dwarf_onesrcline(lines, i);
+    if (!line)
+      continue;
+
+    int lineno = 0;
+    int linecol = 0;
+    const char *linesrc = dwarf_linesrc(line, nullptr, nullptr);
+    Dwarf_Addr address = 0;
+    if (!linesrc || !util::path_ends_with(linesrc, source_path.value()) ||
+        dwarf_lineno(line, &lineno) != 0 ||
+        dwarf_linecol(line, &linecol) != 0 ||
+        dwarf_lineaddr(line, &address) != 0 ||
+        static_cast<size_t>(lineno) != line_num ||
+        (col_num != 0 && static_cast<size_t>(linecol) != col_num))
+      continue;
+    return address;
+  }
+  return std::nullopt;
+}
+
+std::vector<size_t> Dwarf::mapped_lines_near(
+    const std::string &source_file,
+    size_t center_line,
+    size_t radius,
+    const std::string &kernel_module) const
+{
+  auto cu = get_cu_by_src(source_file, kernel_module);
+  if (!cu)
+    return {};
+  const auto source_path = cu->source_path;
+  if (!source_path)
+    return {};
+
+  Dwarf_Lines *lines = nullptr;
+  size_t num_lines = 0;
+  if (dwarf_getsrclines(cu->cu_die(), &lines, &num_lines) != 0)
+    return {};
+
+  const size_t low = center_line > radius ? center_line - radius : 1;
+  const size_t high = center_line + radius;
+
+  std::set<size_t> mapped;
+  for (size_t i = 0; i < num_lines; i++) {
+    Dwarf_Line *line = dwarf_onesrcline(lines, i);
+    if (!line)
+      continue;
+
+    int lineno;
+    if (dwarf_lineno(line, &lineno) != 0)
+      continue;
+
+    const auto no = static_cast<size_t>(lineno);
+    if (no < low || no > high || no == center_line)
+      continue;
+
+    const char *linesrc = dwarf_linesrc(line, nullptr, nullptr);
+    if (!linesrc || !util::path_ends_with(linesrc, source_path.value()))
+      continue;
+
+    Dwarf_Addr addr;
+    if (dwarf_lineaddr(line, &addr) == 0)
+      mapped.insert(no);
+  }
+
+  return { mapped.begin(), mapped.end() };
 }
 
 } // namespace bpftrace
