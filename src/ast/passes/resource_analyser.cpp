@@ -13,6 +13,7 @@
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/types/type_map.h"
 #include "ast/visitor.h"
+#include "bpf_iters.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "required_resources.h"
@@ -53,7 +54,9 @@ public:
   void visit(Tuple &tuple);
   void visit(Record &record);
   void visit(For &f);
+  void visit(While &while_block);
   void visit(IfExpr &if_expr);
+  void visit(Unop &unop);
   void visit(AssignMapStatement &assignment);
   void visit(AssignVarStatement &assignment);
   void visit(VarDeclStatement &decl);
@@ -86,6 +89,9 @@ private:
   Probe *probe_{ nullptr };
   std::vector<Node *> scope_stack_;
   std::unordered_map<Node *, std::unordered_set<std::string>> variables_;
+  // Variables declared outside an open-coded iterator but written inside of
+  // it get promoted to a scratch map to prevent verifier errors.
+  std::vector<size_t> iter_scope_depths_;
   std::unordered_map<std::string, std::pair<bpf_map_type, int>> map_decls_;
 
   int next_map_id_ = 0;
@@ -606,6 +612,17 @@ void ResourceAnalyser::visit(AssignMapStatement &assignment)
                                 assignment.map_access->key);
 }
 
+void ResourceAnalyser::visit(While &while_block)
+{
+  if (while_block.is_iter) {
+    iter_scope_depths_.push_back(scope_stack_.size());
+  }
+  Visitor<ResourceAnalyser>::visit(while_block);
+  if (while_block.is_iter) {
+    iter_scope_depths_.pop_back();
+  }
+}
+
 void ResourceAnalyser::visit(IfExpr &if_expr)
 {
   Visitor<ResourceAnalyser>::visit(if_expr);
@@ -622,6 +639,20 @@ void ResourceAnalyser::visit(IfExpr &if_expr)
   }
 }
 
+void ResourceAnalyser::visit(Unop &unop)
+{
+  Visitor<ResourceAnalyser>::visit(unop);
+
+  if (unop.op == Operator::PRE_INCREMENT ||
+      unop.op == Operator::POST_INCREMENT ||
+      unop.op == Operator::PRE_DECREMENT ||
+      unop.op == Operator::POST_DECREMENT) {
+    if (auto *var = unop.expr.as<Variable>()) {
+      update_variable_info(*var);
+    }
+  }
+}
+
 void ResourceAnalyser::update_variable_info(Variable &var)
 {
   Node *scope = find_variable_scope(var.ident);
@@ -630,7 +661,15 @@ void ResourceAnalyser::update_variable_info(Variable &var)
     variables_[scope].insert(var.ident);
   }
   const auto &ty = type_map_.type(&var);
-  if (exceeds_stack_limit(ty.GetSize())) {
+  bool is_iter_var = false;
+  if (!iter_scope_depths_.empty()) {
+    auto scope_depth = std::ranges::find(scope_stack_, scope) -
+                       scope_stack_.begin();
+    is_iter_var = static_cast<size_t>(scope_depth) < iter_scope_depths_.back();
+  }
+
+  if ((exceeds_stack_limit(ty.GetSize()) || is_iter_var) &&
+      !is_bpf_iter_state(ty)) {
     resources_.max_variable_size = std::max(resources_.max_variable_size,
                                             ty.GetSize());
     if (resources_.scratch_buf_vars.emplace(scope, var.ident).second) {
