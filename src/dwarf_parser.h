@@ -6,6 +6,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,10 +14,16 @@ namespace bpftrace {
 
 class DwarfParseError : public ErrorInfo<DwarfParseError> {
 public:
+  enum class Kind {
+    Generic,
+    LineNotMapped,
+  };
+
   static char ID;
   void log(llvm::raw_ostream &OS) const override;
 
-  DwarfParseError(std::string &&msg) : msg_(std::move(msg)) {};
+  DwarfParseError(std::string &&msg, Kind kind = Kind::Generic)
+      : msg_(std::move(msg)), kind_(kind) {};
   DwarfParseError() = default;
 
   const std::string &msg() const
@@ -24,8 +31,31 @@ public:
     return msg_;
   }
 
+  Kind kind() const
+  {
+    return kind_;
+  }
+
 private:
   std::string msg_;
+  Kind kind_ = Kind::Generic;
+};
+
+struct DwarfInlineInfo {
+  std::string name;
+  std::string declaration_file;
+  size_t declaration_line = 0;
+  std::string call_file;
+  size_t call_line = 0;
+};
+
+struct DwarfFunctionInfo {
+  std::string name;
+  std::string declaration_file;
+  size_t declaration_line = 0;
+  std::optional<uint64_t> low_pc;
+  std::optional<uint64_t> high_pc;
+  std::optional<DwarfInlineInfo> inline_function;
 };
 
 } // namespace bpftrace
@@ -68,12 +98,26 @@ public:
   struct SourceLocation {
     uint64_t address;
     std::string kernel_module;
+    std::string symbol;
+    uint64_t symbol_offset = 0;
   };
 
   Result<SourceLocation> line_to_addr(const std::string &source_file,
                                       size_t line_num,
                                       size_t col_num,
                                       const std::string &kernel_module) const;
+
+  std::optional<DwarfFunctionInfo> get_function_info(
+      const std::string &source_file,
+      size_t line_num,
+      size_t col_num = 0,
+      const std::string &kernel_module = "") const;
+
+  std::vector<size_t> mapped_lines_near(
+      const std::string &source_file,
+      size_t center_line,
+      size_t radius,
+      const std::string &kernel_module = "") const;
 
 private:
   // Compilation unit wrapper, abstracting over regular and split (DWO/DWP)
@@ -103,6 +147,10 @@ private:
     // CU source file (filled when searching CU by source file)
     std::optional<std::filesystem::path> source_path;
   };
+
+  std::optional<Dwarf_Addr> source_dwarf_pc(CuInfo *cu,
+                                            size_t line_num,
+                                            size_t col_num) const;
 
   // The DWFL setup is shared by offline binaries and the running kernel.
   // Kernel mode reports the kernel and loaded modules instead of an offline
@@ -211,6 +259,8 @@ public:
   struct SourceLocation {
     uint64_t address;
     std::string kernel_module;
+    std::string symbol;
+    uint64_t symbol_offset = 0;
   };
 
   Result<SourceLocation> line_to_addr(const std::string &source_file
@@ -221,6 +271,26 @@ public:
                                       __attribute__((unused))) const
   {
     return make_error<DwarfParseError>();
+  }
+
+  std::optional<DwarfFunctionInfo> get_function_info(
+      const std::string &source_file __attribute__((unused)),
+      size_t line_num __attribute__((unused)),
+      size_t col_num __attribute__((unused)),
+      const std::string &kernel_module __attribute__((unused)) = "") const
+  {
+    return std::nullopt;
+  }
+
+  std::vector<size_t> mapped_lines_near(const std::string &source_file
+                                        __attribute__((unused)),
+                                        size_t center_line
+                                        __attribute__((unused)),
+                                        size_t radius __attribute__((unused)),
+                                        const std::string &kernel_module
+                                        __attribute__((unused)) = "") const
+  {
+    return {};
   }
 };
 

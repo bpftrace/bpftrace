@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <bpf/libbpf.h>
 #include <cstdio>
 #include <cstring>
@@ -41,6 +42,7 @@
 #include "build_info.h"
 #include "config.h"
 #include "globalvars.h"
+#include "kprobe_lines.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output/buffer_mode.h"
@@ -91,6 +93,7 @@ enum Options {
   INCLUDE,
   INFO,
   LIST,
+  LIST_KPROBE_LINES,
   NO_FEATURE,
   NO_WARNING,
   MODE,
@@ -127,6 +130,9 @@ void usage(std::ostream& out)
   out << "    -e 'program'   execute this program" << std::endl;
   out << "    -l, --list [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
+  out << "    --list-kprobe-lines" << std::endl;
+  out << "                   with -e 'kprobe@FILE:LINE', report whether the line is" << std::endl;
+  out << "                   mapped and, if not, nearby lines that are" << std::endl;
   out << "    -v, --verbose  enable verbose messages; with -l, also show probe arguments" << std::endl;
   out << "    -h, --help     show this help message" << std::endl;
   out << "    -V, --version  bpftrace version" << std::endl;
@@ -345,6 +351,7 @@ struct Args {
   std::vector<std::string> dwarf_pids_str;
   std::string cmd_str;
   bool listing = false;
+  bool list_kprobe_lines = false;
   bool safe_mode = true;
   bool usdt_file_activation = false;
   int warning_level = 1;
@@ -482,6 +489,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::LIST },
+    option{ .name = "list-kprobe-lines",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::LIST_KPROBE_LINES },
     option{ .name = "no-feature",
             .has_arg = required_argument,
             .flag = nullptr,
@@ -687,6 +698,9 @@ Args parse_args(int argc, char* argv[])
       case Options::LIST:
         args.listing = true;
         break;
+      case Options::LIST_KPROBE_LINES:
+        args.list_kprobe_lines = true;
+        break;
       case 'c':
       case Options::CMD:
         args.cmd_str = optarg;
@@ -869,6 +883,98 @@ void list_probes(BPFtrace& bpftrace,
   }
 }
 
+static void print_source_function(const DwarfFunctionInfo& info,
+                                  const std::string& indent)
+{
+  if (info.inline_function) {
+    std::cout << indent << "function: " << info.inline_function->name << "\n"
+              << indent << "kind: inline\n";
+    if (!info.inline_function->declaration_file.empty() &&
+        info.inline_function->declaration_line != 0)
+      std::cout << indent
+                << "declared_at: " << info.inline_function->declaration_file
+                << ":" << info.inline_function->declaration_line << "\n";
+    if (!info.inline_function->call_file.empty() &&
+        info.inline_function->call_line != 0)
+      std::cout << indent << "inlined_at: " << info.inline_function->call_file
+                << ":" << info.inline_function->call_line << "\n";
+    return;
+  }
+
+  std::cout << indent << "function: " << info.name << "\n"
+            << indent << "kind: physical\n";
+  if (!info.declaration_file.empty() && info.declaration_line != 0)
+    std::cout << indent << "declared_at: " << info.declaration_file << ":"
+              << info.declaration_line << "\n";
+}
+
+int list_kprobe_lines(BPFtrace& bpftrace, ast::ASTContext& ast)
+{
+  std::vector<KprobeLineQuery> results;
+  for (auto* probe : ast.root->probes) {
+    for (auto* ap : probe->attach_points) {
+      if (ap->source_file.empty() || ap->line_num == 0)
+        continue;
+
+      auto query = query_kprobe_lines(bpftrace, *ap);
+      const auto duplicate = std::find_if(
+          results.begin(), results.end(), [&](const auto& existing) {
+            return existing.kernel_module == query.kernel_module &&
+                   existing.source_file == query.source_file &&
+                   existing.requested_line == query.requested_line &&
+                   existing.requested_col == query.requested_col;
+          });
+      if (duplicate == results.end())
+        results.push_back(std::move(query));
+    }
+  }
+
+  if (results.empty()) {
+    LOG(ERROR) << "--list-kprobe-lines requires a source-location probe, e.g. "
+                  "-e 'kprobe@fs/open.c:1428 { }'";
+    return 1;
+  }
+
+  for (const auto& query : results) {
+    std::cout << query.probe_name << "\n"
+              << "  location: "
+              << (query.kernel_module.empty() ? "" : query.kernel_module + ":")
+              << query.source_file << ":" << query.requested_line;
+    if (query.requested_col)
+      std::cout << ":" << query.requested_col;
+    std::cout << "\n  status: "
+              << (query.exact_attachable ? "MAPPED" : "NOT_MAPPED")
+              << "\n  static_only: true\n";
+    if (query.function) {
+      std::cout << "  function: " << *query.function << "+"
+                << *query.function_offset << "\n";
+    }
+    if (query.function_info) {
+      std::cout << "  source_function:\n";
+      print_source_function(*query.function_info, "    ");
+    }
+    if (!query.exact_attachable) {
+      if (!query.error.empty())
+        std::cout << "  reason: " << query.error << "\n";
+      else
+        std::cout << "  reason: no instruction mapped by DWARF for requested "
+                     "line\n";
+      if (query.nearby.empty()) {
+        std::cout << "  nearby mapped lines: none within range\n";
+      } else {
+        std::cout << "  nearby mapped lines:\n";
+        for (const auto line : query.nearby)
+          std::cout << "    " << query.source_file << ":" << line << "\n";
+      }
+    }
+  }
+
+  for (const auto& query : results)
+    if (!query.error.empty())
+      return 1;
+  return 0;
+}
+
 uint64_t parse_pid(std::string const& pid_str)
 {
   auto maybe_pid = util::to_uint(pid_str);
@@ -1005,6 +1111,7 @@ int main(int argc, char* argv[])
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
   bpftrace.safe_mode_ = args.safe_mode;
+  bpftrace.listing_kprobe_lines_ = args.list_kprobe_lines;
   bpftrace.warning_level_ = args.warning_level;
   bpftrace.boottime_ = get_boottime();
   bpftrace.delta_taitime_ = get_delta_taitime();
@@ -1072,6 +1179,24 @@ int main(int argc, char* argv[])
   pm.put(bpftrace);
   pm.put(func_info_state);
   auto flags = extra_flags(bpftrace, args.include_dirs, args.include_files);
+
+  if (args.list_kprobe_lines) {
+    for (auto& pass : ast::AllParsePasses(
+             std::move(flags), {}, bt_debug.contains(DebugStage::Parse))) {
+      pm.add(std::move(pass));
+    }
+
+    auto pmresult = pm.run();
+    if (!pmresult) {
+      std::cerr << pmresult.takeError() << "\n";
+      return 2;
+    } else if (!ast.diagnostics().ok()) {
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+
+    return list_kprobe_lines(bpftrace, ast);
+  }
 
   if (args.listing) {
     // For listing with a program, run the full parse passes (including
