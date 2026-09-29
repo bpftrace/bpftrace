@@ -1456,6 +1456,20 @@ kprobe@my_module:main.c:42
 }
 ```
 
+To check a source location without loading BPF or attaching a probe, use
+`--list-kprobe-lines`:
+
+```
+BPFTRACE_VMLINUX=/path/to/vmlinux \
+  bpftrace --list-kprobe-lines \
+  -e 'kprobe@my_module:main.c:42 { }'
+```
+
+The query reports `MAPPED` when DWARF maps the requested line to an
+instruction. Otherwise it reports `NOT_MAPPED` and lists nearby mapped lines.
+The query is static and does not check the kernel kprobe blocklist or
+architecture-specific instruction restrictions.
+
 ### profile
 
 **variants**

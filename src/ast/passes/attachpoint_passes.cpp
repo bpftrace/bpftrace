@@ -692,6 +692,7 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
     const std::string kernel_module = module_qualified ? parts_[2] : "";
 
     ap_->source_file = parts_[file_idx];
+    ap_->target = kernel_module;
 
     auto line = util::to_uint(parts_[file_idx + 1]);
     if (!line) {
@@ -714,6 +715,10 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
       auto location = dwarf->line_to_addr(
           ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
       if (!location) {
+        if (bpftrace_.listing_kprobe_lines_) {
+          consumeError(location.takeError());
+          return OK;
+        }
         errs_ << location.takeError() << std::endl;
         return INVALID;
       }

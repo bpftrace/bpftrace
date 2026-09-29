@@ -76,6 +76,12 @@ public:
       size_t col_num = 0,
       const std::string &kernel_module = "") const;
 
+  std::vector<size_t> mapped_lines_near(
+      const std::string &source_file,
+      size_t center_line,
+      size_t radius,
+      const std::string &kernel_module = "") const;
+
 private:
   // Compilation unit wrapper, abstracting over regular and split (DWO/DWP)
   // CU DIEs.
@@ -222,6 +228,15 @@ public:
                                       __attribute__((unused)) = "") const
   {
     return make_error<DwarfParseError>();
+  }
+
+  std::vector<size_t> mapped_lines_near(
+      const std::string &source_file __attribute__((unused)),
+      size_t center_line __attribute__((unused)),
+      size_t radius __attribute__((unused)),
+      const std::string &kernel_module __attribute__((unused)) = "") const
+  {
+    return {};
   }
 };
 

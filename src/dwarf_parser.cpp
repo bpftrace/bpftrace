@@ -22,6 +22,7 @@ void DwarfParseError::log(llvm::raw_ostream &OS) const
 #include <elfutils/libdwelf.h>
 
 #include <cstring>
+#include <set>
 
 namespace bpftrace {
 
@@ -750,6 +751,50 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
   return make_error<DwarfParseError>(
       "Unable to map '" + source_file + ":" + std::to_string(line_num) +
       (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address");
+}
+
+std::vector<size_t> Dwarf::mapped_lines_near(
+    const std::string &source_file,
+    size_t center_line,
+    size_t radius,
+    const std::string &kernel_module) const
+{
+  auto cu = get_cu_by_src(source_file, kernel_module);
+  if (!cu || !cu->source_path)
+    return {};
+
+  Dwarf_Lines *lines = nullptr;
+  size_t num_lines = 0;
+  if (dwarf_getsrclines(cu->cu_die(), &lines, &num_lines) != 0)
+    return {};
+
+  const size_t low = center_line > radius ? center_line - radius : 1;
+  const size_t high = center_line + radius;
+
+  std::set<size_t> mapped;
+  for (size_t i = 0; i < num_lines; i++) {
+    Dwarf_Line *line = dwarf_onesrcline(lines, i);
+    if (!line)
+      continue;
+
+    int lineno;
+    if (dwarf_lineno(line, &lineno) != 0)
+      continue;
+
+    const auto no = static_cast<size_t>(lineno);
+    if (no < low || no > high || no == center_line)
+      continue;
+
+    const char *linesrc = dwarf_linesrc(line, nullptr, nullptr);
+    if (!linesrc || !util::path_ends_with(linesrc, *cu->source_path))
+      continue;
+
+    Dwarf_Addr addr;
+    if (dwarf_lineaddr(line, &addr) == 0)
+      mapped.insert(no);
+  }
+
+  return { mapped.begin(), mapped.end() };
 }
 
 } // namespace bpftrace
