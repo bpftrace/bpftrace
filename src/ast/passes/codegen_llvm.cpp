@@ -229,6 +229,7 @@ public:
   ScopedExpr visit(While &while_block);
   ScopedExpr visit(For &f, Map &map);
   ScopedExpr visit(For &f, Range &range);
+  ScopedExpr visit(For &f, Call &iter);
   ScopedExpr visit(For &f);
   ScopedExpr visit(Jump &jump);
   ScopedExpr visit(Probe &probe);
@@ -427,6 +428,7 @@ private:
 
   std::vector<Node *> scope_stack_;
   std::unordered_map<Node *, std::map<std::string, VariableLLVM>> variables_;
+  IterVars iter_vars_;
 
   std::unordered_map<std::string, bpf_map_type> map_types_;
 
@@ -3180,7 +3182,13 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
     return;
   }
 
-  auto *val = b_.CreateVariableAllocationInit(var_type, var_ident, loc);
+  auto *val = b_.CreateVariableAllocationInit(
+      var_type,
+      var_ident,
+      loc,
+      iter_vars_.scratch.contains(var_ident),
+      // Iterator state must sit at an 8 byte aligned stack offset.
+      iter_vars_.state.contains(var_ident) ? 8 : 0);
   variables_[scope_stack_.back()][var_ident] = VariableLLVM{
     .value = val, .type = b_.GetType(var_type)
   };
@@ -3383,6 +3391,12 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
   return ScopedExpr();
 }
 
+ScopedExpr CodegenLLVM::visit([[maybe_unused]] For &f, Call &iter)
+{
+  LOG(BUG) << "unlowered iterator in for-loop: " << iter.func;
+  return ScopedExpr();
+}
+
 ScopedExpr CodegenLLVM::visit(For &f)
 {
   scope_stack_.push_back(&f);
@@ -3445,6 +3459,7 @@ void CodegenLLVM::add_probe(AttachPoint &ap,
 
 ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 {
+  iter_vars_ = collectIterVars(subprog);
   scope_stack_.push_back(&subprog);
   std::vector<llvm::Type *> arg_types;
   // First argument is for passing ctx pointer for output, rest are proper
@@ -3557,6 +3572,7 @@ ScopedExpr CodegenLLVM::visit(Probe &probe)
   // can restore it for the next pass (printf_id_, time_id_).
   async_ids_.create_reset_ids();
   assert(probe.attach_points.size() == 1);
+  iter_vars_ = collectIterVars(probe);
   current_attach_point_ = probe.attach_points.at(0);
   probe.set_index(getNextIndexForProbe());
 

@@ -1170,7 +1170,7 @@ Statement Parser::parse_for()
     return { f };
   }
 
-  // Must be a map.
+  // Must be a map or an open-coded iterator.
   if (has_open_paren && !expect(')')) {
     skip_to_block_end();
     auto *none = make_none();
@@ -1178,9 +1178,16 @@ Statement Parser::parse_for()
     return { es };
   }
 
+  if (auto *call = first.as<Call>()) {
+    auto *block = parse_block(false);
+    auto loc = make_loc(begin_line, begin_col, line_, col_);
+    auto *f = ctx_.make_node<For>(loc, var, call, block);
+    return { f };
+  }
+
   auto *map_ptr = first.as<Map>();
   if (!map_ptr) {
-    error("expected map or range in for loop");
+    error("expected map, range, or iterator in for loop");
     skip_to_block_end();
     auto *none = make_none();
     auto *es = ctx_.make_node<ExprStatement>(none->loc, Expression(none));

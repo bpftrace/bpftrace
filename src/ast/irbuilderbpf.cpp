@@ -678,21 +678,24 @@ Value *IRBuilderBPF::CreateWriteMapValueAllocation(const SizedType &value_type,
 
 Value *IRBuilderBPF::CreateVariableAllocationInit(const SizedType &value_type,
                                                   const std::string &name,
-                                                  const Location &loc)
+                                                  const Location &loc,
+                                                  bool force_scratch,
+                                                  unsigned align)
 {
   // Hoist variable declaration and initialization to entry point of
   // probe/subprogram. While we technically do not need this as variables
   // are properly scoped, it eases debugging and is consistent with previous
   // stack-only variable implementation.
   Value *alloc;
-  hoist([this, &value_type, &name, &loc, &alloc] {
-    alloc = createAllocation(bpftrace::globalvars::VARIABLE_BUFFER,
-                             GetType(value_type),
-                             name,
-                             loc,
-                             [](AsyncIds &async_ids) {
-                               return async_ids.variable();
-                             });
+  hoist([this, &value_type, &name, &loc, &alloc, force_scratch, align] {
+    alloc = createAllocation(
+        bpftrace::globalvars::VARIABLE_BUFFER,
+        GetType(value_type),
+        name,
+        loc,
+        [](AsyncIds &async_ids) { return async_ids.variable(); },
+        force_scratch,
+        align);
     CreateAllocationInit(value_type, alloc);
   });
   return alloc;
@@ -716,17 +719,23 @@ Value *IRBuilderBPF::createAllocation(
     llvm::Type *obj_type,
     const std::string &name,
     const Location &loc,
-    std::optional<std::function<size_t(AsyncIds &)>> gen_async_id_cb)
+    std::optional<std::function<size_t(AsyncIds &)>> gen_async_id_cb,
+    bool force_scratch,
+    unsigned align)
 {
   const auto obj_size = module_.getDataLayout().getTypeAllocSize(obj_type);
   const auto on_stack_limit = bpftrace_.config_->on_stack_limit;
-  if (obj_size > on_stack_limit) {
+  if (force_scratch || obj_size > on_stack_limit) {
     return createScratchBuffer(global_var_name,
                                loc,
                                gen_async_id_cb ? (*gen_async_id_cb)(async_ids_)
                                                : 0);
   }
-  return CreateAllocaBPF(obj_type, name);
+  auto *alloca = CreateAllocaBPF(obj_type, name);
+  if (align != 0) {
+    alloca->setAlignment(Align(align));
+  }
+  return alloca;
 }
 
 Value *IRBuilderBPF::createScratchBuffer(std::string_view global_var_name,

@@ -20,6 +20,9 @@ and this project adheres to
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
+- Add open-coded iterators to `for` loops: `iter_task`, `iter_threads`,
+  `iter_task_threads` and `iter_task_vma`.
+  - [#5328](https://github.com/bpftrace/bpftrace/pull/5328)
 #### Changed
 - Structs and arrays are copied for scratch variable assignment
   - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)
