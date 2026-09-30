@@ -315,11 +315,7 @@ static Result<std::map<std::string, btf::Types>> parse_btf()
   result.emplace("vmlinux", vmlinux);
 
   // Load all available BTFs from the host kernel.
-  char name[64];
-  struct bpf_btf_info info = {};
-  info.name = reinterpret_cast<uintptr_t>(&name[0]);
-  info.name_len = sizeof(name);
-  __u32 id = 0, info_len = sizeof(info);
+  __u32 id = 0;
 
   while (true) {
     int err = bpf_btf_get_next_id(id, &id);
@@ -332,6 +328,15 @@ static Result<std::map<std::string, btf::Types>> parse_btf()
     if (fd < 0) {
       return make_error<SystemError>("bpf_btf_get_fd_by_id failed");
     }
+    SCOPE_EXIT
+    {
+      close(fd);
+    };
+    char name[64] = {};
+    struct bpf_btf_info info = {};
+    info.name = reinterpret_cast<uintptr_t>(&name[0]);
+    info.name_len = sizeof(name);
+    __u32 info_len = sizeof(info);
     if (bpf_obj_get_info_by_fd(fd, &info, &info_len) != 0) {
       return make_error<SystemError>("bpf_obj_get_info_by_fd failed");
     }
