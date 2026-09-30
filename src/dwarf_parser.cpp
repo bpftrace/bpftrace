@@ -21,8 +21,14 @@ void DwarfParseError::log(llvm::raw_ostream &OS) const
 #include <elfutils/libdw.h>
 #include <elfutils/libdwelf.h>
 
+#include <algorithm>
+#include <cstdlib>
 #include <cstring>
+#include <fcntl.h>
+#include <fstream>
 #include <set>
+#include <string_view>
+#include <unistd.h>
 
 namespace bpftrace {
 
@@ -50,12 +56,17 @@ Dwarf::Dwarf(BPFtrace *bpftrace,
       is_kernel_(is_kernel)
 {
   debuginfo_path_cstr_ = debuginfo_path_.c_str();
+  callbacks = {};
   if (is_kernel_) {
-    callbacks.find_elf = dwfl_linux_kernel_find_elf;
     callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
-    // Wrapper callback preventing libdw from mistakenly failing due to a
-    // missing __versions section in /sys/module/<name>/sections at runtime.
-    callbacks.section_address = kernel_module_section_address;
+    const char *vmlinux = std::getenv("BPFTRACE_VMLINUX");
+    const bool explicit_vmlinux = vmlinux != nullptr && *vmlinux != '\0';
+    if (explicit_vmlinux) {
+      callbacks.section_address = dwfl_offline_section_address;
+    } else {
+      callbacks.find_elf = dwfl_linux_kernel_find_elf;
+      callbacks.section_address = kernel_module_section_address;
+    }
   } else {
     callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
     callbacks.section_address = dwfl_offline_section_address;
@@ -103,6 +114,86 @@ std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
   return dwarf;
 }
 
+static std::optional<std::string> find_kernel_module(
+    const std::string &module_name,
+    const std::string &search_path)
+{
+  std::string module_name_dash = module_name;
+  std::replace(module_name_dash.begin(), module_name_dash.end(), '_', '-');
+  std::optional<std::string> first_match;
+  if (elf_version(EV_CURRENT) == EV_NONE)
+    return std::nullopt;
+
+  size_t start = 0;
+  while (start <= search_path.size()) {
+    const size_t end = search_path.find(':', start);
+    const std::string dir = search_path.substr(
+        start, end == std::string::npos ? std::string::npos : end - start);
+    start = end == std::string::npos ? search_path.size() + 1 : end + 1;
+    if (dir.empty())
+      continue;
+
+    for (const auto *name : { module_name.c_str(), module_name_dash.c_str() }) {
+      std::string path = dir + "/" + name + ".ko";
+      if (access(path.c_str(), R_OK) != 0)
+        continue;
+      if (!first_match)
+        first_match = path;
+
+      int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
+      if (fd < 0)
+        continue;
+      Elf *elf = elf_begin(fd, ELF_C_READ, nullptr);
+      bool has_dwarf = false;
+      if (elf != nullptr) {
+        size_t shstrndx = 0;
+        if (elf_getshdrstrndx(elf, &shstrndx) == 0) {
+          Elf_Scn *scn = nullptr;
+          bool has_info = false;
+          bool has_line = false;
+          while ((scn = elf_nextscn(elf, scn)) != nullptr) {
+            GElf_Shdr shdr = {};
+            if (gelf_getshdr(scn, &shdr) == nullptr)
+              continue;
+            const char *section = elf_strptr(elf, shstrndx, shdr.sh_name);
+            if (section == nullptr)
+              continue;
+            has_info |= std::strcmp(section, ".debug_info") == 0;
+            has_line |= std::strcmp(section, ".debug_line") == 0;
+          }
+          has_dwarf = has_info && has_line;
+        }
+        elf_end(elf);
+      }
+      close(fd);
+      if (has_dwarf)
+        return path;
+    }
+  }
+
+  return first_match;
+}
+
+static int report_kernel_modules_offline(Dwfl *dwfl,
+                                         const std::string &search_path)
+{
+  std::ifstream modules("/proc/modules");
+  if (!modules)
+    return -1;
+
+  std::string name;
+  uint64_t size;
+  std::string rest;
+  while (modules >> name >> size) {
+    std::getline(modules, rest);
+    auto path = find_kernel_module(name, search_path);
+    if (path)
+      dwfl_report_offline(dwfl, name.c_str(), path->c_str(), -1);
+  }
+
+  return modules.bad() ? -1 : 0;
+}
+
 static int kernel_module_section_address(Dwfl_Module *mod,
                                          void **userdata,
                                          const char *modname,
@@ -119,6 +210,8 @@ static int kernel_module_section_address(Dwfl_Module *mod,
   // https://sourceware.org/bugzilla/show_bug.cgi?id=34030
   // A zero-sized section has no runtime contents or address to resolve.
   if ((shdr != nullptr && shdr->sh_size == 0) || section == "__versions" ||
+      section == "__version_ext_crcs" ||
+      section == "__version_ext_names" ||
       section == ".data..percpu") {
     *addr = static_cast<Dwarf_Addr>(-1L);
     return DWARF_CB_OK;
@@ -132,11 +225,25 @@ std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
                                             const std::string &debuginfo_path)
 {
   std::unique_ptr<Dwarf> dwarf(new Dwarf(bpftrace, "", debuginfo_path, true));
-  if (!dwarf->dwfl || dwfl_linux_kernel_report_kernel(dwarf->dwfl) != 0 ||
-      dwfl_linux_kernel_report_modules(dwarf->dwfl) != 0 ||
-      dwfl_report_end(dwarf->dwfl, nullptr, nullptr) != 0) {
+  if (!dwarf->dwfl)
+    return nullptr;
+
+  const char *vmlinux = std::getenv("BPFTRACE_VMLINUX");
+  const bool explicit_vmlinux = vmlinux != nullptr && *vmlinux != '\0';
+
+  if (explicit_vmlinux) {
+    if (!dwfl_report_offline(dwarf->dwfl, "kernel", vmlinux, -1))
+      return nullptr;
+    if (report_kernel_modules_offline(dwarf->dwfl, debuginfo_path) != 0) {
+      return nullptr;
+    }
+  } else if (dwfl_linux_kernel_report_kernel(dwarf->dwfl) != 0 ||
+             dwfl_linux_kernel_report_modules(dwarf->dwfl) != 0) {
     return nullptr;
   }
+
+  if (dwfl_report_end(dwarf->dwfl, nullptr, nullptr) != 0)
+    return nullptr;
 
   Dwarf_Addr bias;
 
@@ -619,6 +726,57 @@ static std::string cu_kernel_module_name(Dwarf_Die *cudie)
   return name;
 }
 
+static bool find_function_symbol(Dwfl_Module *mod,
+                                 Dwarf_Addr address,
+                                 std::string *name,
+                                 uint64_t *offset)
+{
+  const int symbol_count = dwfl_module_getsymtab(mod);
+  if (symbol_count < 0)
+    return false;
+
+  GElf_Xword best_size = 0;
+  uint64_t best_offset = 0;
+  const char *best_name = nullptr;
+
+  for (int i = 0; i < symbol_count; i++) {
+    GElf_Sym sym = {};
+    GElf_Addr symbol_address = 0;
+    const char *symbol_name = dwfl_module_getsym_info(
+        mod, i, &sym, &symbol_address, nullptr, nullptr, nullptr);
+    if (symbol_name == nullptr || GELF_ST_TYPE(sym.st_info) != STT_FUNC ||
+        sym.st_size == 0)
+      continue;
+
+    std::optional<uint64_t> current_offset;
+    for (const GElf_Addr candidate : { symbol_address, sym.st_value }) {
+      GElf_Addr lookup_address = address;
+      if (candidate <= UINT32_MAX && address > UINT32_MAX)
+        lookup_address = static_cast<uint32_t>(address);
+      if (lookup_address >= candidate &&
+          lookup_address - candidate < sym.st_size) {
+        current_offset = lookup_address - candidate;
+        break;
+      }
+    }
+    if (!current_offset)
+      continue;
+
+    if (best_name == nullptr || sym.st_size < best_size) {
+      best_size = sym.st_size;
+      best_offset = *current_offset;
+      best_name = symbol_name;
+    }
+  }
+
+  if (best_name == nullptr)
+    return false;
+
+  *name = best_name;
+  *offset = best_offset;
+  return true;
+}
+
 Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
     const std::string &source_file,
     const std::string &kernel_module) const
@@ -739,11 +897,32 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
         (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
       Dwarf_Addr addr;
       if (dwarf_lineaddr(line, &addr) == 0) {
-        // Add KASLR offset if in kernel mode
-        return SourceLocation{
+        SourceLocation location{
           .address = is_kernel_ ? addr + cu->mod_bias : addr,
           .kernel_module = is_kernel_ ? cu_kernel_module_name(cu->cudie) : "",
         };
+
+        if (is_kernel_) {
+          const char *vmlinux = std::getenv("BPFTRACE_VMLINUX");
+          const bool explicit_vmlinux =
+              vmlinux != nullptr && *vmlinux != '\0';
+          const bool offline_vmlinux =
+              explicit_vmlinux &&
+              (location.kernel_module == "kernel" ||
+               location.kernel_module == "vmlinux");
+          if (offline_vmlinux)
+            location.address = addr;
+
+          Dwfl_Module *mod = dwfl_cumodule(cu->cudie);
+          if (mod != nullptr) {
+            find_function_symbol(mod,
+                                 location.address,
+                                 &location.symbol,
+                                 &location.symbol_offset);
+          }
+        }
+
+        return location;
       }
     }
   }

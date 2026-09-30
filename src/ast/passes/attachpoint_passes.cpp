@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <bcc/bcc_proc.h>
 #include <cctype>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -722,8 +723,26 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
         errs_ << location.takeError() << std::endl;
         return INVALID;
       }
-      ap_->address = location->address;
-      ap_->target = location->kernel_module;
+      const char *vmlinux = std::getenv("BPFTRACE_VMLINUX");
+      if (vmlinux != nullptr && *vmlinux != '\0') {
+        if (location->symbol.empty()) {
+          errs_ << "Unable to resolve source location address 0x" << std::hex
+                << location->address << std::dec
+                << " to a kernel function" << std::endl;
+          return INVALID;
+        }
+
+        ap_->func = location->symbol;
+        ap_->func_offset = location->symbol_offset;
+        ap_->target = location->kernel_module == "kernel" ||
+                              location->kernel_module == "vmlinux"
+                          ? ""
+                          : location->kernel_module;
+        ap_->address = 0;
+      } else {
+        ap_->address = location->address;
+        ap_->target = location->kernel_module;
+      }
 
       return OK;
     }
