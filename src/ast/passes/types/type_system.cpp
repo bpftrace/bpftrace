@@ -15,13 +15,15 @@ Pass CreateTypeSystemPass()
     TypeMetadata result;
 
     // For now, we simply build a single type system that covers all the
-    // external imports and standard library. For now, we load in all the
-    // kernel types, but in theory this should load in a base type system
+    // external imports and standard library.
+    // Eventually we want to load in a base type system
     // that is different for each of the probes.
     std::optional<btf::Types> aggregate;
     auto kernel_types = func_info.kernel_info().load_btf("vmlinux");
     if (kernel_types) {
-      aggregate.emplace(std::move(*kernel_types));
+      result.kernel = std::move(*kernel_types);
+    } else {
+      consumeError(kernel_types.takeError());
     }
 
     for (const auto &module : bm.modules) {
