@@ -13,6 +13,15 @@ add_custom_command(
 )
 add_custom_target(dwarf_origin_fixture DEPENDS dwarf_origin)
 
+add_custom_command(
+  OUTPUT dwarf_pie
+  COMMAND ${GCC} -fPIE -pie -g ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_pie.c
+          -o ${CMAKE_CURRENT_BINARY_DIR}/dwarf_pie
+  DEPENDS dwarf_pie.c
+  VERBATIM
+)
+add_custom_target(dwarf_pie_fixture DEPENDS dwarf_pie)
+
 bpf(
   data_source
   BTF       data_source.btf

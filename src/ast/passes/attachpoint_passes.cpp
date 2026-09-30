@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <bcc/bcc_proc.h>
 #include <cctype>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -722,16 +723,33 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
         errs_ << location.takeError() << std::endl;
         return INVALID;
       }
-      if (auto function_info = dwarf->get_function_info(
-              ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
-          function_info && !function_info->name.empty() &&
-          function_info->low_pc &&
-          location->address >= *function_info->low_pc) {
-        location->symbol = function_info->name;
-        location->symbol_offset = location->address - *function_info->low_pc;
+      const char *vmlinux = std::getenv("BPFTRACE_VMLINUX");
+      if (vmlinux != nullptr && *vmlinux != '\0') {
+        if (location->symbol.empty()) {
+          errs_ << "Unable to resolve source location address 0x" << std::hex
+                << location->address << std::dec << " to a kernel function"
+                << std::endl;
+          return INVALID;
+        }
+        if (location->symbol_size == 0 ||
+            location->symbol_offset >= location->symbol_size) {
+          errs_ << "Resolved source location offset " << location->symbol_offset
+                << " is outside function " << location->symbol << " (size "
+                << location->symbol_size << ")" << std::endl;
+          return INVALID;
+        }
+
+        ap_->func = location->symbol;
+        ap_->func_offset = location->symbol_offset;
+        ap_->target = location->kernel_module == "kernel" ||
+                              location->kernel_module == "vmlinux"
+                          ? ""
+                          : location->kernel_module;
+        ap_->address = 0;
+      } else {
+        ap_->address = location->address;
+        ap_->target = location->kernel_module;
       }
-      ap_->address = location->address;
-      ap_->target = location->kernel_module;
 
       return OK;
     }

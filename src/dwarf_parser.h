@@ -96,10 +96,11 @@ public:
   void resolve_fields(const SizedType &type) const;
 
   struct SourceLocation {
-    uint64_t address;
+    uint64_t address = 0;
     std::string kernel_module;
     std::string symbol;
     uint64_t symbol_offset = 0;
+    uint64_t symbol_size = 0;
   };
 
   Result<SourceLocation> line_to_addr(const std::string &source_file,
@@ -257,10 +258,11 @@ public:
   }
 
   struct SourceLocation {
-    uint64_t address;
+    uint64_t address = 0;
     std::string kernel_module;
     std::string symbol;
     uint64_t symbol_offset = 0;
+    uint64_t symbol_size = 0;
   };
 
   Result<SourceLocation> line_to_addr(const std::string &source_file

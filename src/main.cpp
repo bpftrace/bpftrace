@@ -158,7 +158,7 @@ void usage(std::ostream& out)
   out << "    -I DIR         add the directory to the include search path" << std::endl;
   out << "    --include FILE add an #include file before preprocessing" << std::endl;
   out << "    --debuginfo DIR[:DIR]" << std::endl;
-  out << "                   add directories to the debug info search path" << std::endl;
+  out << "                   add directories to the debug info and kernel module search path" << std::endl;
   out << "    --traceable-functions FILE" << std::endl;
   out << "                   load the list of traceable kernel functions from FILE" << std::endl;
   out << std::endl;

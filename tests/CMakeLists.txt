@@ -63,8 +63,13 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
 add_subdirectory(data)
 add_dependencies(bpftrace_test data_source_dwarf data_source_btf)
 add_dependencies(bpftrace_test dwarf_origin_fixture)
+add_dependencies(bpftrace_test dwarf_pie_fixture)
 target_compile_definitions(bpftrace_test PRIVATE
   DWARF_ORIGIN_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_origin")
+target_compile_definitions(bpftrace_test PRIVATE
+  DATA_SOURCE_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/data_source_exe")
+target_compile_definitions(bpftrace_test PRIVATE
+  DWARF_PIE_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_pie")
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
