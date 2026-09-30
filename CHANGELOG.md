@@ -18,6 +18,9 @@ and this project adheres to
   - [#5308](https://github.com/bpftrace/bpftrace/pull/5308)
 - stdlib: Add the compile-time `arch` builtin.
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
+- Add open-coded iterators to `for` loops: `iter_task`, `iter_threads`,
+  `iter_task_threads` and `iter_task_vma`.
+  - [#5328](https://github.com/bpftrace/bpftrace/pull/5328)
 #### Changed
 #### Deprecated
 #### Removed
