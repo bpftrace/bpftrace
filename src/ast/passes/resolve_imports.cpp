@@ -422,6 +422,22 @@ Result<OK> Imports::import_any(Node &node,
   return OK();
 }
 
+Result<OK> Imports::import_cwd_c_headers(Node &node)
+{
+  auto cwd = std::filesystem::current_path();
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(cwd)) {
+    if (std::filesystem::is_regular_file(entry.status()) &&
+        entry.path().extension() == ".h") {
+      auto ok = import_c(
+          node, entry.path().filename().string(), entry.path(), c_headers);
+      if (!ok) {
+        return ok.takeError();
+      }
+    }
+  }
+  return OK();
+}
+
 void ResolveStatementImports::visit(StatementImport &imp)
 {
   static std::string import_error =
@@ -563,6 +579,11 @@ Pass CreateResolveRootImportsPass(std::vector<std::string> &&import_paths)
                           if (!ok) {
                             return ok.takeError();
                           }
+                        }
+
+                        auto hdr = imports.import_cwd_c_headers(*ast.root);
+                        if (!hdr) {
+                          return hdr.takeError();
                         }
 
                         return imports;
