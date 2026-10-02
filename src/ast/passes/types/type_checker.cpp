@@ -83,6 +83,8 @@ private:
                                size_t index,
                                const arg_type_spec &spec);
   [[nodiscard]] bool check_call(Call &call);
+  void check_external_call(Call &call);
+  void check_kfunc(Call &call);
   bool check_string_size(Node &node, const SizedType &ty);
 
   bool check_arg(Call &call,
@@ -250,6 +252,12 @@ void TypeChecker::visit(Call &call)
 {
   for (auto &varg : call.vargs) {
     visit(varg);
+  }
+
+  if (call.is_kfunc()) {
+    check_kfunc(call);
+    check_external_call(call);
+    return;
   }
 
   if (!check_call(call)) {
@@ -553,96 +561,130 @@ void TypeChecker::visit(Call &call)
       call.addError() << fs.format(args);
     }
   } else {
-    // Check here if this corresponds to an external function. We convert the
-    // external type metadata into the internal `SizedType` representation and
-    // check that they are exactly equal.
-    auto maybe_func = type_metadata_.global.lookup<btf::Function>(call.func);
-    if (!maybe_func) {
-      consumeError(std::move(maybe_func));
-      if (type_map_.type(&call).IsNoneTy()) {
-        LOG(BUG) << "Unknown builtin function " << call.func;
-      }
-      return;
-    }
+    check_external_call(call);
+  }
+}
 
-    const auto &func = *maybe_func;
-    auto proto = func.type();
-    if (!proto) {
-      consumeError(std::move(proto));
-      return;
-    }
+void TypeChecker::check_kfunc(Call &call)
+{
+  auto maybe_local = type_metadata_.global.lookup<btf::Function>(call.func);
+  if (!maybe_local) {
+    consumeError(maybe_local.takeError());
+  } else if (maybe_local->linkage() == btf::Function::Linkage::Global) {
+    call.addError() << "`kfunc::" << call.func << "` conflicts with function `"
+                    << call.func << "` defined in an imported file";
+    return;
+  }
 
-    // Convert all arguments.
-    auto argument_types = proto->argument_types();
-    if (!argument_types) {
-      call.addError() << "Unable to read argument types: "
-                      << argument_types.takeError();
+  auto *probe = dynamic_cast<Probe *>(top_level_node_);
+  if (probe == nullptr) {
+    return;
+  }
+  for (AttachPoint *ap : probe->attach_points) {
+    bpf_prog_type prog_type = progtype(probetype(ap->provider));
+    if (!bpftrace_.feature_->kfunc_allowed(call.func.c_str(), prog_type)) {
+      auto &err = call.addError();
+      err << "Kernel function `" << call.func << "` is not callable from a \""
+          << ap->provider << "\" probe";
+      err.addHint() << "It may not be a kfunc at all, or it may not be "
+                       "registered for this program type.";
       return;
     }
-    // Check the argument count.
-    if (argument_types->size() != call.vargs.size()) {
-      call.addError() << "Function `" << call.func << "` requires "
-                      << argument_types->size() << " arguments, got only "
-                      << call.vargs.size();
-      return;
+  }
+}
+
+// Check if this corresponds to an external imported function. We convert the
+// external type metadata into the internal `SizedType` representation and check
+// that they are exactly equal.
+void TypeChecker::check_external_call(Call &call)
+{
+  auto maybe_func = type_metadata_.for_call(call).lookup<btf::Function>(
+      call.func);
+  if (!maybe_func) {
+    consumeError(std::move(maybe_func));
+    if (type_map_.type(&call).IsNoneTy()) {
+      LOG(BUG) << "Unknown builtin function " << call.func;
     }
-    std::vector<std::pair<std::string, SizedType>> args;
-    for (size_t i = 0; i < argument_types->size(); i++) {
-      const auto &[name, type] = argument_types->at(i);
-      const auto &varg_type = type_map_.type(call.vargs[i]);
-      auto compat_arg_type = getCompatType(type, bpftrace_.structs);
-      if (!compat_arg_type) {
-        // If the required type is a **pointer**, and the provided type is
-        // a **pointer**, then we let it slide. Just assume the user knows
-        // what they are doing. The verifier will catch them out otherwise.
-        if (type.is<btf::Pointer>() && varg_type.IsPtrTy()) {
-          args.emplace_back(name, varg_type);
-          continue;
-        }
-        call.addError() << "Unable to convert argument type, "
-                        << "function requires '" << type << "', " << "found '"
-                        << typestr(varg_type)
-                        << "': " << compat_arg_type.takeError();
+    return;
+  }
+
+  const auto &func = *maybe_func;
+  auto proto = func.type();
+  if (!proto) {
+    consumeError(std::move(proto));
+    return;
+  }
+
+  // Convert all arguments.
+  auto argument_types = proto->argument_types();
+  if (!argument_types) {
+    call.addError() << "Unable to read argument types: "
+                    << argument_types.takeError();
+    return;
+  }
+  // Check the argument count.
+  if (argument_types->size() != call.vargs.size()) {
+    call.addError() << "Function `" << call.func << "` requires "
+                    << argument_types->size() << " arguments, got only "
+                    << call.vargs.size();
+    return;
+  }
+  std::vector<std::pair<std::string, SizedType>> args;
+  for (size_t i = 0; i < argument_types->size(); i++) {
+    const auto &[name, type] = argument_types->at(i);
+    const auto &varg_type = type_map_.type(call.vargs[i]);
+    auto compat_arg_type = getCompatType(type, bpftrace_.structs);
+    if (!compat_arg_type) {
+      // If the required type is a **pointer**, and the provided type is
+      // a **pointer**, then we let it slide. Just assume the user knows
+      // what they are doing. The verifier will catch them out otherwise.
+      if (type.is<btf::Pointer>() && varg_type.IsPtrTy()) {
+        args.emplace_back(name, varg_type);
         continue;
       }
-      args.emplace_back(name, std::move(*compat_arg_type));
+      call.addError() << "Unable to convert argument type, "
+                      << "function requires '" << type << "', " << "found '"
+                      << typestr(varg_type)
+                      << "': " << compat_arg_type.takeError();
+      continue;
     }
-    if (args.size() != argument_types->size()) {
-      return; // Already emitted errors.
-    }
-    // Check all the individual arguments.
-    bool ok = true;
-    for (size_t i = 0; i < args.size(); i++) {
-      const auto &[name, type] = args[i];
-      const auto &varg_type = type_map_.type(call.vargs[i]);
-      if (type != varg_type) {
-        if (!name.empty()) {
-          call.vargs[i].node().addError()
-              << "Expected " << typestr(type) << " for argument `" << name
-              << "` got " << typestr(varg_type);
-        } else {
-          call.vargs[i].node().addError()
-              << "Expected " << typestr(type) << " got " << typestr(varg_type);
-        }
-        ok = false;
+    args.emplace_back(name, std::move(*compat_arg_type));
+  }
+  if (args.size() != argument_types->size()) {
+    return; // Already emitted errors.
+  }
+  // Check all the individual arguments.
+  bool ok = true;
+  for (size_t i = 0; i < args.size(); i++) {
+    const auto &[name, type] = args[i];
+    const auto &varg_type = type_map_.type(call.vargs[i]);
+    if (type != varg_type) {
+      if (!name.empty()) {
+        call.vargs[i].node().addError()
+            << "Expected " << typestr(type) << " for argument `" << name
+            << "` got " << typestr(varg_type);
+      } else {
+        call.vargs[i].node().addError()
+            << "Expected " << typestr(type) << " got " << typestr(varg_type);
       }
+      ok = false;
     }
-    // Build our full proto as an error message.
-    std::stringstream fullmsg;
-    fullmsg << "Function `" << call.func << "` requires arguments (";
-    bool first = true;
-    for (const auto &[name, type] : args) {
-      if (!first) {
-        fullmsg << ", ";
-      }
-      fullmsg << typestr(type);
-      first = false;
+  }
+  // Build our full proto as an error message.
+  std::stringstream fullmsg;
+  fullmsg << "Function `" << call.func << "` requires arguments (";
+  bool first = true;
+  for (const auto &[name, type] : args) {
+    if (!first) {
+      fullmsg << ", ";
     }
-    fullmsg << ")";
-    if (!ok) {
-      call.addError() << fullmsg.str();
-      return;
-    }
+    fullmsg << typestr(type);
+    first = false;
+  }
+  fullmsg << ")";
+  if (!ok) {
+    call.addError() << fullmsg.str();
+    return;
   }
 }
 

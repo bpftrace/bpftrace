@@ -2233,6 +2233,34 @@ Expression Parser::parse_primary()
       return { boolean };
     }
 
+    if (peek() == ':' && peek(1) == ':') {
+      auto ns = Call::namespace_from_name(*name);
+      if (!ns) {
+        error("unknown namespace '" + *name + "'",
+              begin_line,
+              begin_col,
+              line_,
+              col_);
+      }
+      advance(2);
+      auto func_name = consume_identifier();
+      if (!func_name) {
+        error("expected a function name after '" + *name + "::'");
+        auto *none = make_none();
+        return { none };
+      }
+      auto func_loc = make_loc(begin_line, begin_col, line_, col_);
+      consume_layout();
+      if (peek() != '(') {
+        error("expected '(' after '" + *name + "::" + *func_name + "'");
+        auto *none = make_none();
+        return { none };
+      }
+      return parse_call_expression(*func_name,
+                                   func_loc,
+                                   ns.value_or(Call::Namespace::Default));
+    }
+
     consume_layout();
     if (peek() == '(') {
       return parse_call_expression(*name, name_loc);
@@ -2521,7 +2549,8 @@ Expression Parser::parse_tuple_or_grouping_expr(int begin_line, int begin_col)
 }
 
 Expression Parser::parse_call_expression(const std::string &name,
-                                         const SourceLocation &start_loc)
+                                         const SourceLocation &start_loc,
+                                         Call::Namespace ns)
 {
   expect('(');
 
@@ -2550,7 +2579,8 @@ Expression Parser::parse_call_expression(const std::string &name,
 
   auto loc = make_loc(
       start_loc.begin.line, start_loc.begin.column, line_, col_);
-  auto *call = ctx_.make_node<Call>(loc, std::string(name), std::move(args));
+  auto *call = ctx_.make_node<Call>(
+      loc, std::string(name), std::move(args), ns);
   return { call };
 }
 

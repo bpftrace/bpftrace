@@ -20,6 +20,25 @@ Diagnostic &Node::addWarning() const
   return state_.diagnostics_->addWarning(loc);
 }
 
+std::optional<Call::Namespace> Call::namespace_from_name(std::string_view name)
+{
+  if (name == namespace_name(Namespace::KFunc)) {
+    return Namespace::KFunc;
+  }
+  return std::nullopt;
+}
+
+std::string_view Call::namespace_name(Namespace ns)
+{
+  switch (ns) {
+    case Namespace::Default:
+      return "";
+    case Namespace::KFunc:
+      return "kfunc";
+  }
+  return "";
+}
+
 bool Expression::is_literal() const
 {
   if (is<Integer>() || is<NegativeInteger>() || is<String>() || is<Boolean>()) {

@@ -437,8 +437,12 @@ Buffer Formatter::format_list(std::vector<U>& exprs,
 
 Buffer Formatter::visit(Call& call)
 {
+  std::string name = call.func;
+  if (call.ns != Call::Namespace::Default) {
+    name = std::string(Call::namespace_name(call.ns)) + "::" + name;
+  }
   auto args = format_list(
-      call.vargs, ", ", metadata, max_width - (call.func.size() + 2), true);
+      call.vargs, ", ", metadata, max_width - (name.size() + 2), true);
   if (args.width() > max_width) {
     // Return with the newline break style.
     //
@@ -447,7 +451,7 @@ Buffer Formatter::visit(Call& call)
     //      b
     //    );
     return Buffer()
-        .text(call.func + "(")
+        .text(name + "(")
         .append(std::move(args), kIndentWidth)
         .text(")");
   } else {
@@ -459,7 +463,7 @@ Buffer Formatter::visit(Call& call)
     //        b,
     //        c);
     //
-    return Buffer().text(call.func + "(").append(std::move(args)).text(")");
+    return Buffer().text(name + "(").append(std::move(args)).text(")");
   }
 }
 

@@ -459,6 +459,9 @@ void MacroExpander::visit(Expression &expr)
   }
   if (call) {
     visit(call->vargs);
+    if (call->is_kfunc()) {
+      return;
+    }
   }
 
   std::vector<Expression> empty;

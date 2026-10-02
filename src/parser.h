@@ -74,8 +74,10 @@ private:
   ast::Expression parse_unary();
   ast::Expression parse_postfix(ast::Expression expr);
   ast::Expression parse_primary();
-  ast::Expression parse_call_expression(const std::string &name,
-                                        const ast::SourceLocation &start_loc);
+  ast::Expression parse_call_expression(
+      const std::string &name,
+      const ast::SourceLocation &start_loc,
+      ast::Call::Namespace ns = ast::Call::Namespace::Default);
   ast::Expression parse_paren_expr();
   std::optional<ast::Expression> try_parse_record(int begin_line,
                                                   int begin_col);
