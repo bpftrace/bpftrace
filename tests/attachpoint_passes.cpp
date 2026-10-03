@@ -85,6 +85,37 @@ void test_uprobe_lang(const std::string& input, const std::string& lang = "")
   }
 }
 
+void test_source_location_fields(const std::string& input,
+                                 const std::string& target,
+                                 const std::string& source_file,
+                                 size_t line_num,
+                                 size_t col_num = 0)
+{
+  auto mock_bpftrace = get_mock_bpftrace();
+  BPFtrace& bpftrace = *mock_bpftrace;
+  ast::ASTContext ast("stdin", input);
+
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put(bpftrace)
+                .put(get_mock_function_info())
+                .add(CreateParsePass())
+                .add(ast::CreateParseAttachpointsPass())
+                .run();
+
+  ASSERT_FALSE(ok && ast.diagnostics().ok());
+  ASSERT_NE(ast.root, nullptr);
+  ASSERT_EQ(ast.root->probes.size(), 1);
+  ASSERT_EQ(ast.root->probes.at(0)->attach_points.size(), 1);
+
+  auto* ap = ast.root->probes.at(0)->attach_points.at(0);
+  EXPECT_EQ(ap->provider, "kprobe");
+  EXPECT_EQ(ap->target, target);
+  EXPECT_EQ(ap->source_file, source_file);
+  EXPECT_EQ(ap->line_num, line_num);
+  EXPECT_EQ(ap->col_num, col_num);
+}
+
 TEST(attachpoint_parser, iter)
 {
   test("iter:task { 1 }");
@@ -109,12 +140,29 @@ TEST(attachpoint_parser, kprobe_src_loc)
   test_error("kprobe@fs/open.c:1077 { 1 }",
              "No DWARF debug info found for kernel, cannot attach by source "
              "code location.");
-  test_error(
-      "kprobe@fs/open.c: { 1 }",
-      R"(Invalid kprobe arguments, expected format: kprobe@FILE:LINE[:COL])");
-  test_error(
-      "kprobe@fs/open.c:1077:1:2 { 1 }",
-      R"(Invalid kprobe arguments, expected format: kprobe@FILE:LINE[:COL])");
+  test_source_location_fields("kprobe@my_module:src/test.c:1077 { 1 }",
+                              "my_module",
+                              "src/test.c",
+                              1077);
+  test_source_location_fields("kprobe@my_module:src/test.c:1077:7 { 1 }",
+                              "my_module",
+                              "src/test.c",
+                              1077,
+                              7);
+  test_source_location_fields(
+      "kprobe@src/test.c:1077 { 1 }", "", "src/test.c", 1077);
+
+  test_error("kprobe@my_module:src/test.c: { 1 }",
+             R"(Invalid kprobe arguments, expected format: )"
+             R"(kprobe@[MODULE:]FILE:LINE[:COL])");
+  test_error("kprobe@my_module:src/test.c:invalid { 1 }",
+             R"(Invalid line number: invalid integer: invalid)");
+  test_error("kprobe@fs/open.c: { 1 }",
+             R"(Invalid kprobe arguments, expected format: )"
+             R"(kprobe@[MODULE:]FILE:LINE[:COL])");
+  test_error("kprobe@fs/open.c:1077:1:2 { 1 }",
+             R"(Invalid kprobe arguments, expected format: )"
+             R"(kprobe@[MODULE:]FILE:LINE[:COL])");
   test_error("kprobe@fs/open.c:invalid { 1 }",
              R"(Invalid line number: invalid integer: invalid)");
   test_error("kprobe@fs/open.c:1077:invalid { 1 }",
