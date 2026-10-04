@@ -15,22 +15,14 @@ inline bool needMemcpy(const SizedType &stype)
 // maybe something else (like BPF arenas) in the future.
 //
 // This means that a bpf_probe_read_*() is _NOT_ required.
-inline bool shouldBeInBpfMemoryAlready(const SizedType &type)
-{
-  return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
-         type.IsUsymTy() || type.IsKstackTy() || type.IsUstackTy() ||
-         type.IsTupleTy() || type.IsRecordTy() || type.IsTimestampTy() ||
-         type.IsMacAddressTy() || type.IsCgroupPathTy();
-}
-
 inline bool inBpfMemory(const SizedType &type)
 {
-  return type.is_internal || shouldBeInBpfMemoryAlready(type);
+  return type.is_internal;
 }
 
 inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {
-  return shouldBeInBpfMemoryAlready(ty) ? AddrSpace::kernel : ty.GetAS();
+  return inBpfMemory(ty) ? AddrSpace::kernel : ty.GetAS();
 }
 
 // This applies to both map keys and map values

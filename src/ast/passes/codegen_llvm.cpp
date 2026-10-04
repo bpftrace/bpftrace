@@ -2849,7 +2849,7 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
     b_.SetInsertPoint(merge);
   }
 
-  if (inBpfMemory(type_map_.type(&arr)) && !type.IsPtrTy()) {
+  if (inBpfMemory(type) && !type.IsPtrTy() && !type_map_.type(&arr).IsPtrTy()) {
     return readDatastructElemFromStack(std::move(scoped_expr),
                                        scoped_index.value(),
                                        type,
@@ -2886,7 +2886,7 @@ ScopedExpr CodegenLLVM::createAnonStructAccess(const SizedType &stype,
                             { b_.getInt32(0), b_.getInt32(field_idx) });
   SizedType &elem_type = stype.GetFields()[field_idx].type;
 
-  if (shouldBeInBpfMemoryAlready(elem_type)) {
+  if (inBpfMemory(elem_type)) {
     // Extend lifetime of source buffer
     return ScopedExpr(src, std::move(expr_value));
   } else {
@@ -3629,7 +3629,7 @@ void CodegenLLVM::createMapBufferStore(const SizedType &src_type,
     // src currently contains a pointer to the struct or array
     // We now want to read the entire struct/array in so we can save it
     b_.CreateProbeRead(dst, dst_type, src, loc, src_type.GetAS());
-  } else if (shouldBeInBpfMemoryAlready(dst_type)) {
+  } else if (inBpfMemory(dst_type)) {
     b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
   } else {
     b_.CreateStore(src, dst);

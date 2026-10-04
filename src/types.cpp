@@ -409,7 +409,9 @@ SizedType CreateEnum(size_t bits, const std::string &name)
 
 SizedType CreateString(size_t size)
 {
-  return { Type::string, size };
+  auto st = SizedType(Type::string, size);
+  st.is_internal = true;
+  return st;
 }
 
 SizedType CreateNone()
@@ -479,6 +481,7 @@ SizedType CreateStack(bool kernel, StackType stack)
                       kernel ? base_size : (base_size + 8));
   st.stack_type = stack;
   st.stack_type.kernel = kernel;
+  st.is_internal = true;
   return st;
 }
 
@@ -541,7 +544,9 @@ SizedType CreateTSeries()
 
 SizedType CreateUSym()
 {
-  return { Type::usym_t, 16 };
+  auto st = SizedType(Type::usym_t, 16);
+  st.is_internal = true;
+  return st;
 }
 
 SizedType CreateKSym()
@@ -552,18 +557,23 @@ SizedType CreateKSym()
 SizedType CreateBuffer(size_t size)
 {
   auto metadata_headroom_bytes = sizeof(AsyncEvent::Buf);
-  return { Type::buffer, size + metadata_headroom_bytes };
+  auto st = SizedType(Type::buffer, size + metadata_headroom_bytes);
+  st.is_internal = true;
+  return st;
 }
 
 SizedType CreateTimestamp()
 {
-  return { Type::timestamp, 16 };
+  auto st = SizedType(Type::timestamp, 16);
+  st.is_internal = true;
+  return st;
 }
 
 SizedType CreateTuple(std::shared_ptr<Struct> &&tuple)
 {
   auto s = SizedType(Type::tuple, tuple->size);
   s.inner_struct_ = std::move(tuple);
+  s.is_internal = true;
   return s;
 }
 
@@ -571,6 +581,7 @@ SizedType CreateRecord(std::shared_ptr<Struct> &&record)
 {
   auto s = SizedType(Type::record, record->size);
   s.inner_struct_ = std::move(record);
+  s.is_internal = true;
   return s;
 }
 
@@ -583,7 +594,9 @@ SizedType CreateMacAddress()
 
 SizedType CreateCgroupPath()
 {
-  return { Type::cgroup_path_t, 16 };
+  auto st = SizedType(Type::cgroup_path_t, 16);
+  st.is_internal = true;
+  return st;
 }
 
 SizedType CreateTimestampMode()
