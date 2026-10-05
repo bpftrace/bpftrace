@@ -1937,7 +1937,10 @@ void TypeRuleCollector::visit(Record &record)
         std::vector<SizedType> elements;
         std::vector<std::string_view> names;
         for (size_t i = 0; i < record.elems.size(); ++i) {
-          elements.emplace_back(inputs[i]);
+          auto &elem = elements.emplace_back(inputs[i]);
+          if (elem.IsCTypeTy() || elem.IsArrayTy()) {
+            elem.SetInBpfMemory(true);
+          }
           names.emplace_back(record.elems[i]->name);
         }
         return CreateRecord(Struct::CreateRecord(elements, names));
@@ -2039,9 +2042,14 @@ void TypeRuleCollector::visit(Tuple &tuple)
   resolver_.add_type_rule({
       .output = &tuple,
       .inputs = std::move(inputs),
-      .resolve = [&tuple](const std::vector<SizedType> &inputs) -> SizedType {
-        return CreateTuple(Struct::CreateTuple(
-            std::vector<SizedType>(inputs.begin(), inputs.end())));
+      .resolve = [](const std::vector<SizedType> &inputs) -> SizedType {
+        std::vector<SizedType> elements(inputs.begin(), inputs.end());
+        for (auto &elem : elements) {
+          if (elem.IsCTypeTy() || elem.IsArrayTy()) {
+            elem.SetInBpfMemory(true);
+          }
+        }
+        return CreateTuple(Struct::CreateTuple(elements));
       },
   });
 }
@@ -2501,6 +2509,10 @@ SizedType TypeRuleCollector::get_map_key_type(const std::string &map_name,
   const auto &current_type = resolver_.get_type(key_name);
   auto promoted = get_promoted_type(current_type, type);
   if (promoted) {
+    if (promoted->IsCTypeTy() || promoted->IsArrayTy()) {
+      promoted->SetInBpfMemory(true);
+    }
+
     return *promoted;
   }
 
