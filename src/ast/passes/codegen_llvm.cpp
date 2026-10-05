@@ -2052,7 +2052,7 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &macaddr = call.vargs.front();
     auto scoped_arg = visit(macaddr);
 
-    if (inBpfMemory(type_map_.type(macaddr)))
+    if (type_map_.type(macaddr).IsInBpfMemory())
       b_.CreateMemcpyBPF(buf,
                          scoped_arg.value(),
                          type_map_.type(macaddr).GetSize());
@@ -2730,7 +2730,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 
   const auto &field = type.GetField(acc.field);
 
-  if (inBpfMemory(type)) {
+  if (type.IsInBpfMemory()) {
     return readDatastructElemFromStack(
         std::move(scoped_arg), b_.getInt64(field.offset), type, field.type);
   } else {
@@ -2849,7 +2849,7 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
     b_.SetInsertPoint(merge);
   }
 
-  if (inBpfMemory(type) && !type.IsPtrTy() && !type_map_.type(&arr).IsPtrTy()) {
+  if (type.IsInBpfMemory() && !type_map_.type(&arr).IsPtrTy()) {
     return readDatastructElemFromStack(std::move(scoped_expr),
                                        scoped_index.value(),
                                        type,
@@ -2886,7 +2886,7 @@ ScopedExpr CodegenLLVM::createAnonStructAccess(const SizedType &stype,
                             { b_.getInt32(0), b_.getInt32(field_idx) });
   SizedType &elem_type = stype.GetFields()[field_idx].type;
 
-  if (inBpfMemory(elem_type)) {
+  if (elem_type.IsInBpfMemory()) {
     // Extend lifetime of source buffer
     return ScopedExpr(src, std::move(expr_value));
   } else {
@@ -2955,7 +2955,7 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     if (type_map_.type(cast.expr).IsArrayTy()) {
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
-      if (type_map_.type(cast.expr).is_internal ||
+      if (type_map_.type(cast.expr).IsInBpfMemory() ||
           type_map_.type(cast.expr).IsCtxAccess()) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
@@ -3071,7 +3071,7 @@ Value *CodegenLLVM::createAnonStruct(
 
     Value *dst = b_.CreateGEP(llvm_ty, buf, { b_.getInt32(0), b_.getInt32(i) });
 
-    if (inBpfMemory(type))
+    if (type.IsInBpfMemory())
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
     else if (type.IsArrayTy() || type.IsCTypeTy())
       b_.CreateProbeRead(dst, type, val, vloc);
@@ -3629,7 +3629,7 @@ void CodegenLLVM::createMapBufferStore(const SizedType &src_type,
     // src currently contains a pointer to the struct or array
     // We now want to read the entire struct/array in so we can save it
     b_.CreateProbeRead(dst, dst_type, src, loc, src_type.GetAS());
-  } else if (inBpfMemory(dst_type)) {
+  } else if (dst_type.IsInBpfMemory()) {
     b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
   } else {
     b_.CreateStore(src, dst);
@@ -3695,7 +3695,7 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
 
   bool aligned = (map_key_size % 8) == 0;
 
-  if (inBpfMemory(type_map_.type(key_expr))) {
+  if (type_map_.type(key_expr).IsInBpfMemory()) {
     b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
   } else {
     if (type_map_.type(key_expr).IsArrayTy() ||
@@ -4294,7 +4294,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call)
                      b_.getInt8(0),
                      type_map_.type(arg).GetSize());
   if (needMemcpy(type_map_.type(arg))) {
-    if (inBpfMemory(type_map_.type(arg)))
+    if (type_map_.type(arg).IsInBpfMemory())
       b_.CreateMemcpyBPF(content_offset, value, type_map_.type(arg).GetSize());
     else
       b_.CreateProbeRead(content_offset, type_map_.type(arg), value, call.loc);
@@ -4504,7 +4504,7 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(src, std::move(scoped_src));
   } else if (elem_type.IsStringTy() || elem_type.IsBufferTy()) {
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    if (elem_type.IsStringTy() && data_type.is_internal) {
+    if (elem_type.IsStringTy() && data_type.IsInBpfMemory()) {
       if (src->getType()->isIntegerTy())
         src = b_.CreateIntToPtr(src, dst->getType());
       b_.CreateMemcpyBPF(dst, src, elem_type.GetSize());
@@ -4871,7 +4871,7 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
       f, name, args, debug_args, ctx_t, [&](llvm::Function *callback) {
         auto &key_type = type_map_.type(f.decl).GetField(0).type;
         Value *key = callback->getArg(1);
-        if (!inBpfMemory(key_type)) {
+        if (!key_type.IsInBpfMemory()) {
           key = b_.CreateLoad(b_.GetType(key_type), key, "key");
         }
 
@@ -4887,7 +4887,7 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
         if (canAggPerCpuMapElems(map_info->second.bpf_type, map_val_type)) {
           val = b_.CreatePerCpuMapAggElems(
               map, callback->getArg(1), map_val_type, f.loc);
-        } else if (!inBpfMemory(val_type)) {
+        } else if (!val_type.IsInBpfMemory()) {
           val = b_.CreateLoad(b_.GetType(val_type), val, "val");
         }
 

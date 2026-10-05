@@ -674,10 +674,10 @@ void TypeRuleCollector::visit(ArrayAccess &arr)
 
         elem.SetAS(type.GetAS());
 
-        // Indexing a pointer as an array can't be verified, so is_internal is
+        // Indexing a pointer as an array can't be verified, so in_bpf_memory is
         // only propagated from arrays.
         if (elem.IsCTypeTy() || elem.IsArrayTy()) {
-          elem.is_internal = !type.IsPtrTy() && type.is_internal;
+          elem.SetInBpfMemory(type.IsInBpfMemory());
         }
 
         return elem;
@@ -913,7 +913,7 @@ void TypeRuleCollector::visit(Builtin &builtin)
       builtin_type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
                                                    : AddrSpace::kernel);
       if (type == ProbeType::uprobe)
-        builtin_type.is_internal = true;
+        builtin_type.SetInBpfMemory(true);
     } else if (type == ProbeType::tracepoint) {
       builtin_type = CreateCStruct(*type_name,
                                    bpftrace_.structs.Lookup(*type_name));
@@ -1160,7 +1160,7 @@ void TypeRuleCollector::visit(Call &call)
 
       return_type = CreateArray(addr_size, CreateUInt8());
       return_type.SetAS(AddrSpace::kernel);
-      return_type.is_internal = true;
+      return_type.SetInBpfMemory(true);
     } else if (call.func == "reg") {
       return_type = CreateUInt64();
       if (probe_) {
@@ -1378,7 +1378,7 @@ SizedType update_cast_expr(const SizedType &cast_ty,
     }
 
     if (expr_ty.IsIntTy() || expr_ty.IsBoolTy())
-      updated_ty.is_internal = true;
+      updated_ty.SetInBpfMemory(true);
   }
 
   if (expr_ty.IsCtxAccess() && !updated_ty.IsIntTy()) {
@@ -1476,7 +1476,7 @@ void TypeRuleCollector::visit(FieldAccess &acc)
         // pointers anyways. In the future, we will likely want to do this in a
         // different way if we are tracking l-values.
         bool is_ctx = expr_type_in.IsCtxAccess();
-        bool is_internal = expr_type_in.is_internal;
+        bool in_bpf_memory = expr_type_in.IsInBpfMemory();
         auto expr_type = expr_type_in;
         while (expr_type.IsPtrTy()) {
           expr_type = expr_type.GetPointeeTy();
@@ -1555,7 +1555,7 @@ void TypeRuleCollector::visit(FieldAccess &acc)
             result_type.MarkCtxAccess();
           }
           if (result_type.IsCTypeTy() || result_type.IsArrayTy()) {
-            result_type.is_internal = is_internal;
+            result_type.SetInBpfMemory(in_bpf_memory);
           }
           result_type.SetAS(expr_type.GetAS());
 
@@ -2228,7 +2228,7 @@ void TypeRuleCollector::visit(Unop &unop)
             if (type.IsCtxAccess())
               result.MarkCtxAccess();
             if (result.IsCTypeTy() || result.IsArrayTy()) {
-              result.is_internal = type.is_internal;
+              result.SetInBpfMemory(type.IsInBpfMemory());
             }
             result.SetAS(type.GetAS());
           } else if (type.IsCTypeTy()) {
@@ -2442,7 +2442,7 @@ SizedType TypeRuleCollector::get_map_value_type(const std::string &map_name,
     // Data stored in a BPF map is internal (managed by BPF runtime), so
     // structs and arrays should be marked as such.
     if (promoted->IsCTypeTy() || promoted->IsArrayTy()) {
-      promoted->is_internal = true;
+      promoted->SetInBpfMemory(true);
     }
 
     return *promoted;

@@ -10,19 +10,9 @@ inline bool needMemcpy(const SizedType &stype)
   return stype.IsAggregate() || stype.IsTimestampTy() || stype.IsCgroupPathTy();
 }
 
-// BPF memory is memory that the program can access with a regular
-// dereference. This could mean the value is on the stack, a map, or
-// maybe something else (like BPF arenas) in the future.
-//
-// This means that a bpf_probe_read_*() is _NOT_ required.
-inline bool inBpfMemory(const SizedType &type)
-{
-  return type.is_internal;
-}
-
 inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {
-  return inBpfMemory(ty) ? AddrSpace::kernel : ty.GetAS();
+  return ty.IsInBpfMemory() ? AddrSpace::kernel : ty.GetAS();
 }
 
 // This applies to both map keys and map values

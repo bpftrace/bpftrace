@@ -410,7 +410,7 @@ SizedType CreateEnum(size_t bits, const std::string &name)
 SizedType CreateString(size_t size)
 {
   auto st = SizedType(Type::string, size);
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
@@ -481,7 +481,7 @@ SizedType CreateStack(bool kernel, StackType stack)
                       kernel ? base_size : (base_size + 8));
   st.stack_type = stack;
   st.stack_type.kernel = kernel;
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
@@ -523,7 +523,7 @@ SizedType CreateUsername()
 SizedType CreateInet(size_t size)
 {
   auto st = SizedType(Type::inet, size);
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
@@ -545,7 +545,7 @@ SizedType CreateTSeries()
 SizedType CreateUSym()
 {
   auto st = SizedType(Type::usym_t, 16);
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
@@ -558,14 +558,14 @@ SizedType CreateBuffer(size_t size)
 {
   auto metadata_headroom_bytes = sizeof(AsyncEvent::Buf);
   auto st = SizedType(Type::buffer, size + metadata_headroom_bytes);
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
 SizedType CreateTimestamp()
 {
   auto st = SizedType(Type::timestamp, 16);
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
@@ -573,7 +573,7 @@ SizedType CreateTuple(std::shared_ptr<Struct> &&tuple)
 {
   auto s = SizedType(Type::tuple, tuple->size);
   s.inner_struct_ = std::move(tuple);
-  s.is_internal = true;
+  s.SetInBpfMemory(true);
   return s;
 }
 
@@ -581,21 +581,21 @@ SizedType CreateRecord(std::shared_ptr<Struct> &&record)
 {
   auto s = SizedType(Type::record, record->size);
   s.inner_struct_ = std::move(record);
-  s.is_internal = true;
+  s.SetInBpfMemory(true);
   return s;
 }
 
 SizedType CreateMacAddress()
 {
   auto st = SizedType(Type::mac_address, 6);
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
 SizedType CreateCgroupPath()
 {
   auto st = SizedType(Type::cgroup_path_t, 16);
-  st.is_internal = true;
+  st.SetInBpfMemory(true);
   return st;
 }
 
