@@ -189,7 +189,6 @@ public:
 
   StackType stack_type;
   int funcarg_idx = -1;
-  bool is_internal = false;
   bool is_funcarg = false;
   TimestampMode ts_mode = TimestampMode::boot;
 
@@ -208,6 +207,7 @@ private:
   bool sign_flexible_ = false;
   bool is_anon_ = false;
   bool ctx_ = false;                              // Is bpf program context
+  bool in_bpf_memory_ = false;
   std::unordered_set<std::string> btf_type_tags_; // Only populated for
                                                   // Type::pointer
   size_t num_elements_ = 0; // Only populated for array types
@@ -220,7 +220,7 @@ private:
   {
     archive(type_,
             stack_type,
-            is_internal,
+            in_bpf_memory_,
             is_funcarg,
             is_anon_,
             funcarg_idx,
@@ -280,6 +280,26 @@ public:
   {
     ctx_ = true;
   };
+
+  // BPF memory is memory that the program can access with a regular
+  // dereference. This could mean the value is on the stack, a map, or
+  // maybe something else (like BPF arenas) in the future.
+  //
+  // If true, the value is a pointer to BPF memory and a bpf_probe_read_*()
+  // is _NOT_ required. Scalars are always loaded into a register, so this is
+  // never true for them.
+  bool IsInBpfMemory() const
+  {
+    if (IsIntTy() || IsBoolTy() || IsPtrTy()) {
+      return false;
+    }
+    return in_bpf_memory_;
+  }
+
+  void SetInBpfMemory(bool in_bpf_memory)
+  {
+    in_bpf_memory_ = in_bpf_memory;
+  }
 
   bool IsByteArray() const;
   bool IsAggregate() const;
