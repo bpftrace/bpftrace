@@ -156,10 +156,18 @@ Result<output::Primitive> format(BPFtrace &bpftrace,
     case Type::record: {
       output::Primitive::Record record;
       for (auto &field : type.GetFields()) {
-        auto elem_data = value.slice(field.offset, field.type.GetSize());
+        auto elem_data = value.slice(field.offset,
+                                     field.bitfield ? field.bitfield->read_bytes
+                                                    : field.type.GetSize());
 
         if (field.bitfield) {
           auto bf = *field.bitfield;
+          auto raw = elem_data;
+          elem_data = util::OpaqueValue::alloc(
+              field.type.GetSize(), [&](char *data) {
+                memset(data, 0, field.type.GetSize());
+                memcpy(data, raw.data(), raw.size());
+              });
           switch (field.type.GetIntBitWidth()) {
             case 64:
               elem_data = bf.to_opaque<uint64_t>(elem_data);
