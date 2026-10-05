@@ -21,6 +21,8 @@ and this project adheres to
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 #### Changed
+- Structs and arrays assigned to scratch variables are now copied into the
+  variable instead of being stored as a pointer to the original memory.
 - Structs inside tuples and records are now 8-byte aligned.
 #### Deprecated
 #### Removed

@@ -12,7 +12,8 @@ inline bool needMemcpy(const SizedType &stype)
 
 inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {
-  return ty.IsInBpfMemory() ? AddrSpace::kernel : ty.GetAS();
+  return ty.IsInBpfMemory() || ty.IsCtxAccess() ? AddrSpace::kernel
+                                                : ty.GetAS();
 }
 
 // This applies to both map keys and map values

@@ -4,6 +4,28 @@ EXPECT Result: 2
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
+NAME struct assignment into variable is a copy
+PROG struct Foo { int m; } begin { $val = (int32)2; $s = *(struct Foo *)(&$val); $val = 3; $t = $s; $val = 4; printf("Result: %d %d %d\n", $s.m, $t.m, (&$s)->m); }
+EXPECT Result: 2 2 2
+
+NAME struct variable stored in map
+PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $s = *((struct Foo *)arg0); @s = $s; @t = (1, $s); @k[$s] = 0; exit(); }
+EXPECT @s: { .m = 2, .n = 3 }
+EXPECT @t: (1, { .m = 2, .n = 3 })
+EXPECT @k[{ .m = 2, .n = 3 }]: 0
+TIMEOUT 4
+AFTER ./testprogs/simple_struct
+
+NAME struct variable bitfield access
+PROG struct foo { unsigned short a; unsigned short b:8, c:8; } begin { $val = (uint32)0x04030201; $f = *(struct foo *)(&$val); print(($f.a, $f.b, $f.c)); }
+EXPECT (513, 3, 4)
+ARCH le
+
+NAME array assignment into variable is a copy
+PROG struct Foo { int a[2]; } begin { $val = (uint64)0x0000000200000001; $a = (*(struct Foo *)(&$val)).a; $val = 0; print(($a[0], $a[1], $a)); }
+EXPECT (1, 2, [1,2])
+ARCH le
+
 NAME struct assignment into map
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }
 EXPECT @s: { .m = 2, .n = 3 }
