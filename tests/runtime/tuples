@@ -33,8 +33,24 @@ AFTER ./testprogs/simple_struct
 
 NAME struct in tuple sizing
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $t = ((int32)1, *((struct Foo *)arg0)); print(sizeof($t)); exit(); }
-EXPECT 12
+EXPECT 16
 AFTER ./testprogs/simple_struct
+
+NAME struct in tuple field access
+PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $t = (1, *((struct Foo *)arg0)); @t = $t; printf("%d %d %d\n", (1, *((struct Foo *)arg0)).1.n, $t.1.n, @t.1.m); exit(); }
+EXPECT 3 3 2
+AFTER ./testprogs/simple_struct
+
+NAME struct in record field access
+PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $r = (a=1, f=*((struct Foo *)arg0)); @r = $r; printf("%d %d\n", $r.f.n, @r.f.m); exit(); }
+EXPECT 3 2
+AFTER ./testprogs/simple_struct
+
+NAME odd sized structs in tuple
+PROG struct Bar { char a; char b; char c; } begin { $v = (uint32)0x030201; $t = (*(struct Bar *)(&$v), (int8)7, *(struct Bar *)(&$v)); print(($t.0.b, $t.1, $t.2.c)); print(sizeof($t)); }
+EXPECT (2, 7, 3)
+EXPECT 24
+ARCH le
 
 NAME array in tuple
 PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0).x); exit(); }

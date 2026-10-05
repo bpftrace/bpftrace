@@ -26,6 +26,8 @@ and this project adheres to
 #### Fixed
 - Fix bitfield access on structs stored in maps.
   - [#5366](https://github.com/bpftrace/bpftrace/pull/5366)
+- Fix field access on structs inside tuples, records and map keys.
+  - [#5367](https://github.com/bpftrace/bpftrace/pull/5367)
 - Resolve uprobe argument names inherited through DWARF abstract origins.
   - [#5344](https://github.com/bpftrace/bpftrace/issues/5344)
 - Fix crash printing a `hist()` map when the `print()` divisor scales every
