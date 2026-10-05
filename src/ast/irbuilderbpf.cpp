@@ -417,7 +417,13 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 
     for (const auto &elem : stype.GetFields()) {
       const auto &elemtype = elem.type;
-      llvm_elems.emplace_back(GetType(elemtype));
+      llvm::Type *elem_ty = GetType(elemtype);
+      auto align = static_cast<uint64_t>(elemtype.GetInTupleAlignment());
+      if (module_.getDataLayout().getABITypeAlign(elem_ty).value() < align) {
+        elem_ty = StructType::get(
+            getContext(), { ArrayType::get(getIntNTy(align * 8), 0), elem_ty });
+      }
+      llvm_elems.emplace_back(elem_ty);
       ty_name += typestr(elemtype) + "_";
     }
     ty_name += (stype.IsTupleTy() ? "_tuple_t" : "_record_t");

@@ -21,10 +21,12 @@ and this project adheres to
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 #### Changed
+- Structs inside tuples and records are now 8-byte aligned.
 #### Deprecated
 #### Removed
 #### Fixed
 - Fix bitfield access on structs stored in maps.
+- Fix field access on structs inside tuples, records and map keys.
 - Resolve uprobe argument names inherited through DWARF abstract origins.
   - [#5344](https://github.com/bpftrace/bpftrace/issues/5344)
 - Fix crash printing a `hist()` map when the `print()` divisor scales every
