@@ -61,6 +61,11 @@ PROG struct foo { unsigned short a; unsigned short b:8, c:8; } begin { $val = (u
 EXPECT { .a = 513, .b = 3, .c = 4 }
 ARCH le
 
+NAME struct map value bitfield access
+PROG struct foo { unsigned short a; unsigned short b:8, c:8; } begin { $val = (uint32)0x04030201; @f = *(struct foo *)(&$val); print((@f.a, @f.b, @f.c)); }
+EXPECT (513, 3, 4)
+ARCH le
+
 NAME struct with attribute
 PROG struct foo { int x; char y; int z; } struct bar { int x; char y; int z; } __attribute__((packed)) struct bar2 { int x; char y; int z; } __attribute__((packed)) __attribute__((aligned(1))) begin { print(sizeof(struct foo)); print(sizeof(struct bar)); print(sizeof(struct bar2)); }
 EXPECT 12
