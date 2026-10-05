@@ -29,6 +29,8 @@ and this project adheres to
 - Fix crash printing a `hist()` map when the `print()` divisor scales every
   bucket to zero.
   - [#5346](https://github.com/bpftrace/bpftrace/pull/5346)
+- Fix scalar access for copied structs
+  - [#5363](https://github.com/bpftrace/bpftrace/pull/5363)
 #### Security
 #### Docs
 #### Tools

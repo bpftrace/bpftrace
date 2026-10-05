@@ -674,14 +674,10 @@ void TypeRuleCollector::visit(ArrayAccess &arr)
 
         elem.SetAS(type.GetAS());
 
-        // BPF verifier cannot track BTF information for double pointers so we
-        // cannot propagate is_internal for arrays of pointers and we need to
-        // reset it on the array type as well. Indexing a pointer as an array
-        // also can't be verified, so the same applies there.
-        if (elem.IsPtrTy() || type.IsPtrTy()) {
-          elem.is_internal = false;
-        } else {
-          elem.is_internal = type.is_internal;
+        // Indexing a pointer as an array can't be verified, so is_internal is
+        // only propagated from arrays.
+        if (elem.IsCTypeTy() || elem.IsArrayTy()) {
+          elem.is_internal = !type.IsPtrTy() && type.is_internal;
         }
 
         return elem;
@@ -1213,7 +1209,7 @@ void TypeRuleCollector::visit(Call &call)
           call_type_size = size->value;
         }
       }
-      return_type = SizedType(Type::string, call_type_size);
+      return_type = CreateString(call_type_size);
     } else if (call.func == "kptr" || call.func == "uptr") {
       resolver_.add_type_rule({
           .output = &call,
@@ -1558,7 +1554,9 @@ void TypeRuleCollector::visit(FieldAccess &acc)
             // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
             result_type.MarkCtxAccess();
           }
-          result_type.is_internal = is_internal;
+          if (result_type.IsCTypeTy() || result_type.IsArrayTy()) {
+            result_type.is_internal = is_internal;
+          }
           result_type.SetAS(expr_type.GetAS());
 
           return result_type;
@@ -2229,7 +2227,9 @@ void TypeRuleCollector::visit(Unop &unop)
             result = type.GetPointeeTy();
             if (type.IsCtxAccess())
               result.MarkCtxAccess();
-            result.is_internal = type.is_internal;
+            if (result.IsCTypeTy() || result.IsArrayTy()) {
+              result.is_internal = type.is_internal;
+            }
             result.SetAS(type.GetAS());
           } else if (type.IsCTypeTy()) {
             // We allow dereferencing "args" with no effect (for backwards

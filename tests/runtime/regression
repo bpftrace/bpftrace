@@ -197,3 +197,8 @@ NAME large string cast
 PROG begin { let $a = (string[1024])"hi"; print($a); }
 EXPECT hi
 TIMEOUT 1
+
+NAME scalars can be accessed in copied structs
+PROG begin { @s = *curtask; @k = @s->pid; @j = @s->parent->pid; } end { clear(@s); }
+EXPECT_REGEX @k:\s[0-9]+
+EXPECT_REGEX @j:\s[0-9]+
