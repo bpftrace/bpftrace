@@ -13,7 +13,7 @@ bool needMapAllocation(const SizedType &src, const SizedType &dst)
     }
   }
 
-  return !inBpfMemory(dst);
+  return !dst.IsInBpfMemory();
 }
 
 } // namespace bpftrace::ast

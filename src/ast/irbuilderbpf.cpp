@@ -1629,7 +1629,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *val1,
                                     ptr_val1,
                                     { getInt32(0),
                                       CreateLoad(getInt32Ty(), i) });
-  if (inBpfMemory(val1_type)) {
+  if (val1_type.IsInBpfMemory()) {
     val1_elem_i = CreateLoad(GetType(elem_type), ptr_val1_elem_i);
   } else {
     CreateProbeRead(v1,
@@ -1644,7 +1644,7 @@ Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *val1,
                                     ptr_val2,
                                     { getInt32(0),
                                       CreateLoad(getInt32Ty(), i) });
-  if (inBpfMemory(val2_type)) {
+  if (val2_type.IsInBpfMemory()) {
     val2_elem_i = CreateLoad(GetType(elem_type), ptr_val2_elem_i);
   } else {
     CreateProbeRead(v2,
