@@ -68,6 +68,13 @@ enum class AddrSpace : uint8_t {
   user,
 };
 
+// Where the bytes behind a value's llvm::Value live.
+enum class ValueLocation : uint8_t {
+  by_value,        // the value itself, not a pointer to it
+  bpf_memory,      // a pointer to stack or map memory
+  external_memory, // a pointer to kernel or user memory
+};
+
 std::ostream &operator<<(std::ostream &os, Type type);
 std::ostream &operator<<(std::ostream &os, AddrSpace as);
 std::string to_string(Type ty);
@@ -180,10 +187,16 @@ public:
   {
   }
   SizedType(Type type, size_t size_, bool is_signed)
-      : type_(type), size_bits_(size_ * 8), is_signed_(is_signed)
+      : type_(type),
+        size_bits_(size_ * 8),
+        is_signed_(is_signed),
+        value_location_(DefaultValueLocation(type))
   {
   }
-  SizedType(Type type, size_t size_) : type_(type), size_bits_(size_ * 8)
+  SizedType(Type type, size_t size_)
+      : type_(type),
+        size_bits_(size_ * 8),
+        value_location_(DefaultValueLocation(type))
   {
   }
 
@@ -206,13 +219,20 @@ private:
   bool is_signed_ = false;
   bool sign_flexible_ = false;
   bool is_anon_ = false;
-  bool ctx_ = false;                              // Is bpf program context
-  bool in_bpf_memory_ = false;
+  bool ctx_ = false; // Is bpf program context
+  ValueLocation value_location_ = ValueLocation::by_value;
   std::unordered_set<std::string> btf_type_tags_; // Only populated for
                                                   // Type::pointer
   size_t num_elements_ = 0; // Only populated for array types
 
   std::shared_ptr<Struct> inner_struct() const;
+
+  static ValueLocation DefaultValueLocation(Type type)
+  {
+    return type == Type::array || type == Type::c_type
+               ? ValueLocation::external_memory
+               : ValueLocation::by_value;
+  }
 
   friend class cereal::access;
   template <typename Archive>
@@ -220,7 +240,7 @@ private:
   {
     archive(type_,
             stack_type,
-            in_bpf_memory_,
+            value_location_,
             is_funcarg,
             is_anon_,
             funcarg_idx,
@@ -281,24 +301,18 @@ public:
     ctx_ = true;
   };
 
-  // BPF memory is memory that the program can access with a regular
-  // dereference. This could mean the value is on the stack, a map, or
-  // maybe something else (like BPF arenas) in the future.
-  //
-  // If true, the value is a pointer to BPF memory and a bpf_probe_read_*()
-  // is _NOT_ required. Scalars are always loaded into a register, so this is
-  // never true for them.
-  bool IsInBpfMemory() const
+  ValueLocation GetValueLocation() const
   {
-    if (IsIntTy() || IsBoolTy() || IsPtrTy()) {
-      return false;
-    }
-    return in_bpf_memory_;
+    return value_location_;
   }
 
-  void SetInBpfMemory(bool in_bpf_memory)
+  void SetValueLocation(ValueLocation location)
   {
-    in_bpf_memory_ = in_bpf_memory;
+    assert(!IsIntTy() && !IsBoolTy() && !IsPtrTy());
+    assert(location != ValueLocation::by_value);
+    assert(location != ValueLocation::external_memory || IsArrayTy() ||
+           IsCTypeTy());
+    value_location_ = location;
   }
 
   bool IsByteArray() const;

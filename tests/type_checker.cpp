@@ -2551,8 +2551,10 @@ TEST_F(TypeCheckerTest, field_access_in_bpf_memory)
     auto &stmts = result.ast.root->probes.at(0)->block->stmts;
     auto *var_assignment1 = stmts.at(0).as<ast::AssignVarStatement>();
     auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
-    EXPECT_TRUE(result.type_map.type(var_assignment1->var()).IsInBpfMemory());
-    EXPECT_TRUE(result.type_map.type(var_assignment2->var()).IsInBpfMemory());
+    EXPECT_EQ(result.type_map.type(var_assignment1->var()).GetValueLocation(),
+              ValueLocation::bpf_memory);
+    EXPECT_EQ(result.type_map.type(var_assignment2->var()).GetValueLocation(),
+              ValueLocation::bpf_memory);
   }
 
   {
@@ -2562,11 +2564,14 @@ TEST_F(TypeCheckerTest, field_access_in_bpf_memory)
     auto *map_assignment = stmts.at(0).as<ast::AssignMapStatement>();
     auto *var_assignment1 = stmts.at(1).as<ast::AssignVarStatement>();
     auto *var_assignment2 = stmts.at(2).as<ast::AssignVarStatement>();
-    EXPECT_TRUE(
-        result.type_map.map_value_type(map_assignment->map_access->map->ident)
-            .IsInBpfMemory());
-    EXPECT_FALSE(result.type_map.type(var_assignment1->var()).IsInBpfMemory());
-    EXPECT_TRUE(result.type_map.type(var_assignment2->var()).IsInBpfMemory());
+    EXPECT_EQ(result.type_map
+                  .map_value_type(map_assignment->map_access->map->ident)
+                  .GetValueLocation(),
+              ValueLocation::bpf_memory);
+    EXPECT_EQ(result.type_map.type(var_assignment1->var()).GetValueLocation(),
+              ValueLocation::by_value);
+    EXPECT_EQ(result.type_map.type(var_assignment2->var()).GetValueLocation(),
+              ValueLocation::bpf_memory);
   }
 
   {
@@ -2576,9 +2581,12 @@ TEST_F(TypeCheckerTest, field_access_in_bpf_memory)
     auto *var_assignment1 = stmts.at(0).as<ast::AssignVarStatement>();
     auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
     auto *var_assignment3 = stmts.at(2).as<ast::AssignVarStatement>();
-    EXPECT_TRUE(result.type_map.type(var_assignment1->var()).IsInBpfMemory());
-    EXPECT_FALSE(result.type_map.type(var_assignment2->var()).IsInBpfMemory());
-    EXPECT_TRUE(result.type_map.type(var_assignment3->var()).IsInBpfMemory());
+    EXPECT_EQ(result.type_map.type(var_assignment1->var()).GetValueLocation(),
+              ValueLocation::bpf_memory);
+    EXPECT_EQ(result.type_map.type(var_assignment2->var()).GetValueLocation(),
+              ValueLocation::by_value);
+    EXPECT_EQ(result.type_map.type(var_assignment3->var()).GetValueLocation(),
+              ValueLocation::bpf_memory);
   }
 }
 
