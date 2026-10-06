@@ -13,7 +13,7 @@ bool needMapAllocation(const SizedType &src, const SizedType &dst)
     }
   }
 
-  return !dst.IsInBpfMemory();
+  return dst.GetValueLocation() != ValueLocation::bpf_memory;
 }
 
 } // namespace bpftrace::ast

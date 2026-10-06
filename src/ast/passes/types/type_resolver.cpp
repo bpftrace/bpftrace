@@ -674,10 +674,13 @@ void TypeRuleCollector::visit(ArrayAccess &arr)
 
         elem.SetAS(type.GetAS());
 
-        // Indexing a pointer as an array can't be verified, so in_bpf_memory is
+        // Indexing a pointer as an array can't be verified, so BPF memory is
         // only propagated from arrays.
         if (elem.IsCTypeTy() || elem.IsArrayTy()) {
-          elem.SetInBpfMemory(type.IsInBpfMemory());
+          elem.SetValueLocation(type.GetValueLocation() ==
+                                        ValueLocation::bpf_memory
+                                    ? ValueLocation::bpf_memory
+                                    : ValueLocation::external_memory);
         }
 
         return elem;
@@ -913,7 +916,7 @@ void TypeRuleCollector::visit(Builtin &builtin)
       builtin_type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
                                                    : AddrSpace::kernel);
       if (type == ProbeType::uprobe)
-        builtin_type.SetInBpfMemory(true);
+        builtin_type.SetValueLocation(ValueLocation::bpf_memory);
     } else if (type == ProbeType::tracepoint) {
       builtin_type = CreateCStruct(*type_name,
                                    bpftrace_.structs.Lookup(*type_name));
@@ -1160,7 +1163,7 @@ void TypeRuleCollector::visit(Call &call)
 
       return_type = CreateArray(addr_size, CreateUInt8());
       return_type.SetAS(AddrSpace::kernel);
-      return_type.SetInBpfMemory(true);
+      return_type.SetValueLocation(ValueLocation::bpf_memory);
     } else if (call.func == "reg") {
       return_type = CreateUInt64();
       if (probe_) {
@@ -1378,7 +1381,7 @@ SizedType update_cast_expr(const SizedType &cast_ty,
     }
 
     if (expr_ty.IsIntTy() || expr_ty.IsBoolTy())
-      updated_ty.SetInBpfMemory(true);
+      updated_ty.SetValueLocation(ValueLocation::bpf_memory);
   }
 
   if (expr_ty.IsCtxAccess() && !updated_ty.IsIntTy()) {
@@ -1476,7 +1479,8 @@ void TypeRuleCollector::visit(FieldAccess &acc)
         // pointers anyways. In the future, we will likely want to do this in a
         // different way if we are tracking l-values.
         bool is_ctx = expr_type_in.IsCtxAccess();
-        bool in_bpf_memory = expr_type_in.IsInBpfMemory();
+        bool in_bpf_memory = expr_type_in.GetValueLocation() ==
+                             ValueLocation::bpf_memory;
         auto expr_type = expr_type_in;
         while (expr_type.IsPtrTy()) {
           expr_type = expr_type.GetPointeeTy();
@@ -1555,7 +1559,9 @@ void TypeRuleCollector::visit(FieldAccess &acc)
             result_type.MarkCtxAccess();
           }
           if (result_type.IsCTypeTy() || result_type.IsArrayTy()) {
-            result_type.SetInBpfMemory(in_bpf_memory);
+            result_type.SetValueLocation(in_bpf_memory
+                                             ? ValueLocation::bpf_memory
+                                             : ValueLocation::external_memory);
           }
           result_type.SetAS(expr_type.GetAS());
 
@@ -1939,7 +1945,7 @@ void TypeRuleCollector::visit(Record &record)
         for (size_t i = 0; i < record.elems.size(); ++i) {
           auto &elem = elements.emplace_back(inputs[i]);
           if (elem.IsCTypeTy() || elem.IsArrayTy()) {
-            elem.SetInBpfMemory(true);
+            elem.SetValueLocation(ValueLocation::bpf_memory);
           }
           names.emplace_back(record.elems[i]->name);
         }
@@ -2046,7 +2052,7 @@ void TypeRuleCollector::visit(Tuple &tuple)
         std::vector<SizedType> elements(inputs.begin(), inputs.end());
         for (auto &elem : elements) {
           if (elem.IsCTypeTy() || elem.IsArrayTy()) {
-            elem.SetInBpfMemory(true);
+            elem.SetValueLocation(ValueLocation::bpf_memory);
           }
         }
         return CreateTuple(Struct::CreateTuple(elements));
@@ -2236,7 +2242,7 @@ void TypeRuleCollector::visit(Unop &unop)
             if (type.IsCtxAccess())
               result.MarkCtxAccess();
             if (result.IsCTypeTy() || result.IsArrayTy()) {
-              result.SetInBpfMemory(type.IsInBpfMemory());
+              result.SetValueLocation(ValueLocation::external_memory);
             }
             result.SetAS(type.GetAS());
           } else if (type.IsCTypeTy()) {
@@ -2321,7 +2327,7 @@ void TypeRuleCollector::visit(Variable &var)
       .resolve = [](const std::vector<SizedType> &inputs) -> SizedType {
         auto type = inputs[0];
         if (type.IsCTypeTy() || type.IsArrayTy()) {
-          type.SetInBpfMemory(true);
+          type.SetValueLocation(ValueLocation::bpf_memory);
         }
         return type;
       },
@@ -2460,7 +2466,7 @@ SizedType TypeRuleCollector::get_map_value_type(const std::string &map_name,
     // Data stored in a BPF map is internal (managed by BPF runtime), so
     // structs and arrays should be marked as such.
     if (promoted->IsCTypeTy() || promoted->IsArrayTy()) {
-      promoted->SetInBpfMemory(true);
+      promoted->SetValueLocation(ValueLocation::bpf_memory);
     }
 
     return *promoted;
@@ -2520,7 +2526,7 @@ SizedType TypeRuleCollector::get_map_key_type(const std::string &map_name,
   auto promoted = get_promoted_type(current_type, type);
   if (promoted) {
     if (promoted->IsCTypeTy() || promoted->IsArrayTy()) {
-      promoted->SetInBpfMemory(true);
+      promoted->SetValueLocation(ValueLocation::bpf_memory);
     }
 
     return *promoted;

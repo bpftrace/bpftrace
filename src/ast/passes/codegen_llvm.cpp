@@ -1532,13 +1532,11 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     auto scoped_expr = visit(call.vargs.front());
     const auto &arg0_type = type_map_.type(call.vargs.front());
-    b_.CreateProbeRead(buf_data_offset,
-                       length,
-                       scoped_expr.value(),
-                       arg0_type.IsInBpfMemory()
-                           ? AddrSpace::kernel
-                           : find_addrspace_stack(arg0_type),
-                       call.loc);
+    AddrSpace as = arg0_type.GetValueLocation() == ValueLocation::bpf_memory
+                       ? AddrSpace::kernel
+                       : find_addrspace_stack(arg0_type);
+    b_.CreateProbeRead(
+        buf_data_offset, length, scoped_expr.value(), as, call.loc);
 
     if (dyn_cast<AllocaInst>(buf))
       return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
@@ -2046,13 +2044,20 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     auto &macaddr = call.vargs.front();
     auto scoped_arg = visit(macaddr);
 
-    if (type_map_.type(macaddr).IsInBpfMemory())
-      b_.CreateMemcpyBPF(buf,
-                         scoped_arg.value(),
-                         type_map_.type(macaddr).GetSize());
-    else
-      b_.CreateProbeRead(
-          buf, type_map_.type(macaddr), scoped_arg.value(), call.loc);
+    const auto &macaddr_type = type_map_.type(macaddr);
+    switch (macaddr_type.GetValueLocation()) {
+      case ValueLocation::by_value:
+      case ValueLocation::external_memory:
+        b_.CreateProbeRead(buf,
+                           macaddr_type,
+                           scoped_arg.value(),
+                           call.loc,
+                           find_addrspace_stack(macaddr_type));
+        break;
+      case ValueLocation::bpf_memory:
+        b_.CreateMemcpyBPF(buf, scoped_arg.value(), macaddr_type.GetSize());
+        break;
+    }
 
     return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
   } else if (call.func == "bswap") {
@@ -2727,7 +2732,8 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
   if (field.type.IsIntTy() && field.bitfield.has_value()) {
     Value *raw;
     auto *field_type = b_.GetType(field.type);
-    if (type.IsCtxAccess() && !type.IsInBpfMemory()) {
+    if (type.IsCtxAccess() &&
+        type.GetValueLocation() != ValueLocation::bpf_memory) {
       // The offset is specified in absolute terms here; and the load
       // will implicitly convert to the intended field_type.
       Value *src = b_.CreateSafeGEP(b_.getPtrTy(),
@@ -2746,7 +2752,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
       // memset so verifier doesn't complain about reading uninitialized
       // stack
       b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
-      if (type.IsInBpfMemory()) {
+      if (type.GetValueLocation() == ValueLocation::bpf_memory) {
         b_.CreateMemcpyBPF(dst, src, field.bitfield->read_bytes);
       } else {
         b_.CreateProbeRead(dst,
@@ -2790,7 +2796,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     return ScopedExpr(value);
   }
 
-  if (type.IsInBpfMemory()) {
+  if (type.GetValueLocation() == ValueLocation::bpf_memory) {
     return readDatastructElemFromStack(
         std::move(scoped_arg), b_.getInt64(field.offset), type, field.type);
   }
@@ -2840,7 +2846,7 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
     b_.SetInsertPoint(merge);
   }
 
-  if (type.IsInBpfMemory()) {
+  if (type.GetValueLocation() == ValueLocation::bpf_memory) {
     return readDatastructElemFromStack(std::move(scoped_expr),
                                        scoped_index.value(),
                                        type,
@@ -2877,7 +2883,7 @@ ScopedExpr CodegenLLVM::createAnonStructAccess(const SizedType &stype,
                             { b_.getInt32(0), b_.getInt32(field_idx) });
   SizedType &elem_type = stype.GetFields()[field_idx].type;
 
-  if (elem_type.IsInBpfMemory()) {
+  if (elem_type.GetValueLocation() == ValueLocation::bpf_memory) {
     // Extend lifetime of source buffer
     return ScopedExpr(src, std::move(expr_value));
   } else {
@@ -2946,7 +2952,8 @@ ScopedExpr CodegenLLVM::visit(Cast &cast)
     if (type_map_.type(cast.expr).IsArrayTy()) {
       // we need to read the array into the integer
       Value *array = scoped_expr.value();
-      if (type_map_.type(cast.expr).IsInBpfMemory() ||
+      if (type_map_.type(cast.expr).GetValueLocation() ==
+              ValueLocation::bpf_memory ||
           type_map_.type(cast.expr).IsCtxAccess()) {
         // array is on the stack - just cast the pointer
         if (array->getType()->isIntegerTy())
@@ -3062,12 +3069,18 @@ Value *CodegenLLVM::createAnonStruct(
 
     Value *dst = b_.CreateGEP(llvm_ty, buf, { b_.getInt32(0), b_.getInt32(i) });
 
-    if ((type.IsArrayTy() || type.IsCTypeTy()) && !src_type.IsInBpfMemory())
-      b_.CreateProbeRead(dst, type, val, vloc, find_addrspace_stack(src_type));
-    else if (type.IsInBpfMemory())
-      b_.CreateMemcpyBPF(dst, val, type.GetSize());
-    else
-      b_.CreateStore(val, dst);
+    switch (src_type.GetValueLocation()) {
+      case ValueLocation::by_value:
+        b_.CreateStore(val, dst);
+        break;
+      case ValueLocation::bpf_memory:
+        b_.CreateMemcpyBPF(dst, val, type.GetSize());
+        break;
+      case ValueLocation::external_memory:
+        b_.CreateProbeRead(
+            dst, type, val, vloc, find_addrspace_stack(src_type));
+        break;
+    }
   }
   return buf;
 }
@@ -3238,13 +3251,17 @@ void CodegenLLVM::createVariableStore(const SizedType &src_type,
     return;
   }
 
-  if ((dst_type.IsArrayTy() || dst_type.IsCTypeTy()) &&
-      !src_type.IsInBpfMemory()) {
-    b_.CreateProbeRead(dst, dst_type, src, loc, find_addrspace_stack(src_type));
-  } else if (needMemcpy(dst_type)) {
-    b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
-  } else {
-    b_.CreateStore(src, dst);
+  switch (src_type.GetValueLocation()) {
+    case ValueLocation::by_value:
+      b_.CreateStore(src, dst);
+      break;
+    case ValueLocation::bpf_memory:
+      b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
+      break;
+    case ValueLocation::external_memory:
+      b_.CreateProbeRead(
+          dst, dst_type, src, loc, find_addrspace_stack(src_type));
+      break;
   }
 }
 
@@ -3606,15 +3623,17 @@ void CodegenLLVM::createMapBufferStore(const SizedType &src_type,
     return;
   }
 
-  if ((dst_type.IsArrayTy() || dst_type.IsCTypeTy()) &&
-      !src_type.IsInBpfMemory()) {
-    // src currently contains a pointer to the struct or array
-    // We now want to read the entire struct/array in so we can save it
-    b_.CreateProbeRead(dst, dst_type, src, loc, find_addrspace_stack(src_type));
-  } else if (dst_type.IsInBpfMemory()) {
-    b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
-  } else {
-    b_.CreateStore(src, dst);
+  switch (src_type.GetValueLocation()) {
+    case ValueLocation::by_value:
+      b_.CreateStore(src, dst);
+      break;
+    case ValueLocation::bpf_memory:
+      b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
+      break;
+    case ValueLocation::external_memory:
+      b_.CreateProbeRead(
+          dst, dst_type, src, loc, find_addrspace_stack(src_type));
+      break;
   }
 }
 
@@ -3677,23 +3696,24 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
 
   bool aligned = (map_key_size % 8) == 0;
 
-  if (type_map_.type(key_expr).IsInBpfMemory()) {
-    b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
-  } else {
-    if (type_map_.type(key_expr).IsArrayTy() ||
-        type_map_.type(key_expr).IsCTypeTy()) {
-      // Read the array/struct into the key
-      b_.CreateProbeRead(offset_val,
-                         type_map_.type(key_expr),
-                         scoped_expr.value(),
-                         map.loc,
-                         find_addrspace_stack(type_map_.type(key_expr)));
-    } else {
+  const auto &expr_type = type_map_.type(key_expr);
+  switch (expr_type.GetValueLocation()) {
+    case ValueLocation::by_value:
       if (aligned)
         b_.CreateStore(scoped_expr.value(), offset_val);
       else
         b_.createAlignedStore(scoped_expr.value(), offset_val, 1);
-    }
+      break;
+    case ValueLocation::bpf_memory:
+      b_.CreateMemcpyBPF(offset_val, scoped_expr.value(), expr_size);
+      break;
+    case ValueLocation::external_memory:
+      b_.CreateProbeRead(offset_val,
+                         expr_type,
+                         scoped_expr.value(),
+                         map.loc,
+                         find_addrspace_stack(expr_type));
+      break;
   }
   offset += map_key_size;
 
@@ -4278,13 +4298,21 @@ void CodegenLLVM::createPrintNonMapCall(Call &call)
   b_.CreateMemsetBPF(content_offset,
                      b_.getInt8(0),
                      type_map_.type(arg).GetSize());
-  if (needMemcpy(type_map_.type(arg))) {
-    if (type_map_.type(arg).IsInBpfMemory())
-      b_.CreateMemcpyBPF(content_offset, value, type_map_.type(arg).GetSize());
-    else
-      b_.CreateProbeRead(content_offset, type_map_.type(arg), value, call.loc);
-  } else {
-    b_.CreateStore(value, content_offset);
+  const auto &arg_type = type_map_.type(arg);
+  switch (arg_type.GetValueLocation()) {
+    case ValueLocation::by_value:
+      b_.CreateStore(value, content_offset);
+      break;
+    case ValueLocation::bpf_memory:
+      b_.CreateMemcpyBPF(content_offset, value, arg_type.GetSize());
+      break;
+    case ValueLocation::external_memory:
+      b_.CreateProbeRead(content_offset,
+                         arg_type,
+                         value,
+                         call.loc,
+                         find_addrspace_stack(arg_type));
+      break;
   }
 
   b_.CreateOutput(buf, struct_size, call.loc);
@@ -4489,7 +4517,8 @@ ScopedExpr CodegenLLVM::probereadDatastructElem(ScopedExpr &&scoped_src,
     return ScopedExpr(src, std::move(scoped_src));
   } else if (elem_type.IsStringTy() || elem_type.IsBufferTy()) {
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    if (elem_type.IsStringTy() && data_type.IsInBpfMemory()) {
+    if (elem_type.IsStringTy() &&
+        data_type.GetValueLocation() == ValueLocation::bpf_memory) {
       if (src->getType()->isIntegerTy())
         src = b_.CreateIntToPtr(src, dst->getType());
       b_.CreateMemcpyBPF(dst, src, elem_type.GetSize());
@@ -4856,7 +4885,7 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
       f, name, args, debug_args, ctx_t, [&](llvm::Function *callback) {
         auto &key_type = type_map_.type(f.decl).GetField(0).type;
         Value *key = callback->getArg(1);
-        if (!key_type.IsInBpfMemory()) {
+        if (key_type.GetValueLocation() != ValueLocation::bpf_memory) {
           key = b_.CreateLoad(b_.GetType(key_type), key, "key");
         }
 
@@ -4872,7 +4901,7 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
         if (canAggPerCpuMapElems(map_info->second.bpf_type, map_val_type)) {
           val = b_.CreatePerCpuMapAggElems(
               map, callback->getArg(1), map_val_type, f.loc);
-        } else if (!val_type.IsInBpfMemory()) {
+        } else if (val_type.GetValueLocation() != ValueLocation::bpf_memory) {
           val = b_.CreateLoad(b_.GetType(val_type), val, "val");
         }
 
