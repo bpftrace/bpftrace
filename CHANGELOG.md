@@ -21,6 +21,8 @@ and this project adheres to
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 #### Changed
+- Structs and arrays are copied for scratch variable assignment
+  - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)
 #### Deprecated
 #### Removed
 #### Fixed

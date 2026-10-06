@@ -218,6 +218,10 @@ NAME variable_scratch_buf
 PROG config = { on_stack_limit = 0 } begin { $x = "XXXX"; $y = $x; print($y); exit() }
 EXPECT XXXX
 
+NAME variable_scratch_buf large struct
+PROG config = { on_stack_limit = 0 } begin { $x = curtask; print($x.pid); exit() }
+EXPECT_REGEX \d+$
+
 # Verify enough buffer space is allocated for same variable name in multiple scopes
 NAME variable_for_loop_scratch_buf
 PROG config = { on_stack_limit = 0 } begin { @[1] = 1; for ($kv : @) { $y = $kv } for ($kv : @) { $y = $kv; print($y) } exit() }
@@ -284,6 +288,10 @@ NAME buf
 RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s.a, 4), buf($s.b, 4), buf($s.c), buf($s.d), buf($s.e), buf($s.f)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: \x09\x08\x07\x06-\x05\x04\x03\x02-\x01\x02\x03\x04-\x00\x00\x00\x05\x00\x00\x00\x06\x00\x00\x00\x07\x00\x00\x00\x08-\x00\x09\x00\x0a\x00\x0b\x00\x0c-\x00\x00\x00\x00\x00\x00\x00\x0d\x00\x00\x00\x00\x00\x00\x00\x0e\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\x00\x00\x00\x00\x10
 ARCH be
+
+NAME buf_user_array_scratch_variable
+RUN {{BPFTRACE}} -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; config = { on_stack_limit = 0 } u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; $b = $s.b; $c = $s.c; printf("P: %r-%r\n", buf($b, 4), buf($c)); exit(); }' -c ./testprogs/complex_struct
+EXPECT P: \x05\x04\x03\x02-\x01\x02\x03\x04
 
 NAME buf_map_key
 PROG i:ms:100 { @[buf("ok_key", 6)] = 1; exit(); }
