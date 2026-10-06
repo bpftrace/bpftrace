@@ -861,7 +861,10 @@ ssize_t SizedType::GetInTupleAlignment() const
   if (IsByteArray())
     return 1;
 
-  if (IsTupleTy() || IsCTypeTy() || IsRecordTy())
+  if (IsCTypeTy())
+    return 8;
+
+  if (IsTupleTy() || IsRecordTy())
     return inner_struct()->align;
 
   if (GetSize() <= 2)

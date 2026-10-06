@@ -133,3 +133,8 @@ EXPECT_NONE end
 NAME external function call map
 PROG begin { @map[1] = 1; $x = 1; for ($kv : @map) { print(has_key(@map, $x)); }  }
 EXPECT true
+
+NAME map struct key elements
+PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @[*((struct Foo *)arg0)] = 1; for ($kv : @) { printf("key: %d %d\n", $kv.0.m, $kv.0.n); } exit(); }
+EXPECT key: 2 3
+AFTER ./testprogs/simple_struct

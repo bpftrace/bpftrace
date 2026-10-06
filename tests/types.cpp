@@ -86,4 +86,18 @@ TEST(types, to_str)
   EXPECT_EQ(to_str(CreateVoid()), "void");
 }
 
+TEST(types, tuple_ctype_alignment)
+{
+  auto bar = CreateCStruct("struct Bar", std::make_shared<Struct>(3));
+  auto tuple = Struct::CreateTuple(
+      { bar, CreateInt8(), bar, CreateArray(2, bar) });
+
+  EXPECT_EQ(tuple->fields[0].offset, 0);
+  EXPECT_EQ(tuple->fields[1].offset, 8);
+  EXPECT_EQ(tuple->fields[2].offset, 16);
+  EXPECT_EQ(tuple->fields[3].offset, 24);
+  EXPECT_EQ(tuple->size, 32);
+  EXPECT_EQ(tuple->align, 8);
+}
+
 } // namespace bpftrace::test::types

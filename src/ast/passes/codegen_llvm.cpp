@@ -271,7 +271,7 @@ private:
                            const SizedType &value_type);
   Value *createAnonStruct(
       const SizedType &stype,
-      const std::vector<std::pair<llvm::Value *, Location>> &vals,
+      const std::vector<std::tuple<llvm::Value *, SizedType, Location>> &vals,
       const std::string &name,
       const Location &loc);
   ScopedExpr createAnonStructAccess(const SizedType &stype,
@@ -2848,7 +2848,7 @@ ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
     b_.SetInsertPoint(merge);
   }
 
-  if (type.IsInBpfMemory() && !type_map_.type(&arr).IsPtrTy()) {
+  if (type.IsInBpfMemory()) {
     return readDatastructElemFromStack(std::move(scoped_expr),
                                        scoped_index.value(),
                                        type,
@@ -3055,7 +3055,7 @@ void CodegenLLVM::compareStructure(const SizedType &our_type,
 // values.
 Value *CodegenLLVM::createAnonStruct(
     const SizedType &stype,
-    const std::vector<std::pair<llvm::Value *, Location>> &vals,
+    const std::vector<std::tuple<llvm::Value *, SizedType, Location>> &vals,
     const std::string &name,
     const Location &loc)
 {
@@ -3065,15 +3065,15 @@ Value *CodegenLLVM::createAnonStruct(
   b_.CreateMemsetBPF(buf, b_.getInt8(0), alloc_size);
 
   for (size_t i = 0; i < vals.size(); ++i) {
-    auto [val, vloc] = vals[i];
+    const auto &[val, src_type, vloc] = vals[i];
     SizedType &type = stype.GetField(i).type;
 
     Value *dst = b_.CreateGEP(llvm_ty, buf, { b_.getInt32(0), b_.getInt32(i) });
 
-    if (type.IsInBpfMemory())
+    if ((type.IsArrayTy() || type.IsCTypeTy()) && !src_type.IsInBpfMemory())
+      b_.CreateProbeRead(dst, type, val, vloc, find_addrspace_stack(src_type));
+    else if (type.IsInBpfMemory())
       b_.CreateMemcpyBPF(dst, val, type.GetSize());
-    else if (type.IsArrayTy() || type.IsCTypeTy())
-      b_.CreateProbeRead(dst, type, val, vloc);
     else
       b_.CreateStore(val, dst);
   }
@@ -3086,7 +3086,7 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
 
   compareStructure(type_map_.type(&tuple), tuple_ty);
 
-  std::vector<std::pair<llvm::Value *, Location>> vals;
+  std::vector<std::tuple<llvm::Value *, SizedType, Location>> vals;
   // This is used to extend the life of the element expressions
   // beyond the `for` loop body below
   std::vector<ScopedExpr> scoped_exprs;
@@ -3094,7 +3094,7 @@ ScopedExpr CodegenLLVM::visit(Tuple &tuple)
 
   for (auto &elem : tuple.elems) {
     auto scoped_expr = visit(elem);
-    vals.emplace_back(scoped_expr.value(), tuple.loc);
+    vals.emplace_back(scoped_expr.value(), type_map_.type(elem), tuple.loc);
     scoped_exprs.emplace_back(std::move(scoped_expr));
   }
 
@@ -3111,7 +3111,7 @@ ScopedExpr CodegenLLVM::visit(Record &record)
 
   compareStructure(type_map_.type(&record), record_ty);
 
-  std::vector<std::pair<llvm::Value *, Location>> vals;
+  std::vector<std::tuple<llvm::Value *, SizedType, Location>> vals;
   // This is used to extend the life of the element expressions
   // beyond the `for` loop body below
   std::vector<ScopedExpr> scoped_exprs;
@@ -3119,7 +3119,9 @@ ScopedExpr CodegenLLVM::visit(Record &record)
 
   for (auto *elem : record.elems) {
     auto scoped_expr = visit(elem->expr);
-    vals.emplace_back(scoped_expr.value(), record.loc);
+    vals.emplace_back(scoped_expr.value(),
+                      type_map_.type(elem->expr),
+                      record.loc);
     scoped_exprs.emplace_back(std::move(scoped_expr));
   }
 
@@ -3624,7 +3626,8 @@ void CodegenLLVM::createMapBufferStore(const SizedType &src_type,
     return;
   }
 
-  if (dst_type.IsArrayTy() || dst_type.IsCTypeTy()) {
+  if ((dst_type.IsArrayTy() || dst_type.IsCTypeTy()) &&
+      !src_type.IsInBpfMemory()) {
     // src currently contains a pointer to the struct or array
     // We now want to read the entire struct/array in so we can save it
     b_.CreateProbeRead(dst, dst_type, src, loc, src_type.GetAS());
@@ -4891,7 +4894,8 @@ ScopedExpr CodegenLLVM::visit(For &f, Map &map)
         }
 
         return createAnonStruct(type_map_.type(f.decl),
-                                { { key, f.decl->loc }, { val, f.decl->loc } },
+                                { { key, key_type, f.decl->loc },
+                                  { val, val_type, f.decl->loc } },
                                 f.decl->ident,
                                 f.decl->loc);
       });
