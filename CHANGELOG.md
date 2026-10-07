@@ -31,6 +31,8 @@ and this project adheres to
   - [#5346](https://github.com/bpftrace/bpftrace/pull/5346)
 - Fix scalar access for copied structs
   - [#5363](https://github.com/bpftrace/bpftrace/pull/5363)
+- Fix invalid BPF object with LLVM 23 when using strings with a large `max_strlen`
+  - [#5372](https://github.com/bpftrace/bpftrace/pull/5372)
 #### Security
 #### Docs
 #### Tools
