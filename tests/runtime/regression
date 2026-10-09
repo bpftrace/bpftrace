@@ -191,14 +191,14 @@ EXPECT Attached 2 probes
 TIMEOUT 1
 
 NAME config max_strlen and on_stack_limit
-PROG config = { max_strlen = 8; on_stack_limit = 8 } t:syscalls:sys_enter_execve { print(str(args.filename)); exit(); }
+PROG config = { max_strlen = 8; on_stack_limit = 8 } t:syscalls:sys_enter_execve /comm == "syscall"/ { print(str(args.filename)); exit(); }
 AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
-EXPECT_REGEX /.......\.\.
+EXPECT_REGEX \.\/testpr\.\.
 
 NAME config max_strlen with 8 cpus
-RUN printf '0-7\n' > /tmp/fake_possible && unshare -m bash -c 'mount --bind /tmp/fake_possible /sys/devices/system/cpu/possible && exec {{BPFTRACE}} -e "config = { max_strlen = 8; } t:syscalls:sys_enter_execve { print(str(args.filename)); exit(); }"'
+RUN printf '0-7\n' > /tmp/fake_possible && unshare -m bash -c 'mount --bind /tmp/fake_possible /sys/devices/system/cpu/possible && exec {{BPFTRACE}} -e "config = { max_strlen = 8; } t:syscalls:sys_enter_execve /comm == \"syscall\"/ { print(str(args.filename)); exit(); }"'
 AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
-EXPECT_REGEX /.......\.\.
+EXPECT_REGEX \.\/testpr\.\.
 
 NAME config max_strlen with unaligned strings
 PROG config = { max_strlen = 256 } t:syscalls:sys_enter_execve { print(("ab", str(args.filename))); exit(); }
