@@ -206,6 +206,7 @@ public:
   std::unique_ptr<BPFfeature> feature_;
 
   bool safe_mode_ = true;
+  bool listing_kprobe_lines_ = false;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int warning_level_ = 1;

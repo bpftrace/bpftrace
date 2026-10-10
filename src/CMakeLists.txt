@@ -27,6 +27,7 @@ add_library(runtime STATIC
   config.cpp
   disasm.cpp
   dwarf_parser.cpp
+  kprobe_lines.cpp
   format_string.cpp
   globalvars.cpp
   log.cpp
