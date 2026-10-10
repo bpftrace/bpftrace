@@ -187,7 +187,8 @@ TIMEOUT 1
 
 NAME positional lhist
 RUN {{BPFTRACE}} -e 'begin { @ = lhist(0, $1, $2, $3); exit()}' 0 10000 1000
-EXPECT_REGEX @: *\n[\[(].*
+EXPECT @:
+EXPECT_REGEX ^\[0, 1000\)\s+1 \|@+\|$
 
 NAME positional buf
 RUN {{BPFTRACE}} -e 'begin { @ = buf("hello", $1);  }' 5
@@ -196,7 +197,8 @@ TIMEOUT 1
 
 NAME positional tseries
 RUN {{BPFTRACE}} -e 'begin { @ = tseries($1, 1ms, 1); exit()}' 0
-EXPECT_REGEX @:.*
+EXPECT @:
+EXPECT_REGEX ^\d{2}:\d{2}:\d{2}\.\d{9}\s+\|\s+\*\s+\|\s+0$
 
 NAME positional kstack
 RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS %s\n%s\n", kstack(), kstack($1)); exit(); }' 1
