@@ -242,3 +242,7 @@ NAME attached probes
 RUN {{BPFTRACE}} -f json -e 'i:s:1 { exit(); }'
 EXPECT {"type": "attached_probes", "count": 1, "data": {"probes": 1}}
 TIMEOUT 5
+
+NAME warnings go to stderr
+RUN {{BPFTRACE}} -q -f json -e 'begin { let $x; @a = 1; exit(); }' 2>/dev/null
+EXPECT_JSON runtime/outputs/warning_stderr.json
