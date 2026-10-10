@@ -31,6 +31,9 @@ and this project adheres to
   - [#5346](https://github.com/bpftrace/bpftrace/pull/5346)
 - Fix scalar access for copied structs
   - [#5363](https://github.com/bpftrace/bpftrace/pull/5363)
+- Print compile-time warnings to stderr instead of stdout so they don't
+  corrupt JSON output
+  - [#5376](https://github.com/bpftrace/bpftrace/pull/5376)
 #### Security
 #### Docs
 #### Tools

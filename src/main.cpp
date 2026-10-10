@@ -1195,7 +1195,7 @@ int main(int argc, char* argv[])
   }
 
   // Emits warnings
-  ast.diagnostics().emit(std::cout);
+  ast.diagnostics().emit(std::cerr);
 
   if (args.build_mode == BuildMode::AHEAD_OF_TIME) {
     // Note: this should use the fully-linked version in the future, but
