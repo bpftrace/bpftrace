@@ -2730,86 +2730,85 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 
   const auto &field = type.GetField(acc.field);
 
+  // Structs may contain two kinds of fields that must be handled separately
+  // (bitfields and _data_loc)
+  if (field.type.IsIntTy() && field.bitfield.has_value()) {
+    Value *raw;
+    auto *field_type = b_.GetType(field.type);
+    if (type.IsCtxAccess() && !type.IsInBpfMemory()) {
+      // The offset is specified in absolute terms here; and the load
+      // will implicitly convert to the intended field_type.
+      Value *src = b_.CreateSafeGEP(b_.getPtrTy(),
+                                    scoped_arg.value(),
+                                    b_.getInt64(field.offset));
+      raw = b_.CreateLoad(field_type, src, true /*volatile*/);
+    } else {
+      // Since `src` is treated as a offset for a constructed probe read,
+      // we are not constrained in the same way.
+      Value *src = b_.CreateSafeGEP(b_.GetType(type),
+                                    scoped_arg.value(),
+                                    { b_.getInt64(0),
+                                      b_.getInt64(field.offset) });
+      AllocaInst *dst = b_.CreateAllocaBPF(field.type,
+                                           type.GetName() + "." + acc.field);
+      // memset so verifier doesn't complain about reading uninitialized
+      // stack
+      b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
+      if (type.IsInBpfMemory()) {
+        b_.CreateMemcpyBPF(dst, src, field.bitfield->read_bytes);
+      } else {
+        b_.CreateProbeRead(dst,
+                           b_.getInt32(field.bitfield->read_bytes),
+                           src,
+                           type.GetAS(),
+                           acc.loc);
+      }
+      raw = b_.CreateLoad(field_type, dst);
+      b_.CreateLifetimeEnd(dst);
+    }
+    size_t rshiftbits;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    rshiftbits = field.bitfield->access_rshift;
+#else
+    rshiftbits = (field.type.GetSize() - field.bitfield->read_bytes) * 8;
+    rshiftbits += field.bitfield->access_rshift;
+#endif
+    Value *shifted = b_.CreateLShr(raw, rshiftbits);
+    Value *masked = b_.CreateAnd(shifted, field.bitfield->mask);
+    return ScopedExpr(masked);
+  }
+
+  if (field.type.IsIntTy() && field.is_data_loc) {
+    // `is_data_loc` should only be set if field access is on `args` which
+    // has to be a ctx access
+    assert(type.IsCtxAccess());
+    // Parser needs to have rewritten field to be a u64
+    assert(field.type.GetIntBitWidth() == 64);
+
+    // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
+    // offset which we add to the start of the tracepoint struct. We need
+    // to wrap the context here in a special way to treat it as the
+    // expected pointer type for all versions.
+    Value *value = b_.CreateLoad(
+        b_.getInt32Ty(),
+        b_.CreateSafeGEP(b_.getInt32Ty(), ctx_, b_.getInt64(field.offset / 4)));
+    value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
+    value = b_.CreateAnd(value, b_.getInt64(0xFFFF));
+    value = b_.CreateSafeGEP(b_.getInt8Ty(), ctx_, value);
+    return ScopedExpr(value);
+  }
+
   if (type.IsInBpfMemory()) {
     return readDatastructElemFromStack(
         std::move(scoped_arg), b_.getInt64(field.offset), type, field.type);
-  } else {
-    // Structs may contain two kinds of fields that must be handled separately
-    // (bitfields and _data_loc)
-    if (field.type.IsIntTy() &&
-        (field.bitfield.has_value() || field.is_data_loc)) {
-      if (field.bitfield.has_value()) {
-        Value *raw;
-        auto *field_type = b_.GetType(field.type);
-        if (type.IsCtxAccess()) {
-          // The offset is specified in absolute terms here; and the load
-          // will implicitly convert to the intended field_type.
-          Value *src = b_.CreateSafeGEP(b_.getPtrTy(),
-                                        scoped_arg.value(),
-                                        b_.getInt64(field.offset));
-          raw = b_.CreateLoad(field_type, src, true /*volatile*/);
-        } else {
-          // Since `src` is treated as a offset for a constructed probe read,
-          // we are not constrained in the same way.
-          Value *src = b_.CreateSafeGEP(b_.GetType(type),
-                                        scoped_arg.value(),
-                                        { b_.getInt64(0),
-                                          b_.getInt64(field.offset) });
-          AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                               type.GetName() + "." +
-                                                   acc.field);
-          // memset so verifier doesn't complain about reading uninitialized
-          // stack
-          b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
-          b_.CreateProbeRead(dst,
-                             b_.getInt32(field.bitfield->read_bytes),
-                             src,
-                             type.GetAS(),
-                             acc.loc);
-          raw = b_.CreateLoad(field_type, dst);
-          b_.CreateLifetimeEnd(dst);
-        }
-        size_t rshiftbits;
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        rshiftbits = field.bitfield->access_rshift;
-#else
-        rshiftbits = (field.type.GetSize() - field.bitfield->read_bytes) * 8;
-        rshiftbits += field.bitfield->access_rshift;
-#endif
-        Value *shifted = b_.CreateLShr(raw, rshiftbits);
-        Value *masked = b_.CreateAnd(shifted, field.bitfield->mask);
-        return ScopedExpr(masked);
-      } else {
-        // `is_data_loc` should only be set if field access is on `args` which
-        // has to be a ctx access
-        assert(type.IsCtxAccess());
-        // Parser needs to have rewritten field to be a u64
-        assert(field.type.IsIntTy());
-        assert(field.type.GetIntBitWidth() == 64);
-
-        // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
-        // offset which we add to the start of the tracepoint struct. We need
-        // to wrap the context here in a special way to treat it as the
-        // expected pointer type for all versions.
-        Value *value = b_.CreateLoad(b_.getInt32Ty(),
-                                     b_.CreateSafeGEP(b_.getInt32Ty(),
-                                                      ctx_,
-                                                      b_.getInt64(field.offset /
-                                                                  4)));
-        value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
-        value = b_.CreateAnd(value, b_.getInt64(0xFFFF));
-        value = b_.CreateSafeGEP(b_.getInt8Ty(), ctx_, value);
-        return ScopedExpr(value);
-      }
-    } else {
-      return probereadDatastructElem(std::move(scoped_arg),
-                                     b_.getInt64(field.offset),
-                                     type,
-                                     field.type,
-                                     acc.loc,
-                                     type.GetName() + "." + acc.field);
-    }
   }
+
+  return probereadDatastructElem(std::move(scoped_arg),
+                                 b_.getInt64(field.offset),
+                                 type,
+                                 field.type,
+                                 acc.loc,
+                                 type.GetName() + "." + acc.field);
 }
 
 ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)
