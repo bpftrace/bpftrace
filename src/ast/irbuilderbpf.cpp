@@ -359,7 +359,17 @@ void IRBuilderBPF::CreateMemsetBPF(Value *ptr, Value *val, uint32_t size)
     // So only use helper based memset when we really need it. And that's when
     // we're memset()ing off-stack. We know it's off stack b/c 512 is program
     // stack limit.
-    CreateMemSet(ptr, val, getInt64(size), MaybeAlign(1));
+    //
+    // Above 128 bytes use the inline intrinsic, which is never lowered to a
+    // libcall; BPF backends cap how many stores a plain memset may expand to
+    // (192 in LLVM 23) and an unaligned memset needs one store per byte. Small
+    // memsets keep the plain intrinsic so dead store elimination still works
+    // at least according to AI (take with a grain of salt).
+    if (size > 128) {
+      CreateMemSetInline(ptr, MaybeAlign(1), val, getInt64(size));
+    } else {
+      CreateMemSet(ptr, val, getInt64(size), MaybeAlign(1));
+    }
   }
 }
 
@@ -383,7 +393,7 @@ void IRBuilderBPF::CreateMemcpyBPF(Value *dst, Value *src, uint32_t size)
                { dst, getInt32(size), src },
                probeReadHelperName(probe_read_id));
   } else {
-    CreateMemCpy(dst, MaybeAlign(1), src, MaybeAlign(1), size);
+    CreateMemCpyInline(dst, MaybeAlign(1), src, MaybeAlign(1), getInt64(size));
   }
 }
 
