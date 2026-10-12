@@ -89,7 +89,7 @@ std::shared_ptr<Struct> Struct::CreateRecord(
         .bitfield = std::nullopt,
     });
 
-    offset += size;
+    offset += size + ((align - (size % align)) % align);
   }
 
   auto padding = (struct_align - (offset % struct_align)) % struct_align;
