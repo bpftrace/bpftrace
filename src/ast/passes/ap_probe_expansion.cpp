@@ -379,6 +379,11 @@ void ProbeAndApExpander::visit(AttachPointList &aps)
         auto pt = probetype(ap->provider);
         bool is_kprobe = pt == ProbeType::kprobe || pt == ProbeType::kretprobe;
 
+        if (bpftrace_.listing_kprobe_lines_ && !ap->source_file.empty()) {
+          new_aps.push_back(ap);
+          break;
+        }
+
         if (is_kprobe) {
           // Construct a string containing "module:function."
           // Also log a warning or throw an error if the module doesn't exist,

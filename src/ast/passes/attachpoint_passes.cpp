@@ -715,17 +715,30 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
       auto location = dwarf->line_to_addr(
           ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
       if (!location) {
+        if (bpftrace_.listing_kprobe_lines_) {
+          consumeError(location.takeError());
+          return OK;
+        }
         errs_ << location.takeError() << std::endl;
         return INVALID;
       }
       ap_->address = location->address;
-      ap_->target = location->kernel_module;
+      if (!bpftrace_.listing_kprobe_lines_)
+        ap_->target = location->kernel_module;
 
       return OK;
     }
 
-    errs_ << "No DWARF debug info found for kernel, cannot attach "
-          << "by source code location." << std::endl;
+    if (bpftrace_.listing_kprobe_lines_ &&
+        symbols::kernel_symbol_addresses_hidden()) {
+      errs_ << "Permission denied reading live kernel symbols; run as root or "
+               "adjust kernel.kptr_restrict."
+            << std::endl;
+    } else {
+      errs_ << "No DWARF debug info found for kernel, cannot attach "
+               "by source code location."
+            << std::endl;
+    }
     return INVALID;
   }
 
