@@ -2590,6 +2590,34 @@ TEST_F(TypeCheckerTest, field_access_in_bpf_memory)
   }
 }
 
+TEST_F(TypeCheckerTest, deref_value_location)
+{
+  std::string structs = "struct type1 { int x; int y[4]; }";
+
+  {
+    auto result = test(structs + "kprobe:f { $s = *(struct type1*)0 }");
+    auto &stmts = result.ast.root->probes.at(0)->block->stmts;
+    auto *var_assignment = stmts.at(0).as<ast::AssignVarStatement>();
+    auto *deref = var_assignment->expr.as<ast::Unop>();
+    EXPECT_EQ(result.type_map.type(deref).GetValueLocation(),
+              ValueLocation::external_memory);
+    EXPECT_EQ(result.type_map.type(var_assignment->var()).GetValueLocation(),
+              ValueLocation::bpf_memory);
+  }
+
+  {
+    auto result = test(structs + "kprobe:f { $s = *(struct type1*)0; "
+                                 "$p = &$s; $t = *$p }");
+    auto &stmts = result.ast.root->probes.at(0)->block->stmts;
+    auto *var_assignment = stmts.at(2).as<ast::AssignVarStatement>();
+    auto *deref = var_assignment->expr.as<ast::Unop>();
+    EXPECT_EQ(result.type_map.type(deref).GetValueLocation(),
+              ValueLocation::bpf_memory);
+    EXPECT_EQ(result.type_map.type(var_assignment->var()).GetValueLocation(),
+              ValueLocation::bpf_memory);
+  }
+}
+
 TEST_F(TypeCheckerTest, struct_as_map_key)
 {
   test("struct A { int x; } struct B { char x; } "
