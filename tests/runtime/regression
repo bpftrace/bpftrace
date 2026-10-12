@@ -193,6 +193,11 @@ RUN printf '0-7\n' > /tmp/fake_possible && unshare -m bash -c 'mount --bind /tmp
 AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
 EXPECT_REGEX /.......\.\.
 
+NAME config max_strlen with unaligned strings
+PROG config = { max_strlen = 256 } t:syscalls:sys_enter_execve { print(("ab", str(args.filename))); exit(); }
+AFTER ./testprogs/syscall execve ./testprogs/true &>/dev/null
+EXPECT_REGEX ^\(ab, /.+\)$
+
 NAME large string cast
 PROG begin { let $a = (string[1024])"hi"; print($a); }
 EXPECT hi
