@@ -183,15 +183,6 @@ public:
     return value_;
   }
 
-  // May be used to disable the deletion method, essentially leaking some
-  // memory within the frame. The use of this function should be generally
-  // considered a bug, as it will make dealing with larger functions and
-  // multiple scopes more problematic over time.
-  void disarm()
-  {
-    deleter_.reset();
-  }
-
 private:
   Value *value_ = nullptr;
   std::optional<llvm::unique_function<void()>> deleter_;
@@ -281,6 +272,7 @@ private:
                            Value *src,
                            const SizedType &dst_type,
                            Value *dst,
+                           const Location &loc,
                            bool recursing = false);
   void createMapBufferStore(const SizedType &src_type,
                             Value *src,
@@ -1489,11 +1481,13 @@ ScopedExpr CodegenLLVM::visit(Call &call)
     b_.CreateMemsetBPF(buf_data_offset, b_.getInt8(0), fixed_buffer_length);
 
     auto scoped_expr = visit(call.vargs.front());
-    auto &arg0 = call.vargs.front();
+    const auto &arg0_type = type_map_.type(call.vargs.front());
     b_.CreateProbeRead(buf_data_offset,
                        length,
                        scoped_expr.value(),
-                       find_addrspace_stack(type_map_.type(arg0)),
+                       arg0_type.IsInBpfMemory()
+                           ? AddrSpace::kernel
+                           : find_addrspace_stack(arg0_type),
                        call.loc);
 
     if (dyn_cast<AllocaInst>(buf))
@@ -2136,9 +2130,7 @@ ScopedExpr CodegenLLVM::visit(MapAddr &map_addr)
 
 ScopedExpr CodegenLLVM::visit(Variable &var)
 {
-  // Arrays and c-types are not memcopied for local variables
-  if (needMemcpy(type_map_.type(&var)) &&
-      !(type_map_.type(&var).IsArrayTy() || type_map_.type(&var).IsCTypeTy())) {
+  if (needMemcpy(type_map_.type(&var))) {
     return ScopedExpr(getVariable(var.ident).value);
   } else {
     auto &var_llvm = getVariable(var.ident);
@@ -3113,19 +3105,9 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
     return;
   }
 
-  SizedType alloca_type = var_type;
-  // Arrays and structs need not to be copied when assigned to local variables
-  // since they are treated as read-only - it is sufficient to assign
-  // the pointer and do the memcpy/proberead later when necessary
-  if (var_type.IsArrayTy() || var_type.IsCTypeTy()) {
-    const auto &pointee_type = var_type.IsArrayTy() ? var_type.GetElementTy()
-                                                    : var_type;
-    alloca_type = CreatePointer(pointee_type, var_type.GetAS());
-  }
-
-  auto *val = b_.CreateVariableAllocationInit(alloca_type, var_ident, loc);
+  auto *val = b_.CreateVariableAllocationInit(var_type, var_ident, loc);
   variables_[scope_stack_.back()][var_ident] = VariableLLVM{
-    .value = val, .type = b_.GetType(alloca_type)
+    .value = val, .type = b_.GetType(var_type)
   };
 }
 
@@ -3154,6 +3136,7 @@ void CodegenLLVM::createVariableStore(const SizedType &src_type,
                                       Value *src,
                                       const SizedType &dst_type,
                                       Value *dst,
+                                      const Location &loc,
                                       bool recursing)
 {
   if (dst_type.IsTupleTy() || dst_type.IsRecordTy()) {
@@ -3176,8 +3159,12 @@ void CodegenLLVM::createVariableStore(const SizedType &src_type,
       Value *dst_field_val = b_.CreateGEP(dst_llvm_type,
                                           dst,
                                           { b_.getInt64(0), b_.getInt32(i) });
-      createVariableStore(
-          src_field.type, src_field_val, dst_field.type, dst_field_val, true);
+      createVariableStore(src_field.type,
+                          src_field_val,
+                          dst_field.type,
+                          dst_field_val,
+                          loc,
+                          true);
     }
 
     return;
@@ -3189,8 +3176,9 @@ void CodegenLLVM::createVariableStore(const SizedType &src_type,
     return;
   }
 
-  if (dst_type.IsArrayTy() || dst_type.IsCTypeTy()) {
-    b_.CreateStore(b_.CreatePtrToInt(src, b_.getInt64Ty()), dst);
+  if ((dst_type.IsArrayTy() || dst_type.IsCTypeTy()) &&
+      !src_type.IsInBpfMemory()) {
+    b_.CreateProbeRead(dst, dst_type, src, loc, find_addrspace_stack(src_type));
   } else if (needMemcpy(dst_type)) {
     b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
   } else {
@@ -3217,18 +3205,10 @@ ScopedExpr CodegenLLVM::visit(AssignVarStatement &assignment)
 
   maybeAllocVariable(var.ident, type_map_.type(&var), var.loc);
 
-  if (type_map_.type(&var).IsArrayTy() || type_map_.type(&var).IsCTypeTy()) {
-    // For arrays and structs, only the pointer is stored. However, this means
-    // that we cannot release the underlying memory for any of these types. We
-    // just disarm the scoped expression, and therefore never free any of these
-    // values; this is a bug that matches existing behavior.
-    scoped_expr.disarm();
-  }
-
   auto *val = getVariable(var.ident).value;
   const auto &expr_type = type_map_.type(assignment.expr);
   createVariableStore(
-      expr_type, scoped_expr.value(), type_map_.type(&var), val);
+      expr_type, scoped_expr.value(), type_map_.type(&var), val, var.loc);
 
   return ScopedExpr();
 }
@@ -3568,7 +3548,7 @@ void CodegenLLVM::createMapBufferStore(const SizedType &src_type,
       !src_type.IsInBpfMemory()) {
     // src currently contains a pointer to the struct or array
     // We now want to read the entire struct/array in so we can save it
-    b_.CreateProbeRead(dst, dst_type, src, loc, src_type.GetAS());
+    b_.CreateProbeRead(dst, dst_type, src, loc, find_addrspace_stack(src_type));
   } else if (dst_type.IsInBpfMemory()) {
     b_.CreateMemcpyBPF(dst, src, src_type.GetSize());
   } else {
@@ -3641,8 +3621,11 @@ ScopedExpr CodegenLLVM::getMultiMapKey(Map &map,
     if (type_map_.type(key_expr).IsArrayTy() ||
         type_map_.type(key_expr).IsCTypeTy()) {
       // Read the array/struct into the key
-      b_.CreateProbeRead(
-          offset_val, type_map_.type(key_expr), scoped_expr.value(), map.loc);
+      b_.CreateProbeRead(offset_val,
+                         type_map_.type(key_expr),
+                         scoped_expr.value(),
+                         map.loc,
+                         find_addrspace_stack(type_map_.type(key_expr)));
     } else {
       if (aligned)
         b_.CreateStore(scoped_expr.value(), offset_val);

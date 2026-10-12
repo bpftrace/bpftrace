@@ -1,0 +1,23 @@
+struct T {
+  uint32_t a;
+  uint32_t b[2];
+};
+
+struct W {
+  uint32_t a;
+  struct T t;
+};
+
+struct C {
+  uint32_t a;
+  void * b;
+  struct W w[10];
+};
+
+config = { on_stack_limit = 0 }
+
+uprobe:./testprogs/struct_array:clear
+{
+  $c = *(struct C*)arg0;
+  printf("SUCCESS %d", $c.w[0].a);
+}
