@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <bpf/libbpf.h>
 #include <cstdio>
 #include <cstring>
@@ -41,6 +42,7 @@
 #include "build_info.h"
 #include "config.h"
 #include "globalvars.h"
+#include "kprobe_lines.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output/buffer_mode.h"
@@ -91,6 +93,7 @@ enum Options {
   INCLUDE,
   INFO,
   LIST,
+  LIST_KPROBE_LINES,
   NO_FEATURE,
   NO_WARNING,
   MODE,
@@ -110,6 +113,48 @@ enum Options {
 
 constexpr auto FULL_SEARCH = "*:*";
 
+class EmptyKernelInfo : public symbols::KernelInfoBase<EmptyKernelInfo> {
+public:
+  symbols::ModuleSet get_modules(
+      [[maybe_unused]] const std::optional<std::string>& mod_name =
+          std::nullopt) const override
+  {
+    return {};
+  }
+
+  symbols::ModulesFuncsMap get_traceable_funcs(
+      [[maybe_unused]] const std::optional<std::string>& mod_name =
+          std::nullopt) const override
+  {
+    return {};
+  }
+
+  symbols::ModulesFuncsMap get_raw_tracepoints(
+      [[maybe_unused]] const std::optional<std::string>& mod_name =
+          std::nullopt) const override
+  {
+    return {};
+  }
+
+  symbols::ModulesFuncsMap get_tracepoints(
+      [[maybe_unused]] const std::optional<std::string>& category_name =
+          std::nullopt) const override
+  {
+    return {};
+  }
+
+  Result<bpftrace::btf::Types> load_btf(
+      [[maybe_unused]] const std::string& mod_name) const override
+  {
+    return bpftrace::btf::Types();
+  }
+
+  std::vector<std::pair<uint32_t, std::string>> get_bpf_progs() const override
+  {
+    return {};
+  }
+};
+
 } // namespace
 
 void usage(std::ostream& out)
@@ -127,6 +172,9 @@ void usage(std::ostream& out)
   out << "    -e 'program'   execute this program" << std::endl;
   out << "    -l, --list [search|filename]" << std::endl;
   out << "                   list kernel probes or probes in a program" << std::endl;
+  out << "    --list-kprobe-lines" << std::endl;
+  out << "                   with -e 'kprobe@FILE:LINE', report whether the line is" << std::endl;
+  out << "                   mapped and, if not, nearby mapped lines" << std::endl;
   out << "    -v, --verbose  enable verbose messages; with -l, also show probe arguments" << std::endl;
   out << "    -h, --help     show this help message" << std::endl;
   out << "    -V, --version  bpftrace version" << std::endl;
@@ -345,6 +393,7 @@ struct Args {
   std::vector<std::string> dwarf_pids_str;
   std::string cmd_str;
   bool listing = false;
+  bool list_kprobe_lines = false;
   bool safe_mode = true;
   bool usdt_file_activation = false;
   int warning_level = 1;
@@ -482,6 +531,10 @@ Args parse_args(int argc, char* argv[])
             .has_arg = no_argument,
             .flag = nullptr,
             .val = Options::LIST },
+    option{ .name = "list-kprobe-lines",
+            .has_arg = no_argument,
+            .flag = nullptr,
+            .val = Options::LIST_KPROBE_LINES },
     option{ .name = "no-feature",
             .has_arg = required_argument,
             .flag = nullptr,
@@ -686,6 +739,9 @@ Args parse_args(int argc, char* argv[])
       case 'l':
       case Options::LIST:
         args.listing = true;
+        break;
+      case Options::LIST_KPROBE_LINES:
+        args.list_kprobe_lines = true;
         break;
       case 'c':
       case Options::CMD:
@@ -990,6 +1046,45 @@ int main(int argc, char* argv[])
     return 0; // All done.
   }
 
+  bpftrace.usdt_file_activation_ = args.usdt_file_activation;
+  bpftrace.safe_mode_ = args.safe_mode;
+  bpftrace.listing_kprobe_lines_ = args.list_kprobe_lines;
+  bpftrace.warning_level_ = args.warning_level;
+  bpftrace.boottime_ = get_boottime();
+  bpftrace.delta_taitime_ = get_delta_taitime();
+  bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
+  bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
+  bpftrace.probe_filter_ = args.probe_filter;
+  bpftrace.debuginfo_path_ = args.debuginfo_path + default_debuginfo_paths;
+
+  for (const auto& param : args.params) {
+    bpftrace.add_param(param);
+  }
+
+  if (args.list_kprobe_lines) {
+    EmptyKernelInfo kernel_func_info;
+    symbols::UserInfoImpl user_func_info;
+    ast::FunctionInfo func_info_state(kernel_func_info, user_func_info);
+    ast::PassManager pm;
+    pm.put(ast);
+    pm.put(bpftrace);
+    pm.put(func_info_state);
+    pm.add(CreateParsePass(bt_debug.contains(DebugStage::Parse)));
+    pm.add(ast::CreateConfigPass());
+    pm.add(ast::CreateParseAttachpointsPass());
+
+    auto pmresult = pm.run();
+    if (!pmresult) {
+      std::cerr << pmresult.takeError() << "\n";
+      return 2;
+    } else if (!ast.diagnostics().ok()) {
+      ast.diagnostics().emit(std::cerr);
+      return 1;
+    }
+
+    return list_kprobe_lines(bpftrace, ast);
+  }
+
   check_privileges();
 
   // Create function info objects for probe matching and pass state.
@@ -1002,16 +1097,6 @@ int main(int argc, char* argv[])
   }
   symbols::UserInfoImpl user_func_info;
   ast::FunctionInfo func_info_state(*kernel_func_info, user_func_info);
-
-  bpftrace.usdt_file_activation_ = args.usdt_file_activation;
-  bpftrace.safe_mode_ = args.safe_mode;
-  bpftrace.warning_level_ = args.warning_level;
-  bpftrace.boottime_ = get_boottime();
-  bpftrace.delta_taitime_ = get_delta_taitime();
-  bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
-  bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
-  bpftrace.probe_filter_ = args.probe_filter;
-  bpftrace.debuginfo_path_ = args.debuginfo_path + default_debuginfo_paths;
 
   if (!args.pid_str.empty()) {
     auto pid = parse_pid(args.pid_str);
@@ -1041,10 +1126,6 @@ int main(int argc, char* argv[])
   if (args.listing && args.script.empty() && args.filename.empty()) {
     list_probes(bpftrace, args.search, *kernel_func_info, user_func_info);
     return 0;
-  }
-
-  for (const auto& param : args.params) {
-    bpftrace.add_param(param);
   }
 
   // If we are not running anything, then we don't require privileges.

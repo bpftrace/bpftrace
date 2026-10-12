@@ -18,6 +18,7 @@ enum KernelVersionMethod { vDSO, UTS, File, None };
 uint32_t kernel_version(KernelVersionMethod method);
 
 std::optional<std::string> find_vmlinux(util::Symbol *sym = nullptr);
+bool kernel_symbol_addresses_hidden();
 
 using FunctionSet = std::set<std::string>;
 using ModuleSet = std::set<std::string>;
