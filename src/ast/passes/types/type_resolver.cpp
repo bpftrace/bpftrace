@@ -2315,7 +2315,17 @@ void TypeRuleCollector::visit(Variable &var)
 
   ScopedVariable scoped_var = std::make_pair(scope, var.ident);
 
-  resolver_.add_pass_through(scoped_var, &var);
+  resolver_.add_type_rule({
+      .output = &var,
+      .inputs = { scoped_var },
+      .resolve = [](const std::vector<SizedType> &inputs) -> SizedType {
+        auto type = inputs[0];
+        if (type.IsCTypeTy() || type.IsArrayTy()) {
+          type.SetInBpfMemory(true);
+        }
+        return type;
+      },
+  });
 
   if (introspection_level_ > 0) {
     introspected_nodes_.insert(scoped_var);

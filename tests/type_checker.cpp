@@ -2551,7 +2551,7 @@ TEST_F(TypeCheckerTest, field_access_in_bpf_memory)
     auto &stmts = result.ast.root->probes.at(0)->block->stmts;
     auto *var_assignment1 = stmts.at(0).as<ast::AssignVarStatement>();
     auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
-    EXPECT_FALSE(result.type_map.type(var_assignment1->var()).IsInBpfMemory());
+    EXPECT_TRUE(result.type_map.type(var_assignment1->var()).IsInBpfMemory());
     EXPECT_TRUE(result.type_map.type(var_assignment2->var()).IsInBpfMemory());
   }
 
@@ -2567,6 +2567,18 @@ TEST_F(TypeCheckerTest, field_access_in_bpf_memory)
             .IsInBpfMemory());
     EXPECT_FALSE(result.type_map.type(var_assignment1->var()).IsInBpfMemory());
     EXPECT_TRUE(result.type_map.type(var_assignment2->var()).IsInBpfMemory());
+  }
+
+  {
+    auto result = test(structs + "kprobe:f { $s = *(struct type1*)0; "
+                                 "$x = $s.x; $y = $s.y }");
+    auto &stmts = result.ast.root->probes.at(0)->block->stmts;
+    auto *var_assignment1 = stmts.at(0).as<ast::AssignVarStatement>();
+    auto *var_assignment2 = stmts.at(1).as<ast::AssignVarStatement>();
+    auto *var_assignment3 = stmts.at(2).as<ast::AssignVarStatement>();
+    EXPECT_TRUE(result.type_map.type(var_assignment1->var()).IsInBpfMemory());
+    EXPECT_FALSE(result.type_map.type(var_assignment2->var()).IsInBpfMemory());
+    EXPECT_TRUE(result.type_map.type(var_assignment3->var()).IsInBpfMemory());
   }
 }
 

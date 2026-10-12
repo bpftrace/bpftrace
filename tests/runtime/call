@@ -218,6 +218,14 @@ NAME variable_scratch_buf
 PROG config = { on_stack_limit = 0 } begin { $x = "XXXX"; $y = $x; print($y); exit() }
 EXPECT XXXX
 
+NAME variable_scratch_buf large kernel struct
+PROG config = { on_stack_limit = 0 } begin { $x = curtask; printf("SUCCESS %d\n", $x.pid); exit() }
+EXPECT_REGEX SUCCESS \d+$
+
+NAME variable_scratch_buf large user struct
+RUN {{BPFTRACE}} runtime/scripts/scratch_buf_user_struct.bt -c ./testprogs/struct_array
+EXPECT SUCCESS 100
+
 # Verify enough buffer space is allocated for same variable name in multiple scopes
 NAME variable_for_loop_scratch_buf
 PROG config = { on_stack_limit = 0 } begin { @[1] = 1; for ($kv : @) { $y = $kv } for ($kv : @) { $y = $kv; print($y) } exit() }

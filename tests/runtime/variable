@@ -39,6 +39,11 @@ PROG tracepoint:syscalls:sys_enter_openat /comm == "syscall"/ { $i = args.flags;
 EXPECT openflags: 64
 AFTER ./testprogs/syscall openat
 
+NAME tracepoint args assignment into variable
+PROG tracepoint:syscalls:sys_enter_openat /comm == "syscall"/ { $a = args; printf("openflags: %d\n", $a.flags); if ($a.flags == 64) { exit() } }
+EXPECT openflags: 64
+AFTER ./testprogs/syscall openat
+
 NAME tracepoint arg casts in predicates
 RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_wait4 /args.ru/ { @ru[tid] = args.ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }' -c ./testprogs/wait4_ru
 EXPECT_REGEX @: [1-9][0-9]*
