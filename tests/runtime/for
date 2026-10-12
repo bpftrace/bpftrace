@@ -97,31 +97,31 @@ EXPECT_NONE end
 
 NAME range basic
 PROG begin { for ($i : 0..5) { print($i); }  }
-EXPECT_REGEX .*\n0\n1\n2\n3\n4\n\n
+EXPECT_REGEX ^0\n1\n2\n3\n4$
 
 NAME range with variables
 PROG begin { $start = 2; $end = 7; for ($i : $start..$end) { print($i); }  }
-EXPECT_REGEX .*\n2\n3\n4\n5\n6\n\n
+EXPECT_REGEX ^2\n3\n4\n5\n6$
 
 NAME range with expressions
 PROG begin { for ($i : (1+1)..(2*4)) { print($i); }  }
-EXPECT_REGEX .*\n2\n3\n4\n5\n6\n7\n\n
+EXPECT_REGEX ^2\n3\n4\n5\n6\n7$
 
 NAME range with map as expression
 PROG begin { @map[5] = 8; for ($i : 0..@map[5]) { print($i); }  }
-EXPECT_REGEX .*\n2\n3\n4\n5\n6\n7\n\n
+EXPECT_REGEX ^0\n1\n2\n3\n4\n5\n6\n7$
 
 NAME range with negative start
 PROG begin { for ($i : (-3)..3) { print($i); }  }
-EXPECT_REGEX .*\n-3\n-2\n-1\n0\n1\n2\n\n
+EXPECT_REGEX ^-3\n-2\n-1\n0\n1\n2$
 
 NAME range with break
 PROG begin { for ($i : 1..4) { if ($i == 2) { break; } print($i); } print("5");  }
-EXPECT_REGEX .*\n1\n5\n\n
+EXPECT_REGEX ^1\n5$
 
 NAME range with continue
 PROG begin { for ($i : 1..4) { if ($i == 2) { continue; } print($i); }  }
-EXPECT_REGEX .*\n1\n3\n\n
+EXPECT_REGEX ^1\n3$
 
 NAME range with nested return
 PROG begin { for ($i : 1..4) { for ($j : 1..$i) { print($j); if ($j == 2) { return; } } } print("end"); }
