@@ -11,6 +11,8 @@ and this project adheres to
 #### Breaking Changes
 #### Added
 #### Changed
+- Structs and arrays are copied for scratch variable assignment
+  - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)
 #### Deprecated
 #### Removed
 #### Fixed
