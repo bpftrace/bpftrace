@@ -165,14 +165,26 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetSize(), 2 * sizeof(uintptr_t));
   EXPECT_EQ(arrs->GetField("ptr_arr").offset, 40);
 
-  // BTF flattens multi-dimensional arrays, so this test doesn't
-  // check the correct number of elements. The correct values are
-  // below in 'field_analyser_btf.btf_arrays_multi_dim'.
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 6);
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy().IsIntTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
-  EXPECT_EQ(arrs->GetField("multi_dim").offset, 56);
+  // Multi-dimensional arrays are encoded differently depending on the pahole
+  // version used to generate the test BTF: older versions flatten `int[3][2]`
+  // into a single `int[6]`, while pahole >= 1.32 encodes it correctly as a
+  // nested array. Accept both encodings.
+  const auto &multi_dim = arrs->GetField("multi_dim");
+  EXPECT_TRUE(multi_dim.type.IsArrayTy());
+  EXPECT_EQ(multi_dim.type.GetSize(), 24U);
+  EXPECT_EQ(multi_dim.offset, 56);
+  if (multi_dim.type.GetElementTy().IsArrayTy()) {
+    // Correctly encoded nested array: int[3][2].
+    EXPECT_EQ(multi_dim.type.GetNumElements(), 3);
+    EXPECT_EQ(multi_dim.type.GetElementTy().GetSize(), 8U);
+    EXPECT_EQ(multi_dim.type.GetElementTy().GetNumElements(), 2);
+    EXPECT_TRUE(multi_dim.type.GetElementTy().GetElementTy().IsIntTy());
+    EXPECT_EQ(multi_dim.type.GetElementTy().GetElementTy().GetSize(), 4U);
+  } else {
+    // Flattened array: int[6].
+    EXPECT_EQ(multi_dim.type.GetNumElements(), 6);
+    EXPECT_TRUE(multi_dim.type.GetElementTy().IsIntTy());
+  }
 
   EXPECT_TRUE(arrs->GetField("zero").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("zero").type.GetNumElements(), 0);
@@ -185,37 +197,6 @@ TEST_F(field_analyser_btf, btf_arrays)
   EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy().IsIntTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
   EXPECT_EQ(arrs->GetField("flexible").offset, 80);
-}
-
-// Disabled because BTF flattens multi-dimensional arrays #3082.
-TEST_F(field_analyser_btf, DISABLED_btf_arrays_multi_dim)
-{
-  auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace,
-       "begin {\n"
-       "  @ = (struct Arrays *) 0;\n"
-       "}",
-       true);
-
-  ASSERT_TRUE(bpftrace->structs.Has("struct Arrays"));
-  auto arrs = bpftrace->structs.Lookup("struct Arrays").lock();
-
-  ASSERT_TRUE(arrs->HasField("multi_dim"));
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 3);
-
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy().IsArrayTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetSize(), 8U);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetNumElements(),
-            2);
-
-  EXPECT_TRUE(
-      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().IsIntTy());
-  EXPECT_EQ(
-      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().GetSize(),
-      4U);
 }
 
 void test_arrays_compound_data(BPFtrace &bpftrace)
