@@ -39,6 +39,8 @@ and this project adheres to
   - [#5363](https://github.com/bpftrace/bpftrace/pull/5363)
 - Fix invalid BPF object with LLVM 23 when using strings with a large `max_strlen`
   - [#5372](https://github.com/bpftrace/bpftrace/pull/5372)
+- Print compile-time warnings to stderr instead of stdout so they don't corrupt JSON output
+  - [#5376](https://github.com/bpftrace/bpftrace/pull/5376)
 #### Security
 #### Docs
 #### Tools
