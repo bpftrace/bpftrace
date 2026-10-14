@@ -62,7 +62,12 @@ TEST(TypeSystemTest, basic)
     "char[16]",
     "void*[2]",
     "void*",
+    // Multi-dimensional arrays: older pahole flattens int[3][2] to int[6],
+    // while pahole >= 1.32 encodes it as a nested int[2][3]. Only one of these
+    // is produced per build; the unused ones are erased before the final check.
     "int[6]",
+    "int[2]",
+    "int[2][3]",
     "int[0]",
     "struct ArrayWithCompoundData",
     "struct Foo3*[2]",
@@ -133,6 +138,14 @@ TEST(TypeSystemTest, basic)
     EXPECT_TRUE(expected.erase(s)) << s;
     removed.insert(s);
   }
+
+  // Check that at least one multi-dimensional array encoding was produced in
+  // this build's BTF (see the comment on the candidates added above) and erase
+  // the other one.
+  EXPECT_LT(expected.size(), 3);
+  for (const auto &name : { "int[6]", "int[2]", "int[2][3]" })
+    expected.erase(name);
+
   EXPECT_TRUE(expected.empty());
 }
 
