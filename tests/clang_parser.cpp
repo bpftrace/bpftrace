@@ -748,8 +748,7 @@ TEST_F(clang_parser_btf, struct_enum_fields)
   ASSERT_TRUE(defs.enum_defs.contains("FooEnum"));
 }
 
-// Disabled because BTF flattens multi-dimensional arrays #3082.
-TEST_F(clang_parser_btf, DISABLED_btf_arrays_multi_dim)
+TEST_F(clang_parser_btf, btf_arrays_multi_dim)
 {
   auto bpftrace = get_mock_bpftrace();
   parse("struct Foo { struct Arrays a; };", *bpftrace);
@@ -757,22 +756,26 @@ TEST_F(clang_parser_btf, DISABLED_btf_arrays_multi_dim)
   ASSERT_TRUE(bpftrace->structs.Has("struct Arrays"));
   auto arrs = bpftrace->structs.Lookup("struct Arrays").lock();
 
-  ASSERT_TRUE(arrs->HasField("multi_dim"));
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 3);
-
-  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy().IsArrayTy());
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetSize(), 8U);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy().GetNumElements(),
-            2);
-
-  EXPECT_TRUE(
-      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().IsIntTy());
-  EXPECT_EQ(
-      arrs->GetField("multi_dim").type.GetElementTy().GetElementTy().GetSize(),
-      4U);
+  // Multi-dimensional arrays are encoded differently depending on the pahole
+  // version used to generate the test BTF: older versions flatten `int[3][2]`
+  // into a single `int[6]`, while pahole >= 1.32 encodes it correctly as a
+  // nested array. Accept both encodings.
+  const auto &multi_dim = arrs->GetField("multi_dim");
+  EXPECT_TRUE(multi_dim.type.IsArrayTy());
+  EXPECT_EQ(multi_dim.type.GetSize(), 24U);
+  EXPECT_EQ(multi_dim.offset, 56);
+  if (multi_dim.type.GetElementTy().IsArrayTy()) {
+    // Correctly encoded nested array: int[3][2].
+    EXPECT_EQ(multi_dim.type.GetNumElements(), 3);
+    EXPECT_EQ(multi_dim.type.GetElementTy().GetSize(), 8U);
+    EXPECT_EQ(multi_dim.type.GetElementTy().GetNumElements(), 2);
+    EXPECT_TRUE(multi_dim.type.GetElementTy().GetElementTy().IsIntTy());
+    EXPECT_EQ(multi_dim.type.GetElementTy().GetElementTy().GetSize(), 4U);
+  } else {
+    // Flattened array: int[6].
+    EXPECT_EQ(multi_dim.type.GetNumElements(), 6);
+    EXPECT_TRUE(multi_dim.type.GetElementTy().IsIntTy());
+  }
 }
 
 TEST(clang_parser, btf_unresolved_typedef)
