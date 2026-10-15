@@ -2242,7 +2242,10 @@ void TypeRuleCollector::visit(Unop &unop)
             if (type.IsCtxAccess())
               result.MarkCtxAccess();
             if (result.IsCTypeTy() || result.IsArrayTy()) {
-              result.SetValueLocation(ValueLocation::external_memory);
+              result.SetValueLocation(type.GetPointeeTy().GetValueLocation() ==
+                                              ValueLocation::bpf_memory
+                                          ? ValueLocation::bpf_memory
+                                          : ValueLocation::external_memory);
             }
             result.SetAS(type.GetAS());
           } else if (type.IsCTypeTy()) {
