@@ -63,8 +63,16 @@ file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
 add_subdirectory(data)
 add_dependencies(bpftrace_test data_source_dwarf data_source_btf)
 add_dependencies(bpftrace_test dwarf_origin_fixture)
+add_dependencies(bpftrace_test dwarf_inline_fixture)
+add_dependencies(bpftrace_test dwarf_line_selection_fixture)
+add_dependencies(bpftrace_test dwarf_function_consistency_fixture)
+add_dependencies(bpftrace_test dwarf_inline_after_callsite_fixture)
 target_compile_definitions(bpftrace_test PRIVATE
-  DWARF_ORIGIN_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_origin")
+  DWARF_ORIGIN_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_origin"
+  DWARF_INLINE_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_inline"
+  DWARF_LINE_SELECTION_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_line_selection"
+  DWARF_FUNCTION_CONSISTENCY_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_function_consistency"
+  DWARF_INLINE_AFTER_CALLSITE_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_inline_after_callsite")
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 

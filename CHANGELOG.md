@@ -20,6 +20,9 @@ and this project adheres to
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
+- Add `--list-kprobe-lines` to inspect DWARF source-line mappings without
+  loading BPF programs or attaching probes.
+  - [#5361](https://github.com/bpftrace/bpftrace/pull/5361)
 #### Changed
 - Structs and arrays are copied for scratch variable assignment
   - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)
