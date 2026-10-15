@@ -1,5 +1,5 @@
+// :summary Determine if a kfunc exists using BTF.
 // :variant boolean kfunc_exist(const string kfunc)
-// Determine if a kfunc exists using BTF.
 //
 // Argument kfunc must be string literal.
 macro kfunc_exist(kfunc)
@@ -12,8 +12,8 @@ macro kfunc_exist(kfunc)
   }
 }
 
+// :summary Determine if a kfunc is supported for particular probe types.
 // :variant boolean kfunc_allowed(const string kfunc)
-// Determine if a kfunc is supported for particular probe types.
 //
 // Argument kfunc must be string literal.
 macro kfunc_allowed(kfunc)
