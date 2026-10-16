@@ -20,6 +20,8 @@ and this project adheres to
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
+- Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
+  - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
 #### Changed
 - Structs and arrays are copied for scratch variable assignment
   - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)

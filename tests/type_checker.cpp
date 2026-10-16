@@ -816,6 +816,18 @@ TEST_F(TypeCheckerTest, call_delete)
       "__delete", btf::Function::Linkage::Global, *delete_proto);
   ASSERT_TRUE(bool(delete_func));
 
+  std::vector<std::pair<std::string, btf::ValueType>> delete_all_args = {
+    { "map", btf::ValueType(*vd_ptr) }
+  };
+
+  auto delete_all_proto = types.global.add<btf::FunctionProto>(
+      btf::ValueType(*long_ty), delete_all_args);
+  ASSERT_TRUE(bool(delete_all_proto));
+
+  auto delete_all_func = types.global.add<btf::Function>(
+      "__delete_all", btf::Function::Linkage::Global, *delete_all_proto);
+  ASSERT_TRUE(bool(delete_all_func));
+
   test("kprobe:f { @x = 1; delete(@x); }", Types{ types });
   test("kprobe:f { @y[5] = 5; delete(@y, "
        "5); }",
@@ -880,7 +892,13 @@ ERROR: Argument mismatch for @y: trying to access with arguments: '(int8,int8)' 
 )" },
        Types{ types });
 
-  test("kprobe:f { @y[1] = 2; delete(@y); }", Error{}, Types{ types });
+  // Deleting all keys/values of a map with explicit keys
+  test("kprobe:f { @y[1] = 2; delete(@y); }", Types{ types });
+  test("kprobe:f { @y[1, 2] = 2; delete(@y); }", Types{ types });
+  test("kprobe:f { @y[1] = hist(2); delete(@y); }", Types{ types });
+  test("kprobe:f { @y[1] = 2; $x = delete(@y); }", Types{ types });
+  test("kprobe:f { @y[1] = 2; if (delete(@y)) { 123 } }", Types{ types });
+
   test("kprobe:f { @a[1] = 1; "
        "delete(@a, @a); }",
        Error{ R"(
