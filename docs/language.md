@@ -23,14 +23,14 @@ struct S {
 }
 
 config = {
-    stack_mode=perf
+  stack_mode = perf;
 }
 
 let @a = lruhash(100);
 
-macro greet { print("hi"); }
+macro greet() { print("hi"); }
 
-kprobe:do_nanosleep { greet!(); }
+kprobe:do_nanosleep { greet(); }
 ```
 
 ## Action Blocks
@@ -56,12 +56,12 @@ A basic script that traces the `open(2)` and `openat(2)` system calls can be wri
 
 ```
 begin {
-	printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
+  printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
 }
 
 tracepoint:syscalls:sys_enter_open,
 tracepoint:syscalls:sys_enter_openat {
-	printf("%-6d %-16s %s\n", pid, comm, str(args.filename));
+  printf("%-6d %-16s %s\n", pid, comm, str(args.filename));
 }
 ```
 
@@ -70,7 +70,7 @@ The above script has two action blocks and a total of 3 probes.
 The first action block uses the special `begin` probe, which fires once during `bpftrace` startup.
 This probe is used to print a header, indicating that the tracing has started.
 
-The second action block uses two probes, one for `open` and one for `openat`, and defines an action that prints the file being `open` ed as well as the `pid` and `comm` of the process that execute the syscall.
+The second action block uses two probes, one for `open` and one for `openat`, and defines an action that prints the file being opened as well as the `pid` and `comm` of the process that executes the syscall.
 See the [Probes](#probes) section for details on the available probe types.
 
 ## Arguments
@@ -88,7 +88,7 @@ These keywords allow access to the nth argument passed to the function being tra
 For the first argument use `arg0`, for the second `arg1`, and so forth.
 The type of each arg is an `int64` and will often require casting to non scalar types, e.g., `$x = (struct qstr *)arg1`.
 These are extracted from the CPU registers.
-The amount of args passed in registers depends on the CPU architecture.
+The number of arguments passed in registers depends on the CPU architecture.
 
 ### args
 
@@ -223,8 +223,8 @@ which can only be placed at the top of the script before any action blocks, macr
 
 ```
 config = {
-    stack_mode=perf;
-    max_map_keys=2
+  stack_mode = perf;
+  max_map_keys = 2;
 }
 
 begin { ... }
@@ -244,20 +244,20 @@ inside a script config block.
 ## Config Variables
 
 Some behavior can only be controlled through config variables, which are listed here.
-These can be set via the [Config Block](#config-block) directly in a script (before any probes) or via their environment variable equivalent, which is upper case and includes the `BPFTRACE_` prefix e.g. `stack_mode`’s environment variable would be `BPFTRACE_STACK_MODE`.
+These can be set via the [Config Block](#config-block) directly in a script (before any probes) or via their environment variable equivalent, which is uppercase and includes the `BPFTRACE_` prefix, e.g. `stack_mode`’s environment variable would be `BPFTRACE_STACK_MODE`.
 
 ### cache_user_symbols
 
-Default: PER_PROGRAM if ASLR disabled or `-c` option given, PER_PID otherwise.
+Default: `PER_PROGRAM` if ASLR is disabled or the `-c` option is given; `PER_PID` otherwise.
 
-* PER_PROGRAM - each program has its own cache. If there are more processes with enabled ASLR for a single program, this might produce incorrect results.
-* PER_PID - each process has its own cache. This is accurate for processes with ASLR enabled, and enables bpftrace to preload caches for processes running at probe attachment time.
-If there are many processes running, it will consume a lot of a memory.
-* NONE - caching disabled. This saves the most memory, but at the cost of speed.
+* `PER_PROGRAM` - each program has its own cache. If there are more processes with enabled ASLR for a single program, this might produce incorrect results.
+* `PER_PID` - each process has its own cache. This is accurate for processes with ASLR enabled, and enables bpftrace to preload caches for processes running at probe attachment time.
+If there are many processes running, it will consume a lot of memory.
+* `NONE` - caching disabled. This saves the most memory, but at the cost of speed.
 
 ### cpp_demangle
 
-Default: true
+Default: `true`
 
 C++ symbol demangling in userspace stack traces is enabled by default.
 
@@ -265,7 +265,7 @@ This feature can be turned off by setting the value of this variable to `false`.
 
 ### lazy_symbolication
 
-Default: false
+Default: `false`
 
 For user space symbols, symbolicate lazily/on-demand (`true`) or symbolicate everything ahead of time (`false`).
 
@@ -273,7 +273,8 @@ For user space symbols, symbolicate lazily/on-demand (`true`) or symbolicate eve
 
 Default: "GPL"
 
-The license bpftrace will use to load BPF programs into the linux kernel. Here is the list of accepted license strings:
+The license bpftrace will use to load BPF programs into the Linux kernel. Here is the list of accepted license strings:
+
 - GPL
 - GPL v2
 - GPL and additional rights
@@ -326,7 +327,7 @@ Default: 1024
 The maximum length (in bytes) for values created by `str()`, `buf()` and `path()`.
 
 This limit is necessary because BPF requires the size of all dynamically-read strings (and similar) to be declared up front. This is the size for all strings (and similar) in bpftrace unless specified at the call site.
-There is no artificial limit on what you can tune this to. But you may be wasting resources (memory and cpu) if you make this too high.
+There is no artificial limit on what you can tune this to. But you may be wasting resources (memory and CPU) if you make this too high.
 
 ### missing_probes
 
@@ -335,6 +336,7 @@ Default: `error`
 Controls handling of probes which cannot be attached because they do not exist (in the kernel or in the traced binary) or there was an issue during attachment.
 
 The possible options are:
+
 - `error` - always fail on missing probes
 - `warn` - print a warning but continue execution
 - `ignore` - silently ignore missing probes
@@ -352,11 +354,11 @@ This exists because the BPF stack is limited to 512 bytes and large objects make
 Default: Based on available system memory
 
 Number of pages to allocate for each created ring or perf buffer (there is only one of each max).
-The minimum is: 1 * the number of cpus on your machine.
+The minimum is one page per CPU on your machine.
 If you’re getting a lot of dropped events bpftrace may not be processing events in the ring buffer (or perf buffer if you're using `skboutput`) fast enough.
 It may be useful to bump the value higher so more events can be queued up.
 The tradeoff is that bpftrace will use more memory.
-The default value is based on available system memory; max is 4096 pages (16mb) and min is 64 pages (256kb), which presumes 4k page size.
+The default value is based on available system memory; max is 4096 pages (16 MB) and min is 64 pages (256 KB), which presumes a 4 KB page size.
 If your system has a larger page size the amount of allocated memory will be the same but we'll just use fewer pages.
 
 ### show_debug_info
@@ -366,19 +368,19 @@ There might be a performance difference when symbolicating, which is the only re
 
 ### stack_mode
 
-Default: bpftrace
+Default: `bpftrace`
 
 Output format for ustack and kstack builtins.
 Available modes/formats:
 
-* bpftrace: symbol + offset (e.g. `do_mmap+1`)
-* perf: linux perf style with leading IP (e.g. `ffffffffb4019501 do_mmap+1`)
-* raw: no symbolication (print instruction pointer)
-* build_id: no symbolication (print build_id and file offset) (ustack only)
+* `bpftrace`: symbol + offset (e.g. `do_mmap+1`)
+* `perf`: Linux perf style with leading IP (e.g. `ffffffffb4019501 do_mmap+1`)
+* `raw`: no symbolication (print instruction pointer)
+* `build_id`: no symbolication (print build ID and file offset) (ustack only)
 
-This can be overwritten at the call site.
+This can be overridden at the call site.
 
-When [debug info](#show_debug_info) is available the file and line is added at the end for `bpftrace` or `perf` stack mode e.g. `spin+37@/home/jordalgo/local/bpftrace/tests/testprogs/uprobe_loop.c:14`.
+When [debug info](#show_debug_info) is available the file and line are added at the end for `bpftrace` or `perf` stack mode e.g. `spin+37@/home/jordalgo/local/bpftrace/tests/testprogs/uprobe_loop.c:14`.
 
 ### str_trunc_trailer
 
@@ -389,19 +391,20 @@ Set to empty string to disable truncation trailers.
 
 ### print_maps_on_exit
 
-Default: true
+Default: `true`
 
 Controls whether maps are printed on exit. Set to `false` in order to change the default behavior and not automatically print maps at program exit.
 
 ### unstable features
 
-These are the list of unstable features:
+This is the list of unstable features:
+
 - `unstable_tseries` - feature flag for time series map type
 - `unstable_dw_ustack` - feature flag for DWARF-based user-space stack unwinding
 
 All of these accept the following options:
 
-Default: warn
+Default: `warn`
 
 - `error` - fail if this feature is used
 - `warn` - enable feature but print a warning
@@ -454,7 +457,7 @@ $a = $b; // $a now becomes an int16
 $c = (uint64)1;
 $d = (int64)-1;
 
-// $c is a int64 below
+// $c is an int64 below
 // an implicit cast is added to the assignment -> (int64)$d
 // and a warning about the sign mismatch is surfaced
 $c = $d;
@@ -482,7 +485,7 @@ $a = (uint64_t)1; // $a is a uint64
 
 bpftrace also supports a `string` data type, which it uses for string literals, e.g. `"hello"`.
 Similar to C this is represented as a well formed char array (NULL terminated).
-Additionally, all BTF char arrays (`char[]` or `int8[]`) are automatically converted to a bpftrace string but can be casted back to an int array if needed, e.g. `$a = (int8[])"mystring"`;
+Additionally, all BTF char arrays (`char[]` or `int8[]`) are automatically converted to a bpftrace string but can be cast back to an int array if needed, e.g. `$a = (int8[])"mystring";`.
 It also may be necessary to utilize the [`str()`](stdlib.md#str) function if bpftrace can't determine the correct address space (user or kernel).
 
 ## Filters/Predicates
@@ -538,13 +541,13 @@ Importing a bpftrace script:
 
 ```
 // helpers.bt
-macro greet { print("hello"); }
+macro greet() { print("hello"); }
 ```
 
 ```
 import "helpers.bt";
 
-begin { greet!(); } // prints "hello"
+begin { greet(); } // prints "hello"
 ```
 
 Importing a C file:
@@ -741,14 +744,14 @@ The following two probes compile into the same code:
 ```
 interval:s:1 {
   unroll(3) {
-    print("Unrolled")
+    print("Unrolled");
   }
 }
 
 interval:s:1 {
-  print("Unrolled")
-  print("Unrolled")
-  print("Unrolled")
+  print("Unrolled");
+  print("Unrolled");
+  print("Unrolled");
 }
 ```
 
@@ -758,11 +761,11 @@ bpftrace macros (as opposed to C macros) provide a way for you to structure your
 They can be useful when you want to factor out code into smaller, more understandable parts.
 Or if you want to share code between probes.
 
-At a high level, macros can be thought of as semantic aware text replacement.
+At a high level, macros can be thought of as semantically aware text replacement.
 They accept (optional) variable, map, and expression arguments.
 The body of the macro may only access maps and external variables passed in through the arguments, which is why these are often referred to as "hygienic macros", but the macro body can create new variables which only exist inside the body.
 A macro's parameter signature specifies how an argument will be used.
-For example `macro test($a, b, @c)` indicates that `$a` needs to be a scratch variable (which might be mutated), that `b` needs to be an expression that will be inserted where ever `b` is used in the macro body, and that `@c` needs to be a map (which might be mutated).
+For example `macro test($a, b, @c)` indicates that `$a` needs to be a scratch variable (which might be mutated), that `b` needs to be an expression that will be inserted wherever `b` is used in the macro body, and that `@c` needs to be a map (which might be mutated).
 A valid use of this macro could be `test($x, 1 + 2, @y)`.
 Variables and maps can also be used for ident parameters that expect expressions and would be the same as writing `{ @y }` (Block Expression).
 Type expression substitution is also supported inside of macros but types must be passed into macro calls wrapped in the `typeof` builtin (see below).
@@ -808,9 +811,9 @@ begin {
 
   @b = 5;
   add_one_to_each($a, @b);
-  print($a + @b)                  // prints 17
+  print($a + @b);                // prints 17
 
-  side_effects({ printf("hi") })  // prints hihihi
+  side_effects({ printf("hi"); }); // prints hihihi
 
   print(add_two(1));              // prints 3
 
@@ -909,11 +912,11 @@ The following relational operators are defined for integers and pointers.
 | &lt; | left-hand expression is less than right-hand |
 | &lt;= | left-hand expression is less than or equal to right-hand |
 | > | left-hand expression is bigger than right-hand |
-| >= | left-hand expression is bigger or equal to than right-hand |
+| >= | left-hand expression is greater than or equal to right-hand |
 | == | left-hand expression equal to right-hand |
 | != | left-hand expression not equal to right-hand |
 
-The following relation operators are available for comparing strings, integer arrays, and tuples.
+The following relational operators are available for comparing strings, integer arrays, and tuples.
 
 |     |     |
 | --- | --- |
@@ -931,7 +934,7 @@ The following assignment operators can be used on both `map` and `scratch` varia
 | >>= | Update the variable with its value right shifted by the number of bits specified by the right-hand expression value |
 | += | Increment the variable by the right-hand expression value |
 | -= | Decrement the variable by the right-hand expression value |
-| *= | Multiple the variable by the right-hand expression value |
+| *= | Multiply the variable by the right-hand expression value |
 | /= | Divide the variable by the right-hand expression value |
 | %= | Modulo the variable by the right-hand expression value |
 | &= | Bitwise AND the variable by the right-hand expression value |
@@ -943,7 +946,7 @@ All these operators are syntactic sugar for combining assignment with the specif
 
 ### Increment and Decrement Operators
 
-The increment (`++`) and decrement (`--`) operators can be used on integer and pointer variables to increment their value by one.
+The increment (`++`) and decrement (`--`) operators can be used on integer and pointer variables to increment or decrement their value by one.
 They can only be used on variables and can either be applied as prefix or suffix.
 The difference is that the expression `x++` returns the original value of `x`, before it got incremented while `++x` returns the value of `x` post increment.
 
@@ -961,8 +964,8 @@ Note `++`/`--` on a shared global variable can lose updates. See [`count()`](std
 
 ### Block Expressions
 
-A block can be used as expression, as long as the last statement of the block
-is an expression with no trailing semi-colon.
+A block can be used as an expression, as long as the last statement of the block
+is an expression with no trailing semicolon.
 
 ```
 let $a = {
@@ -992,7 +995,7 @@ _ = has_key(@a, 1); // No Warning
 bpftrace supports various probe types which allow the user to attach BPF programs to different types of events.
 Each probe starts with a provider (e.g. `kprobe`) followed by a colon (`:`) separated list of options.
 An optional name may precede the provider with an equals sign (e.g. `name=`), which is reserved for internal use and future features.
-The amount of options and their meaning depend on the provider and are detailed below.
+The number of options and their meaning depend on the provider and are detailed below.
 The valid values for options can depend on the system or binary being traced, e.g. for uprobes it depends on the binary.
 Also see [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes).
 
@@ -1031,6 +1034,7 @@ Most providers also support a short name which can be used instead of the full n
 | [`begin/end`](#beginend) | - | Built-in events |
 | [`bench`](#bench) | - | Micro benchmarks |
 | [`self`](#self) | - | Built-in events |
+| [`test`](#test) | - | Script tests |
 | [`hardware`](#hardware) | `h` | Processor-level events |
 | [`interval`](#interval) | `i` | Timed output |
 | [`iter`](#iterator) | `it` | Iterators tracing |
@@ -1053,12 +1057,12 @@ Each of these probes can be used any number of times, and they will be executed 
 For imports containing `begin` and `end` probes, an effort is made to preserve the partial order implied by the import graph (e.g. if `A` depends on `B`, then `B` will have both its `begin` and `end` probes executed first), but this is not strictly guaranteed.
 
 Note that specifying an `end` probe doesn’t override the printing of 'non-empty' maps at exit.
-To prevent printing all used maps need be cleared in the `end` probe:
+To prevent printing, clear all used maps in the `end` probe:
 
 ```
 end {
-    clear(@map1);
-    clear(@map2);
+  clear(@map1);
+  clear(@map2);
 }
 ```
 
@@ -1089,18 +1093,18 @@ To run `bench` probes, you must run bpftrace in bench mode: `bpftrace --bench ..
 
 ```
 bench:lhist {
-    @a = lhist(rand % 10, 1, 10, 1);
+  @a = lhist(rand % 10, 1, 10, 1);
 }
 
 bench:count {
-    @b = count();
+  @b = count();
 }
 
 bench:my_loop {
-    $a = 0;
-    for ($i : 0..10) {
-        $a++;
-    }
+  $a = 0;
+  for ($i : 0..10) {
+    $a++;
+  }
 }
 ```
 
@@ -1136,7 +1140,7 @@ self:signal:SIGUSR1 {
 
 **variants**
 
-* `hardware:event_name:`
+* `hardware:event_name`
 * `hardware:event_name:count`
 
 **short name**
@@ -1211,10 +1215,10 @@ interval:1s { print(@syscalls); clear(@syscalls); }
 ***Warning*** this feature is experimental and may be subject to interface changes.
 
 These are eBPF iterator probes that allow iteration over kernel objects.
-Iterator probe can’t be mixed with any other probe, not even another iterator.
+An iterator probe can’t be mixed with any other probe, not even another iterator.
 Each iterator probe provides a set of fields that could be accessed with the
-ctx pointer. Users can display the set of available fields for each iterator via
--lv options as described below.
+`ctx` pointer. Users can display the set of available fields for each iterator via
+the `-lv` option as described below.
 
 ```
 iter:task { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
@@ -1340,7 +1344,7 @@ fentry:x86_pmu_stop {
 }
 ```
 
-The fget function takes one argument as file descriptor and you can access it via args.fd and the return value is accessible via retval:
+The `fget` function takes a file descriptor argument, available as `args.fd`. Its return value is available as `retval`:
 
 ```
 fexit:fget {
@@ -1371,16 +1375,16 @@ fexit:fget {
 * `kr`
 
 ``kprobe``s allow for dynamic instrumentation of kernel functions.
-Each time the specified kernel function is executed the attached BPF programs are ran.
+Each time the specified kernel function is executed the attached BPF programs are run.
 
 ```
 kprobe:tcp_reset {
-  @tcp_resets = count()
+  @tcp_resets = count();
 }
 ```
 
-Function arguments are available through the `argN` for register args. Arguments passed on stack are available using the stack pointer, e.g. `$stack_arg0 = **(int64**)reg("sp") + 16`.
-Whether arguments passed on stack or in a register depends on the architecture and the number or arguments used, e.g. on x86_64 the first 6 non-floating point arguments are passed in registers and all following arguments are passed on the stack.
+Function arguments passed in registers are available through `argN`. Arguments passed on the stack can be read using the stack pointer. For example, on x86_64 at function entry, `$stack_arg0 = *(uint64*)(reg("sp") + 8);` reads the first stack-passed argument.
+Whether arguments are passed on the stack or in a register depends on the architecture and the number of arguments used, e.g. on x86_64 the first 6 non-floating point arguments are passed in registers and all following arguments are passed on the stack.
 Note that floating point arguments are typically passed in special registers which don’t count as `argN` arguments which can cause confusion.
 Consider a function with the following signature:
 
@@ -1388,7 +1392,7 @@ Consider a function with the following signature:
 void func(int a, double d, int x)
 ```
 
-Due to `d` being a floating point, `x` is accessed through `arg1` where one might expect `arg2`.
+Due to `d` being a floating-point argument, `x` is accessed through `arg1` where one might expect `arg2`.
 
 bpftrace does not detect the function signature so it is not aware of the argument count or their type.
 It is up to the user to perform [Type conversion](#type-conversion) when needed, e.g.
@@ -1399,7 +1403,7 @@ It is up to the user to perform [Type conversion](#type-conversion) when needed,
 
 kprobe:vfs_open
 {
-	printf("open path: %s\n", str(((struct path *)arg0).dentry.d_name.name));
+  printf("open path: %s\n", str(((struct path *)arg0).dentry.d_name.name));
 }
 ```
 
@@ -1427,24 +1431,24 @@ kprobe:kvm:x86_emulate_insn
 
 See [BTF Support](#btf-support) for more details.
 
-`kprobe` s are not limited to function entry, they can be attached to any instruction in a function by specifying an offset from the start of the function or by providing the bare address of the function, which is useful if there are multiple functions with the same name. The bare address variant `kprobe:addr` requires the `--unsafe` flag.
+`kprobe` probes are not limited to function entry, they can be attached to any instruction in a function by specifying an offset from the start of the function or by providing the bare address of the function, which is useful if there are multiple functions with the same name. The bare address variant `kprobe:addr` requires the `--unsafe` flag.
 
-`kretprobe` s trigger on the return from a kernel function.
+`kretprobe` probes trigger on the return from a kernel function.
 Return probes do not have access to the function (input) arguments, only to the return value (through `retval`).
 A common pattern to work around this is by storing the arguments in a map on function entry and retrieving in the return probe:
 
 ```
 kprobe:d_lookup
 {
-	$name = (struct qstr *)arg1;
-	@fname[tid] = $name.name;
+  $name = (struct qstr *)arg1;
+  @fname[tid] = $name.name;
 }
 
 kretprobe:d_lookup
 /@fname[tid]/
 {
-	printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm,
-	    str(@fname[tid]));
+  printf("%-8d %-6d %-16s M %s\n", elapsed / 1e6, pid, comm,
+    str(@fname[tid]));
 }
 ```
 
@@ -1490,7 +1494,7 @@ kprobe@my_module:main.c:42
 
 Profile probes fire on each CPU on the specified interval.
 These operate using perf_events (a Linux kernel facility, which is also used by the perf command).
-If a unit of time is not specified in the second position, the number is interpreted as nanoseconds; e.g., `interval:1s`, `interval:1000000000`, and `interval:s:1` are all equivalent.
+If a unit of time is not specified in the second position, the number is interpreted as nanoseconds; e.g., `profile:1s`, `profile:1000000000`, and `profile:s:1` are all equivalent.
 
 ```
 profile:hz:99 { @[tid] = count(); }
@@ -1527,7 +1531,7 @@ The function arguments are available in the `args` struct which can be inspected
 
 **variants**
 
-* `software:event:`
+* `software:event`
 * `software:event:count`
 
 **short name**
@@ -1535,7 +1539,7 @@ The function arguments are available in the `args` struct which can be inspected
 * `s`
 
 These are the pre-defined software events provided by the Linux kernel, as commonly traced via the perf utility.
-They are similar to tracepoints, but there is only about a dozen of these, and they are documented in the perf_event_open(2) man page.
+They are similar to tracepoints, but there are only about a dozen of these, and they are documented in the perf_event_open(2) man page.
 If the count is not provided, a default is used.
 
 The event names are:
@@ -1570,9 +1574,9 @@ This roughly counts who is causing page faults, by sampling the process name for
 
 Tracepoints are hooks into events in the kernel.
 Tracepoints are defined in the kernel source and compiled into the kernel binary which makes them a form of static tracing.
-Unlike `kprobe` s, new tracepoints cannot be added without modifying the kernel.
+Unlike `kprobe` probes, new tracepoints cannot be added without modifying the kernel.
 
-The advantage of tracepoints is that they generally provide a more stable interface than `kprobe` s do, they do not depend on the existence of a kernel function.
+The advantage of tracepoints is that they generally provide a more stable interface than `kprobe` probes do, they do not depend on the existence of a kernel function.
 
 ```
 tracepoint:syscalls:sys_enter_openat {
@@ -1617,9 +1621,9 @@ After the "common" members listed first, the members are specific to the tracepo
 * `u`
 * `ur`
 
-`uprobe` s or user-space probes are the user-space equivalent of `kprobe` s.
-The same limitations that apply [kprobe and kretprobe](#kprobe-and-kretprobe) also apply to `uprobe` s and `uretprobe` s, namely: arguments are available via the `argN` builtins and can only be accessed with a uprobe.
-retval is the return value for the instrumented function and can only be accessed with a uretprobe.
+`uprobe` probes, or user-space probes, are the user-space equivalent of `kprobe` probes.
+The same limitations that apply to [kprobe and kretprobe](#kprobe-and-kretprobe) also apply to `uprobe` and `uretprobe` probes, namely: arguments are available via the `argN` builtins and can only be accessed with a uprobe.
+`retval` is the return value for the instrumented function and can only be accessed with a uretprobe.
 **Note**: When tracing some languages, like C++, `arg0` and even `arg1` may refer to runtime internals such as the current object instance (`this`) and/or the eventual return value for large returned objects where copy elision is used.
 This will push the actual function arguments to possibly start at `arg1` or `arg2` - the only way to know is to experiment.
 
@@ -1679,10 +1683,10 @@ The compiler mangles the function name to `_ZN5MyApp6Server14handle_requestEi`.
 Instead of using that directly, use the `cpp` qualifier:
 
 ```
-# using cpp qualifier with demangled name
+// using cpp qualifier with demangled name
 uprobe:/path/to/myapp:cpp:"MyApp::Server::handle_request" { print(ustack); }
 
-# wildcards also work with cpp qualifier
+// wildcards also work with cpp qualifier
 uprobe:/path/to/myapp:cpp:"MyApp::Server::*" { print(ustack); }
 ```
 
@@ -1697,7 +1701,7 @@ _ZN5MyApp6Server14handle_requestEi
 uprobe:/path/to/myapp:"_ZN5MyApp6Server14handle_requestEi" { print(ustack); }
 ```
 
-It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
+It is important to note that for `uretprobe` probes to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
 This can cause issues with languages that have their own runtime like Golang:
 
 **example.go**
@@ -1737,16 +1741,14 @@ uprobe:"/system/app/Foo/Foo.apk!/lib/arm64-v8a/libfoo.so":func { ... }
 
 **variants**
 
-* `usdt:binary_path:probe_name`
-* `usdt:binary_path:[probe_namespace]:probe_name`
-* `usdt:library_path:probe_name`
-* `usdt:library_path:[probe_namespace]:probe_name`
+* `usdt:binary_path[:probe_namespace]:probe_name`
+* `usdt:library_path[:probe_namespace]:probe_name`
 
 **short name**
 
 * `U`
 
-Where probe_namespace is optional if probe_name is unique within the binary.
+`probe_namespace` is optional if `probe_name` is unique within the binary.
 
 You can target the entire host (or an entire process’s address space by using the `-p` arg) by using a single wildcard in place of the binary_path/library_path:
 
@@ -2090,17 +2092,17 @@ with a `$`, e.g. `$myvar`.
 ```
 $a = 1;
 if ($a == 1) {
-  $b = "hello"
+  $b = "hello";
   $a = 2;
 }
 ```
 
-'scratch' variables can also declared before or during initialization with `let` e.g.
+'scratch' variables can also be declared before or during initialization with `let` e.g.
 ```
 let $a = 1;
 let $b;
 if ($a == 1) {
-  $b = "hello"
+  $b = "hello";
   $a = 2;
 }
 ```
@@ -2109,7 +2111,7 @@ If no assignment is specified variables will initialize to 0.
 
 'map' variables use BPF 'maps'.
 These exist for the lifetime of `bpftrace` itself and can be accessed from all action blocks and user-space.
-Map names always start with a `@`, e.g. `@mymap`.
+Map names always start with an `@`, e.g. `@mymap`.
 
 All valid identifiers can be used as `name`.
 
@@ -2143,7 +2145,7 @@ However, it’s best practice to declare maps up front as using the default can 
 
 ### Maps without Explicit Keys
 
-Values can be assigned directly to maps without a key (sometimes refered to as scalar maps).
+Values can be assigned directly to maps without a key (sometimes referred to as scalar maps).
 Note: you can’t iterate over these maps as they don’t have an accessible key.
 
 ```
@@ -2239,7 +2241,7 @@ begin { @=*uptr(kaddr("do_poweroff")) }
 ```
 
 bpftrace tries to automatically set the correct address space for a pointer based on the probe type, but might fail in cases where it is unclear.
-The address space can be changed with the [kptrs](stdlib.md#kptr) and [uptr](stdlib.md#uptr) functions.
+The address space can be changed with the [kptr](stdlib.md#kptr) and [uptr](stdlib.md#uptr) functions.
 
 ### BPF License
 
@@ -2251,10 +2253,10 @@ You can specify a different license using the "license" config variable.
 ### BTF Support
 
 If the kernel version has BTF support, kernel types are automatically available and there is no need to include additional headers to use them.
-It is not recommended to mix definitions from multiple sources (ie. BTF and header files).
+It is not recommended to mix definitions from multiple sources (i.e. BTF and header files).
 If your program mixes definitions, bpftrace will do its best but can easily get confused due to redefinition conflicts.
 Prefer to exclusively use BTF as it can never get out of sync on a running system. BTF is also less susceptible to parsing failures (C is constantly evolving).
-Almost all current linux deployments will support BTF.
+Almost all current Linux deployments will support BTF.
 
 To allow users to detect this situation in scripts, the preprocessor macro `BPFTRACE_HAVE_BTF` is defined if BTF is detected.
 See `tools/` for examples of its usage.
@@ -2284,10 +2286,10 @@ See clang documentation for more information on these environment variables and 
 bpftrace can be used to create some powerful one-liners and some simple tools.
 For complex tools, which may involve command line options, positional parameters, argument processing, and customized output, consider switching to bcc.
 bcc provides Python (and other) front-ends, enabling usage of all the other Python libraries (including argparse), as well as a direct control of the kernel BPF program.
-The down side is that bcc is much more verbose and laborious to program.
-Together, bpftrace and bcc are complimentary.
+The downside is that bcc is much more verbose and laborious to program.
+Together, bpftrace and bcc are complementary.
 
-An expected development path would be exploration with bpftrace one-liners, then and ad hoc scripting with bpftrace, then finally, when needed, advanced tooling with bcc.
+An expected development path would be exploration with bpftrace one-liners, then ad hoc scripting with bpftrace, then finally, when needed, advanced tooling with bcc.
 
 As an example of bpftrace vs bcc differences, the bpftrace xfsdist.bt tool also exists in bcc as xfsdist.py. Both measure the same functions and produce the same summary of information.
 However, the bcc version supports various arguments:
@@ -2319,12 +2321,12 @@ The bcc version is 131 lines of code. The bpftrace version is 22.
 
 ### Errors
 
-1. Looks like the BPF stack limit of 512 bytes is exceeded BPF programs that operate on many data items may hit this limit.
+1. Looks like the BPF stack limit of 512 bytes is exceeded. BPF programs that operate on many data items may hit this limit.
 There are a number of things you can try to stay within the limit:
    1. Find ways to reduce the size of the data used in the program. Eg, avoid strings if they are unnecessary: use pid instead of comm. Use fewer map keys.
    2. Split your program over multiple probes.
    3. Check the status of the BPF stack limit in Linux (it may be increased in the future, maybe as a tuneable).
-   4. (advanced): Run -d and examine the LLVM IR, and look for ways to optimize src/ast/codegen_llvm.cpp.
+   4. (advanced): Run -d and examine the LLVM IR, and look for ways to optimize src/ast/passes/codegen_llvm.cpp.
 2. Kernel headers not found
 bpftrace requires kernel headers for certain features, which are searched for by default in: `/lib/modules/$(uname -r)`.
 The default search directory can be overridden using the environment variable BPFTRACE_KERNEL_SOURCE and also BPFTRACE_KERNEL_BUILD if it is out-of-tree Linux kernel build.
@@ -2388,7 +2390,7 @@ These are also the values that the [arch](stdlib.md#arch) builtin can return.
 ### Systemd support
 
 If bpftrace has been built with `-DENABLE_SYSTEMD=1`, one can run bpftrace in
-the background using systemd::
+the background using systemd:
 ```
 # systemd-run --unit=bpftrace --service-type=notify bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
 ```
@@ -2399,7 +2401,7 @@ stop tracing, run `systemctl stop bpftrace`.
 
 To debug early boot issues, bpftrace can be invoked via a systemd service
 ordered before the service that needs to be traced. A basic unit file to run
-bpftrace before another service looks as follows::
+bpftrace before another service looks as follows:
 ```
 [Unit]
 Before=service-i-want-to-trace.service
@@ -2419,14 +2421,14 @@ They are enabled by default but come with a warning if used.
 If you explicitly add the config variable to your script the warning will not be shown e.g.
 ```
 config = {
-    unstable_map_decl=enable;
+  unstable_tseries = enable;
 }
 ```
 
 To opt-out of these unstable features (and ensure they are not used) add the config variable and set it to `error` e.g.
 ```
 config = {
-    unstable_map_decl=error;
+  unstable_tseries = error;
 }
 ```
 
