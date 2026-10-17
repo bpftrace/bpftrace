@@ -267,8 +267,9 @@ SizedType GlobalVars::get_sized_type(const std::string &global_var_name,
   if (global_var_name == VARIABLE_BUFFER) {
     assert(resources.variable_buffers > 0);
     assert(resources.max_variable_size > 0);
+    const auto slot_size = (resources.max_variable_size + 7) / 8 * 8;
     return make_rw_type(resources.variable_buffers,
-                        CreateArray(resources.max_variable_size, CreateInt8()));
+                        CreateArray(slot_size, CreateInt8()));
   }
 
   if (global_var_name == MAP_KEY_BUFFER) {
