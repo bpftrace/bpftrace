@@ -2,6 +2,7 @@
 // created by an AST pass that happens after ResolveRootImports
 // This is the only stdlib bt file that always gets imported
 
+// :summary Compares a specified number of bytes.
 // :variant int memcmp(left, right, uint64 count)
 // Compares the first 'count' bytes of two expressions.
 // 0 is returned if they are the same.

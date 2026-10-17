@@ -12,7 +12,7 @@
 //  * Arrays of int8
 //  * Native bpftrace `string` objects of various sizes
 
-// Checks that this value is string-like.
+// :summary Checks that this value is string-like.
 macro assert_str(exp)
 {
   if comptime (!is_str(exp)) {
@@ -29,13 +29,13 @@ macro assert_str(exp)
   }
 }
 
-// Returns the default unbounded length.
+// :summary Returns the default unbounded length.
 macro default_str_length()
 {
   sizeof(str((int8*)0))
 }
 
-// Returns the length of a string-like object.
+// :summary Returns the length of a string-like object.
 // :variant uint64 strlen(string exp)
 // :variant uint64 strlen(int8 exp[])
 // :variant uint64 strlen(int8 *exp)
@@ -71,7 +71,7 @@ macro __strnlen(ptr, max_size)
   __bpf_strnlen((int8*)ptr, (size_t)max_size)
 }
 
-// Returns the "capacity" of a string-like object.
+// :summary Returns the capacity of a string-like object.
 //
 // In most cases this is the same as the length, but for bpftrace-native
 // strings and arrays, this is the underlying object capacity. This is used to
@@ -91,7 +91,8 @@ macro strcap(exp)
   }
 }
 
-// Returns the index of the first occurrence of the string needle in the string haystack. If needle is not in haystack then -1 is returned.
+// :summary Returns the index of the first occurrence of one string in another.
+// Returns -1 if needle is not in haystack.
 // :variant int64 strstr(string haystack, string needle)
 macro strstr($haystack, $needle)
 {
@@ -127,9 +128,7 @@ macro strstr(haystack, needle)
   strstr($haystack, needle)
 }
 
-// Concatenate two strings into a new string.
-// Returns the new string.
-//
+// :summary Concatenates two strings into a new string.
 // :variant string str_concat(string s1, string s2)
 macro str_concat($s1, $s2) {
   import "stdlib/strings/strings.bpf.c";
@@ -162,6 +161,7 @@ macro str_concat(s1, s2) {
   str_concat($s1, s2)
 }
 
+// :summary Checks whether one string contains another.
 // :variant bool strcontains(string haystack, string needle)
 // Compares whether the string haystack contains the string needle.
 //
@@ -171,9 +171,8 @@ macro strcontains(haystack, needle)
   strstr(haystack, needle) >= 0
 }
 
+// :summary Converts an error number to its description.
 // :variant string strerror(int error)
-//
-// Convert errno code to string.
 //
 // ```
 // #include <errno.h>
@@ -189,9 +188,8 @@ macro strerror(errno)
   $v
 }
 
+// :summary Converts a signal number to its name.
 // :variant string signal_name(int sig)
-//
-// Convert signal code to string.
 //
 // ```
 // #include <signal.h>
@@ -207,9 +205,8 @@ macro signal_name(sig)
   $v
 }
 
+// :summary Converts a system call number to its name.
 // :variant string syscall_name(int nr_syscall)
-//
-// Convert syscall number to string.
 //
 // ```
 // #include <syscall.h>

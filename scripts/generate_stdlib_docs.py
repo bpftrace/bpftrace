@@ -9,8 +9,12 @@ import sys
 import re
 from typing import Optional
 
+class MissingSummaryError(Exception):
+    pass
+
 class Helper:
     name: str = ""
+    summary: str = ""
     variants: list[str] = []
     deprecated_variants: list[str] = []
     description: str = ""
@@ -76,7 +80,9 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
                     line_content = line_content[2:]
                     if len(line_content) > 0 and line_content[:1].isspace():
                         line_content = line_content[1:]
-                    if line_content.startswith(":variant"):
+                    if line_content.startswith(":summary "):
+                        current.summary = line_content[len(":summary "):].strip()
+                    elif line_content.startswith(":variant"):
                         parsed_variant = parse_variant_string(line_content)
                         if parsed_variant:
                             current.variants.append(parsed_variant)
@@ -91,24 +97,32 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
                         parsed_function_name = parse_function_name_string(line_content)
                         if parsed_function_name:
                             current.name = parsed_function_name
-                    elif line_content or current.description:
+                    elif current.summary and (
+                        line_content or current.description
+                    ):
                         current.description += line_content + "\n"
                 elif line_content.startswith("macro"):
                     parsed_name = parse_macro_name(line_content)
                     if parsed_name:
                         current.name = parsed_name
-                        # There must at least be a description or it's an
-                        # undocumented macro.
-                        if current.description:
+                        # A summary marks a documented macro.
+                        if current.summary:
                             helpers.append(current)
+                        # Fail without a summary, but skip undocumented internal macros.
+                        elif current.variants or current.deprecated_variants:
+                            raise MissingSummaryError(current.name)
                     current = Helper()
                 else:
-                    if current.name and current.description:
+                    if current.name:
                         helpers.append(current)
                     current = Helper()
 
-        if current.name and current.description:
+        if current.name:
             helpers.append(current)
+
+        for helper in helpers:
+            if not helper.summary:
+                raise MissingSummaryError(helper.name)
 
         return helpers
 
@@ -117,6 +131,9 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
         return None
     except UnicodeDecodeError:
         print(f"Error: Unable to decode '{file_path}' as UTF-8.")
+        return None
+    except MissingSummaryError as e:
+        print(f"Error: Missing :summary for helper '{e}' in '{file_path}'.")
         return None
     except Exception as e:
         print(f"Error reading file '{file_path}': {e}")
@@ -151,13 +168,14 @@ def write_markdown_doc(helpers: list[Helper]):
 
             for helper in helpers:
                 updated_lines.append(f"### {helper.name}\n")
+                updated_lines.append(f"\n{helper.summary}\n\n")
                 for variant in helper.variants:
                     updated_lines.append(f"- `{variant}`\n")
                 for variant in helper.deprecated_variants:
                     updated_lines.append(f"- deprecated `{variant}`\n")
                 updated_lines.append("\n")
-                updated_lines.append(f"{helper.description}\n")
-                updated_lines.append("\n")
+                if helper.description:
+                    updated_lines.append(f"{helper.description}\n\n")
         else:
             updated_lines.append(cleaned_line)
 
@@ -176,8 +194,9 @@ def main():
     all_helpers: list[Helper] = []
     for file in stdlib_files:
         helpers = read_file_lines(file)
-        if helpers:
-            all_helpers += helpers
+        if helpers is None:
+            sys.exit(1)
+        all_helpers += helpers
 
     if len(all_helpers) > 0:
         sorted_by_name = sorted(all_helpers, key=lambda h: h.name)

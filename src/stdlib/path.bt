@@ -1,9 +1,9 @@
 // Path helpers.
 
+// :summary Get the current working directory.
 // :variant string cwd();
 // :variant string cwd(max_path_depth);
 //
-// Get the current working directory.
 macro cwd(max_path_depth)
 {
   let $path : string[1024] = "";
@@ -59,9 +59,8 @@ macro cwd()
   cwd(32)
 }
 
+// :summary Resolves a relative path or filename to an absolute path.
 // :variant string abs_path(string path, uint64 max_path_depth);
-//
-// Returns the absolute path for the passed relative path or filename.
 //
 // If the first string parameter is empty, the returned string will be empty.
 //
