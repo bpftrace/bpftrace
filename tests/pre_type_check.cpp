@@ -676,6 +676,45 @@ TEST(CallPreCheck, nargs)
   }
 }
 
+static std::string kaddr_prog(std::string_view name)
+{
+  return "kprobe:f { kaddr(\"" + std::string(name) + "\"); }";
+}
+
+TEST(CallPreCheck, kaddr)
+{
+  const std::string missing(MOCK_KSYM_MISSING);
+  const std::string zero_addr(MOCK_KSYM_ZERO_ADDR);
+  const std::string ambiguous(MOCK_KSYM_AMBIGUOUS);
+
+  test(kaddr_prog("avenrun"));
+  test(kaddr_prog("nf_conntrack:nf_conntrack_max"));
+
+  // Errors
+  test(kaddr_prog(missing), "Failed to resolve kernel symbol: " + missing);
+  test(kaddr_prog(missing),
+       "HINT: Check /proc/kallsyms. A symbol which lives in a kernel module "
+       "can be qualified with the name of that module, e.g. "
+       "kaddr(\"nf_conntrack:nf_conntrack_max\").");
+  test(kaddr_prog(zero_addr), "Failed to resolve kernel symbol: " + zero_addr);
+  test(kaddr_prog(zero_addr),
+       "HINT: " + zero_addr +
+           " is listed in /proc/kallsyms but its address reads as zero, "
+           "which usually means that kernel addresses are hidden "
+           "(kernel.kptr_restrict).");
+
+  // Warnings
+  test(kaddr_prog(ambiguous),
+       "",
+       "Kernel symbol " + ambiguous +
+           " is defined in 2 modules; using the one from vmlinux");
+  test(kaddr_prog(ambiguous),
+       "",
+       "HINT: Qualify the name with a module to select another one, e.g. "
+       "kaddr(\"nfsd:" +
+           ambiguous + "\").");
+}
+
 TEST(CallPreCheck, hist)
 {
   test("kprobe:f { @x = hist(1); }");

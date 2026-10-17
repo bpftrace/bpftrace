@@ -1,6 +1,7 @@
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <cassert>
+#include <charconv>
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
@@ -88,6 +89,48 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
            symbol.substr(idx1 + strlen("\t"), idx2 - idx1 - strlen("\t")),
            symbol.substr(idx2 + strlen(" ["),
                          symbol.length() - idx2 - strlen(" []")) };
+}
+
+std::pair<std::string_view, std::string_view> split_kallsyms_module(
+    std::string_view symbol)
+{
+  if (symbol.empty() || symbol.back() != ']')
+    return { symbol, {} };
+
+  size_t idx = symbol.rfind("\t[");
+  if (idx == std::string_view::npos || idx == 0)
+    return { symbol, {} };
+
+  return { symbol.substr(0, idx),
+           symbol.substr(idx + strlen("\t["),
+                         symbol.size() - idx - strlen("\t[]")) };
+}
+
+std::optional<KallsymsEntry> parse_kallsyms_line(std::string_view line)
+{
+  size_t addr_end = line.find(' ');
+  if (addr_end == 0 || addr_end == std::string_view::npos)
+    return std::nullopt;
+
+  uint64_t address = 0;
+  const char *begin = line.data();
+  const char *end = begin + addr_end;
+  auto parsed = std::from_chars(begin, end, address, 16);
+  if (parsed.ec != std::errc{} || parsed.ptr != end)
+    return std::nullopt;
+
+  if (line.size() < addr_end + 4 || line[addr_end + 2] != ' ')
+    return std::nullopt;
+
+  KallsymsEntry entry;
+  entry.address = address;
+  entry.type = line[addr_end + 1];
+
+  auto [name, kernel_module] = split_kallsyms_module(line.substr(addr_end + 3));
+  entry.name = name;
+  entry.kernel_module = kernel_module;
+
+  return entry;
 }
 
 struct resolve_symbols_data {
