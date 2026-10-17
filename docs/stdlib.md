@@ -224,7 +224,8 @@ Returns the current bpftrace configuration.
 Returns a `Record` containing the current `bpftrace` configuration settings. [List of config variables](./language.md#config-variables)
 
 ```
-printf("max_strlen: %d, stack_mode: %s\n", config.max_strlen, config.stack_mode);
+begin {
+  printf("max_strlen: %d, stack_mode: %s\n", config.max_strlen, config.stack_mode);
 }
 ```
 
@@ -300,7 +301,7 @@ Additionally, if the return value for `delete` is discarded, and deletion fails,
 delete(@a, 1); // no warning (the key exists)
 
 if (delete(@a, 2)) { // no warning (return value is used)
-  ...
+  // ...
 }
 
 $did_delete = delete(@a, 2); // no warning (return value is used)
@@ -322,9 +323,9 @@ kprobe:dummy {
   delete(@associative); // error
   delete(@associative, 1); // error
 
-    // deprecated but ok
-    delete(@single["hello"]);
-    delete(@associative[1, 2]);
+  // deprecated but ok
+  delete(@single["hello"]);
+  delete(@associative[1, 2]);
 }
 ```
 
@@ -385,7 +386,7 @@ BEGIN { errorf("Something bad with args: %d, %s", 10, "arg2"); }
 Prints:
 
 ```
-EXPECT stdin:1:9-62: ERROR: Something bad with args: 10, arg2
+stdin:1:9-62: ERROR: Something bad with args: 10, arg2
 ```
 
 
@@ -524,10 +525,10 @@ kprobe:dummy {
     print(("bye"));
   }
 
-    @scalar = 1;
-    if (has_key(@scalar)) { // error
-      print(("hello"));
-    }
+  @scalar = 1;
+  if (has_key(@scalar)) { // error
+    print(("hello"));
+  }
 }
 ```
 
@@ -1012,7 +1013,7 @@ omitted, the current CPU is used.
 ```
 interval:s:1 {
   $proc_cnt = percpu_kaddr("process_counts");
-  printf("% processes are running on CPU %d\n", *$proc_cnt, cpu);
+  printf("%d processes are running on CPU %d\n", *$proc_cnt, cpu);
 }
 ```
 
@@ -1061,14 +1062,11 @@ This is an alias for `task.real_parent.pid`, which is different than `task.group
 Prints a value using its default formatting.
 
 - `void print(T val)`
-- `void print(T val)`
-- `void print(@map)`
-- `void print(@map, uint64 top)`
-- `void print(@map, uint64 top, uint64 div)`
+- `void print(@map [, uint64 top [, uint64 div]])`
 
 **async**
 
-`print` prints a the value, which can be a map or a scalar value, with the default formatting for the type.
+`print` prints a value, which can be a map or a scalar value, with the default formatting for the type.
 
 ```
 interval:s:1 {
@@ -1118,11 +1116,11 @@ The printing of maps supports the optional `top` and `div` arguments.
 BEGIN {
   $i = 11;
   for $elem : 1..$i {
-    @[$elem] = $elem-1;
+    @[$elem] = $elem - 1;
   }
   print(@, 2);
   clear(@);
-  exit()
+  exit();
 }
 
 /*
@@ -1138,21 +1136,22 @@ Consider the following program:
 
 ```
 kprobe:f {
-  @[func] += arg0/10;
+  @[func] += arg0 / 10;
 }
 ```
 
 With the following sequence as numbers for arg0: `134, 377, 111, 99`.
 The total is `721` which rounds to `72` when scaled by 10 but the program would print `70` due to the rounding of individual values.
 
-Changing the print call to `print(@, 5, 2)` will take the top 5 values and scale them by 2:
+Changing the earlier `print(@, 2)` call to `print(@, 5, 2)` will take the top 5
+values and scale them by 2:
 
 ```
-@[6]: 3
+@[6]: 2
 @[7]: 3
-@[8]: 4
+@[8]: 3
 @[9]: 4
-@[10]: 5
+@[10]: 4
 ```
 
 
@@ -1654,7 +1653,7 @@ Attached 3 probes
 
 ```
 tracepoint:syscalls:sys_enter_execve {
-  system("/bin/grep %s /proc/%d/status", "vmswap", pid);
+  system("/bin/grep %s /proc/%d/status", "VmSwap", pid);
 }
 ```
 
@@ -1897,7 +1896,7 @@ Formats and prints a warning message with its source location.
 
 **async**
 
-`warnf()` formats and prints data (similar to [`printf`](#printf)) as an warning message with the source location. This respects the "--no-warnings" flag and will be silent if that is used.
+`warnf()` formats and prints data (similar to [`printf`](#printf)) as a warning message with the source location. This respects the "--no-warnings" flag and will be silent if that is used.
 
 ```
 BEGIN { warnf("Something kinda bad with args: %d, %s", 10, "arg2"); }
@@ -1906,7 +1905,7 @@ BEGIN { warnf("Something kinda bad with args: %d, %s", 10, "arg2"); }
 Prints:
 
 ```
-EXPECT stdin:1:9-62: WARNING: Something kinda bad with args: 10, arg2
+stdin:1:9-67: WARNING: Something kinda bad with args: 10, arg2
 ```
 
 
@@ -2036,7 +2035,7 @@ kretprobe:vfs_read {
 Prints:
 
 ```
-@:
+@bytes:
 [1M, 2M)               3 |                                                    |
 [2M, 4M)               2 |                                                    |
 [4M, 8M)               2 |                                                    |
@@ -2057,11 +2056,11 @@ Records values in a linear histogram.
 * `lhist_t lhist(int64 n, int64 min, int64 max, int64 step)`
 
 `lhist` creates `M` (`(max - min) / step`) buckets in the range `[min,max)` where each bucket is `step` in size.
-Values in the range `(-inf, min)` and `(max, inf)` get their get their own bucket too, bringing the total amount of buckets created to `M+2`.
+Values in the range `(-inf, min)` and `[max, inf)` get their own bucket too, bringing the total amount of buckets created to `M+2`.
 
 ```
 interval:ms:1 {
-  @ = lhist(rand %10, 0, 10, 1);
+  @ = lhist(rand % 10, 0, 10, 1);
 }
 
 interval:s:5 {
@@ -2246,7 +2245,7 @@ i:ms:10 {
 ```
 
 ```
-Attached 2 probes
+Attached 1 probe
 
 
 @:
@@ -2291,7 +2290,7 @@ i:ms:100 {
 
   if (@c > 5) {
     @dir = -1;
-    @c = 4
+    @c = 4;
   } else if (@c < -5) {
     @dir = 1;
     @c = -4;
@@ -2354,12 +2353,12 @@ One example is updating a map value in a tight loop:
 
 ```
 BEGIN {
-    @=0;
-    unroll(10) {
-      print(@);
-      @++;
-    }
-    exit()
+  @ = 0;
+  unroll(10) {
+    print(@);
+    @++;
+  }
+  exit();
 }
 ```
 
