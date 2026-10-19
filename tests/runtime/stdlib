@@ -46,6 +46,14 @@ EXPECT_NONE @: 0
 EXPECT_NONE @a[1]: 1
 TIMEOUT 1
 
+NAME delete all
+PROG begin { @a[1] = 1; @a[2] = 2; @b[1, 2] = count(); @c[1] = hist(1); delete(@a); delete(@b); delete(@c); }
+EXPECT_NONE @a[1]: 1
+EXPECT_NONE @a[2]: 2
+EXPECT_NONE @b[1, 2]: 1
+EXPECT_NONE @c[1]:
+TIMEOUT 1
+
 NAME delete deprecated
 PROG begin { @a[1] = 1; @b[2, "hi"] = 2; delete(@a[1]); delete(@b[2, "hi"]); }
 EXPECT_NONE @a[1]: 1

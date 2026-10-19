@@ -191,6 +191,8 @@ Clear all keys/values from a map.
 
 **async**
 
+Use `delete(m)` to remove all keys/values synchronously.
+
 ```
 interval:ms:100 {
   @[rand % 10] = count();
@@ -287,9 +289,13 @@ Returns the default unbounded length.
 Removes one key and its value from a map.
 
 - `bool delete(map m, mapkey k)`
+- `bool delete(map m)`
 - deprecated `bool delete(mapkey k)`
 
-For scalar maps (e.g. no explicit keys), the key is omitted and is equivalent to calling `clear`.
+For scalar maps (e.g. no explicit keys), the key is omitted.
+For maps with explicit keys, omitting the key deletes all of the map's keys/values and returns false if some entries couldn't be deleted.
+Unlike `clear`, the deletion happens in-kernel during the call rather than asynchronously, so it can't be dropped. If other probes update the map at the same time (e.g. on other CPUs), entries they add while `delete` runs may remain afterwards.
+Note that because the deletion happens in-kernel, a `print` of the map issued earlier in the same probe will also see an empty map, as printing happens asynchronously.
 For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
 
 If deletion fails (e.g. the key doesn’t exist) the function returns false (0).
@@ -320,7 +326,7 @@ kprobe:dummy {
   delete(@single, "hello"); // ok
   @associative[1,2] = 1;
   delete(@associative, (1,2)); // ok
-  delete(@associative); // error
+  delete(@associative); // ok, deletes all keys/values
   delete(@associative, 1); // error
 
   // deprecated but ok

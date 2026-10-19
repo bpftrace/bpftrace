@@ -1,4 +1,5 @@
 #define __KERNEL__
+#include <linux/errno.h>
 #include <linux/types.h>
 #include <stddef.h>
 
@@ -13,6 +14,23 @@ void * __lookup_elem(void *map, void *key) {
 
 long __delete(void *map, void *key) {
     return bpf_map_delete_elem(map, key);
+}
+
+static long __delete_all_cb(void *map, const void *key, void *value, void *ctx)
+{
+    long *failed = ctx;
+    long err = bpf_map_delete_elem(map, key);
+    if (err && err != -ENOENT) {
+        *failed = 1;
+    }
+    return 0;
+}
+
+// Returns true if iterating the map succeeded and every element was deleted.
+_Bool __delete_all(void *map) {
+    long failed = 0;
+    long ret = bpf_for_each_map_elem(map, &__delete_all_cb, &failed, 0);
+    return ret >= 0 && !failed;
 }
 
 static long __empty_map_elem_cb(void *map, const void *key, void *value, void *ctx)
