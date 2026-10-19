@@ -1,6 +1,8 @@
 #include <filesystem>
+#include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Transforms/Utils/BuildLibCalls.h>
 
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
@@ -1506,6 +1508,27 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   CreateLifetimeEnd(store);
 
   return result;
+}
+
+Value *IRBuilderBPF::CreateMemcmp(Value *buf1,
+                                  Value *buf2,
+                                  uint64_t n,
+                                  bool inverse)
+{
+  // memcmp(buf1, buf2, n) returns 0 when all n bytes are equal. Unlike
+  // strncmp, it does not stop at NULL bytes.
+  llvm::TargetLibraryInfoImpl tli_impl{ llvm::Triple(
+      module_.getTargetTriple()) };
+  llvm::TargetLibraryInfo tli(tli_impl);
+
+  Value *cmp = llvm::emitMemCmp(
+      buf1, buf2, getInt64(n), *this, module_.getDataLayout(), &tli);
+  if (!cmp) {
+    LOG(BUG) << "Failed to emit memcmp";
+  }
+
+  return inverse ? CreateICmpEQ(cmp, getInt32(0))
+                 : CreateICmpNE(cmp, getInt32(0));
 }
 
 Value *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)

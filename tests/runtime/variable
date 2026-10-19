@@ -26,6 +26,10 @@ NAME buf_equality
 PROG i:ms:1 {$a = buf("hi", 2); $b = buf("bye", 3); printf("equal=%d, unequal=%d\n", $a == $a, $a != $b); exit();}
 EXPECT equal=1, unequal=1
 
+NAME buf_equality_equal_len
+PROG i:ms:1 {$a = buf("hi", 2); $b = buf("si", 2); printf("equal=%d, unequal=%d\n", $a == $b, $a != $b); exit();}
+EXPECT equal=0, unequal=1
+
 NAME global_associative_arrays
 PROG begin { @map[123] = 456; } end { printf("val: %d\n", @map[123]);  }
 EXPECT val: 456

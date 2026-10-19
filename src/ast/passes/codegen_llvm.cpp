@@ -2284,20 +2284,20 @@ ScopedExpr CodegenLLVM::binop_buf(Binop &binop)
     LOG(BUG) << "missing codegen to buffer operator \"" << opstr(binop) << "\"";
   }
 
-  // strcmp returns 0 when strings are equal
+  // memcmp returns 0 when buffers are equal
   bool inverse = binop.op == Operator::EQ;
 
   auto scoped_left = visit(binop.left);
   auto scoped_right = visit(binop.right);
-  Value *left_string = scoped_left.value();
-  Value *right_string = scoped_right.value();
+  Value *left_buf = scoped_left.value();
+  Value *right_buf = scoped_right.value();
 
   size_t len = std::min(type_map_.type(binop.left).GetSize(),
                         type_map_.type(binop.right).GetSize());
-  return ScopedExpr(b_.CreateIntCast(
-      b_.CreateStrncmp(left_string, right_string, len, inverse),
-      b_.getInt1Ty(),
-      false));
+  return ScopedExpr(
+      b_.CreateIntCast(b_.CreateMemcmp(left_buf, right_buf, len, inverse),
+                       b_.getInt1Ty(),
+                       false));
 }
 
 ScopedExpr CodegenLLVM::binop_int(Binop &binop)
