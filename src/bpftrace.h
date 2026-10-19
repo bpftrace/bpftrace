@@ -37,6 +37,7 @@
 #include "util/cpus.h"
 #include "util/proc.h"
 #include "util/result.h"
+#include "util/symbols.h"
 
 namespace bpftrace {
 
@@ -96,6 +97,11 @@ private:
   std::string msg_;
 };
 
+struct KernelSymbol {
+  uint64_t address = 0;
+  std::vector<std::string> kernel_modules;
+};
+
 class BPFtrace : public ast::State<"bpftrace"> {
 public:
   BPFtrace(BPFnofeature no_feature = BPFnofeature(),
@@ -150,7 +156,8 @@ public:
   time_t time_since_epoch(uint32_t mode,
                           uint64_t timestamp_ns,
                           uint64_t *nsecs);
-  uint64_t resolve_kname(const std::string &name) const;
+  virtual std::optional<KernelSymbol> resolve_kname(
+      const std::string &name) const;
   virtual Result<Symbol> resolve_uname(const std::string &name,
                                        const std::string &path) const;
   std::string resolve_mac_address(const char *mac_addr) const;
@@ -257,17 +264,20 @@ private:
   void teardown_output();
   void poll_output(output::Output &out, bool drain = false);
   void poll_event_loss(output::Output &out);
-  static uint64_t read_address_from_output(std::string output);
   struct bcc_symbol_option &get_symbol_opts();
   Probe generate_probe(const ast::AttachPoint &ap,
                        const ast::Probe &p,
                        ast::ExpansionType expansion,
                        std::set<std::string> expanded_funcs);
+  using Kallsyms = std::vector<util::KallsymsEntry>;
+  const Kallsyms *get_kallsyms() const;
+
   bool has_iter_ = false;
   struct ring_buffer *ringbuf_ = nullptr;
   struct perf_buffer *skb_perfbuf_ = nullptr;
   uint64_t event_loss_count_ = 0;
 
+  mutable std::optional<Kallsyms> kallsyms_;
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
   std::unique_ptr<Dwarf> kernel_dwarf_;
 };

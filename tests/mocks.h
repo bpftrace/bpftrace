@@ -54,6 +54,10 @@ public:
                      Result<TSeriesMap>(const MapInfo &map_info, int nvalues));
 };
 
+constexpr std::string_view MOCK_KSYM_MISSING = "nosuchsym";
+constexpr std::string_view MOCK_KSYM_ZERO_ADDR = "zeroaddrsym";
+constexpr std::string_view MOCK_KSYM_AMBIGUOUS = "ambiguoussym";
+
 class MockBPFtrace : public BPFtrace {
 public:
   MOCK_METHOD2(
@@ -81,6 +85,19 @@ public:
   std::vector<::bpftrace::Probe> get_benchmark_probes()
   {
     return resources.benchmark_probes;
+  }
+
+  std::optional<KernelSymbol> resolve_kname(
+      const std::string &name) const override
+  {
+    if (name == MOCK_KSYM_MISSING)
+      return std::nullopt;
+    if (name == MOCK_KSYM_ZERO_ADDR)
+      return KernelSymbol{ .address = 0, .kernel_modules = { "vmlinux" } };
+    if (name == MOCK_KSYM_AMBIGUOUS)
+      return KernelSymbol{ .address = 12345,
+                           .kernel_modules = { "vmlinux", "nfsd" } };
+    return KernelSymbol{ .address = 12345, .kernel_modules = { "vmlinux" } };
   }
 
   Result<Symbol> resolve_uname(const std::string &name,

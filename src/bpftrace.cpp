@@ -1,5 +1,6 @@
 #include "bpfbytecode.h"
 #include "types_format.h"
+#include <algorithm>
 #include <arpa/inet.h>
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
@@ -1257,31 +1258,71 @@ std::vector<std::string> BPFtrace::resolve_ksym_stack(uint64_t addr,
   return ksyms_.resolve(addr, show_offset, perf_mode, show_debug_info);
 }
 
-uint64_t BPFtrace::resolve_kname(const std::string &name) const
+static std::string kallsyms_module_name(const std::string &kernel_module)
 {
-  uint64_t addr = 0;
-  std::string file_name = "/proc/kallsyms";
+  return kernel_module.empty() ? "vmlinux" : kernel_module;
+}
+
+const BPFtrace::Kallsyms *BPFtrace::get_kallsyms() const
+{
+  if (kallsyms_)
+    return &*kallsyms_;
+
+  static const std::string file_name = "/proc/kallsyms";
 
   std::ifstream file(file_name);
   if (file.fail()) {
     LOG(ERROR) << strerror(errno) << ": " << file_name;
-    return addr;
+    return nullptr;
   }
 
+  Kallsyms entries;
   std::string line;
+  while (std::getline(file, line)) {
+    if (auto entry = util::parse_kallsyms_line(line))
+      entries.push_back(std::move(*entry));
+  }
 
-  while (std::getline(file, line) && addr == 0) {
-    auto tokens = util::split_string(line, ' ');
+  kallsyms_ = std::move(entries);
+  return &*kallsyms_;
+}
 
-    if (name == tokens[2]) {
-      addr = read_address_from_output(line);
-      break;
+std::optional<KernelSymbol> BPFtrace::resolve_kname(
+    const std::string &name) const
+{
+  const auto *kallsyms = get_kallsyms();
+  if (!kallsyms)
+    return std::nullopt;
+
+  auto [want_symbol, want_module] = util::split_kallsyms_module(name);
+  if (want_module.empty()) {
+    want_symbol = {};
+    if (size_t idx = name.find(':');
+        idx != std::string::npos && idx > 0 && idx + 1 < name.size()) {
+      want_module = std::string_view(name).substr(0, idx);
+      want_symbol = std::string_view(name).substr(idx + 1);
     }
   }
 
-  file.close();
+  std::optional<KernelSymbol> bare;
+  std::optional<KernelSymbol> qualified;
+  for (const auto &entry : *kallsyms) {
+    if (entry.name == name) {
+      auto kernel_module = kallsyms_module_name(entry.kernel_module);
+      if (!bare)
+        bare = KernelSymbol{ .address = entry.address };
+      if (std::ranges::find(bare->kernel_modules, kernel_module) ==
+          bare->kernel_modules.end())
+        bare->kernel_modules.push_back(std::move(kernel_module));
+    } else if (!qualified && !want_symbol.empty() &&
+               entry.name == want_symbol &&
+               kallsyms_module_name(entry.kernel_module) == want_module) {
+      qualified = KernelSymbol{ .address = entry.address };
+      qualified->kernel_modules.emplace_back(want_module);
+    }
+  }
 
-  return addr;
+  return bare ? bare : qualified;
 }
 
 Result<Symbol> BPFtrace::resolve_uname(const std::string &name,
@@ -1327,12 +1368,6 @@ std::string BPFtrace::resolve_cgroup_path(uint64_t cgroup_path_id,
     result << pair.first << ":" << pair.second << ",";
   }
   return result.str().substr(0, result.str().size() - 1);
-}
-
-uint64_t BPFtrace::read_address_from_output(std::string output)
-{
-  std::string first_word = output.substr(0, output.find(" "));
-  return std::stoull(first_word, nullptr, 16);
 }
 
 static std::string resolve_inetv4(const char *inet)

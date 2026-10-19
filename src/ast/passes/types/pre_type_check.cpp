@@ -568,6 +568,7 @@ public:
 private:
   bool check_nargs(const Call &call, size_t expected_nargs);
   bool check_varargs(const Call &call, size_t min_nargs, size_t max_nargs);
+  void check_kernel_symbol(const std::string &name, const Call &call);
 
   ASTContext &ctx_;
   BPFtrace &bpftrace_;
@@ -636,6 +637,38 @@ bool CallPreCheck::check_varargs(const Call &call,
   }
 
   return true;
+}
+
+void CallPreCheck::check_kernel_symbol(const std::string &name,
+                                       const Call &call)
+{
+  auto sym = bpftrace_.resolve_kname(name);
+  if (!sym || sym->address == 0) {
+    auto &err = call.addError();
+    err << "Failed to resolve kernel symbol: " << name;
+    if (sym) {
+      err.addHint() << name
+                    << " is listed in /proc/kallsyms but its address reads "
+                       "as zero, which usually means that kernel addresses "
+                       "are hidden (kernel.kptr_restrict).";
+    } else {
+      err.addHint() << "Check /proc/kallsyms. A symbol which lives in a "
+                       "kernel module can be qualified with the name of "
+                       "that module, e.g. "
+                       "kaddr(\"nf_conntrack:nf_conntrack_max\").";
+    }
+    return;
+  }
+
+  if (sym->kernel_modules.size() > 1) {
+    auto &warn = call.addWarning();
+    warn << "Kernel symbol " << name << " is defined in "
+         << sym->kernel_modules.size() << " modules; using the one from "
+         << sym->kernel_modules.front();
+    warn.addHint() << "Qualify the name with a module to select another "
+                      "one, e.g. kaddr(\""
+                   << sym->kernel_modules.back() << ":" << name << "\").";
+  }
 }
 
 void CallPreCheck::visit(Call &call)
@@ -885,6 +918,9 @@ void CallPreCheck::visit(Call &call)
                         << "() only supports curr_ns and init as the argument";
       }
     }
+  } else if (call.func == "kaddr") {
+    if (auto *str = call.vargs.at(0).as<String>())
+      check_kernel_symbol(str->value, call);
   } else if (call.func == "__builtin_uaddr") {
     check_symbol(call);
   } else if (call.func == "__builtin_signal_num") {
