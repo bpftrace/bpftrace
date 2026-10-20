@@ -48,6 +48,7 @@ else()
   # every time).
   add_custom_command(
     OUTPUT ${LIBBPF_LIBRARY}
+    COMMAND make PREFIX=${LIBBPF_BUILD} clean > /dev/null
     # -fPIE here is needed by latest binutils when building with Clang
     COMMAND make PREFIX=${LIBBPF_BUILD} EXTRA_CFLAGS="-fPIE" install > /dev/null
     WORKING_DIRECTORY ${LIBBPF_SOURCE}
