@@ -12,6 +12,13 @@ PROG struct Foo { int m; } uprobe:./testprogs/simple_struct:func { $foo = (struc
 AFTER ./testprogs/simple_struct
 EXPECT 2 0 1 1 1
 
+NAME verifier error reports attempted program
+ENV BPFTRACE_LOG_SIZE=1024
+RUN {{BPFTRACE}} -v -e 'begin {} begin { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+EXPECT_REGEX Error loading BPF program for begin_2
+WILL_FAIL
+TIMEOUT 1
+
 # https://github.com/bpftrace/bpftrace/issues/759
 # Update test once https://github.com/bpftrace/bpftrace/pull/781 lands
 # NAME ntop_map_printf
