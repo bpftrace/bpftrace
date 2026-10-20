@@ -34,7 +34,8 @@ jobs:
       run: nix develop --command git clang-format --diff origin/master --extensions cpp,h
 
   build_test:
-    runs-on: ${{ matrix.env.RUNS_ON || 'ubuntu-latest' }}
+    # TODO: back to ubuntu-latest once actions/runner-images#15003 is fixed
+    runs-on: ${{ matrix.env.RUNS_ON || 'ubuntu-22.04' }}
     # For flakehub cache
     permissions:
       id-token: write
@@ -67,7 +68,7 @@ jobs:
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm23
           TOOLS_TEST_DISABLE: runqlen.bt
-          RUNS_ON: ubuntu-24.04-arm
+          RUNS_ON: ubuntu-22.04-arm
         - NAME: LLVM 23 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm23
