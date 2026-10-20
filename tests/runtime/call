@@ -906,12 +906,13 @@ NAME kfunc calls single arg
 PROG tracepoint:syscalls:sys_enter_read { $t = kfunc::bpf_task_from_pid(1); if ($t != 0) { printf("pid1 tgid=%d\n", $t->tgid); kfunc::bpf_task_release($t); } exit(); }
 EXPECT pid1 tgid=1
 REQUIRES_FEATURE btf
+MIN_KERNEL 6.12
 
 NAME kfunc calls with multiple args
 PROG tracepoint:syscalls:sys_enter_read { $c = kfunc::bpf_cgroup_from_id(cgroup); if ($c != 0) { print(kfunc::bpf_task_under_cgroup(curtask, $c)); kfunc::bpf_cgroup_release($c); } exit(); }
 EXPECT 1
 REQUIRES_FEATURE btf
-MIN_KERNEL 6.5
+MIN_KERNEL 6.12
 
 NAME kfunc call conflicts with imported definition
 PROG import "stdlib/test"; tracepoint:syscalls:sys_enter_read { $t = kfunc::bpf_task_from_pid(1); exit(); }
