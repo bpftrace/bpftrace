@@ -23,7 +23,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-from typing import Callable, Dict, List, Optional, Self, Union
+from typing import Callable, Dict, List, Optional, Union
 
 BUILD_DIR = "build-ci"
 
@@ -104,7 +104,7 @@ class FoldOutput:
         self.name = name
         self.in_ci = truthy(CI)
 
-    def __enter__(self) -> Self:
+    def __enter__(self) -> "FoldOutput":
         if self.in_ci:
             # Start a collapsible section in GitHub Actions logs
             print(f"::group::{self.name}")
