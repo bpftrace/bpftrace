@@ -178,7 +178,13 @@ void update_global_vars_custom_rw_section(
     LOG(BUG) << "Section " << section_name << " has size of 0 ";
   }
 
-  auto desired_size = (max_cpu_id + 1) * actual_size;
+  size_t num_rows = max_cpu_id + 1;
+  // C code given `&$var` (e.g. str_concat) may do accesses that the verifier
+  // bounds past the end of the variable, so pad with an unused row.
+  if (global_var == VARIABLE_BUFFER) {
+    num_rows++;
+  }
+  auto desired_size = num_rows * actual_size;
   auto err = bpf_map__set_value_size(global_vars_map, desired_size);
   if (err != 0) {
     throw util::FatalUserException("Failed to set size to " +

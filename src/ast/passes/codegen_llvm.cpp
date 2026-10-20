@@ -3180,7 +3180,10 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
     return;
   }
 
-  auto *val = b_.CreateVariableAllocationInit(var_type, var_ident, loc);
+  const bool use_scratch = bpftrace_.resources.scratch_buf_vars.contains(
+      { scope_stack_.back(), var_ident });
+  auto *val = b_.CreateVariableAllocationInit(
+      var_type, var_ident, loc, use_scratch);
   variables_[scope_stack_.back()][var_ident] = VariableLLVM{
     .value = val, .type = b_.GetType(var_type)
   };

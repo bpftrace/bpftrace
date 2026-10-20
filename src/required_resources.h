@@ -12,6 +12,7 @@
 #include <cereal/types/variant.hpp>
 
 #include "ast/location.h"
+#include "ast/scoped_variable.h"
 #include "format_string.h"
 #include "globalvars.h"
 #include "map_info.h"
@@ -215,6 +216,9 @@ public:
   // Required for sizing of variable scratch buffers
   size_t variable_buffers = 0;
   size_t max_variable_size = 0;
+
+  std::unordered_set<ast::ScopedVariable, ast::ScopedVariableHash>
+      scratch_buf_vars;
 
   // Required for sizing of map key scratch buffers
   size_t map_key_buffers = 0;

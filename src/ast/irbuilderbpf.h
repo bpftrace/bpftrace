@@ -150,7 +150,8 @@ public:
                                        const Location &loc);
   Value *CreateVariableAllocationInit(const SizedType &value_type,
                                       const std::string &name,
-                                      const Location &loc);
+                                      const Location &loc,
+                                      bool use_scratch_buffer);
   Value *CreateMapKeyAllocation(const SizedType &value_type,
                                 const std::string &name,
                                 const Location &loc);
