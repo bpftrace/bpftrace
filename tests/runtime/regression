@@ -207,3 +207,11 @@ NAME scalars can be accessed in copied structs
 PROG begin { @s = *curtask; @k = @s->pid; @j = @s->parent->pid; } end { clear(@s); }
 EXPECT_REGEX @k:\s[0-9]+
 EXPECT_REGEX @j:\s[0-9]+
+
+NAME str_concat into last variable scratch buffer slot
+PROG begin { print(str_concat("a", "b")); exit(); }
+EXPECT ab
+
+NAME str_concat into last variable scratch buffer slot with 4 cpus
+RUN printf '0-3\n' > /tmp/fake_possible_4 && unshare -m bash -c 'mount --bind /tmp/fake_possible_4 /sys/devices/system/cpu/possible && exec {{BPFTRACE}} -e "begin { print(str_concat(\"a\", \"b\")); exit(); }"'
+EXPECT ab
