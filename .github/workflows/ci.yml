@@ -120,3 +120,10 @@ jobs:
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
+    # TEMPORARY: diagnose syscall tracepoint runtime tests timing out on some
+    # runner kernels.
+    - name: Debug syscall tracepoints
+      if: always() && !matrix.env.NIX_TARGET_KERNEL && !matrix.env.RUN_AOT_TESTS && !matrix.env.CC && !matrix.env.BUILD_ASAN
+      run: |
+        nix develop ${{ matrix.env.NIX_TARGET }} --command "$(command -v sudo)" --preserve-env=PATH ./.github/include/debug_syscall_tp_cpu.sh build-ci/src/bpftrace 20 || true
+        nix develop ${{ matrix.env.NIX_TARGET }} --command "$(command -v sudo)" --preserve-env=PATH ./.github/include/debug_syscall_tp.sh build-ci/src/bpftrace 10
