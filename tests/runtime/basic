@@ -306,6 +306,10 @@ NAME nested while loop
 PROG begin { $i = 0; while ($i < 3) { $j = 0; while ($j < 2) { @count = count(); $j++; } $i++; } }
 EXPECT @count: 6
 
+NAME while loop let without assignment is zeroed each iteration
+PROG begin { $y = 0; $i = 0; while ($i < 3) { let $z; if ($i == 0) { $z = 5; } $y += $z; $i++; } print($y); }
+EXPECT 5
+
 NAME disable warnings
 RUN {{BPFTRACE}} --no-warnings -e 'begin { @x = stats(10); print(@x, 2); clear(@x); }' 2>&1| grep -c -E "WARNING|invalid option"
 EXPECT_REGEX ^0$

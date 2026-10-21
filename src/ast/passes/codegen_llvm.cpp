@@ -3303,6 +3303,7 @@ ScopedExpr CodegenLLVM::visit(VarDeclStatement &decl)
     return ScopedExpr();
   }
   maybeAllocVariable(var.ident, type_map_.type(&var), var.loc);
+  b_.CreateAllocationInit(type_map_.type(&var), getVariable(var.ident).value);
   return ScopedExpr();
 }
 
