@@ -129,4 +129,33 @@ TEST(resource_analyser, print_non_map_print_correct_args_order)
                           SizedType(Type::boolean, 1)));
 }
 
+TEST(resource_analyser, variable_scratch_buffers)
+{
+  RequiredResources resources;
+
+  test(R"(begin { $x = 1; $x = 2; })", true, &resources, 0);
+  EXPECT_EQ(resources.variable_buffers, 1);
+  EXPECT_EQ(resources.scratch_buf_vars.size(), 1);
+
+  test(R"(begin { $x = 1; $y = 2; })", true, &resources, 0);
+  EXPECT_EQ(resources.variable_buffers, 2);
+
+  test(R"(begin { $x = 1; } end { $x = 2; })", true, &resources, 0);
+  EXPECT_EQ(resources.variable_buffers, 2);
+
+  test(R"(fn foo(): void { $x = 1; } begin { $x = 2; })", true, &resources, 0);
+  EXPECT_EQ(resources.variable_buffers, 2);
+
+  test(
+      R"(begin { @[1] = 1; for ($kv : @) { $y = $kv } for ($kv : @) { $y = $kv; print($y) } })",
+      true,
+      &resources,
+      0);
+  EXPECT_EQ(resources.variable_buffers, 2);
+
+  test(R"(begin { $x = 1; })", true, &resources, 32);
+  EXPECT_EQ(resources.variable_buffers, 0);
+  EXPECT_EQ(resources.max_variable_size, 0);
+}
+
 } // namespace bpftrace::test::resource_analyser

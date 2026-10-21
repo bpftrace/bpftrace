@@ -1,4 +1,9 @@
 #include <algorithm>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
+
 #include <bpf/bpf.h>
 
 #include "ast/async_event_types.h"
@@ -37,6 +42,7 @@ public:
   using Visitor<ResourceAnalyser>::visit;
   void visit(Probe &probe);
   void visit(Subprog &subprog);
+  void visit(BlockExpr &block);
   void visit(Builtin &builtin);
   void visit(Call &call);
   void visit(Cast &cast);
@@ -68,6 +74,7 @@ private:
 
   void update_map_info(Map &map);
   void update_variable_info(Variable &var);
+  Node *find_variable_scope(const std::string &var_ident);
 
   RequiredResources resources_;
   BPFtrace &bpftrace_;
@@ -77,6 +84,8 @@ private:
 
   // Current probe we're analysing
   Probe *probe_{ nullptr };
+  std::vector<Node *> scope_stack_;
+  std::unordered_map<Node *, std::unordered_set<std::string>> variables_;
   std::unordered_map<std::string, std::pair<bpf_map_type, int>> map_decls_;
 
   int next_map_id_ = 0;
@@ -155,7 +164,19 @@ void ResourceAnalyser::visit(Probe &probe)
 void ResourceAnalyser::visit(Subprog &subprog)
 {
   probe_ = nullptr;
+  scope_stack_.push_back(&subprog);
+  for (auto *arg : subprog.args) {
+    variables_[&subprog].insert(arg->var->ident);
+  }
   Visitor<ResourceAnalyser>::visit(subprog);
+  scope_stack_.pop_back();
+}
+
+void ResourceAnalyser::visit(BlockExpr &block)
+{
+  scope_stack_.push_back(&block);
+  Visitor<ResourceAnalyser>::visit(block);
+  scope_stack_.pop_back();
 }
 
 void ResourceAnalyser::visit(Builtin &builtin)
@@ -531,7 +552,10 @@ void ResourceAnalyser::visit(Record &record)
 
 void ResourceAnalyser::visit(For &f)
 {
+  scope_stack_.push_back(&f);
+  variables_[&f].insert(f.decl->ident);
   Visitor<ResourceAnalyser>::visit(f);
+  scope_stack_.pop_back();
 
   // Need tuple per for loop to store key and value
   const auto &ty = type_map_.type(f.decl);
@@ -600,17 +624,30 @@ void ResourceAnalyser::visit(IfExpr &if_expr)
 
 void ResourceAnalyser::update_variable_info(Variable &var)
 {
-  // Note we don't check if a variable has been declared/assigned before.
-  // We do this to simplify the code and make it more robust to changes
-  // in other modules at the expense of memory over-allocation. Otherwise,
-  // we would need to track scopes like TypeChecker and CodegenLLVM
-  // and duplicate scope tracking in a third module.
+  Node *scope = find_variable_scope(var.ident);
+  if (scope == nullptr) {
+    scope = scope_stack_.back();
+    variables_[scope].insert(var.ident);
+  }
   const auto &ty = type_map_.type(&var);
   if (exceeds_stack_limit(ty.GetSize())) {
-    resources_.variable_buffers++;
     resources_.max_variable_size = std::max(resources_.max_variable_size,
                                             ty.GetSize());
+    if (resources_.scratch_buf_vars.emplace(scope, var.ident).second) {
+      resources_.variable_buffers++;
+    }
   }
+}
+
+Node *ResourceAnalyser::find_variable_scope(const std::string &var_ident)
+{
+  for (auto *scope : scope_stack_) {
+    auto it = variables_.find(scope);
+    if (it != variables_.end() && it->second.contains(var_ident)) {
+      return scope;
+    }
+  }
+  return nullptr;
 }
 
 void ResourceAnalyser::visit(AssignVarStatement &assignment)

@@ -678,21 +678,22 @@ Value *IRBuilderBPF::CreateWriteMapValueAllocation(const SizedType &value_type,
 
 Value *IRBuilderBPF::CreateVariableAllocationInit(const SizedType &value_type,
                                                   const std::string &name,
-                                                  const Location &loc)
+                                                  const Location &loc,
+                                                  bool use_scratch_buffer)
 {
   // Hoist variable declaration and initialization to entry point of
   // probe/subprogram. While we technically do not need this as variables
   // are properly scoped, it eases debugging and is consistent with previous
   // stack-only variable implementation.
   Value *alloc;
-  hoist([this, &value_type, &name, &loc, &alloc] {
-    alloc = createAllocation(bpftrace::globalvars::VARIABLE_BUFFER,
-                             GetType(value_type),
-                             name,
-                             loc,
-                             [](AsyncIds &async_ids) {
-                               return async_ids.variable();
-                             });
+  hoist([this, &value_type, &name, &loc, &alloc, use_scratch_buffer] {
+    if (use_scratch_buffer) {
+      alloc = createScratchBuffer(bpftrace::globalvars::VARIABLE_BUFFER,
+                                  loc,
+                                  async_ids_.variable());
+    } else {
+      alloc = CreateAllocaBPF(GetType(value_type), name);
+    }
     CreateAllocationInit(value_type, alloc);
   });
   return alloc;
