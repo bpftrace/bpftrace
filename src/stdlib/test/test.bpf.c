@@ -11,3 +11,7 @@ int __always_true() { return 1; }
 struct task_struct *__test_get_current_task() {
   return bpf_get_current_task_btf();
 }
+
+void __test_atomic_inc(struct load_weight *w) {
+  __sync_fetch_and_add(&w->weight, 1);
+}

@@ -207,3 +207,10 @@ NAME scalars can be accessed in copied structs
 PROG begin { @s = *curtask; @k = @s->pid; @j = @s->parent->pid; } end { clear(@s); }
 EXPECT_REGEX @k:\s[0-9]+
 EXPECT_REGEX @j:\s[0-9]+
+
+# The 20-byte string makes the variable scratch buffer slots 20 bytes wide,
+# which leaves $w misaligned unless slots are padded to 8 bytes.
+NAME interop atomic on struct in variable scratch buffer
+PROG import "stdlib/test"; config = { on_stack_limit = 0 } begin { $s = "aaaaaaaaaaaaaaaaaaa"; $w = curtask->se.load; __test_atomic_inc(&$w); printf("%d %s\n", $w.weight == curtask->se.load.weight + 1, $s); exit(); }
+EXPECT 1 aaaaaaaaaaaaaaaaaaa
+REQUIRES_FEATURE btf
