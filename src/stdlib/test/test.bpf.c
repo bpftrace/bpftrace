@@ -17,3 +17,7 @@ struct task_struct *__test_get_current_task() {
 struct task_struct *bpf_task_from_pid(int pid) {
   return 0;
 }
+
+void __test_atomic_inc(struct load_weight *w) {
+  __sync_fetch_and_add(&w->weight, 1);
+}

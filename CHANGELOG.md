@@ -43,6 +43,8 @@ and this project adheres to
   - [#5372](https://github.com/bpftrace/bpftrace/pull/5372)
 - Print compile-time warnings to stderr instead of stdout so they don't corrupt JSON output
   - [#5376](https://github.com/bpftrace/bpftrace/pull/5376)
+- Align scratch variables to 8 bytes when they don't fit on the stack.
+  - [#5377](https://github.com/bpftrace/bpftrace/pull/5377)
 #### Security
 #### Docs
 #### Tools
