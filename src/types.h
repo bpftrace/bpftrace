@@ -206,7 +206,7 @@ private:
   bool is_signed_ = false;
   bool sign_flexible_ = false;
   bool is_anon_ = false;
-  bool ctx_ = false;                              // Is bpf program context
+  bool ctx_ = false; // Is bpf program context
   bool in_bpf_memory_ = false;
   std::unordered_set<std::string> btf_type_tags_; // Only populated for
                                                   // Type::pointer
