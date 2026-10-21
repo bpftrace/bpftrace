@@ -6,6 +6,12 @@ REQUIRES testprogs/hello_rust
 RUN {{BPFTRACE}} -l 'uprobe:./testprogs/hello_rust:*'
 EXPECT_REGEX uprobe:./testprogs/hello_rust.*fun1
 
+NAME uprobes - Rust function runtime hit
+REQUIRES testprogs/hello_rust
+PROG uprobe:./testprogs/hello_rust:*fun1* { printf("RUST_UPROBE_HIT\n"); exit(); }
+EXPECT RUST_UPROBE_HIT
+AFTER ./testprogs/hello_rust
+
 # This only tests for the presence of the builtin symbol `runtime.schedule`.
 # Argument unpacking and other things will *not* be supported in Go for a
 # while, since the calling convention is different. But useful analysis can
