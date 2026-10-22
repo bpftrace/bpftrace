@@ -238,9 +238,17 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
   // If loading of bpf_object failed, we try to give user some hints of what
   // could've gone wrong.
   std::string last_error_msg;
-  for (const auto &[name, prog] : programs_) {
-    if (prog.fd() >= 0)
+  // libbpf stops loading at the first failed program, so the last attempted
+  // program is the first one with a verifier log when walking in reverse.
+  auto *bpf_prog = bpf_object__prev_program(bpf_object_.get(), nullptr);
+  while (bpf_prog != nullptr) {
+    auto *previous_prog = bpf_object__prev_program(bpf_object_.get(), bpf_prog);
+    auto program = programs_.find(bpf_program__name(bpf_prog));
+    if (program == programs_.end() || program->second.fd() >= 0) {
+      bpf_prog = previous_prog;
       continue;
+    }
+    const auto &name = program->first;
 
     // Unfortunately, a negative fd does not mean that this specific program
     // caused the failure. It can mean that libbpf didn't even try to load it
@@ -248,8 +256,9 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
     // failures when the verifier log is non-empty.
     std::string log(log_bufs[name].data());
     if (!log.empty()) {
-      // These should be the only errors that may occur here which do not imply
-      // a bpftrace bug so throw immediately with a proper error message.
+      // These should be the only errors that may occur here which do not
+      // imply a bpftrace bug so throw immediately with a proper error
+      // message.
       auto ok = check_helper_verifier_error(
           log, "helper call is not allowed in probe", " not allowed in probe");
       if (!ok) {
@@ -263,7 +272,8 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
       }
       ok = check_helper_verifier_error(
           log,
-          "pointer arithmetic on ptr_or_null_ prohibited, null-check it first",
+          "pointer arithmetic on ptr_or_null_ prohibited, null-check it "
+          "first",
           ": result needs to be null-checked before accessing fields");
       if (!ok) {
         return ok.takeError();
@@ -272,8 +282,8 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
       if (is_stack_size_error(log)) {
         return make_error<BpfLoadError>(
             "Stack size is too large. Trying moving some scratch variables "
-            "into maps or try setting a lower on_stack_limit (e.g. `config = { "
-            "on_stack_limit=16 }`)");
+            "into maps or try setting a lower on_stack_limit (e.g. `config = "
+            "{ on_stack_limit=16 }`)");
       }
 
       std::stringstream errmsg;
@@ -297,7 +307,9 @@ Result<> BpfBytecode::load_progs(const RequiredResources &resources,
         errmsg << " Use -v for full kernel error log.";
       }
       last_error_msg = errmsg.str();
+      break;
     }
+    bpf_prog = previous_prog;
   }
 
   if (!last_error_msg.empty()) {

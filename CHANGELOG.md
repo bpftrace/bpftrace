@@ -25,6 +25,8 @@ and this project adheres to
 - Fix crash printing a `hist()` map when the `print()` divisor scales every
   bucket to zero.
   - [#5346](https://github.com/bpftrace/bpftrace/pull/5346)
+- Report the BPF program that actually failed verification when using `-v` or `-d verifier`.
+  - [#5388](https://github.com/bpftrace/bpftrace/issues/5388)
 - Fix scalar access for copied structs
   - [#5363](https://github.com/bpftrace/bpftrace/pull/5363)
 - Fix invalid BPF object with LLVM 23 when using strings with a large `max_strlen`
