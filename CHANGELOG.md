@@ -35,6 +35,8 @@ and this project adheres to
   - [#5376](https://github.com/bpftrace/bpftrace/pull/5376)
 - Align scratch variables to 8 bytes when they don't fit on the stack.
   - [#5377](https://github.com/bpftrace/bpftrace/pull/5377)
+- Zero `let` declarations without an assignment on every loop iteration.
+  - [#5399](https://github.com/bpftrace/bpftrace/pull/5399)
 #### Security
 #### Docs
 #### Tools
