@@ -149,6 +149,7 @@ public:
   Value *CreateVariableAllocationInit(const SizedType &value_type,
                                       const std::string &name,
                                       const Location &loc);
+  void CreateAllocationInit(const SizedType &stype, Value *alloc);
   Value *CreateMapKeyAllocation(const SizedType &value_type,
                                 const std::string &name,
                                 const Location &loc);
@@ -300,7 +301,6 @@ private:
                           const Location &loc,
                           std::optional<std::function<size_t(AsyncIds &)>>
                               gen_async_id_cb = std::nullopt);
-  void CreateAllocationInit(const SizedType &stype, Value *alloc);
   Value *createScratchBuffer(std::string_view global_var_name,
                              const Location &loc,
                              size_t key);
