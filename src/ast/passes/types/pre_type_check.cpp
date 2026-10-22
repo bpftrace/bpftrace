@@ -3,13 +3,13 @@
 #include <cstdlib>
 #include <regex>
 #include <set>
-#include <sstream>
 #include <string>
 #include <variant>
 
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/helpers.h"
+#include "ast/passes/check_nargs.h"
 #include "ast/passes/collect_nodes.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/signal_bt.h"
@@ -568,77 +568,12 @@ public:
   void visit(Unroll &unroll);
 
 private:
-  bool check_nargs(const Call &call, size_t expected_nargs);
-  bool check_varargs(const Call &call, size_t min_nargs, size_t max_nargs);
-
   ASTContext &ctx_;
   BPFtrace &bpftrace_;
   std::string func_;
   int func_arg_idx_ = -1;
   Node *top_level_node_ = nullptr;
 };
-
-bool CallPreCheck::check_nargs(const Call &call, size_t expected_nargs)
-{
-  std::stringstream err;
-  auto nargs = call.vargs.size();
-  assert(nargs >= call.injected_args);
-  assert(expected_nargs >= call.injected_args);
-  nargs -= call.injected_args;
-  expected_nargs -= call.injected_args;
-
-  if (nargs != expected_nargs) {
-    if (expected_nargs == 0)
-      err << call.func << "() requires no arguments";
-    else if (expected_nargs == 1)
-      err << call.func << "() requires one argument";
-    else
-      err << call.func << "() requires " << expected_nargs << " arguments";
-
-    err << " (" << nargs << " provided)";
-    call.addError() << err.str();
-    return false;
-  }
-  return true;
-}
-
-bool CallPreCheck::check_varargs(const Call &call,
-                                 size_t min_nargs,
-                                 size_t max_nargs)
-{
-  std::stringstream err;
-  auto nargs = call.vargs.size();
-  assert(nargs >= call.injected_args);
-  assert(min_nargs >= call.injected_args);
-  assert(max_nargs >= call.injected_args);
-  nargs -= call.injected_args;
-  min_nargs -= call.injected_args;
-  max_nargs -= call.injected_args;
-
-  if (nargs < min_nargs) {
-    if (min_nargs == 1)
-      err << call.func << "() requires at least one argument";
-    else
-      err << call.func << "() requires at least " << min_nargs << " arguments";
-
-    err << " (" << nargs << " provided)";
-    call.addError() << err.str();
-    return false;
-  } else if (nargs > max_nargs) {
-    if (max_nargs == 0)
-      err << call.func << "() requires no arguments";
-    else if (max_nargs == 1)
-      err << call.func << "() takes up to one argument";
-    else
-      err << call.func << "() takes up to " << max_nargs << " arguments";
-
-    err << " (" << nargs << " provided)";
-    call.addError() << err.str();
-    return false;
-  }
-
-  return true;
-}
 
 void CallPreCheck::visit(Call &call)
 {
@@ -688,15 +623,7 @@ void CallPreCheck::visit(Call &call)
   // Check argument count before visiting args to avoid cascading errors.
   auto spec = CALL_NARGS.find(call.func);
   if (spec != CALL_NARGS.end()) {
-    bool nargs_ok;
-    if (spec->second.min_args != spec->second.max_args) {
-      nargs_ok = check_varargs(call,
-                               spec->second.min_args,
-                               spec->second.max_args);
-    } else {
-      nargs_ok = check_nargs(call, spec->second.min_args);
-    }
-    if (!nargs_ok) {
+    if (!check_nargs(call, spec->second.min_args, spec->second.max_args)) {
       return;
     }
   }
