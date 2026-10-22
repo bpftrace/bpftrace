@@ -1262,8 +1262,7 @@ bool TypeChecker::check_call(Call &call)
 // Checks an argument passed to a function is of the correct type.
 //
 // This function does not check that the function has the correct number of
-// arguments. Either check_nargs() or check_varargs() should be called first
-// to validate this.
+// arguments. check_nargs() should be called first to validate this.
 bool TypeChecker::check_arg(Call &call,
                             Type type,
                             size_t index,
