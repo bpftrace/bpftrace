@@ -12,6 +12,10 @@ from typing import Optional
 class MissingSummaryError(Exception):
     pass
 
+class MissingVariantError(Exception):
+    pass
+
+
 class Helper:
     name: str = ""
     summary: str = ""
@@ -123,6 +127,8 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
         for helper in helpers:
             if not helper.summary:
                 raise MissingSummaryError(helper.name)
+            if not (helper.variants or helper.deprecated_variants):
+                raise MissingVariantError(helper.name)
 
         return helpers
 
@@ -134,6 +140,9 @@ def read_file_lines(file_path: str) -> Optional[list[Helper]]:
         return None
     except MissingSummaryError as e:
         print(f"Error: Missing :summary for helper '{e}' in '{file_path}'.")
+        return None
+    except MissingVariantError as e:
+        print(f"Error: Missing :variant or :deprecated_variant for helper '{e}' in '{file_path}'.")
         return None
     except Exception as e:
         print(f"Error reading file '{file_path}': {e}")

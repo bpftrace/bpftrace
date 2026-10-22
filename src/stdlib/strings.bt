@@ -13,6 +13,7 @@
 //  * Native bpftrace `string` objects of various sizes
 
 // :summary Checks that this value is string-like.
+// :variant void assert_str(any expression)
 macro assert_str(exp)
 {
   if comptime (!is_str(exp)) {
@@ -30,6 +31,7 @@ macro assert_str(exp)
 }
 
 // :summary Returns the default unbounded length.
+// :variant uint64 default_str_length()
 macro default_str_length()
 {
   sizeof(str((int8*)0))
@@ -91,8 +93,7 @@ macro strcap(exp)
   }
 }
 
-// :summary Returns the index of the first occurrence of one string in another.
-// Returns -1 if needle is not in haystack.
+// :summary Returns the index of the first occurrence of one string in another, or -1 if not found.
 // :variant int64 strstr(string haystack, string needle)
 macro strstr($haystack, $needle)
 {

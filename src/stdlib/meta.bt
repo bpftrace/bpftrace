@@ -36,6 +36,8 @@ macro is_unsigned_integer(expr)
 
 // :summary Assert something is true or fail the build.
 // :variant void static_assert(bool condition, string msg)
+//
+// **compile time**
 macro static_assert(cond, msg)
 {
   if comptime (!cond) {
@@ -60,7 +62,7 @@ macro check_key(@map, key, func)
   }
 }
 
-// :summary Returns true if the passed expression is a literal, e.g. 1, true, "hello"
+// :summary Returns true if the passed expression is a literal, e.g. `1`, `true`, `"hello"`.
 // :variant bool is_literal(Expression expr)
 macro is_literal(expr)
 {

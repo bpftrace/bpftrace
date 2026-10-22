@@ -1,8 +1,8 @@
 // Path helpers.
 
 // :summary Get the current working directory.
-// :variant string cwd();
-// :variant string cwd(max_path_depth);
+// :variant string cwd()
+// :variant string cwd(max_path_depth)
 //
 macro cwd(max_path_depth)
 {
@@ -60,9 +60,9 @@ macro cwd()
 }
 
 // :summary Resolves a relative path or filename to an absolute path.
-// :variant string abs_path(string path, uint64 max_path_depth);
+// :variant string abs_path(string path, uint64 max_path_depth)
 //
-// If the first string parameter is empty, the returned string will be empty.
+// If `path` is empty, the returned string is empty.
 //
 // Example:
 // ```
@@ -71,7 +71,7 @@ macro cwd()
 // }
 // ```
 //
-// see also `cwd`.
+// See also `cwd`.
 macro abs_path(path, max_path_depth)
 {
   assert_str(path);

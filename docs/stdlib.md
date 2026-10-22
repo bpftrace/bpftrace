@@ -17,9 +17,9 @@ Basically all functions or macros that don't have arguments or have default argu
 
 Resolves a relative path or filename to an absolute path.
 
-- `string abs_path(string path, uint64 max_path_depth);`
+- `string abs_path(string path, uint64 max_path_depth)`
 
-If the first string parameter is empty, the returned string will be empty.
+If `path` is empty, the returned string is empty.
 
 Example:
 ```
@@ -28,7 +28,7 @@ tracepoint:syscalls:sys_enter_openat {
 }
 ```
 
-see also `cwd`.
+See also `cwd`.
 
 
 ### arch
@@ -58,6 +58,7 @@ Terminates the script with an error code if a condition is false.
 
 Checks that this value is string-like.
 
+- `void assert_str(any expression)`
 
 ### bswap
 
@@ -134,9 +135,9 @@ Returns the current process's cgroup ID.
 - `uint64 cgroup()`
 - `uint64 cgroup`
 
-Only works with cgroupv2
+Only works with cgroupv2.
 
-This utilizes the BPF helper `get_current_cgroup_id`
+This utilizes the BPF helper `get_current_cgroup_id`.
 
 
 ### cgroup_path
@@ -145,7 +146,7 @@ Converts a cgroup ID to its path.
 
 - `cgroup_path_t cgroup_path(int cgroupid, string filter)`
 
-This is done asynchronously in userspace when the cgroup_path value is printed,
+This is done asynchronously in userspace when the `cgroup_path` value is printed,
 therefore it can resolve to a different value if the cgroup id gets reassigned.
 This also means that the returned value can only be used for printing.
 
@@ -213,7 +214,8 @@ Returns the name of the current thread or a specified process.
 - `string comm`
 - `string comm(uint32 pid)`
 
-This utilizes the BPF helper `get_current_comm`
+This uses the BPF helper `bpf_get_current_comm` for `comm()` or the kfunc
+`bpf_task_from_pid` for `comm(pid)`.
 
 
 ### config
@@ -258,7 +260,7 @@ Returns the ID of the CPU running the current BPF program.
 - `uint32 cpu`
 
 The BPF program corresponds to the probe's action body.
-This utilizes the BPF helper `bpf_get_smp_processor_id`
+This utilizes the BPF helper `bpf_get_smp_processor_id`.
 
 
 ### curtask
@@ -268,21 +270,23 @@ Returns a pointer to the current task's `task_struct`.
 - `struct task_struct * curtask()`
 - `struct task_struct * curtask`
 
-This utilizes the BPF helper `bpf_get_current_task_btf`
+This utilizes the BPF helper `bpf_get_current_task_btf`.
 
 
 ### cwd
 
 Get the current working directory.
 
-- `string cwd();`
-- `string cwd;`
-- `string cwd(max_path_depth);`
+- `string cwd()`
+- `string cwd`
+- `string cwd(max_path_depth)`
 
 ### default_str_length
 
 Returns the default unbounded length.
 
+- `uint64 default_str_length()`
+- `uint64 default_str_length`
 
 ### delete
 
@@ -296,7 +300,7 @@ For scalar maps (e.g. no explicit keys), the key is omitted.
 For maps with explicit keys, omitting the key deletes all of the map's keys/values and returns false if some entries couldn't be deleted.
 Unlike `clear`, the deletion happens in-kernel during the call rather than asynchronously, so it can't be dropped. If other probes update the map at the same time (e.g. on other CPUs), entries they add while `delete` runs may remain afterwards.
 Note that because the deletion happens in-kernel, a `print` of the map issued earlier in the same probe will also see an empty map, as printing happens asynchronously.
-For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`
+For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`.
 
 If deletion fails (e.g. the key doesn’t exist) the function returns false (0).
 Additionally, if the return value for `delete` is discarded, and deletion fails, you will get a warning.
@@ -354,7 +358,7 @@ For this, one or more pids have to be specified. This can either be done via
 `-p`, `-c` (implicitly) or `--dwarf-pid`. If `dw_ustack` cannot find unwind
 information for a process, a runtime warning is emitted.
 
-`dw_ustack` is currently only available on x86_64.
+`dw_ustack` is currently only available on `x86_64`.
 
 **Unstable feature**
 
@@ -429,6 +433,8 @@ Reports a compile-time error and halts compilation when reached.
 
 - `void fail(const string fmt, args...)`
 
+**compile time**
+
 `fail()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location but, as opposed to [`errorf`](#errorf), is treated like a static assert and halts compilation if it is visited. All args have to be literals since they are evaluated at compile time.
 
 ```
@@ -461,7 +467,7 @@ kprobe:dummy {
 
 ### func
 
-Name of the current function being traced (kprobes,uprobes,fentry)
+Name of the current function being traced (kprobes,uprobes,fentry).
 
 - `ksym_t func()`
 - `ksym_t func`
@@ -504,12 +510,12 @@ Returns the current thread's group ID in the initial namespace.
 - `uint64 gid()`
 - `uint64 gid`
 
-This utilizes the BPF helper `get_current_uid_gid`
+This utilizes the BPF helper `get_current_uid_gid`.
 
 
 ### has_cpid
 
-Returns true iff cpid is available.
+Returns whether a child process ID is available.
 
 - `bool has_cpid()`
 - `bool has_cpid`
@@ -551,7 +557,7 @@ Checks whether a pointer encodes a kernel error.
 
 - `bool is_err(void * ptr)`
 
-Returns true if the pointer is an ERR_PTR, i.e. it encodes a kernel error code.
+Returns true if the pointer is an `ERR_PTR`, i.e. it encodes a kernel error code.
 
 In the Linux kernel, some functions return error codes encoded as pointers
 using the `ERR_PTR` macro. These are pointer values in the range
@@ -576,7 +582,7 @@ Determine whether the given expression is an integer.
 
 ### is_literal
 
-Returns true if the passed expression is a literal, e.g. 1, true, "hello"
+Returns true if the passed expression is a literal, e.g. `1`, `true`, `"hello"`.
 
 - `bool is_literal(Expression expr)`
 
@@ -605,9 +611,9 @@ Returns the kernel jiffies counter.
 - `uint64 jiffies()`
 - `uint64 jiffies`
 
-On 32-bit systems, using this builtin might be slower
+On 32-bit systems, using this builtin might be slower.
 
-This utilizes the BPF helper `get_jiffies_64`
+This utilizes the BPF helper `bpf_jiffies64`.
 
 
 ### join
@@ -674,7 +680,7 @@ Marks a pointer as pointing to kernel address space.
 
 - `T * kptr(T * ptr)`
 
-See the address-spaces section for more information on address-spaces.
+See [Address Spaces](./language.md#address-spaces) for more information.
 The pointer type is left unchanged.
 
 
@@ -812,7 +818,6 @@ Creates a printable buffer from a MAC address.
 
 - `macaddr_t macaddr(char [6] mac)`
 
-Create a buffer that holds a macaddress as read from `mac`
 This buffer can be printed in the canonical string format using the `%s` format specifier.
 
 ```
@@ -835,16 +840,16 @@ Compares a specified number of bytes.
 
 - `int memcmp(left, right, uint64 count)`
 
-Compares the first 'count' bytes of two expressions.
-0 is returned if they are the same.
-negative value if the first differing byte in left is less
-than the corresponding byte in right.
+Compares the first `count` bytes of `left` and `right`.
+Returns zero if they match.
+Otherwise, returns a negative value if the first differing byte in `left` is smaller,
+or a positive value if it is larger.
 
 
 
 ### ncpus
 
-Number of CPUs
+Number of CPUs.
 
 - `uint64 ncpus()`
 - `uint64 ncpus`
@@ -889,10 +894,9 @@ Converts an IPv4 or IPv6 address to its text representation.
 - `inet ntop([int64 af, ] char addr[4])`
 - `inet ntop([int64 af, ] char addr[16])`
 
-`ntop` returns the string representation of an IPv4 or IPv6 address.
 `ntop` will infer the address type (IPv4 or IPv6) based on the `addr` type and size.
 If an integer or `char[4]` is given, ntop assumes IPv4, if a `char[16]` is given, ntop assumes IPv6.
-You can also pass the address type (e.g. AF_INET) explicitly as the first parameter.
+You can also pass the address type (e.g. `AF_INET`) explicitly as the first parameter.
 
 
 ### numaid
@@ -902,7 +906,7 @@ Returns the ID of the NUMA node running the current BPF program.
 - `uint32 numaid()`
 - `uint32 numaid`
 
-This utilizes the BPF helper `numa_node_id`
+This utilizes the BPF helper `bpf_get_numa_node_id`.
 
 
 ### offsetof
@@ -914,9 +918,7 @@ Returns the byte offset of a field within a type.
 
 **compile time**
 
-Similar to kernel `offsetof` operator.
-
-Support any number of sub field levels, for example:
+Like the kernel's `offsetof` operator, it supports any number of nested fields. For example:
 
 ```
 struct Foo {
@@ -945,7 +947,7 @@ Prevents a probed function from running and supplies its return value.
 
 **Kernel** 4.16
 
-This utilizes the BPF helper `bpf_override`
+This utilizes the BPF helper `bpf_override_return`.
 
 **Supported probes**
 
@@ -966,7 +968,7 @@ uid=4194304 gid=0(root) euid=0(root) groups=0(root)
 
 This feature only works on kernels compiled with `CONFIG_BPF_KPROBE_OVERRIDE` and only works on functions tagged `ALLOW_ERROR_INJECTION`.
 
-bpftrace does not test whether error injection is allowed for the probed function, instead if will fail to load the program into the kernel:
+bpftrace does not test whether error injection is allowed for the probed function, instead it will fail to load the program into the kernel:
 
 ```
 ioctl(PERF_EVENT_IOC_SET_BPF): Invalid argument
@@ -982,7 +984,7 @@ Resolves a kernel path to a string.
 
 **Kernel** 5.10
 
-This utilizes the BPF helper `bpf_d_path`
+This utilizes the BPF helper `bpf_d_path`.
 
 Return full path referenced by struct path pointer in argument. If `size` is set,
 the path will be clamped by `size` otherwise `BPFTRACE_MAX_STRLEN` is used.
@@ -1116,7 +1118,7 @@ Note that maps are printed by reference while scalar values are copied.
 This means that updating and printing maps in a fast loop will likely result in bogus map values as the map will be updated before userspace gets the time to dump and print it.
 
 The printing of maps supports the optional `top` and `div` arguments.
-`top` limits the printing to the top N entries with the highest integer values
+`top` limits the printing to the top N entries with the highest integer values.
 
 ```
 BEGIN {
@@ -1182,8 +1184,8 @@ The non-standard ones can be found in the table below:
 | Specifier | Type | Format | Description |
 | --- | --- | --- | --- |
 | r | buffer | normal hex | Hex-formatted string to print arbitrary binary content returned by the [buf](#buf) function. |
-| rh | buffer | formatted hex | Prints in hex-formatted string without `\x` and with spaces between bytes (e.g. `0a fe`) |
-| rx | buffer | escaped hex | Prints in hex-formatted string with `\x` without spaces between bytes (e.g. `\x0a\xfe`) |
+| rh | buffer | formatted hex | Prints in hex-formatted string without `\x` and with spaces between bytes (e.g. `0a fe`). |
+| rx | buffer | escaped hex | Prints in hex-formatted string with `\x` without spaces between bytes (e.g. `\x0a\xfe`). |
 | gr | integer | human readable | Formats GFP (Get Free Pages) flags into human-readable strings, similar to Linux kernel's `%pGg` format. |
 
 `printf()` can also symbolize enums as strings. User defined enums as well as enums
@@ -1237,7 +1239,7 @@ Returns the fully expanded name of the current probe.
 - `string probe()`
 - `string probe`
 
-For example: `kprobe:do_nanosleep`
+For example: `kprobe:do_nanosleep`.
 
 
 ### probetype
@@ -1249,7 +1251,7 @@ Returns the type of the current probe.
 
 Note: `begin` and `end` probes are of type `special`.
 
-For example: `kprobe`, `special`, `tracepoint`
+For example: `kprobe`, `special`, `tracepoint`.
 
 
 ### pton
@@ -1278,7 +1280,7 @@ Returns a pseudo-random number.
 - `uint32 rand()`
 - `uint32 rand`
 
-This utilizes the BPF helper `get_prandom_u32`
+This utilizes the BPF helper `get_prandom_u32`.
 
 
 ### reg
@@ -1304,7 +1306,7 @@ Returns the value returned by the function being traced.
 - `uint64 retval`
 
 (kretprobe, uretprobe, fexit)
-For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You can look up the type using `bpftrace -lv`
+For kretprobe and uretprobe, its type is uint64, but for fexit it depends. You can look up the type using `bpftrace -lv`.
 
 
 ### signal
@@ -1389,9 +1391,9 @@ Writes packet data from a socket buffer to a PCAP file.
 
 **Kernel** 5.5
 
-This utilizes the BPF helper `bpf_skb_output`
+This utilizes the BPF helper `bpf_skb_output`.
 
-Write sk_buff `skb` 's data section to a PCAP file in the `path`, starting from `offset` to `offset` + `length`.
+Write the data section of `skb` to a PCAP file in `path`, starting from `offset` to `offset` + `length`.
 
 The PCAP file is encapsulated in RAW IP, so no ethernet header is included.
 The `data` section in the struct `skb` may contain ethernet header in some kernel contexts, you may set `offset` to 14 bytes to exclude ethernet header.
@@ -1435,7 +1437,7 @@ Returns the kernel-generated cookie for a socket.
 
 - `uint64 socket_cookie(struct sock *sk)`
 
-This utilizes the BPF helper `bpf_get_socket_cookie`
+This utilizes the BPF helper `bpf_get_socket_cookie`.
 
 Retrieve the cookie (generated by the kernel) of the socket.
 If no cookie has been set yet, generate a new cookie. Once generated, the socket cookie remains stable for the life of the socket.
@@ -1473,13 +1475,16 @@ Assert something is true or fail the build.
 
 - `void static_assert(bool condition, string msg)`
 
+**compile time**
+
+
 ### str
 
 Reads a null-terminated string from an address.
 
-- `string str(char * data [, uint32 length)`
+- `string str(char * data [, uint32 length])`
 
-This utilizes the BPF helpers `probe_read_str, probe_read_{kernel,user}_str`
+This utilizes the BPF helpers `probe_read_str, probe_read_{kernel,user}_str`.
 
 `str` reads a NULL terminated (`\0`) string from `data`.
 The maximum string length is limited by the `BPFTRACE_MAX_STRLEN` env variable, unless `length` is specified and shorter than the maximum.
@@ -1556,7 +1561,7 @@ bpftrace also supports the following format string extensions:
 
 | Specifier | Description |
 | --- | --- |
-| `%f` | Microsecond as a decimal number, zero-padded on the left |
+| `%f` | Microsecond as a decimal number, zero-padded on the left. |
 
 
 ### strlen
@@ -1583,12 +1588,9 @@ The use of the `==` and `!=` operators is recommended over calling `strncmp` dir
 
 ### strstr
 
-Returns the index of the first occurrence of one string in another.
+Returns the index of the first occurrence of one string in another, or -1 if not found.
 
 - `int64 strstr(string haystack, string needle)`
-
-Returns -1 if needle is not in haystack.
-
 
 ### syscall_name
 
@@ -1719,7 +1721,7 @@ Returns the address of a user-space symbol.
 * uretprobes
 * USDT
 
-If kernel supports task_vma open-coded iterator kfuncs (linux >= 6.7), uaddr() will correct the symbol addresses of PIE and dynamic libraries instead of directly using the symbol addresses in the ELF file, see https://github.com/torvalds/linux/commit/4ac454682158.
+If kernel supports `task_vma` open-coded iterator kfuncs (linux >= 6.7), `uaddr()` will correct the symbol addresses of PIE and dynamic libraries instead of directly using the symbol addresses in the ELF file, see https://github.com/torvalds/linux/commit/4ac454682158.
 
 The `uaddr` function returns the address of the specified symbol.
 This lookup happens during program compilation and cannot be used dynamically.
@@ -1742,7 +1744,7 @@ Returns the user ID of the current thread in the initial namespace.
 - `uint64 uid()`
 - `uint64 uid`
 
-This utilizes the BPF helper `get_current_uid_gid`
+This utilizes the BPF helper `get_current_uid_gid`.
 
 
 ### unwatch
@@ -1760,7 +1762,7 @@ Marks a pointer as pointing to user address space.
 
 - `T * uptr(T * ptr)`
 
-See the address-spaces section for more information on address-spaces.
+See [Address Spaces](./language.md#address-spaces) for more information.
 The pointer type is left unchanged.
 
 
@@ -1771,7 +1773,7 @@ Returns whether execution is currently in user mode (1 or 0).
 - `uint8 usermode()`
 - `uint8 usermode`
 
-Currently only available on x86_64.
+Currently only available on `x86_64`.
 
 
 ### username
@@ -1781,7 +1783,7 @@ Returns the current user's name.
 - `string username()`
 - `string username`
 
-Often this is just "root"
+Often this is just "root".
 
 
 ### ustack
@@ -1926,7 +1928,7 @@ Writes bytes from BPF memory to a user-space address.
 Writes `len` bytes from BPF program memory at `src` to user-space address
 `dst` using the BPF helper `bpf_probe_write_user`.
 
-Returns true on success, or false on failure.
+Returns `true` on success, or `false` on failure.
 
 **Warning**: This can crash or corrupt the target process if used incorrectly.
 Only use on user-space memory addresses belonging to the current task.
@@ -1975,10 +1977,10 @@ interval:s:1 {
 ```
 
 Internally this keeps two values in the map: value count and running total.
-The average is computed in user-space when printing by dividing the total by the
-count. However, you can get the average in kernel space in expressions like
-`if (@y == 5)` but this is expensive as bpftrace needs to iterate over all the
-cpus to collect and sum BOTH count and total.
+The average is computed in userspace when printing by dividing the total by the
+count. You can also get the average in kernel space in expressions like
+`if (@y == 5)`, but this is expensive because bpftrace must iterate over all
+CPUs to collect and sum both the count and total.
 
 ### count
 
@@ -1989,7 +1991,7 @@ Counts how many times the function is called.
 Using `@=count()` is conceptually similar to `@++`.
 The difference is that the `count()` function uses a map type optimized for
 performance and correctness using cheap, thread-safe writes ([PERCPU](./language.md#percpu-types)). However, sync reads
-can be expensive as bpftrace needs to iterate over all the cpus to collect and
+can be expensive as bpftrace needs to iterate over all the CPUs to collect and
 sum these values.
 
 Note: This differs from "raw" writes (e.g. `@++`) where multiple writers to a
@@ -2127,7 +2129,7 @@ Tracks the smallest value passed to the function.
 * `min_t min(int64 n)`
 
 Update the map with `n` if `n` is smaller than the current value held.
-Similar to `count` this uses a [PERCPU](./language.md#percpu-types) map (thread-safe, fast writes, slow reads).
+This function uses a [PERCPU](./language.md#percpu-types) map. Writes are fast and thread-safe, but reads are slow.
 
 See `max()` above for how this differs from the typical userspace `min()`.
 
@@ -2137,7 +2139,7 @@ Tracks the count, average, and sum of values.
 
 * `stats_t stats(int64 n)`
 
-`stats` combines the `count`, `avg` and `sum` calls into one.
+`stats` combines the `count`, `avg`, and `sum` calls into one.
 
 ```
 kprobe:vfs_read {
@@ -2169,7 +2171,7 @@ Calculates the sum of values passed to the function.
 Using `@=sum(5)` is conceptually similar to `@+=5`.
 The difference is that the `sum()` function uses a map type optimized for
 performance and correctness using cheap, thread-safe writes ([PERCPU](./language.md#percpu-types)). However, sync reads
-can be expensive as bpftrace needs to iterate over all the cpus to collect and
+can be expensive as bpftrace needs to iterate over all the CPUs to collect and
 sum these values.
 
 Note: This differs from "raw" writes (e.g. `@+=5`) where multiple writers to a
@@ -2216,8 +2218,8 @@ Create a time series that tracks an integer value. `tseries` records up to
 
 #### Durations
 
-`interval_ns` is an unsigned integer that specifies the interval duration. You
-may use numbers with duration suffixes to improve readability:
+`interval_ns` is an unsigned integer that specifies the interval duration.
+Use duration suffixes to improve readability:
 
 ```
 @a = tseries(1, 100ns, 5); // 100 nanoseconds
@@ -2348,7 +2350,7 @@ There are three invocation modes for bpftrace built-in functions.
 
 While BPF in the kernel can do a lot there are still things that can only be done from user space, like the outputting (printing) of data.
 The way bpftrace handles this is by sending events from the BPF program which user-space will pick up some time in the future (usually in milliseconds).
-Operations that happen in the kernel are 'synchronous' ('sync') and those that are handled in user space are 'asynchronous' ('async')
+Operations that happen in the kernel are 'synchronous' ('sync') and those that are handled in user space are 'asynchronous' ('async').
 
 The asynchronous behaviour can lead to some unexpected behavior as updates can happen before user space had time to process the event. The following situations may occur:
 
