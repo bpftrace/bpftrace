@@ -1,10 +1,10 @@
 #include "ast/passes/iter_desugar.h"
 
-#include <sstream>
 #include <string>
 #include <utility>
 
 #include "ast/ast.h"
+#include "ast/passes/check_nargs.h"
 #include "ast/visitor.h"
 #include "bpf_iters.h"
 #include "bpftrace.h"
@@ -47,7 +47,6 @@ public:
   void visit(Statement &stmt);
 
 private:
-  bool check_nargs(const Call &call, const BpfIterItem &info);
   Expression struct_ptr_cast(const Location &loc,
                              const std::string &name,
                              Expression expr);
@@ -58,41 +57,6 @@ private:
   BPFtrace &bpftrace_;
   size_t next_id_ = 0;
 };
-
-bool IterDesugar::check_nargs(const Call &call, const BpfIterItem &info)
-{
-  auto nargs = call.vargs.size();
-  if (nargs >= info.min_args && nargs <= info.max_args) {
-    return true;
-  }
-
-  std::stringstream err;
-  if (info.min_args == info.max_args) {
-    if (info.max_args == 0) {
-      err << call.func << "() requires no arguments";
-    } else if (info.max_args == 1) {
-      err << call.func << "() requires one argument";
-    } else {
-      err << call.func << "() requires " << info.max_args << " arguments";
-    }
-  } else if (nargs < info.min_args) {
-    if (info.min_args == 1) {
-      err << call.func << "() requires at least one argument";
-    } else {
-      err << call.func << "() requires at least " << info.min_args
-          << " arguments";
-    }
-  } else if (info.max_args == 0) {
-    err << call.func << "() requires no arguments";
-  } else if (info.max_args == 1) {
-    err << call.func << "() takes up to one argument";
-  } else {
-    err << call.func << "() takes up to " << info.max_args << " arguments";
-  }
-  err << " (" << nargs << " provided)";
-  call.addError() << err.str();
-  return false;
-}
 
 Expression IterDesugar::struct_ptr_cast(const Location &loc,
                                         const std::string &name,
@@ -229,7 +193,7 @@ void IterDesugar::visit(Statement &stmt)
     return;
   }
 
-  if (!check_nargs(*it, *info)) {
+  if (!check_nargs(*it, info->min_args, info->max_args)) {
     return;
   }
 
