@@ -48,6 +48,7 @@
 #include "ast/passes/types/type_map.h"
 #include "ast/visitor.h"
 #include "async_action.h"
+#include "bpf_iters.h"
 #include "bpfmap.h"
 #include "bpftrace.h"
 #include "config.h"
@@ -229,6 +230,7 @@ public:
   ScopedExpr visit(While &while_block);
   ScopedExpr visit(For &f, Map &map);
   ScopedExpr visit(For &f, Range &range);
+  ScopedExpr visit(For &f, Call &iter);
   ScopedExpr visit(For &f);
   ScopedExpr visit(Jump &jump);
   ScopedExpr visit(Probe &probe);
@@ -3182,8 +3184,9 @@ void CodegenLLVM::maybeAllocVariable(const std::string &var_ident,
 
   const bool use_scratch = bpftrace_.resources.scratch_buf_vars.contains(
       { scope_stack_.back(), var_ident });
+  const unsigned align = is_bpf_iter_state(var_type) ? 8 : 0;
   auto *val = b_.CreateVariableAllocationInit(
-      var_type, var_ident, loc, use_scratch);
+      var_type, var_ident, loc, use_scratch, align);
   variables_[scope_stack_.back()][var_ident] = VariableLLVM{
     .value = val, .type = b_.GetType(var_type)
   };
@@ -3384,6 +3387,12 @@ ScopedExpr CodegenLLVM::visit(While &while_block)
   b_.SetInsertPoint(while_end);
   loops_.pop_back();
 
+  return ScopedExpr();
+}
+
+ScopedExpr CodegenLLVM::visit([[maybe_unused]] For &f, Call &iter)
+{
+  LOG(BUG) << "unlowered iterator in for-loop: " << iter.func;
   return ScopedExpr();
 }
 

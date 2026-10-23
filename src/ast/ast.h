@@ -1579,21 +1579,26 @@ public:
   explicit While(ASTContext &ctx, const Location &loc, const While &other)
       : Node(ctx, loc + other.loc),
         cond(clone(ctx, loc, other.cond)),
-        block(clone(ctx, loc, other.block)) {};
+        block(clone(ctx, loc, other.block)),
+        is_iter(other.is_iter) {};
 
   bool operator==(const While &other) const
   {
-    return cond == other.cond && *block == *other.block;
+    return cond == other.cond && *block == *other.block &&
+           is_iter == other.is_iter;
   }
   std::strong_ordering operator<=>(const While &other) const
   {
     if (auto cmp = cond <=> other.cond; cmp != 0)
       return cmp;
-    return *block <=> *other.block;
+    if (auto cmp = *block <=> *other.block; cmp != 0)
+      return cmp;
+    return is_iter <=> other.is_iter;
   }
 
   Expression cond;
   BlockExpr *block = nullptr;
+  bool is_iter = false;
 };
 
 class Range : public Node {
@@ -1623,7 +1628,7 @@ public:
   Expression end;
 };
 
-class Iterable : public VariantNode<Map, Range> {
+class Iterable : public VariantNode<Map, Range, Call> {
 public:
   using VariantNode::VariantNode;
   Iterable() : Iterable(static_cast<Map *>(nullptr)) {};
