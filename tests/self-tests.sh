@@ -72,8 +72,28 @@ tmplog=$(mktemp)
 # Prevent leftover temporary files caused by abnormal exits.
 trap 'rm -f "${tmplog}"' EXIT
 
+# Gather all self-test scripts in alphabetical order.
+# We do this in advance to report the test numbers.
+mapfile -d '' -t scripts < <(find "$TESTS_DIR"/self -type f -name \*.bt -print0 | sort -z)
+
+green='\033[32m'
+nc='\033[0m'
+
+total_tests=0
+for script in "${scripts[@]}"; do
+    count=$(grep -c '^test:' "${script}" || true)
+    total_tests=$(( total_tests + count ))
+done
+printf "${green}[==========]${nc} Found %d test%s in %d test case%s.\n\n" \
+    "${total_tests}" "$([[ ${total_tests} -ne 1 ]] && echo s)" \
+    "${#scripts[@]}" "$([[ ${#scripts[@]} -ne 1 ]] && echo s)"
+
 rc=0
-while IFS= read -r -d '' script; do
+for script in "${scripts[@]}"; do
+    count=$(grep -c '^test:' "${script}" || true)
+    printf "${green}[----------]${nc} Found %d test%s in %s\n" \
+        "${count}" "$([[ ${count} -ne 1 ]] && echo s)" "$(basename "${script}")"
+
     "${BPFTRACE_RUNTIME_TEST_EXECUTABLE}" --test "${filter_args[@]}" "${script}" | tee "${tmplog}"
 
     status=${PIPESTATUS[0]}
@@ -85,7 +105,7 @@ while IFS= read -r -d '' script; do
     fi
 
     filter_matched_count=$(( filter_matched_count + 1 ))
-done < <(find "$TESTS_DIR"/self -type f -a -name \*.bt -print0)
+done
 
 if [[ ${filter_matched_count} -eq 0 ]] && [[ -n ${FILTER} ]]; then
     echo >&2 "No probes matched filter '${FILTER}'"
