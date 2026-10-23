@@ -1478,6 +1478,32 @@ kprobe@my_module:main.c:42
 }
 ```
 
+To check a source location without loading BPF or attaching a probe, use
+`--list-kprobe-lines`:
+
+```
+bpftrace --list-kprobe-lines \
+  -e 'kprobe@my_module:main.c:42 { }'
+```
+
+For example, a mapped location reports the physical function and offset:
+
+```
+kprobe@my_module:main.c:42
+  location: my_module:main.c:42
+  status: MAPPED
+  static_only: true
+  function: my_function+12
+  source_function:
+    function: my_function
+    kind: physical
+```
+
+The query reports `MAPPED` when DWARF maps the requested line to an
+instruction. Otherwise it reports `NOT_MAPPED` and lists nearby mapped lines.
+The query is static and does not check the kernel kprobe blocklist or
+architecture-specific instruction restrictions.
+
 ### profile
 
 **variants**

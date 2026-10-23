@@ -22,6 +22,9 @@ and this project adheres to
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 - Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
   - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
+- Add `--list-kprobe-lines` to inspect DWARF source-line mappings without
+  loading BPF programs or attaching probes.
+  - [#5361](https://github.com/bpftrace/bpftrace/pull/5361)
 #### Changed
 - Structs and arrays are copied for scratch variable assignment
   - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)

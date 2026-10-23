@@ -4,6 +4,8 @@
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <bpf/libbpf.h>
+#include <cctype>
+#include <cerrno>
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
@@ -220,6 +222,29 @@ std::optional<std::string> find_vmlinux(util::Symbol *sym)
     return find_vmlinux(locs_env, sym);
   }
   return find_vmlinux(vmlinux_locs, sym);
+}
+
+bool kernel_symbol_addresses_hidden()
+{
+  std::ifstream kallsyms("/proc/kallsyms");
+  if (!kallsyms)
+    return errno == EACCES || errno == EPERM;
+
+  std::string line;
+  bool found_symbol = false;
+  while (std::getline(kallsyms, line)) {
+    const auto separator = line.find(' ');
+    if (separator == std::string::npos || separator == 0)
+      continue;
+    const std::string_view address(line.data(), separator);
+    if (!std::ranges::all_of(address,
+                             [](unsigned char c) { return std::isxdigit(c); }))
+      continue;
+    found_symbol = true;
+    if (address.find_first_not_of('0') != std::string_view::npos)
+      return false;
+  }
+  return found_symbol;
 }
 
 static bool is_bad_func(const std::string &func)
