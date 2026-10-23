@@ -660,6 +660,7 @@ void TextOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
 void TextOutput::test_result(const std::vector<std::string> &all_tests,
                              size_t index,
                              std::chrono::nanoseconds duration,
+                             uint32_t retval,
                              const std::vector<bool> &passed,
                              std::string output)
 {
@@ -679,6 +680,10 @@ void TextOutput::test_result(const std::vector<std::string> &all_tests,
       if (!line.empty()) {
         out_ << line << std::endl;
       }
+    }
+    if (retval != 0) {
+      out_ << "test:" << all_tests[index] << " failed at line " << retval
+           << std::endl;
     }
     out_ << "\033[31m[  FAILED  ]\033[0m " << all_tests[index];
   }

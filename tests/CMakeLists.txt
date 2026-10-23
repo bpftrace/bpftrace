@@ -51,6 +51,7 @@ add_executable(bpftrace_test
   type_checker.cpp
   type_resolver.cpp
   temp.cpp
+  test_return.cpp
   tracepoint_format_parser.cpp
   types.cpp
   type_system.cpp

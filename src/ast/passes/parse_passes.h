@@ -21,6 +21,7 @@
 #include "ast/passes/pid_filter_pass.h"
 #include "ast/passes/probe_prune.h"
 #include "ast/passes/resolve_imports.h"
+#include "ast/passes/test_return.h"
 #include "ast/passes/unstable_feature.h"
 #include "ast/passes/usdt_arguments.h"
 #include "btf.h"
@@ -49,6 +50,7 @@ inline std::vector<Pass> AllParsePasses(
   passes.emplace_back(CreateCheckAttachpointsPass());
   passes.emplace_back(CreateUSDTImportPass());
   passes.emplace_back(CreateImportInternalScriptsPass());
+  passes.emplace_back(CreateTestReturnPass());
   passes.emplace_back(CreateLoopReturnPass());
   passes.emplace_back(CreateControlFlowPass());
   passes.emplace_back(CreateMacroExpansionPass());
