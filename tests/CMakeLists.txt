@@ -100,14 +100,14 @@ add_subdirectory(testlibs)
 #
 # Runtime tests
 #
-configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
-
 file(GLOB_RECURSE runtime_test_src_files
   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
   CONFIGURE_DEPENDS
   runtime/*
 )
 list(REMOVE_ITEM runtime_test_src_files runtime/engine/cmake_vars.py)
+
+list(APPEND runtime_test_src_files runtime-tests.sh)
 
 set(runtime_test_files)
 foreach(runtime_test_file ${runtime_test_src_files})
@@ -134,13 +134,13 @@ configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/
 #
 # Self tests
 #
-configure_file(self-tests.sh self-tests.sh COPYONLY)
-
 file(GLOB_RECURSE self_test_src_files
   RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
   CONFIGURE_DEPENDS
   self/*
 )
+
+list(APPEND self_test_src_files self-tests.sh)
 
 set(self_test_files)
 foreach(self_test_src_file ${self_test_src_files})
@@ -164,5 +164,9 @@ add_custom_target(self_test_files ALL DEPENDS ${self_test_files})
 #
 # Tools tests
 #
-configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
+add_custom_target(tools-parsing-test-file ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    ${CMAKE_CURRENT_SOURCE_DIR}/tools-parsing-test.sh
+    ${CMAKE_CURRENT_BINARY_DIR}/tools-parsing-test.sh
+)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
