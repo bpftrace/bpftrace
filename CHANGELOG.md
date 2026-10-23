@@ -22,6 +22,8 @@ and this project adheres to
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
 - Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
   - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
+- `test` probes now log non-zero return values
+  - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
 #### Changed
 - Structs and arrays are copied for scratch variable assignment
   - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)

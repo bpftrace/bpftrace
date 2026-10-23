@@ -35,6 +35,7 @@ public:
   void test_result([[maybe_unused]] const std::vector<std::string> &all_tests,
                    [[maybe_unused]] size_t index,
                    [[maybe_unused]] std::chrono::nanoseconds duration,
+                   [[maybe_unused]] uint32_t retval,
                    [[maybe_unused]] const std::vector<bool> &passed,
                    [[maybe_unused]] std::string output) override
   {
