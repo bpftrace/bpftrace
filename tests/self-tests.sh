@@ -65,8 +65,6 @@ echo "===================="
 "${BPFTRACE_RUNTIME_TEST_EXECUTABLE}" --info;
 
 filter_matched_count=0
-filter_args=()
-[[ -n ${FILTER} ]] && filter_args=( --probe-filter "${FILTER}" )
 
 tmplog=$(mktemp)
 # Prevent leftover temporary files caused by abnormal exits.
@@ -93,6 +91,13 @@ for script in "${scripts[@]}"; do
     count=$(grep -c '^test:' "${script}" || true)
     printf "${green}[----------]${nc} Found %d test%s in %s\n" \
         "${count}" "$([[ ${count} -ne 1 ]] && echo s)" "$(basename "${script}")"
+
+    # If the filter matches the file name, run all of its tests.
+    # Otherwise, forward the filter to bpftrace to only run the matching probes.
+    filter_args=()
+    if [[ -n ${FILTER} ]] && ! [[ ${script} =~ ${FILTER} ]]; then
+        filter_args=( --probe-filter "${FILTER}" )
+    fi
 
     "${BPFTRACE_RUNTIME_TEST_EXECUTABLE}" --test "${filter_args[@]}" "${script}" | tee "${tmplog}"
 
