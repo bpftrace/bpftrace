@@ -28,6 +28,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix pointer arithmetic on `void *` crashing LLVM during compilation.
+  - [#4485](https://github.com/bpftrace/bpftrace/issues/4485)
 - Fix bitfield access on structs stored in maps.
   - [#5366](https://github.com/bpftrace/bpftrace/pull/5366)
 - Fix field access on structs inside tuples, records and map keys.

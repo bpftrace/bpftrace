@@ -2343,6 +2343,15 @@ ScopedExpr CodegenLLVM::binop_int(Binop &binop)
   }
 }
 
+static llvm::Type *getPointeeType(IRBuilderBPF &builder,
+                                  const SizedType &pointer_type)
+{
+  auto *type = builder.GetType(pointer_type.GetPointeeTy());
+  if (type->isVoidTy())
+    return builder.getInt8Ty();
+  return type;
+}
+
 ScopedExpr CodegenLLVM::binop_ptr(Binop &binop)
 {
   auto compare = false;
@@ -2417,7 +2426,7 @@ ScopedExpr CodegenLLVM::binop_ptr(Binop &binop)
                                  : type_map_.type(binop.right);
     Value *ptr_expr = leftptr ? lhs : rhs;
     Value *other_expr = leftptr ? rhs : lhs;
-    return ScopedExpr(b_.CreateGEP(b_.GetType(ptr_ty.GetPointeeTy()),
+    return ScopedExpr(b_.CreateGEP(getPointeeType(b_, ptr_ty),
                                    ptr_expr,
                                    binop.op == Operator::PLUS
                                        ? other_expr
@@ -4594,8 +4603,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
 
     if (type.IsPtrTy()) {
       b_.CreateStore(
-          b_.CreateGEP(b_.GetType(
-                           type_map_.map_value_type(map.ident).GetPointeeTy()),
+          b_.CreateGEP(getPointeeType(b_, type_map_.map_value_type(map.ident)),
                        oldval,
                        is_increment ? b_.getInt32(1) : b_.getInt32(-1)),
           newval);
@@ -4625,7 +4633,7 @@ ScopedExpr CodegenLLVM::createIncDec(Unop &unop)
     Value *newval;
 
     if (type.IsPtrTy()) {
-      newval = b_.CreateGEP(b_.GetType(type.GetPointeeTy()),
+      newval = b_.CreateGEP(getPointeeType(b_, type),
                             oldval,
                             is_increment ? b_.getInt32(1) : b_.getInt32(-1));
     } else {

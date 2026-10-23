@@ -7,6 +7,18 @@ PROG struct C { uint32_t a; }; uprobe:./testprogs/struct_walk:clear { $c = (stru
 AFTER ./testprogs/struct_walk
 EXPECT_REGEX ^ptr: 0x[0-9a-z]+
 
+NAME Void pointer arithmetic
+PROG begin { $p = (void *)0; printf("%p\n", $p + 1); exit(); }
+EXPECT 0x1
+
+NAME Void pointer increment
+PROG begin { $p = (void *)0; $p++; printf("%p\n", $p); exit(); }
+EXPECT 0x1
+
+NAME Void pointer increment in map
+PROG begin { @p = (void *)0; @p++; printf("%p\n", @p); exit(); }
+EXPECT 0x1
+
 NAME Pointer to pointer arithmetic and dereference
 PROG uprobe:./testprogs/array_access:test_ptr_array { $p = (int32 **)arg0; @x = **($p + 1); exit(); }
 EXPECT @x: 2
