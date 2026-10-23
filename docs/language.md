@@ -1084,6 +1084,29 @@ test:failure {
 }
 ```
 
+When a `test` probe fails because it returned a non-zero value, bpftrace reports
+that value. If a test has multiple checks, returning a distinct value from each
+one allows to identify which check failed without having to re-run the test:
+
+```
+test:multiple_checks {
+  if (1 + 1 != 2) {
+    return 1;
+  }
+  if (2 * 2 != 5) {
+    return 2;
+  }
+}
+```
+
+A failure of the second check is then reported as:
+
+```
+[ RUN      ] multiple_checks
+test::multiple_checks returned 2
+[  FAILED  ] multiple_checks (1000 μs)
+```
+
 ### bench
 
 `bench` is a special built-in probe type for creating micro benchmarks.
