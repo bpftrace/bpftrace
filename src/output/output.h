@@ -166,6 +166,7 @@ public:
   virtual void test_result(const std::vector<std::string>& all_tests,
                            size_t index,
                            std::chrono::nanoseconds result,
+                           uint32_t retval,
                            const std::vector<bool>& passed,
                            std::string output) = 0;
 

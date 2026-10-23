@@ -505,11 +505,13 @@ void JsonOutput::runtime_error(int retcode, const RuntimeErrorInfo &info)
 void JsonOutput::test_result(const std::vector<std::string> &all_tests,
                              size_t index,
                              std::chrono::nanoseconds duration,
+                             uint32_t retval,
                              const std::vector<bool> &passed,
                              std::string output)
 {
   Primitive::Record result;
   result.fields.emplace_back("duration", duration.count());
+  result.fields.emplace_back("retval", static_cast<uint64_t>(retval));
   result.fields.emplace_back("passed", passed[index]);
   result.fields.emplace_back("output", output);
   emit_data(out_, "test_result", all_tests[index], result);
