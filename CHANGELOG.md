@@ -23,10 +23,18 @@ and this project adheres to
 - Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
   - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
 #### Changed
-- Structs and arrays are copied for scratch variable assignment
-  - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)
 #### Deprecated
 #### Removed
+#### Fixed
+#### Security
+#### Docs
+#### Tools
+
+## [0.27.1] 2026-10-24
+
+#### Changed
+- Structs and arrays are copied for scratch variable assignment
+  - [#5369](https://github.com/bpftrace/bpftrace/pull/5369)
 #### Fixed
 - Fix bitfield access on structs stored in maps.
   - [#5366](https://github.com/bpftrace/bpftrace/pull/5366)
@@ -49,9 +57,6 @@ and this project adheres to
   - [#5377](https://github.com/bpftrace/bpftrace/pull/5377)
 - Zero `let` declarations without an assignment on every loop iteration.
   - [#5399](https://github.com/bpftrace/bpftrace/pull/5399)
-#### Security
-#### Docs
-#### Tools
 
 ## [0.27.0] 2026-09-10
 
