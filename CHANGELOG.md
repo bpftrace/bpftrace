@@ -45,6 +45,8 @@ and this project adheres to
   - [#5372](https://github.com/bpftrace/bpftrace/pull/5372)
 - Print compile-time warnings to stderr instead of stdout so they don't corrupt JSON output
   - [#5376](https://github.com/bpftrace/bpftrace/pull/5376)
+- Don't warn when a task is not visible in the current PID namespace.
+  - [#4384](https://github.com/bpftrace/bpftrace/issues/4384)
 - Align scratch variables to 8 bytes when they don't fit on the stack.
   - [#5377](https://github.com/bpftrace/bpftrace/pull/5377)
 - Zero `let` declarations without an assignment on every loop iteration.

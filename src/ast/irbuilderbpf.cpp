@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <filesystem>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
@@ -1731,7 +1732,8 @@ void IRBuilderBPF::CreateGetNsPidTgid(Value *dev,
                                     false,
                                     "get_ns_pid_tgid",
                                     loc);
-  CreateHelperErrorCond(call, BPF_FUNC_get_ns_current_pid_tgid, loc);
+  // A namespace mismatch is expected for tasks outside this PID namespace.
+  CreateHelperErrorCond(call, BPF_FUNC_get_ns_current_pid_tgid, loc, EINVAL);
 }
 
 llvm::Type *IRBuilderBPF::BpfPidnsInfoType()
@@ -2266,7 +2268,8 @@ void IRBuilderBPF::CreateRuntimeError(RuntimeErrorId rte_id,
 
 void IRBuilderBPF::CreateHelperErrorCond(Value *return_value,
                                          bpf_func_id func_id,
-                                         const Location &loc)
+                                         const Location &loc,
+                                         int ignored_errno)
 {
   if (bpftrace_.warning_level_ == 0 ||
       (bpftrace_.warning_level_ == 1 && return_zero_if_err(func_id)))
@@ -2284,6 +2287,9 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *return_value,
   // value is negative. TODO: use Int32Ty as a return type
   auto *ret = CreateIntCast(return_value, getInt32Ty(), true);
   Value *condition = CreateICmpSGE(ret, Constant::getNullValue(ret->getType()));
+  if (ignored_errno != 0)
+    condition = CreateOr(condition,
+                         CreateICmpEQ(ret, getInt32(-ignored_errno)));
   CreateCondBr(condition, helper_merge_block, helper_failure_block);
   SetInsertPoint(helper_failure_block);
   CreateRuntimeError(RuntimeErrorId::HELPER_ERROR, ret, func_id, loc);
