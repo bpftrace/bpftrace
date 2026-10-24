@@ -192,7 +192,8 @@ public:
                           const Location &loc);
   void CreateHelperErrorCond(Value *return_value,
                              bpf_func_id func_id,
-                             const Location &loc);
+                             const Location &loc,
+                             int ignored_errno = 0);
   StructType *GetStackStructType(const StackType &stack_type);
   StructType *GetStructType(const std::string &name,
                             const std::vector<llvm::Type *> &elements,
