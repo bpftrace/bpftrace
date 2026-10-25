@@ -303,12 +303,13 @@ Note that because the deletion happens in-kernel, a `print` of the map issued ea
 For map keys that are composed of multiple values (e.g. `@mymap[3, "hello"] = 1` - remember these values are represented as a tuple) the syntax would be: `delete(@mymap, (3, "hello"));`.
 
 If deletion fails (e.g. the key doesn’t exist) the function returns false (0).
-Additionally, if the return value for `delete` is discarded, and deletion fails, you will get a warning.
+If the return value of `delete` isn't used, you will get a compile-time warning, whether or not the deletion succeeds.
+Use `_ = delete(...)` to discard it without a warning.
 
 ```
 @a[1] = 1;
 
-delete(@a, 1); // no warning (the key exists)
+delete(@a, 1); // warning (return value is discarded)
 
 if (delete(@a, 2)) { // no warning (return value is used)
   // ...
@@ -316,7 +317,7 @@ if (delete(@a, 2)) { // no warning (return value is used)
 
 $did_delete = delete(@a, 2); // no warning (return value is used)
 
-delete(@a, 2); // warning (return value is discarded and the key doesn’t exist)
+_ = delete(@a, 2); // no warning (return value is explicitly discarded)
 ```
 
 The, now deprecated, API (supported in version &lt;= 0.21.x) of passing map arguments with the key is still supported:
