@@ -15,6 +15,16 @@ add_custom_target(dwarf_origin_fixture DEPENDS dwarf_origin)
 
 if(SOURCE_LOCATION_FIXTURES)
   add_custom_command(
+    OUTPUT dwarf_inline
+    COMMAND ${GCC} -O2 -g -no-pie
+            ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_inline.c
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dwarf_inline
+    DEPENDS dwarf_inline.c
+    VERBATIM
+  )
+  add_custom_target(dwarf_inline_fixture DEPENDS dwarf_inline)
+
+  add_custom_command(
     OUTPUT dwarf_line_selection
     COMMAND ${GCC} -g -Wa,--gdwarf-4 -no-pie
             ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_line_selection_main.c
@@ -24,6 +34,32 @@ if(SOURCE_LOCATION_FIXTURES)
     VERBATIM
   )
   add_custom_target(dwarf_line_selection_fixture DEPENDS dwarf_line_selection)
+
+  add_custom_command(
+    OUTPUT dwarf_function_consistency
+    COMMAND ${GCC} -O2 -g -fno-toplevel-reorder -no-pie
+            ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_function_consistency.c
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dwarf_function_consistency
+    DEPENDS dwarf_function_consistency.c
+    VERBATIM
+  )
+  add_custom_target(
+    dwarf_function_consistency_fixture
+    DEPENDS dwarf_function_consistency
+  )
+
+  add_custom_command(
+    OUTPUT dwarf_inline_after_callsite
+    COMMAND ${GCC} -O2 -g -no-pie
+            ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_inline_after_callsite.c
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dwarf_inline_after_callsite
+    DEPENDS dwarf_inline_after_callsite.c
+    VERBATIM
+  )
+  add_custom_target(
+    dwarf_inline_after_callsite_fixture
+    DEPENDS dwarf_inline_after_callsite
+  )
 endif()
 
 bpf(

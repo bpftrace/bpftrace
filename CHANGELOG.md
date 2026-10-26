@@ -27,6 +27,9 @@ and this project adheres to
   - [#5386](https://github.com/bpftrace/bpftrace/pull/5386)
 - `test` probes now report the source line of a failing (non-zero) return
   - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
+- Add `--list-kprobe-lines` to inspect DWARF source-line mappings without
+  loading BPF programs or attaching probes.
+  - [#5361](https://github.com/bpftrace/bpftrace/pull/5361)
 #### Changed
 - Source location attachpoints resolve to an address the DWARF line table marks
   as a statement start, which can move where kprobes and uprobes attach.

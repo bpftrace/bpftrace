@@ -18,6 +18,7 @@ enum KernelVersionMethod { vDSO, UTS, File, None };
 uint32_t kernel_version(KernelVersionMethod method);
 
 std::optional<std::string> find_vmlinux(util::Symbol *sym = nullptr);
+bool kernel_symbol_addresses_hidden();
 
 using FunctionSet = std::set<std::string>;
 using ModuleSet = std::set<std::string>;
@@ -110,6 +111,49 @@ public:
   {
     const auto *impl = static_cast<const T *>(this);
     return !impl->get_modules(mod_name).empty();
+  }
+};
+
+// Implementation that reports nothing, for callers that must not read state
+// from the running kernel.
+class EmptyKernelInfo : public KernelInfoBase<EmptyKernelInfo> {
+public:
+  ModuleSet get_modules([[maybe_unused]] const std::optional<std::string>
+                            &mod_name = std::nullopt) const override
+  {
+    return {};
+  }
+
+  ModulesFuncsMap get_traceable_funcs(
+      [[maybe_unused]] const std::optional<std::string> &mod_name =
+          std::nullopt) const override
+  {
+    return {};
+  }
+
+  ModulesFuncsMap get_raw_tracepoints(
+      [[maybe_unused]] const std::optional<std::string> &mod_name =
+          std::nullopt) const override
+  {
+    return {};
+  }
+
+  ModulesFuncsMap get_tracepoints(
+      [[maybe_unused]] const std::optional<std::string> &category_name =
+          std::nullopt) const override
+  {
+    return {};
+  }
+
+  Result<btf::Types> load_btf(
+      [[maybe_unused]] const std::string &mod_name) const override
+  {
+    return btf::Types();
+  }
+
+  std::vector<std::pair<uint32_t, std::string>> get_bpf_progs() const override
+  {
+    return {};
   }
 };
 
