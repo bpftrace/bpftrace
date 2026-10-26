@@ -711,6 +711,8 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
         "Failed to get compilation unit source lines");
   }
 
+  std::optional<Dwarf_Addr> statement_addr;
+  std::optional<Dwarf_Addr> other_addr;
   for (size_t i = 0; i < num_lines; i++) {
     Dwarf_Line *line = dwarf_onesrcline(lines, i);
     if (!line) {
@@ -736,15 +738,33 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
     if (util::path_ends_with(linesrc, *cu->source_path) &&
         line_num == static_cast<size_t>(lineno) &&
         (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
+      bool end_sequence = false;
+      if (dwarf_lineendsequence(line, &end_sequence) != 0 || end_sequence) {
+        continue;
+      }
+
       Dwarf_Addr addr;
-      if (dwarf_lineaddr(line, &addr) == 0) {
-        // Add KASLR offset if in kernel mode
-        return SourceLocation{
-          .address = is_kernel_ ? addr + cu->mod_bias : addr,
-          .kernel_module = is_kernel_ ? cu_kernel_module_name(cu->cudie) : "",
-        };
+      if (dwarf_lineaddr(line, &addr) != 0) {
+        continue;
+      }
+
+      bool is_statement = false;
+      if (dwarf_linebeginstatement(line, &is_statement) == 0 && is_statement) {
+        statement_addr = addr;
+        break;
+      }
+      if (!other_addr) {
+        other_addr = addr;
       }
     }
+  }
+
+  if (auto addr = statement_addr ? statement_addr : other_addr) {
+    // Add KASLR offset if in kernel mode
+    return SourceLocation{
+      .address = is_kernel_ ? *addr + cu->mod_bias : *addr,
+      .kernel_module = is_kernel_ ? cu_kernel_module_name(cu->cudie) : "",
+    };
   }
 
   return make_error<DwarfParseError>(

@@ -1,5 +1,6 @@
 #include "dwarf_parser.h"
 #include "mocks.h"
+#include "util/symbols.h"
 #include "gtest/gtest.h"
 
 #ifdef HAVE_LIBDW
@@ -19,6 +20,29 @@ TEST(dwarf_parser, inherited_parameter_names)
   EXPECT_TRUE(args->HasField("left"));
   EXPECT_TRUE(args->HasField("right"));
 }
+
+#ifdef HAVE_SOURCE_LOCATION_FIXTURES
+TEST(dwarf_parser, source_location_prefers_statement)
+{
+  auto bpftrace = create_bpftrace();
+  auto dwarf = Dwarf::GetFromBinary(bpftrace.get(),
+                                    DWARF_LINE_SELECTION_BINARY,
+                                    "");
+  ASSERT_NE(dwarf, nullptr);
+
+  auto symbols = util::resolve_symbols(DWARF_LINE_SELECTION_BINARY,
+                                       { "line_selection_preferred" },
+                                       false);
+  if (!symbols)
+    FAIL() << llvm::toString(symbols.takeError());
+  ASSERT_EQ(symbols->size(), 1);
+
+  auto location = dwarf->line_to_addr("dwarf_line_selection.c", 10, 1, "");
+  if (!location)
+    FAIL() << llvm::toString(location.takeError());
+  EXPECT_EQ(location->address, symbols->front().v_addr);
+}
+#endif
 
 } // namespace bpftrace::test
 #endif
