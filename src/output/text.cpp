@@ -664,8 +664,8 @@ void TextOutput::test_result(const std::vector<std::string> &all_tests,
                              std::string output)
 {
   if (index == 0) {
-    out_ << "\033[32m[==========]\033[0m Running " << all_tests.size()
-         << " tests." << std::endl;
+    out_ << "\033[32m[----------]\033[0m Running " << all_tests.size()
+         << " tests" << std::endl;
   }
   out_ << "\033[32m[ RUN      ]\033[0m " << all_tests[index] << std::endl;
 
