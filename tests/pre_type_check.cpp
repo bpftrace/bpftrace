@@ -7,6 +7,7 @@
 #include "ast/passes/config_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
+#include "ast/passes/iter_desugar.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
 #include "ast/passes/resolve_imports.h"
@@ -50,6 +51,7 @@ void test(const std::string &input,
                 .add(ast::CreatePreExpansionBuiltinsPass())
                 .add(ast::CreateFoldLiteralsPass())
                 .add(ast::CreateBuiltinsPass())
+                .add(ast::CreateIterDesugarPass())
                 .add(ast::CreateMapSugarPass())
                 .add(ast::CreatePreTypeCheckPass())
                 .run();
@@ -810,6 +812,26 @@ TEST(CallPreCheck, raw_map_arg_funcs)
        "expects a map argument");
   test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }",
        "expects a map argument");
+}
+
+TEST(CallPreCheck, open_coded_iter_nargs)
+{
+  test("begin { for ($t : iter_task(curtask)) { print($t) } }",
+       "iter_task() requires no arguments (1 provided)");
+  test("begin { for ($t : iter_task_threads()) { print($t) } }",
+       "iter_task_threads() requires one argument (0 provided)");
+  test("begin { for ($v : iter_task_vma()) { print($v) } }",
+       "iter_task_vma() requires at least one argument (0 provided)");
+  test("begin { for ($v : iter_task_vma(curtask, 4096, 1)) { print($v) } }",
+       "iter_task_vma() takes up to 2 arguments (3 provided)");
+}
+
+TEST(CallPreCheck, open_coded_iter_unknown)
+{
+  test("begin { for ($x : str($y)) { print($x) } }",
+       "str() is not a valid iterator");
+  test("begin { for ($x : no_such_iter()) { print($x) } }",
+       "no_such_iter() is not a valid iterator");
 }
 
 TEST(MapPreCheck, no_meta_map_assignments)

@@ -151,7 +151,8 @@ public:
   Value *CreateVariableAllocationInit(const SizedType &value_type,
                                       const std::string &name,
                                       const Location &loc,
-                                      bool use_scratch_buffer);
+                                      bool use_scratch_buffer,
+                                      unsigned align = 0);
   void CreateAllocationInit(const SizedType &stype, Value *alloc);
   Value *CreateMapKeyAllocation(const SizedType &value_type,
                                 const std::string &name,
