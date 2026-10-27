@@ -43,7 +43,7 @@ uprobe:libc:gethostbyaddr,
 uprobe:libc:gethostbyaddr_r
 {
   @start[tid] = nsecs;
-  @inet[tid] = ntop(arg0);
+  @inet[tid] = ntop(*(uint32 *)uptr(arg0));
 }
 
 uprobe:libc:getaddrinfo,
