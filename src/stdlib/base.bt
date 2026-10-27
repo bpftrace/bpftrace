@@ -88,7 +88,7 @@ macro assert(cond, msg)
 //
 // Only works with cgroupv2.
 //
-// This utilizes the BPF helper `get_current_cgroup_id`.
+// This utilizes the BPF helper `bpf_get_current_cgroup_id`.
 macro cgroup()
 {
   import "stdlib/process/process.bpf.c";
@@ -465,7 +465,7 @@ macro func()
 // :summary Returns the current thread's group ID in the initial namespace.
 // :variant uint64 gid()
 //
-// This utilizes the BPF helper `get_current_uid_gid`.
+// This utilizes the BPF helper `bpf_get_current_uid_gid`.
 macro gid()
 {
   import "stdlib/process/process.bpf.c";
@@ -1192,7 +1192,7 @@ macro probetype()
 // :summary Returns a pseudo-random number.
 // :variant uint32 rand()
 //
-// This utilizes the BPF helper `get_prandom_u32`.
+// This utilizes the BPF helper `bpf_get_prandom_u32`.
 macro rand()
 {
   import "stdlib/system/system.bpf.c";
@@ -1362,13 +1362,13 @@ macro signal_thread(expr)
 // :function str
 // :variant string str(char * data [, uint32 length])
 //
-// This utilizes the BPF helpers `probe_read_str, probe_read_{kernel,user}_str`.
+// This utilizes the BPF helpers `bpf_probe_read_str, bpf_probe_read_{kernel,user}_str`.
 //
 // `str` reads a NULL terminated (`\0`) string from `data`.
 // The maximum string length is limited by the `BPFTRACE_MAX_STRLEN` env variable, unless `length` is specified and shorter than the maximum.
 // In case the string is longer than the specified length only `length - 1` bytes are copied and a NULL byte is appended at the end.
 //
-// bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
+// bpftrace will automatically use the `kernel` or `user` variant of `bpf_probe_read_{kernel,user}_str` based on the address space of `data`, see [Address-spaces](./language.md#address-spaces) for more information.
 
 // :summary Formats a timestamp according to a time format string.
 // :function strftime
@@ -1538,7 +1538,7 @@ macro uaddr(sym)
 // :summary Returns the user ID of the current thread in the initial namespace.
 // :variant uint64 uid()
 //
-// This utilizes the BPF helper `get_current_uid_gid`.
+// This utilizes the BPF helper `bpf_get_current_uid_gid`.
 macro uid()
 {
   import "stdlib/process/process.bpf.c";
