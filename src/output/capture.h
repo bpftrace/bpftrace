@@ -47,10 +47,11 @@ public:
   void test_result(const std::vector<std::string> &all_tests,
                    size_t index,
                    std::chrono::nanoseconds duration,
+                   uint32_t retval,
                    const std::vector<bool> &passed,
                    std::string output) override
   {
-    nested_.test_result(all_tests, index, duration, passed, output);
+    nested_.test_result(all_tests, index, duration, retval, passed, output);
   }
   void benchmark_result(const std::vector<std::string> &all_benches,
                         size_t index,

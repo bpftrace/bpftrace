@@ -49,6 +49,7 @@ add_library(ast STATIC
   passes/codegen_llvm.cpp
   passes/resolve_imports.cpp
   passes/recursion_check.cpp
+  passes/test_return.cpp
   passes/tracepoint_format_parser.cpp
   passes/types/type_system.cpp
   passes/unstable_feature.cpp

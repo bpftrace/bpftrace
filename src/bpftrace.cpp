@@ -643,6 +643,7 @@ int BPFtrace::run(output::Output &out,
         out.test_result(all_tests,
                         index,
                         std::chrono::nanoseconds(opts.duration),
+                        opts.retval,
                         all_passed,
                         ss.str());
 

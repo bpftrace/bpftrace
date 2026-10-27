@@ -25,6 +25,8 @@ and this project adheres to
 - Add open-coded iterators to `for` loops: `iter_task`, `iter_threads`,
   `iter_task_threads` and `iter_task_vma`.
   - [#5386](https://github.com/bpftrace/bpftrace/pull/5386)
+- `test` probes now report the source line of a failing (non-zero) return
+  - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
 #### Changed
 #### Deprecated
 #### Removed

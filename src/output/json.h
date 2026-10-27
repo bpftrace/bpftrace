@@ -28,6 +28,7 @@ public:
   void test_result(const std::vector<std::string> &all_tests,
                    size_t index,
                    std::chrono::nanoseconds duration,
+                   uint32_t retval,
                    const std::vector<bool> &passed,
                    std::string output) override;
 
