@@ -425,7 +425,7 @@ std::map<std::string, int32_t> Enum::values() const
   const auto *t = btf_type();
   auto *v = btf_enum(t);
   auto vlen = btf_vlen(t);
-  for (int i = 0; i < vlen; i++) {
+  for (decltype(vlen) i = 0; i < vlen; i++) {
     std::string s(btf__name_by_offset(btf_library(), v[i].name_off));
     values.emplace(std::move(s), static_cast<int32_t>(v[i].val));
   }
@@ -457,7 +457,7 @@ std::map<std::string, int64_t> Enum64::values() const
   const auto *t = btf_type();
   auto *v = btf_enum64(t);
   auto vlen = btf_vlen(t);
-  for (int i = 0; i < vlen; i++) {
+  for (decltype(vlen) i = 0; i < vlen; i++) {
     std::string s(btf__name_by_offset(btf_library(), v[i].name_off));
     values.emplace(std::move(s),
                    (static_cast<int64_t>(v[i].val_hi32) << 32) |
@@ -582,7 +582,7 @@ Result<std::vector<std::pair<std::string, ValueType>>> FunctionProto::
   const auto *t = btf_type();
   auto *params = btf_params(t);
   auto vlen = btf_vlen(t);
-  for (int i = 0; i < vlen; i++) {
+  for (decltype(vlen) i = 0; i < vlen; i++) {
     auto v = ValueType::lookup(handle(), params[i].type);
     if (!v) {
       return v.takeError();
