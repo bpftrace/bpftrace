@@ -34,6 +34,9 @@ and this project adheres to
 #### Security
 #### Docs
 #### Tools
+- gethostlatency.bt: gethostbyaddr: Add IPv6 support, fix IP address printing
+  - [#5414](https://github.com/bpftrace/bpftrace/pull/5414)
+
 
 ## [0.27.1] 2026-10-24
 

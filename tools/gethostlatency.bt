@@ -29,6 +29,9 @@
 //
 // 08-Sep-2018	Brendan Gregg	Created this.
 
+// #include <bits/socket.h>
+#define AF_INET6 10
+
 config = {
   missing_probes = ignore;
 }
@@ -43,7 +46,8 @@ uprobe:libc:gethostbyaddr,
 uprobe:libc:gethostbyaddr_r
 {
   @start[tid] = nsecs;
-  @inet[tid] = ntop(*(uint32 *)uptr(arg0));
+  @inet[tid] = arg2 == AF_INET6 ? ntop(*(uint8[16]*)uptr(arg0))
+                                : ntop(*(uint32 *)uptr(arg0));
 }
 
 uprobe:libc:getaddrinfo,
