@@ -181,12 +181,14 @@ NAME parse DWP debuginfo - list args
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/external_debug/dwp/uprobe_test-split:main'
 EXPECT int argc
 REQUIRES_FEATURE dwarf
+REQUIRES test -f ./testprogs/external_debug/dwp/uprobe_test-split
 TIMEOUT 5
 
 NAME parse DWP debuginfo - arg by name
 RUN {{BPFTRACE}} -e 'uprobe:./testprogs/external_debug/dwp/uprobe_test-split:uprobeFunction1 { printf("%c\n", args.c); exit(); }'
 EXPECT x
 REQUIRES_FEATURE dwarf
+REQUIRES test -f ./testprogs/external_debug/dwp/uprobe_test-split
 TIMEOUT 5
 BEFORE ./testprogs/external_debug/dwp/uprobe_test-split
 
@@ -194,5 +196,6 @@ NAME parse DWP debuginfo - attach by source line
 RUN {{BPFTRACE}} -e 'uprobe:./testprogs/external_debug/dwp/uprobe_test-split@uprobe_test.c:22 { printf("ok"); exit(); }'
 EXPECT ok
 REQUIRES_FEATURE dwarf
+REQUIRES test -f ./testprogs/external_debug/dwp/uprobe_test-split
 TIMEOUT 5
 BEFORE ./testprogs/external_debug/dwp/uprobe_test-split
