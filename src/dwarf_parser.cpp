@@ -578,6 +578,16 @@ ssize_t Dwarf::get_bitfield_size(Dwarf_Die &field_die)
   return 0;
 }
 
+static std::filesystem::path get_cu_comp_dir(Dwarf_Die *cudie)
+{
+  Dwarf_Attribute attr;
+  if (!dwarf_attr(cudie, DW_AT_comp_dir, &attr))
+    return {};
+
+  const char *dir = dwarf_formstring(&attr);
+  return dir ? std::filesystem::path(dir) : std::filesystem::path();
+}
+
 std::vector<std::filesystem::path> Dwarf::get_cu_src_paths(Dwarf_Die *cudie)
 {
   std::vector<std::filesystem::path> result;
@@ -622,9 +632,14 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
     const std::string &source_file,
     const std::string &kernel_module) const
 {
-  std::optional<CuInfo> matched_cu;
-  Dwfl_Module *matched_module = nullptr;
-  std::string matched_module_name;
+  std::optional<CuInfo> own;
+  std::optional<CuInfo> listed;
+  std::optional<std::filesystem::path> first_source_path;
+  Dwfl_Module *first_module = nullptr;
+  std::string first_module_name;
+
+  std::filesystem::path normalized_source =
+      std::filesystem::path(source_file).lexically_normal();
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
@@ -633,50 +648,63 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
       continue;
     }
 
+    std::filesystem::path comp_dir = get_cu_comp_dir(cu_info.cu_die());
+    std::filesystem::path cu_name = comp_dir /
+                                    std::filesystem::path(
+                                        get_die_name(cu_info.cu_die()));
+    bool is_own = util::path_ends_with(cu_name.lexically_normal(),
+                                       normalized_source);
     auto src_paths = get_cu_src_paths(cu_info.cu_die());
 
     for (auto &src_path : src_paths) {
-      if (util::path_ends_with(src_path, source_file)) {
+      auto normalized_src_path = (comp_dir / src_path).lexically_normal();
+      if (util::path_ends_with(normalized_src_path, normalized_source)) {
+        auto &candidate = is_own ? own : listed;
         auto *current_module = is_kernel_ ? dwfl_cumodule(cu_info.cudie)
                                           : nullptr;
         auto current_module_name = is_kernel_
                                        ? cu_kernel_module_name(cu_info.cudie)
                                        : "";
-        if (!matched_cu) {
-          matched_cu = cu_info;
-          matched_cu->source_path = src_path;
-          matched_module = current_module;
-          matched_module_name = std::move(current_module_name);
-        } else if (matched_cu->source_path &&
-                   (src_path != *matched_cu->source_path ||
-                    (is_kernel_ && kernel_module.empty() &&
-                     (current_module != matched_module ||
-                      current_module_name != matched_module_name)))) {
+        if (!first_source_path) {
+          first_source_path = normalized_src_path;
+          first_module = current_module;
+          first_module_name = current_module_name;
+        } else if (normalized_src_path != *first_source_path ||
+                   (is_kernel_ && kernel_module.empty() &&
+                    (current_module != first_module ||
+                     current_module_name != first_module_name))) {
           std::string msg;
           if (is_kernel_) {
-            std::string first_match = (matched_module_name.empty()
+            std::string first_match = (first_module_name.empty()
                                            ? ""
-                                           : matched_module_name + ":") +
-                                      matched_cu->source_path->string();
+                                           : first_module_name + ":") +
+                                      first_source_path->string();
             std::string current_match = (current_module_name.empty()
                                              ? ""
                                              : current_module_name + ":") +
-                                        src_path.string();
+                                        normalized_src_path.string();
             msg = "Ambiguous source path, matches multiple files or modules: " +
                   first_match + ", " + current_match;
           } else {
             msg = "Ambiguous source path, matches multiple files: " +
-                  matched_cu->source_path->string() + ", " + src_path.string();
+                  first_source_path->string() + ", " +
+                  normalized_src_path.string();
           }
           if (is_kernel_ && kernel_module.empty())
             msg += ". Specify the owning module: kprobe@MODULE:FILE:LINE";
           return make_error<DwarfParseError>(msg);
         }
+        if (!candidate) {
+          candidate = cu_info;
+          candidate->source_path = src_path;
+        }
       }
     }
   }
 
-  if (!matched_cu) {
+  auto &matched = own ? own : listed;
+
+  if (!matched) {
     if (!kernel_module.empty())
       return make_error<DwarfParseError>("Module " + kernel_module +
                                          " does not contain " + source_file);
@@ -684,7 +712,7 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
                                        source_file);
   }
 
-  return std::move(*matched_cu);
+  return std::move(*matched);
 }
 
 Result<Dwarf::SourceLocation> Dwarf::line_to_addr(

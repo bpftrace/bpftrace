@@ -31,6 +31,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Resolve source location probes to the compilation unit built from the file, not a unit that includes it.
+  - [#5415](https://github.com/bpftrace/bpftrace/pull/5415)
 #### Security
 #### Docs
 #### Tools
