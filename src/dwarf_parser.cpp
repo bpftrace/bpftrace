@@ -622,9 +622,18 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
     const std::string &source_file,
     const std::string &kernel_module) const
 {
-  std::optional<CuInfo> matched_cu;
-  Dwfl_Module *matched_module = nullptr;
-  std::string matched_module_name;
+  struct Candidate {
+    std::optional<CuInfo> cu;
+    Dwfl_Module *module = nullptr;
+    std::string module_name;
+    std::string ambiguity;
+  };
+
+  Candidate own;
+  Candidate listed;
+
+  std::filesystem::path normalized_source =
+      std::filesystem::path(source_file).lexically_normal();
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
@@ -633,31 +642,35 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
       continue;
     }
 
+    std::filesystem::path cu_name = get_die_name(cu_info.cu_die());
+    bool is_own = util::path_ends_with(cu_name.lexically_normal(),
+                                       normalized_source);
     auto src_paths = get_cu_src_paths(cu_info.cu_die());
 
     for (auto &src_path : src_paths) {
       if (util::path_ends_with(src_path, source_file)) {
+        Candidate &cand = is_own ? own : listed;
         auto *current_module = is_kernel_ ? dwfl_cumodule(cu_info.cudie)
                                           : nullptr;
         auto current_module_name = is_kernel_
                                        ? cu_kernel_module_name(cu_info.cudie)
                                        : "";
-        if (!matched_cu) {
-          matched_cu = cu_info;
-          matched_cu->source_path = src_path;
-          matched_module = current_module;
-          matched_module_name = std::move(current_module_name);
-        } else if (matched_cu->source_path &&
-                   (src_path != *matched_cu->source_path ||
+        if (!cand.cu) {
+          cand.cu = cu_info;
+          cand.cu->source_path = src_path;
+          cand.module = current_module;
+          cand.module_name = std::move(current_module_name);
+        } else if (cand.ambiguity.empty() && cand.cu->source_path &&
+                   (src_path != *cand.cu->source_path ||
                     (is_kernel_ && kernel_module.empty() &&
-                     (current_module != matched_module ||
-                      current_module_name != matched_module_name)))) {
+                     (current_module != cand.module ||
+                      current_module_name != cand.module_name)))) {
           std::string msg;
           if (is_kernel_) {
-            std::string first_match = (matched_module_name.empty()
+            std::string first_match = (cand.module_name.empty()
                                            ? ""
-                                           : matched_module_name + ":") +
-                                      matched_cu->source_path->string();
+                                           : cand.module_name + ":") +
+                                      cand.cu->source_path->string();
             std::string current_match = (current_module_name.empty()
                                              ? ""
                                              : current_module_name + ":") +
@@ -666,17 +679,19 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
                   first_match + ", " + current_match;
           } else {
             msg = "Ambiguous source path, matches multiple files: " +
-                  matched_cu->source_path->string() + ", " + src_path.string();
+                  cand.cu->source_path->string() + ", " + src_path.string();
           }
           if (is_kernel_ && kernel_module.empty())
             msg += ". Specify the owning module: kprobe@MODULE:FILE:LINE";
-          return make_error<DwarfParseError>(msg);
+          cand.ambiguity = std::move(msg);
         }
       }
     }
   }
 
-  if (!matched_cu) {
+  Candidate &matched = own.cu ? own : listed;
+
+  if (!matched.cu) {
     if (!kernel_module.empty())
       return make_error<DwarfParseError>("Module " + kernel_module +
                                          " does not contain " + source_file);
@@ -684,7 +699,10 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
                                        source_file);
   }
 
-  return std::move(*matched_cu);
+  if (!matched.ambiguity.empty())
+    return make_error<DwarfParseError>(matched.ambiguity);
+
+  return std::move(*matched.cu);
 }
 
 Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
