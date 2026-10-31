@@ -157,6 +157,17 @@ E.g. '-l kprobe:*file*' to list all 'kprobes' with 'file' in the name.
 This can be used with a program, which will list all probes in that program.
 For more details see the <<Listing Probes>> section.
 
+=== *--list-kprobe-lines*
+
+With a source-location kprobe such as '-e 'kprobe@fs/open.c:1428 { }'', report
+whether the requested line maps to an instruction in the DWARF line table.
+When it does not, list mapped source lines near the requested one so a
+different line can be chosen.
+Exits 0 when every requested line is queried successfully and at least one is
+mapped, and 1 otherwise.
+This is a static DWARF query: it does not check the kernel kprobe blocklist or
+instruction restrictions.
+
 === *--no-feature* _feature,feature,..._
 
 Disable use of detected features, valid values are::
