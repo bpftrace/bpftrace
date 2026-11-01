@@ -115,6 +115,15 @@ TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 ARCH aarch64
 
+NAME uprobe source location - prefer the compilation unit that owns the file
+PROG uprobe:./testprogs/included_source:wrapper_entry { @caller[tid] = "wrapper"; }
+     uprobe:./testprogs/included_source:included_entry { @caller[tid] = "included"; }
+     uprobe:./testprogs/included_source@included.c:7 { printf("%s\n", @caller[tid]); exit(); }
+EXPECT included
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/included_source
+
 NAME uprobe source location - attach multiple probes
 PROG uprobe:./testprogs/uprobe_test@uprobe_test.c:34 { @a=1; }
      uprobe:./testprogs/uprobe_test@uprobe_test.c:36 { @b=1; }

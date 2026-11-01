@@ -36,6 +36,8 @@ and this project adheres to
 #### Fixed
 - Resolve source location probes to the compilation unit built from the file, not a unit that includes it.
   - [#5415](https://github.com/bpftrace/bpftrace/pull/5415)
+- Attach address and source location uprobes to the right copy of a duplicated static function.
+  - [#XXXX](https://github.com/bpftrace/bpftrace/pull/XXXX)
 #### Security
 #### Docs
 #### Tools
