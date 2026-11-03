@@ -82,3 +82,209 @@ test:external_function_call_range
     return 1;
   }
 }
+
+test:map_create_map_in_body
+{
+  @map_create_map_in_body_map[16] = 32;
+  @map_create_map_in_body_map[64] = 128;
+
+  for $kv : @map_create_map_in_body_map {
+    @map_create_map_in_body_new[$kv.1 + 1] = $kv.0;
+  }
+
+  if (@map_create_map_in_body_new[33] != 16) {
+    return 1;
+  }
+  if (@map_create_map_in_body_new[129] != 64) {
+    return 1;
+  }
+}
+
+test:map_delete
+{
+  @map_delete[0, 0, 0] = 1;
+  @map_delete[0, 0, 1] = 1;
+  @map_delete[0, 1, 0] = 1;
+  @map_delete[1, 0, 0] = 1;
+
+  for $kv : @map_delete {
+    if ($kv.0.1 == 1) {
+      _ = delete(@map_delete, $kv.0);
+    }
+  }
+
+  if (len(@map_delete) != 3) {
+    return 1;
+  }
+  if has_key(@map_delete, (0, 1, 0)) {
+    return 1;
+  }
+  if (@map_delete[0, 0, 0] != 1 ||
+      @map_delete[0, 0, 1] != 1 || @map_delete[1, 0, 0] != 1) {
+    return 1;
+  }
+}
+
+test:variable_context_update
+{
+  @variable_context_update_map[0] = 0;
+  @variable_context_update_map[1] = 1;
+  $var = 123;
+  $index = 0;
+
+  for $kv : @variable_context_update_map {
+    if ($index >= 2 || ($index == 0 && $var != 123) || ($index == 1 && $var != 246)) {
+      return 1;
+    }
+    $var *= 2;
+    $index++;
+  }
+
+  if ($index != 2 || $var != 492) {
+    return 1;
+  }
+}
+
+test:variable_context_multiple
+{
+  @variable_context_multiple_map[0] = 0;
+  $var1 = 123;
+  $var2 = "abc";
+  $visited = false;
+
+  for $kv : @variable_context_multiple_map {
+    if (($var1, $var2) != (123, "abc")) {
+      return 1;
+    }
+    $visited = true;
+  }
+
+  if (!$visited) {
+    return 1;
+  }
+}
+
+test:external_function_call_map
+{
+  @external_function_call_map[1] = 1;
+  $x = 1;
+  $found = false;
+
+  for $kv : @external_function_call_map {
+    $found = has_key(@external_function_call_map, $x);
+  }
+
+  if (!$found) {
+    return 1;
+  }
+}
+
+test:map_two_keys
+{
+  @map_two_keys_map[16, 17] = 32;
+  @map_two_keys_map[64, 65] = 128;
+
+  for $kv : @map_two_keys_map {
+    @map_two_keys_result[$kv.0] = $kv.1;
+  }
+
+  if (@map_two_keys_result[16, 17] != 32 || @map_two_keys_result[64, 65] != 128) {
+    return 1;
+  }
+}
+
+test:map_one_key_elements
+{
+  @map_one_key_elements_map[16] = 32;
+  $result = (0, 0);
+
+  for $kv : @map_one_key_elements_map {
+    $result = ($kv.0, $kv.1);
+  }
+
+  if ($result != (16, 32)) {
+    return 1;
+  }
+}
+
+test:map_strings
+{
+  @map_strings_map["abc"] = "aa";
+  @map_strings_map["def"] = "dd";
+
+  for $kv : @map_strings_map {
+    @map_strings_result[$kv.0] = $kv.1;
+  }
+
+  if (@map_strings_result["abc"] != "aa" || @map_strings_result["def"] != "dd") {
+    return 1;
+  }
+}
+
+test:map_multiple_loops
+{
+  @map_multiple_loops_map_a[16] = 32;
+  @map_multiple_loops_map_a[17] = 33;
+  @map_multiple_loops_map_b[64] = "aa";
+  @map_multiple_loops_map_b[65] = "bb";
+
+  for $kv : @map_multiple_loops_map_a {
+    @map_multiple_loops_result_a[$kv.0] = $kv.1;
+  }
+  for $kv : @map_multiple_loops_map_b {
+    @map_multiple_loops_result_b[$kv.0] = $kv.1;
+  }
+
+  if (@map_multiple_loops_result_a[16] != 32 ||
+      @map_multiple_loops_result_a[17] != 33 ||
+      @map_multiple_loops_result_b[64] != "aa" ||
+      @map_multiple_loops_result_b[65] != "bb") {
+    return 1;
+  }
+}
+
+test:map_nested_vals
+{
+  @map_nested_vals_map_a[16] = 32;
+  @map_nested_vals_map_b[64] = 128;
+  @map_nested_vals_map_b[65] = 129;
+
+  for $kv : @map_nested_vals_map_a {
+    @map_nested_vals_result_a[$kv.0] = $kv.1;
+    for $kv2 : @map_nested_vals_map_b {
+      @map_nested_vals_result_b[$kv2.0] = $kv2.1;
+    }
+  }
+
+  if (@map_nested_vals_result_a[16] != 32 ||
+      @map_nested_vals_result_b[64] != 128 || @map_nested_vals_result_b[65] != 129) {
+    return 1;
+  }
+}
+
+test:map_nested_count
+{
+  @map_nested_count_map_a[16] = 32;
+  @map_nested_count_map_a[17] = 33;
+  @map_nested_count_map_b[64] = 128;
+  @map_nested_count_map_b[65] = 129;
+  @map_nested_count_map_b[66] = 130;
+  $outer_count = 0;
+  $inner_count = 0;
+
+    for $kv : @map_nested_count_map_a {
+    if ($outer_count < 3) {
+      $outer_count++;
+    }
+    for $kv2 : @map_nested_count_map_b {
+      if ($inner_count < 7) {
+        $inner_count++;
+      }
+    }
+  }
+
+  if ($outer_count != 2 || $inner_count != 6) {
+    return 1;
+  }
+}
+
