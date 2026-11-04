@@ -710,23 +710,27 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
       ap_->col_num = *col;
     }
 
-    Dwarf *dwarf = bpftrace_.get_kernel_dwarf();
-    if (dwarf) {
-      auto location = dwarf->line_to_addr(
-          ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
-      if (!location) {
-        errs_ << location.takeError() << std::endl;
-        return INVALID;
-      }
-      ap_->address = location->address;
-      ap_->target = location->kernel_module;
-
+    if (bpftrace_.listing_kprobe_lines_)
       return OK;
+
+    Dwarf *dwarf = bpftrace_.get_kernel_dwarf();
+    if (!dwarf) {
+      errs_ << "No DWARF debug info found for kernel, cannot attach "
+               "by source code location."
+            << std::endl;
+      return INVALID;
     }
 
-    errs_ << "No DWARF debug info found for kernel, cannot attach "
-          << "by source code location." << std::endl;
-    return INVALID;
+    auto location = dwarf->line_to_addr(
+        ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
+    if (!location) {
+      errs_ << location.takeError() << std::endl;
+      return INVALID;
+    }
+    ap_->address = location->address;
+    ap_->target = location->kernel_module;
+
+    return OK;
   }
 
   auto func_idx = 1;
