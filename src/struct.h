@@ -79,6 +79,13 @@ struct Field {
            bitfield == rhs.bitfield && is_data_loc == rhs.is_data_loc;
   }
 
+  bool IsCommonTracepointField() const
+  {
+    // Other event fields may also start with "common_".
+    return name == "common_type" || name == "common_flags" ||
+           name == "common_preempt_count" || name == "common_pid";
+  }
+
 private:
   friend class cereal::access;
   template <typename Archive>

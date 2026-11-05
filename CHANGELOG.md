@@ -27,6 +27,8 @@ and this project adheres to
   - [#5386](https://github.com/bpftrace/bpftrace/pull/5386)
 - `test` probes now report the source line of a failing (non-zero) return
   - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
+- Treat tracepoint `args` as a Record, which allows it to be printed and stored into maps and scratch variables.
+  - [#5347](https://github.com/bpftrace/bpftrace/pull/5347)
 #### Changed
 - Source location attachpoints resolve to an address the DWARF line table marks
   as a statement start, which can move where kprobes and uprobes attach.
