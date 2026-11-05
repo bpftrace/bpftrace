@@ -13,6 +13,19 @@ add_custom_command(
 )
 add_custom_target(dwarf_origin_fixture DEPENDS dwarf_origin)
 
+if(SOURCE_LOCATION_FIXTURES)
+  add_custom_command(
+    OUTPUT dwarf_line_selection
+    COMMAND ${GCC} -g -Wa,--gdwarf-4 -no-pie
+            ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_line_selection_main.c
+            ${CMAKE_CURRENT_SOURCE_DIR}/dwarf_line_selection.S
+            -o ${CMAKE_CURRENT_BINARY_DIR}/dwarf_line_selection
+    DEPENDS dwarf_line_selection_main.c dwarf_line_selection.S
+    VERBATIM
+  )
+  add_custom_target(dwarf_line_selection_fixture DEPENDS dwarf_line_selection)
+endif()
+
 bpf(
   data_source
   BTF       data_source.btf

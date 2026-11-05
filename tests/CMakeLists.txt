@@ -61,11 +61,24 @@ add_executable(bpftrace_test
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/near_self_file "near_self_file")
 
+# The source-location fixtures use hand-written DWARF and rely on the GCC
+# inlining decisions of these two architectures.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|aarch64|arm64")
+  set(SOURCE_LOCATION_FIXTURES ON)
+endif()
+
 add_subdirectory(data)
 add_dependencies(bpftrace_test data_source_dwarf data_source_btf)
 add_dependencies(bpftrace_test dwarf_origin_fixture)
 target_compile_definitions(bpftrace_test PRIVATE
   DWARF_ORIGIN_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_origin")
+
+if(SOURCE_LOCATION_FIXTURES)
+  add_dependencies(bpftrace_test dwarf_line_selection_fixture)
+  target_compile_definitions(bpftrace_test PRIVATE
+    HAVE_SOURCE_LOCATION_FIXTURES
+    DWARF_LINE_SELECTION_BINARY="${CMAKE_CURRENT_BINARY_DIR}/data/dwarf_line_selection")
+endif()
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
