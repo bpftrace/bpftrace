@@ -189,8 +189,6 @@ static const std::map<std::string, std::vector<arg_type_spec>>
         { arg_type_spec{ .type = Type::string, .literal = true } } },
       { "unwatch", { arg_type_spec{ .type = Type::integer } } },
       { "warnf", { arg_type_spec{ .type = Type::string, .literal = true } } },
-      { "socket_cookie", { arg_type_spec{ .type = Type::pointer } } }, // struct
-                                                                       // sock *
       { "fail", { arg_type_spec{ .type = Type::string, .literal = true } } },
     };
 // clang-format on
@@ -510,22 +508,6 @@ void TypeChecker::visit(Call &call)
         !bpftrace_.delta_taitime_.has_value()) {
       call.addError() << "Failed to initialize sw_tai in "
                          "userspace. This is very unexpected.";
-    }
-  } else if (call.func == "socket_cookie") {
-    auto logError = [&]<typename T>(T name) {
-      call.addError() << call.func
-                      << "() only supports 'struct sock *' as the argument ("
-                      << name << " provided)";
-    };
-
-    const auto &type = type_map_.type(call.vargs.at(0));
-    if (!type.IsPtrTy() || !type.GetPointeeTy().IsCTypeTy()) {
-      logError(type.GetTy());
-      return;
-    }
-    if (!type.GetPointeeTy().IsCompatible(CreateCStruct("struct sock"))) {
-      logError("'" + type.GetPointeeTy().GetName() + " *'");
-      return;
     }
   } else if (call.func == "exit") {
     // OK

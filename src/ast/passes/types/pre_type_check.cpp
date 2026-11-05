@@ -327,7 +327,6 @@ const std::map<std::string, nargs_spec> CALL_NARGS = {
   { "reg",            { .min_args=1, .max_args=1 } },
   { "sizeof",         { .min_args=1, .max_args=1 } },
   { "skboutput",      { .min_args=4, .max_args=4 } },
-  { "socket_cookie",  { .min_args=1, .max_args=1 } },
   { "stack_len",      { .min_args=1, .max_args=1 } },
   { "stats",          { .min_args=3, .max_args=3 } },
   { "str",            { .min_args=1, .max_args=2 } },
