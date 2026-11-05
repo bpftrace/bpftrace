@@ -1,0 +1,24 @@
+struct struct_size_default { int x; char y; int z; };
+struct struct_size_packed { int x; char y; int z; } __attribute__((packed));
+struct struct_size_packed_aligned { int x; char y; int z; } __attribute__((packed)) __attribute__((aligned(1)));
+struct struct_size_packed_with_comment { int x; char y; int z; } /**/ __attribute__ /**/ ((packed));
+
+test:struct_with_attribute
+{
+  if (sizeof(struct struct_size_default) != 12) {
+    return 1;
+  }
+  if (sizeof(struct struct_size_packed) != 9) {
+    return 1;
+  }
+  if (sizeof(struct struct_size_packed_aligned) != 9) {
+    return 1;
+  }
+}
+
+test:struct_with_attribute_and_comment
+{
+  if (sizeof(struct struct_size_packed_with_comment) != 9) {
+    return 1;
+  }
+}

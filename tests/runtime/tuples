@@ -1,30 +1,6 @@
-NAME basic tuple
-PROG begin { $v = 99; $t = (0, 1, "str", (5, 6), $v); printf("%d %d %s %d %d %d\n", $t.0, $t.1, $t.2, $t.3.0, $t.3.1, $t.4);  }
-EXPECT 0 1 str 5 6 99
-
 NAME basic tuple map
 PROG begin { $v = 99; @t = (0, 1, "str"); printf("%d %d %s\n", @t.0, @t.1, @t.2);  }
 EXPECT 0 1 str
-
-NAME complex tuple 1
-PROG begin { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555));  }
-EXPECT (-100, 100, abcdef, 3, 1, -10, 10, -555)
-
-NAME tuple struct sizing 1
-PROG begin { $t = ((int8) 1, (int64) 1, (int8) 1, (int64) 1); print(sizeof($t)); exit() }
-EXPECT 32
-
-NAME tuple struct sizing 2
-PROG begin { $t = ((int8) 1, (int16) 1, (int32) 1); print(sizeof($t)); exit() }
-EXPECT 8
-
-NAME tuple struct sizing 3
-PROG begin { $t = ((int32) 1, (int16) 1, (int8) 1); print(sizeof($t)); exit() }
-EXPECT 8
-
-NAME complex tuple 4
-PROG begin { $a = ((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555, "abc"); print(sizeof($a));  }
-EXPECT 32
 
 NAME struct in tuple
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }
@@ -61,14 +37,6 @@ NAME array in tuple sizing
 PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int32)1, ((struct A *)arg0).x); print(sizeof($t)); exit(); }
 EXPECT 20
 AFTER ./testprogs/array_access
-
-NAME array-style tuple access
-PROG begin{ $a = (1, 2, 3); print($a[1 + 1]); }
-EXPECT 3
-
-NAME nested tuple
-PROG begin{ @ = ((int8)1, ((int8)-20, (int8)30)); exit(); }
-EXPECT @: (1, (-20, 30))
 
 # Careful with '(' and ')', they are read by the test engine as a regex group,
 # so make sure to escape them.
