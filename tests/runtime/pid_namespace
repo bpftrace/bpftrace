@@ -16,6 +16,14 @@ EXPECT_REGEX ^\d+, \d+, \d+, \d+, \d+, \d+$
 EXPECT_REGEX_NONE ^1, \d+, \d+, 1, \d+, \d+$
 EXPECT_REGEX_NONE ^\d+, 1, \d+, \d+, 1, \d+$
 
+# A task outside bpftrace's PID namespace is not visible in that namespace.
+# The helper returns -EINVAL and clears the PID data. This is not an error.
+NAME pid in namespace for external task
+RUN unshare --fork --pid --mount-proc {{BPFTRACE}} -k -e 'tracepoint:sched:sched_process_exec { printf("%d\n", pid); exit(); }'
+AFTER /bin/true
+EXPECT_REGEX ^0$
+EXPECT_REGEX_NONE .*get_ns_current_pid_tgid.*
+
 # Both bpftrace and target running inside a PID namespace
 NAME ustack_inside
 RUN unshare --fork --pid --mount-proc bash -c "(./testprogs/uprobe_loop &) && {{BPFTRACE}} -e 'config = { show_debug_info=0 } uprobe:./testprogs/uprobe_loop:uprobeFunction1 { print(ustack); exit(); }'"
