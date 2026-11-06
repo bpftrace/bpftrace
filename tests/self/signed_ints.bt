@@ -6,6 +6,10 @@ test:sum_negative_maps
 {
   @sum_negative_maps = -11;
 
+  if (@sum_negative_maps != (-11)) {
+    return 1;
+  }
+
   @sum_negative_maps += @sum_negative_maps;
 
   if (@sum_negative_maps != -22) {
@@ -69,3 +73,22 @@ test:uint64_subtraction_stays_unsigned_with_cast
     return 1;
   }
 }
+
+test:avg_with_negative_values
+{
+  @avg_with_negative_values = avg(-30);
+  @avg_with_negative_values = avg(-10);
+
+  if (@avg_with_negative_values != (-20)) {
+    return 1;
+  }
+
+  @avg_cast_negative_values = avg(-1);
+  @avg_cast_negative_values = avg(-1);
+  @avg_cast_negative_values = avg(-10);
+
+  if (@avg_cast_negative_values != (-4)) {
+    return 1;
+  }
+}
+

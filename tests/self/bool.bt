@@ -143,3 +143,17 @@ test:complex_bool_logical
     return 1;
   }
 }
+
+test:cast_castable_map_to_bool
+{
+  @cast_castable_map_to_bool_count = count();
+  @cast_castable_map_to_bool_sum = sum(0);
+
+  if (!((bool)@cast_castable_map_to_bool_count)) {
+    return 1;
+  }
+  if ((bool)@cast_castable_map_to_bool_sum) {
+    return 1;
+  }
+}
+
