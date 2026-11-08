@@ -1,3 +1,4 @@
+#include <bpf/btf.h>
 #include <string>
 #include <unordered_set>
 
@@ -649,6 +650,72 @@ TEST(btf, compat_anonymous_record)
   EXPECT_EQ(ty->GetSize(), 4);
 
   EXPECT_FALSE(structs.Has(""));
+}
+
+TEST(btf, compat_record_prefers_local_definition)
+{
+  auto kernel = Types::parse(reinterpret_cast<const char *>(btf_data),
+                             sizeof(btf_data));
+  ASSERT_TRUE(bool(kernel));
+
+  Types btf;
+  auto int32 = btf.add<Integer>("int32", 4, 1);
+  ASSERT_TRUE(bool(int32));
+  std::vector<std::pair<std::string, ValueType>> fields = {
+    { "local", ValueType(*int32) }
+  };
+  auto task_struct = btf.add<Struct>("task_struct", fields);
+  ASSERT_TRUE(bool(task_struct));
+
+  bpftrace::StructManager structs;
+  auto ty = getCompatType(*task_struct, structs, &*kernel);
+  ASSERT_TRUE(bool(ty));
+  EXPECT_EQ(ty->GetName(), "struct task_struct");
+  EXPECT_EQ(ty->GetSize(), 4);
+  EXPECT_EQ(ty->GetFieldCount(), 1);
+  EXPECT_TRUE(ty->HasField("local"));
+}
+
+TEST(btf, compat_forward_decl_from_kernel)
+{
+  auto kernel = Types::parse(reinterpret_cast<const char *>(btf_data),
+                             sizeof(btf_data));
+  ASSERT_TRUE(bool(kernel));
+
+  struct btf *raw = btf__new_empty();
+  int fwd_id = btf__add_fwd(raw, "task_struct", BTF_FWD_STRUCT);
+  int ptr_id = btf__add_ptr(raw, fwd_id);
+  Types btf(raw);
+  auto ptr = btf.lookup<Pointer>(ptr_id);
+  ASSERT_TRUE(bool(ptr));
+
+  bpftrace::StructManager structs;
+  auto ty = getCompatType(*ptr, structs, &*kernel);
+  ASSERT_TRUE(bool(ty));
+  ASSERT_TRUE(ty->IsPtrTy());
+  const auto &pointee = ty->GetPointeeTy();
+  EXPECT_EQ(pointee.GetName(), "struct task_struct");
+  EXPECT_EQ(pointee.GetSize(), sizeof(int *));
+  EXPECT_EQ(pointee.GetFieldCount(), 2);
+}
+
+TEST(btf, compat_unresolved_forward_decl)
+{
+  struct btf *raw = btf__new_empty();
+  ASSERT_NE(raw, nullptr);
+  int fwd_id = btf__add_fwd(raw, "not_a_kernel_type", BTF_FWD_STRUCT);
+  ASSERT_GT(fwd_id, 0);
+  int ptr_id = btf__add_ptr(raw, fwd_id);
+  ASSERT_GT(ptr_id, 0);
+  Types btf(raw);
+  auto ptr = btf.lookup<Pointer>(ptr_id);
+  ASSERT_TRUE(bool(ptr));
+
+  bpftrace::StructManager structs;
+  auto ty = getCompatType(*ptr, structs);
+  ASSERT_TRUE(bool(ty));
+  ASSERT_TRUE(ty->IsPtrTy());
+  EXPECT_TRUE(ty->GetPointeeTy().IsVoidTy());
 }
 
 } // namespace bpftrace::test::btf
