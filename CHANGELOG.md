@@ -28,6 +28,9 @@ and this project adheres to
 - `test` probes now report the source line of a failing (non-zero) return
   - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
 #### Changed
+- `void *` converts to and from any pointer, without a cast, when calling an
+  imported C function or kfunc.
+  - [#5426](https://github.com/bpftrace/bpftrace/pull/5426)
 - Source location attachpoints resolve to an address the DWARF line table marks
   as a statement start, which can move where kprobes and uprobes attach.
   - [#5419](https://github.com/bpftrace/bpftrace/pull/5419)

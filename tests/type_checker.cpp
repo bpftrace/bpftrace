@@ -1137,6 +1137,47 @@ kprobe:f { @a[1] = 1; has_key(@a, @a); }
        Types{ types });
 }
 
+TEST_F(TypeCheckerTest, call_external_void_pointer)
+{
+  ast::TypeMetadata types;
+
+  auto vd_ty = types.global.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(vd_ty));
+  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  ASSERT_TRUE(bool(vd_ptr));
+  auto int64 = types.global.add<btf::Integer>("int64", 8, BTF_INT_SIGNED);
+  ASSERT_TRUE(bool(int64));
+  auto int64_ptr = types.global.add<btf::Pointer>(*int64);
+  ASSERT_TRUE(bool(int64_ptr));
+
+  auto add_func = [&](const std::string &name, const btf::ValueType &arg) {
+    std::vector<std::pair<std::string, btf::ValueType>> args = { { "p", arg } };
+    auto proto = types.global.add<btf::FunctionProto>(btf::ValueType(*int64),
+                                                      args);
+    ASSERT_TRUE(bool(proto));
+    auto func = types.global.add<btf::Function>(name,
+                                                btf::Function::Linkage::Global,
+                                                *proto);
+    ASSERT_TRUE(bool(func));
+  };
+  add_func("takes_void_ptr", btf::ValueType(*vd_ptr));
+  add_func("takes_int64_ptr", btf::ValueType(*int64_ptr));
+
+  // Any pointer converts to `void *`.
+  test("kprobe:f { $x = takes_void_ptr((int32 *)arg0); }", Types{ types });
+  // `void *` converts to any pointer.
+  test("kprobe:f { $x = takes_int64_ptr((void *)arg0); }", Types{ types });
+  // Other pointers must match.
+  test("kprobe:f { $x = takes_int64_ptr((int32 *)arg0); }",
+       Types{ types },
+       Error{ R"(
+stdin:1:33-42: ERROR: Expected int64 * for argument `p` got int32 *
+)" });
+  test("kprobe:f { $x = takes_void_ptr(1); }", Types{ types }, Error{ R"(
+stdin:1:32-33: ERROR: Expected void * for argument `p` got int8
+)" });
+}
+
 // N.B. find uses mostly the same implementation as has_key
 TEST_F(TypeCheckerTest, call_find)
 {
