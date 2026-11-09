@@ -91,8 +91,7 @@ macro assert(cond, msg)
 // This utilizes the BPF helper `bpf_get_current_cgroup_id`.
 macro cgroup()
 {
-  import "stdlib/process/process.bpf.c";
-  __get_cgroup()
+  helper::bpf_get_current_cgroup_id()
 }
 
 // :summary Returns the cgroup v2 ID for a cgroup path.
@@ -301,17 +300,15 @@ macro curtask()
 // ```
 macro delete(@map, $key)
 {
-  import "stdlib/map/map.bpf.c";
   check_key(@map, $key, "delete() with two arguments");
-  __delete((void*)(&@map), (void*)(&$key)) == 0
+  helper::bpf_map_delete_elem((void*)(&@map), (void*)(&$key)) == 0
 }
 
 macro delete(@map, key)
 {
-  import "stdlib/map/map.bpf.c";
   check_key(@map, key, "delete() with two arguments");
   let $key : typeof(@map) = key;
-  __delete((void*)(&@map), (void*)(&$key)) == 0
+  helper::bpf_map_delete_elem((void*)(&@map), (void*)(&$key)) == 0
 }
 
 macro delete(@map)
@@ -321,7 +318,7 @@ macro delete(@map)
     __delete_all((void*)(&@map))
   } else {
     let $key : int64 = 0;
-    __delete((void*)(&@map), (void*)(&$key)) == 0
+    helper::bpf_map_delete_elem((void*)(&@map), (void*)(&$key)) == 0
   }
 }
 
@@ -413,10 +410,9 @@ macro elapsed()
 // ```
 macro find(@map, key, $var)
 {
-  import "stdlib/map/map.bpf.c";
   check_key(@map, key, "find");
   let $key : typeof(@map) = key;
-  $result = __lookup_elem((void*)(&@map), (void*)(&$key));
+  $result = helper::bpf_map_lookup_elem((void*)(&@map), (void*)(&$key));
   if ((bool)$result) {
     $var = *((typeof({
                        $a = @map[$key];
@@ -468,8 +464,7 @@ macro func()
 // This utilizes the BPF helper `bpf_get_current_uid_gid`.
 macro gid()
 {
-  import "stdlib/process/process.bpf.c";
-  __get_current_uid_gid() >> 32
+  helper::bpf_get_current_uid_gid() >> 32
 }
 
 // :summary Returns whether a map contains a specified key.
@@ -494,10 +489,9 @@ macro gid()
 // ```
 macro has_key(@map, key)
 {
-  import "stdlib/map/map.bpf.c";
   check_key(@map, key, "has_key()");
   let $key : typeof(@map) = key;
-  (bool)__lookup_elem((void*)(&@map), (void*)(&$key))
+  (bool)helper::bpf_map_lookup_elem((void*)(&@map), (void*)(&$key))
 }
 
 // :summary Checks whether a pointer encodes a kernel error.
@@ -530,8 +524,7 @@ macro is_err(ptr)
 // This utilizes the BPF helper `bpf_jiffies64`.
 macro jiffies()
 {
-  import "stdlib/system/system.bpf.c";
-  __get_jiffies()
+  helper::bpf_jiffies64()
 }
 
 // :summary Joins an array of strings with a separator and prints the result.
@@ -759,8 +752,7 @@ macro ncpus()
 // This utilizes the BPF helper `bpf_get_numa_node_id`.
 macro numaid()
 {
-  import "stdlib/system/system.bpf.c";
-  (uint64)__get_numa_node_id()
+  (uint64)helper::bpf_get_numa_node_id()
 }
 
 // :summary Returns the byte offset of a field within a type.
@@ -825,7 +817,6 @@ macro numaid()
 // ```
 macro override(expr)
 {
-  import "stdlib/system/system.bpf.c";
   if comptime (probetype != "kprobe") {
     fail("override() can only be used inside kprobes");
   } else if comptime __builtin_safe_mode {
@@ -833,7 +824,7 @@ macro override(expr)
   } else if comptime (typeinfo(expr).base_type != typeinfo(0).base_type) {
     fail("override() only supports int arguments (%s provided)", typeinfo(expr).base_type);
   } else {
-    __override((void*)ctx, (uint64)expr);
+    let $ret = helper::bpf_override_return((void*)ctx, (uint64)expr);
   }
 }
 
@@ -862,11 +853,10 @@ macro override(expr)
 // ```
 macro write_user(dst, src, len)
 {
-  import "stdlib/system/system.bpf.c";
   if comptime __builtin_safe_mode {
     fail("write_user() is unsafe. To use you need the --unsafe flag");
   } else {
-    __probe_write_user((void*)dst, (void*)src, (uint32)len) == 0;
+    helper::bpf_probe_write_user((void*)dst, (void*)src, (uint32)len) == 0;
   }
 }
 
@@ -1195,8 +1185,7 @@ macro probetype()
 // This utilizes the BPF helper `bpf_get_prandom_u32`.
 macro rand()
 {
-  import "stdlib/system/system.bpf.c";
-  __get_rand()
+  (uint64)helper::bpf_get_prandom_u32()
 }
 
 // :summary Returns the value of a named CPU register.
@@ -1358,12 +1347,11 @@ macro signal_thread(expr)
 // ```
 macro socket_cookie(sk)
 {
-  import "stdlib/net/net.bpf.c";
   if comptime (probetype != "fentry" && probetype != "fexit" &&
                probetype != "iter" && probetype != "rawtracepoint") {
     fail("socket_cookie() can not be used with \"%s\" probes", probetype);
   } else {
-    __get_socket_cookie(sk)
+    helper::bpf_get_socket_cookie(sk)
   }
 }
 
@@ -1550,8 +1538,7 @@ macro uaddr(sym)
 // This utilizes the BPF helper `bpf_get_current_uid_gid`.
 macro uid()
 {
-  import "stdlib/process/process.bpf.c";
-  __get_current_uid_gid() & 0xffffffff
+  helper::bpf_get_current_uid_gid() & 0xffffffff
 }
 
 // :summary Marks a pointer as pointing to user address space.

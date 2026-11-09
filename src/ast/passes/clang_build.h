@@ -16,6 +16,12 @@ public:
     Location loc;
   };
   std::vector<Result> modules;
+
+  // An object with the libbpf prototypes of all BPF helpers, as members of
+  // `HELPERS_STRUCT`. It is only built if there are `helper::` calls, is only
+  // used for its BTF, and is never linked.
+  std::string helpers_object;
+  static constexpr std::string_view HELPERS_STRUCT = "__bpftrace_helpers";
 };
 
 class ClangBuildError : public ErrorInfo<ClangBuildError> {

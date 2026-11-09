@@ -7,6 +7,63 @@
 
 namespace bpftrace::ast {
 
+// Builds a `Function` for each member of the helpers struct, from the member's
+// function pointer type. The types are added on top of the kernel types so
+// that forward declared structs resolve to the kernel's definition.
+static Result<std::map<std::string, btf::Function>> load_helpers(
+    const btf::Types &kernel,
+    const std::string &object)
+{
+  auto parsed = btf::Types::parse(static_cast<const void *>(object.data()),
+                                  object.size());
+  if (!parsed) {
+    return parsed.takeError();
+  }
+  btf::Types helpers(kernel);
+  auto ok = helpers.append(*parsed);
+  if (!ok) {
+    return ok.takeError();
+  }
+  auto members = helpers.lookup<btf::Struct>(
+      std::string(BitcodeModules::HELPERS_STRUCT));
+  if (!members) {
+    return members.takeError();
+  }
+  auto fields = members->fields();
+  if (!fields) {
+    return fields.takeError();
+  }
+  std::map<std::string, btf::Function> funcs;
+  for (const auto &[name, field] : *fields) {
+    btf::AnyType type = field.type;
+    if (type.is<btf::Const>()) {
+      auto inner = type.as<btf::Const>().type();
+      if (!inner) {
+        return inner.takeError();
+      }
+      type = *inner;
+    }
+    if (!type.is<btf::Pointer>()) {
+      continue;
+    }
+    auto proto = type.as<btf::Pointer>().element_type();
+    if (!proto) {
+      return proto.takeError();
+    }
+    if (!proto->is<btf::FunctionProto>()) {
+      continue;
+    }
+    auto func = helpers.add<btf::Function>(name,
+                                           btf::Function::Linkage::Global,
+                                           proto->as<btf::FunctionProto>());
+    if (!func) {
+      return func.takeError();
+    }
+    funcs.emplace(name, std::move(*func));
+  }
+  return funcs;
+}
+
 Pass CreateTypeSystemPass()
 {
   auto fn = [](ASTContext &ast,
@@ -59,6 +116,14 @@ Pass CreateTypeSystemPass()
     }
     if (aggregate) {
       result.global = std::move(*aggregate);
+    }
+
+    if (!bm.helpers_object.empty()) {
+      auto helpers = load_helpers(result.kernel, bm.helpers_object);
+      if (!helpers) {
+        return helpers.takeError();
+      }
+      result.helpers = std::move(*helpers);
     }
 
     return result;

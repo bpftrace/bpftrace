@@ -9,3 +9,27 @@ std::ostream& operator<<(std::ostream& out, const bpf_func_id& id)
   out << bpf_func_name[id];
   return out;
 }
+
+std::optional<bpf_func_id> bpf_func_id_from_name(std::string_view name)
+{
+  if (!name.starts_with("bpf_")) {
+    return std::nullopt;
+  }
+  name.remove_prefix(4);
+  // Index 0 is BPF_FUNC_unspec, which is not a callable helper.
+  for (int i = 1; i < __BPF_FUNC_MAX_ID; i++) {
+    if (name == bpf_func_name[i]) {
+      return static_cast<bpf_func_id>(i);
+    }
+  }
+  return std::nullopt;
+}
+
+std::vector<std::string> bpf_func_names()
+{
+  std::vector<std::string> names;
+  for (int i = 1; i < __BPF_FUNC_MAX_ID; i++) {
+    names.push_back(std::string("bpf_") + bpf_func_name[i]);
+  }
+  return names;
+}

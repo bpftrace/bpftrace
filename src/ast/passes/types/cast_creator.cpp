@@ -460,8 +460,7 @@ void CastCreator::visit(Call &call)
     }
   } else {
     // All these errors below will be surfaced in type_checker
-    auto maybe_func = type_metadata_.for_call(call).lookup<btf::Function>(
-        call.func);
+    auto maybe_func = type_metadata_.lookup_function(call);
     if (!maybe_func) {
       consumeError(std::move(maybe_func));
       return;

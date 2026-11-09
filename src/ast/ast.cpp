@@ -25,6 +25,9 @@ std::optional<Call::Namespace> Call::namespace_from_name(std::string_view name)
   if (name == namespace_name(Namespace::KFunc)) {
     return Namespace::KFunc;
   }
+  if (name == namespace_name(Namespace::Helper)) {
+    return Namespace::Helper;
+  }
   return std::nullopt;
 }
 
@@ -35,6 +38,8 @@ std::string_view Call::namespace_name(Namespace ns)
       return "";
     case Namespace::KFunc:
       return "kfunc";
+    case Namespace::Helper:
+      return "helper";
   }
   return "";
 }

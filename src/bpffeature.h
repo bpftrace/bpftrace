@@ -2,6 +2,7 @@
 
 #include <bpf/bpf.h>
 #include <linux/bpf.h>
+#include <map>
 #include <optional>
 #include <string>
 
@@ -69,6 +70,7 @@ public:
 
   bool has_kfunc(std::string kfunc);
   bool kfunc_allowed(const char* kfunc, enum bpf_prog_type prog_type);
+  virtual bool helper_allowed(bpf_func_id func_id, bpf_prog_type prog_type);
 
 protected:
   std::optional<bool> has_d_path_;
@@ -77,6 +79,7 @@ protected:
   std::optional<bool> has_kprobe_session_;
   std::optional<bool> has_uprobe_multi_;
   std::optional<bool> has_kernel_dwarf_;
+  std::map<std::pair<bpf_func_id, bpf_prog_type>, bool> helper_allowed_;
 
 private:
   bool detect_helper(bpf_func_id func_id, bpf_prog_type prog_type);

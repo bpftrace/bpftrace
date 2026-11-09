@@ -216,6 +216,16 @@ bool BPFfeature::kfunc_allowed(const char* kfunc, enum bpf_prog_type prog_type)
   return false;
 }
 
+bool BPFfeature::helper_allowed(bpf_func_id func_id, bpf_prog_type prog_type)
+{
+  auto key = std::make_pair(func_id, prog_type);
+  auto it = helper_allowed_.find(key);
+  if (it == helper_allowed_.end()) {
+    it = helper_allowed_.emplace(key, detect_helper(func_id, prog_type)).first;
+  }
+  return it->second;
+}
+
 bool BPFfeature::has_kfunc(std::string kfunc)
 {
   int btf_id = 0;

@@ -16,6 +16,7 @@
 #include "config.h"
 #include "log.h"
 #include "types.h"
+#include "util/bpf_funcs.h"
 #include "util/strings.h"
 
 namespace bpftrace::ast {
@@ -85,6 +86,7 @@ private:
   [[nodiscard]] bool check_call(Call &call);
   void check_external_call(Call &call);
   void check_kfunc(Call &call);
+  void check_helper(Call &call);
   bool check_string_size(Node &node, const SizedType &ty);
 
   bool check_arg(Call &call,
@@ -254,6 +256,11 @@ void TypeChecker::visit(Call &call)
 
   if (call.is_kfunc()) {
     check_kfunc(call);
+    check_external_call(call);
+    return;
+  }
+  if (call.is_helper()) {
+    check_helper(call);
     check_external_call(call);
     return;
   }
@@ -575,13 +582,32 @@ void TypeChecker::check_kfunc(Call &call)
   }
 }
 
+void TypeChecker::check_helper(Call &call)
+{
+  auto func_id = bpf_func_id_from_name(call.func);
+  auto *probe = dynamic_cast<Probe *>(top_level_node_);
+  if (!func_id || probe == nullptr) {
+    return;
+  }
+  for (AttachPoint *ap : probe->attach_points) {
+    bpf_prog_type prog_type = progtype(probetype(ap->provider));
+    if (!bpftrace_.feature_->helper_allowed(*func_id, prog_type)) {
+      auto &err = call.addError();
+      err << "BPF helper `" << call.func << "` is not callable from a \""
+          << ap->provider << "\" probe";
+      err.addHint() << "It may not be supported by the running kernel, or it "
+                       "may not be allowed for this program type.";
+      return;
+    }
+  }
+}
+
 // Check if this corresponds to an external imported function. We convert the
 // external type metadata into the internal `SizedType` representation and check
 // that they are exactly equal.
 void TypeChecker::check_external_call(Call &call)
 {
-  auto maybe_func = type_metadata_.for_call(call).lookup<btf::Function>(
-      call.func);
+  auto maybe_func = type_metadata_.lookup_function(call);
   if (!maybe_func) {
     consumeError(std::move(maybe_func));
     if (type_map_.type(&call).IsNoneTy()) {
@@ -640,6 +666,12 @@ void TypeChecker::check_external_call(Call &call)
   for (size_t i = 0; i < args.size(); i++) {
     const auto &[name, type] = args[i];
     const auto &varg_type = type_map_.type(call.vargs[i]);
+    // As in C, `void *` converts to and from any pointer.
+    if (type.IsPtrTy() && varg_type.IsPtrTy() &&
+        (type.GetPointeeTy().IsVoidTy() ||
+         varg_type.GetPointeeTy().IsVoidTy())) {
+      continue;
+    }
     if (type != varg_type) {
       if (!name.empty()) {
         call.vargs[i].node().addError()

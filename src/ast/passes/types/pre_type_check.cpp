@@ -600,7 +600,7 @@ void CallPreCheck::visit(Call &call)
     std::string old_func_;
   };
 
-  if (call.is_kfunc()) {
+  if (call.ns != Call::Namespace::Default) {
     func_setter scope_bound_func_setter{ *this, call.func };
     for (size_t i = 0; i < call.vargs.size(); ++i) {
       func_arg_idx_ = i;

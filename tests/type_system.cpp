@@ -2,7 +2,10 @@
 
 #include "ast/ast.h"
 #include "ast/passes/clang_build.h"
+#include "ast/passes/codegen_llvm.h"
+#include "ast/passes/parse_passes.h"
 #include "ast/passes/types/type_system.h"
+#include "btf/compat.h"
 #include "mocks.h"
 
 namespace bpftrace::test::type_system {
@@ -147,6 +150,76 @@ TEST(TypeSystemTest, basic)
     expected.erase(name);
 
   EXPECT_TRUE(expected.empty());
+}
+
+TEST(TypeSystemTest, helpers)
+{
+  auto bpftrace = get_mock_bpftrace();
+  ast::ASTContext ast("stdin",
+                      "kprobe:f { helper::bpf_get_prandom_u32(); "
+                      "helper::bpf_get_current_task_btf(); "
+                      "helper::bpf_not_a_helper(); }");
+
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put<BPFtrace>(*bpftrace)
+                .put(get_mock_function_info())
+                .add(ast::AllParsePasses())
+                .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateClangBuildPass())
+                .add(ast::CreateTypeSystemPass())
+                .run();
+  ASSERT_TRUE(bool(ok)) << ok.takeError();
+  auto &types = ok->get<ast::TypeMetadata>();
+
+  // All helpers that libbpf declares are loaded, not only the ones called.
+  EXPECT_TRUE(types.helpers.contains("bpf_send_signal"));
+  EXPECT_FALSE(types.helpers.contains("bpf_not_a_helper"));
+
+  auto return_type = [&](const std::string &name) -> SizedType {
+    auto it = types.helpers.find(name);
+    EXPECT_NE(it, types.helpers.end()) << name;
+    if (it == types.helpers.end()) {
+      return CreateNone();
+    }
+    EXPECT_EQ(it->second.linkage(), btf::Function::Linkage::Global);
+    auto proto = it->second.type();
+    EXPECT_TRUE(bool(proto));
+    auto ret = proto->return_type();
+    EXPECT_TRUE(bool(ret));
+    auto compat = btf::getCompatType(*ret, bpftrace->structs);
+    EXPECT_TRUE(bool(compat));
+    return *compat;
+  };
+
+  EXPECT_EQ(return_type("bpf_get_prandom_u32"), CreateUInt32());
+
+  // The forward declared struct resolves to the kernel's definition.
+  auto task = return_type("bpf_get_current_task_btf");
+  ASSERT_TRUE(task.IsPtrTy());
+  EXPECT_TRUE(task.GetPointeeTy().IsCStructTy());
+  EXPECT_EQ(task.GetPointeeTy().GetName(), "struct task_struct");
+}
+
+TEST(TypeSystemTest, no_helpers)
+{
+  auto bpftrace = get_mock_bpftrace();
+  ast::ASTContext ast("stdin", "kprobe:f { $x = 1; }");
+
+  auto ok = ast::PassManager()
+                .put(ast)
+                .put<BPFtrace>(*bpftrace)
+                .put(get_mock_function_info())
+                .add(ast::AllParsePasses())
+                .add(ast::CreateLLVMInitPass())
+                .add(ast::CreateClangBuildPass())
+                .add(ast::CreateTypeSystemPass())
+                .run();
+  ASSERT_TRUE(bool(ok)) << ok.takeError();
+
+  // The helpers are only built when they are called.
+  EXPECT_TRUE(ok->get<ast::BitcodeModules>().helpers_object.empty());
+  EXPECT_TRUE(ok->get<ast::TypeMetadata>().helpers.empty());
 }
 
 } // namespace bpftrace::test::type_system

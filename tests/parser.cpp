@@ -1053,6 +1053,18 @@ TEST(Parser, namespaced_call)
                                       KfuncCall("bpf_task_from_pid",
                                                 { Integer(1) })) })));
 
+  test("kprobe:sys_open { $c = helper::bpf_get_current_cgroup_id() }",
+       Program().WithProbe(
+           Probe({ "kprobe:sys_open" },
+                 { AssignVarStatement(Variable("$c"),
+                                      HelperCall("bpf_get_current_cgroup_id",
+                                                 {})) })));
+
+  test("kprobe:sys_open { helper::bpf_send_signal(9) }",
+       Program().WithProbe(Probe(
+           { "kprobe:sys_open" },
+           { ExprStatement(HelperCall("bpf_send_signal", { Integer(9) })) })));
+
   test("kprobe:sys_open { kfunc(1) }",
        Program().WithProbe(
            Probe({ "kprobe:sys_open" },

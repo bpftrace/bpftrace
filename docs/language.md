@@ -597,6 +597,27 @@ bpftrace checks at compile time that the target really is a kfunc and that it is
 
 **Use at your own risk.** bpftrace cannot check the rules the verifier applies to kfuncs so make sure to check the kfunc documentation and proper usage.
 
+## BPF Helpers
+
+BPF helpers can be called directly with the `helper::` prefix:
+
+```
+tracepoint:syscalls:sys_enter_read {
+  $cgroup_id = helper::bpf_get_current_cgroup_id();
+  $task = helper::bpf_get_current_task_btf();
+  printf("%s in cgroup %d\n", $task->comm, $cgroup_id);
+  exit();
+}
+```
+
+Helper prototypes come from libbpf's `bpf_helper_defs.h`, so arguments are type checked and return values have their real types.
+As in C, any pointer can be passed where a helper expects a `void *` (e.g. `&@map` or `&$key` for `bpf_map_lookup_elem`).
+bpftrace also checks at compile time that the helper is callable from the probe type you used.
+
+Helpers that change the state of the system (e.g. `bpf_send_signal`, `bpf_override_return` and `bpf_probe_write_user`) require `--unsafe`.
+
+**Use at your own risk.** Prefer the equivalent builtin or standard library function if there is one. bpftrace cannot check every rule the verifier applies to helpers, and helpers that take a callback (e.g. `bpf_loop`) cannot be called this way.
+
 ## Identifiers
 
 Identifiers must match the following regular expression: `[_a-zA-Z][_a-zA-Z0-9]*`

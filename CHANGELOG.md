@@ -20,6 +20,8 @@ and this project adheres to
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
+- Add `helper::name(...)` syntax for calling BPF helpers directly.
+  - [#XXXX](https://github.com/bpftrace/bpftrace/pull/XXXX)
 - Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
   - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
 - Add open-coded iterators to `for` loops: `iter_task`, `iter_threads`,
@@ -28,6 +30,9 @@ and this project adheres to
 - `test` probes now report the source line of a failing (non-zero) return
   - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
 #### Changed
+- `void *` converts to and from any pointer, without a cast, when calling an
+  imported C function or kfunc.
+  - [#XXXX](https://github.com/bpftrace/bpftrace/pull/XXXX)
 - Source location attachpoints resolve to an address the DWARF line table marks
   as a statement start, which can move where kprobes and uprobes attach.
   - [#5419](https://github.com/bpftrace/bpftrace/pull/5419)
