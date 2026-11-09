@@ -263,8 +263,6 @@ TEST(CallPreCheck, probe_availability)
   // Errors
   test("kprobe:f { $ret = skboutput(\"one.pcap\", arg0, 1500, 0); }",
        "skboutput can not be used with \"kprobe\" probes");
-  test("kprobe:f { $ret = socket_cookie(arg0); }",
-       "socket_cookie can not be used with \"kprobe\" probes");
   test("kprobe:f { __builtin_uaddr(\"A\"); }",
        "__builtin_uaddr can not be used with \"kprobe\" probes");
   test("kprobe:f { $k = path(1) }",
@@ -666,7 +664,6 @@ TEST(CallPreCheck, nargs)
     { "@x = max();",             "max" },
     { "@x = min();",             "min" },
     { "pton();",                 "pton" },
-    { "$ret = socket_cookie();", "socket_cookie" },
     { "@x = stats();",           "stats" },
     { "@x = sum();",             "sum" },
     { "usym();",                 "usym" },

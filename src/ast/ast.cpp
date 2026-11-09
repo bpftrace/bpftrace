@@ -312,7 +312,7 @@ bool AttachPoint::check_available(const std::string &identifier) const
       case ProbeType::rawtracepoint:
         return false;
     }
-  } else if (identifier == "skboutput" || identifier == "socket_cookie") {
+  } else if (identifier == "skboutput") {
     return bpftrace::progtype(type) == BPF_PROG_TYPE_TRACING;
   }
 

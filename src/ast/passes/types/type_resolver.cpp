@@ -50,15 +50,10 @@ std::unordered_map<std::string, SizedType (*)()> SIMPLE_BUILTIN_TYPES = {
 };
 
 std::unordered_map<std::string, SizedType (*)()> SIMPLE_CALL_TYPES = {
-  { "ksym", CreateKSym },
-  { "usym", CreateUSym },
-  { "cgroupid", CreateUInt64 },
-  { "cgroup_path", CreateCgroupPath },
-  { "stack_len", CreateInt64 },
-  { "macaddr", CreateMacAddress },
-  { "skboutput", CreateUInt32 },
-  { "strncmp", CreateUInt64 },
-  { "socket_cookie", CreateUInt64 },
+  { "ksym", CreateKSym },        { "usym", CreateUSym },
+  { "cgroupid", CreateUInt64 },  { "cgroup_path", CreateCgroupPath },
+  { "stack_len", CreateInt64 },  { "macaddr", CreateMacAddress },
+  { "skboutput", CreateUInt32 }, { "strncmp", CreateUInt64 },
 };
 
 const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{

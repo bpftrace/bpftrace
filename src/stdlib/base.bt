@@ -1324,7 +1324,6 @@ macro signal_thread(expr)
 // ```
 
 // :summary Returns the kernel-generated cookie for a socket.
-// :function socket_cookie
 // :variant uint64 socket_cookie(struct sock *sk)
 //
 // This utilizes the BPF helper `bpf_get_socket_cookie`.
@@ -1357,6 +1356,16 @@ macro signal_thread(expr)
 // [1K, 2K)               0 |                                                    |
 // [2K, 4K)               1 |@@@@@@@@@@@@@                                       |
 // ```
+macro socket_cookie(sk)
+{
+  import "stdlib/net/net.bpf.c";
+  if comptime (probetype != "fentry" && probetype != "fexit" &&
+               probetype != "iter" && probetype != "rawtracepoint") {
+    fail("socket_cookie() can not be used with \"%s\" probes", probetype);
+  } else {
+    __get_socket_cookie(sk)
+  }
+}
 
 // :summary Reads a null-terminated string from an address.
 // :function str

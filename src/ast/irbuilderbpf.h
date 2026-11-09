@@ -133,7 +133,6 @@ public:
   CallInst *CreateGetFuncIp(Value *ctx, const Location &loc);
   CallInst *CreatePerCpuPtr(Value *var, Value *cpu, const Location &loc);
   CallInst *CreateThisCpuPtr(Value *var, const Location &loc);
-  CallInst *CreateGetSocketCookie(Value *var, const Location &loc);
   Value *CreateGetStrAllocation(const std::string &name, const Location &loc);
   Value *CreateGetFmtStringArgsAllocation(StructType *struct_type,
                                           const std::string &name,
