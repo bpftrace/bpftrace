@@ -174,9 +174,7 @@ else()
 endif()
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
-string(REGEX REPLACE "(-rc[0-9]+|git)" "" CLANG_VERSION ${LLVM_PACKAGE_VERSION})
-
-find_package(Clang ${CLANG_VERSION} REQUIRED)
+find_package(Clang ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH} REQUIRED)
 include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
 
 # DWARF-based user-space stack unwinding requires x86_64 and LLVM >= 21
