@@ -72,6 +72,53 @@ test:map_strings_are_memset
   _ = delete(@map_strings_are_memset_y);
 }
 
+test:basic_while_loop
+{
+  $a = 0;
+  while ($a <= 100) {
+    @basic_while_loop = avg($a++);
+  }
+
+  if (@basic_while_loop != 50) {
+    return 1;
+  }
+}
+
+test:nested_while_loop
+{
+  $i = 0;
+  while ($i < 3) {
+    $j = 0;
+    while ($j < 2) {
+      @nested_while_loop = count();
+      $j++;
+    }
+    $i++;
+  }
+
+  if (@nested_while_loop != 6) {
+    return 1;
+  }
+}
+
+test:while_loop_let_without_assignment_is_zeroed_each_iteration
+{
+  $y = 0;
+  $i = 0;
+  while ($i < 3) {
+    let $z;
+    if ($i == 0) {
+      $z = 5;
+    }
+    $y += $z;
+    $i++;
+  }
+
+  if ($y != 5) {
+    return 1;
+  }
+}
+
 test:block_expression
 {
   let $a = {
@@ -94,6 +141,21 @@ test:block_expression_complex
   };
 
   if ($x != 30) {
+    return 1;
+  }
+}
+
+test:block_expression_with_condition
+{
+  $taken = false;
+  if ({
+       let $a = true;
+       $a
+     }) {
+    $taken = true;
+  }
+
+  if (!$taken) {
     return 1;
   }
 }
@@ -145,3 +207,4 @@ test:operator_precedence_4
     return 1;
   }
 }
+

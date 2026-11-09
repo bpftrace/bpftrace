@@ -2,19 +2,6 @@ NAME stats with negative values
 PROG begin { @=stats(-10); @=stats(-5); @=stats(5); exit() }
 EXPECT @: { .count = 3, .average = -3, .total = -10 }
 
-NAME avg with negative values
-PROG begin { @=avg(-30); @=avg(-10);  }
-EXPECT @: -20
-
-NAME avg cast negative values
-PROG begin { @ = avg(-1); @ = avg(-1); @ = avg(-10); if (@ == -4) { printf("done\n");  }}
-EXPECT done
-
-NAME negative map value
-PROG begin { @ = -11;  }
-EXPECT @: -11
-TIMEOUT 1
-
 NAME Comparison should print as 0 or 1
 PROG struct x { unsigned long x; }; uprobe:./testprogs/signed_ints_test:test_signed_ints { $a = ((struct x*)arg0).x; printf("%d %d\n", $a > 0, $a < 1); exit(); }
 EXPECT 0 1

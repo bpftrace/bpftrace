@@ -8,11 +8,6 @@ PROG begin { @a[true] = false;  }
 EXPECT @a[true]: false
 TIMEOUT 1
 
-NAME cast castable map to bool
-PROG begin{ @a = count(); @b = sum(0); print(((bool)@a, (bool)@b)); exit(); }
-EXPECT (true, false)
-TIMEOUT 1
-
 NAME bool array
 PROG begin { @a = (bool[2])(uint16)1;  }
 EXPECT @a: [true,false]

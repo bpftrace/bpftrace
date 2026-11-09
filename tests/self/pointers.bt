@@ -171,3 +171,25 @@ test:pointer_int_comparison
     return 1;
   }
 }
+
+test:pointer_truthiness
+{
+  $taken = false;
+  if curtask {
+    $taken = true;
+  }
+  if (!$taken) {
+    return 1;
+  }
+
+  if ((curtask ? 1 : 2) != 1) {
+    return 1;
+  }
+  if (((curtask && 0) ? 1 : 2) != 2) {
+    return 1;
+  }
+  if (((curtask || 0) ? 1 : 2) != 1) {
+    return 1;
+  }
+}
+
