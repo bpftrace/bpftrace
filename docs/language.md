@@ -1280,7 +1280,6 @@ the `-lv` option as described below.
 
 ```
 iter:task { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
-
 /*
  * Sample output:
  * systemd:1
@@ -1296,7 +1295,6 @@ iter:task { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
 iter:task_file {
   printf("%s:%d %d:%s\n", ctx.task.comm, ctx.task.pid, ctx.fd, path(ctx.file.f_path));
 }
-
 /*
  * Sample output:
  * systemd:1 1:/dev/null
@@ -1313,7 +1311,6 @@ iter:task_file {
 iter:task_vma {
   printf("%s %d %lx-%lx\n", comm, pid, ctx.vma.vm_start, ctx.vma.vm_end);
 }
-
 /*
  * Sample output:
  * bpftrace 119480 55b92c380000-55b92c386000
@@ -1329,11 +1326,7 @@ It can be specified as an absolute or relative path to /sys/fs/bpf.
 
 ```
 iter:task:list { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
-
-/*
- * Sample output:
- * Program pinned to /sys/fs/bpf/list
- */
+// Prints: Program pinned to /sys/fs/bpf/list
 ```
 
 **absolute pin**
@@ -1342,11 +1335,7 @@ iter:task:list { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
 iter:task_file:/sys/fs/bpf/files {
   printf("%s:%d %s\n", ctx.task.comm, ctx.task.pid, path(ctx.file.f_path));
 }
-
-/*
- * Sample output:
- * Program pinned to /sys/fs/bpf/files
- */
+// Prints: Program pinned to /sys/fs/bpf/files
 ```
 
 ### fentry and fexit
@@ -1408,7 +1397,6 @@ The `fget` function takes a file descriptor argument, available as `args.fd`. It
 fexit:fget {
   printf("fd %d name %s\n", args.fd, str(retval.f_path.dentry.d_name.name));
 }
-
 /*
  * Sample output:
  * fd 3 name ld.so.cache
@@ -2254,7 +2242,6 @@ kretprobe:do_nanosleep /has_key(@start, tid)/ {
   printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000);
   delete(@start, tid);
 }
-
 /*
  * Sample output:
  * slept for 1000 ms

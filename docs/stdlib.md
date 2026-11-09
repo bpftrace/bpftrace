@@ -93,11 +93,11 @@ Bytes with values >=32 and \&lt;=126 are printed using their ASCII character, ot
 interval:s:1 {
   printf("%r\n", buf(kaddr("avenrun"), 8));
 }
-```
-
-```
-\x00\x03\x00\x00\x00\x00\x00\x00
-\xc2\x02\x00\x00\x00\x00\x00\x00
+/*
+ * Sample output:
+ * \x00\x03\x00\x00\x00\x00\x00\x00
+ * \xc2\x02\x00\x00\x00\x00\x00\x00
+ */
 ```
 
 
@@ -117,14 +117,14 @@ If the file cannot be opened or read an error is printed to stderr.
 tracepoint:syscalls:sys_enter_execve {
   cat("/proc/%d/maps", pid);
 }
-```
-
-```
-55f683ebd000-55f683ec1000 r--p 00000000 08:01 1843399                    /usr/bin/ls
-55f683ec1000-55f683ed6000 r-xp 00004000 08:01 1843399                    /usr/bin/ls
-55f683ed6000-55f683edf000 r--p 00019000 08:01 1843399                    /usr/bin/ls
-55f683edf000-55f683ee2000 rw-p 00021000 08:01 1843399                    /usr/bin/ls
-55f683ee2000-55f683ee3000 rw-p 00000000 00:00 0
+/*
+ * Sample output:
+ * 55f683ebd000-55f683ec1000 r--p 00000000 08:01 1843399                    /usr/bin/ls
+ * 55f683ec1000-55f683ed6000 r-xp 00004000 08:01 1843399                    /usr/bin/ls
+ * 55f683ed6000-55f683edf000 r--p 00019000 08:01 1843399                    /usr/bin/ls
+ * 55f683edf000-55f683ee2000 rw-p 00021000 08:01 1843399                    /usr/bin/ls
+ * 55f683ee2000-55f683ee3000 rw-p 00000000 00:00 0
+ */
 ```
 
 
@@ -392,12 +392,7 @@ Formats and prints an error message with its source location.
 
 ```
 BEGIN { errorf("Something bad with args: %d, %s", 10, "arg2"); }
-```
-
-Prints:
-
-```
-stdin:1:9-62: ERROR: Something bad with args: 10, arg2
+// Prints: stdin:1:9-62: ERROR: Something bad with args: 10, arg2
 ```
 
 
@@ -460,7 +455,7 @@ kprobe:dummy {
   @map[2] = (1, "hello");
   let $val;
   if (find(@map, 2, $val)) {
-    print($val); // prints (1, "hello")
+    assert($val.0 == 1 && $val.1 == "hello", "Invalid map value!");
   }
 }
 ```
@@ -695,7 +690,6 @@ There are several [formatting/StackMode options](./language.md#stack_mode).
 
 ```
 kprobe:ip_output { @[kstack()] = count(); }
-
 /*
  * Sample output:
  * @[
@@ -719,7 +713,6 @@ Sampling only three frames from the stack (limit = 3):
 
 ```
 kprobe:ip_output { @[kstack(3)] = count(); }
-
 /*
  * Sample output:
  * @[
@@ -736,7 +729,6 @@ Example using `perf` StackMode:
 
 ```
 kprobe:ip_output { @[kstack(perf, 3)] = count(); }
-
 /*
  * Sample output:
  * @[
@@ -766,11 +758,7 @@ kprobe:do_nanosleep
 {
   printf("%s\n", ksym(reg("ip")));
 }
-
-/*
- * Sample output:
- * do_nanosleep
- */
+// Prints: do_nanosleep
 ```
 
 
@@ -827,11 +815,7 @@ kprobe:arp_create {
   $stack_arg1 = *(uint8*)(reg("sp") + 16);
   printf("SRC %s, DST %s\n", macaddr($stack_arg0), macaddr($stack_arg1));
 }
-
-/*
- * Sample output:
- * SRC 18:C0:4D:08:2E:BB, DST 74:83:C2:7F:8C:FF
- */
+// Sample output: SRC 18:C0:4D:08:2E:BB, DST 74:83:C2:7F:8C:FF
 ```
 
 
@@ -877,7 +861,6 @@ interval:s:1 {
   $sw_tai2 = nsecs(sw_tai);
   printf("sw_tai precision: %lldns\n", ($sw_tai1 + $sw_tai2)/2 - $tai);
 }
-
 /*
  * Sample output:
  * sw_tai precision: -98ns
@@ -930,9 +913,9 @@ struct Foo {
       } c;
     } b;
   } a;
-}
+};
 BEGIN {
-  @x = offsetof(struct Foo, a.b.c.d);
+  assert(offsetof(struct Foo, a.b.c.d) == 0, "Invalid offset!");
   exit();
 }
 ```
@@ -961,10 +944,7 @@ kprobe:__x64_sys_getuid
 /comm == "id"/ {
   override(2<<21);
 }
-```
-
-```
-uid=4194304 gid=0(root) euid=0(root) groups=0(root)
+// Sample output from id command: uid=4194304 gid=0(root) euid=0(root) groups=0(root)
 ```
 
 This feature only works on kernels compiled with `CONFIG_BPF_KPROBE_OVERRIDE` and only works on functions tagged `ALLOW_ERROR_INJECTION`.
@@ -1083,9 +1063,8 @@ interval:s:1 {
   print("abc");
   exit();
 }
-
 /*
- * Sample output:
+ * Prints:
  * 123
  * abc
  */
@@ -1097,20 +1076,18 @@ interval:s:1 {
   print(@);
   exit();
 }
-```
-
-Prints:
-
-```
-@:
-[16M, 32M)             3 |@@@                                                 |
-[32M, 64M)             2 |@@                                                  |
-[64M, 128M)            1 |@                                                   |
-[128M, 256M)           4 |@@@@                                                |
-[256M, 512M)           3 |@@@                                                 |
-[512M, 1G)            14 |@@@@@@@@@@@@@@                                      |
-[1G, 2G)              22 |@@@@@@@@@@@@@@@@@@@@@@                              |
-[2G, 4G)              51 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+/*
+ * Sample output:
+ * @:
+ * [16M, 32M)             3 |@@@                                                 |
+ * [32M, 64M)             2 |@@                                                  |
+ * [64M, 128M)            1 |@                                                   |
+ * [128M, 256M)           4 |@@@@                                                |
+ * [256M, 512M)           3 |@@@                                                 |
+ * [512M, 1G)            14 |@@@@@@@@@@@@@@                                      |
+ * [1G, 2G)              22 |@@@@@@@@@@@@@@@@@@@@@@                              |
+ * [2G, 4G)              51 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+ */
 ```
 
 Declared maps and histograms are automatically printed out on program termination.
@@ -1131,9 +1108,8 @@ BEGIN {
   clear(@);
   exit();
 }
-
 /*
- * Sample output:
+ * Prints:
  * @[9]: 8
  * @[10]: 9
  */
@@ -1156,11 +1132,23 @@ Changing the earlier `print(@, 2)` call to `print(@, 5, 2)` will take the top 5
 values and scale them by 2:
 
 ```
-@[6]: 2
-@[7]: 3
-@[8]: 3
-@[9]: 4
-@[10]: 4
+BEGIN {
+  $i = 11;
+  for $elem : 1..$i {
+    @[$elem] = $elem - 1;
+  }
+  print(@, 5, 2);
+  clear(@);
+  exit();
+}
+/*
+ * Prints:
+ * @[6]: 2
+ * @[7]: 3
+ * @[8]: 3
+ * @[9]: 4
+ * @[10]: 4
+ */
 ```
 
 
@@ -1202,12 +1190,7 @@ BEGIN {
   printf("%d, %s, %s\n", $r, $r, CUSTOM_ENUM);
   exit();
 }
-```
-
-yields:
-
-```
-6, SKB_DROP_REASON_SOCKET_FILTER, CUSTOM_ENUM
+// Sample output: 6, SKB_DROP_REASON_SOCKET_FILTER, CUSTOM_ENUM
 ```
 
 The `%gr` specifier can be used to format GFP (Get Free Pages) flags into human-readable strings:
@@ -1216,14 +1199,12 @@ The `%gr` specifier can be used to format GFP (Get Free Pages) flags into human-
 tracepoint:kmem:kmalloc {
   printf("GFP flags: %gr\n", args->gfp_flags);
 }
-```
-
-This would output something like:
-
-```
-GFP flags: GFP_KERNEL
-GFP flags: GFP_ATOMIC|__GFP_HIGHMEM
-GFP flags: __GFP_IO|__GFP_FS|__GFP_DIRECT_RECLAIM
+/*
+ * Sample output:
+ * GFP flags: GFP_KERNEL
+ * GFP flags: GFP_ATOMIC|__GFP_HIGHMEM
+ * GFP flags: __GFP_IO|__GFP_FS|__GFP_DIRECT_RECLAIM
+ */
 ```
 
 Colors are supported too, using standard terminal escape sequences:
@@ -1240,7 +1221,11 @@ Returns the fully expanded name of the current probe.
 - `string probe()`
 - `string probe`
 
-For example: `kprobe:do_nanosleep`.
+```
+fentry:vmlinux:vm_area_free {
+  assert(probe() == "fentry:vmlinux:vm_area_free", "Invalid probe!");
+}
+```
 
 
 ### probetype
@@ -1253,6 +1238,12 @@ Returns the type of the current probe.
 Note: `begin` and `end` probes are of type `special`.
 
 For example: `kprobe`, `special`, `tracepoint`.
+
+```
+fentry:vmlinux:vm_area_free {
+  assert(probetype() == "fentry", "Invalid probe type!");
+}
+```
 
 
 ### pton
@@ -1332,10 +1323,11 @@ kprobe:__x64_sys_execve
 /comm == "bash"/ {
   signal(5);
 }
-```
-```
-$ ls
-Trace/breakpoint trap (core dumped)
+/*
+ * Sample output from running ls in bash while tracing:
+ * $ ls
+ * Trace/breakpoint trap (core dumped)
+ */
 ```
 
 
@@ -1348,7 +1340,7 @@ Converts a signal number to its name.
 ```
 #include <signal.h>
 begin {
-  print(signal_name(SIGINT));
+  assert(signal_name(SIGINT) == "Interrupt", "Invalid signal name!");
 }
 ```
 
@@ -1405,10 +1397,9 @@ This function returns 0 on success, or a negative error in case of failure.
 
 Environment variable `BPFTRACE_PERF_RB_PAGES` should be increased in order to capture large packets, or else these packets will be dropped.
 
-Usage
+Usage (save as `dump.bt`):
 
 ```
-# cat dump.bt
 fentry:napi_gro_receive {
   $ret = skboutput("receive.pcap", args.skb, args.skb.len, 0);
 }
@@ -1419,16 +1410,20 @@ fentry:dev_queue_xmit {
   printf("skboutput returns %d\n", $ret);
 }
 
-# export BPFTRACE_PERF_RB_PAGES=1024
-# bpftrace dump.bt
-...
-
-# tcpdump -n -r ./receive.pcap  | head -3
-reading from file ./receive.pcap, link-type RAW (Raw IP)
-dropped privs to tcpdump
-10:23:44.674087 IP 22.128.74.231.63175 > 192.168.0.23.22: Flags [.], ack 3513221061, win 14009, options [nop,nop,TS val 721277750 ecr 3115333619], length 0
-10:23:45.823194 IP 100.101.2.146.53 > 192.168.0.23.46619: 17273 0/1/0 (130)
-10:23:45.823229 IP 100.101.2.146.53 > 192.168.0.23.46158: 45799 1/0/0 A 100.100.45.106 (60)
+// Run:
+// $ export BPFTRACE_PERF_RB_PAGES=1024
+// $ bpftrace dump.bt
+//
+// Inspect captured packets:
+// $ tcpdump -n -r ./receive.pcap | head -3
+/*
+ * Sample output from tcpdump:
+ * reading from file ./receive.pcap, link-type RAW (Raw IP)
+ * dropped privs to tcpdump
+ * 10:23:44.674087 IP 22.128.74.231.63175 > 192.168.0.23.22: Flags [.], ack 3513221061, win 14009, options [nop,nop,TS val 721277750 ecr 3115333619], length 0
+ * 10:23:45.823194 IP 100.101.2.146.53 > 192.168.0.23.46619: 17273 0/1/0 (130)
+ * 10:23:45.823229 IP 100.101.2.146.53 > 192.168.0.23.46158: 45799 1/0/0 A 100.100.45.106 (60)
+ */
 ```
 
 
@@ -1451,22 +1446,20 @@ fentry:tcp_rcv_established
   $cookie = socket_cookie(args.sk);
   @psize[$cookie] = hist(args.skb.len);
 }
-```
-
-Prints:
-
-```
-@psize[65551]:
-[32, 64)               4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-
-@psize[504]:
-[32, 64)               4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[64, 128)              1 |@@@@@@@@@@@@@                                       |
-[128, 256)             0 |                                                    |
-[256, 512)             1 |@@@@@@@@@@@@@                                       |
-[512, 1K)              0 |                                                    |
-[1K, 2K)               0 |                                                    |
-[2K, 4K)               1 |@@@@@@@@@@@@@                                       |
+/*
+ * Sample output:
+ * @psize[65551]:
+ * [32, 64)               4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+ *
+ * @psize[504]:
+ * [32, 64)               4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+ * [64, 128)              1 |@@@@@@@@@@@@@                                       |
+ * [128, 256)             0 |                                                    |
+ * [256, 512)             1 |@@@@@@@@@@@@@                                       |
+ * [512, 1K)              0 |                                                    |
+ * [1K, 2K)               0 |                                                    |
+ * [2K, 4K)               1 |@@@@@@@@@@@@@                                       |
+ */
 ```
 
 
@@ -1533,7 +1526,7 @@ Converts an error number to its description.
 ```
 #include <errno.h>
 begin {
-  print(strerror(EPERM));
+  assert(strerror(EPERM) == "Operation not permitted", "Invalid error!");
 }
 ```
 
@@ -1602,7 +1595,7 @@ Converts a system call number to its name.
 ```
 #include <syscall.h>
 begin {
-  print(syscall_name(__NR_read)); // outputs "read"
+  assert(syscall_name(__NR_read) == "read", "Invalid syscall name!");
 }
 ```
 
@@ -1630,33 +1623,33 @@ interval:s:10 {
 interval:s:30 {
   exit();
 }
+/*
+ * Sample output:
+ * Attached 3 probes
+ * 08:50:37: 0
+ * 08:50:38: 1
+ * 08:50:39: 2
+ * 08:50:40: 3
+ * 08:50:41: 4
+ * 08:50:42: 5
+ * 08:50:43: 6
+ * 08:50:44: 7
+ * 08:50:45: 8
+ * 08:50:46: 9
+ * 08:50:56: 10
+ * 08:50:56: 11
+ * 08:50:56: 12
+ * 08:50:56: 13
+ * 08:50:56: 14
+ * 08:50:56: 15
+ * 08:50:56: 16
+ * 08:50:56: 17
+ * 08:50:56: 18
+ * 08:50:56: 19
+ */
 ```
 
 Note how the async `time` and `printf` first print every second until the `interval:s:10` probe hits, then they print every 10 seconds due to bpftrace blocking on `sleep`.
-
-```
-Attached 3 probes
-08:50:37: 0
-08:50:38: 1
-08:50:39: 2
-08:50:40: 3
-08:50:41: 4
-08:50:42: 5
-08:50:43: 6
-08:50:44: 7
-08:50:45: 8
-08:50:46: 9
-08:50:56: 10
-08:50:56: 11
-08:50:56: 12
-08:50:56: 13
-08:50:56: 14
-08:50:56: 15
-08:50:56: 16
-08:50:56: 17
-08:50:56: 18
-08:50:56: 19
-```
 
 `system` supports the same format string and arguments that `printf` does.
 
@@ -1797,7 +1790,6 @@ There are several [formatting/StackMode options](./language.md#stack_mode).
 
 ```
 kprobe:do_sys_open /comm == "bash"/ { @[ustack()] = count(); }
-
 /*
  * Sample output:
  * @[
@@ -1836,7 +1828,6 @@ Sampling only three frames from the stack (limit = 3):
 
 ```
 kprobe:ip_output { @[ustack(3)] = count(); }
-
 /*
  * Sample output:
  * @[
@@ -1853,7 +1844,6 @@ Example using `perf` StackMode:
 
 ```
 kprobe:ip_output { @[ustack(perf, 3)] = count(); }
-
 /*
  * Sample output:
  * @[
@@ -1889,11 +1879,7 @@ uprobe:/bin/bash:readline
 {
   printf("%s\n", usym(reg("ip")));
 }
-
-/*
- * Sample output:
- * readline
- */
+// Prints: readline
 ```
 
 
@@ -1909,12 +1895,7 @@ Formats and prints a warning message with its source location.
 
 ```
 BEGIN { warnf("Something kinda bad with args: %d, %s", 10, "arg2"); }
-```
-
-Prints:
-
-```
-stdin:1:9-67: WARNING: Something kinda bad with args: 10, arg2
+// Prints: stdin:1:9-67: WARNING: Something kinda bad with args: 10, arg2
 ```
 
 
@@ -2004,7 +1985,8 @@ Example one:
 BEGIN {
   @ = count();
   @ = count();
-  printf("%d\n", (int64)@);   // prints 2
+  assert((int64)@ == 2, "Invalid count!");
+  clear(@);
   exit();
 }
 ```
@@ -2039,23 +2021,21 @@ Create a log2 histogram of `n` using $2^k$ buckets per power of 2,
 kretprobe:vfs_read {
   @bytes = hist(retval);
 }
-```
-
-Prints:
-
-```
-@bytes:
-[1M, 2M)               3 |                                                    |
-[2M, 4M)               2 |                                                    |
-[4M, 8M)               2 |                                                    |
-[8M, 16M)              6 |                                                    |
-[16M, 32M)            16 |                                                    |
-[32M, 64M)            27 |                                                    |
-[64M, 128M)           48 |@                                                   |
-[128M, 256M)          98 |@@@                                                 |
-[256M, 512M)         191 |@@@@@@                                              |
-[512M, 1G)           394 |@@@@@@@@@@@@@                                       |
-[1G, 2G)             820 |@@@@@@@@@@@@@@@@@@@@@@@@@@@                         |
+/*
+ * Sample output:
+ * @bytes:
+ * [1M, 2M)               3 |                                                    |
+ * [2M, 4M)               2 |                                                    |
+ * [4M, 8M)               2 |                                                    |
+ * [8M, 16M)              6 |                                                    |
+ * [16M, 32M)            16 |                                                    |
+ * [32M, 64M)            27 |                                                    |
+ * [64M, 128M)           48 |@                                                   |
+ * [128M, 256M)          98 |@@@                                                 |
+ * [256M, 512M)         191 |@@@@@@                                              |
+ * [512M, 1G)           394 |@@@@@@@@@@@@@                                       |
+ * [1G, 2G)             820 |@@@@@@@@@@@@@@@@@@@@@@@@@@@                         |
+ */
 ```
 
 ### lhist
@@ -2075,22 +2055,20 @@ interval:ms:1 {
 interval:s:5 {
   exit();
 }
-```
-
-Prints:
-
-```
-@:
-[0, 1)               306 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@         |
-[1, 2)               284 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@            |
-[2, 3)               294 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@          |
-[3, 4)               318 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       |
-[4, 5)               311 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@        |
-[5, 6)               362 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[6, 7)               336 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    |
-[7, 8)               326 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      |
-[8, 9)               328 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@     |
-[9, 10)              318 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       |
+/*
+ * Sample output:
+ * @:
+ * [0, 1)               306 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@         |
+ * [1, 2)               284 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@            |
+ * [2, 3)               294 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@          |
+ * [3, 4)               318 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       |
+ * [4, 5)               311 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@        |
+ * [5, 6)               362 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+ * [6, 7)               336 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@    |
+ * [7, 8)               326 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      |
+ * [8, 9)               328 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@     |
+ * [9, 10)              318 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@       |
+ */
 ```
 
 ### max
@@ -2116,7 +2094,8 @@ int x = std::max(3, 33);  // x contains 33
 In bpftrace:
 ```
 @x = max(3);
-@x = max(33);   // @x contains 33
+@x = max(33);
+assert(@x == 33, "Invalid maximum!");
 ```
 
 Also note that bpftrace takes care to handle the unset case. In other words,
@@ -2146,13 +2125,12 @@ Tracks the count, average, and sum of values.
 kprobe:vfs_read {
   @bytes[comm] = stats(arg2);
 }
-```
-
-```
-@bytes[bash]: count 7, average 1, total 7
-@bytes[sleep]: count 5, average 832, total 4160
-@bytes[ls]: count 7, average 886, total 6208
-@
+/*
+ * Sample output:
+ * @bytes[bash]: count 7, average 1, total 7
+ * @bytes[sleep]: count 5, average 832, total 4160
+ * @bytes[ls]: count 7, average 886, total 6208
+ */
 ```
 
 Individual fields of a `stats_t` map can also be accessed synchronously using `.count`, `.total`, and `.avg`:
@@ -2184,7 +2162,7 @@ Example one:
 BEGIN {
   @ = sum(5);
   @ = sum(6);
-  printf("%d\n", (int64)@);   // prints 11
+  assert((int64)@ == 11, "Invalid sum!");
   clear(@);
   exit();
 }
@@ -2251,37 +2229,37 @@ Example one:
 i:ms:10 {
   @ = tseries(rand % 10, 100ms, 20, "min");
 }
-```
-
-```
-Attached 1 probe
-
-
-@:
-             0                                                   2
-hh:mm:ss.ms  |___________________________________________________|
-10:41:46.700 *                                                   | 0
-10:41:46.800 *                                                   | 0
-10:41:46.900 |                         *                         | 1
-10:41:47.000 |                                                   * 2
-10:41:47.100 |                         *                         | 1
-10:41:47.200 *                                                   | 0
-10:41:47.300 |                         *                         | 1
-10:41:47.400 *                                                   | 0
-10:41:47.500 |                         *                         | 1
-10:41:47.600 *                                                   | 0
-10:41:47.700 |                                                   * 2
-10:41:47.800 *                                                   | 0
-10:41:47.900 *                                                   | 0
-10:41:48.000 |                         *                         | 1
-10:41:48.100 |                         *                         | 1
-10:41:48.200 |                         *                         | 1
-10:41:48.300 *                                                   | 0
-10:41:48.400 |                                                   * 2
-10:41:48.500 |                         *                         | 1
-10:41:48.600 |                         *                         | 1
-             v___________________________________________________v
-             0                                                   2
+/*
+ * Sample output:
+ * Attached 1 probe
+ *
+ *
+ * @:
+ *              0                                                   2
+ * hh:mm:ss.ms  |___________________________________________________|
+ * 10:41:46.700 *                                                   | 0
+ * 10:41:46.800 *                                                   | 0
+ * 10:41:46.900 |                         *                         | 1
+ * 10:41:47.000 |                                                   * 2
+ * 10:41:47.100 |                         *                         | 1
+ * 10:41:47.200 *                                                   | 0
+ * 10:41:47.300 |                         *                         | 1
+ * 10:41:47.400 *                                                   | 0
+ * 10:41:47.500 |                         *                         | 1
+ * 10:41:47.600 *                                                   | 0
+ * 10:41:47.700 |                                                   * 2
+ * 10:41:47.800 *                                                   | 0
+ * 10:41:47.900 *                                                   | 0
+ * 10:41:48.000 |                         *                         | 1
+ * 10:41:48.100 |                         *                         | 1
+ * 10:41:48.200 |                         *                         | 1
+ * 10:41:48.300 *                                                   | 0
+ * 10:41:48.400 |                                                   * 2
+ * 10:41:48.500 |                         *                         | 1
+ * 10:41:48.600 |                         *                         | 1
+ *              v___________________________________________________v
+ *              0                                                   2
+ */
 ```
 
 Example two:
@@ -2305,37 +2283,37 @@ i:ms:100 {
     @c = -4;
   }
 }
-```
-
-```
-Attached 2 probes
-
-
-@:
-             -5                                                  5
-hh:mm:ss.ms  |___________________________________________________|
-10:39:49.300 *                         .                         | -5
-10:39:49.400 |    *                    .                         | -4
-10:39:49.500 |         *               .                         | -3
-10:39:49.600 |              *          .                         | -2
-10:39:49.700 |                   *     .                         | -1
-10:39:49.800 |                         *                         | 0
-10:39:49.900 |                         .    *                    | 1
-10:39:50.000 |                         .         *               | 2
-10:39:50.100 |                         .              *          | 3
-10:39:50.200 |                         .                   *     | 4
-10:39:50.300 |                         .                         * 5
-10:39:50.400 |                         .                   *     | 4
-10:39:50.500 |                         .              *          | 3
-10:39:50.600 |                         .         *               | 2
-10:39:50.700 |                         .    *                    | 1
-10:39:50.800 |                         *                         | 0
-10:39:50.900 |                   *     .                         | -1
-10:39:51.000 |              *          .                         | -2
-10:39:51.100 |         *               .                         | -3
-10:39:51.200 |    *                    .                         | -4
-             v___________________________________________________v
-             -5                                                  5
+/*
+ * Sample output:
+ * Attached 2 probes
+ *
+ *
+ * @:
+ *              -5                                                  5
+ * hh:mm:ss.ms  |___________________________________________________|
+ * 10:39:49.300 *                         .                         | -5
+ * 10:39:49.400 |    *                    .                         | -4
+ * 10:39:49.500 |         *               .                         | -3
+ * 10:39:49.600 |              *          .                         | -2
+ * 10:39:49.700 |                   *     .                         | -1
+ * 10:39:49.800 |                         *                         | 0
+ * 10:39:49.900 |                         .    *                    | 1
+ * 10:39:50.000 |                         .         *               | 2
+ * 10:39:50.100 |                         .              *          | 3
+ * 10:39:50.200 |                         .                   *     | 4
+ * 10:39:50.300 |                         .                         * 5
+ * 10:39:50.400 |                         .                   *     | 4
+ * 10:39:50.500 |                         .              *          | 3
+ * 10:39:50.600 |                         .         *               | 2
+ * 10:39:50.700 |                         .    *                    | 1
+ * 10:39:50.800 |                         *                         | 0
+ * 10:39:50.900 |                   *     .                         | -1
+ * 10:39:51.000 |              *          .                         | -2
+ * 10:39:51.100 |         *               .                         | -3
+ * 10:39:51.200 |    *                    .                         | -4
+ *              v___________________________________________________v
+ *              -5                                                  5
+ */
 ```
 
 ## Invocation Mode
@@ -2369,21 +2347,21 @@ BEGIN {
   }
   exit();
 }
+/*
+ * Sample output:
+ * @: 10
+ * @: 10
+ * @: 10
+ * @: 10
+ * @: 10
+ * @: 10
+ * @: 10
+ * @: 10
+ * @: 10
+ * @: 10
+ */
 ```
 
-Maps are printed by reference not by value and as the value gets updated right after the print user-space will likely only see the final value once it processes the event:
-
-```
-@: 10
-@: 10
-@: 10
-@: 10
-@: 10
-@: 10
-@: 10
-@: 10
-@: 10
-@: 10
-```
+Maps are printed by reference not by value and as the value gets updated right after the print user-space will likely only see the final value once it processes the event.
 
 Therefore, when you need precise event statistics, it is recommended to use synchronous functions (e.g. count() and hist()) to ensure more reliable and accurate results.
