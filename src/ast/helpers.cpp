@@ -6,12 +6,14 @@
 
 namespace bpftrace {
 
-// N.B. there are other unsafe functions but they are being checked
-// inside the macros themselves
 static std::unordered_set<std::string> UNSAFE_FUNCS = {
   "system",
   "crash_kexec",
   "bpf_send_signal_task",
+  "bpf_send_signal",
+  "bpf_send_signal_thread",
+  "bpf_override_return",
+  "bpf_probe_write_user",
 };
 
 static std::unordered_set<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };

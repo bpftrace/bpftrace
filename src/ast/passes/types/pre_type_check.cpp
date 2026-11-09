@@ -578,8 +578,9 @@ void CallPreCheck::visit(Call &call)
 {
   // Check for unsafe-ness first.
   if (bpftrace_.safe_mode_ && is_unsafe_func(call.func)) {
-    call.addError() << call.func
-                    << "() is an unsafe function being used in safe mode";
+    auto &err = call.addError();
+    err << call.func << "() is an unsafe function being used in safe mode";
+    err.addHint() << "To use it you need the --unsafe flag";
   }
 
   struct func_setter {
@@ -600,7 +601,7 @@ void CallPreCheck::visit(Call &call)
     std::string old_func_;
   };
 
-  if (call.is_kfunc()) {
+  if (call.ns != Call::Namespace::Default) {
     func_setter scope_bound_func_setter{ *this, call.func };
     for (size_t i = 0; i < call.vargs.size(); ++i) {
       func_arg_idx_ = i;

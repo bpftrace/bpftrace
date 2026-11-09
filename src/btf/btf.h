@@ -446,10 +446,9 @@ public:
   std::string name() const;
 
 private:
-  // We don't support `add` for forward declarations, this is really an
-  // artifact used for constructing pointers without full type information in
-  // all translation units. It should not be relevant in fully fleshed out
-  // types, hence the only method is the resolution method.
+  static Result<ForwardDecl> add(HandleRef handle,
+                                 const std::string &name,
+                                 Kind kind);
   friend class Types;
   friend std::ostream &operator<<(std::ostream & /*out*/,
                                   const ForwardDecl & /*type*/);
@@ -494,7 +493,7 @@ public:
   Result<AnyType> type() const;
 
 private:
-  static Result<Const> add(HandleRef handle, const ValueType &value_type);
+  static Result<Const> add(HandleRef handle, const AnyType &type);
   friend class Types;
   friend std::ostream &operator<<(std::ostream & /*out*/,
                                   const Const & /*type*/);

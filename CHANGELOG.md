@@ -20,6 +20,8 @@ and this project adheres to
   - [#4018](https://github.com/bpftrace/bpftrace/issues/4018)
 - Add `kfunc::name(...)` syntax for calling kernel functions (kfuncs) directly.
   - [#5360](https://github.com/bpftrace/bpftrace/pull/5360)
+- Add `helper::name(...)` syntax for calling BPF helpers directly.
+  - [#5435](https://github.com/bpftrace/bpftrace/pull/5435)
 - Allow `delete(@map)` on maps with explicit keys to synchronously delete all keys/values
   - [#5382](https://github.com/bpftrace/bpftrace/pull/5382)
 - Add open-coded iterators to `for` loops: `iter_task`, `iter_threads`,

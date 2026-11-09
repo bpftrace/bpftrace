@@ -894,7 +894,7 @@ EXPECT @: 100
 
 NAME write_user_unsafe_required
 PROG tracepoint:syscalls:sys_enter_openat { write_user(args.filename, "x", 1); }
-EXPECT_REGEX .*ERROR: write_user\(\) is unsafe. To use you need the --unsafe flag
+EXPECT_REGEX .*ERROR: bpf_probe_write_user\(\) is an unsafe function being used in safe mode
 WILL_FAIL
 
 NAME write_user_basic
@@ -937,3 +937,21 @@ PROG tracepoint:syscalls:sys_enter_read { $t = kfunc::bpf_task_from_pid("x"); }
 EXPECT_REGEX .*ERROR: Expected int32 for argument `pid` got string.*
 WILL_FAIL
 REQUIRES_FEATURE btf
+
+NAME helper call without args
+PROG begin { print(helper::bpf_get_current_pid_tgid() >> 32 == pid); exit(); }
+EXPECT true
+
+NAME helper call with map args
+PROG begin { @m[1] = 5; $k = 1; print(helper::bpf_map_delete_elem(&@m, &$k)); print(helper::bpf_map_delete_elem(&@m, &$k)); exit(); }
+EXPECT_REGEX 0\n-2
+
+NAME helper call returning a kernel struct
+PROG begin { print(helper::bpf_get_current_task_btf()->pid == tid); exit(); }
+EXPECT true
+REQUIRES_FEATURE btf
+
+NAME helper call wrong probe context
+PROG kprobe:vfs_read { $x = helper::bpf_get_socket_cookie(curtask); }
+EXPECT_REGEX .*ERROR: BPF helper `bpf_get_socket_cookie` is not callable from a "kprobe" probe.*
+WILL_FAIL

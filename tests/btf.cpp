@@ -4,9 +4,11 @@
 
 #include "btf/btf.h"
 #include "btf/compat.h"
+#include "btf/helper_protos.h"
 #include "btf/helpers.h"
 #include "data/data_source_btf.h"
 #include "struct.h"
+#include "util/bpf_funcs.h"
 #include "gtest/gtest.h"
 
 namespace bpftrace::test::btf {
@@ -716,6 +718,45 @@ TEST(btf, compat_unresolved_forward_decl)
   ASSERT_TRUE(bool(ty));
   ASSERT_TRUE(ty->IsPtrTy());
   EXPECT_TRUE(ty->GetPointeeTy().IsVoidTy());
+}
+
+TEST(btf, helper_protos)
+{
+  auto types = load_helper_protos();
+  ASSERT_TRUE(bool(types));
+
+  for (const auto &helper : helper_protos) {
+    EXPECT_TRUE(helper_id_from_name(helper.name).has_value()) << helper.name;
+    auto func = types->lookup<Function>(std::string(helper.name));
+    ASSERT_TRUE(bool(func)) << helper.name;
+    EXPECT_EQ(func->linkage(), Function::Linkage::Global);
+  }
+
+  auto task = types->lookup<Function>("bpf_get_current_task_btf");
+  ASSERT_TRUE(bool(task));
+  auto task_proto = task->type();
+  ASSERT_TRUE(bool(task_proto));
+  auto task_args = task_proto->argument_types();
+  ASSERT_TRUE(bool(task_args));
+  EXPECT_TRUE(task_args->empty());
+  auto task_ret = task_proto->return_type();
+  ASSERT_TRUE(bool(task_ret));
+  ASSERT_TRUE(task_ret->is<Pointer>());
+  auto task_struct = task_ret->as<Pointer>().element_type();
+  ASSERT_TRUE(bool(task_struct));
+  ASSERT_TRUE(task_struct->is<ForwardDecl>());
+  EXPECT_EQ(task_struct->as<ForwardDecl>().kind(), ForwardDecl::Struct);
+  EXPECT_EQ(task_struct->as<ForwardDecl>().name(), "task_struct");
+
+  auto lookup = types->lookup<Function>("bpf_map_lookup_elem");
+  ASSERT_TRUE(bool(lookup));
+  auto lookup_proto = lookup->type();
+  ASSERT_TRUE(bool(lookup_proto));
+  auto lookup_args = lookup_proto->argument_types();
+  ASSERT_TRUE(bool(lookup_args));
+  ASSERT_EQ(lookup_args->size(), 2);
+  EXPECT_EQ(to_str(lookup_args->at(0).second), "void*");
+  EXPECT_EQ(to_str(lookup_args->at(1).second), "const void*");
 }
 
 } // namespace bpftrace::test::btf

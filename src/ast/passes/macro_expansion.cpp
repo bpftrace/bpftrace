@@ -459,7 +459,7 @@ void MacroExpander::visit(Expression &expr)
   }
   if (call) {
     visit(call->vargs);
-    if (call->is_kfunc()) {
+    if (call->ns != Call::Namespace::Default) {
       return;
     }
   }

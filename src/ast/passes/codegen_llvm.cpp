@@ -57,6 +57,7 @@
 #include "map_info.h"
 #include "required_resources.h"
 #include "types.h"
+#include "util/bpf_funcs.h"
 #include "util/bpf_names.h"
 #include "util/cgroup.h"
 #include "util/cpus.h"
@@ -208,6 +209,7 @@ public:
   ScopedExpr visit(Builtin &builtin);
   ScopedExpr visit(Call &call);
   ScopedExpr kfunc_call(Call &call);
+  ScopedExpr helper_call(Call &call);
   ScopedExpr visit(Map &map);
   ScopedExpr visit(MapAddr &map_addr);
   ScopedExpr visit(Variable &var);
@@ -958,10 +960,43 @@ ScopedExpr CodegenLLVM::kfunc_call(Call &call)
   return ScopedExpr(b_.CreateCall(fn, arg_values));
 }
 
+ScopedExpr CodegenLLVM::helper_call(Call &call)
+{
+  auto func_id = helper_id_from_name(call.func);
+  if (!func_id) {
+    LOG(BUG) << "Unknown BPF helper " << call.func;
+  }
+
+  const auto &ret_type = type_map_.type(&call);
+  bool returns_void = ret_type.IsVoidTy() || ret_type.IsNoneTy();
+
+  std::vector<ScopedExpr> args;
+  SmallVector<llvm::Type *> arg_types;
+  SmallVector<llvm::Value *> arg_values;
+  args.reserve(call.vargs.size());
+  for (auto &expr : call.vargs) {
+    args.emplace_back(visit(expr));
+    arg_types.push_back(b_.GetType(type_map_.type(expr)));
+    arg_values.push_back(args.back().value());
+  }
+
+  FunctionType *func_type = FunctionType::get(
+      returns_void ? b_.getVoidTy() : b_.GetType(ret_type), arg_types, false);
+  return ScopedExpr(b_.CreateHelperCall(*func_id,
+                                        func_type,
+                                        arg_values,
+                                        false,
+                                        returns_void ? "" : call.func,
+                                        call.loc));
+}
+
 ScopedExpr CodegenLLVM::visit(Call &call)
 {
   if (call.is_kfunc()) {
     return kfunc_call(call);
+  }
+  if (call.is_helper()) {
+    return helper_call(call);
   }
 
   if (call.func == "count") {

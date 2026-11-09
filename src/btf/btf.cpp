@@ -481,6 +481,19 @@ Result<Enum64> Enum64::add(HandleRef handle,
   return Enum64(std::move(handle), v);
 }
 
+Result<ForwardDecl> ForwardDecl::add(HandleRef handle,
+                                     const std::string &name,
+                                     Kind kind)
+{
+  auto v = btf__add_fwd(handle->btf_library(),
+                        name.c_str(),
+                        static_cast<enum btf_fwd_kind>(kind));
+  if (v < 0) {
+    return make_error<TypeError>(v);
+  }
+  return ForwardDecl(std::move(handle), v);
+}
+
 ForwardDecl::Kind ForwardDecl::kind() const
 {
   // Note that enums don't really exist in the encoded scheme, they are just
@@ -532,9 +545,9 @@ Result<AnyType> Volatile::type() const
   return AnyType::lookup(handle(), btf_type()->type);
 }
 
-Result<Const> Const::add(HandleRef handle, const ValueType &value_type)
+Result<Const> Const::add(HandleRef handle, const AnyType &type)
 {
-  auto v = btf__add_const(handle->btf_library(), value_type.type_id());
+  auto v = btf__add_const(handle->btf_library(), type.type_id());
   if (v < 0) {
     return make_error<TypeError>(v);
   }
