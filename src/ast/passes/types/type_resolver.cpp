@@ -952,7 +952,7 @@ void TypeRuleCollector::visit(Call &call)
     visit(varg);
   }
 
-  if (call.is_kfunc()) {
+  if (call.ns != Call::Namespace::Default) {
     resolve_btf_function(call);
     return;
   }
@@ -1290,6 +1290,8 @@ void TypeRuleCollector::resolve_btf_function(Call &call)
     if (call.is_kfunc()) {
       call.addError() << "Unknown kernel function: '" << call.func
                       << "'; it is not present in kernel BTF";
+    } else if (call.is_helper()) {
+      call.addError() << "Unknown BPF helper: '" << call.func << "'";
     } else {
       call.addError() << "Unknown function: '" << call.func << "'";
     }
@@ -1324,7 +1326,7 @@ void TypeRuleCollector::resolve_btf_function(Call &call)
                     << compat_return_type.takeError();
     return;
   }
-  if (call.is_kfunc() && compat_return_type->IsPtrTy()) {
+  if ((call.is_kfunc() || call.is_helper()) && compat_return_type->IsPtrTy()) {
     compat_return_type->SetAS(AddrSpace::kernel);
   }
   resolver_.set_type(&call, *compat_return_type);

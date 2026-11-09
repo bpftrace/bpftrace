@@ -1,6 +1,5 @@
 macro __signal(expr, is_tid)
 {
-  import "stdlib/process/process.bpf.c";
   let $sig : uint32 = 0;
 
   if comptime (probetype != "kprobe" && probetype != "kretprobe" &&
@@ -12,10 +11,7 @@ macro __signal(expr, is_tid)
          is_tid ? "signal_thread()" : "signal()", probetype);
   }
 
-  if comptime __builtin_safe_mode {
-    fail("%s is unsafe. To use you need the --unsafe flag",
-         is_tid ? "signal_thread()" : "signal()");
-  } else if comptime is_literal(expr) {
+  if comptime is_literal(expr) {
     if comptime is_str(expr) {
       $sig = __builtin_signal_num(expr);
     } else if comptime is_integer(expr) {
@@ -39,7 +35,9 @@ macro __signal(expr, is_tid)
     errorf("%s expects an integer between 1 and 64 (inclusive). Got %d",
            is_tid ? "signal_thread()" : "signal()", $sig);
   } else {
-    $ret = comptime is_tid ? __signal_thread($sig) : __signal_process($sig);
+    $ret = comptime is_tid
+    ? helper::bpf_send_signal_thread($sig)
+    : helper::bpf_send_signal($sig);
     if ($ret != 0) {
       warnf("signal call failed with error %d", $ret);
     }

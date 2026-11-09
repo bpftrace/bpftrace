@@ -7,6 +7,51 @@
 
 namespace bpftrace::ast {
 
+static Result<btf::Types> load_helpers(const std::string &object)
+{
+  auto helpers = btf::Types::parse(static_cast<const void *>(object.data()),
+                                   object.size());
+  if (!helpers) {
+    return helpers.takeError();
+  }
+  auto members = helpers->lookup<btf::Struct>(
+      std::string(BitcodeModules::HELPERS_STRUCT));
+  if (!members) {
+    return members.takeError();
+  }
+  auto fields = members->fields();
+  if (!fields) {
+    return fields.takeError();
+  }
+  for (const auto &[name, field] : *fields) {
+    btf::AnyType type = field.type;
+    if (type.is<btf::Const>()) {
+      auto inner = type.as<btf::Const>().type();
+      if (!inner) {
+        return inner.takeError();
+      }
+      type = *inner;
+    }
+    if (!type.is<btf::Pointer>()) {
+      continue;
+    }
+    auto proto = type.as<btf::Pointer>().element_type();
+    if (!proto) {
+      return proto.takeError();
+    }
+    if (!proto->is<btf::FunctionProto>()) {
+      continue;
+    }
+    auto func = helpers->add<btf::Function>(name,
+                                            btf::Function::Linkage::Global,
+                                            proto->as<btf::FunctionProto>());
+    if (!func) {
+      return func.takeError();
+    }
+  }
+  return std::move(*helpers);
+}
+
 Pass CreateTypeSystemPass()
 {
   auto fn = [](ASTContext &ast,
@@ -59,6 +104,14 @@ Pass CreateTypeSystemPass()
     }
     if (aggregate) {
       result.global = std::move(*aggregate);
+    }
+
+    if (!bm.helpers_object.empty()) {
+      auto helpers = load_helpers(bm.helpers_object);
+      if (!helpers) {
+        return helpers.takeError();
+      }
+      result.helpers = std::move(*helpers);
     }
 
     return result;

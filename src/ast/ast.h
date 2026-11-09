@@ -501,6 +501,7 @@ public:
   enum class Namespace {
     Default,
     KFunc,
+    Helper,
   };
 
   explicit Call(ASTContext &ctx,
@@ -545,6 +546,11 @@ public:
   bool is_kfunc() const
   {
     return ns == Namespace::KFunc;
+  }
+
+  bool is_helper() const
+  {
+    return ns == Namespace::Helper;
   }
 
   std::string func;

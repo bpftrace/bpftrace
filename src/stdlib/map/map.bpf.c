@@ -8,14 +8,6 @@
 struct bpf_map;
 extern __s64 bpf_map_sum_elem_count(const struct bpf_map *map) __ksym __weak;
 
-void * __lookup_elem(void *map, void *key) {
-    return bpf_map_lookup_elem(map, key);
-}
-
-long __delete(void *map, void *key) {
-    return bpf_map_delete_elem(map, key);
-}
-
 static long __delete_all_cb(void *map, const void *key, void *value, void *ctx)
 {
     long *failed = ctx;

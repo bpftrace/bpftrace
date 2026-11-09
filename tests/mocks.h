@@ -166,6 +166,12 @@ public:
     has_get_func_ip_ = std::make_optional<bool>(has_features);
     has_loop_ = std::make_optional<bool>(has_features);
   };
+
+  bool helper_allowed([[maybe_unused]] bpf_func_id func_id,
+                      [[maybe_unused]] bpf_prog_type prog_type) override
+  {
+    return true;
+  }
 };
 
 class MockChildProc : public util::ChildProc {

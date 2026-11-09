@@ -10,15 +10,18 @@
 #include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/TargetParser/Host.h>
+#include <sstream>
 #include <sys/mman.h>
 
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/passes/clang_build.h"
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/collect_nodes.h"
 #include "ast/passes/resolve_imports.h"
 #include "bpftrace.h"
 #include "stdlib/stdlib.h"
+#include "util/bpf_funcs.h"
 #include "util/memfd.h"
 #include "util/result.h"
 
@@ -31,18 +34,25 @@ void ClangBuildError::log(llvm::raw_ostream &OS) const
   OS << msg_;
 }
 
-static Result<BitcodeModules::Result> build(
-    CompileContext &ctx,
-    const std::string &name,
-    LoadedObject &obj,
-    const llvm::MemoryBufferRef &vmlinux_h,
-    Imports &imports)
+namespace {
+
+struct BuildOutput {
+  std::unique_ptr<llvm::Module> module;
+  std::string object;
+  std::string warnings;
+};
+
+} // namespace
+
+static Result<BuildOutput> build(CompileContext &ctx,
+                                 const std::string &name,
+                                 llvm::StringRef source,
+                                 const llvm::MemoryBufferRef &vmlinux_h,
+                                 Imports &imports)
 {
   llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> vfs(
       new llvm::vfs::InMemoryFileSystem());
-  vfs->addFile(name,
-               0,
-               llvm::MemoryBuffer::getMemBufferCopy(obj.data(), "main"));
+  vfs->addFile(name, 0, llvm::MemoryBuffer::getMemBufferCopy(source, "main"));
 
   const std::string asm_dir = "include/asm/" + arch::Host::asm_arch() + "/";
   for (const auto &[name, other] : stdlib::Stdlib::c_files) {
@@ -150,13 +160,6 @@ static Result<BitcodeModules::Result> build(
     // original import, then include the C message as a "hint".
     return make_error<ClangBuildError>(errstr);
   }
-  if (!errstr.empty()) {
-    // If the compilation didn't fail, then these weren't errors but we
-    // can surface them as compilation warnings.
-    auto &e = obj.node.addWarning();
-    e << "found external warnings";
-    e.addHint() << errstr;
-  }
   std::unique_ptr<llvm::Module> mod = action->takeModule();
   if (!mod) {
     // This is an internal error, not suitable to surface as a user
@@ -167,11 +170,42 @@ static Result<BitcodeModules::Result> build(
   if (!data) {
     return data.takeError();
   }
-  return BitcodeModules::Result{
+  // If the compilation didn't fail, then anything in `errstr` is a warning.
+  return BuildOutput{
     .module = std::move(mod),
     .object = std::move(*data),
-    .loc = obj.node.loc,
+    .warnings = std::move(errstr),
   };
+}
+
+// Declares one struct member per helper, typed by the libbpf declaration of
+// that helper, so that the helper prototypes are emitted as BTF. Only helpers
+// that libbpf declares and that have an id are included.
+static std::string helpers_source()
+{
+  std::stringstream src;
+  src << "#define __KERNEL__\n"
+      << "#include <linux/types.h>\n"
+      << "#include <bpf/bpf_helpers.h>\n"
+      << "struct " << BitcodeModules::HELPERS_STRUCT << " {\n";
+  auto defs = stdlib::Stdlib::c_files.find("include/bpf/bpf_helper_defs.h");
+  if (defs != stdlib::Stdlib::c_files.end()) {
+    for (const auto &helper : helper_names()) {
+      if (defs->second.find("(* const " + helper + ")(") !=
+          std::string_view::npos) {
+        src << "  __typeof__(" << helper << ") " << helper << ";\n";
+      }
+    }
+  }
+  src << "} " << BitcodeModules::HELPERS_STRUCT << ";\n";
+  return src.str();
+}
+
+static bool has_helper_calls(ASTContext &ast)
+{
+  CollectNodes<Call> calls;
+  calls.visit(*ast.root, [](const Call &call) { return call.is_helper(); });
+  return !calls.nodes().empty();
 }
 
 ast::Pass CreateClangBuildPass()
@@ -180,12 +214,20 @@ ast::Pass CreateClangBuildPass()
       "ClangBuilder",
       [](BPFtrace &bpftrace,
          CompileContext &ctx,
+         ASTContext &ast,
          ast::Imports &imports) -> Result<BitcodeModules> {
         BitcodeModules bm;
 
-        // Nothing to do? Return directly.
-        if (imports.c_sources.empty()) {
-          return bm;
+        if (has_helper_calls(ast)) {
+          auto result = build(ctx,
+                              "helpers.bpf.c",
+                              helpers_source(),
+                              llvm::MemoryBufferRef("", "vmlinux.h"),
+                              imports);
+          if (!result) {
+            return result.takeError();
+          }
+          bm.helpers_object = std::move(result->object);
         }
 
         // Construct our kernel headers. This is a rather expensive operation,
@@ -197,7 +239,7 @@ ast::Pass CreateClangBuildPass()
         for (auto &[name, obj] : imports.c_sources) {
           auto result = build(ctx,
                               name,
-                              obj,
+                              obj.data(),
                               llvm::MemoryBufferRef(llvm::StringRef(vmlinux_h),
                                                     "vmlinux.h"),
                               imports);
@@ -208,7 +250,16 @@ ast::Pass CreateClangBuildPass()
             e.addHint() << result.takeError();
             continue;
           }
-          bm.modules.push_back(std::move(*result));
+          if (!result->warnings.empty()) {
+            auto &e = obj.node.addWarning();
+            e << "found external warnings";
+            e.addHint() << result->warnings;
+          }
+          bm.modules.push_back(BitcodeModules::Result{
+              .module = std::move(result->module),
+              .object = std::move(result->object),
+              .loc = obj.node.loc,
+          });
         }
 
         return bm;

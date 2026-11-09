@@ -16,6 +16,9 @@ public:
     Location loc;
   };
   std::vector<Result> modules;
+  // libbpf prototypes of all BPF helpers which are type erased in kernel BTF
+  std::string helpers_object;
+  static constexpr std::string_view HELPERS_STRUCT = "__bpftrace_helpers";
 };
 
 class ClangBuildError : public ErrorInfo<ClangBuildError> {
