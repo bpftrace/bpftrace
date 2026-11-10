@@ -225,11 +225,16 @@
           # be controlled alongside the version used for the shell environment.
           mkAFL =
             llvmVersion:
-              pkgs.aflplusplus.override {
+              (pkgs.aflplusplus.override {
                 clang = pkgs."clang_${toString llvmVersion}";
                 llvm = pkgs."llvmPackages_${toString llvmVersion}".llvm;
                 llvmPackages = pkgs."llvmPackages_${toString llvmVersion}";
-              };
+              }).overrideAttrs (_: {
+                # aflplusplus 5.00c's installCheckPhase runs test/test-all.sh,
+                # which fails inside the Nix build sandbox. We only need the
+                # compiled tooling for the fuzz smoke test, so skip the checks.
+                doInstallCheck = false;
+              });
 
           # Lambda that can be used for a fuzzing environment. Not part of the default
           # devshell because aflplusplus is only available for x86_64/amd64.

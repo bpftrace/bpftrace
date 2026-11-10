@@ -342,6 +342,11 @@ def fuzz():
                     # test, we use this rather than change the system state.
                     # [1] https://github.com/mirrorer/afl/blob/master/docs/env_variables.txt
                     "AFL_I_DONT_CARE_ABOUT_MISSING_CRASHES": "",
+                    # Skip the CPU scaling governor check. CI runners use an
+                    # on-demand governor, which afl-fuzz otherwise treats as a
+                    # fatal error. This only affects fuzzing throughput, which
+                    # is irrelevant for this smoke test.
+                    "AFL_SKIP_CPUFREQ": "1",
                 },
                 cwd=Path(BUILD_DIR),
                 # fmt: on
