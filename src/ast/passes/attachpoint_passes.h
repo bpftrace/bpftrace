@@ -12,6 +12,16 @@
 
 namespace bpftrace::ast {
 
+struct ProbeLocation {
+  std::string source_file;
+  std::string kernel_module;
+  size_t line_num;
+  size_t col_num;
+};
+
+Result<ProbeLocation> parse_source_location(
+    const std::vector<std::string> &parts);
+
 // Provides function information (kernel and user space) to AST passes.
 class FunctionInfo : public bpftrace::ast::State<"function-info"> {
 public:

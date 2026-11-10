@@ -27,6 +27,8 @@ and this project adheres to
   - [#5386](https://github.com/bpftrace/bpftrace/pull/5386)
 - `test` probes now report the source line of a failing (non-zero) return
   - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
+- Allow listing source-location kprobes that map to an address.
+  - [#5429](https://github.com/bpftrace/bpftrace/pull/5429)
 #### Changed
 - Source location attachpoints resolve to an address the DWARF line table marks
   as a statement start, which can move where kprobes and uprobes attach.

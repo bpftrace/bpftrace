@@ -1536,6 +1536,15 @@ kprobe@my_module:main.c:42
 }
 ```
 
+To check if a location maps to a valid (attachable) statement in a file, it is
+possible to use probe listing, which prints the same location if it is
+attachable and nothing otherwise.
+
+```
+# bpftrace -l 'kprobe@fs/open.c:1077'
+kprobe@fs/open.c:1077
+```
+
 ### profile
 
 **variants**

@@ -789,9 +789,14 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
 
   if (auto addr = statement_addr ? statement_addr : other_addr) {
     // Add KASLR offset if in kernel mode
+    Dwfl_Module *mod = dwfl_cumodule(cu->cudie);
+    const char *func = mod ? dwfl_module_addrname(mod, *addr + cu->mod_bias)
+                           : nullptr;
+
     return SourceLocation{
       .address = is_kernel_ ? *addr + cu->mod_bias : *addr,
       .kernel_module = is_kernel_ ? cu_kernel_module_name(cu->cudie) : "",
+      .function = func ? func : "",
     };
   }
 

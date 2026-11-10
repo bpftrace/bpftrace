@@ -83,7 +83,7 @@ public:
   // Get definitions of structures matching search.
   std::vector<std::string> get_structs_for_listing(const std::string &search);
 
-  const BPFtrace *bpftrace_;
+  BPFtrace *bpftrace_;
   const symbols::KernelInfo &kernel_func_info_;
   const symbols::UserInfo &user_func_info_;
 
@@ -101,6 +101,7 @@ private:
                                            const std::set<std::string> &set);
   std::vector<std::string> get_self_probes_for_listing(
       const std::string &search_input);
+  bool is_source_location_traceable(const std::vector<std::string> &parts);
 
   virtual std::unique_ptr<std::istream> get_symbols_from_traceable_funcs(
       bool with_modules = false,
@@ -130,4 +131,5 @@ private:
                                   std::vector<std::string> &results,
                                   const std::string &lang = "");
 };
+
 } // namespace bpftrace

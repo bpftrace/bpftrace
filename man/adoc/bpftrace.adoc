@@ -355,6 +355,7 @@ combined with `-e` or filename args to see all the probes that a program would a
 # bpftrace -l -e 'tracepoint:xdp:mem_* { exit(); }'
 # bpftrace -l my_script.bt
 # bpftrace -lv 'enum cpu_usage_stat'
+# bpftrace -l 'kprobe@fs/open.c:1077'
 ----
 
 The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:

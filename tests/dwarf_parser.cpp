@@ -41,6 +41,7 @@ TEST(dwarf_parser, source_location_prefers_statement)
   if (!location)
     FAIL() << llvm::toString(location.takeError());
   EXPECT_EQ(location->address, symbols->front().v_addr);
+  EXPECT_EQ(location->function, "line_selection_preferred");
 }
 #endif
 

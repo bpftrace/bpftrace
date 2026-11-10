@@ -172,6 +172,49 @@ TEST(attachpoint_parser, kprobe_src_loc)
              R"(Source code location not allowed)");
 }
 
+void test_parsed_source_location(const std::vector<std::string>& parts,
+                                 const std::string& kernel_module,
+                                 const std::string& source_file,
+                                 size_t line_num,
+                                 size_t col_num = 0)
+{
+  auto location = ast::parse_source_location(parts);
+  if (!location)
+    FAIL() << llvm::toString(location.takeError());
+  EXPECT_EQ(location->kernel_module, kernel_module);
+  EXPECT_EQ(location->source_file, source_file);
+  EXPECT_EQ(location->line_num, line_num);
+  EXPECT_EQ(location->col_num, col_num);
+}
+
+void test_parsed_source_location_error(const std::vector<std::string>& parts,
+                                       const std::string& error)
+{
+  auto location = ast::parse_source_location(parts);
+  ASSERT_FALSE(bool(location));
+  EXPECT_THAT(llvm::toString(location.takeError()), HasSubstr(error));
+}
+
+TEST(attachpoint_parser, parse_source_location)
+{
+  test_parsed_source_location(
+      { "kprobe", "@", "fs/open.c", "1077" }, "", "fs/open.c", 1077);
+  test_parsed_source_location(
+      { "kprobe", "@", "fs/open.c", "1077", "7" }, "", "fs/open.c", 1077, 7);
+  test_parsed_source_location(
+      { "kprobe", "@", "my_module", "src/test.c", "1077" },
+      "my_module",
+      "src/test.c",
+      1077);
+
+  test_parsed_source_location_error({ "kprobe", "@", "fs/open.c", "*" },
+                                    "Invalid line number");
+  test_parsed_source_location_error(
+      { "kprobe", "@", "fs/open.c" },
+      "Invalid kprobe arguments, expected format: "
+      "kprobe@[MODULE:]FILE:LINE[:COL]");
+}
+
 #ifdef HAVE_LIBDW
 
 class attachpoint_parser_dwarf : public test_dwarf {};

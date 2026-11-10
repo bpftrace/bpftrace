@@ -3,10 +3,12 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <llvm/Support/Error.h>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "ast/passes/attachpoint_passes.h"
 #include "bpftrace.h"
 #include "btf.h"
 #include "cxxdemangler/cxxdemangler.h"
@@ -543,6 +545,36 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
   return results;
 }
 
+bool ProbeMatcher::is_source_location_traceable(
+    const std::vector<std::string>& parts)
+{
+  auto location = ast::parse_source_location(parts);
+  if (!location) {
+    consumeError(location.takeError());
+    return false;
+  }
+
+  Dwarf* dwarf = bpftrace_->get_kernel_dwarf();
+  if (!dwarf) {
+    LOG(WARNING) << "No DWARF debug info found for kernel, cannot list "
+                    "source code locations";
+    return false;
+  }
+
+  auto resolved = dwarf->line_to_addr(location->source_file,
+                                      location->line_num,
+                                      location->col_num,
+                                      location->kernel_module);
+  if (!resolved) {
+    consumeError(resolved.takeError());
+    return false;
+  }
+
+  return !resolved->function.empty() &&
+         kernel_func_info_.is_traceable(resolved->function,
+                                        resolved->kernel_module);
+}
+
 std::vector<std::string> ProbeMatcher::get_probes_for_listing(
     const std::string& pattern,
     std::optional<pid_t> pid)
@@ -553,6 +585,22 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
   // Pattern format: "probe_type:target:func" or "probe_type:func" etc.
   auto parts = util::split_string(pattern, ':');
   if (parts.empty()) {
+    return results;
+  }
+
+  // Special case are location probes ("kprobe@file.c:line:col")
+  // For now, we do not support wildcards in location probes so just check that
+  // the location is attachable to.
+  if (parts[0].find('@') != std::string::npos) {
+    auto probetype_parts = util::split_string(parts[0], '@');
+    if (probetype_parts.size() == 2 &&
+        probetype(probetype_parts[0]) == ProbeType::kprobe) {
+      parts[0] = probetype_parts[0];
+      parts.insert(parts.begin() + 1, { "@", probetype_parts[1] });
+      if (is_source_location_traceable(parts)) {
+        results.push_back(pattern);
+      }
+    }
     return results;
   }
 
