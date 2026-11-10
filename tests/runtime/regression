@@ -179,7 +179,7 @@ TIMEOUT 1
 
 # https://github.com/bpftrace/bpftrace/issues/5194
 NAME session_retval
-RUN {{BPFTRACE}} -e 'kprobe:ksys_read { print("enter"); } kretprobe:ksys_read { print(retval); }'
+RUN {{BPFTRACE}} -e 'kprobe:ksys_read { print("enter"); } kretprobe:ksys_read { print(retval); exit() }'
 AFTER ./testprogs/syscall read
 EXPECT Attached 1 probe
 TIMEOUT 1
