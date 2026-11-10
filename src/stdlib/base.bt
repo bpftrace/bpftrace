@@ -48,7 +48,7 @@ macro assert(cond, msg)
 //
 // Bytes with values >=32 and \&lt;=126 are printed using their ASCII character, other bytes are printed in hex form (e.g. `\x00`). The `%rx` format specifier can be used to print everything in hex form, including ASCII characters. The similar `%rh` format specifier prints everything in hex form without `\x` and with spaces between bytes (e.g. `0a fe`).
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   printf("%r\n", buf(kaddr("avenrun"), 8));
 // }
@@ -69,7 +69,7 @@ macro assert(cond, msg)
 // `cat` supports the same format string and arguments that `printf` does.
 // If the file cannot be opened or read an error is printed to stderr.
 //
-// ```
+// ```bpftrace
 // tracepoint:syscalls:sys_enter_execve {
 //   cat("/proc/%d/maps", pid);
 // }
@@ -101,7 +101,7 @@ macro cgroup()
 //
 // **compile time**
 //
-// ```
+// ```bpftrace
 // BEGIN {
 //   print(cgroupid("/sys/fs/cgroup/system.slice"));
 // }
@@ -124,7 +124,7 @@ macro cgroup()
 // container), the cgroup path won’t be found (unlike when looking up the cgroup
 // path of a process via /proc/.../cgroup).
 //
-// ```
+// ```bpftrace
 // BEGIN {
 //   $cgroup_path = cgroup_path(3436);
 //   print($cgroup_path);
@@ -141,7 +141,7 @@ macro cgroup()
 //
 // Use `delete(m)` to remove all keys/values synchronously.
 //
-// ```
+// ```bpftrace
 // interval:ms:100 {
 //   @[rand % 10] = count();
 // }
@@ -157,7 +157,7 @@ macro cgroup()
 //
 // Returns a `Record` containing the current `bpftrace` configuration settings. [List of config variables](./language.md#config-variables)
 //
-// ```
+// ```bpftrace
 // begin {
 //   printf("max_strlen: %d, stack_mode: %s\n", config.max_strlen, config.stack_mode);
 // }
@@ -266,7 +266,7 @@ macro curtask()
 // If the return value of `delete` isn't used, you will get a compile-time warning, whether or not the deletion succeeds.
 // Use `_ = delete(...)` to discard it without a warning.
 //
-// ```
+// ```bpftrace
 // @a[1] = 1;
 //
 // delete(@a, 1); // warning (return value is discarded)
@@ -283,7 +283,7 @@ macro curtask()
 // The, now deprecated, API (supported in version &lt;= 0.21.x) of passing map arguments with the key is still supported:
 // e.g. `delete(@mymap[3, "hello"]);`.
 //
-// ```
+// ```bpftrace
 // kprobe:dummy {
 //   @scalar = 1;
 //   delete(@scalar); // ok
@@ -347,7 +347,7 @@ macro elapsed()
 //
 // `errorf()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location.
 //
-// ```
+// ```bpftrace
 // BEGIN { errorf("Something bad with args: %d, %s", 10, "arg2"); }
 // // Prints: stdin:1:9-62: ERROR: Something bad with args: 10, arg2
 // ```
@@ -362,7 +362,7 @@ macro elapsed()
 // The `END` probe will still trigger (if specified) and maps will be printed.
 // An optional exit code can be provided.
 //
-// ```
+// ```bpftrace
 // BEGIN {
 //   exit();
 // }
@@ -370,7 +370,7 @@ macro elapsed()
 //
 // Or
 //
-// ```
+// ```bpftrace
 // BEGIN {
 //   exit(1);
 // }
@@ -384,7 +384,7 @@ macro elapsed()
 //
 // `fail()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location but, as opposed to [`errorf`](#errorf), is treated like a static assert and halts compilation if it is visited. All args have to be literals since they are evaluated at compile time.
 //
-// ```
+// ```bpftrace
 // BEGIN { if ($1 < 2) { fail("Expected the first positional param to be greater than 1. Got %d", $1); } }
 // ```
 //
@@ -397,7 +397,7 @@ macro elapsed()
 // Use this instead of `has_key` and a map access to avoid an additional map lookup.
 // Error if called with a map that has no keys (aka scalar map).
 //
-// ```
+// ```bpftrace
 // kprobe:dummy {
 //   @map[2] = (1, "hello");
 //   let $val;
@@ -474,7 +474,7 @@ macro gid()
 // Otherwise return `false`.
 // Error if called with a map that has no keys (aka scalar map).
 //
-// ```
+// ```bpftrace
 // kprobe:dummy {
 //   @associative[1,2] = 1;
 //   if (!has_key(@associative, (1,3))) { // ok
@@ -505,7 +505,7 @@ macro has_key(@map, key)
 //
 // This is equivalent to the kernel's `IS_ERR()` macro.
 //
-// ```
+// ```bpftrace
 // fexit:do_filp_open {
 //   if (is_err(retval)) {
 //     printf("error: %ld\n", (int64)retval);
@@ -540,7 +540,7 @@ macro jiffies()
 //
 // The concatenation of the array members is done in BPF and the printing happens in userspace.
 //
-// ```
+// ```bpftrace
 // tracepoint:syscalls:sys_enter_execve {
 //   join(args.argv);
 // }
@@ -554,7 +554,7 @@ macro jiffies()
 //
 // Get the address of the kernel symbol `name`.
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   $avenrun = kaddr("avenrun");
 //   $load1 = *$avenrun;
@@ -576,7 +576,7 @@ macro jiffies()
 //
 // There are several [formatting/StackMode options](./language.md#stack_mode).
 //
-// ```
+// ```bpftrace
 // kprobe:ip_output { @[kstack()] = count(); }
 // /*
 //  * Sample output:
@@ -599,7 +599,7 @@ macro jiffies()
 //
 // Sampling only three frames from the stack (limit = 3):
 //
-// ```
+// ```bpftrace
 // kprobe:ip_output { @[kstack(3)] = count(); }
 // /*
 //  * Sample output:
@@ -615,7 +615,7 @@ macro jiffies()
 //
 // Example using `perf` StackMode:
 //
-// ```
+// ```bpftrace
 // kprobe:ip_output { @[kstack(perf, 3)] = count(); }
 // /*
 //  * Sample output:
@@ -638,7 +638,7 @@ macro jiffies()
 //
 // The `ksym_t` type can be printed with the `%s` format specifier.
 //
-// ```
+// ```bpftrace
 // kprobe:do_nanosleep
 // {
 //   printf("%s\n", ksym(reg("ip")));
@@ -683,7 +683,7 @@ macro len(e)
 //
 // This buffer can be printed in the canonical string format using the `%s` format specifier.
 //
-// ```
+// ```bpftrace
 // kprobe:arp_create {
 //   $stack_arg0 = *(uint8*)(reg("sp") + 8);
 //   $stack_arg1 = *(uint8*)(reg("sp") + 16);
@@ -711,7 +711,7 @@ macro ncpus()
 // :variant nsecs(tai) - TAI timestamp in nanoseconds (CLOCK_TAI)
 // :variant nsecs(sw_tai) - approximation of TAI timestamp in nanoseconds, is obtained through the "triple vdso sandwich" method. For older kernels without direct TAI timestamp access in BPF.
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   $sw_tai1 = nsecs(sw_tai);
 //   $tai = nsecs(tai);
@@ -755,7 +755,7 @@ macro numaid()
 //
 // Like the kernel's `offsetof` operator, it supports any number of nested fields. For example:
 //
-// ```
+// ```bpftrace
 // struct Foo {
 //   struct {
 //     struct {
@@ -787,7 +787,7 @@ macro numaid()
 //
 // When using `override` the probed function will not be executed and instead `rc` will be returned.
 //
-// ```
+// ```bpftrace
 // kprobe:__x64_sys_getuid
 // /comm == "id"/ {
 //   override(2<<21);
@@ -831,7 +831,7 @@ macro override(expr)
 // Only use on user-space memory addresses belonging to the current task.
 // The kernel will print a warning to dmesg when this helper is used.
 //
-// ```
+// ```bpftrace
 // tracepoint:syscalls:sys_enter_openat
 // /comm == "myapp"/ {
 //   $new_path = "/tmp/redirected\0";
@@ -875,7 +875,7 @@ macro write_user(dst, src, len)
 // Get the address of the percpu kernel symbol `name` for CPU `cpu`. When `cpu` is
 // omitted, the current CPU is used.
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   $proc_cnt = percpu_kaddr("process_counts");
 //   printf("%d processes are running on CPU %d\n", *$proc_cnt, cpu);
@@ -887,7 +887,7 @@ macro write_user(dst, src, len)
 // when accessing fields of the pointed structure, otherwise the BPF program will
 // be rejected.
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   $runqueues = (struct rq *)percpu_kaddr("runqueues", 0);
 //   if ($runqueues != 0) {         // The check is mandatory here
@@ -981,7 +981,7 @@ macro leader_comm()
 //
 // `print` prints a value, which can be a map or a scalar value, with the default formatting for the type.
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   print(123);
 //   print("abc");
@@ -994,7 +994,7 @@ macro leader_comm()
 //  */
 // ```
 //
-// ```
+// ```bpftrace
 // interval:ms:10 { @=hist(rand); }
 // interval:s:1 {
 //   print(@);
@@ -1022,7 +1022,7 @@ macro leader_comm()
 // The printing of maps supports the optional `top` and `div` arguments.
 // `top` limits the printing to the top N entries with the highest integer values.
 //
-// ```
+// ```bpftrace
 // BEGIN {
 //   $i = 11;
 //   for $elem : 1..$i {
@@ -1043,7 +1043,7 @@ macro leader_comm()
 // Scaling values before storing them can result in rounding errors.
 // Consider the following program:
 //
-// ```
+// ```bpftrace
 // kprobe:f {
 //   @[func] += arg0 / 10;
 // }
@@ -1055,7 +1055,7 @@ macro leader_comm()
 // Changing the earlier `print(@, 2)` call to `print(@, 5, 2)` will take the top 5
 // values and scale them by 2:
 //
-// ```
+// ```bpftrace
 // BEGIN {
 //   $i = 11;
 //   for $elem : 1..$i {
@@ -1101,7 +1101,7 @@ macro leader_comm()
 // `printf()` can also symbolize enums as strings. User defined enums as well as enums
 // defined in the kernel are supported. For example:
 //
-// ```
+// ```bpftrace
 // enum custom {
 //   CUSTOM_ENUM = 3,
 // };
@@ -1116,7 +1116,7 @@ macro leader_comm()
 //
 // The `%gr` specifier can be used to format GFP (Get Free Pages) flags into human-readable strings:
 //
-// ```
+// ```bpftrace
 // tracepoint:kmem:kmalloc {
 //   printf("GFP flags: %gr\n", args->gfp_flags);
 // }
@@ -1130,14 +1130,14 @@ macro leader_comm()
 //
 // Colors are supported too, using standard terminal escape sequences:
 //
-// ```
+// ```bpftrace
 // print("\033[31mRed\t\033[33mYellow\033[0m\n")
 // ```
 
 // :summary Returns the fully expanded name of the current probe.
 // :variant string probe()
 //
-// ```
+// ```bpftrace
 // fentry:vmlinux:vm_area_free {
 //   assert(probe() == "fentry:vmlinux:vm_area_free", "Invalid probe!");
 // }
@@ -1154,7 +1154,7 @@ macro probe()
 //
 // For example: `kprobe`, `special`, `tracepoint`.
 //
-// ```
+// ```bpftrace
 // fentry:vmlinux:vm_area_free {
 //   assert(probetype() == "fentry", "Invalid probe type!");
 // }
@@ -1226,7 +1226,7 @@ macro retval()
 // Use `signal_thread` to send to the thread being traced.
 // The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
 //
-// ```
+// ```bpftrace
 // kprobe:__x64_sys_execve
 // /comm == "bash"/ {
 //   signal(5);
@@ -1291,7 +1291,7 @@ macro signal_thread(expr)
 //
 // Usage (save as `dump.bt`):
 //
-// ```
+// ```bpftrace
 // fentry:napi_gro_receive {
 //   $ret = skboutput("receive.pcap", args.skb, args.skb.len, 0);
 // }
@@ -1328,7 +1328,7 @@ macro signal_thread(expr)
 //
 // This function returns a `uint64` unique number on success, or 0 if **sk** is NULL.
 //
-// ```
+// ```bpftrace
 // fentry:tcp_rcv_established
 // {
 //   $cookie = socket_cookie(args.sk);
@@ -1384,7 +1384,7 @@ macro socket_cookie(sk)
 //
 // bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   printf("%s\n", strftime("%H:%M:%S", nsecs));
 // }
@@ -1417,7 +1417,7 @@ macro socket_cookie(sk)
 // `system` lets bpftrace run the specified command (`fork` and `exec`) until it completes and print its stdout.
 // The `command` is run with the same privileges as bpftrace and it blocks execution of the processing threads which can lead to missed events and delays processing of async events.
 //
-// ```
+// ```bpftrace
 // interval:s:1 {
 //   time("%H:%M:%S: ");
 //   printf("%d\n", @++);
@@ -1458,7 +1458,7 @@ macro socket_cookie(sk)
 //
 // `system` supports the same format string and arguments that `printf` does.
 //
-// ```
+// ```bpftrace
 // tracepoint:syscalls:sys_enter_execve {
 //   system("/bin/grep %s /proc/%d/status", "VmSwap", pid);
 // }
@@ -1516,7 +1516,7 @@ macro socket_cookie(sk)
 // If the ELF object size matches a known integer size (1, 2, 4 or 8 bytes) the return type is modified to match the width (`uint8*`, `uint16*`, `uint32*` or `uint64*` resp.).
 // As ELF does not contain type info the type is always assumed to be unsigned.
 //
-// ```
+// ```bpftrace
 // uprobe:/bin/bash:readline {
 //   printf("PS1: %s\n", str(*uaddr("ps1_prompt")));
 // }
@@ -1578,7 +1578,7 @@ macro username()
 //
 // There are several [formatting/StackMode options](./language.md#stack_mode).
 //
-// ```
+// ```bpftrace
 // kprobe:do_sys_open /comm == "bash"/ { @[ustack()] = count(); }
 // /*
 //  * Sample output:
@@ -1616,7 +1616,7 @@ macro username()
 //
 // Sampling only three frames from the stack (limit = 3):
 //
-// ```
+// ```bpftrace
 // kprobe:ip_output { @[ustack(3)] = count(); }
 // /*
 //  * Sample output:
@@ -1632,7 +1632,7 @@ macro username()
 //
 // Example using `perf` StackMode:
 //
-// ```
+// ```bpftrace
 // kprobe:ip_output { @[ustack(perf, 3)] = count(); }
 // /*
 //  * Sample output:
@@ -1669,7 +1669,7 @@ macro username()
 // `dw_ustack` is an unstable feature. By default a warning is printed when it
 // is used. Set the config flag to suppress the warning or to make it an error:
 //
-// ```
+// ```bpftrace
 // config = { unstable_dw_ustack=enable }
 // ```
 //
@@ -1708,7 +1708,7 @@ macro dw_ustack()
 //
 // If ASLR is enabled, user space symbolication only works when the process is running at either the time of the symbol resolution or the time of the probe attachment. The latter requires `BPFTRACE_CACHE_USER_SYMBOLS` to be set to `PER_PID`, and might not work with older versions of BCC. A similar limitation also applies to dynamically loaded symbols.
 //
-// ```
+// ```bpftrace
 // uprobe:/bin/bash:readline
 // {
 //   printf("%s\n", usym(reg("ip")));
@@ -1738,7 +1738,7 @@ macro dw_ustack()
 //
 // `warnf()` formats and prints data (similar to [`printf`](#printf)) as a warning message with the source location. This respects the "--no-warnings" flag and will be silent if that is used.
 //
-// ```
+// ```bpftrace
 // BEGIN { warnf("Something kinda bad with args: %d, %s", 10, "arg2"); }
 // // Prints: stdin:1:9-67: WARNING: Something kinda bad with args: 10, arg2
 // ```

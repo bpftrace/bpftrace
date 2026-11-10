@@ -65,7 +65,7 @@ macro cwd()
 // If `path` is empty, the returned string is empty.
 //
 // Example:
-// ```
+// ```bpftrace
 // tracepoint:syscalls:sys_enter_openat {
 //   print(abs_path(str(args.filename), 32));
 // }

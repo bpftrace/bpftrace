@@ -175,7 +175,7 @@ macro strcontains(haystack, needle)
 // :summary Converts an error number to its description.
 // :variant string strerror(int error)
 //
-// ```
+// ```bpftrace
 // #include <errno.h>
 // begin {
 //   assert(strerror(EPERM) == "Operation not permitted", "Invalid error!");
@@ -192,7 +192,7 @@ macro strerror(errno)
 // :summary Converts a signal number to its name.
 // :variant string signal_name(int sig)
 //
-// ```
+// ```bpftrace
 // #include <signal.h>
 // begin {
 //   assert(signal_name(SIGINT) == "Interrupt", "Invalid signal name!");
@@ -209,7 +209,7 @@ macro signal_name(sig)
 // :summary Converts a system call number to its name.
 // :variant string syscall_name(int nr_syscall)
 //
-// ```
+// ```bpftrace
 // #include <syscall.h>
 // begin {
 //   assert(syscall_name(__NR_read) == "read", "Invalid syscall name!");
