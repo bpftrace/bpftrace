@@ -117,8 +117,8 @@ static int kernel_module_section_address(Dwfl_Module *mod,
   // /sys/module/<name>/sections. See elfutils Bugzilla 34030, fixed upstream:
   // https://sourceware.org/bugzilla/show_bug.cgi?id=34030
   // A zero-sized section has no runtime contents or address to resolve.
-  if ((shdr != nullptr && shdr->sh_size == 0) || section == "__versions" ||
-      section == ".data..percpu") {
+  if ((shdr != nullptr && shdr->sh_size == 0) ||
+      section.starts_with("__version") || section == ".data..percpu") {
     *addr = static_cast<Dwarf_Addr>(-1L);
     return DWARF_CB_OK;
   }
