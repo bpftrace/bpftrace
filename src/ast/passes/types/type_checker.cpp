@@ -642,6 +642,13 @@ void TypeChecker::check_external_call(Call &call)
   for (size_t i = 0; i < args.size(); i++) {
     const auto &[name, type] = args[i];
     const auto &varg_type = type_map_.type(call.vargs[i]);
+
+    if (type.IsPtrTy() && varg_type.IsPtrTy() &&
+        (type.GetPointeeTy().IsVoidTy() ||
+         varg_type.GetPointeeTy().IsVoidTy())) {
+      continue;
+    }
+
     if (type != varg_type) {
       if (!name.empty()) {
         call.vargs[i].node().addError()
