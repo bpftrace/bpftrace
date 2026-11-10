@@ -1,0 +1,61 @@
+test:global_int
+{
+  @global_int = 10;
+  if (@global_int != 10) {
+    return 1;
+  }
+}
+
+test:global_string
+{
+  @global_string = "hi";
+  if (@global_string != "hi") {
+    return 1;
+  }
+}
+
+test:global_buf
+{
+  @global_buf = buf("hi", 2);
+  if (@global_buf != buf("hi", 2)) {
+    return 1;
+  }
+}
+
+test:map_associative_array
+{
+  @map_associative_array[123] = 456;
+  if (@map_associative_array[123] != 456) {
+    return 1;
+  }
+  $val = @map_associative_array[123];
+  if ($val != 456) {
+    return 1;
+  }
+}
+
+test:map_key_tuple_with_casted_ints
+{
+  @map_key_tuple_with_casted_ints[(int16)(-1), ((int32)(-2), 3)] = 10;
+  @map_key_tuple_with_casted_ints[5, (6, 7)] = 11;
+  $c = ((int8)(-4), ((int16)(-5), -6));
+  @map_key_tuple_with_casted_ints[$c] = 12;
+  if (@map_key_tuple_with_casted_ints[-4, (-5, -6)] != 12 ||
+      @map_key_tuple_with_casted_ints[-1, (-2, 3)] != 10 ||
+      @map_key_tuple_with_casted_ints[5, (6, 7)] != 11) {
+    return 1;
+  }
+}
+
+test:variable_map_key_lifetime
+{
+  $key = "test";
+  @variable_map_key_lifetime[$key] = 1;
+  $key = "other";
+  @variable_map_key_lifetime[$key] = 2;
+  if (@variable_map_key_lifetime["test"] != 1 ||
+      @variable_map_key_lifetime["other"] != 2) {
+    return 1;
+  }
+}
+

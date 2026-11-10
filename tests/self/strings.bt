@@ -12,3 +12,178 @@ test:str_concat
     return 1;
   }
 }
+
+test:local_string
+{
+  $a = "hi";
+  if ($a != "hi") {
+    return 1;
+  }
+}
+
+test:variable_string_type_resize
+{
+  $x = "hello";
+  $x = "hi";
+  if ($x != "hi") {
+    return 1;
+  }
+
+  if (sizeof($x) != 6) {
+    return 1;
+  }
+}
+
+test:map_string_type_resize
+{
+  @map_string_type_resize = "hello";
+  @map_string_type_resize = "hi";
+  if (@map_string_type_resize != "hi") {
+    return 1;
+  }
+
+  if (sizeof(@map_string_type_resize) != 6) {
+    return 1;
+  }
+}
+
+test:map_key_string_type_resize
+{
+  @map_key_string_type_resize["hello"] = 0;
+  @map_key_string_type_resize["hi"] = 1;
+  if (@map_key_string_type_resize["hi"] != 1) {
+    return 1;
+  }
+
+  for $kv : @map_key_string_type_resize {
+    if (sizeof($kv.0) != 6) {
+      return 1;
+    }
+  }
+}
+
+test:map_multi_key_string_type_resize
+{
+  @map_multi_key_string_type_resize["hello", 0] = 0;
+  @map_multi_key_string_type_resize["hi", 1] = 1;
+  if (@map_multi_key_string_type_resize["hi", 1] != 1) {
+    return 1;
+  }
+
+  for $kv : @map_multi_key_string_type_resize {
+    if (sizeof($kv.0.0) != 6) {
+      return 1;
+    }
+  }
+}
+
+test:map_tuple_string_resize
+{
+  @map_tuple_string_resize[1] = ("hi", 1);
+  @map_tuple_string_resize[1] = ("hellolongstr", 2);
+  @map_tuple_string_resize[1] = ("by", 3);
+  if (@map_tuple_string_resize[1] != ("by", 3)) {
+    return 1;
+  }
+
+  if (sizeof(@map_tuple_string_resize[1].0) != 13) {
+    return 1;
+  }
+}
+
+test:map_key_tuple_string_resize
+{
+  @map_key_tuple_string_resize["hi", 1] = 1;
+  @map_key_tuple_string_resize["hellolongstr", 2] = 2;
+  @map_key_tuple_string_resize["by", 3] = 3;
+  if (@map_key_tuple_string_resize["hi", 1] != 1 ||
+      @map_key_tuple_string_resize["hellolongstr", 2] != 2 ||
+      @map_key_tuple_string_resize["by", 3] != 3) {
+    return 1;
+  }
+
+  for $kv : @map_key_tuple_string_resize {
+    if (sizeof($kv.0.0) != 13) {
+      return 1;
+    }
+  }
+}
+
+test:variable_tuple_string_resize
+{
+  $a = ("hi", 1);
+  if ($a != ("hi", 1)) {
+    return 1;
+  }
+  $a = ("hellolongstr", 2);
+  if ($a != ("hellolongstr", 2)) {
+    return 1;
+  }
+  $a = ("by", 3);
+  if ($a != ("by", 3)) {
+    return 1;
+  }
+
+  if (sizeof($a.0) != 13) {
+    return 1;
+  }
+}
+
+test:variable_nested_tuple_string_resize
+{
+  $a = ("hi", ("hellolongstr", 2));
+  if ($a != ("hi", ("hellolongstr", 2))) {
+    return 1;
+  }
+  $a = ("hellolongstr", ("hi", 5));
+  if ($a != ("hellolongstr", ("hi", 5))) {
+    return 1;
+  }
+
+  if (sizeof($a.0) != 13 || sizeof($a.1.0) != 13) {
+    return 1;
+  }
+}
+
+test:map_nested_tuple_string_resize
+{
+  @map_nested_tuple_string_resize[1] = ("hi", ("hellolongstr", 2));
+  @map_nested_tuple_string_resize[1] = ("hellolongstr", ("hi", 5));
+  if (@map_nested_tuple_string_resize[1] != ("hellolongstr", ("hi", 5))) {
+    return 1;
+  }
+
+  if (sizeof(@map_nested_tuple_string_resize[1].0) != 13 ||
+      sizeof(@map_nested_tuple_string_resize[1].1.0) != 13) {
+    return 1;
+  }
+}
+
+test:map_key_nested_tuple_string_resize
+{
+  @map_key_nested_tuple_string_resize["hi", ("hellolongstr", 2)] = 1;
+  @map_key_nested_tuple_string_resize["hellolongstr", ("hi", 5)] = 2;
+  if (@map_key_nested_tuple_string_resize["hi", ("hellolongstr", 2)] != 1 ||
+      @map_key_nested_tuple_string_resize["hellolongstr", ("hi", 5)] != 2) {
+    return 1;
+  }
+
+  for $kv : @map_key_nested_tuple_string_resize {
+    if (sizeof($kv.0.0) != 13 || sizeof($kv.0.1.0) != 13) {
+      return 1;
+    }
+  }
+}
+
+test:variable_address_with_string
+{
+  $a = "hello";
+  $b = (int8*)(&$a);
+  if ((*$b) != 104) {
+    return 1;
+  }
+  if ((*(++$b)) != 101) {
+    return 1;
+  }
+}
+
