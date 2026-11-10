@@ -41,6 +41,9 @@ using BtfTypeId = uint32_t;
 struct CompatTypeCache {
   StructManager &structs;
   std::map<BtfTypeId, std::shared_ptr<bpftrace::Struct>> records;
+  // If set, forward declarations that can't be resolved within their
+  // own types are resolved against the kernel's types.
+  const Types *kernel_types = nullptr;
 };
 
 template <typename T>
@@ -101,9 +104,13 @@ Result<SizedType> getCompatType(const T &type, CompatTypeCache &type_cache)
 }
 
 template <typename T>
-Result<SizedType> getCompatType(const T &type, StructManager &structs)
+Result<SizedType> getCompatType(const T &type,
+                                StructManager &structs,
+                                const Types *kernel_types = nullptr)
 {
-  CompatTypeCache type_cache{ .structs = structs, .records = {} };
+  CompatTypeCache type_cache{ .structs = structs,
+                              .records = {},
+                              .kernel_types = kernel_types };
   return getCompatType(type, type_cache);
 }
 

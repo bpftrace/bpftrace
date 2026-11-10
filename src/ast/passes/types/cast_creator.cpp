@@ -486,7 +486,9 @@ void CastCreator::visit(Call &call)
 
     for (size_t i = 0; i < argument_types->size(); i++) {
       auto compat_arg_type = getCompatType(argument_types->at(i).second,
-                                           bpftrace_.structs);
+                                           bpftrace_.structs,
+                                           type_metadata_.kernel_for_call(
+                                               call));
       if (!compat_arg_type) {
         consumeError(compat_arg_type.takeError());
         continue;

@@ -24,6 +24,11 @@ public:
     return call.is_kfunc() ? kernel : global;
   }
 
+  const btf::Types *kernel_for_call(const Call &call) const
+  {
+    return call.is_kfunc() ? nullptr : &kernel;
+  }
+
   btf::Types global;
   btf::Types kernel;
 };

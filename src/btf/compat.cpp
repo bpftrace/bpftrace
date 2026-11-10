@@ -136,6 +136,25 @@ Result<SizedType> asRecord(
   return CreateCStruct(name, std::shared_ptr<bpftrace::Struct>(it->second));
 }
 
+template <typename T>
+static std::optional<Result<SizedType>> getKernelCompatType(
+    const std::string &name,
+    CompatTypeCache &type_cache)
+{
+  if (type_cache.kernel_types == nullptr || name.empty()) {
+    return std::nullopt;
+  }
+  auto kernel_type = type_cache.kernel_types->lookup<T>(name);
+  if (!kernel_type) {
+    consumeError(kernel_type.takeError());
+    return std::nullopt;
+  }
+  CompatTypeCache kernel_cache{ .structs = type_cache.structs,
+                                .records = {},
+                                .kernel_types = nullptr };
+  return getCompatType(*kernel_type, kernel_cache);
+}
+
 Result<SizedType> getCompatType(const Struct &type, CompatTypeCache &type_cache)
 {
   auto f = type.fields();
@@ -312,17 +331,25 @@ Result<SizedType> getCompatType(const ForwardDecl &type,
   switch (kind) {
     case ForwardDecl::Struct: {
       auto struct_type = types.lookup<Struct>(name);
-      if (!struct_type) {
-        return CreatePointer(CreateVoid());
+      if (struct_type) {
+        return getCompatType(*struct_type, type_cache);
       }
-      return getCompatType(*struct_type, type_cache);
+      consumeError(struct_type.takeError());
+      if (auto kernel_type = getKernelCompatType<Struct>(name, type_cache)) {
+        return std::move(*kernel_type);
+      }
+      return CreateVoid();
     }
     case ForwardDecl::Union: {
       auto union_type = types.lookup<Union>(name);
-      if (!union_type) {
-        return CreatePointer(CreateVoid());
+      if (union_type) {
+        return getCompatType(*union_type, type_cache);
       }
-      return getCompatType(*union_type, type_cache);
+      consumeError(union_type.takeError());
+      if (auto kernel_type = getKernelCompatType<Union>(name, type_cache)) {
+        return std::move(*kernel_type);
+      }
+      return CreateVoid();
     }
     case ForwardDecl::Enum: {
       auto enum_type = types.lookup<Enum>(name);
