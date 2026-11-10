@@ -13,10 +13,16 @@ namespace bpftrace {
 
 class DwarfParseError : public ErrorInfo<DwarfParseError> {
 public:
+  enum class Kind {
+    Generic,
+    LineNotMapped,
+  };
+
   static char ID;
   void log(llvm::raw_ostream &OS) const override;
 
-  DwarfParseError(std::string &&msg) : msg_(std::move(msg)) {};
+  DwarfParseError(std::string &&msg, Kind kind = Kind::Generic)
+      : msg_(std::move(msg)), kind_(kind) {};
   DwarfParseError() = default;
 
   const std::string &msg() const
@@ -24,8 +30,14 @@ public:
     return msg_;
   }
 
+  Kind kind() const
+  {
+    return kind_;
+  }
+
 private:
   std::string msg_;
+  Kind kind_ = Kind::Generic;
 };
 
 } // namespace bpftrace

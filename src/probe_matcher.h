@@ -74,6 +74,7 @@ public:
       const std::string &probe_type);
   // Match all probes in prog and return them as formatted strings.
   std::vector<std::string> get_probes_for_listing(ast::Program *prog);
+  static bool is_source_location_listing(const std::string &search);
   // Get probes matching a raw pattern string (e.g., "kprobe:*", "*:*foo*").
   // If pid is provided, userspace probes will be included even with wildcard
   // probe types; otherwise userspace probes require explicit probe type.
@@ -130,4 +131,11 @@ private:
                                   std::vector<std::string> &results,
                                   const std::string &lang = "");
 };
+
+// Echoes the pattern if the location maps to an address, nothing if it does
+// not. Missing kernel DWARF is an error.
+Result<std::vector<std::string>> list_source_location(
+    BPFtrace &bpftrace,
+    const std::string &pattern);
+
 } // namespace bpftrace

@@ -32,6 +32,78 @@ static bool source_kprobe_has_module(const std::vector<std::string> &parts)
   return parts[2].find('/') == std::string::npos;
 }
 
+namespace {
+
+class SourceLocationParseError : public ErrorInfo<SourceLocationParseError> {
+public:
+  static char ID;
+
+  explicit SourceLocationParseError(std::string msg) : msg_(std::move(msg))
+  {
+  }
+
+  void log(llvm::raw_ostream &OS) const override
+  {
+    OS << msg_;
+  }
+
+private:
+  std::string msg_;
+};
+
+char SourceLocationParseError::ID;
+
+} // namespace
+
+static Result<SourceLocationParts> parse_source_location(
+    const std::vector<std::string> &parts)
+{
+  const bool module_qualified = source_kprobe_has_module(parts);
+  const size_t file_idx = module_qualified ? 3 : 2;
+  const size_t expected_parts = module_qualified ? 5 : 4;
+
+  if ((parts.size() != expected_parts && parts.size() != expected_parts + 1) ||
+      parts[file_idx].empty() || parts[file_idx + 1].empty()) {
+    return make_error<SourceLocationParseError>(
+        "Invalid kprobe arguments, expected format: "
+        "kprobe@[MODULE:]FILE:LINE[:COL]");
+  }
+
+  SourceLocationParts location{
+    .source_file = parts[file_idx],
+    .kernel_module = module_qualified ? parts[2] : "",
+    .line_num = 0,
+    .col_num = 0,
+  };
+
+  auto line = util::to_uint(parts[file_idx + 1]);
+  if (!line) {
+    return make_error<SourceLocationParseError>(
+        "Invalid line number: " + llvm::toString(line.takeError()));
+  }
+  location.line_num = *line;
+
+  if (parts.size() == file_idx + 3) {
+    auto col = util::to_uint(parts[file_idx + 2]);
+    if (!col) {
+      return make_error<SourceLocationParseError>(
+          "Invalid column number: " + llvm::toString(col.takeError()));
+    }
+    location.col_num = *col;
+  }
+
+  return location;
+}
+
+Result<SourceLocationParts> parse_source_location(const std::string &pattern)
+{
+  std::vector<std::string> parts = { "kprobe", "@" };
+  auto location = util::split_string(
+      pattern.substr(std::string("kprobe@").size()), ':');
+  parts.insert(parts.end(), location.begin(), location.end());
+  return parse_source_location(parts);
+}
+
 class AttachPointChecker : public Visitor<AttachPointChecker> {
 public:
   explicit AttachPointChecker(BPFtrace &bpftrace, FunctionInfo &func_info_state)
@@ -676,44 +748,21 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset,
       return INVALID;
     }
 
-    const bool module_qualified = source_kprobe_has_module(parts_);
-
-    const size_t file_idx = module_qualified ? 3 : 2;
-    const size_t expected_parts = module_qualified ? 5 : 4;
-
-    if ((parts_.size() != expected_parts &&
-         parts_.size() != expected_parts + 1) ||
-        parts_[file_idx].empty() || parts_[file_idx + 1].empty()) {
-      errs_ << "Invalid kprobe arguments, "
-            << "expected format: kprobe@[MODULE:]FILE:LINE[:COL]" << std::endl;
+    auto parsed = parse_source_location(parts_);
+    if (!parsed) {
+      errs_ << llvm::toString(parsed.takeError()) << std::endl;
       return INVALID;
     }
 
-    const std::string kernel_module = module_qualified ? parts_[2] : "";
-
-    ap_->source_file = parts_[file_idx];
-    ap_->target = kernel_module;
-
-    auto line = util::to_uint(parts_[file_idx + 1]);
-    if (!line) {
-      errs_ << "Invalid line number: " << line.takeError() << std::endl;
-      return INVALID;
-    }
-    ap_->line_num = *line;
-
-    if (parts_.size() == file_idx + 3) {
-      auto col = util::to_uint(parts_[file_idx + 2]);
-      if (!col) {
-        errs_ << "Invalid column number: " << col.takeError() << std::endl;
-        return INVALID;
-      }
-      ap_->col_num = *col;
-    }
+    ap_->source_file = parsed->source_file;
+    ap_->target = parsed->kernel_module;
+    ap_->line_num = parsed->line_num;
+    ap_->col_num = parsed->col_num;
 
     Dwarf *dwarf = bpftrace_.get_kernel_dwarf();
     if (dwarf) {
       auto location = dwarf->line_to_addr(
-          ap_->source_file, ap_->line_num, ap_->col_num, kernel_module);
+          ap_->source_file, ap_->line_num, ap_->col_num, ap_->target);
       if (!location) {
         errs_ << location.takeError() << std::endl;
         return INVALID;

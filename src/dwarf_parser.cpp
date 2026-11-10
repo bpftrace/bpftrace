@@ -797,7 +797,8 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
 
   return make_error<DwarfParseError>(
       "Unable to map '" + source_file + ":" + std::to_string(line_num) +
-      (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address");
+          (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address",
+      DwarfParseError::Kind::LineNotMapped);
 }
 
 } // namespace bpftrace

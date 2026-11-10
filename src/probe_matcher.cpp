@@ -3,10 +3,12 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <llvm/Support/Error.h>
 #include <sstream>
 #include <string>
 #include <vector>
 
+#include "ast/passes/attachpoint_passes.h"
 #include "bpftrace.h"
 #include "btf.h"
 #include "cxxdemangler/cxxdemangler.h"
@@ -541,6 +543,51 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
     }
   }
   return results;
+}
+
+bool ProbeMatcher::is_source_location_listing(const std::string& search)
+{
+  const auto patterns = util::split_string(search, ',');
+  return !patterns.empty() &&
+         std::ranges::all_of(patterns, [](const auto& pattern) {
+           return util::normalize_whitespace(pattern).starts_with("kprobe@");
+         });
+}
+
+Result<std::vector<std::string>> list_source_location(
+    BPFtrace& bpftrace,
+    const std::string& pattern)
+{
+  auto parsed = ast::parse_source_location(pattern);
+  if (!parsed)
+    return parsed.takeError();
+
+  Dwarf* dwarf = bpftrace.get_kernel_dwarf();
+  if (!dwarf) {
+    return make_error<DwarfParseError>(
+        "No DWARF debug info found for kernel, cannot list source code "
+        "locations.");
+  }
+
+  auto location = dwarf->line_to_addr(parsed->source_file,
+                                      parsed->line_num,
+                                      parsed->col_num,
+                                      parsed->kernel_module);
+  if (location)
+    return std::vector<std::string>{ pattern };
+
+  DwarfParseError::Kind kind = DwarfParseError::Kind::Generic;
+  std::string msg;
+  auto unhandled = llvm::handleErrors(location.takeError(),
+                                      [&](const DwarfParseError& error) {
+                                        kind = error.kind();
+                                        msg = error.msg();
+                                      });
+  if (unhandled)
+    return unhandled;
+  if (kind == DwarfParseError::Kind::LineNotMapped)
+    return std::vector<std::string>{};
+  return make_error<DwarfParseError>(std::move(msg), kind);
 }
 
 std::vector<std::string> ProbeMatcher::get_probes_for_listing(

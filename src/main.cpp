@@ -821,6 +821,21 @@ bool is_colorize()
   }
 }
 
+int list_source_locations(BPFtrace& bpftrace, const std::string& search)
+{
+  for (auto& rawprobe : util::split_string(search, ',')) {
+    auto listed = list_source_location(bpftrace,
+                                       util::normalize_whitespace(rawprobe));
+    if (!listed) {
+      LOG(ERROR) << listed.takeError();
+      return 1;
+    }
+    for (const auto& probe : *listed)
+      std::cout << probe << std::endl;
+  }
+  return 0;
+}
+
 void list_probes(BPFtrace& bpftrace,
                  const std::string& search,
                  const symbols::KernelInfo& kernel_func_info,
@@ -990,6 +1005,14 @@ int main(int argc, char* argv[])
     return 0; // All done.
   }
 
+  bpftrace.debuginfo_path_ = args.debuginfo_path + default_debuginfo_paths;
+
+  // Source location listing needs only DWARF, not BPF privileges.
+  if (args.listing && args.script.empty() && args.filename.empty() &&
+      ProbeMatcher::is_source_location_listing(args.search)) {
+    return list_source_locations(bpftrace, args.search);
+  }
+
   check_privileges();
 
   // Create function info objects for probe matching and pass state.
@@ -1011,7 +1034,6 @@ int main(int argc, char* argv[])
   bpftrace.run_tests_ = args.mode == Mode::BPF_TEST;
   bpftrace.run_benchmarks_ = args.mode == Mode::BPF_BENCHMARK;
   bpftrace.probe_filter_ = args.probe_filter;
-  bpftrace.debuginfo_path_ = args.debuginfo_path + default_debuginfo_paths;
 
   if (!args.pid_str.empty()) {
     auto pid = parse_pid(args.pid_str);
