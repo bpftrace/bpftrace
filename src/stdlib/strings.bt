@@ -178,7 +178,7 @@ macro strcontains(haystack, needle)
 // ```
 // #include <errno.h>
 // begin {
-//   print(strerror(EPERM));
+//   assert(strerror(EPERM) == "Operation not permitted", "Invalid error!");
 // }
 // ```
 macro strerror(errno)
@@ -195,7 +195,7 @@ macro strerror(errno)
 // ```
 // #include <signal.h>
 // begin {
-//   print(signal_name(SIGINT));
+//   assert(signal_name(SIGINT) == "Interrupt", "Invalid signal name!");
 // }
 // ```
 macro signal_name(sig)
@@ -212,7 +212,7 @@ macro signal_name(sig)
 // ```
 // #include <syscall.h>
 // begin {
-//   print(syscall_name(__NR_read)); // outputs "read"
+//   assert(syscall_name(__NR_read) == "read", "Invalid syscall name!");
 // }
 // ```
 macro syscall_name(n)
