@@ -3526,7 +3526,11 @@ ScopedExpr CodegenLLVM::visit(Subprog &subprog)
 
   FunctionPassManager fpm;
   FunctionAnalysisManager fam;
+#if LLVM_VERSION_MAJOR >= 24
+  llvm::PassBuilder pb(module_->getContext());
+#else
   llvm::PassBuilder pb;
+#endif
   pb.registerFunctionAnalyses(fam);
   fpm.addPass(UnreachableBlockElimPass());
   fpm.run(*func, fam);
@@ -5157,7 +5161,11 @@ Pass CreateOptimizePass()
     pto.LoopVectorization = false;
     pto.SLPVectorization = false;
 
+#if LLVM_VERSION_MAJOR >= 24
+    llvm::PassBuilder pb(cm.module->getContext(), getTargetMachine(), pto);
+#else
     llvm::PassBuilder pb(getTargetMachine(), pto);
+#endif
 
     // ModuleAnalysisManager must be destroyed first.
     llvm::LoopAnalysisManager lam;
