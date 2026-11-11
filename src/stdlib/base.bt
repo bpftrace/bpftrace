@@ -1523,16 +1523,23 @@ macro socket_cookie(sk)
 // ```
 macro uaddr(sym)
 {
-  import "stdlib/task/vma.bpf.c";
   let $addr = __builtin_uaddr(sym);
 
   // There are three types of ELF that use uprobe: PIE, EXEC, and dynamic
   // libraries. Among them, PIE and dynamic libraries need to correct the
   // symbol address according to the actual load address.
-  if comptime (!elf_is_exe) {
-    $offset = __bpf_task_map_file_min_addr(curtask, (uint64)elf_info);
+  if comptime ((!elf_is_exe) && kfunc_exist("bpf_iter_task_vma_new")) {
+    let $offset : uint64 = 0;
+    for $vma : iter_task_vma(curtask) {
+      // In the VMAs, the first matching inode is the lowest address offset,
+      // see /proc/PID/maps.
+      if ($vma.vm_file != 0 && $vma.vm_file.f_inode.i_ino == ((uint64)elf_info)) {
+        $offset = $vma.vm_start;
+        break;
+      }
+    }
     // Recast to the original pointer type to preserve dereference size.
-    $addr = (typeof($addr))((uint64)$addr + $offset);
+    $addr = (typeof($addr))(((uint64)$addr) + $offset);
   }
   $addr
 }
