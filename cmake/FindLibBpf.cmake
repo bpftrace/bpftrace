@@ -29,18 +29,28 @@ else()
   set(LIBBPF_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/libbpf/src)
   file(GLOB LIBBPF_SRCS ${LIBBPF_SOURCE}/*)
   set(LIBBPF_BUILD ${CMAKE_CURRENT_BINARY_DIR}/libbpf)
-  set(LIBBPF_LIBRARY ${LIBBPF_BUILD}/lib64/libbpf.a)
+  set(LIBBPF_OBJDIR ${LIBBPF_BUILD}/obj)
+  set(LIBBPF_LIBRARY ${LIBBPF_OBJDIR}/libbpf.a)
 
-  # We need to install headers during configure phase for two reasons:
-  # 1. To parse libbpf version from libbpf_version.h below.
-  # 2. For bpftrace's stdlib since libbpf headers are included in stdlib bpf.c
-  #    files (and the rules to embed them are generated in configure phase).
+  # Headers are installed only during the configure phase, never at build
+  # time: install(1) unlinks and recreates each file, so reinstalling while
+  # other targets compile against them races with those compiles.
+  #
+  # Installing them at configure time is also needed because:
+  # 1. We parse the libbpf version from libbpf_version.h below.
+  # 2. bpftrace's stdlib embeds the libbpf headers, and the rules to embed
+  #    them are generated in the configure phase.
   execute_process(
     COMMAND make PREFIX=${LIBBPF_BUILD} install_headers install_uapi_headers
     WORKING_DIRECTORY ${LIBBPF_SOURCE}
     OUTPUT_QUIET)
+  file(GLOB LIBBPF_HEADERS
+    ${LIBBPF_SOURCE}/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/libbpf/include/uapi/linux/*.h)
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${LIBBPF_HEADERS})
 
-  # Build and install libbpf from source. This needs to be done in a rather
+  # Build libbpf.a from source. This needs to be done in a rather
   # complicated way to ensure proper dependency between the exported
   # LIBBPF_LIBRARIES and the built libbpf.a. Note that we cannot use
   # add_custom_target with COMMAND since CMake considers the target as always
@@ -48,9 +58,10 @@ else()
   # every time).
   add_custom_command(
     OUTPUT ${LIBBPF_LIBRARY}
-    COMMAND make PREFIX=${LIBBPF_BUILD} clean > /dev/null
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${LIBBPF_OBJDIR}
     # -fPIE here is needed by latest binutils when building with Clang
-    COMMAND make PREFIX=${LIBBPF_BUILD} EXTRA_CFLAGS="-fPIE" install > /dev/null
+    COMMAND make OBJDIR=${LIBBPF_OBJDIR} BUILD_STATIC_ONLY=y
+            EXTRA_CFLAGS="-fPIE" ${LIBBPF_LIBRARY} > /dev/null
     WORKING_DIRECTORY ${LIBBPF_SOURCE}
     DEPENDS ${LIBBPF_SRCS}
     COMMENT "Building libbpf"
