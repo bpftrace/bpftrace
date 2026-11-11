@@ -60,8 +60,8 @@ Pass CreateLinkPass()
         }
 
         // In order to craft the final output, since we may have external maps
-        // and probes, we delegate the heavy lifting to libbpf. First, we open a
-        // new memfd as output, and add our top-level output to the linker.
+        // and probes, we delegate the heavy lifting to libbpf. First, we create
+        // a linker that writes to the output file, then add our own object.
         struct bpf_linker *linker = bpf_linker__new(output->path().c_str(),
                                                     nullptr);
         if (linker == nullptr) {
