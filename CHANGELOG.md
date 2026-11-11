@@ -27,6 +27,8 @@ and this project adheres to
   - [#5386](https://github.com/bpftrace/bpftrace/pull/5386)
 - `test` probes now report the source line of a failing (non-zero) return
   - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
+- Allow listing source-location kprobes that map to an address.
+  - [#5429](https://github.com/bpftrace/bpftrace/pull/5429)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.

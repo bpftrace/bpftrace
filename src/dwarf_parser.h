@@ -68,6 +68,7 @@ public:
   struct SourceLocation {
     uint64_t address;
     std::string kernel_module;
+    std::string function;
   };
 
   Result<SourceLocation> line_to_addr(const std::string &source_file,
@@ -211,6 +212,7 @@ public:
   struct SourceLocation {
     uint64_t address;
     std::string kernel_module;
+    std::string function;
   };
 
   Result<SourceLocation> line_to_addr(const std::string &source_file
