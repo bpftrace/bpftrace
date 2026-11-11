@@ -36,7 +36,7 @@ function(embed NAME SOURCE)
       -DTEMPLATE=${CMAKE_SOURCE_DIR}/cmake/Embed.tmpl
       -P ${CMAKE_SOURCE_DIR}/cmake/EmbedRun.cmake
     DEPENDS
-      ${ARG_HEX}
+      ${CMAKE_CURRENT_BINARY_DIR}/${ARG_HEX}
       ${CMAKE_SOURCE_DIR}/cmake/EmbedRun.cmake
       ${CMAKE_SOURCE_DIR}/cmake/Embed.tmpl
     VERBATIM
