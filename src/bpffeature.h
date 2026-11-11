@@ -67,7 +67,7 @@ public:
   DEFINE_HELPER_TEST(get_func_ip, BPF_PROG_TYPE_KPROBE);
   DEFINE_HELPER_TEST(loop, BPF_PROG_TYPE_KPROBE); // Added in 5.17.
 
-  bool has_kfunc(std::string kfunc);
+  virtual bool has_kfunc(std::string kfunc);
   bool kfunc_allowed(const char* kfunc, enum bpf_prog_type prog_type);
 
 protected:

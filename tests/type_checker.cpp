@@ -13,6 +13,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/fold_literals.h"
 #include "ast/passes/import_scripts.h"
+#include "ast/passes/iter_desugar.h"
 #include "ast/passes/loop_return.h"
 #include "ast/passes/macro_expansion.h"
 #include "ast/passes/map_sugar.h"
@@ -179,6 +180,7 @@ public:
                   .add(ast::CreateFoldLiteralsPass())
                   .add(ast::CreateBuiltinsPass())
                   .add(ast::CreateCMacroExpansionPass())
+                  .add(ast::CreateIterDesugarPass())
                   .add(ast::CreateMapSugarPass())
                   .add(ast::CreateNamedParamsPass())
                   .add(ast::CreatePreTypeCheckPass())
@@ -5591,6 +5593,17 @@ kprobe:f { @a[1] = 1; if (comptime true) { @a = 1; } }
 stdin:1:23-40: ERROR: Unable to resolve comptime expression
 kprobe:f { @a = 1; if comptime (@a > 1) { print(1); } }
                       ~~~~~~~~~~~~~~~~~
+)" });
+}
+
+TEST_F(TypeCheckerTest, iter_missing_kfunc)
+{
+  test(R"(begin { if comptime (false) { for ($t : iter_task()) { } } })",
+       NoFeatures::Enable);
+  test(R"(begin { for ($t : iter_task()) { } })", NoFeatures::Enable, Error{ R"(
+stdin:1:19-30: ERROR: Missing required kernel feature: bpf_iter_task (open-coded iterators require kernel 6.7 or later)
+begin { for ($t : iter_task()) { } }
+                  ~~~~~~~~~~~
 )" });
 }
 

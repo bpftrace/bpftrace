@@ -52,6 +52,7 @@ private:
                              Expression expr);
   Expression state_arg(const Location &loc, const std::string &ident);
   Statement desugar(For &f, Call &it, const BpfIterItem &info);
+  Statement fail(const Location &loc, const std::string &msg);
 
   ASTContext &ast_;
   BPFtrace &bpftrace_;
@@ -174,6 +175,13 @@ Statement IterDesugar::desugar(For &f, Call &it, const BpfIterItem &info)
   return ast_.make_node<ExprStatement>(loc, block);
 }
 
+Statement IterDesugar::fail(const Location &loc, const std::string &msg)
+{
+  auto *call = ast_.make_node<Call>(
+      loc, "fail", ExpressionList({ ast_.make_node<String>(loc, msg) }));
+  return ast_.make_node<ExprStatement>(loc, call);
+}
+
 void IterDesugar::visit(Statement &stmt)
 {
   Visitor<IterDesugar>::visit(stmt);
@@ -198,14 +206,16 @@ void IterDesugar::visit(Statement &stmt)
   }
 
   if (!bpftrace_.feature_->has_kfunc(info->kfunc + "_new")) {
-    it->addError() << "Missing required kernel feature: " << info->kfunc
-                   << " (open-coded iterators require kernel 6.7 or later)";
+    stmt = fail(it->loc,
+                "Missing required kernel feature: " + info->kfunc +
+                    " (open-coded iterators require kernel 6.7 or later)");
     return;
   }
 
   if (bpftrace_.btf_->get_stype(info->yields).IsNoneTy()) {
-    it->addError() << "Cannot resolve \"" << info->yields << "\" required by "
-                   << it->func << "(); kernel BTF may be unavailable";
+    stmt = fail(it->loc,
+                "Cannot resolve \"" + info->yields + "\" required by " +
+                    it->func + "(); kernel BTF may be unavailable");
     return;
   }
 

@@ -156,7 +156,8 @@ static auto btf_obj = BTF(nullptr);
 
 class MockBPFfeature : public BPFfeature {
 public:
-  MockBPFfeature(bool has_features = true) : BPFfeature(bpf_nofeature, btf_obj)
+  MockBPFfeature(bool has_features = true)
+      : BPFfeature(bpf_nofeature, btf_obj), has_features_(has_features)
   {
     has_d_path_ = std::make_optional<bool>(has_features);
     has_kprobe_multi_ = std::make_optional<bool>(has_features);
@@ -166,6 +167,14 @@ public:
     has_get_func_ip_ = std::make_optional<bool>(has_features);
     has_loop_ = std::make_optional<bool>(has_features);
   };
+
+  bool has_kfunc(std::string kfunc) override
+  {
+    return has_features_ && BPFfeature::has_kfunc(std::move(kfunc));
+  }
+
+private:
+  bool has_features_;
 };
 
 class MockChildProc : public util::ChildProc {
