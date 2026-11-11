@@ -1,10 +1,12 @@
 #include "ast/passes/ap_probe_expansion.h"
 
 #include <algorithm>
+#include <optional>
 
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/visitor.h"
 #include "bpftrace.h"
+#include "btf/btf.h"
 #include "probe_matcher.h"
 #include "util/wildcard.h"
 
@@ -129,8 +131,12 @@ class SessionExpander : public Visitor<SessionExpander> {
 public:
   explicit SessionExpander(ASTContext &ast,
                            BPFtrace &bpftrace,
+                           FunctionInfo &func_info,
                            ExpansionResult &expansion_result)
-      : ast_(ast), bpftrace_(bpftrace), expansion_result_(expansion_result)
+      : ast_(ast),
+        bpftrace_(bpftrace),
+        func_info_(func_info),
+        expansion_result_(expansion_result)
   {
   }
 
@@ -145,8 +151,11 @@ private:
 
   Probe *find_matching_retprobe(Probe &probe);
 
+  std::optional<bool> session_is_return_has_arg();
+
   ASTContext &ast_;
   const BPFtrace &bpftrace_;
+  FunctionInfo &func_info_;
   ExpansionResult &expansion_result_;
   ProbeList probes_to_erase_;
 };
@@ -164,6 +173,33 @@ bool SessionExpander::is_session_attach_point(AttachPoint &ap)
   return expansion == ExpansionType::NONE &&
          bpftrace_.feature_->has_kprobe_multi() && ap.target.empty() &&
          ap.func_offset == 0 && ap.address == 0 && !util::has_wildcard(ap.func);
+}
+
+// bpf_session_is_return takes no arguments before Linux 7.0 and the probe
+// context after.
+std::optional<bool> SessionExpander::session_is_return_has_arg()
+{
+  auto kernel = func_info_.kernel_info().load_btf("vmlinux");
+  if (!kernel) {
+    consumeError(kernel.takeError());
+    return std::nullopt;
+  }
+  auto func = kernel->lookup<btf::Function>("bpf_session_is_return");
+  if (!func) {
+    consumeError(func.takeError());
+    return std::nullopt;
+  }
+  auto proto = func->type();
+  if (!proto) {
+    consumeError(proto.takeError());
+    return std::nullopt;
+  }
+  auto args = proto->argument_types();
+  if (!args) {
+    consumeError(args.takeError());
+    return std::nullopt;
+  }
+  return args->size() == 1;
 }
 
 Probe *SessionExpander::find_matching_retprobe(Probe &probe)
@@ -211,26 +247,32 @@ void SessionExpander::visit(Probe &probe)
     if (!bpftrace_.feature_->has_kprobe_session())
       return;
 
+    auto has_arg = session_is_return_has_arg();
+    if (!has_arg)
+      return;
+
     AttachPointList attach_points = probe.attach_points;
 
-    auto *ctx_builtin = ast_.make_node<Builtin>(probe.block->loc, "ctx");
-    auto *void_type = ast_.make_node<ParsedType>(probe.block->loc,
-                                                 ParsedType::Kind::Identifier,
-                                                 "void");
-    auto *void_ptr_type = ast_.make_node<ParsedType>(probe.block->loc,
-                                                     void_type);
-    auto *typeof_node = ast_.make_node<Typeof>(probe.block->loc, void_ptr_type);
-    auto *ctx_cast = ast_.make_node<Cast>(probe.block->loc,
-                                          typeof_node,
-                                          ctx_builtin);
     ExpressionList call_args;
-    call_args.emplace_back(ctx_cast);
+    if (*has_arg) {
+      auto *ctx_builtin = ast_.make_node<Builtin>(probe.block->loc, "ctx");
+      auto *void_type = ast_.make_node<ParsedType>(probe.block->loc,
+                                                   ParsedType::Kind::Identifier,
+                                                   "void");
+      auto *void_ptr_type = ast_.make_node<ParsedType>(probe.block->loc,
+                                                       void_type);
+      auto *typeof_node = ast_.make_node<Typeof>(probe.block->loc,
+                                                 void_ptr_type);
+      call_args.emplace_back(
+          ast_.make_node<Cast>(probe.block->loc, typeof_node, ctx_builtin));
+    }
 
     auto *expr = ast_.make_node<IfExpr>(
         probe.block->loc,
         ast_.make_node<Call>(probe.block->loc,
-                             "__session_is_return",
-                             call_args),
+                             "bpf_session_is_return",
+                             std::move(call_args),
+                             Call::Namespace::KFunc),
         retprobe->block,
         probe.block);
     auto *stmt = ast_.make_node<ExprStatement>(probe.block->loc, expr);
@@ -442,7 +484,7 @@ Pass CreateProbeAndApExpansionPass()
     ExpansionAnalyser analyser(bpftrace);
     auto result = analyser.analyse(*ast.root);
 
-    SessionExpander session_expander(ast, bpftrace, result);
+    SessionExpander session_expander(ast, bpftrace, func_info, result);
     session_expander.visit(*ast.root);
 
     ProbeAndApExpander expander(ast, bpftrace, func_info, result);

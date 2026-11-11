@@ -102,6 +102,9 @@ TEST(TypeSystemTest, basic)
     "int bpf_iter_task_vma()",
     "long int (*)(const struct bpf_map* map)",
     "long int bpf_map_sum_elem_count(const struct bpf_map* map)",
+    "_Bool",
+    "_Bool (*)(void* ctx)",
+    "_Bool bpf_session_is_return(void* ctx)",
     "struct Foo3* (*)(int a, struct Foo1* foo1, struct Foo2* foo2, struct "
     "Foo3* foo3, struct Foo4* foo4)",
     "struct Foo3* func_1(int a, struct Foo1* foo1, struct Foo2* foo2, struct "

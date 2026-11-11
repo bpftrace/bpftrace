@@ -112,7 +112,7 @@ public:
                                AddrSpace as,
                                const Location &loc);
   Value *CreateStrncmp(Value *str1, Value *str2, uint64_t n, bool inverse);
-  Value *CreateMemcmp(Value *buf1, Value *buf2, uint64_t n, bool inverse);
+  Value *CreateMemcmp(Value *left, Value *right, Value *count);
   Value *CreateStrcontains(Value *haystack,
                            uint64_t haystack_sz,
                            Value *needle,

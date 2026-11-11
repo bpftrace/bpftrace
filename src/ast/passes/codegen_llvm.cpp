@@ -2073,6 +2073,12 @@ ScopedExpr CodegenLLVM::visit(Call &call)
 
     return ScopedExpr(b_.CreateStrncmp(
         left_string.value(), right_string.value(), size, false));
+  } else if (call.func == "__builtin_memcmp") {
+    auto left = visit(call.vargs.at(0));
+    auto right = visit(call.vargs.at(1));
+    auto count = visit(call.vargs.at(2));
+    return ScopedExpr(
+        b_.CreateMemcmp(left.value(), right.value(), count.value()));
   } else if (call.func == "kptr" || call.func == "uptr") {
     return visit(call.vargs.at(0));
   } else if (call.func == "macaddr") {
@@ -2284,9 +2290,6 @@ ScopedExpr CodegenLLVM::binop_buf(Binop &binop)
     LOG(BUG) << "missing codegen to buffer operator \"" << opstr(binop) << "\"";
   }
 
-  // memcmp returns 0 when buffers are equal
-  bool inverse = binop.op == Operator::EQ;
-
   auto scoped_left = visit(binop.left);
   auto scoped_right = visit(binop.right);
   Value *left_buf = scoped_left.value();
@@ -2294,10 +2297,12 @@ ScopedExpr CodegenLLVM::binop_buf(Binop &binop)
 
   size_t len = std::min(type_map_.type(binop.left).GetSize(),
                         type_map_.type(binop.right).GetSize());
-  return ScopedExpr(
-      b_.CreateIntCast(b_.CreateMemcmp(left_buf, right_buf, len, inverse),
-                       b_.getInt1Ty(),
-                       false));
+  // memcmp returns 0 when buffers are equal
+  Value *cmp = b_.CreateMemcmp(left_buf, right_buf, b_.getInt64(len));
+  if (binop.op == Operator::EQ) {
+    return ScopedExpr(b_.CreateICmpEQ(cmp, b_.getInt32(0)));
+  }
+  return ScopedExpr(b_.CreateICmpNE(cmp, b_.getInt32(0)));
 }
 
 ScopedExpr CodegenLLVM::binop_int(Binop &binop)
@@ -2660,7 +2665,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
 
     bool prev_in_session_return = in_session_return_branch_;
     if (auto *call = if_expr.cond.as<Call>()) {
-      if (call->func == "__session_is_return") {
+      if (call->is_kfunc() && call->func == "bpf_session_is_return") {
         in_session_return_branch_ = true;
       }
     }

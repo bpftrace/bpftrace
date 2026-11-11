@@ -1,8 +1,6 @@
 #include <filesystem>
-#include <llvm/Analysis/TargetLibraryInfo.h>
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Transforms/Utils/BuildLibCalls.h>
 
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
@@ -1510,25 +1508,63 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
   return result;
 }
 
-Value *IRBuilderBPF::CreateMemcmp(Value *buf1,
-                                  Value *buf2,
-                                  uint64_t n,
-                                  bool inverse)
+Value *IRBuilderBPF::CreateMemcmp(Value *left, Value *right, Value *count)
 {
-  // memcmp(buf1, buf2, n) returns 0 when all n bytes are equal. Unlike
-  // strncmp, it does not stop at NULL bytes.
-  llvm::TargetLibraryInfoImpl tli_impl{ llvm::Triple(
-      module_.getTargetTriple()) };
-  llvm::TargetLibraryInfo tli(tli_impl);
+  // Returns 0 if the first `count` bytes match, otherwise the difference
+  // between the first pair of bytes that don't.
+  //
+  //  for (uint64_t i = 0; i < count; i++) {
+  //    if (left[i] != right[i]) {
+  //      return (int32_t)left[i] - (int32_t)right[i];
+  //    }
+  //  }
+  //  return 0;
+  llvm::Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *entry = GetInsertBlock();
+  BasicBlock *cond = BasicBlock::Create(module_.getContext(),
+                                        "memcmp.cond",
+                                        parent);
+  BasicBlock *body = BasicBlock::Create(module_.getContext(),
+                                        "memcmp.body",
+                                        parent);
+  BasicBlock *inc = BasicBlock::Create(module_.getContext(),
+                                       "memcmp.inc",
+                                       parent);
+  BasicBlock *ne = BasicBlock::Create(module_.getContext(),
+                                      "memcmp.ne",
+                                      parent);
+  BasicBlock *done = BasicBlock::Create(module_.getContext(),
+                                        "memcmp.done",
+                                        parent);
 
-  Value *cmp = llvm::emitMemCmp(
-      buf1, buf2, getInt64(n), *this, module_.getDataLayout(), &tli);
-  if (!cmp) {
-    LOG(BUG) << "Failed to emit memcmp";
-  }
+  count = CreateIntCast(count, getInt64Ty(), false);
+  CreateBr(cond);
 
-  return inverse ? CreateICmpEQ(cmp, getInt32(0))
-                 : CreateICmpNE(cmp, getInt32(0));
+  SetInsertPoint(cond);
+  PHINode *i = CreatePHI(getInt64Ty(), 2, "memcmp.i");
+  i->addIncoming(getInt64(0), entry);
+  CreateCondBr(CreateICmpULT(i, count), body, done);
+
+  SetInsertPoint(body);
+  Value *l = CreateLoad(getInt8Ty(), CreateGEP(getInt8Ty(), left, i));
+  Value *r = CreateLoad(getInt8Ty(), CreateGEP(getInt8Ty(), right, i));
+  CreateCondBr(CreateICmpNE(l, r), ne, inc);
+
+  SetInsertPoint(inc);
+  Value *next = CreateAdd(i, getInt64(1));
+  i->addIncoming(next, inc);
+  CreateBr(cond);
+
+  SetInsertPoint(ne);
+  Value *diff = CreateSub(CreateSExt(l, getInt32Ty()),
+                          CreateSExt(r, getInt32Ty()));
+  CreateBr(done);
+
+  SetInsertPoint(done);
+  PHINode *result = CreatePHI(getInt32Ty(), 2, "memcmp.result");
+  result->addIncoming(getInt32(0), cond);
+  result->addIncoming(diff, ne);
+  return result;
 }
 
 Value *IRBuilderBPF::CreateGetNs(TimestampMode ts, const Location &loc)

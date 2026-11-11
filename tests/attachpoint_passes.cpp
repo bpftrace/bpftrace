@@ -229,33 +229,33 @@ TEST_F(attachpoint_parser_dwarf, uprobe)
   std::string bin = std::string(bin_);
   std::string ap = "uprobe:" + bin;
 
-  test(ap + "@data_source.c:202 { 1 }");
-  test(ap + "@data_source.c:202:1 { 1 }");
-  test(ap + "@data/data_source.c:202 { 1 }");
-  test(ap + "@data/data_source.c:202:1 { 1 }");
-  test(ap + "@data_source.c:202 / 1 / { 1 }");
-  test(ap + "@data/data_source.c:202 / 1 / { 1 }");
-  test("begin { @x = 1; } " + ap + "@data/data_source.c:202 / @x / { @x/1; }");
-  test("begin { @x = 1; } " + ap + "@data/data_source.c:202 /@x/ { @x/1; }");
+  test(ap + "@data_source.c:207 { 1 }");
+  test(ap + "@data_source.c:207:1 { 1 }");
+  test(ap + "@data/data_source.c:207 { 1 }");
+  test(ap + "@data/data_source.c:207:1 { 1 }");
+  test(ap + "@data_source.c:207 / 1 / { 1 }");
+  test(ap + "@data/data_source.c:207 / 1 / { 1 }");
+  test("begin { @x = 1; } " + ap + "@data/data_source.c:207 / @x / { @x/1; }");
+  test("begin { @x = 1; } " + ap + "@data/data_source.c:207 /@x/ { @x/1; }");
   test("begin { @data_source = 1; } " + ap +
-       "@data_source.c:202 /@data_source/ { @data_source/1; }");
+       "@data_source.c:207 /@data_source/ { @data_source/1; }");
   test("begin { @data = 1; } " + ap +
-       "@data/data_source.c:202 /@data/ { @data/1; }");
+       "@data/data_source.c:207 /@data/ { @data/1; }");
 
   // Quoted arguments
-  test(ap + R"(@"data_source.c":202 { 1 })");
-  test(ap + R"(@data_source.c:"202" { 1 })");
-  test(ap + R"(@"data_source.c":"202" { 1 })");
-  test(ap + R"(@"data_source.c":"202":"1" { 1 })");
-  test(ap + R"(@data/"data_source.c":202 { 1 })");
-  test(ap + R"(@"data/data_source.c":202 { 1 })");
-  test(R"(uprobe:")" + bin + R"("@data_source.c:202 { 1 })");
-  test(R"(uprobe:")" + bin + R"("@"data_source.c":202 { 1 })");
-  test(R"(uprobe:")" + bin + R"("@"data/data_source.c":202 { 1 })");
+  test(ap + R"(@"data_source.c":207 { 1 })");
+  test(ap + R"(@data_source.c:"207" { 1 })");
+  test(ap + R"(@"data_source.c":"207" { 1 })");
+  test(ap + R"(@"data_source.c":"207":"1" { 1 })");
+  test(ap + R"(@data/"data_source.c":207 { 1 })");
+  test(ap + R"(@"data/data_source.c":207 { 1 })");
+  test(R"(uprobe:")" + bin + R"("@data_source.c:207 { 1 })");
+  test(R"(uprobe:")" + bin + R"("@"data_source.c":207 { 1 })");
+  test(R"(uprobe:")" + bin + R"("@"data/data_source.c":207 { 1 })");
 
-  test_error("uretprobe:" + bin + "@data_source.c:202 { 1 }",
+  test_error("uretprobe:" + bin + "@data_source.c:207 { 1 }",
              R"(Source code location not allowed)");
-  test_error("uprobe:*@data_source.c:202 { 1 }",
+  test_error("uprobe:*@data_source.c:207 { 1 }",
              R"(Cannot use wildcards with source code location)");
   test_error(
       ap + "@ { 1 }",
@@ -270,12 +270,12 @@ TEST_F(attachpoint_parser_dwarf, uprobe)
       ap + "@:202 { 1 }",
       R"(ERROR: Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
   test_error(
-      ap + "@data_source.c:202:1:2:3 { 1 }",
+      ap + "@data_source.c:207:1:2:3 { 1 }",
       R"(Invalid uprobe arguments, expected format: uprobe:TARGET@FILE:LINE[:COL])");
   test_error(ap + "@data_source.c:invalid { 1 }", R"(Invalid line number: )");
-  test_error(ap + "@data_source.c:202:invalid { 1 }",
+  test_error(ap + "@data_source.c:207:invalid { 1 }",
              R"(Invalid column number: )");
-  test_error(ap + "@data_source.c:202: { 1 }", R"(Invalid column number: )");
+  test_error(ap + "@data_source.c:207: { 1 }", R"(Invalid column number: )");
   test_error(ap + "@invalid.c:202 { 1 }",
              R"(No compilation unit matches invalid.c)");
   test_error(
