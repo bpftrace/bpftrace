@@ -14,7 +14,7 @@ Each section is optional but must appear in this order:
 
 For example:
 
-```
+```bpftrace
 #include <linux/socket.h>
 #define RED "\033[31m"
 
@@ -54,7 +54,7 @@ An action is a semicolon (`;`) separated list of statements and always enclosed 
 
 A basic script that traces the `open(2)` and `openat(2)` system calls can be written as follows:
 
-```
+```bpftrace
 begin {
   printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
 }
@@ -113,7 +113,7 @@ They can only be read into a variable from a pointer.
 
 The `[]` operator is used to access elements.
 
-```
+```bpftrace
 struct MyStruct {
   int y[4];
 }
@@ -174,7 +174,7 @@ ello
 
 Both single line and multi line comments are supported.
 
-```
+```bpftrace
 // A single line comment
 interval:s:1 { // can also be used to comment inline
 /*
@@ -199,7 +199,7 @@ Both the `ifTrue` and `ifFalse` expressions must be of the same type, mixing typ
 
 The ternary operator can be used as part of an assignment.
 
-```
+```bpftrace
 $a == 1 ? print("true") : print("false");
 $b = $a > 0 ? $a : -1;
 ```
@@ -221,7 +221,7 @@ if (condition) {
 To improve script portability, you can set bpftrace [Config Variables](#config-variables) via the config block,
 which can only be placed at the top of the script before any action blocks, macros, or map declarations.
 
-```
+```bpftrace
 config = {
   stack_mode = perf;
   max_map_keys = 2;
@@ -428,7 +428,7 @@ The following fundamental types are provided by the language.
 | int64 | Signed 64 bit integer |
 | string | See below |
 
-```
+```bpftrace
 begin { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }
 
 /*
@@ -442,14 +442,14 @@ signed type, e.g. `0`, `1`, and `-1` are all `int8`.
 If an integer literal exceeds the largest `int64` then it's a `uint64`.
 Positive integer literals are flexible though.
 For this code:
-```
+```bpftrace
 $a = 1;
 $a = (uint64)2;
 ```
 `$a` ends up being a `uint64` as bpftrace can determine this statically.
 
 Scratch variables and map keys/values will be automatically upcast when necessary, e.g.
-```
+```bpftrace
 $a = 1; // starts as int8
 $b = -1000; // starts as int16
 $a = $b; // $a now becomes an int16
@@ -469,7 +469,7 @@ This may lead to undefined behavior, or, most likely, a large number being print
 However, implicit casts of integer literals still fail when the literal is outside the
 destination type's range. For example, `let $a: uint16 = -1;` requires an
 explicit cast: `let $a: uint16 = (uint16)-1;`. Though this:
-```
+```bpftrace
 $b = -1;
 let $a: uint16 = $b;
 ```
@@ -477,7 +477,7 @@ only yields a warning.
 
 Additionally, when vmlinux BTF is available, bpftrace supports
 casting to some of the kernel's fixed integer types:
-```
+```bpftrace
 $a = (uint64_t)1; // $a is a uint64
 ```
 
@@ -493,7 +493,7 @@ It also may be necessary to utilize the [`str()`](stdlib.md#str) function if bpf
 Filters (also known as predicates) can be added after probe names.
 The probe still fires, but it will skip the action unless the filter is true.
 
-```
+```bpftrace
 kprobe:vfs_read /arg2 < 16/ {
   printf("small read: %d byte buffer\n", arg2);
 }
@@ -513,7 +513,7 @@ Root-level imports allow you to import other files into your script using the `i
 
 ### Syntax
 
-```
+```bpftrace
 import "<path>";
 ```
 
@@ -539,12 +539,12 @@ As a security measure, bpftrace refuses to import from world-writable directorie
 
 Importing a bpftrace script:
 
-```
+```bpftrace
 // helpers.bt
 macro greet() { print("hello"); }
 ```
 
-```
+```bpftrace
 import "helpers.bt";
 
 begin { greet(); } // prints "hello"
@@ -557,7 +557,7 @@ Importing a C file:
 int __add_one(int val) { return 1 + val; }
 ```
 
-```
+```bpftrace
 import "my_c_lib.bpf.c";
 
 begin {
@@ -567,7 +567,7 @@ begin {
 
 Importing a directory of files:
 
-```
+```bpftrace
 import "my_lib";
 ```
 
@@ -583,7 +583,7 @@ This imports all supported files in the `my_lib/` directory.
 
 Kernel functions (kfuncs) can be called directly with the `kfunc::` prefix:
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_read {
   $t = kfunc::bpf_task_from_pid(1);
   if ($t != 0) {
@@ -629,14 +629,14 @@ Integer suffixes as found in the C language are parsed by bpftrace to ensure com
 `123UL`, `123U` and `123LL` all result in the same integer type with a value of `123`.
 
 These duration suffixes are also supported: `ns`, `us`, `ms`, `s`, `m`, `h`, and `d`. All get turned into integer values in nanoseconds, e.g.
-```
+```bpftrace
 $a = 1m;
 print($a); // prints 60000000000
 ```
 
 Character literals are not supported at this time, and the corresponding ASCII code must be used instead:
 
-```
+```bpftrace
 begin {
   printf("Echo A: %c\n", 65);
 }
@@ -659,19 +659,19 @@ Strings support the following escape sequences:
 
 `for` loops can be used to iterate over elements in a map, over a range of integers, provided as two unary expressions separated by `..`, or over specific kernel objects using an iterator.
 
-```
+```bpftrace
 for ($kv : @map) {
   block;
 }
 ```
 
-```
+```bpftrace
 for ($i : start..end) {
   block;
 }
 ```
 
-```
+```bpftrace
 for ($task : iter_task()) {
   block;
 }
@@ -681,7 +681,7 @@ The variable declared in the `for` loop will be initialised on each iteration.
 
 If the iteration is over a map, the value will be a tuple containing a key and a value from the map, i.e. `$kv = (key, value)`:
 
-```
+```bpftrace
 @map[10] = 20;
 for ($kv : @map) {
   print($kv.0); // key
@@ -691,7 +691,7 @@ for ($kv : @map) {
 
 If a map has multiple keys, the loop variable will be initialised with nested tuple of the form: `((key1, key2, ...), value)`:
 
-```
+```bpftrace
 @map[10,11] = 20;
 for ($kv : @map) {
   print($kv.0.0); // key 1
@@ -702,7 +702,7 @@ for ($kv : @map) {
 
 If an integer range is provided, the value will be an integer value for each element in the range, inclusive of the start value and exclusive of the end value:
 
-```
+```bpftrace
 for ($cpu : 0..ncpus) {
   print($cpu); // current value in range
 }
@@ -712,7 +712,7 @@ Note that you cannot adjust the range itself after the loop has started.
 The `for` start and end values are evaluated once, not on each loop iteration.
 For example, the following will print `0` through `9`:
 
-```
+```bpftrace
 $a = 10;
 for ($i : 0..$a) {
   print($i);
@@ -732,7 +732,7 @@ These are implemented using [open coded iterators](https://docs.kernel.org/bpf/b
 | `iter_task_threads(task)` | `struct task_struct *` | the threads of `task` |
 | `iter_task_vma(task[, addr])` | `struct vm_area_struct *` | the memory mappings of `task`, optionally starting at `addr` |
 
-```
+```bpftrace
 interval:s:10 {
   for ($task : iter_task()) {
     printf("%-6d %s\n", $task->pid, $task->comm);
@@ -740,7 +740,7 @@ interval:s:10 {
 }
 ```
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_execve {
   for ($vma : iter_task_vma(curtask)) {
     printf("%lx-%lx\n", $vma->vm_start, $vma->vm_end);
@@ -764,7 +764,7 @@ While loops are deprecated and may be removed in the future; please use `For` lo
 
 Loop unrolling is also supported with the `unroll` statement.
 
-```
+```bpftrace
 unroll(n) {
   block;
 }
@@ -775,7 +775,7 @@ As this happens at compile time `n` must be a constant greater than 0 (`n > 0`).
 
 The following two probes compile into the same code:
 
-```
+```bpftrace
 interval:s:1 {
   unroll(3) {
     print("Unrolled");
@@ -807,7 +807,7 @@ Note: User-defined macros with the same name and signature as a standard library
 
 Here are some valid usages of macros:
 
-```
+```bpftrace
 macro one() {
   1
 }
@@ -859,7 +859,7 @@ begin {
 
 Some examples of invalid macro usage:
 
-```
+```bpftrace
 macro unhygienic_access() {
   @x++                         // BAD: @x not passed in
 }
@@ -878,7 +878,7 @@ begin {
 ```
 
 Note: If you want the passed in expression to only be executed once, simply bind it to a variable, e.g.,
-```
+```bpftrace
 macro add_one(x) {
   let $x = x;
   $x + 1
@@ -984,7 +984,7 @@ The increment (`++`) and decrement (`--`) operators can be used on integer and p
 They can only be used on variables and can either be applied as prefix or suffix.
 The difference is that the expression `x++` returns the original value of `x`, before it got incremented while `++x` returns the value of `x` post increment.
 
-```
+```bpftrace
 $x = 10;
 $y = $x--; // y = 10; x = 9
 $a = 10;
@@ -1001,7 +1001,7 @@ Note `++`/`--` on a shared global variable can lose updates. See [`count()`](std
 A block can be used as an expression, as long as the last statement of the block
 is an expression with no trailing semicolon.
 
-```
+```bpftrace
 let $a = {
   let $b = 1;
   $b
@@ -1012,7 +1012,7 @@ This can be used anywhere an expression can be used.
 
 **Note:** There will be a warning for discarded expressions, e.g.,
 
-```
+```bpftrace
 { 1 } // Warning
 $a = { 1 } // No Warning
 has_key(@a, 1); // Warning
@@ -1020,7 +1020,7 @@ $b = has_key(@a, 1); // No Warning
 ```
 The warning can also be silenced by utilizing the Discard Expression:
 
-```
+```bpftrace
 _ = has_key(@a, 1); // No Warning
 ```
 
@@ -1036,7 +1036,7 @@ Also see [Listing Probes](../man/adoc/bpftrace.adoc#listing-probes).
 It is possible to associate multiple probes with a single action as long as the action is valid for all specified probes.
 Multiple probes can be specified as a comma (`,`) separated list:
 
-```
+```bpftrace
 kprobe:tcp_reset,kprobe:tcp_v4_rcv {
   printf("Entered: %s\n", probe);
 }
@@ -1044,7 +1044,7 @@ kprobe:tcp_reset,kprobe:tcp_v4_rcv {
 
 Wildcards are supported too:
 
-```
+```bpftrace
 kprobe:tcp_* {
   printf("Entered: %s\n", probe);
 }
@@ -1052,7 +1052,7 @@ kprobe:tcp_* {
 
 Both can be combined:
 
-```
+```bpftrace
 kprobe:tcp_reset,kprobe:*socket* {
   printf("Entered: %s\n", probe);
 }
@@ -1093,7 +1093,7 @@ For imports containing `begin` and `end` probes, an effort is made to preserve t
 Note that specifying an `end` probe doesn’t override the printing of 'non-empty' maps at exit.
 To prevent printing, clear all used maps in the `end` probe:
 
-```
+```bpftrace
 end {
   clear(@map1);
   clear(@map2);
@@ -1107,7 +1107,7 @@ bpftrace executes each `test` probe and checks the return value, error count and
 If multiple `test` probes exist in a script, bpftrace executes them sequentially in the order they are specified.
 To run `test` probes, you must run bpftrace in test mode: `bpftrace --test ...`; otherwise `test` probes will be ignored.
 
-```
+```bpftrace
 test:okay {
   print("I'm okay! This output will be suppressed.");
 }
@@ -1122,7 +1122,7 @@ When a `test` probe fails because it returned a non-zero value, bpftrace reports
 the source line of the failing `return`. This identifies which check failed when
 a test has multiple checks, without having to re-run the test:
 
-```
+```bpftrace
 test:multiple_checks {
   if (1 + 1 != 2) {
     return 1;
@@ -1148,7 +1148,7 @@ bpftrace executes each `bench` probe repeatedly to measure the average execution
 If multiple `bench` probes exist in a script, bpftrace executes them sequentially in the order they are specified.
 To run `bench` probes, you must run bpftrace in bench mode: `bpftrace --bench ...`; otherwise, `bench` probes will be ignored.
 
-```
+```bpftrace
 bench:lhist {
   @a = lhist(rand % 10, 1, 10, 1);
 }
@@ -1187,7 +1187,7 @@ Attached 3 probes
 These are special built-in events provided by the bpftrace runtime.
 The trigger function is called by the bpftrace runtime when the bpftrace process receives specific events, such as a `SIGUSR1` signal.
 
-```
+```bpftrace
 self:signal:SIGUSR1 {
   print("abc");
 }
@@ -1225,7 +1225,7 @@ If `count` is left unspecified a default value is used.
 
 This will fire once for every 1,000,000 cache misses.
 
-```
+```bpftrace
 hardware:cache-misses:1e6 { @[pid] = count(); }
 ```
 
@@ -1249,7 +1249,7 @@ If a unit of time is not specified in the second position, the number is interpr
 
 This prints the rate of syscalls per second.
 
-```
+```bpftrace
 tracepoint:raw_syscalls:sys_enter { @syscalls = count(); }
 interval:1s { print(@syscalls); clear(@syscalls); }
 ```
@@ -1278,7 +1278,7 @@ Each iterator probe provides a set of fields that could be accessed with the
 `ctx` pointer. Users can display the set of available fields for each iterator via
 the `-lv` option as described below.
 
-```
+```bpftrace
 iter:task { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
 /*
  * Sample output:
@@ -1291,7 +1291,7 @@ iter:task { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
  */
 ```
 
-```
+```bpftrace
 iter:task_file {
   printf("%s:%d %d:%s\n", ctx.task.comm, ctx.task.pid, ctx.fd, path(ctx.file.f_path));
 }
@@ -1307,7 +1307,7 @@ iter:task_file {
  */
 ```
 
-```
+```bpftrace
 iter:task_vma {
   printf("%s %d %lx-%lx\n", comm, pid, ctx.vma.vm_start, ctx.vma.vm_end);
 }
@@ -1324,14 +1324,14 @@ It can be specified as an absolute or relative path to /sys/fs/bpf.
 
 **relative pin**
 
-```
+```bpftrace
 iter:task:list { printf("%s:%d\n", ctx.task.comm, ctx.task.pid); }
 // Prints: Program pinned to /sys/fs/bpf/list
 ```
 
 **absolute pin**
 
-```
+```bpftrace
 iter:task_file:/sys/fs/bpf/files {
   printf("%s:%d %s\n", ctx.task.comm, ctx.task.pid, path(ctx.file.f_path));
 }
@@ -1385,7 +1385,7 @@ fentry:tcp_reset
     struct sk_buff * skb
 ```
 
-```
+```bpftrace
 fentry:x86_pmu_stop {
   printf("pmu %s stop\n", str(args.event.pmu.name));
 }
@@ -1393,7 +1393,7 @@ fentry:x86_pmu_stop {
 
 The `fget` function takes a file descriptor argument, available as `args.fd`. Its return value is available as `retval`:
 
-```
+```bpftrace
 fexit:fget {
   printf("fd %d name %s\n", args.fd, str(retval.f_path.dentry.d_name.name));
 }
@@ -1423,7 +1423,7 @@ fexit:fget {
 ``kprobe``s allow for dynamic instrumentation of kernel functions.
 Each time the specified kernel function is executed the attached BPF programs are run.
 
-```
+```bpftrace
 kprobe:tcp_reset {
   @tcp_resets = count();
 }
@@ -1443,7 +1443,7 @@ Due to `d` being a floating-point argument, `x` is accessed through `arg1` where
 bpftrace does not detect the function signature so it is not aware of the argument count or their type.
 It is up to the user to perform [Type conversion](#type-conversion) when needed, e.g.
 
-```
+```bpftrace
 #include <linux/path.h>
 #include <linux/dcache.h>
 
@@ -1459,7 +1459,7 @@ This means that many, but not all, structs will be available, and you may need t
 
 If the kernel has BTF (BPF Type Format) data, all kernel structs are always available without defining them. For example:
 
-```
+```bpftrace
 kprobe:vfs_open {
   printf("open path: %s\n", str(((struct path *)arg0).dentry.d_name.name));
 }
@@ -1467,7 +1467,7 @@ kprobe:vfs_open {
 
 You can optionally specify a kernel module, either to include BTF data from that module, or to specify that the traced function should come from that module.
 
-```
+```bpftrace
 kprobe:kvm:x86_emulate_insn
 {
   $ctxt = (struct x86_emulate_ctxt *) arg0;
@@ -1483,7 +1483,7 @@ See [BTF Support](#btf-support) for more details.
 Return probes do not have access to the function (input) arguments, only to the return value (through `retval`).
 A common pattern to work around this is by storing the arguments in a map on function entry and retrieving in the return probe:
 
-```
+```bpftrace
 kprobe:d_lookup
 {
   $name = (struct qstr *)arg1;
@@ -1504,7 +1504,7 @@ may be absolute or relative, and
 `line:col` must refer to a valid statement in that file. This is useful for
 probing inside a function body.
 
-```
+```bpftrace
 kprobe@fs/open.c:1077
 {
   printf("0x%lx\n", reg("ip"));
@@ -1516,7 +1516,7 @@ The same source path can occur in more than one kernel module. Prefix the
 location with a module name to select one of them, using `vmlinux` for the
 kernel itself.
 
-```
+```bpftrace
 kprobe@my_module:main.c:42
 {
   printf("0x%lx\n", reg("ip"));
@@ -1542,7 +1542,7 @@ Profile probes fire on each CPU on the specified interval.
 These operate using perf_events (a Linux kernel facility, which is also used by the perf command).
 If a unit of time is not specified in the second position, the number is interpreted as nanoseconds; e.g., `profile:1s`, `profile:1000000000`, and `profile:s:1` are all equivalent.
 
-```
+```bpftrace
 profile:hz:99 { @[tid] = count(); }
 ```
 
@@ -1561,7 +1561,7 @@ The reason why you might want to use raw tracepoints over normal tracepoints is 
 
 `rawtracepoint` arguments can be accessed via the `argN` builtins AND via the `args` builtin.
 
-```
+```bpftrace
 rawtracepoint:vmlinux:kfree_skb {
   printf("%llx %llx\n", arg0, args.skb);
 }
@@ -1602,7 +1602,7 @@ The event names are:
 * `dummy`
 * `bpf-output`
 
-```
+```bpftrace
 software:faults:100 { @[comm] = count(); }
 ```
 
@@ -1624,7 +1624,7 @@ Unlike `kprobe` probes, new tracepoints cannot be added without modifying the ke
 
 The advantage of tracepoints is that they generally provide a more stable interface than `kprobe` probes do, they do not depend on the existence of a kernel function.
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_openat {
   printf("%s %s\n", comm, str(args.filename));
 }
@@ -1673,7 +1673,7 @@ The same limitations that apply to [kprobe and kretprobe](#kprobe-and-kretprobe)
 **Note**: When tracing some languages, like C++, `arg0` and even `arg1` may refer to runtime internals such as the current object instance (`this`) and/or the eventual return value for large returned objects where copy elision is used.
 This will push the actual function arguments to possibly start at `arg1` or `arg2` - the only way to know is to experiment.
 
-```
+```bpftrace
 uprobe:/bin/bash:readline { printf("arg0: %d\n", arg0); }
 ```
 
@@ -1683,7 +1683,7 @@ I don’t know, so I’ll need to look at the bash source code to find out what 
 When tracing libraries, it is sufficient to specify the library name instead of
 a full path. The path will be then automatically resolved using `/etc/ld.so.cache`:
 
-```
+```bpftrace
 uprobe:libc:malloc { printf("Allocated %d bytes\n", arg0); }
 ```
 
@@ -1691,7 +1691,7 @@ If multiple versions of the same shared library exist (e.g. `libssl.so.3` and
 `libssl.so.59`), bpftrace may resolve the wrong one. To fix this, you can specify
 a versioned SONAME to ensure the correct library is traced:
 
-```
+```bpftrace
 uprobe:libssl.so.3:SSL_write { ... }
 ```
 
@@ -1706,7 +1706,7 @@ uprobe:/bin/bash:rl_set_prompt
 
 Using DWARF source code location info, bpftrace can also attach uprobes directly to source file statements, similar to setting a breakpoint at a `file:line[:col]` location in a debugger. This avoids manually locating instruction offsets in the ELF when probes are needed inside a function body.
 
-```
+```bpftrace
 uprobe:/bin/bash@readline.c:362 { ... }
 ```
 
@@ -1728,7 +1728,7 @@ namespace MyApp {
 The compiler mangles the function name to `_ZN5MyApp6Server14handle_requestEi`.
 Instead of using that directly, use the `cpp` qualifier:
 
-```
+```bpftrace
 // using cpp qualifier with demangled name
 uprobe:/path/to/myapp:cpp:"MyApp::Server::handle_request" { print(ustack); }
 
@@ -1779,7 +1779,7 @@ Uprobe targets are expected to be valid ELF binaries. Unsafe mode (`--unsafe`) a
 
 For shared libraries mapped directly from ZIP archives (common on Android), the archive and library name can be separated by `!/`:
 
-```
+```bpftrace
 uprobe:"/system/app/Foo/Foo.apk!/lib/arm64-v8a/libfoo.so":func { ... }
 ```
 
@@ -1798,7 +1798,7 @@ uprobe:"/system/app/Foo/Foo.apk!/lib/arm64-v8a/libfoo.so":func { ... }
 
 You can target the entire host (or an entire process’s address space by using the `-p` arg) by using a single wildcard in place of the binary_path/library_path:
 
-```
+```bpftrace
 usdt:*:loop { printf("hi\n"); }
 ```
 
@@ -1806,7 +1806,7 @@ Please note that if you use wildcards for the probe_name or probe_namespace and 
 
 Arguments are available via the `argN` builtins:
 
-```
+```bpftrace
 usdt:/root/tick:loop { printf("%s: %d\n", str(arg0), arg1); }
 ```
 
@@ -1867,7 +1867,7 @@ bpftrace uses a postfix type syntax for pointer and array modifiers.
 Modifiers are read left-to-right: the base type comes first, followed by
 any combination of `*` (pointer) and `[N]` (array) suffixes in any order.
 
-```
+```bpftrace
 int32*       // pointer to int32
 int32[4]     // array of 4 int32
 int32*[4]    // array of 4 pointers to int32
@@ -1894,7 +1894,7 @@ The same syntax applies to type annotations in variable declarations, casts, and
 For the parameterized types `string`, `buffer`, and `inet`, a `[N]` suffix
 sets the type's size parameter rather than creating an array:
 
-```
+```bpftrace
 $s = (string[64])arg0;    // string with capacity 64 bytes
 $b = (buffer[256])arg0;   // buffer of 256 bytes
 ```
@@ -1908,7 +1908,7 @@ The following functions accept a type OR an expression, which is evaluated in or
 - `typeinfo` (unstable)
 
 Examples:
-```
+```bpftrace
 print(sizeof(uint32));               // prints 4 as uint32 is parsed as a type
 print(sizeof({ $a = (int8)1; $a })); // prints 1 as the expression evaluates to $a whose type is int8
 print(sizeof(uint32*[10]));          // prints 80 as the type is an array of 10 pointers to uint32
@@ -1935,7 +1935,7 @@ Custom structs can be defined at the top of the program.
 Constructing structs from scratch, like `struct X var = {.f1 = 1}` in `C`, is not supported.
 They can only be read into a variable from a pointer.
 
-```
+```bpftrace
 struct MyStruct {
   int a;
 }
@@ -1958,7 +1958,7 @@ Individual fields can be accessed with the `.` operator or via array-style acces
 The array index expression must evaluate to an integer literal at compile time (no variables but this is ok `(1, "hello")[1 - 1]`).
 Tuples are zero indexed like arrays. Examples:
 
-```
+```bpftrace
 interval:s:1 {
   $a = (1,"hello");
   $b = (3,4, $a);
@@ -1982,7 +1982,7 @@ Individual fields can be accessed with the `.` operator and the field name.
 If records are assigned in a different order to the same variable, map key, or map value then the final ordering is ambiguous. Note that the evaluation order is maintained, e.g. `$a = (size={ print("first"); 20 }, color={ print("second"); "pink" });` will print "first" then "second" regardless of the ordering of the final type.
 Examples:
 
-```
+```bpftrace
 interval:s:1 {
   $a = (color="green", size=2);
   print($a);        // { .color = "green", .size = 2 }
@@ -1996,7 +1996,7 @@ interval:s:1 {
 
 Integer and pointer types can be converted using explicit type conversion with an expression like:
 
-```
+```bpftrace
 $y = (uint32)$z;
 $py = (int16 *)$pz;
 ```
@@ -2006,7 +2006,7 @@ Conversion to a lower rank is done by zeroing leading bits.
 
 It is also possible to cast between integers and integer arrays using the same syntax:
 
-```
+```bpftrace
 $a = (uint8[8])12345;
 $x = (uint64)$a;
 ```
@@ -2020,7 +2020,7 @@ Integers are internally represented as 64 bit signed. If you need another repres
 
 Most C-style casting is supported, however due to bpftrace's builtins, which are raw identifiers (e.g. `pid`), and macros which can be called without parenthesis if the macro doesn't have any arguments, a raw identifier wrapped in parenthesis is considered a type when followed by something that looks like an expression start.
 
-```
+```bpftrace
 $w = (myident); // parsed as an expression and not a type
 $x = (myident)*$a; // parsed as a cast to myident type with a dereference of $a
 $y = (pid)*tid; // parsed a multiplication of the pid builtin and the tid builtin
@@ -2031,7 +2031,7 @@ Bare identifiers in type contexts (casts, `sizeof`, `typeof`, etc.) are always t
 as type names and are never expanded as macros. To force macro expansion in a
 type context, use the call syntax or wrap with `typeof`:
 
-```
+```bpftrace
 macro uint64_t() { 1 }
 $x = sizeof(uint64_t);           // uint64_t is treated as a type name and $x evaluates to 8
 $x = sizeof(uint64_t());         // call syntax forces macro expansion and $x evaluates to 1
@@ -2039,7 +2039,7 @@ $y = (typeof(uint64_t()))$z;     // typeof wrapper for casts and this becomes $y
 ```
 
 Additionally, in a type context the array syntax is always treated as a type unless surrounded by parenthesis.
-```
+```bpftrace
 $x = sizeof(ident[1]);   // parsed as an array of type ident with 1 element
 $x = sizeof((ident)[1]); // parsed as an expression accessing the first element of ident (useful in macro contexts)
 $x = sizeof((ident[1])); // parsed as an expression accessing the first element of ident (useful in macro contexts)
@@ -2051,7 +2051,7 @@ It is possible to cast between integer arrays and integers.
 Both the source and the destination type must have the same size.
 The main purpose of this is to allow casts from/to byte arrays.
 
-```
+```bpftrace
 begin {
   $a = (int8[8])12345;
   printf("%x %x\n", $a[0], $a[1]);
@@ -2070,7 +2070,7 @@ When casting to an array, it is possible to omit the size which will be determin
 This feature is especially useful when working with IP addresses since various libraries, builtins, and parts of the kernel use different approaches to represent addresses (usually byte arrays vs. integers).
 Array casting allows seamless comparison of such representations:
 
-```
+```bpftrace
 fentry:tcp_connect {
     if (args.sk.__sk_common.skc_daddr == (uint32)pton("127.0.0.1"))
         ...
@@ -2087,7 +2087,7 @@ and the system's native byte order (endianness)
 For example, when casting `(uint16)1` to `bool[2]`, each `bool` element is
 initialized from one byte of the `uint16` representation:
 
-```
+```bpftrace
 // On little-endian systems:
 begin { @a = (bool[2])(uint16)1; }
 // Output: @a: [true, false]
@@ -2112,7 +2112,7 @@ then the array is initialized from that wider representation.
 For example, `(uint64)12345` is `0x0000000000003039`, so casting it to
 `int8[8]` uses the full 8-byte representation:
 
-```
+```bpftrace
 // On little-endian systems:
 begin { printf("first byte: %x\n", ((int8[8])(uint64)12345)[0]); }
 // Output: first byte: 39
@@ -2135,7 +2135,7 @@ bpftrace knows two types of variables, 'scratch' and 'map'.
 'scratch' variables are kept on the BPF stack and their names always start
 with a `$`, e.g. `$myvar`.
 'scratch' variables cannot be accessed outside of their lexical block e.g.
-```
+```bpftrace
 $a = 1;
 if ($a == 1) {
   $b = "hello";
@@ -2144,7 +2144,7 @@ if ($a == 1) {
 ```
 
 'scratch' variables can also be declared before or during initialization with `let` e.g.
-```
+```bpftrace
 let $a = 1;
 let $b;
 if ($a == 1) {
@@ -2169,7 +2169,7 @@ The data type of a variable is automatically determined during first assignment 
 Stabilization is tracked in [#4077](https://github.com/bpftrace/bpftrace/issues/4077).
 
 Maps can also be declared in the global scope, before probes and after the config e.g.
-```
+```bpftrace
 let @a = hash(100);
 let @b = percpulruhash(20);
 
@@ -2194,7 +2194,7 @@ However, it’s best practice to declare maps up front as using the default can 
 Values can be assigned directly to maps without a key (sometimes referred to as scalar maps).
 Note: you can’t iterate over these maps as they don’t have an accessible key.
 
-```
+```bpftrace
 @name = expression
 ```
 
@@ -2202,20 +2202,20 @@ Note: you can’t iterate over these maps as they don’t have an accessible key
 
 Setting single value map keys.
 
-```
+```bpftrace
 @name[key] = expression
 ```
 
 Map keys that are composed of multiple values are represented as tuples e.g.
 
-```
+```bpftrace
 @name[(key1,key2)] = expression
 ```
 
 However, this, more concise, syntax is supported and the same as the explicit
 tuple above:
 
-```
+```bpftrace
 @name[key1,key2] = expression
 ```
 
@@ -2224,7 +2224,7 @@ This applies to both the key(s) and the value type.
 
 The following snippets create a map with key signature `(int64, string)` and a value type of `int64`:
 
-```
+```bpftrace
 @[pid, comm]++
 @[(pid, comm)]++
 ```
@@ -2233,7 +2233,7 @@ The following snippets create a map with key signature `(int64, string)` and a v
 
 These can be implemented as a map keyed on the thread ID. For example, `@start[tid]`:
 
-```
+```bpftrace
 kprobe:do_nanosleep {
   @start[tid] = nsecs;
 }
@@ -2253,7 +2253,7 @@ kretprobe:do_nanosleep /has_key(@start, tid)/ {
 
 This style of map may also be useful for capturing output parameters, or other context, between two different probes. For example:
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_wait4
 {
   @out[tid] = args.ru;
@@ -2382,7 +2382,7 @@ By default when a bpftrace program exits it will print all maps to stdout.
 If you don’t want this, you can either override the `print_maps_on_exit` configuration option or you can specify an `end` probe and `clear` the maps you don’t want printed.
 
 For example, these two scripts are equivalent and will print nothing on exit:
-```
+```bpftrace
 config = {
   print_maps_on_exit=0
 }
@@ -2393,7 +2393,7 @@ begin {
 }
 ```
 
-```
+```bpftrace
 begin {
   @a = 1;
   @b[1] = 1;
@@ -2414,7 +2414,7 @@ during comparisons, `printf()`, or other.
 
 For example:
 
-```
+```bpftrace
 begin {
   @c = count();
   @s = sum(3);
@@ -2464,14 +2464,14 @@ until bpftrace started by the systemd unit has attached its probes.
 Some features added to bpftrace are not yet stable.
 They are enabled by default but come with a warning if used.
 If you explicitly add the config variable to your script the warning will not be shown e.g.
-```
+```bpftrace
 config = {
   unstable_tseries = enable;
 }
 ```
 
 To opt-out of these unstable features (and ensure they are not used) add the config variable and set it to `error` e.g.
-```
+```bpftrace
 config = {
   unstable_tseries = error;
 }

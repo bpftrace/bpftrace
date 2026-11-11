@@ -22,7 +22,7 @@ Resolves a relative path or filename to an absolute path.
 If `path` is empty, the returned string is empty.
 
 Example:
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_openat {
   print(abs_path(str(args.filename), 32));
 }
@@ -89,7 +89,7 @@ The `buffer` object returned by `buf` can safely be printed as a hex encoded str
 
 Bytes with values >=32 and \&lt;=126 are printed using their ASCII character, other bytes are printed in hex form (e.g. `\x00`). The `%rx` format specifier can be used to print everything in hex form, including ASCII characters. The similar `%rh` format specifier prints everything in hex form without `\x` and with spaces between bytes (e.g. `0a fe`).
 
-```
+```bpftrace
 interval:s:1 {
   printf("%r\n", buf(kaddr("avenrun"), 8));
 }
@@ -113,7 +113,7 @@ Dump the contents of the named file to stdout.
 `cat` supports the same format string and arguments that `printf` does.
 If the file cannot be opened or read an error is printed to stderr.
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_execve {
   cat("/proc/%d/maps", pid);
 }
@@ -159,7 +159,7 @@ the cgroup with the given id isn’t present here (e.g. when running in a Docker
 container), the cgroup path won’t be found (unlike when looking up the cgroup
 path of a process via /proc/.../cgroup).
 
-```
+```bpftrace
 BEGIN {
   $cgroup_path = cgroup_path(3436);
   print($cgroup_path);
@@ -177,7 +177,7 @@ Returns the cgroup v2 ID for a cgroup path.
 
 **compile time**
 
-```
+```bpftrace
 BEGIN {
   print(cgroupid("/sys/fs/cgroup/system.slice"));
 }
@@ -194,7 +194,7 @@ Clear all keys/values from a map.
 
 Use `delete(m)` to remove all keys/values synchronously.
 
-```
+```bpftrace
 interval:ms:100 {
   @[rand % 10] = count();
 }
@@ -227,7 +227,7 @@ Returns the current bpftrace configuration.
 
 Returns a `Record` containing the current `bpftrace` configuration settings. [List of config variables](./language.md#config-variables)
 
-```
+```bpftrace
 begin {
   printf("max_strlen: %d, stack_mode: %s\n", config.max_strlen, config.stack_mode);
 }
@@ -306,7 +306,7 @@ If deletion fails (e.g. the key doesn’t exist) the function returns false (0).
 If the return value of `delete` isn't used, you will get a compile-time warning, whether or not the deletion succeeds.
 Use `_ = delete(...)` to discard it without a warning.
 
-```
+```bpftrace
 @a[1] = 1;
 
 delete(@a, 1); // warning (return value is discarded)
@@ -323,7 +323,7 @@ _ = delete(@a, 2); // no warning (return value is explicitly discarded)
 The, now deprecated, API (supported in version &lt;= 0.21.x) of passing map arguments with the key is still supported:
 e.g. `delete(@mymap[3, "hello"]);`.
 
-```
+```bpftrace
 kprobe:dummy {
   @scalar = 1;
   delete(@scalar); // ok
@@ -366,7 +366,7 @@ information for a process, a runtime warning is emitted.
 `dw_ustack` is an unstable feature. By default a warning is printed when it
 is used. Set the config flag to suppress the warning or to make it an error:
 
-```
+```bpftrace
 config = { unstable_dw_ustack=enable }
 ```
 
@@ -390,7 +390,7 @@ Formats and prints an error message with its source location.
 
 `errorf()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location.
 
-```
+```bpftrace
 BEGIN { errorf("Something bad with args: %d, %s", 10, "arg2"); }
 // Prints: stdin:1:9-62: ERROR: Something bad with args: 10, arg2
 ```
@@ -408,7 +408,7 @@ Terminate bpftrace, as if a `SIGTERM` was received.
 The `END` probe will still trigger (if specified) and maps will be printed.
 An optional exit code can be provided.
 
-```
+```bpftrace
 BEGIN {
   exit();
 }
@@ -416,7 +416,7 @@ BEGIN {
 
 Or
 
-```
+```bpftrace
 BEGIN {
   exit(1);
 }
@@ -433,7 +433,7 @@ Reports a compile-time error and halts compilation when reached.
 
 `fail()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location but, as opposed to [`errorf`](#errorf), is treated like a static assert and halts compilation if it is visited. All args have to be literals since they are evaluated at compile time.
 
-```
+```bpftrace
 BEGIN { if ($1 < 2) { fail("Expected the first positional param to be greater than 1. Got %d", $1); } }
 ```
 
@@ -450,7 +450,7 @@ Otherwise return `false` and don't mutate result.
 Use this instead of `has_key` and a map access to avoid an additional map lookup.
 Error if called with a map that has no keys (aka scalar map).
 
-```
+```bpftrace
 kprobe:dummy {
   @map[2] = (1, "hello");
   let $val;
@@ -526,7 +526,7 @@ Return `true` if the key exists in this map.
 Otherwise return `false`.
 Error if called with a map that has no keys (aka scalar map).
 
-```
+```bpftrace
 kprobe:dummy {
   @associative[1,2] = 1;
   if (!has_key(@associative, (1,3))) { // ok
@@ -561,7 +561,7 @@ using the `ERR_PTR` macro. These are pointer values in the range
 
 This is equivalent to the kernel's `IS_ERR()` macro.
 
-```
+```bpftrace
 fexit:do_filp_open {
   if (is_err(retval)) {
     printf("error: %ld\n", (int64)retval);
@@ -625,7 +625,7 @@ This string will be printed to stdout directly, it cannot be used as string valu
 
 The concatenation of the array members is done in BPF and the printing happens in userspace.
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_execve {
   join(args.argv);
 }
@@ -642,7 +642,7 @@ Returns the address of a kernel symbol.
 
 Get the address of the kernel symbol `name`.
 
-```
+```bpftrace
 interval:s:1 {
   $avenrun = kaddr("avenrun");
   $load1 = *$avenrun;
@@ -688,7 +688,7 @@ Returns a kernel stack trace.
 
 There are several [formatting/StackMode options](./language.md#stack_mode).
 
-```
+```bpftrace
 kprobe:ip_output { @[kstack()] = count(); }
 /*
  * Sample output:
@@ -711,7 +711,7 @@ kprobe:ip_output { @[kstack()] = count(); }
 
 Sampling only three frames from the stack (limit = 3):
 
-```
+```bpftrace
 kprobe:ip_output { @[kstack(3)] = count(); }
 /*
  * Sample output:
@@ -727,7 +727,7 @@ Note: If a limit is used and `show_debug_info` is enabled then the number of sym
 
 Example using `perf` StackMode:
 
-```
+```bpftrace
 kprobe:ip_output { @[kstack(perf, 3)] = count(); }
 /*
  * Sample output:
@@ -753,7 +753,7 @@ The address to name mapping happens in user-space.
 
 The `ksym_t` type can be printed with the `%s` format specifier.
 
-```
+```bpftrace
 kprobe:do_nanosleep
 {
   printf("%s\n", ksym(reg("ip")));
@@ -809,7 +809,7 @@ Creates a printable buffer from a MAC address.
 
 This buffer can be printed in the canonical string format using the `%s` format specifier.
 
-```
+```bpftrace
 kprobe:arp_create {
   $stack_arg0 = *(uint8*)(reg("sp") + 8);
   $stack_arg1 = *(uint8*)(reg("sp") + 16);
@@ -854,7 +854,7 @@ Returns a timestamp in nanoseconds, as given by the requested kernel clock.
 Defaults to `boot` if no clock is explicitly requested.
 
 
-```
+```bpftrace
 interval:s:1 {
   $sw_tai1 = nsecs(sw_tai);
   $tai = nsecs(tai);
@@ -904,7 +904,7 @@ Returns the byte offset of a field within a type.
 
 Like the kernel's `offsetof` operator, it supports any number of nested fields. For example:
 
-```
+```bpftrace
 struct Foo {
   struct {
     struct {
@@ -939,7 +939,7 @@ This utilizes the BPF helper `bpf_override_return`.
 
 When using `override` the probed function will not be executed and instead `rc` will be returned.
 
-```
+```bpftrace
 kprobe:__x64_sys_getuid
 /comm == "id"/ {
   override(2<<21);
@@ -999,7 +999,7 @@ Returns the address of a per-CPU kernel symbol.
 Get the address of the percpu kernel symbol `name` for CPU `cpu`. When `cpu` is
 omitted, the current CPU is used.
 
-```
+```bpftrace
 interval:s:1 {
   $proc_cnt = percpu_kaddr("process_counts");
   printf("%d processes are running on CPU %d\n", *$proc_cnt, cpu);
@@ -1011,7 +1011,7 @@ available CPUs. Therefore, it is necessary to perform a NULL-check on the result
 when accessing fields of the pointed structure, otherwise the BPF program will
 be rejected.
 
-```
+```bpftrace
 interval:s:1 {
   $runqueues = (struct rq *)percpu_kaddr("runqueues", 0);
   if ($runqueues != 0) {         // The check is mandatory here
@@ -1057,7 +1057,7 @@ Prints a value using its default formatting.
 
 `print` prints a value, which can be a map or a scalar value, with the default formatting for the type.
 
-```
+```bpftrace
 interval:s:1 {
   print(123);
   print("abc");
@@ -1070,7 +1070,7 @@ interval:s:1 {
  */
 ```
 
-```
+```bpftrace
 interval:ms:10 { @=hist(rand); }
 interval:s:1 {
   print(@);
@@ -1098,7 +1098,7 @@ This means that updating and printing maps in a fast loop will likely result in 
 The printing of maps supports the optional `top` and `div` arguments.
 `top` limits the printing to the top N entries with the highest integer values.
 
-```
+```bpftrace
 BEGIN {
   $i = 11;
   for $elem : 1..$i {
@@ -1119,7 +1119,7 @@ The `div` argument scales the values prior to printing them.
 Scaling values before storing them can result in rounding errors.
 Consider the following program:
 
-```
+```bpftrace
 kprobe:f {
   @[func] += arg0 / 10;
 }
@@ -1131,7 +1131,7 @@ The total is `721` which rounds to `72` when scaled by 10 but the program would 
 Changing the earlier `print(@, 2)` call to `print(@, 5, 2)` will take the top 5
 values and scale them by 2:
 
-```
+```bpftrace
 BEGIN {
   $i = 11;
   for $elem : 1..$i {
@@ -1180,7 +1180,7 @@ The non-standard ones can be found in the table below:
 `printf()` can also symbolize enums as strings. User defined enums as well as enums
 defined in the kernel are supported. For example:
 
-```
+```bpftrace
 enum custom {
   CUSTOM_ENUM = 3,
 };
@@ -1195,7 +1195,7 @@ BEGIN {
 
 The `%gr` specifier can be used to format GFP (Get Free Pages) flags into human-readable strings:
 
-```
+```bpftrace
 tracepoint:kmem:kmalloc {
   printf("GFP flags: %gr\n", args->gfp_flags);
 }
@@ -1209,7 +1209,7 @@ tracepoint:kmem:kmalloc {
 
 Colors are supported too, using standard terminal escape sequences:
 
-```
+```bpftrace
 print("\033[31mRed\t\033[33mYellow\033[0m\n")
 ```
 
@@ -1221,7 +1221,7 @@ Returns the fully expanded name of the current probe.
 - `string probe()`
 - `string probe`
 
-```
+```bpftrace
 fentry:vmlinux:vm_area_free {
   assert(probe() == "fentry:vmlinux:vm_area_free", "Invalid probe!");
 }
@@ -1239,7 +1239,7 @@ Note: `begin` and `end` probes are of type `special`.
 
 For example: `kprobe`, `special`, `tracepoint`.
 
-```
+```bpftrace
 fentry:vmlinux:vm_area_free {
   assert(probetype() == "fentry", "Invalid probe type!");
 }
@@ -1318,7 +1318,7 @@ Send a signal to the process being traced (any thread).
 Use `signal_thread` to send to the thread being traced.
 The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
 
-```
+```bpftrace
 kprobe:__x64_sys_execve
 /comm == "bash"/ {
   signal(5);
@@ -1337,7 +1337,7 @@ Converts a signal number to its name.
 
 - `string signal_name(int sig)`
 
-```
+```bpftrace
 #include <signal.h>
 begin {
   assert(signal_name(SIGINT) == "Interrupt", "Invalid signal name!");
@@ -1399,7 +1399,7 @@ Environment variable `BPFTRACE_PERF_RB_PAGES` should be increased in order to ca
 
 Usage (save as `dump.bt`):
 
-```
+```bpftrace
 fentry:napi_gro_receive {
   $ret = skboutput("receive.pcap", args.skb, args.skb.len, 0);
 }
@@ -1440,7 +1440,7 @@ If no cookie has been set yet, generate a new cookie. Once generated, the socket
 
 This function returns a `uint64` unique number on success, or 0 if **sk** is NULL.
 
-```
+```bpftrace
 fentry:tcp_rcv_established
 {
   $cookie = socket_cookie(args.sk);
@@ -1523,7 +1523,7 @@ Converts an error number to its description.
 
 - `string strerror(int error)`
 
-```
+```bpftrace
 #include <errno.h>
 begin {
   assert(strerror(EPERM) == "Operation not permitted", "Invalid error!");
@@ -1545,7 +1545,7 @@ The time conversion and formatting happens in user space, therefore  the `timest
 
 bpftrace uses the `strftime(3)` function for formatting time and supports the same format specifiers.
 
-```
+```bpftrace
 interval:s:1 {
   printf("%s\n", strftime("%H:%M:%S", nsecs));
 }
@@ -1592,7 +1592,7 @@ Converts a system call number to its name.
 
 - `string syscall_name(int nr_syscall)`
 
-```
+```bpftrace
 #include <syscall.h>
 begin {
   assert(syscall_name(__NR_read) == "read", "Invalid syscall name!");
@@ -1612,7 +1612,7 @@ Runs a command in a child process and prints its output.
 `system` lets bpftrace run the specified command (`fork` and `exec`) until it completes and print its stdout.
 The `command` is run with the same privileges as bpftrace and it blocks execution of the processing threads which can lead to missed events and delays processing of async events.
 
-```
+```bpftrace
 interval:s:1 {
   time("%H:%M:%S: ");
   printf("%d\n", @++);
@@ -1653,7 +1653,7 @@ Note how the async `time` and `printf` first print every second until the `inter
 
 `system` supports the same format string and arguments that `printf` does.
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_execve {
   system("/bin/grep %s /proc/%d/status", "VmSwap", pid);
 }
@@ -1724,7 +1724,7 @@ The default return type is `uint64*`.
 If the ELF object size matches a known integer size (1, 2, 4 or 8 bytes) the return type is modified to match the width (`uint8*`, `uint16*`, `uint32*` or `uint64*` resp.).
 As ELF does not contain type info the type is always assumed to be unsigned.
 
-```
+```bpftrace
 uprobe:/bin/bash:readline {
   printf("PS1: %s\n", str(*uaddr("ps1_prompt")));
 }
@@ -1788,7 +1788,7 @@ Returns a user-space stack trace.
 
 There are several [formatting/StackMode options](./language.md#stack_mode).
 
-```
+```bpftrace
 kprobe:do_sys_open /comm == "bash"/ { @[ustack()] = count(); }
 /*
  * Sample output:
@@ -1826,7 +1826,7 @@ kprobe:do_sys_open /comm == "bash"/ { @[ustack()] = count(); }
 
 Sampling only three frames from the stack (limit = 3):
 
-```
+```bpftrace
 kprobe:ip_output { @[ustack(3)] = count(); }
 /*
  * Sample output:
@@ -1842,7 +1842,7 @@ Note: If a limit is used and `show_debug_info` is enabled then the number of sym
 
 Example using `perf` StackMode:
 
-```
+```bpftrace
 kprobe:ip_output { @[ustack(perf, 3)] = count(); }
 /*
  * Sample output:
@@ -1874,7 +1874,7 @@ Equal to [ksym](#ksym) but resolves user space symbols.
 
 If ASLR is enabled, user space symbolication only works when the process is running at either the time of the symbol resolution or the time of the probe attachment. The latter requires `BPFTRACE_CACHE_USER_SYMBOLS` to be set to `PER_PID`, and might not work with older versions of BCC. A similar limitation also applies to dynamically loaded symbols.
 
-```
+```bpftrace
 uprobe:/bin/bash:readline
 {
   printf("%s\n", usym(reg("ip")));
@@ -1893,7 +1893,7 @@ Formats and prints a warning message with its source location.
 
 `warnf()` formats and prints data (similar to [`printf`](#printf)) as a warning message with the source location. This respects the "--no-warnings" flag and will be silent if that is used.
 
-```
+```bpftrace
 BEGIN { warnf("Something kinda bad with args: %d, %s", 10, "arg2"); }
 // Prints: stdin:1:9-67: WARNING: Something kinda bad with args: 10, arg2
 ```
@@ -1916,7 +1916,7 @@ Returns `true` on success, or `false` on failure.
 Only use on user-space memory addresses belonging to the current task.
 The kernel will print a warning to dmesg when this helper is used.
 
-```
+```bpftrace
 tracepoint:syscalls:sys_enter_openat
 /comm == "myapp"/ {
   $new_path = "/tmp/redirected\0";
@@ -1949,7 +1949,7 @@ Calculates the running average of values passed to the function.
 
 * `avg_t avg(int64 n)`
 
-```
+```bpftrace
 interval:s:1 {
   @x++;
   @y = avg(@x);
@@ -1981,7 +1981,7 @@ shared location might lose updates, as bpftrace does not generate any atomic ins
 for `++`.
 
 Example one:
-```
+```bpftrace
 BEGIN {
   @ = count();
   @ = count();
@@ -1992,7 +1992,7 @@ BEGIN {
 ```
 
 Example two:
-```
+```bpftrace
 interval:ms:100 {
   @ = count();
 }
@@ -2017,7 +2017,7 @@ Records values in a logarithmic histogram.
 Create a log2 histogram of `n` using $2^k$ buckets per power of 2,
 0 &lt;= k &lt;= 5, defaults to 0.
 
-```
+```bpftrace
 kretprobe:vfs_read {
   @bytes = hist(retval);
 }
@@ -2047,7 +2047,7 @@ Records values in a linear histogram.
 `lhist` creates `M` (`(max - min) / step`) buckets in the range `[min,max)` where each bucket is `step` in size.
 Values in the range `(-inf, min)` and `[max, inf)` get their own bucket too, bringing the total amount of buckets created to `M+2`.
 
-```
+```bpftrace
 interval:ms:1 {
   @ = lhist(rand % 10, 0, 10, 1);
 }
@@ -2092,7 +2092,7 @@ int x = std::max(3, 33);  // x contains 33
 ```
 
 In bpftrace:
-```
+```bpftrace
 @x = max(3);
 @x = max(33);
 assert(@x == 33, "Invalid maximum!");
@@ -2121,7 +2121,7 @@ Tracks the count, average, and sum of values.
 
 `stats` combines the `count`, `avg`, and `sum` calls into one.
 
-```
+```bpftrace
 kprobe:vfs_read {
   @bytes[comm] = stats(arg2);
 }
@@ -2135,7 +2135,7 @@ kprobe:vfs_read {
 
 Individual fields of a `stats_t` map can also be accessed synchronously using `.count`, `.total`, and `.avg`:
 
-```
+```bpftrace
 interval:s:1 {
   printf("Count: %d, Total: %d, Avg: %d\n", @bytes["bash"].count, @bytes["bash"].total, @bytes["bash"].avg);
 }
@@ -2158,7 +2158,7 @@ shared location might lose updates, as bpftrace does not generate any implicit
 atomic operations.
 
 Example one:
-```
+```bpftrace
 BEGIN {
   @ = sum(5);
   @ = sum(6);
@@ -2169,7 +2169,7 @@ BEGIN {
 ```
 
 Example two:
-```
+```bpftrace
 interval:ms:100 {
   @ = sum(5);
 }
@@ -2200,7 +2200,7 @@ Create a time series that tracks an integer value. `tseries` records up to
 `interval_ns` is an unsigned integer that specifies the interval duration.
 Use duration suffixes to improve readability:
 
-```
+```bpftrace
 @a = tseries(1, 100ns, 5); // 100 nanoseconds
 @b = tseries(1, 100us, 5); // 100 microseconds
 @c = tseries(1, 100ms, 5); // 100 milliseconds
@@ -2224,7 +2224,7 @@ are aggregated.
 
 Example one:
 
-```
+```bpftrace
 // Record the minimum of ten random values generated during each 100ms interval.
 i:ms:10 {
   @ = tseries(rand % 10, 100ms, 20, "min");
@@ -2264,7 +2264,7 @@ i:ms:10 {
 
 Example two:
 
-```
+```bpftrace
 // Create a zigzag pattern
 BEGIN {
   @dir = 1;
@@ -2338,7 +2338,7 @@ The asynchronous behaviour can lead to some unexpected behavior as updates can h
 
 One example is updating a map value in a tight loop:
 
-```
+```bpftrace
 BEGIN {
   @ = 0;
   unroll(10) {
