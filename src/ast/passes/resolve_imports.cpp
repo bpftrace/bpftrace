@@ -406,7 +406,9 @@ Result<OK> Imports::import_any(Node &node,
       similar.push_back(internal_path);
     }
   }
-  if (found) {
+  // The embedded stdlib .bt files are imported on demand, so an explicit
+  // import of the embedded "stdlib" package has nothing left to do.
+  if (found || name == "stdlib") {
     return OK();
   }
 
@@ -538,28 +540,16 @@ Pass CreateResolveRootImportsPass(std::vector<std::string> &&import_paths)
                                                                  updated_paths);
                         macro_analyser.visit(ast.root);
 
-                        // Ensure that the essential part of the standard
-                        // library is imported. All other parts of the standard
-                        // library are conditionally imported based on inlined
-                        // import statements. The implicit import is only
-                        // permitted from the embedded standard library.
-                        // Overriding this is possible, but it must be
-                        // explicitly imported.
-                        auto ok = imports.import_any(*ast.root, "stdlib");
-                        if (!ok) {
-                          return ok.takeError();
-                        }
-
                         // This is the only stdlib bt script we import
                         // unconditionally because it contains macro calls that
                         // are created in future passes
                         auto internal = Stdlib::bt_files.find(INTERNAL_BT);
                         if (internal != Stdlib::bt_files.end()) {
-                          ok = imports.import_stdlib(*ast.root,
-                                                     INTERNAL_BT,
-                                                     internal->second,
-                                                     INTERNAL_BT,
-                                                     updated_paths);
+                          auto ok = imports.import_stdlib(*ast.root,
+                                                          INTERNAL_BT,
+                                                          internal->second,
+                                                          INTERNAL_BT,
+                                                          updated_paths);
                           if (!ok) {
                             return ok.takeError();
                           }

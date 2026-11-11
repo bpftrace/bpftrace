@@ -569,6 +569,14 @@ void TypeChecker::check_kfunc(Call &call)
   if (probe == nullptr) {
     return;
   }
+
+  if (call.func == "bpf_session_is_return") {
+    // We don't currently pass the attach type when testing if a kprobe is
+    // allowed, which is needed to test this kfunc. This kfunc is also only used
+    // internally after we've verified it can be used.
+    return;
+  }
+
   for (AttachPoint *ap : probe->attach_points) {
     bpf_prog_type prog_type = progtype(probetype(ap->provider));
     if (!bpftrace_.feature_->kfunc_allowed(call.func.c_str(), prog_type)) {

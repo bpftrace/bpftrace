@@ -180,6 +180,11 @@ long bpf_map_sum_elem_count(const struct bpf_map *map)
   return 0;
 }
 
+_Bool bpf_session_is_return(void *ctx)
+{
+  return 0;
+}
+
 long __probestub_event_rt(void *__data, long first_real_arg)
 {
   return first_real_arg;
@@ -213,6 +218,7 @@ int main(void)
   bpf_iter_task_file();
   bpf_iter_task_vma();
   bpf_map_sum_elem_count(&bpf_map);
+  bpf_session_is_return(0);
   __probestub_event_rt((void *)&bpf_map, 1);
   tcp_shutdown(&sk, 0);
   return 0;

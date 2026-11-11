@@ -11,7 +11,7 @@
 //
 macro memcmp($left, $right, count)
 {
-  __memcmp((int8*)(&$left), (int8*)(&$right), (uint64)count)
+  __builtin_memcmp(&$left, &$right, (uint64)count)
 }
 
 macro memcmp($left, right, count)

@@ -290,6 +290,7 @@ const std::map<std::string, nargs_spec> CALL_NARGS = {
   { "__builtin_is_literal", { .min_args=1, .max_args=1 } },
   { "__builtin_kfunc_allowed", { .min_args=1, .max_args=1 } },
   { "__builtin_kfunc_exist", { .min_args=1, .max_args=1 } },
+  { "__builtin_memcmp", { .min_args=3, .max_args=3 } },
   { "__builtin_signal_num", { .min_args=1, .max_args=1 } },
   { "__builtin_dw_ustack", { .min_args=0, .max_args=2 } },
   { "__builtin_uaddr", { .min_args=1, .max_args=1 } },
