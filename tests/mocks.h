@@ -173,6 +173,12 @@ public:
     return has_features_ && BPFfeature::has_kfunc(std::move(kfunc));
   }
 
+  bool helper_allowed([[maybe_unused]] bpf_func_id func_id,
+                      [[maybe_unused]] bpf_prog_type prog_type) override
+  {
+    return true;
+  }
+
 private:
   bool has_features_;
 };

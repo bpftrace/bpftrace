@@ -690,6 +690,14 @@ inline CallMatcher KfuncCall(
       ast::Call::Namespace::KFunc);
 }
 
+inline CallMatcher HelperCall(
+    const std::string& name,
+    const std::vector<Matcher<const ast::Expression&>>& args)
+{
+  return CallMatcher().WithFunction(name).WithArgs(args).WithNamespace(
+      ast::Call::Namespace::Helper);
+}
+
 class MapMatcher : public NodeMatcher<MapMatcher, ast::Map> {};
 
 inline MapMatcher Map(const std::string& ident)

@@ -16,6 +16,7 @@
 #include "config.h"
 #include "log.h"
 #include "types.h"
+#include "util/bpf_funcs.h"
 #include "util/strings.h"
 
 namespace bpftrace::ast {
@@ -85,6 +86,7 @@ private:
   [[nodiscard]] bool check_call(Call &call);
   void check_external_call(Call &call);
   void check_kfunc(Call &call);
+  void check_helper(Call &call);
   bool check_string_size(Node &node, const SizedType &ty);
 
   bool check_arg(Call &call,
@@ -254,6 +256,11 @@ void TypeChecker::visit(Call &call)
 
   if (call.is_kfunc()) {
     check_kfunc(call);
+    check_external_call(call);
+    return;
+  }
+  if (call.is_helper()) {
+    check_helper(call);
     check_external_call(call);
     return;
   }
@@ -570,6 +577,31 @@ void TypeChecker::check_kfunc(Call &call)
           << ap->provider << "\" probe";
       err.addHint() << "It may not be a kfunc at all, or it may not be "
                        "registered for this program type.";
+      return;
+    }
+  }
+}
+
+void TypeChecker::check_helper(Call &call)
+{
+  auto func_id = helper_id_from_name(call.func);
+  auto *probe = dynamic_cast<Probe *>(top_level_node_);
+  if (!func_id || probe == nullptr) {
+    return;
+  }
+  for (AttachPoint *ap : probe->attach_points) {
+    bpf_prog_type prog_type = progtype(probetype(ap->provider));
+    // Helper availability for tracing programs depends on the attach target,
+    // so leave these to the verifier.
+    if (prog_type == BPF_PROG_TYPE_TRACING) {
+      continue;
+    }
+    if (!bpftrace_.feature_->helper_allowed(*func_id, prog_type)) {
+      auto &err = call.addError();
+      err << "BPF helper `" << call.func << "` is not callable from a \""
+          << ap->provider << "\" probe";
+      err.addHint() << "It may not be supported by the running kernel, or it "
+                       "may not be allowed for this program type.";
       return;
     }
   }

@@ -803,19 +803,25 @@ TEST_F(TypeCheckerTest, call_delete)
   auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
   ASSERT_TRUE(bool(vd_ptr));
 
-  auto long_ty = types.global.add<btf::Integer>("long", 4, 0);
+  auto helper_vd_ty = types.helpers.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(helper_vd_ty));
+  auto helper_vd_ptr = types.helpers.add<btf::Pointer>(*helper_vd_ty);
+  ASSERT_TRUE(bool(helper_vd_ptr));
+
+  auto long_ty = types.helpers.add<btf::Integer>("long", 4, 0);
   ASSERT_TRUE(bool(long_ty));
 
   std::vector<std::pair<std::string, btf::ValueType>> args = {
-    { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
+    { "map", btf::ValueType(*helper_vd_ptr) },
+    { "key", btf::ValueType(*helper_vd_ptr) }
   };
 
-  auto delete_proto = types.global.add<btf::FunctionProto>(
+  auto delete_proto = types.helpers.add<btf::FunctionProto>(
       btf::ValueType(*long_ty), args);
   ASSERT_TRUE(bool(delete_proto));
 
-  auto delete_func = types.global.add<btf::Function>(
-      "__delete", btf::Function::Linkage::Global, *delete_proto);
+  auto delete_func = types.helpers.add<btf::Function>(
+      "bpf_map_delete_elem", btf::Function::Linkage::Global, *delete_proto);
   ASSERT_TRUE(bool(delete_func));
 
   auto bool_ty = types.global.add<btf::Integer>("_Bool", 1, BTF_INT_BOOL);
@@ -1061,21 +1067,23 @@ TEST_F(TypeCheckerTest, call_has_key)
 {
   ast::TypeMetadata types;
 
-  auto vd_ty = types.global.lookup<btf::Void>("void");
+  auto vd_ty = types.helpers.lookup<btf::Void>("void");
   ASSERT_TRUE(bool(vd_ty));
-  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  auto vd_ptr = types.helpers.add<btf::Pointer>(*vd_ty);
   ASSERT_TRUE(bool(vd_ptr));
 
   std::vector<std::pair<std::string, btf::ValueType>> args = {
     { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
   };
 
-  auto lookup_elem_proto = types.global.add<btf::FunctionProto>(
+  auto lookup_elem_proto = types.helpers.add<btf::FunctionProto>(
       btf::ValueType(*vd_ptr), args);
   ASSERT_TRUE(bool(lookup_elem_proto));
 
-  auto lookup_elem_func = types.global.add<btf::Function>(
-      "__lookup_elem", btf::Function::Linkage::Global, *lookup_elem_proto);
+  auto lookup_elem_func = types.helpers.add<btf::Function>(
+      "bpf_map_lookup_elem",
+      btf::Function::Linkage::Global,
+      *lookup_elem_proto);
   ASSERT_TRUE(bool(lookup_elem_func));
 
   test("kprobe:f { @x[1] = 0; if "
@@ -1180,26 +1188,105 @@ stdin:1:32-33: ERROR: Expected void * for argument `p` got int8
 )" });
 }
 
+TEST_F(TypeCheckerTest, call_helper)
+{
+  ast::TypeMetadata types;
+
+  auto vd_ty = types.helpers.lookup<btf::Void>("void");
+  ASSERT_TRUE(bool(vd_ty));
+  auto vd_ptr = types.helpers.add<btf::Pointer>(*vd_ty);
+  ASSERT_TRUE(bool(vd_ptr));
+  auto uint64 = types.helpers.add<btf::Integer>("uint64", 8, 0);
+  ASSERT_TRUE(bool(uint64));
+
+  std::vector<std::pair<std::string, btf::ValueType>> args = {
+    { "ctx", btf::ValueType(*vd_ptr) }
+  };
+  auto cookie_proto = types.helpers.add<btf::FunctionProto>(
+      btf::ValueType(*uint64), args);
+  ASSERT_TRUE(bool(cookie_proto));
+  auto cookie_func = types.helpers.add<btf::Function>(
+      "bpf_get_socket_cookie", btf::Function::Linkage::Global, *cookie_proto);
+  ASSERT_TRUE(bool(cookie_func));
+
+  // Any pointer converts to `void *`.
+  test("kprobe:f { $x = helper::bpf_get_socket_cookie((int64 *)arg0); }",
+       Types{ types });
+
+  auto regs_ptr = types.helpers.add<btf::Pointer>(*uint64);
+  ASSERT_TRUE(bool(regs_ptr));
+  std::vector<std::pair<std::string, btf::ValueType>> override_args = {
+    { "regs", btf::ValueType(*regs_ptr) }, { "rc", btf::ValueType(*uint64) }
+  };
+  auto override_proto = types.helpers.add<btf::FunctionProto>(
+      btf::ValueType(*uint64), override_args);
+  ASSERT_TRUE(bool(override_proto));
+  auto override_func = types.helpers.add<btf::Function>(
+      "bpf_override_return", btf::Function::Linkage::Global, *override_proto);
+  ASSERT_TRUE(bool(override_func));
+
+  // `void *` converts to any pointer, but other pointers must match.
+  test("kprobe:f { helper::bpf_override_return((void *)arg0, 0); }",
+       UnsafeMode::Enable,
+       Types{ types });
+  test("kprobe:f { helper::bpf_override_return((int32 *)arg0, 0); }",
+       UnsafeMode::Enable,
+       Types{ types },
+       Error{ R"(
+ERROR: Expected uint64 * for argument `regs` got int32 *
+)" });
+  test("kprobe:f { $x = helper::bpf_get_socket_cookie(1); }",
+       Types{ types },
+       Error{ R"(
+ERROR: Expected void * for argument `ctx` got int8
+kprobe:f { $x = helper::bpf_get_socket_cookie(1); }
+                                              ~
+)" });
+  test("kprobe:f { $x = helper::bpf_get_socket_cookie(); }",
+       Types{ types },
+       Error{ R"(
+ERROR: Function `bpf_get_socket_cookie` requires 1 arguments, got only 0
+)" });
+  test("kprobe:f { $x = helper::bpf_get_prandom_u32(); }",
+       Types{ types },
+       Error{ R"(
+ERROR: Unknown BPF helper: 'bpf_get_prandom_u32'
+)" });
+  // The default namespace does not see helpers.
+  test("kprobe:f { $x = bpf_get_socket_cookie((int64 *)arg0); }",
+       Types{ types },
+       Error{ R"(
+ERROR: Unknown function: 'bpf_get_socket_cookie'
+)" });
+
+  // Helpers that can change the state of the system are unsafe.
+  test("kprobe:f { helper::bpf_send_signal(9); }", Error{ R"(
+ERROR: bpf_send_signal() is an unsafe function being used in safe mode
+)" });
+}
+
 // N.B. find uses mostly the same implementation as has_key
 TEST_F(TypeCheckerTest, call_find)
 {
   ast::TypeMetadata types;
 
-  auto vd_ty = types.global.lookup<btf::Void>("void");
+  auto vd_ty = types.helpers.lookup<btf::Void>("void");
   ASSERT_TRUE(bool(vd_ty));
-  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
+  auto vd_ptr = types.helpers.add<btf::Pointer>(*vd_ty);
   ASSERT_TRUE(bool(vd_ptr));
 
   std::vector<std::pair<std::string, btf::ValueType>> args = {
     { "map", btf::ValueType(*vd_ptr) }, { "key", btf::ValueType(*vd_ptr) }
   };
 
-  auto lookup_elem_proto = types.global.add<btf::FunctionProto>(
+  auto lookup_elem_proto = types.helpers.add<btf::FunctionProto>(
       btf::ValueType(*vd_ptr), args);
   ASSERT_TRUE(bool(lookup_elem_proto));
 
-  auto lookup_elem_func = types.global.add<btf::Function>(
-      "__lookup_elem", btf::Function::Linkage::Global, *lookup_elem_proto);
+  auto lookup_elem_func = types.helpers.add<btf::Function>(
+      "bpf_map_lookup_elem",
+      btf::Function::Linkage::Global,
+      *lookup_elem_proto);
   ASSERT_TRUE(bool(lookup_elem_func));
 
   test("kprobe:f { @x[1] = 0; let $y; if "
@@ -3414,25 +3501,25 @@ TEST_F(TypeCheckerTest, signal)
 {
   ast::TypeMetadata types;
 
-  auto uint32 = types.global.add<btf::Integer>("uint32", 4, 0);
+  auto uint32 = types.helpers.add<btf::Integer>("uint32", 4, 0);
   ASSERT_TRUE(bool(uint32));
-  auto int32 = types.global.add<btf::Integer>("int32", 4, 1);
+  auto int32 = types.helpers.add<btf::Integer>("int32", 4, 1);
   ASSERT_TRUE(bool(int32));
 
   std::vector<std::pair<std::string, btf::ValueType>> args = {
     { "sig", btf::ValueType(*uint32) }
   };
-  auto signal_proto = types.global.add<btf::FunctionProto>(
+  auto signal_proto = types.helpers.add<btf::FunctionProto>(
       btf::ValueType(*int32), args);
   ASSERT_TRUE(bool(signal_proto));
 
-  auto signal_process_func = types.global.add<btf::Function>(
-      "__signal_process", btf::Function::Linkage::Global, *signal_proto);
+  auto signal_process_func = types.helpers.add<btf::Function>(
+      "bpf_send_signal", btf::Function::Linkage::Global, *signal_proto);
   ASSERT_TRUE(bool(signal_process_func));
 
-  auto signal_thread_func = types.global.add<btf::Function>(
-      "__signal_thread", btf::Function::Linkage::Global, *signal_proto);
-  ASSERT_TRUE(bool(signal_process_func));
+  auto signal_thread_func = types.helpers.add<btf::Function>(
+      "bpf_send_signal_thread", btf::Function::Linkage::Global, *signal_proto);
+  ASSERT_TRUE(bool(signal_thread_func));
 
   for (const auto &signal :
        std::vector<std::string>{ "signal", "signal_thread" }) {
@@ -3563,22 +3650,24 @@ TEST_F(TypeCheckerTest, override)
 {
   ast::TypeMetadata types;
 
-  auto vd_ty = types.global.lookup<btf::Void>("void");
-  ASSERT_TRUE(bool(vd_ty));
-  auto vd_ptr = types.global.add<btf::Pointer>(*vd_ty);
-  ASSERT_TRUE(bool(vd_ptr));
-  auto uint64 = types.global.add<btf::Integer>("uint64", 8, 0);
+  auto uint64 = types.helpers.add<btf::Integer>("uint64", 8, 0);
   ASSERT_TRUE(bool(uint64));
 
+  // The real helper takes a `struct pt_regs *`, which `void *` converts to.
+  auto regs_ptr = types.helpers.add<btf::Pointer>(*uint64);
+  ASSERT_TRUE(bool(regs_ptr));
+
   std::vector<std::pair<std::string, btf::ValueType>> args = {
-    { "ctx", btf::ValueType(*vd_ptr) }, { "rc", btf::ValueType(*uint64) }
+    { "regs", btf::ValueType(*regs_ptr) }, { "rc", btf::ValueType(*uint64) }
   };
-  auto override_proto = types.global.add<btf::FunctionProto>(
-      btf::ValueType(*vd_ty), args);
+  auto long_ty = types.helpers.add<btf::Integer>("long", 8, BTF_INT_SIGNED);
+  ASSERT_TRUE(bool(long_ty));
+  auto override_proto = types.helpers.add<btf::FunctionProto>(
+      btf::ValueType(*long_ty), args);
   ASSERT_TRUE(bool(override_proto));
 
-  auto override_func = types.global.add<btf::Function>(
-      "__override", btf::Function::Linkage::Global, *override_proto);
+  auto override_func = types.helpers.add<btf::Function>(
+      "bpf_override_return", btf::Function::Linkage::Global, *override_proto);
   ASSERT_TRUE(bool(override_func));
 
   // literals

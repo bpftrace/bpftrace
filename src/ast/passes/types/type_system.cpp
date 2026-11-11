@@ -2,10 +2,22 @@
 #include "ast/context.h"
 #include "ast/passes/attachpoint_passes.h"
 #include "ast/passes/clang_build.h"
+#include "ast/passes/collect_nodes.h"
 #include "ast/passes/printer.h"
 #include "ast/passes/types/type_map.h"
+#include "btf/helper_protos.h"
 
 namespace bpftrace::ast {
+
+static bool has_helper_calls(ASTContext &ast)
+{
+  if (!ast.root) {
+    return false;
+  }
+  CollectNodes<Call> calls;
+  calls.visit(*ast.root, [](const Call &call) { return call.is_helper(); });
+  return !calls.nodes().empty();
+}
 
 Pass CreateTypeSystemPass()
 {
@@ -59,6 +71,14 @@ Pass CreateTypeSystemPass()
     }
     if (aggregate) {
       result.global = std::move(*aggregate);
+    }
+
+    if (has_helper_calls(ast)) {
+      auto helpers = btf::load_helper_protos();
+      if (!helpers) {
+        return helpers.takeError();
+      }
+      result.helpers = std::move(*helpers);
     }
 
     return result;
