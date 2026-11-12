@@ -3,14 +3,12 @@
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/FrontendActions.h>
 #include <clang/Frontend/TextDiagnosticPrinter.h>
-#include <fcntl.h>
 #include <llvm/ADT/IntrusiveRefCntPtr.h>
 #include <llvm/Bitcode/BitcodeWriter.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/VirtualFileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/TargetParser/Host.h>
-#include <sys/mman.h>
 
 #include "arch/arch.h"
 #include "ast/ast.h"
@@ -19,7 +17,6 @@
 #include "ast/passes/resolve_imports.h"
 #include "bpftrace.h"
 #include "stdlib/stdlib.h"
-#include "util/memfd.h"
 #include "util/result.h"
 
 namespace bpftrace::ast {
@@ -91,14 +88,6 @@ static Result<BitcodeModules::Result> build(
                                                           *diagOpts,
                                                           client.release());
 #endif
-  // We create a temporary memfd that we can use to store the output,
-  // since the ClangDriver API is framed in terms of filenames. Perhaps
-  // we could use the internals here, but that carries other risks.
-  auto memfd = util::MemFd::create(name);
-  if (!memfd) {
-    return memfd.takeError();
-  }
-
   // Create the compiler invocation. Note that the `-O2` introduces some passes
   // that seem to be load-bearing with respect to generating useful debug
   // information, for some reason. The generated module will be linked and
@@ -110,8 +99,6 @@ static Result<BitcodeModules::Result> build(
     args.push_back("-D");
     args.push_back(s.c_str());
   }
-  args.push_back("-o");
-  args.push_back(memfd->path().c_str());
   args.push_back(name.c_str());
 
   // Configure the instance. We want to read the source file named
@@ -124,7 +111,10 @@ static Result<BitcodeModules::Result> build(
   inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
   inv->getCodeGenOpts().DebugColumnInfo = true;
 
+  llvm::SmallString<0> object;
   clang::CompilerInstance ci;
+
+  ci.setOutputStream(std::make_unique<llvm::raw_svector_ostream>(object));
   // Cross-version friendly: assign into the existing invocation
   // (works across modern Clang majors, including 21)
   ci.getInvocation() = *inv;
@@ -163,13 +153,9 @@ static Result<BitcodeModules::Result> build(
     // diagnostic. Surface it directly as an error in the pipeline.
     return make_error<ClangBuildError>("failed to generate module");
   }
-  auto data = memfd->read_all();
-  if (!data) {
-    return data.takeError();
-  }
   return BitcodeModules::Result{
     .module = std::move(mod),
-    .object = std::move(*data),
+    .object = std::string(object.str()),
     .loc = obj.node.loc,
   };
 }

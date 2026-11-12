@@ -7,7 +7,6 @@ add_library(util STATIC
   gfp_flags.cpp
   int_parser.cpp
   math.cpp
-  memfd.cpp
   opaque.cpp
   paths.cpp
   proc.cpp
