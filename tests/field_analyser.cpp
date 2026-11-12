@@ -417,6 +417,23 @@ TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
   EXPECT_EQ(record->GetField("c").offset, 4);
 }
 
+TEST_F(field_analyser_btf, btf_types_iter_var)
+{
+  auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace,
+       "kprobe:sys_read {\n"
+       "  for $vma : iter_task_vma(__builtin_curtask) {\n"
+       "    $x = $vma.vm_file.ino;\n"
+       "  }\n"
+       "}",
+       true);
+
+  EXPECT_FALSE(bpftrace->btf_set_.contains("struct task_struct"));
+  auto file = bpftrace->structs.Lookup("struct file").lock();
+  ASSERT_TRUE(file);
+  EXPECT_TRUE(file->HasField("ino"));
+}
+
 #ifdef HAVE_LIBDW
 
 class field_analyser_dwarf : public test_dwarf {};
