@@ -38,6 +38,9 @@ and this project adheres to
 - Source location attachpoints resolve to an address the DWARF line table marks
   as a statement start, which can move where kprobes and uprobes attach.
   - [#5419](https://github.com/bpftrace/bpftrace/pull/5419)
+- Printing and clearing maps reads and deletes elements in batches instead of
+  one syscall per key, which is several times faster for large maps.
+  - [#5444](https://github.com/bpftrace/bpftrace/pull/5444)
 #### Deprecated
 #### Removed
 #### Fixed
