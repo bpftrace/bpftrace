@@ -1,0 +1,51 @@
+test:ppid_macro
+{
+  if (ppid(curtask) == 0) {
+    return 1;
+  }
+}
+
+test:strerror
+{
+  if (strerror(22) != "Invalid argument") {
+    return 1;
+  }
+}
+
+test:signal_name
+{
+  if (signal_name(2) != "Interrupt") {
+    return 1;
+  }
+  if (signal_name(0) != "Unknown signal 0") {
+    return 1;
+  }
+  if (signal_name(1024) != "N/A") {
+    return 1;
+  }
+}
+
+test:strlen
+{
+  $a = "hello";
+  if (strlen($a) != 5) {
+    return 1;
+  }
+}
+
+test:abs_path_pass_absolute_path
+{
+  if (abs_path("/etc/passwd", 32) != "/etc/passwd") {
+    return 1;
+  }
+}
+
+test:arch
+{
+  if (arch != "x86_64" &&
+      arch != "arm64" && arch != "arm" && arch != "s390x" && arch != "ppc64le" &&
+      arch != "ppc64" && arch != "mips64" && arch != "riscv64" && arch != "loongarch64") {
+    return 1;
+  }
+}
+

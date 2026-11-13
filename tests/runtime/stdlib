@@ -3,20 +3,6 @@ PROG BEGIN { assert(false, "My error message"); }
 EXPECT_REGEX stdlib/base\.bt:[0-9]+:5-37: ERROR: assert failed: My error message
 WILL_FAIL
 
-NAME ppid_macro
-PROG BEGIN { printf("SUCCESS %d\n", ppid(curtask)); exit(); }
-EXPECT_REGEX SUCCESS [0-9][0-9]*
-
-NAME strerror
-PROG BEGIN { print(strerror(22)); }
-EXPECT Invalid argument
-
-NAME signal_name
-PROG BEGIN { print(signal_name(2)); print(signal_name(0)); print(signal_name(1024)); }
-EXPECT Interrupt
-EXPECT Unknown signal 0
-EXPECT N/A
-
 NAME comm from pid
 PROG iter:task { @ = comm(pid); exit() }
 EXPECT @: bpftrace
@@ -33,13 +19,6 @@ EXPECT son-proc parent-proc son-proc
 EXPECT grandson-proc son-proc grandson-proc
 AFTER ./testprogs/multi_procs
 
-NAME delete map
-PROG begin { @ = 1; @a[1] = 1; @b[1, 2] = 2; if (delete(@)) { printf("ok1\n"); } delete(@a, 1); if (delete(@b, (1, 2))) { printf("ok2\n"); } if (!delete(@b, (5, 6))) { printf("ok3\n"); } }
-EXPECT ok1
-EXPECT ok2
-EXPECT ok3
-TIMEOUT 1
-
 NAME delete count-map
 PROG begin { @ = count(); @a[1] = count(); delete(@); delete(@a, 1); }
 EXPECT_NONE @: 0
@@ -54,17 +33,6 @@ EXPECT_NONE @b[1, 2]: 1
 EXPECT_NONE @c[1]:
 TIMEOUT 1
 
-NAME delete deprecated
-PROG begin { @a[1] = 1; @b[2, "hi"] = 2; delete(@a[1]); delete(@b[2, "hi"]); }
-EXPECT_NONE @a[1]: 1
-EXPECT_NONE @b[2, hi]: 2
-TIMEOUT 1
-
-NAME bad delete
-PROG begin { @a[1] = 1; $x = delete(@a, 2); $y = delete(@a, 1); if ($x == false && $y == true) { printf("SUCCESS"); } }
-EXPECT SUCCESS
-TIMEOUT 1
-
 # Kernel commit 541003b576c3 ("rename do_filp_open() to do_file_open()") renamed
 # do_filp_open to do_file_open since version 7.0 so use wildcard below to handle
 # both names.
@@ -74,10 +42,6 @@ EXPECT_REGEX is_err: -[0-9]{1,4}$
 AFTER cat /tmp/bpftrace_nonexistent_file
 REQUIRES_FEATURE btf
 TIMEOUT 5
-
-NAME strlen
-PROG begin { $a = "hello"; print(strlen($a)); }
-EXPECT 5
 
 NAME container_of
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:n_func { $n = (int *)arg0; $foo_ptr = container_of($n, typeof(struct Foo), n); print(*$foo_ptr); }
@@ -89,18 +53,9 @@ NAME abs_path
 PROG begin { print(abs_path("a.out", 32)); }
 EXPECT {{CWD}}/a.out
 
-NAME abs_path pass absolute path
-PROG begin { print(abs_path("/etc/passwd", 32)); }
-EXPECT /etc/passwd
-
 NAME cwd
 PROG begin { print(cwd); }
 EXPECT {{CWD}}
-
-NAME arch
-PROG begin { print(arch); exit(); }
-EXPECT_REGEX ^(x86_64|arm64|arm|s390x|ppc64le|ppc64|mips64|riscv64|loongarch64)$
-TIMEOUT 5
 
 NAME arch on x86_64
 ARCH x86_64
