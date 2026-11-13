@@ -1,0 +1,96 @@
+test:buf_equality
+{
+  $a = buf("hi", 2);
+  $b = buf("bye", 3);
+  if ((!($a == $a)) || (!($a != $b))) {
+    return 1;
+  }
+}
+
+test:variable_declaration
+{
+  let $a;
+  if ($a != 0) {
+    return 1;
+  }
+  $a = 10;
+  if ($a != 10) {
+    return 1;
+  }
+}
+
+test:variable_declaration_not_initialized
+{
+  let $a;
+  if $a {
+    $a = 1;
+  }
+  if ($a != 0) {
+    return 1;
+  }
+}
+
+test:variable_address_with_tuple
+{
+  $a = (1, "hello", 2);
+  if ((*(&$a)) != (1, "hello", 2)) {
+    return 1;
+  }
+}
+
+test:variable_doesnt_escape_scope
+{
+  if 1 {
+    $x = 1;
+  }
+
+  if 1 {
+    let $x;
+    if $x {
+      $x = 5;
+    }
+    if ($x != 0) {
+      return 1;
+    }
+  }
+}
+
+test:late_variable_declaration
+{
+  @late_variable_declaration[1] = 1;
+  if 1 {
+    $x = 1;
+    if ($x != 1) {
+      return 1;
+    }
+  }
+
+  $seen = false;
+  for $kv : @late_variable_declaration {
+    $x = 2;
+    if ($x != 2) {
+      return 1;
+    }
+    $seen = true;
+  }
+  if (!$seen) {
+    return 1;
+  }
+
+  let $x;
+  if 0 {
+    $x = 3;
+  }
+  if ($x != 0) {
+    return 1;
+  }
+}
+
+test:local_int
+{
+  $a = 10;
+  if ($a != 10) {
+    return 1;
+  }
+}
+
