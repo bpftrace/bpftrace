@@ -2,6 +2,7 @@
 
 #include <bpf/bpf.h>
 #include <bpf/libbpf.h>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -35,6 +36,28 @@ using MapElements = std::vector<std::pair<OpaqueValue, OpaqueValue>>;
 using HistogramMap = std::map<OpaqueValue, std::vector<uint64_t>>;
 using TSeries = std::map<uint64_t, OpaqueValue>;
 using TSeriesMap = std::map<OpaqueValue, TSeries>;
+using MapElementCallback =
+    std::function<void(OpaqueValue key, OpaqueValue value)>;
+
+// A batch map operation such as bpf_map_lookup_batch(), with the map fd and
+// options already bound.
+using MapBatchOp = std::function<int(void *in_batch,
+                                     void *out_batch,
+                                     void *keys,
+                                     void *values,
+                                     uint32_t *count)>;
+
+// Walks a whole map with `op` (BPF_MAP_LOOKUP_BATCH or
+// BPF_MAP_LOOKUP_AND_DELETE_BATCH), calling `fn`, if set, for each element.
+// Returns false without having visited any element if the kernel or the map
+// type does not support the operation, so the caller can fall back to per-key
+// operations.
+Result<bool> batch_walk_map(const std::string &map_name,
+                            const std::string &op_name,
+                            uint32_t key_size,
+                            size_t value_size,
+                            const MapBatchOp &op,
+                            const MapElementCallback &fn);
 
 class BpfMap {
 public:
@@ -80,12 +103,14 @@ public:
   virtual Result<TSeriesMap> collect_tseries_data(const MapInfo &map_info,
                                                   int nvalues) const;
   Result<> zero_out(int nvalues) const;
-  Result<> clear() const;
+  Result<> clear(int nvalues) const;
   Result<> update_elem(const void *key, const void *value) const;
   Result<> lookup_elem(const void *key, void *value) const;
   Result<> resize(uint32_t new_size) const;
 
 private:
+  Result<> for_each_elem(int nvalues, const MapElementCallback &fn) const;
+
   struct bpf_map *bpf_map_;
   bpf_map_type type_;
   std::string name_;

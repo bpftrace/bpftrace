@@ -63,3 +63,38 @@ EXPECT @a[2]: 1
 NAME map declaration unused
 PROG let @a = percpuhash(1); begin {  }
 EXPECT_REGEX .*WARNING: Unused map: @a.*
+
+# The maps below hold more elements than a single batch syscall returns, so
+# print() and clear() need several batches. The awk scripts check that every
+# key from 0 to 4999 is printed exactly once, with the expected value.
+NAME print hash with many elements
+RUN {{BPFTRACE}} -e 'let @a = hash(5000); begin { for ($i : 0..5000) { @a[$i] = $i; } print(@a); clear(@a); }' | awk -F '[[]|[]]: ' '/^@a\[/ { k = $2; if (k < 0 || k >= 5000 || seen[k]++ || $3 != k) bad++; n++ } END { print n + 0, bad + 0 }'
+EXPECT 5000 0
+
+NAME print lruhash with many elements
+RUN {{BPFTRACE}} -e 'let @a = lruhash(10000); begin { for ($i : 0..5000) { @a[$i] = $i; } print(@a); clear(@a); }' | awk -F '[[]|[]]: ' '/^@a\[/ { k = $2; if (k < 0 || k >= 5000 || seen[k]++ || $3 != k) bad++; n++ } END { print n + 0, bad + 0 }'
+EXPECT 5000 0
+
+NAME print percpuhash with many elements
+RUN {{BPFTRACE}} -e 'let @a = percpuhash(5000); begin { for ($i : 0..5000) { @a[$i] = sum($i); } print(@a); clear(@a); }' | awk -F '[[]|[]]: ' '/^@a\[/ { k = $2; if (k < 0 || k >= 5000 || seen[k]++ || $3 != k) bad++; n++ } END { print n + 0, bad + 0 }'
+EXPECT 5000 0
+
+NAME print percpulruhash with many elements
+RUN {{BPFTRACE}} -e 'let @a = percpulruhash(10000); begin { for ($i : 0..5000) { @a[$i] = sum($i); } print(@a); clear(@a); }' | awk -F '[[]|[]]: ' '/^@a\[/ { k = $2; if (k < 0 || k >= 5000 || seen[k]++ || $3 != k) bad++; n++ } END { print n + 0, bad + 0 }'
+EXPECT 5000 0
+
+NAME print hist with many elements
+RUN {{BPFTRACE}} -e 'config = { max_map_keys = 5000 } begin { for ($i : 0..2500) { @a[$i] = hist(1); @a[$i] = hist(1048576); } print(@a); clear(@a); }' | awk -F '[][]' '/^@a\[/ { if (seen[$2]++) bad++; n++ } /^\[1\] +1 / { one++ } /^\[1M, 2M\) +1 / { big++ } END { print n + 0, bad + 0, one + 0, big + 0 }'
+EXPECT 2500 0 2500 2500
+
+NAME clear hash with many elements
+RUN {{BPFTRACE}} -e 'let @a = hash(5000); begin { for ($i : 0..5000) { @a[$i] = $i; } clear(@a); print(@a); printf("done\n"); }' 2>&1 | awk '/^@a\[/ { n++ } /^done$/ { done++ } /ERROR/ { err++ } END { print n + 0, done + 0, err + 0 }'
+EXPECT 0 1 0
+
+NAME clear percpuhash with many elements
+RUN {{BPFTRACE}} -e 'let @a = percpuhash(5000); begin { for ($i : 0..5000) { @a[$i] = count(); } clear(@a); print(@a); printf("done\n"); }' 2>&1 | awk '/^@a\[/ { n++ } /^done$/ { done++ } /ERROR/ { err++ } END { print n + 0, done + 0, err + 0 }'
+EXPECT 0 1 0
+
+NAME clear lruhash with many elements
+RUN {{BPFTRACE}} -e 'let @a = lruhash(10000); begin { for ($i : 0..5000) { @a[$i] = $i; } clear(@a); print(@a); printf("done\n"); }' 2>&1 | awk '/^@a\[/ { n++ } /^done$/ { done++ } /ERROR/ { err++ } END { print n + 0, done + 0, err + 0 }'
+EXPECT 0 1 0

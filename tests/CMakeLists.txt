@@ -9,6 +9,7 @@ add_executable(bpftrace_test
   attachpoint_passes.cpp
   bitfield.cpp
   bpfbytecode.cpp
+  bpfmap.cpp
   bpftrace.cpp
   btf.cpp
   pre_type_check.cpp
