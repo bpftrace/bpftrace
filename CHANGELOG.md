@@ -31,6 +31,8 @@ and this project adheres to
   - [#5406](https://github.com/bpftrace/bpftrace/pull/5406)
 - Allow listing source-location kprobes that map to an address.
   - [#5429](https://github.com/bpftrace/bpftrace/pull/5429)
+- Treat tracepoint `args` as a Record, which allows it to be printed and stored into maps and scratch variables.
+  - [#5347](https://github.com/bpftrace/bpftrace/pull/5347)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.

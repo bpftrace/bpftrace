@@ -269,6 +269,10 @@ private:
       const std::vector<std::tuple<llvm::Value *, SizedType, Location>> &vals,
       const std::string &name,
       const Location &loc);
+
+  ScopedExpr createTracepointArgsRecord(Builtin &builtin);
+  SizedType tracepointCtxStructType(const std::string &probe_name);
+
   ScopedExpr createAnonStructAccess(const SizedType &stype,
                                     ScopedExpr &&expr_value,
                                     size_t field_idx);
@@ -346,6 +350,10 @@ private:
                                          Value *index,
                                          llvm::Type *data_type,
                                          const SizedType &elem_type);
+  ScopedExpr readStructField(ScopedExpr &&scoped_arg,
+                             const SizedType &type,
+                             const Field &field,
+                             const Location &loc);
   ScopedExpr probereadDatastructElem(ScopedExpr &&scoped_src,
                                      Value *offset,
                                      const SizedType &data_type,
@@ -780,6 +788,67 @@ int CodegenLLVM::get_probe_id()
   return std::distance(begin, found);
 }
 
+// The args record omits fields and has new offsets. Reads from ctx must
+// instead use the original tracepoint layout.
+SizedType CodegenLLVM::tracepointCtxStructType(const std::string &probe_name)
+{
+  auto type_name = std::string(STRUCT_PREFIX) + probe_name + "_args";
+  auto original_struct = bpftrace_.structs.Lookup(type_name).lock();
+  assert(original_struct);
+
+  auto type = CreateCStruct(type_name, original_struct);
+  type.SetAS(current_attach_point_->target == "syscalls" ? AddrSpace::user
+                                                         : AddrSpace::kernel);
+  type.MarkCtxAccess();
+  return type;
+}
+
+ScopedExpr CodegenLLVM::createTracepointArgsRecord(Builtin &builtin)
+{
+  auto original_type = tracepointCtxStructType(current_attach_point_->name());
+  auto original_struct = original_type.GetStruct();
+
+  const SizedType &record_type = type_map_.type(&builtin);
+  llvm::Type *record_llvm_ty = b_.GetType(record_type);
+  size_t alloc_size = datalayout().getTypeAllocSize(record_llvm_ty);
+  auto *buf = b_.CreateAnonStructAllocation(record_type, "args", builtin.loc);
+  b_.CreateMemsetBPF(buf, b_.getInt8(0), alloc_size);
+
+  for (size_t field_idx = 0; field_idx < record_type.GetFields().size();
+       ++field_idx) {
+    const auto &field = original_struct->GetField(
+        record_type.GetField(field_idx).name);
+
+    Value *dst = b_.CreateGEP(record_llvm_ty,
+                              buf,
+                              { b_.getInt32(0),
+                                b_.getInt32(static_cast<int>(field_idx)) });
+
+    if (field.type.IsCTypeTy() || field.type.IsArrayTy() ||
+        field.type.IsStringTy() || field.type.IsBufferTy()) {
+      Value *src = b_.CreateSafeGEP(b_.getInt8Ty(),
+                                    ctx_,
+                                    b_.getInt64(field.offset));
+      // Copy directly into the record, avoiding per-field stack temporaries.
+      // Inline data is in kernel ctx even when pointer fields refer to
+      // userspace.
+      b_.CreateProbeRead(dst, field.type, src, builtin.loc, AddrSpace::kernel);
+    } else {
+      auto scoped_field = readStructField(
+          ScopedExpr(ctx_), original_type, field, builtin.loc);
+      Value *val = scoped_field.value();
+      if (field.is_data_loc)
+        val = b_.CreatePtrToInt(val, b_.getInt64Ty());
+      b_.CreateStore(val, dst);
+    }
+  }
+
+  if (isa<AllocaInst>(buf))
+    return ScopedExpr(buf, [this, buf]() { b_.CreateLifetimeEnd(buf); });
+
+  return ScopedExpr(buf);
+}
+
 ScopedExpr CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs") {
@@ -897,7 +966,10 @@ ScopedExpr CodegenLLVM::visit(Builtin &builtin)
                         [this, value]() { b_.CreateLifetimeEnd(value); });
     }
     return ScopedExpr(value);
-
+  } else if (builtin.ident == "args" &&
+             probetype(current_attach_point_->provider) ==
+                 ProbeType::tracepoint) {
+    return createTracepointArgsRecord(builtin);
   } else if (builtin.ident == "args" &&
              probetype(current_attach_point_->provider) == ProbeType::uprobe) {
     // uprobe args record is built on stack
@@ -2723,7 +2795,7 @@ ScopedExpr CodegenLLVM::visit(IfExpr &if_expr)
 
 ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
 {
-  const SizedType &type = type_map_.type(acc.expr);
+  SizedType type = type_map_.type(acc.expr);
 
   if (type.IsStatsTy()) {
     auto *map_acc = acc.expr.as<MapAccess>();
@@ -2736,7 +2808,17 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     return ScopedExpr(val, std::move(scoped_key));
   }
 
-  auto scoped_arg = visit(acc.expr);
+  auto scoped_arg = [&]() -> ScopedExpr {
+    auto *builtin = acc.expr.as<Builtin>();
+    if (builtin && builtin->ident == "args" &&
+        probetype(current_attach_point_->provider) == ProbeType::tracepoint) {
+      // Avoid materializing unused fields for direct args.field reads.
+      type = tracepointCtxStructType(current_attach_point_->name());
+      return ScopedExpr(ctx_);
+    }
+
+    return visit(acc.expr);
+  }();
 
   assert(type.IsRecordTy() || type.IsCTypeTy());
 
@@ -2763,8 +2845,15 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     }
   }
 
-  const auto &field = type.GetField(acc.field);
+  return readStructField(
+      std::move(scoped_arg), type, type.GetField(acc.field), acc.loc);
+}
 
+ScopedExpr CodegenLLVM::readStructField(ScopedExpr &&scoped_arg,
+                                        const SizedType &type,
+                                        const Field &field,
+                                        const Location &loc)
+{
   // Structs may contain two kinds of fields that must be handled separately
   // (bitfields and _data_loc)
   if (field.type.IsIntTy() && field.bitfield.has_value()) {
@@ -2786,7 +2875,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
                                     { b_.getInt64(0),
                                       b_.getInt64(field.offset) });
       AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                           type.GetName() + "." + acc.field);
+                                           type.GetName() + "." + field.name);
       // memset so verifier doesn't complain about reading uninitialized
       // stack
       b_.CreateMemsetBPF(dst, b_.getInt8(0), field.type.GetSize());
@@ -2797,7 +2886,7 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
                            b_.getInt32(field.bitfield->read_bytes),
                            src,
                            type.GetAS(),
-                           acc.loc);
+                           loc);
       }
       raw = b_.CreateLoad(field_type, dst);
       b_.CreateLifetimeEnd(dst);
@@ -2825,12 +2914,13 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
     // offset which we add to the start of the tracepoint struct. We need
     // to wrap the context here in a special way to treat it as the
     // expected pointer type for all versions.
-    Value *value = b_.CreateLoad(
-        b_.getInt32Ty(),
-        b_.CreateSafeGEP(b_.getInt32Ty(), ctx_, b_.getInt64(field.offset / 4)));
+    Value *value = b_.CreateLoad(b_.getInt32Ty(),
+                                 b_.CreateSafeGEP(b_.getInt8Ty(),
+                                                  scoped_arg.value(),
+                                                  b_.getInt64(field.offset)));
     value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
     value = b_.CreateAnd(value, b_.getInt64(0xFFFF));
-    value = b_.CreateSafeGEP(b_.getInt8Ty(), ctx_, value);
+    value = b_.CreateSafeGEP(b_.getInt8Ty(), scoped_arg.value(), value);
     return ScopedExpr(value);
   }
 
@@ -2843,8 +2933,8 @@ ScopedExpr CodegenLLVM::visit(FieldAccess &acc)
                                  b_.getInt64(field.offset),
                                  type,
                                  field.type,
-                                 acc.loc,
-                                 type.GetName() + "." + acc.field);
+                                 loc,
+                                 type.GetName() + "." + field.name);
 }
 
 ScopedExpr CodegenLLVM::visit(ArrayAccess &arr)

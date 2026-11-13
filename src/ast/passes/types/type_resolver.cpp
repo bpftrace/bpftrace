@@ -73,6 +73,13 @@ const std::unordered_map<Type, std::string_view> AGGREGATE_HINTS{
   { Type::stats_t, "stats(arg2)" },
 };
 
+bool is_common_tracepoint_field(std::string_view name)
+{
+  // Other event fields may also start with "common_".
+  return name == "common_type" || name == "common_flags" ||
+         name == "common_preempt_count" || name == "common_pid";
+}
+
 AddrSpace find_addrspace(ProbeType pt)
 {
   switch (pt) {
@@ -918,12 +925,44 @@ void TypeRuleCollector::visit(Builtin &builtin)
       if (type == ProbeType::uprobe)
         builtin_type.SetValueLocation(ValueLocation::bpf_memory);
     } else if (type == ProbeType::tracepoint) {
-      builtin_type = CreateCStruct(*type_name,
-                                   bpftrace_.structs.Lookup(*type_name));
+      auto original = bpftrace_.structs.Lookup(*type_name).lock();
+
+      std::vector<SizedType> fields;
+      std::vector<std::string_view> names;
+
+      for (const auto &field : original->fields) {
+        if (is_common_tracepoint_field(field.name))
+          continue;
+
+        // Unresolved and zero-sized fields cannot be laid out in a record.
+        // Omit them so supported fields remain accessible.
+        if (field.type.IsNoneTy() || field.type.GetSize() == 0) {
+          if (bt_verbose) {
+            builtin.addWarning() << "tracepoint field '" << field.name
+                                 << "' has an unsupported type and is not "
+                                    "available in the args record";
+          }
+          continue;
+        }
+
+        auto &elem = fields.emplace_back(field.type);
+        if (elem.IsCTypeTy() || elem.IsArrayTy()) {
+          elem.SetValueLocation(ValueLocation::bpf_memory);
+        }
+        names.emplace_back(field.name);
+      }
+
+      if (fields.empty()) {
+        builtin.addError() << "Tracepoint args has no supported fields";
+        return;
+      }
+
+      // Record offsets differ from ctx offsets. Codegen uses the original
+      // struct for direct field reads, rather than marking this record as ctx.
+      builtin_type = CreateRecord(Struct::CreateRecord(fields, names));
       builtin_type.SetAS(probe->attach_points.front()->target == "syscalls"
                              ? AddrSpace::user
                              : AddrSpace::kernel);
-      builtin_type.MarkCtxAccess();
     }
   } else {
     LOG(BUG) << "Unknown builtin variable: '" << builtin.ident << "'";
