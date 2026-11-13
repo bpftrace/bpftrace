@@ -5,6 +5,7 @@
 #include "ast/passes/ap_probe_expansion.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/visitor.h"
+#include "bpf_iters.h"
 #include "bpftrace.h"
 #include "dwarf_parser.h"
 #include "probe_matcher.h"
@@ -37,6 +38,7 @@ public:
   void visit(Probe &probe);
   void visit(Subprog &subprog);
   void visit(Cast &cast);
+  void visit(For &f);
 
 private:
   void resolve_fields(SizedType &type);
@@ -105,15 +107,21 @@ void FieldAnalyser::visit(Builtin &builtin)
 void FieldAnalyser::visit(Map &map)
 {
   auto it = var_types_.find(map.ident);
-  if (it != var_types_.end())
+  if (it != var_types_.end()) {
     sized_type_ = it->second;
+  } else {
+    sized_type_ = CreateNone();
+  }
 }
 
 void FieldAnalyser::visit(Variable &var)
 {
   auto it = var_types_.find(var.ident);
-  if (it != var_types_.end())
+  if (it != var_types_.end()) {
     sized_type_ = it->second;
+  } else {
+    sized_type_ = CreateNone();
+  }
 }
 
 void FieldAnalyser::visit(FieldAccess &acc)
@@ -279,6 +287,20 @@ void FieldAnalyser::visit(Cast &cast)
   // visit the type so that the returned sized_type_ is always the type.
   visit(cast.expr);
   visit(cast.typeof);
+}
+
+void FieldAnalyser::visit(For &f)
+{
+  visit(f.iterable);
+  if (auto *call = f.iterable.as<Call>()) {
+    const auto *info = find_bpf_iter(call->func);
+    if (info && bpftrace_.has_btf_data()) {
+      auto yields = bpftrace_.btf_->get_stype(info->yields);
+      if (!yields.IsNoneTy())
+        var_types_.emplace(f.decl->ident, CreatePointer(yields));
+    }
+  }
+  visit(f.block);
 }
 
 Pass CreateFieldAnalyserPass()

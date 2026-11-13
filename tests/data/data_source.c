@@ -142,6 +142,7 @@ struct file {
 struct vm_area_struct {
   unsigned long vm_start;
   unsigned long vm_end;
+  struct file *vm_file;
 };
 
 struct bpf_iter__task {
