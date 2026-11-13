@@ -7,6 +7,18 @@ test:buf_equality
   }
 }
 
+test:buf_equality_equal_len
+{
+  $a = buf("hi", 2);
+  $b = buf("si", 2);
+  if ($a == $b) {
+    return 1;
+  }
+  if (!($a != $b)) {
+    return 1;
+  }
+}
+
 test:variable_declaration
 {
   let $a;

@@ -2,10 +2,6 @@ NAME local_buf
 PROG i:ms:1 {$a = buf("hi", 2); printf("a=%r\n", $a); exit();}
 EXPECT a=hi
 
-NAME buf_equality_equal_len
-PROG i:ms:1 {$a = buf("hi", 2); $b = buf("si", 2); printf("equal=%d, unequal=%d\n", $a == $b, $a != $b); exit();}
-EXPECT equal=0, unequal=1
-
 NAME 32-bit tracepoint arg
 PROG tracepoint:syscalls:sys_enter_openat /comm == "syscall"/ { $i = args.flags; printf("openflags: %d\n", $i); if ($i == 64) { exit() } }
 EXPECT openflags: 64
