@@ -5305,6 +5305,7 @@ TEST_F(TypeCheckerTest, block_expressions)
 TEST_F(TypeCheckerTest, map_declarations)
 {
   test("let @a = hash(2); begin { @a = 1; }");
+  test("let @a = hash(max_entries=2); begin { @a = 1; }");
   test("let @a = lruhash(2); begin { @a = 1; }");
   test("let @a = percpuhash(2); begin { @a[1] = count(); }");
   test("let @a = percpulruhash(2); begin { @a[1] = count(); }");

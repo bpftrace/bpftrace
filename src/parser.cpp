@@ -650,12 +650,58 @@ MapDeclStatement *Parser::parse_map_decl_stmt()
   if (!expect('(')) {
     return nullptr;
   }
-  auto int_str = consume_integer_str();
-  auto res = util::to_uint(int_str, 0);
-  if (!res) {
-    error("expected positive integer for map declaration max entries");
-    return nullptr;
+
+  std::optional<uint64_t> max_entries;
+  consume_layout();
+  if (is_identifier_start(peek())) {
+    while (true) {
+      consume_layout();
+      auto [arg_line, arg_col] = get_current_line_col();
+      auto arg_name = consume_identifier();
+      if (!arg_name) {
+        error("expected map declaration argument name");
+        return nullptr;
+      }
+      auto [arg_end_line, arg_end_col] = get_current_line_col();
+      if (*arg_name != "max_entries") {
+        error("unknown map declaration argument: " + *arg_name,
+              arg_line,
+              arg_col,
+              arg_end_line,
+              arg_end_col);
+        return nullptr;
+      }
+      if (max_entries) {
+        error("duplicate map declaration argument: " + *arg_name,
+              arg_line,
+              arg_col,
+              arg_end_line,
+              arg_end_col);
+        return nullptr;
+      }
+      if (!expect('=')) {
+        return nullptr;
+      }
+      auto res = util::to_uint(consume_integer_str(), 0);
+      if (!res) {
+        error("expected positive integer for map declaration argument: " +
+              *arg_name);
+        return nullptr;
+      }
+      max_entries = *res;
+      if (!match(',')) {
+        break;
+      }
+    }
+  } else {
+    auto res = util::to_uint(consume_integer_str(), 0);
+    if (!res) {
+      error("expected positive integer for map declaration max entries");
+      return nullptr;
+    }
+    max_entries = *res;
   }
+
   if (!expect(')')) {
     return nullptr;
   }
@@ -663,7 +709,7 @@ MapDeclStatement *Parser::parse_map_decl_stmt()
   auto loc = make_loc(begin_line, begin_col, line_, col_);
 
   return ctx_.make_node<MapDeclStatement>(
-      loc, std::move(map_name), std::move(*type_name), *res);
+      loc, std::move(map_name), std::move(*type_name), *max_entries);
 }
 
 ast::Probe *Parser::parse_probe()
