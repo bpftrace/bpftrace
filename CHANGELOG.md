@@ -33,6 +33,8 @@ and this project adheres to
   - [#5429](https://github.com/bpftrace/bpftrace/pull/5429)
 - Treat tracepoint `args` as a Record, which allows it to be printed and stored into maps and scratch variables.
   - [#5347](https://github.com/bpftrace/bpftrace/pull/5347)
+- Support named arguments in map declarations e.g. `let @a = hash(max_entries=100);`
+  - [#XXXX](https://github.com/bpftrace/bpftrace/pull/XXXX)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.

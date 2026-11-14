@@ -593,7 +593,7 @@ Buffer Formatter::visit(MapDeclStatement& decl)
       .text(decl.ident)
       .text(" = ")
       .text(bpf_type.str())
-      .text("(")
+      .text("(max_entries=")
       .text(std::to_string(decl.max_entries))
       .text(");");
 }

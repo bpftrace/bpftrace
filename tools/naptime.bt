@@ -31,7 +31,7 @@
 #include <linux/sched.h>
 #endif
 
-let @rqtp = lruhash(4096);
+let @rqtp = lruhash(max_entries=4096);
 
 BEGIN
 {

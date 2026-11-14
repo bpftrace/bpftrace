@@ -45,6 +45,11 @@ PROG let @a = hash(1); begin { @a[1] = 1; @a[2] = 2;  }
 EXPECT_REGEX .*WARNING: Map full; can't update element.*
 EXPECT @a[1]: 1
 
+NAME map declaration hash, named args
+PROG let @a = hash(max_entries=1); begin { @a[1] = 1; @a[2] = 2;  }
+EXPECT_REGEX .*WARNING: Map full; can't update element.*
+EXPECT @a[1]: 1
+
 NAME map declaration hash, scalar-like
 PROG let @a = hash(1); begin { @a[0] = 0; @a[0] = 1;  }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*

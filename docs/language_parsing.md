@@ -49,7 +49,7 @@ MainItems  = Probe | Macro | Subprog | MapDeclStmt
 | `parse_root_import`     | `import "path";`                          |
 | `parse_macro`           | `macro name(args) { ... }`                |
 | `parse_subprog`         | `fn name($a: type, ...) : ret_type { ... }` |
-| `parse_map_decl_stmt`   | `let @name = type(N);`                    |
+| `parse_map_decl_stmt`   | `let @name = type(max_entries=N);`        |
 | `parse_probe`           | `attach_points /predicate/ { ... }`       |
 
 ### 2. Block and statement grammar
