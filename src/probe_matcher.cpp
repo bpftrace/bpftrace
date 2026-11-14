@@ -545,6 +545,37 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
   return results;
 }
 
+std::optional<ProbeMatcher::FunctionLinePattern> ProbeMatcher::
+    parse_function_line_pattern(const std::string& pattern)
+{
+  const auto value = util::normalize_whitespace(pattern);
+  constexpr std::string_view suffix = "@*";
+  const auto provider_end = value.find(':');
+  if (provider_end == std::string::npos ||
+      probetype(value.substr(0, provider_end)) != ProbeType::kprobe ||
+      !value.ends_with(suffix) ||
+      value.size() <= provider_end + 1 + suffix.size()) {
+    return std::nullopt;
+  }
+
+  auto target = value.substr(provider_end + 1,
+                             value.size() - provider_end - 1 - suffix.size());
+  if (target.find('@') != std::string::npos) {
+    return std::nullopt;
+  }
+
+  // An optional module name selects one of the modules sharing a function.
+  auto parts = util::split_string(target, ':');
+  if (parts.size() == 1) {
+    return FunctionLinePattern{ .kernel_module = "", .function = parts[0] };
+  }
+  if (parts.size() == 2 && !parts[0].empty() && !parts[1].empty()) {
+    return FunctionLinePattern{ .kernel_module = parts[0],
+                                .function = parts[1] };
+  }
+  return std::nullopt;
+}
+
 bool ProbeMatcher::is_source_location_traceable(
     const std::vector<std::string>& parts)
 {
@@ -580,6 +611,46 @@ std::vector<std::string> ProbeMatcher::get_probes_for_listing(
     std::optional<pid_t> pid)
 {
   std::vector<std::string> results;
+
+  if (auto parsed = parse_function_line_pattern(pattern)) {
+    Dwarf* dwarf = bpftrace_->get_kernel_dwarf();
+    if (!dwarf) {
+      LOG(WARNING) << "No DWARF debug info found for kernel, cannot list "
+                      "source code locations";
+      return results;
+    }
+
+    bool from_instances = false;
+    auto lines = dwarf->list_function_lines(parsed->function,
+                                            &from_instances,
+                                            parsed->kernel_module);
+    if (!lines) {
+      LOG(WARNING) << lines.takeError();
+      return results;
+    }
+
+    // Lines coming from instances are spread over several host functions, and
+    // the requested name may not be a traceable symbol at all. Each line is
+    // checked on attach, so there is nothing to gate on here.
+    const std::optional<std::string> module = parsed->kernel_module.empty()
+                                                  ? std::nullopt
+                                                  : std::optional(
+                                                        parsed->kernel_module);
+    if (!from_instances &&
+        !kernel_func_info_.is_traceable(parsed->function, module)) {
+      return results;
+    }
+
+    for (const auto& line : *lines) {
+      std::string result = "kprobe@" + line.source_file + ":" +
+                           std::to_string(line.line);
+      if (line.inline_function && bt_verbose) {
+        result += " inline:" + *line.inline_function;
+      }
+      results.push_back(std::move(result));
+    }
+    return results;
+  }
 
   // Split the pattern by ':' to extract probe type and search components.
   // Pattern format: "probe_type:target:func" or "probe_type:func" etc.

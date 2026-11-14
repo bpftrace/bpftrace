@@ -15,10 +15,16 @@ namespace bpftrace {
 
 class DwarfParseError : public ErrorInfo<DwarfParseError> {
 public:
+  enum class Kind {
+    Generic,
+    LineNotMapped,
+  };
+
   static char ID;
   void log(llvm::raw_ostream &OS) const override;
 
-  DwarfParseError(std::string &&msg) : msg_(std::move(msg)) {};
+  DwarfParseError(std::string &&msg, Kind kind = Kind::Generic)
+      : msg_(std::move(msg)), kind_(kind) {};
   DwarfParseError() = default;
 
   const std::string &msg() const
@@ -26,8 +32,20 @@ public:
     return msg_;
   }
 
+  Kind kind() const
+  {
+    return kind_;
+  }
+
 private:
   std::string msg_;
+  Kind kind_ = Kind::Generic;
+};
+
+struct DwarfFunctionLine {
+  std::string source_file;
+  size_t line = 0;
+  std::optional<std::string> inline_function;
 };
 
 } // namespace bpftrace
@@ -77,6 +95,14 @@ public:
                                       size_t col_num,
                                       const std::string &kernel_module) const;
 
+  // Sets from_instances_out when the lines come from the function's instances
+  // rather than from a DIE of its own, meaning they are spread over several
+  // host functions.
+  Result<std::vector<DwarfFunctionLine>> list_function_lines(
+      const std::string &function,
+      bool *from_instances_out = nullptr,
+      const std::string &kernel_module = "") const;
+
 private:
   // Compilation unit wrapper, abstracting over regular and split (DWO/DWP)
   // CU DIEs.
@@ -116,7 +142,19 @@ private:
 
   bool next_cu_info(CuInfo *cu_info) const;
   std::vector<Dwarf_Die> function_param_dies(const std::string &function) const;
-  std::optional<Dwarf_Die> get_func_die(const std::string &function) const;
+  std::optional<Dwarf_Die> get_func_die(
+      const std::string &function,
+      CuInfo *cu_info = nullptr,
+      const std::string &kernel_module = "") const;
+  size_t count_function_definitions(
+      const std::string &function,
+      const std::string &kernel_module = "") const;
+  Result<Dwarf_Addr> line_to_addr_in_cu(
+      CuInfo &cu,
+      const std::filesystem::path &source_path,
+      const std::string &source_file,
+      size_t line_num,
+      size_t col_num) const;
   std::string get_type_name(Dwarf_Die &type_die) const;
   Dwarf_Word get_type_encoding(Dwarf_Die &type_die) const;
   std::optional<Dwarf_Die> find_type(const std::string &name) const;
@@ -226,6 +264,14 @@ public:
                                       __attribute__((unused))) const
   {
     return make_error<DwarfParseError>();
+  }
+
+  Result<std::vector<DwarfFunctionLine>> list_function_lines(
+      const std::string &function __attribute__((unused)),
+      bool *from_instances_out __attribute__((unused)) = nullptr,
+      const std::string &kernel_module __attribute__((unused)) = "") const
+  {
+    return make_error<DwarfParseError>("DWARF support is not available");
   }
 };
 

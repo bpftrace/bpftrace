@@ -39,6 +39,8 @@ and this project adheres to
   - [#5450](https://github.com/bpftrace/bpftrace/pull/5450)
 - Resolve kernel module symbols in `kaddr`, including the `kaddr("module:symbol")` form.
   - [#2899](https://github.com/bpftrace/bpftrace/issues/2899)
+- Add experimental `-l 'kprobe:[MODULE:]FUNC@*'` to list the source lines of a kernel function.
+  - [#5454](https://github.com/bpftrace/bpftrace/pull/5454)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.
