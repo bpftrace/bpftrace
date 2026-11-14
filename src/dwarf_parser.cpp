@@ -21,7 +21,12 @@ void DwarfParseError::log(llvm::raw_ostream &OS) const
 #include <elfutils/libdw.h>
 #include <elfutils/libdwelf.h>
 
+#include <elf.h>
+
 #include <cstring>
+#include <fstream>
+
+#include "llvm/ADT/StringExtras.h"
 
 namespace bpftrace {
 
@@ -127,6 +132,109 @@ static int kernel_module_section_address(Dwfl_Module *mod,
       mod, userdata, modname, base, secname, shndx, shdr, addr);
 }
 
+std::optional<std::string> parse_build_id_notes(std::istream &notes)
+{
+  const std::string data((std::istreambuf_iterator<char>(notes)),
+                         std::istreambuf_iterator<char>());
+  // ELF notes: (name_size, desc_size, type) header, then 4-byte aligned
+  // name and descriptor payloads.
+  size_t off = 0;
+  while (off + 12 <= data.size()) {
+    uint32_t name_size = 0, desc_size = 0, type = 0;
+    std::memcpy(&name_size, data.data() + off, 4);
+    std::memcpy(&desc_size, data.data() + off + 4, 4);
+    std::memcpy(&type, data.data() + off + 8, 4);
+    off += 12;
+
+    const size_t name_off = off;
+    off += (size_t{ name_size } + 3) & ~size_t{ 3 };
+    const size_t desc_off = off;
+    off += (size_t{ desc_size } + 3) & ~size_t{ 3 };
+    if (off > data.size()) {
+      break;
+    }
+
+    if (type == NT_GNU_BUILD_ID && name_size >= 4 &&
+        std::memcmp(data.data() + name_off, "GNU\0", 4) == 0 && desc_size > 0) {
+      return llvm::toHex(llvm::ArrayRef<uint8_t>(
+                             reinterpret_cast<const uint8_t *>(data.data()) +
+                                 desc_off,
+                             desc_size),
+                         true);
+    }
+  }
+  return std::nullopt;
+}
+
+static std::optional<std::string> running_kernel_build_id()
+{
+  std::ifstream notes("/sys/kernel/notes", std::ios::binary);
+  if (!notes) {
+    return std::nullopt;
+  }
+  return parse_build_id_notes(notes);
+}
+
+static int find_kernel_module_cb(Dwfl_Module *mod,
+                                 void **userdata __attribute__((unused)),
+                                 const char *name,
+                                 Dwarf_Addr base __attribute__((unused)),
+                                 void *arg)
+{
+  if (name && std::strcmp(name, "kernel") == 0) {
+    *static_cast<Dwfl_Module **>(arg) = mod;
+    return DWARF_CB_ABORT;
+  }
+  return DWARF_CB_OK;
+}
+
+static Dwfl_Module *find_kernel_module(Dwfl *dwfl)
+{
+  Dwfl_Module *kernel = nullptr;
+  dwfl_getmodules(dwfl, find_kernel_module_cb, &kernel, 0);
+  return kernel;
+}
+
+// libdwfl locates the kernel image itself; the debuginfo search path only
+// affects separate debug files. A stale /usr/lib/debug image therefore wins
+// over an explicitly requested one, and source lines then resolve to addresses
+// that belong to a different build.
+static bool kernel_image_is_running_kernel(Dwfl_Module *mod)
+{
+  auto running = running_kernel_build_id();
+  if (!running) {
+    return true;
+  }
+
+  Dwarf_Addr bias = 0;
+  if (!mod || !dwfl_module_getelf(mod, &bias)) {
+    return true;
+  }
+
+  const unsigned char *bits = nullptr;
+  GElf_Addr vaddr = 0;
+  const int len = dwfl_module_build_id(mod, &bits, &vaddr);
+  if (len <= 0 || !bits) {
+    return true;
+  }
+
+  const std::string image = llvm::toHex(
+      llvm::ArrayRef<uint8_t>(bits, static_cast<size_t>(len)), true);
+  if (image == *running) {
+    return true;
+  }
+
+  const char *path = nullptr;
+  dwfl_module_info(
+      mod, nullptr, nullptr, nullptr, nullptr, nullptr, &path, nullptr);
+  LOG(WARNING) << "Kernel image " << (path ? path : "<unknown>")
+               << " is not the running kernel: image build ID " << image
+               << ", running kernel " << *running
+               << ". Use a vmlinux matching the running kernel or remove the "
+                  "stale image from the debuginfo search path.";
+  return false;
+}
+
 std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
                                             const std::string &debuginfo_path)
 {
@@ -137,8 +245,12 @@ std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
     return nullptr;
   }
 
-  Dwarf_Addr bias;
+  Dwfl_Module *kernel_module = find_kernel_module(dwarf->dwfl);
+  if (kernel_module && !kernel_image_is_running_kernel(kernel_module)) {
+    return nullptr;
+  }
 
+  Dwarf_Addr bias;
   if (dwfl_nextcu(dwarf->dwfl, nullptr, &bias) == nullptr)
     return nullptr;
 

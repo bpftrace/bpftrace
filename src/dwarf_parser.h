@@ -5,7 +5,9 @@
 #include "util/result.h"
 
 #include <filesystem>
+#include <iosfwd>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,7 +34,6 @@ private:
 
 #ifdef HAVE_LIBDW
 #include <elfutils/libdwfl.h>
-#include <optional>
 #include <unordered_map>
 
 namespace bpftrace {
@@ -156,6 +157,8 @@ private:
   const char *debuginfo_path_cstr_;
   bool is_kernel_ = false;
 };
+
+std::optional<std::string> parse_build_id_notes(std::istream &notes);
 
 } // namespace bpftrace
 
