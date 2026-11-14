@@ -37,6 +37,8 @@ and this project adheres to
   - [#5447](https://github.com/bpftrace/bpftrace/pull/5447)
 - Add `no_prealloc` map declaration arg to create maps that allocate on demand
   - [#5450](https://github.com/bpftrace/bpftrace/pull/5450)
+- Add experimental `-l 'kprobe:FUNC@*'` to list the source lines of a kernel function.
+  - [#5454](https://github.com/bpftrace/bpftrace/pull/5454)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.
