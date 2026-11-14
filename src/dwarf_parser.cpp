@@ -21,7 +21,10 @@ void DwarfParseError::log(llvm::raw_ostream &OS) const
 #include <elfutils/libdw.h>
 #include <elfutils/libdwelf.h>
 
+#include <elf.h>
+
 #include <cstring>
+#include <fstream>
 
 namespace bpftrace {
 
@@ -127,6 +130,86 @@ static int kernel_module_section_address(Dwfl_Module *mod,
       mod, userdata, modname, base, secname, shndx, shdr, addr);
 }
 
+static std::string hex_string(const unsigned char *bytes, size_t len)
+{
+  static constexpr char digits[] = "0123456789abcdef";
+  std::string out;
+  out.reserve(len * 2);
+  for (size_t i = 0; i < len; i++) {
+    out += digits[bytes[i] >> 4];
+    out += digits[bytes[i] & 0xf];
+  }
+  return out;
+}
+
+// Reads the running kernel's GNU build ID from the notes exposed by sysfs.
+static std::optional<std::string> running_kernel_build_id()
+{
+  std::ifstream notes("/sys/kernel/notes", std::ios::binary);
+  if (!notes)
+    return std::nullopt;
+  const std::string data((std::istreambuf_iterator<char>(notes)),
+                         std::istreambuf_iterator<char>());
+
+  size_t off = 0;
+  while (off + 12 <= data.size()) {
+    uint32_t name_size = 0, desc_size = 0, type = 0;
+    std::memcpy(&name_size, data.data() + off, 4);
+    std::memcpy(&desc_size, data.data() + off + 4, 4);
+    std::memcpy(&type, data.data() + off + 8, 4);
+    off += 12;
+
+    const size_t name_off = off;
+    off += (name_size + 3) & ~size_t{ 3 };
+    const size_t desc_off = off;
+    off += (desc_size + 3) & ~size_t{ 3 };
+    if (off > data.size())
+      break;
+
+    if (type == NT_GNU_BUILD_ID && name_size >= 4 &&
+        std::memcmp(data.data() + name_off, "GNU\0", 4) == 0 && desc_size > 0) {
+      return hex_string(reinterpret_cast<const unsigned char *>(data.data()) +
+                            desc_off,
+                        desc_size);
+    }
+  }
+  return std::nullopt;
+}
+
+// libdwfl locates the kernel image itself; the debuginfo search path only
+// affects separate debug files. A stale /usr/lib/debug image therefore wins
+// over an explicitly requested one, and source lines then resolve to addresses
+// that belong to a different build.
+static bool kernel_image_is_running_kernel(Dwarf_Die *cudie)
+{
+  auto running = running_kernel_build_id();
+  if (!running)
+    return true;
+
+  Dwfl_Module *mod = dwfl_cumodule(cudie);
+  Dwarf_Addr bias = 0;
+  if (!mod || !dwfl_module_getelf(mod, &bias))
+    return true;
+
+  const unsigned char *bits = nullptr;
+  GElf_Addr vaddr = 0;
+  const int len = dwfl_module_build_id(mod, &bits, &vaddr);
+  if (len <= 0 || !bits)
+    return true;
+
+  const std::string image = hex_string(bits, static_cast<size_t>(len));
+  if (image == *running)
+    return true;
+
+  const char *path = nullptr;
+  dwfl_module_info(
+      mod, nullptr, nullptr, nullptr, nullptr, nullptr, &path, nullptr);
+  LOG(ERROR) << "Kernel image " << (path ? path : "<unknown>")
+             << " is not the running kernel: image build ID " << image
+             << ", running kernel " << *running;
+  return false;
+}
+
 std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
                                             const std::string &debuginfo_path)
 {
@@ -139,7 +222,11 @@ std::unique_ptr<Dwarf> Dwarf::GetFromKernel(BPFtrace *bpftrace,
 
   Dwarf_Addr bias;
 
-  if (dwfl_nextcu(dwarf->dwfl, nullptr, &bias) == nullptr)
+  Dwarf_Die *cudie = dwfl_nextcu(dwarf->dwfl, nullptr, &bias);
+  if (cudie == nullptr)
+    return nullptr;
+
+  if (!kernel_image_is_running_kernel(cudie))
     return nullptr;
 
   return dwarf;
