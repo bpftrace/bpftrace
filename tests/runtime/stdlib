@@ -3,6 +3,21 @@ PROG BEGIN { assert(false, "My error message"); }
 EXPECT_REGEX stdlib/base\.bt:[0-9]+:5-37: ERROR: assert failed: My error message
 WILL_FAIL
 
+NAME assert_default_message
+PROG BEGIN { assert(1 == 2); }
+EXPECT_REGEX stdlib/base\.bt:[0-9]+:5-37: ERROR: assert failed: 1 == 2
+RETURN_CODE 1
+
+NAME assert_condition_evaluated_once
+PROG BEGIN { $x = 0; assert(++$x == 1); assert($x == 1); exit(); }
+EXPECT_NONE ERROR
+RETURN_CODE 0
+
+NAME stringify_does_not_evaluate
+PROG BEGIN { $x = 0; printf("%s\n", __builtin_stringify(++$x)); assert($x == 0); exit(); }
+EXPECT ++$x
+RETURN_CODE 0
+
 NAME ppid_macro
 PROG BEGIN { printf("SUCCESS %d\n", ppid(curtask)); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*

@@ -8,6 +8,7 @@
 #include "ast/passes/macro_expansion.h"
 #include "ast/visitor.h"
 #include "log.h"
+#include "scopeguard.h"
 
 namespace bpftrace::ast {
 
@@ -190,12 +191,14 @@ private:
 
   bool rename_ok();
   std::string get_new_var_ident(std::string original_ident);
+  Location argument_location(const Call &call, size_t index) const;
 
   // Maps of macro map/var names -> callsite map/var names
   std::unordered_map<std::string, std::string> maps_;
   std::unordered_map<std::string, std::string> vars_;
   std::unordered_set<std::string> renamed_vars_;
   std::unordered_map<std::string, Expression> passed_exprs_;
+  std::unordered_map<std::string, Location> passed_locations_;
 };
 
 void MacroExpander::visit(AssignVarStatement &assignment)
@@ -457,7 +460,32 @@ void MacroExpander::visit(Expression &expr)
       return;
     }
   }
+  // Later passes may rewrite arguments and expand this call again.
+  SCOPE_EXIT
+  {
+    if (call)
+      call->argument_locations.clear();
+  };
+
   if (call) {
+    // Preserve argument spelling before nested macro calls are expanded.
+    call->argument_locations.resize(call->vargs.size());
+    for (size_t i = 0; i < call->vargs.size(); ++i) {
+      call->argument_locations[i] = argument_location(*call, i);
+    }
+
+    if (call->ns == Call::Namespace::Default &&
+        call->func == "__builtin_stringify") {
+      if (call->vargs.size() != 1) {
+        call->addError() << "__builtin_stringify() expects one argument";
+        return;
+      }
+      // Consume the original source text without expanding the argument.
+      const auto &loc = call->argument_locations.front();
+      expr = ast_.make_node<String>(call->loc, loc->current.source_text());
+      return;
+    }
+
     visit(call->vargs);
     if (call->ns != Call::Namespace::Default) {
       return;
@@ -587,6 +615,27 @@ std::string MacroExpander::get_new_var_ident(std::string original_ident)
   return base + "_" + original_ident;
 }
 
+Location MacroExpander::argument_location(const Call &call, size_t index) const
+{
+  const auto &expr = call.vargs.at(index);
+  const std::string *name = nullptr;
+  if (const auto *ident = expr.as<Identifier>()) {
+    name = &ident->ident;
+  } else if (const auto *var = expr.as<Variable>()) {
+    name = &var->ident;
+  } else if (const auto *map = expr.as<Map>()) {
+    name = &map->ident;
+  }
+  if (name) {
+    if (auto it = passed_locations_.find(*name);
+        it != passed_locations_.end()) {
+      return it->second;
+    }
+  }
+  const auto &loc = call.argument_locations.at(index);
+  return loc ? loc : expr.loc();
+}
+
 std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)
 {
   if (macro.vargs.size() != call.vargs.size()) {
@@ -596,6 +645,7 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)
   StatementList stmt_list;
   for (size_t i = 0; i < macro.vargs.size(); i++) {
     if (auto *mident = macro.vargs.at(i).as<Identifier>()) {
+      passed_locations_[mident->ident] = call.argument_locations.at(i);
       if (call.vargs.at(i).is<Variable>() || call.vargs.at(i).is<Map>()) {
         // Wrap variables and maps in a block to avoid mutation.
         passed_exprs_[mident->ident] = ast_.make_node<BlockExpr>(
@@ -604,10 +654,12 @@ std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)
         passed_exprs_[mident->ident] = call.vargs.at(i);
       }
     } else if (auto *mvar = macro.vargs.at(i).as<Variable>()) {
+      passed_locations_[mvar->ident] = call.argument_locations.at(i);
       auto *cvar = call.vargs.at(i).as<Variable>();
       assert(cvar != nullptr); // Required by lookup.
       vars_[mvar->ident] = cvar->ident;
     } else if (auto *mmap = macro.vargs.at(i).as<Map>()) {
+      passed_locations_[mmap->ident] = call.argument_locations.at(i);
       auto *cmap = call.vargs.at(i).as<Map>();
       assert(cmap != nullptr); // Required by lookup.
       maps_[mmap->ident] = cmap->ident;

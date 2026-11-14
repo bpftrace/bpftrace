@@ -2635,17 +2635,20 @@ Expression Parser::parse_call_expression(const std::string &name,
   expect('(');
 
   ExpressionList args;
+  std::vector<Location> args_locs;
   consume_layout();
   auto add_expr_or_type_arg = [&, this]() {
+    consume_layout();
     auto [begin_line, begin_col] = get_current_line_col();
     if (check_keyword("typeof")) {
       auto *typeof_node = parse_type_annotation();
       auto loc = make_loc(begin_line, begin_col, line_, col_);
       args.emplace_back(ctx_.make_node<TypeArg>(loc, typeof_node));
-      return;
+    } else {
+      args.push_back(parse_expression());
     }
-
-    args.push_back(parse_expression());
+    args_locs.push_back(
+        ctx_.location(make_loc(begin_line, begin_col, line_, col_)));
   };
 
   if (peek() != ')') {
@@ -2661,6 +2664,7 @@ Expression Parser::parse_call_expression(const std::string &name,
       start_loc.begin.line, start_loc.begin.column, line_, col_);
   auto *call = ctx_.make_node<Call>(
       loc, std::string(name), std::move(args), ns);
+  call->argument_locations = std::move(args_locs);
   return { call };
 }
 
