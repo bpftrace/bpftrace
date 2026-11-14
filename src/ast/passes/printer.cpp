@@ -595,6 +595,7 @@ Buffer Formatter::visit(MapDeclStatement& decl)
       .text(bpf_type.str())
       .text("(max_entries=")
       .text(std::to_string(decl.max_entries))
+      .text(decl.no_prealloc ? ", no_prealloc=true" : "")
       .text(");");
 }
 

@@ -86,6 +86,7 @@ struct MapInfo {
   int id = -1;
   int max_entries = -1;
   bpf_map_type bpf_type = BPF_MAP_TYPE_HASH;
+  uint32_t map_flags = 0;
   bool is_scalar = false;
 
 private:
@@ -93,7 +94,14 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(key_type, value_type, detail, id, max_entries, bpf_type, is_scalar);
+    archive(key_type,
+            value_type,
+            detail,
+            id,
+            max_entries,
+            bpf_type,
+            map_flags,
+            is_scalar);
   }
 };
 

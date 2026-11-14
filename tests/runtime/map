@@ -50,6 +50,16 @@ PROG let @a = hash(max_entries=1); begin { @a[1] = 1; @a[2] = 2;  }
 EXPECT_REGEX .*WARNING: Map full; can't update element.*
 EXPECT @a[1]: 1
 
+NAME map declaration hash, no_prealloc map flags
+RUN {{BPFTRACE}} --unsafe -e 'let @a = hash(max_entries=1, no_prealloc=true); begin { @a[1] = 1; system("bpftool map show name AT_a"); exit(); }'
+EXPECT_REGEX flags 0x1
+REQUIRES bpftool
+
+NAME map declaration hash, no_prealloc not set
+RUN {{BPFTRACE}} --unsafe -e 'let @a = hash(max_entries=1); begin { @a[1] = 1; system("bpftool map show name AT_a"); exit(); }'
+EXPECT_REGEX flags 0x0
+REQUIRES bpftool
+
 NAME map declaration hash, scalar-like
 PROG let @a = hash(1); begin { @a[0] = 0; @a[0] = 1;  }
 EXPECT_REGEX_NONE .*WARNING: Map full; can't update element.*

@@ -414,9 +414,10 @@ DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
     bpf_map_type map_type,
     uint64_t max_entries,
     DIType *key_type,
-    const SizedType &value_type)
+    const SizedType &value_type,
+    uint32_t map_flags)
 {
-  SmallVector<Metadata *, 4> fields = {
+  SmallVector<Metadata *, 5> fields = {
     createPointerMemberType("type", 0, GetMapFieldInt(map_type)),
     createPointerMemberType("max_entries", 64, GetMapFieldInt(max_entries)),
   };
@@ -428,6 +429,11 @@ DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
     fields.push_back(createPointerMemberType(
         "value", size + 64, createPointerType(GetType(value_type), 64)));
     size += 128;
+  }
+  if (map_flags != 0) {
+    fields.push_back(
+        createPointerMemberType("map_flags", size, GetMapFieldInt(map_flags)));
+    size += 64;
   }
 
   DIType *map_entry_type = createStructType(file,

@@ -2212,6 +2212,7 @@ Currently these are available in bpftrace:
 
 Map declarations accept the following named arguments:
 - `max_entries` (required): the maximum number of entries the map can hold e.g. `let @a = lruhash(max_entries=100);`
+- `no_prealloc` (optional, default `false`): when `true`, map elements are allocated on demand instead of all being preallocated when the map is created (`BPF_F_NO_PREALLOC`). This saves memory for large maps that are rarely full, at the cost of slower updates. Only supported for `hash` and `percpuhash` e.g. `let @a = hash(max_entries=100000, no_prealloc=true);`
 
 As a shorthand, `max_entries` can also be passed as a single positional argument e.g. `let @a = lruhash(100);`
 All maps that are not declared in the global scope utilize the default set in the config variable "max_map_keys".

@@ -3655,6 +3655,58 @@ stdin:1:27-28: ERROR: syntax: expected '='
 let @a = hash(max_entries 5); begin { $x; }
                           ~
 )");
+
+  test("let @a = hash(max_entries=5, no_prealloc=true); begin { $x; }",
+       Program()
+           .WithMapDecls({ MapDeclStatement("@a", "hash", 5, true) })
+           .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
+
+  test("let @a = hash(no_prealloc=true, max_entries=5); begin { $x; }",
+       Program()
+           .WithMapDecls({ MapDeclStatement("@a", "hash", 5, true) })
+           .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
+
+  test("let @a = hash(max_entries=5, no_prealloc=false); begin { $x; }",
+       Program()
+           .WithMapDecls({ MapDeclStatement("@a", "hash", 5, false) })
+           .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
+
+  test_parse_failure(
+      "let @a = hash(max_entries=5, no_prealloc=True); begin { $x; }", R"(
+stdin:1:42-46: ERROR: syntax: expected 'true' or 'false' for map declaration argument: no_prealloc
+let @a = hash(max_entries=5, no_prealloc=True); begin { $x; }
+                                         ~~~~
+)");
+
+  test_parse_failure(
+      "let @a = hash(max_entries=5, no_prealloc=truest); begin { $x; }", R"(
+stdin:1:42-48: ERROR: syntax: expected 'true' or 'false' for map declaration argument: no_prealloc
+let @a = hash(max_entries=5, no_prealloc=truest); begin { $x; }
+                                         ~~~~~~
+)");
+
+  test_parse_failure(
+      "let @a = hash(max_entries=5, no_prealloc=1); begin { $x; }",
+      R"(
+stdin:1:42-43: ERROR: syntax: expected 'true' or 'false' for map declaration argument: no_prealloc
+let @a = hash(max_entries=5, no_prealloc=1); begin { $x; }
+                                         ~
+)");
+
+  test_parse_failure(
+      "let @a = hash(max_entries=5, no_prealloc=true, no_prealloc=false); "
+      "begin { $x; }",
+      R"(
+stdin:1:48-59: ERROR: syntax: duplicate map declaration argument: no_prealloc
+let @a = hash(max_entries=5, no_prealloc=true, no_prealloc=false); begin { $x; }
+                                               ~~~~~~~~~~~
+)");
+
+  test_parse_failure("let @a = hash(no_prealloc=true); begin { $x; }", R"(
+stdin:1:1-32: ERROR: syntax: map declaration requires argument: max_entries
+let @a = hash(no_prealloc=true); begin { $x; }
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 TEST(Parser, macro_expansion_error)

@@ -652,8 +652,10 @@ MapDeclStatement *Parser::parse_map_decl_stmt()
   }
 
   std::optional<uint64_t> max_entries;
+  bool no_prealloc = false;
   consume_layout();
   if (is_identifier_start(peek())) {
+    std::set<std::string> seen_names;
     while (true) {
       consume_layout();
       auto [arg_line, arg_col] = get_current_line_col();
@@ -663,7 +665,7 @@ MapDeclStatement *Parser::parse_map_decl_stmt()
         return nullptr;
       }
       auto [arg_end_line, arg_end_col] = get_current_line_col();
-      if (*arg_name != "max_entries") {
+      if (*arg_name != "max_entries" && *arg_name != "no_prealloc") {
         error("unknown map declaration argument: " + *arg_name,
               arg_line,
               arg_col,
@@ -671,7 +673,7 @@ MapDeclStatement *Parser::parse_map_decl_stmt()
               arg_end_col);
         return nullptr;
       }
-      if (max_entries) {
+      if (!seen_names.insert(*arg_name).second) {
         error("duplicate map declaration argument: " + *arg_name,
               arg_line,
               arg_col,
@@ -682,13 +684,27 @@ MapDeclStatement *Parser::parse_map_decl_stmt()
       if (!expect('=')) {
         return nullptr;
       }
-      auto res = util::to_uint(consume_integer_str(), 0);
-      if (!res) {
-        error("expected positive integer for map declaration argument: " +
-              *arg_name);
-        return nullptr;
+      if (*arg_name == "max_entries") {
+        auto res = util::to_uint(consume_integer_str(), 0);
+        if (!res) {
+          error("expected positive integer for map declaration argument: " +
+                *arg_name);
+          return nullptr;
+        }
+        max_entries = *res;
+      } else {
+        // no_prealloc
+        if (match("true")) {
+          no_prealloc = true;
+        } else if (match("false")) {
+          no_prealloc = false;
+        } else {
+          error("expected 'true' or 'false' for map declaration argument: " +
+                *arg_name);
+          return nullptr;
+        }
       }
-      max_entries = *res;
+
       if (!match(',')) {
         break;
       }
@@ -705,11 +721,22 @@ MapDeclStatement *Parser::parse_map_decl_stmt()
   if (!expect(')')) {
     return nullptr;
   }
+  if (!max_entries) {
+    error("map declaration requires argument: max_entries",
+          begin_line,
+          begin_col,
+          line_,
+          col_);
+    return nullptr;
+  }
   match(';');
   auto loc = make_loc(begin_line, begin_col, line_, col_);
 
-  return ctx_.make_node<MapDeclStatement>(
-      loc, std::move(map_name), std::move(*type_name), *max_entries);
+  return ctx_.make_node<MapDeclStatement>(loc,
+                                          std::move(map_name),
+                                          std::move(*type_name),
+                                          *max_entries,
+                                          no_prealloc);
 }
 
 ast::Probe *Parser::parse_probe()

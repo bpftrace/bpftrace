@@ -728,6 +728,11 @@ void TypeChecker::visit(MapDeclStatement &decl)
     auto &hint = err.addHint();
     add_bpf_map_types_hint(hint);
   } else {
+    if (decl.no_prealloc && (*bpf_type == BPF_MAP_TYPE_LRU_HASH ||
+                             *bpf_type == BPF_MAP_TYPE_LRU_PERCPU_HASH)) {
+      decl.addError() << "no_prealloc is not supported for map type: "
+                      << decl.bpf_type;
+    }
     bpf_map_type_.insert({ decl.ident, *bpf_type });
   }
 
