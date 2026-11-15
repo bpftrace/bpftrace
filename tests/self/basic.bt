@@ -208,3 +208,14 @@ test:operator_precedence_4
   }
 }
 
+test:unroll
+{
+  $a = 1;
+  unroll (10) {
+    $a = $a + 1;
+  }
+  if ($a != 11) {
+    return 1;
+  }
+}
+

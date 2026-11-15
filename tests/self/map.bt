@@ -59,3 +59,35 @@ test:variable_map_key_lifetime
   }
 }
 
+test:per_cpu_map_avg_if
+{
+  @per_cpu_map_avg_if = avg(1);
+  @per_cpu_map_avg_if = avg(1);
+  @per_cpu_map_avg_if = avg(10);
+  if (@per_cpu_map_avg_if != 4) {
+    return 1;
+  }
+}
+
+test:per_cpu_map_arithmetic
+{
+  @per_cpu_map_arithmetic_a = sum(10);
+  @per_cpu_map_arithmetic_b = count();
+  $c = @per_cpu_map_arithmetic_a + @per_cpu_map_arithmetic_b;
+  if ($c != 11) {
+    return 1;
+  }
+}
+
+test:per_cpu_map_cast
+{
+  @per_cpu_map_cast_a = count();
+  @per_cpu_map_cast_b = sum(10);
+  if ((uint64)@per_cpu_map_cast_a != 1) {
+    return 1;
+  }
+  if ((int64)@per_cpu_map_cast_b != 10) {
+    return 1;
+  }
+}
+
