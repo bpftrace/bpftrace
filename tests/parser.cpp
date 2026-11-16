@@ -3620,6 +3620,41 @@ stdin:1:15-16: ERROR: syntax: expected positive integer for map declaration max 
 let @a = hash(); begin { $x; }
               ~
 )");
+
+  test("let @a = hash(max_entries=5); begin { $x; }",
+       Program()
+           .WithMapDecls({ MapDeclStatement("@a", "hash", 5) })
+           .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
+
+  test("let @a = lruhash( max_entries = 0x10 ); begin { $x; }",
+       Program()
+           .WithMapDecls({ MapDeclStatement("@a", "lruhash", 16) })
+           .WithProbe(Probe({ "begin" }, { ExprStatement(Variable("$x")) })));
+
+  test_parse_failure("let @a = hash(potato=5); begin { $x; }", R"(
+stdin:1:15-21: ERROR: syntax: unknown map declaration argument: potato
+let @a = hash(potato=5); begin { $x; }
+              ~~~~~~
+)");
+
+  test_parse_failure(
+      "let @a = hash(max_entries=5, max_entries=6); begin { $x; }", R"(
+stdin:1:30-41: ERROR: syntax: duplicate map declaration argument: max_entries
+let @a = hash(max_entries=5, max_entries=6); begin { $x; }
+                             ~~~~~~~~~~~
+)");
+
+  test_parse_failure("let @a = hash(max_entries=$x); begin { $x; }", R"(
+stdin:1:27-29: ERROR: syntax: expected positive integer for map declaration argument: max_entries
+let @a = hash(max_entries=$x); begin { $x; }
+                          ~~
+)");
+
+  test_parse_failure("let @a = hash(max_entries 5); begin { $x; }", R"(
+stdin:1:27-28: ERROR: syntax: expected '='
+let @a = hash(max_entries 5); begin { $x; }
+                          ~
+)");
 }
 
 TEST(Parser, macro_expansion_error)
