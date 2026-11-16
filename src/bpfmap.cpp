@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cassert>
 #include <sstream>
 #include <unordered_map>
 
@@ -7,6 +9,69 @@
 
 namespace bpftrace {
 char BpfMapError::ID = 0;
+
+namespace {
+
+constexpr uint32_t MAX_MAP_BATCH_SIZE = 1024;
+constexpr size_t MAP_BATCH_BYTES = 1024 * 1024;
+
+} // namespace
+
+Result<> batch_walk_map(const std::string &map_name,
+                        const std::string &op_name,
+                        uint32_t key_size,
+                        size_t value_size,
+                        uint32_t max_entries,
+                        const MapBatchOp &op,
+                        const MapElementCallback &fn)
+{
+  assert(key_size + value_size > 0);
+  assert(max_entries > 0);
+  auto batch_size = static_cast<uint32_t>(
+      std::clamp<size_t>(MAP_BATCH_BYTES / (key_size + value_size),
+                         1,
+                         std::min(MAX_MAP_BATCH_SIZE, max_entries)));
+  std::vector<char> keys(static_cast<size_t>(batch_size) * key_size);
+  std::vector<char> values(static_cast<size_t>(batch_size) * value_size);
+  // The batch position is opaque: hash maps keep a 32-bit bucket index in it
+  // and other map types keep a key, so make room for either.
+  std::vector<char> position(std::max<size_t>(key_size, sizeof(uint64_t)));
+  bool started = false;
+
+  while (true) {
+    uint32_t count = batch_size;
+    int err = op(started ? position.data() : nullptr,
+                 position.data(),
+                 keys.data(),
+                 values.data(),
+                 &count);
+    if (err == -ENOSPC && count == 0 && batch_size < max_entries) {
+      // A single hash bucket holds more elements than fit into the buffers.
+      // Grow them and retry from the same position.
+      batch_size = static_cast<uint32_t>(
+          std::min<size_t>(static_cast<size_t>(batch_size) * 2, max_entries));
+      keys.resize(static_cast<size_t>(batch_size) * key_size);
+      values.resize(static_cast<size_t>(batch_size) * value_size);
+      continue;
+    }
+    if (err && err != -ENOENT) {
+      return make_error<BpfMapError>(map_name, op_name, err);
+    }
+
+    if (fn) {
+      for (size_t i = 0; i < count; i++) {
+        fn(OpaqueValue::from(keys.data() + (i * key_size), key_size),
+           OpaqueValue::from(values.data() + (i * value_size), value_size));
+      }
+    }
+
+    // ENOENT means that this batch held the last elements of the map.
+    if (err == -ENOENT) {
+      return OK();
+    }
+    started = true;
+  }
+}
 
 const std::unordered_map<std::string, bpf_map_type> BPF_MAP_TYPES = {
   { "hash", BPF_MAP_TYPE_HASH },
@@ -91,16 +156,25 @@ Result<> BpfMap::zero_out(int nvalues) const
   return OK();
 }
 
-Result<> BpfMap::clear() const
+Result<> BpfMap::clear(int nvalues) const
 {
-  auto keys = collect_keys();
-  for (auto &k : keys) {
-    int err = bpf_map_delete_elem(fd(), k.data());
-    if (err && err != -ENOENT) {
-      return make_error<BpfMapError>(name_, "clear", err);
-    }
-  }
-  return OK();
+  auto value_size = static_cast<size_t>(value_size_) *
+                    static_cast<size_t>(nvalues);
+  return batch_walk_map(
+      name_,
+      "clear",
+      key_size_,
+      value_size,
+      max_entries_,
+      [&](void *in_batch,
+          void *out_batch,
+          void *keys,
+          void *values,
+          uint32_t *count) {
+        return bpf_map_lookup_and_delete_batch(
+            fd(), in_batch, out_batch, keys, values, count, nullptr);
+      },
+      nullptr);
 }
 
 Result<> BpfMap::update_elem(const void *key, const void *value) const
@@ -130,25 +204,35 @@ Result<> BpfMap::resize(uint32_t new_size) const
   return OK();
 }
 
+Result<> BpfMap::for_each_elem(int nvalues, const MapElementCallback &fn) const
+{
+  auto value_size = static_cast<size_t>(value_size_) *
+                    static_cast<size_t>(nvalues);
+  return batch_walk_map(
+      name_,
+      "lookup",
+      key_size_,
+      value_size,
+      max_entries_,
+      [&](void *in_batch,
+          void *out_batch,
+          void *keys,
+          void *values,
+          uint32_t *count) {
+        return bpf_map_lookup_batch(
+            fd(), in_batch, out_batch, keys, values, count, nullptr);
+      },
+      fn);
+}
+
 Result<MapElements> BpfMap::collect_elements(int nvalues) const
 {
-  auto keys = collect_keys();
   MapElements values_by_key;
-
-  for (auto &key : keys) {
-    int err = 0;
-    auto value = OpaqueValue::alloc(
-        static_cast<size_t>(value_size_) * static_cast<size_t>(nvalues),
-        [&](void *data) { err = bpf_map_lookup_elem(fd(), key.data(), data); });
-    if (err == -ENOENT) {
-      // key was removed by the eBPF program during bpf_map_get_next_key() and
-      // bpf_map_lookup_elem(), let's skip this key.
-      continue;
-    } else if (err) {
-      return make_error<BpfMapError>(name_, "lookup", err);
-    }
-
+  auto ok = for_each_elem(nvalues, [&](OpaqueValue key, OpaqueValue value) {
     values_by_key.emplace_back(std::move(key), std::move(value));
+  });
+  if (!ok) {
+    return ok.takeError();
   }
   return values_by_key;
 }
@@ -156,22 +240,8 @@ Result<MapElements> BpfMap::collect_elements(int nvalues) const
 Result<HistogramMap> BpfMap::collect_histogram_data(const MapInfo &map_info,
                                                     int nvalues) const
 {
-  auto keys = collect_keys();
   HistogramMap values_by_key;
-
-  for (auto &key : keys) {
-    int err = 0;
-    auto value = OpaqueValue::alloc(
-        static_cast<size_t>(value_size_) * static_cast<size_t>(nvalues),
-        [&](void *data) { err = bpf_map_lookup_elem(fd(), key.data(), data); });
-    if (err == -ENOENT) {
-      // key was removed by the eBPF program during bpf_map_get_next_key() and
-      // bpf_map_lookup_elem(), let's skip this key
-      continue;
-    } else if (err) {
-      return make_error<BpfMapError>(name_, "lookup", err);
-    }
-
+  auto ok = for_each_elem(nvalues, [&](OpaqueValue key, OpaqueValue value) {
     auto prefix = key.slice(0, map_info.key_type.GetSize());
     auto bucket = key.slice(map_info.key_type.GetSize(), sizeof(uint64_t));
     if (!values_by_key.contains(prefix)) {
@@ -183,6 +253,9 @@ Result<HistogramMap> BpfMap::collect_histogram_data(const MapInfo &map_info,
     }
     auto idx = bucket.bitcast<uint64_t>();
     values_by_key[prefix].at(idx) = util::reduce_value<uint64_t>(value);
+  });
+  if (!ok) {
+    return ok.takeError();
   }
   return values_by_key;
 }
@@ -190,23 +263,10 @@ Result<HistogramMap> BpfMap::collect_histogram_data(const MapInfo &map_info,
 Result<TSeriesMap> BpfMap::collect_tseries_data(const MapInfo &map_info,
                                                 int nvalues) const
 {
-  auto keys = collect_keys();
   TSeriesMap values_by_key;
 
   const auto &tseries_args = std::get<TSeriesArgs>(map_info.detail);
-  for (auto &key : keys) {
-    int err = 0;
-    auto value = OpaqueValue::alloc(
-        static_cast<size_t>(value_size_) * static_cast<size_t>(nvalues),
-        [&](void *data) { err = bpf_map_lookup_elem(fd(), key.data(), data); });
-    if (err == -ENOENT) {
-      // key was removed by the eBPF program during bpf_map_get_next_key() and
-      // bpf_map_lookup_elem(), let's skip this key
-      continue;
-    } else if (err) {
-      return make_error<BpfMapError>(name_, "lookup", err);
-    }
-
+  auto ok = for_each_elem(nvalues, [&](OpaqueValue key, OpaqueValue value) {
     auto prefix = key.slice(0, map_info.key_type.GetSize());
     auto bucket = key.slice(map_info.key_type.GetSize(), sizeof(uint64_t));
     auto tseries = values_by_key.try_emplace(prefix).first;
@@ -214,8 +274,10 @@ Result<TSeriesMap> BpfMap::collect_tseries_data(const MapInfo &map_info,
                                                  tseries_args.value_type,
                                                  tseries_args.agg);
     tseries->second.emplace(epoch, std::move(v));
+  });
+  if (!ok) {
+    return ok.takeError();
   }
-
   return values_by_key;
 }
 

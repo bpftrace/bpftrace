@@ -38,6 +38,8 @@ and this project adheres to
 - Source location attachpoints resolve to an address the DWARF line table marks
   as a statement start, which can move where kprobes and uprobes attach.
   - [#5419](https://github.com/bpftrace/bpftrace/pull/5419)
+- Improved performance for printing and `clear`ing maps with batched reads/deletes.
+  - [#5444](https://github.com/bpftrace/bpftrace/pull/5444)
 #### Deprecated
 #### Removed
 #### Fixed

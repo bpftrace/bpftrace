@@ -170,7 +170,8 @@ Result<> AsyncHandlers::clear_map(const OpaqueValue &data)
 {
   auto mapevent = data.bitcast<AsyncEvent::MapEvent>();
   const auto &map = bpftrace.bytecode_.getMap(mapevent.mapid);
-  return map.clear();
+  uint64_t nvalues = map.is_per_cpu_type() ? bpftrace.ncpus_ : 1;
+  return map.clear(nvalues);
 }
 
 Result<> AsyncHandlers::skboutput(const OpaqueValue &data)
