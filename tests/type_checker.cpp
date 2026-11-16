@@ -5545,6 +5545,26 @@ kprobe:f { if (false) { fail("always false"); } }
 )" });
 }
 
+TEST_F(TypeCheckerTest, fail_small_max_strlen)
+{
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->config_->max_strlen = 16;
+
+  test(R"(begin {
+            if comptime (sizeof(uint64) != 8) {
+              fail("uint64 must be 8 bytes");
+            }
+          })",
+       Mock{ *bpftrace });
+  test(R"(begin {
+            if comptime (sizeof(uint64) == 8) {
+              fail("uint64 must be 8 bytes");
+            }
+          })",
+       Mock{ *bpftrace },
+       Error{ "ERROR: uint64 must be 8 bytes" });
+}
+
 TEST_F(TypeCheckerTest, typeof_decls)
 {
   test("kprobe:f { $x = (uint8)1; let $y : typeof($x); $y = (uint8)2; }");

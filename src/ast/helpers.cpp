@@ -16,7 +16,8 @@ static std::unordered_set<std::string> UNSAFE_FUNCS = {
   "bpf_probe_write_user",
 };
 
-static std::unordered_set<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
+static std::unordered_set<std::string> COMPILE_TIME_FUNCS = { "cgroupid",
+                                                              "fail" };
 
 static std::unordered_set<std::string> UPROBE_LANGS = { "cpp" };
 
