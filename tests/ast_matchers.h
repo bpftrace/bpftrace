@@ -1288,16 +1288,25 @@ public:
                             max_entries,
                             "max entries"));
   }
+
+  MapDeclStatementMatcher& WithNoPrealloc(bool no_prealloc)
+  {
+    return Where(CheckField(&ast::MapDeclStatement::no_prealloc,
+                            no_prealloc,
+                            "no_prealloc"));
+  }
 };
 
 inline MapDeclStatementMatcher MapDeclStatement(const std::string& ident,
                                                 const std::string& bpf_type,
-                                                int max_entries)
+                                                int max_entries,
+                                                bool no_prealloc = false)
 {
   return MapDeclStatementMatcher()
       .WithIdent(ident)
       .WithBpfType(bpf_type)
-      .WithMaxEntries(max_entries);
+      .WithMaxEntries(max_entries)
+      .WithNoPrealloc(no_prealloc);
 }
 
 class MacroMatcher : public NodeMatcher<MacroMatcher, ast::Macro> {

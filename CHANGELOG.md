@@ -35,6 +35,8 @@ and this project adheres to
   - [#5347](https://github.com/bpftrace/bpftrace/pull/5347)
 - Support named arguments in map declarations e.g. `let @a = hash(max_entries=100);`
   - [#5447](https://github.com/bpftrace/bpftrace/pull/5447)
+- Add `no_prealloc` map declaration arg to create maps that allocate on demand
+  - [#5450](https://github.com/bpftrace/bpftrace/pull/5450)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.

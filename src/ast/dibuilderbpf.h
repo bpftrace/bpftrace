@@ -52,7 +52,8 @@ public:
                                              bpf_map_type map_type,
                                              uint64_t max_entries,
                                              DIType *key_type,
-                                             const SizedType &value_type);
+                                             const SizedType &value_type,
+                                             uint32_t map_flags);
   DIGlobalVariableExpression *createGlobalVariable(std::string_view name,
                                                    const SizedType &stype);
   DILocation *createDebugLocation(llvm::LLVMContext &ctx,

@@ -834,23 +834,26 @@ public:
                             Location &&loc,
                             std::string ident,
                             std::string bpf_type,
-                            int max_entries)
+                            int max_entries,
+                            bool no_prealloc)
       : Node(ctx, std::move(loc)),
         ident(std::move(ident)),
         bpf_type(std::move(bpf_type)),
-        max_entries(max_entries) {};
+        max_entries(max_entries),
+        no_prealloc(no_prealloc) {};
   explicit MapDeclStatement(ASTContext &ctx,
                             const Location &loc,
                             const MapDeclStatement &other)
       : Node(ctx, loc + other.loc),
         ident(other.ident),
         bpf_type(other.bpf_type),
-        max_entries(other.max_entries) {};
+        max_entries(other.max_entries),
+        no_prealloc(other.no_prealloc) {};
 
   bool operator==(const MapDeclStatement &other) const
   {
     return ident == other.ident && bpf_type == other.bpf_type &&
-           max_entries == other.max_entries;
+           max_entries == other.max_entries && no_prealloc == other.no_prealloc;
   }
   std::strong_ordering operator<=>(const MapDeclStatement &other) const
   {
@@ -858,12 +861,15 @@ public:
       return cmp;
     if (auto cmp = bpf_type <=> other.bpf_type; cmp != 0)
       return cmp;
-    return max_entries <=> other.max_entries;
+    if (auto cmp = max_entries <=> other.max_entries; cmp != 0)
+      return cmp;
+    return no_prealloc <=> other.no_prealloc;
   }
 
   const std::string ident;
   const std::string bpf_type;
   const int max_entries;
+  const bool no_prealloc;
 };
 using MapDeclList = std::vector<MapDeclStatement *>;
 

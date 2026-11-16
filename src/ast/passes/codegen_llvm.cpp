@@ -263,7 +263,8 @@ private:
                            bpf_map_type map_type,
                            uint64_t max_entries,
                            const SizedType &key_type,
-                           const SizedType &value_type);
+                           const SizedType &value_type,
+                           uint32_t map_flags = 0);
   Value *createAnonStruct(
       const SizedType &stype,
       const std::vector<std::tuple<llvm::Value *, SizedType, Location>> &vals,
@@ -4467,20 +4468,24 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
                                       bpf_map_type map_type,
                                       uint64_t max_entries,
                                       const SizedType &key_type,
-                                      const SizedType &value_type)
+                                      const SizedType &value_type,
+                                      uint32_t map_flags)
 {
   DIType *di_key_type = debug_.GetMapKeyType(key_type, value_type, map_type);
   map_types_.emplace(name, map_type);
   auto var_name = bpf_map_name(name);
   auto *debuginfo = debug_.createMapEntry(
-      var_name, map_type, max_entries, di_key_type, value_type);
+      var_name, map_type, max_entries, di_key_type, value_type, map_flags);
 
   // It's sufficient that the global variable has the correct size (struct
   // with one pointer per field). The actual inner types are defined in debug
   // info.
-  SmallVector<llvm::Type *, 4> elems = { b_.getPtrTy(), b_.getPtrTy() };
+  SmallVector<llvm::Type *, 5> elems = { b_.getPtrTy(), b_.getPtrTy() };
   if (!value_type.IsNoneTy()) {
     elems.push_back(b_.getPtrTy());
+    elems.push_back(b_.getPtrTy());
+  }
+  if (map_flags != 0) {
     elems.push_back(b_.getPtrTy());
   }
   auto *type = StructType::create(elems, "struct map_internal_repr_t", false);
@@ -4502,9 +4507,11 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 // - "max_entries" maximum number of entries
 // - "key"         key type
 // - "value"       value type
+// - "map_flags"   map creation flags (only emitted if non-zero)
 //
-// "type" and "max_entries" are integers but they must be represented as
-// pointers to an array of ints whose dimension defines the specified value.
+// "type", "max_entries", and "map_flags" are integers but they must be
+// represented as pointers to an array of ints whose dimension defines the
+// specified value.
 //
 // "key" and "value" are pointers to the corresponding types. Note that these
 // are not used for the BPF_MAP_TYPE_RINGBUF map type.
@@ -4524,8 +4531,12 @@ void CodegenLLVM::generate_maps(const RequiredResources &required_resources)
   for (const auto &[name, info] : required_resources.maps_info) {
     const auto &val_type = info.value_type;
     const auto &key_type = info.key_type;
-    createMapDefinition(
-        name, info.bpf_type, info.max_entries, key_type, val_type);
+    createMapDefinition(name,
+                        info.bpf_type,
+                        info.max_entries,
+                        key_type,
+                        val_type,
+                        info.map_flags);
   }
 
   // bpftrace internal maps

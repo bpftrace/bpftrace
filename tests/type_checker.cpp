@@ -5306,6 +5306,9 @@ TEST_F(TypeCheckerTest, map_declarations)
 {
   test("let @a = hash(2); begin { @a = 1; }");
   test("let @a = hash(max_entries=2); begin { @a = 1; }");
+  test("let @a = hash(max_entries=2, no_prealloc=true); begin { @a = 1; }");
+  test("let @a = percpuhash(max_entries=2, no_prealloc=true); "
+       "begin { @a[1] = count(); }");
   test("let @a = lruhash(2); begin { @a = 1; }");
   test("let @a = percpuhash(2); begin { @a[1] = count(); }");
   test("let @a = percpulruhash(2); begin { @a[1] = count(); }");
@@ -5314,6 +5317,7 @@ TEST_F(TypeCheckerTest, map_declarations)
   test("let @a = hash(2); begin { print(1); }",
        Warning{ "WARNING: Unused map: @a" });
 
+  // Errors
   test("let @a = percpuhash(2); begin { @a = 1; }", Error{ R"(
 stdin:1:33-35: ERROR: Incompatible map types. Type from declaration: percpuhash. Type from value/key type: hash
 let @a = percpuhash(2); begin { @a = 1; }
@@ -5339,6 +5343,13 @@ stdin:1:1-20: ERROR: Invalid bpf map type: potato
 let @a = potato(2); begin { @a[1] = count(); }
 ~~~~~~~~~~~~~~~~~~~
 )" });
+  test("let @a = lruhash(max_entries=2, no_prealloc=true); begin { @a = 1; }",
+       Error{ R"(ERROR: no_prealloc is not supported for map type: lruhash)" });
+  test(
+      "let @a = percpulruhash(max_entries=2, no_prealloc=true); "
+      "begin { @a[1] = count(); }",
+      Error{
+          R"(ERROR: no_prealloc is not supported for map type: percpulruhash)" });
 }
 
 TEST_F(TypeCheckerTest, macros)

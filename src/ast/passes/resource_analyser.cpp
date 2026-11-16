@@ -92,7 +92,7 @@ private:
   // Variables declared outside an open-coded iterator but written inside of
   // it get promoted to a scratch map to prevent verifier errors.
   std::vector<size_t> iter_scope_depths_;
-  std::unordered_map<std::string, std::pair<bpf_map_type, int>> map_decls_;
+  std::unordered_map<std::string, MapDeclStatement *> map_decls_;
 
   int next_map_id_ = 0;
 };
@@ -504,12 +504,7 @@ void ResourceAnalyser::visit(MapDeclStatement &decl)
 {
   Visitor<ResourceAnalyser>::visit(decl);
 
-  auto bpf_type = get_bpf_map_type(decl.bpf_type);
-  if (!bpf_type) {
-    LOG(BUG) << "No bpf type from string: " << decl.bpf_type;
-    return;
-  }
-  map_decls_.insert({ decl.ident, { *bpf_type, decl.max_entries } });
+  map_decls_.insert({ decl.ident, &decl });
 }
 
 void ResourceAnalyser::visit(Map &map)
@@ -740,8 +735,15 @@ void ResourceAnalyser::update_map_info(Map &map)
 
   auto decl = map_decls_.find(map.ident);
   if (decl != map_decls_.end()) {
-    map_info.bpf_type = decl->second.first;
-    map_info.max_entries = decl->second.second;
+    auto bpf_type = get_bpf_map_type(decl->second->bpf_type);
+    if (!bpf_type) {
+      LOG(BUG) << "No bpf type from string: " << decl->second->bpf_type;
+    }
+    map_info.bpf_type = *bpf_type;
+    map_info.max_entries = decl->second->max_entries;
+    if (decl->second->no_prealloc) {
+      map_info.map_flags |= BPF_F_NO_PREALLOC;
+    }
   } else {
     map_info.bpf_type = get_bpf_map_type(map_info.value_type);
     // hist() and lhist() transparently create additional elements in whatever
