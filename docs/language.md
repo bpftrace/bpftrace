@@ -2195,9 +2195,6 @@ The data type of a variable is automatically determined during first assignment 
 
 ### Map Declarations
 
-***Warning*** this feature is experimental and may be subject to changes.
-Stabilization is tracked in [#4077](https://github.com/bpftrace/bpftrace/issues/4077).
-
 Maps can also be declared in the global scope, before probes and after the config e.g.
 ```bpftrace
 let @a = hash(max_entries=100);
