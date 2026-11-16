@@ -111,7 +111,7 @@ EXPECT_REGEX SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall read
 
 NAME kprobe_wildcard_multi
-RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("progs: "); system("bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { system("echo -n \"progs: \" && bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
 EXPECT progs: 1
 REQUIRES bpftool
 REQUIRES_FEATURE kprobe_multi
