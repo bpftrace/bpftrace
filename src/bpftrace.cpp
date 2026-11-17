@@ -1483,8 +1483,10 @@ Result<uint64_t> BPFtrace::get_buffer_pages_per_cpu() const
 
 Dwarf *BPFtrace::get_kernel_dwarf()
 {
-  if (!kernel_dwarf_)
+  if (!kernel_dwarf_initialized_) {
     kernel_dwarf_ = Dwarf::GetFromKernel(this, debuginfo_path_);
+    kernel_dwarf_initialized_ = true;
+  }
   return kernel_dwarf_.get();
 }
 

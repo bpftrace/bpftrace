@@ -270,6 +270,7 @@ private:
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
   std::unique_ptr<Dwarf> kernel_dwarf_;
+  bool kernel_dwarf_initialized_ = false;
 };
 
 } // namespace bpftrace
