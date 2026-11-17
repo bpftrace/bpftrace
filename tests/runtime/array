@@ -196,8 +196,3 @@ RUN {{BPFTRACE}} --include "stdint.h" -e 'struct A { int x[4]; uint8_t y[4]; } u
 EXPECT y: aabbccdd
 ARCH be
 AFTER ./testprogs/array_access
-
-NAME cast string to int array
-PROG begin { print((int8[])"hello"); }
-EXPECT [104,101,108,108,111,0]
-TIMEOUT 1

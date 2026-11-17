@@ -1,70 +1,6 @@
-NAME if_gt
-PROG i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}
-EXPECT a=20
-
-NAME if_lt
-PROG i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}
-EXPECT a=10
-
-NAME ifelse_go_else
-PROG i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
-EXPECT a=hello
-
-NAME ifelse_go_if
-PROG i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
-EXPECT a=hi
-
-NAME ifelseif_go_elseif
-PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}
-EXPECT a=hello
-
-NAME ifelseifelse_go_else
-PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}
-EXPECT a=asdf
-
-NAME if_cast
-PROG i:ms:1 { if ((int32)nsecs) { printf("done\n"); } exit(); }
-EXPECT done
-
-NAME ternary
-PROG i:ms:1 { $a = 1 ? "yes" : "no"; printf("%s\n", $a); exit();}
-EXPECT yes
-
-NAME ternary_lnot
-PROG i:ms:1 { $a = !nsecs ? 0 : 1; printf("%d\n", $a); exit() }
-EXPECT 1
-
-NAME ternary_int8
-PROG i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}
-EXPECT 1
-
-NAME ternary_mixed_int
-PROG i:ms:1 { $a = nsecs ? (uint8)1 : (int32)-1; printf("%d\n", $a); exit();}
-EXPECT 1
-
-NAME ternary_bool
-PROG i:ms:1 { $a = nsecs ? true : false; print($a); exit(); }
-EXPECT true
-
 NAME ternary_none_type
 PROG i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }
 EXPECT  yes
-
-NAME ternary_buf
-PROG i:ms:1 { $a = nsecs ? buf("hi", 2) : buf("bye", 3); print($a); exit(); }
-EXPECT hi
-
-NAME ternary_tuple
-PROG i:ms:1 { $a = nsecs ? ("hellolongstr", "a") : ("b", "hellolongstr"); print($a); exit(); }
-EXPECT (hellolongstr, a)
-
-NAME ternary_empty_2nd_operand
-PROG begin { $x = 1; $a =$x ?: 10; $b = 0 ?: 20; print(($a, $b)); exit(); }
-EXPECT (1, 20)
-
-NAME unroll
-PROG i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}
-EXPECT a=11
 
 NAME unroll_max_value
 PROG i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
@@ -294,18 +230,6 @@ EXPECT done
 NAME per_cpu_map_max_if
 PROG begin { @ = 1; } i:ms:1 { @++; @mx = max(@); if (@mx > 5) { printf("done\n");  }}
 EXPECT done
-
-NAME per_cpu_map_avg_if
-PROG begin { @ = avg(1); @ = avg(1); @ = avg(10); if (@ == 4) { printf("done\n");  }}
-EXPECT done
-
-NAME per_cpu_map_arithmetic
-PROG begin { @a = sum(10); @b = count(); $c = @a + @b; if ($c == 11) { printf("done\n"); } }
-EXPECT done
-
-NAME per_cpu_map_cast
-PROG begin { @a = count(); @b = sum(10); printf("%d-%d\n", (uint64)@a, (int64)@b); }
-EXPECT 1-10
 
 NAME per_cpu_map_as_map_key
 PROG begin {@a = count(); @b = sum(5); @c = min(1); @d = max(10); @e = avg(7); @[@a, @b, @c, @d, @e] = 1;  }

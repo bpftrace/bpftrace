@@ -1,0 +1,12 @@
+test:cast_string_to_int_array
+{
+  $a = (int8[])"hello";
+  if (sizeof($a) != 6) {
+    return 1;
+  }
+  if ($a[0] != 104 || $a[1] != 101 || $a[2] != 108 || $a[3] != 108 ||
+      $a[4] != 111 || $a[5] != 0) {
+    return 1;
+  }
+}
+
