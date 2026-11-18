@@ -216,6 +216,7 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 {
   std::string &symbol = probe.attach_point;
   uint64_t func_offset = probe.func_offset;
+  std::optional<uint64_t> sym_addr;
 
   if (symbol.empty()) {
     auto sym = util::resolve_symbol(probe.path, probe.address);
@@ -238,6 +239,7 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
 
     symbol = sym->name;
     func_offset = probe.address - sym->v_addr;
+    sym_addr = sym->v_addr;
   }
 
   auto symbols = util::resolve_symbols(probe.path, { symbol });
@@ -248,7 +250,10 @@ Result<uint64_t> resolve_offset_uprobe(Probe &probe, bool safe_mode)
     return make_error<AttachError>("Could not resolve symbol: " + probe.path +
                                    ":" + symbol);
   }
-  auto &sym = symbols->front();
+  auto it = std::ranges::find_if(*symbols, [&](const Symbol &s) {
+    return sym_addr && s.v_addr == *sym_addr;
+  });
+  auto &sym = it != symbols->end() ? *it : symbols->front();
 
   if (probe.type == ProbeType::uretprobe && func_offset != 0) {
     return make_error<AttachError>("uretprobes cannot be attached at function "

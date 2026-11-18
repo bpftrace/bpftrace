@@ -50,6 +50,19 @@ foreach(prog uprobe_nofp uprobe_nofp-pie)
   set_target_properties(${prog} PROPERTIES COMPILE_FLAGS "-g -O1 -fomit-frame-pointer -fno-optimize-sibling-calls")
 endforeach()
 
+# wrapper.c #includes included.c, so the binary contains two copies of the
+# static helper(), with the wrapper's copy first. Used to verify that source
+# location probes attach to the copy in the compilation unit that owns the file.
+add_executable(included_source
+  included_source/main.c
+  included_source/wrapper.c
+  included_source/included.c)
+set_target_properties(included_source
+  PROPERTIES
+    COMPILE_FLAGS "${testprog_cflags}"
+    LINK_FLAGS "-no-pie")
+list(APPEND testprogtargets included_source)
+
 find_program(GO_EXECUTABLE go)
 if(GO_EXECUTABLE)
   file(GLOB testprog_go_sources CONFIGURE_DEPENDS *.go)
