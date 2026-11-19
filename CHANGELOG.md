@@ -51,6 +51,8 @@ and this project adheres to
 #### Fixed
 - Resolve source location probes to the compilation unit built from the file, not a unit that includes it.
   - [#5415](https://github.com/bpftrace/bpftrace/pull/5415)
+- Exempt `fail()` from `max_strlen` restrictions because it's a comptime function.
+  - [#5456](https://github.com/bpftrace/bpftrace/pull/5456)
 #### Security
 #### Docs
 #### Tools
