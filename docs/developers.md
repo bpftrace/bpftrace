@@ -53,6 +53,26 @@ works well on distros with newer packages, developers on distros that lag behind
 (e.g. Debian) may want to use the Nix build or manually build and install
 `bcc` and `libbpf`.
 
+#### Building libbpf from source (Ubuntu 22.04 and lower)
+
+Ubuntu 22.04 ships `libbpf` 0.5.0 via apt, but bpftrace requires 1.0+. If
+you're on Ubuntu 22.04 or lower, build `libbpf` from source before proceeding:
+
+```bash
+# Install libelf dependency
+sudo apt install -y libelf-dev
+
+# Build and install libbpf from source
+git clone https://github.com/libbpf/libbpf.git
+cd libbpf/src
+make
+sudo make install
+cd ../..
+```
+
+Ubuntu 24.10+ ships a recent enough `libbpf` via apt and does not require
+this step.
+
 For a suitable build environment, see our Dockerfiles for detailed dependency
 examples:
 - [Ubuntu](https://github.com/bpftrace/bpftrace/blob/master/docker/Dockerfile.ubuntu)
