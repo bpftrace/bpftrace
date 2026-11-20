@@ -52,7 +52,27 @@ kernel yields `arm`.
 
 Terminates the script with an error code if a condition is false.
 
+- `void assert(bool condition)`
 - `void assert(bool condition, string message)`
+
+When no message is supplied, the condition's original source text is used
+as the message. The condition is evaluated once.
+
+```bpftrace
+fentry:vmlinux:gro_receive_skb { assert(args.skb.len < 128) }
+/*
+ * Sample output:
+ * Attached 1 probe
+ * stdlib/base.bt:52:5-37: ERROR: assert failed: args.skb.len < 128
+ * stdlib/base.bt:46:3-42: ERROR: expanded from
+ *   assert(cond, __builtin_stringify(cond));
+ *   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * stdin:1:34-60: ERROR: expanded from
+ * fentry:vmlinux:gro_receive_skb { assert(args.skb.len < 128) }
+ *                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+ */
+```
+
 
 ### assert_str
 
@@ -1467,9 +1487,23 @@ fentry:tcp_rcv_established
 
 Assert something is true or fail the build.
 
+- `void static_assert(bool condition)`
 - `void static_assert(bool condition, string msg)`
 
 **compile time**
+
+```bpftrace
+BEGIN { static_assert(1 == 2) }
+/*
+ * Sample output:
+ * stdlib/meta.bt:61:5-64: ERROR: static_assert failed: 1 == 2
+ *     fail("static_assert failed: %s", __builtin_stringify(cond));
+ *     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * stdin:1:9-30: ERROR: expanded from
+ * BEGIN { static_assert(1 == 2) }
+ *         ~~~~~~~~~~~~~~~~~~~~~
+ */
+```
 
 
 ### str

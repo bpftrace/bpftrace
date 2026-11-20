@@ -4006,6 +4006,26 @@ TEST(Parser, order_of_operations)
                                          Integer(5))) })));
 }
 
+TEST(Parser, call_argument_locations)
+{
+  ast::ASTContext ast("stdin", "f((1 + 2) * 3 == 8,\n (uint8)256, ((1)))");
+  Parser parser(ast);
+  auto result = parser.parse_expr();
+  ASSERT_TRUE(ast.diagnostics().ok());
+  const auto *call = result ? result->as<ast::Call>() : nullptr;
+  ASSERT_NE(call, nullptr);
+  const auto *cloned = ast.clone_node(call->loc, call);
+
+  for (const auto *node : { call, cloned }) {
+    ASSERT_EQ(node->argument_locations.size(), 3U);
+    EXPECT_EQ(node->argument_locations[0]->current.source_text(),
+              "(1 + 2) * 3 == 8");
+    EXPECT_EQ(node->argument_locations[1]->current.source_text(), "(uint8)256");
+    EXPECT_EQ(node->argument_locations[2]->current.source_text(), "((1))");
+    EXPECT_EQ(node->vargs[1].loc()->current.source_text(), "(uint8)");
+  }
+}
+
 TEST(Parser, naked_expression)
 {
   std::stringstream out;

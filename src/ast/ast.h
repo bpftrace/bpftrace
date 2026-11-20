@@ -517,6 +517,7 @@ public:
       : Node(ctx, loc + other.loc),
         func(other.func),
         vargs(clone(ctx, loc, other.vargs)),
+        argument_locations(other.argument_locations),
         ns(other.ns),
         injected_args(other.injected_args) {};
 
@@ -555,6 +556,9 @@ public:
 
   std::string func;
   ExpressionList vargs;
+
+  // Full argument source ranges for stringification.
+  std::vector<Location> argument_locations;
 
   Namespace ns = Namespace::Default;
 
