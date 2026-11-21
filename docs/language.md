@@ -1557,6 +1557,16 @@ attachable and nothing otherwise.
 kprobe@fs/open.c:1077
 ```
 
+`kprobe:FUNC@*` lists the attachable source lines of a function. With `-v`,
+lines inlined from another function end with `inline:NAME`. This is
+experimental and may not list every attachable line.
+
+```
+# bpftrace -lv 'kprobe:vfs_read@*'
+kprobe@fs/read_write.c:486 inline:new_sync_read
+kprobe@fs/read_write.c:551
+```
+
 ### profile
 
 **variants**

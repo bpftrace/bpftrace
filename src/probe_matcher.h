@@ -1,6 +1,7 @@
 #pragma once
 
 #include <linux/perf_event.h>
+#include <optional>
 #include <set>
 
 #include "ast/ast.h"
@@ -88,6 +89,8 @@ public:
   const symbols::UserInfo &user_func_info_;
 
 private:
+  static std::optional<std::string> parse_function_line_pattern(
+      const std::string &pattern);
   std::set<std::string> get_matches_in_stream(const std::string &search_input,
                                               std::istream &symbol_stream,
                                               bool demangle_symbols = true,
