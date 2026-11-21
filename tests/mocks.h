@@ -83,6 +83,22 @@ public:
     return resources.benchmark_probes;
   }
 
+  std::optional<KernelSymbol> resolve_kname(
+      const std::string &name) const override
+  {
+    if (name == "nosuchsym") {
+      return std::nullopt;
+    }
+    if (name == "zeroaddrsym") {
+      return KernelSymbol{ .address = 0, .kernel_modules = { "vmlinux" } };
+    }
+    if (name == "ambiguoussym") {
+      return KernelSymbol{ .address = 12345,
+                           .kernel_modules = { "vmlinux", "nfsd" } };
+    }
+    return KernelSymbol{ .address = 12345, .kernel_modules = { "vmlinux" } };
+  }
+
   Result<Symbol> resolve_uname(const std::string &name,
                                const std::string &path) const override
   {

@@ -1537,6 +1537,32 @@ TEST_F(TypeCheckerTest, call_kaddr)
   test("kprobe:f { kaddr(\"avenrun\"); }");
   test("kprobe:f { @x = kaddr(\"avenrun\"); }");
   test("kprobe:f { kaddr(123); }", Error{});
+  test(R"(kprobe:f { kaddr("nf_conntrack:nf_conntrack_max"); })");
+
+  test(R"(kprobe:f { kaddr("nosuchsym"); })", Error{ R"(
+stdin:1:12-30: ERROR: Failed to resolve kernel symbol: nosuchsym
+kprobe:f { kaddr("nosuchsym"); }
+           ~~~~~~~~~~~~~~~~~~
+HINT: Check /proc/kallsyms. A symbol which lives in a kernel module can be qualified with the name of that module, e.g. kaddr("nf_conntrack:nf_conntrack_max").
+)" });
+  test(R"(kprobe:f { kaddr("zeroaddrsym"); })", Error{ R"(
+stdin:1:12-32: ERROR: Failed to resolve kernel symbol: zeroaddrsym
+kprobe:f { kaddr("zeroaddrsym"); }
+           ~~~~~~~~~~~~~~~~~~~~
+HINT: zeroaddrsym is listed in /proc/kallsyms but its address reads as zero, which usually means that kernel addresses are hidden (kernel.kptr_restrict).
+)" });
+  test(R"(kprobe:f { kaddr("ambiguoussym"); })", Warning{ R"(
+stdin:1:12-33: WARNING: Kernel symbol ambiguoussym is defined in 2 modules; using the one from vmlinux
+kprobe:f { kaddr("ambiguoussym"); }
+           ~~~~~~~~~~~~~~~~~~~~~
+HINT: Qualify the name with a module to select another one, e.g. kaddr("nfsd:ambiguoussym").
+)" });
+
+  // The name is only checked once comptime expressions have been folded.
+  test(
+      R"(kprobe:f { if comptime (sizeof(uint64) != 8) { kaddr("nosuchsym"); } })");
+  test(R"(kprobe:f { kaddr(sizeof(uint64) == 8 ? "nosuchsym" : "avenrun"); })",
+       Error{ "ERROR: Failed to resolve kernel symbol: nosuchsym" });
 }
 
 TEST_F(TypeCheckerTest, call_uaddr)
