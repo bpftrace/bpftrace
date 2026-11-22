@@ -1,6 +1,6 @@
 # bpftrace Tests
 
-There are four different types of tests: [unit](#unit-tests), [self](#self-tests), [runtime](#runtime-tests), and [tool parsing](#tool-parsing-tests).
+Tests cover [unit](#unit-tests), [self](#self-tests), [runtime](#runtime-tests), [tool parsing](#tool-parsing-tests), and [doctest](#documentation-examples-tests).
 
 Every contribution should (1) not break the existing tests and (2) introduce new tests if relevant.
 
@@ -167,3 +167,19 @@ test suite
 - `TOOLS_TEST_DISABLE`: comma separated list of tools to skip, e.g.
   `vfscount.bt,swapin.bt`
 - `TOOLS_TEST_OLDVERSION`: tests the tools/old version of these tools instead.
+
+## Documentation examples tests
+
+Test examples (`bpftrace` code blocks) from `docs/stdlib.md`.
+
+Tests can be executed by: `sudo ./build/tests/runtime-tests.sh --filter '^stdlib_docs'`.
+
+By default, examples must compile successfully. Place a marker in `src/stdlib/*.bt` files immediately before a code block to change its handling:
+
+`<!-- doctest: FLAGS -->`
+
+`FLAGS` is a comma-separated list of:
+
+- `skip`: skip the example.
+- `expect-fail`: expect a compilation error.
+- `unsafe`: compile with `--unsafe`.

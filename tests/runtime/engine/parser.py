@@ -5,6 +5,9 @@ import os
 import platform
 import re
 import sys
+from pathlib import Path
+import cmake_vars
+from documentation import extract_examples
 from runner import Runner
 
 DEFAULT_TIMEOUT = 5
@@ -87,6 +90,12 @@ class TestParser(object):
 
         if run_aot_tests:
             yield ('aot', aot_tests)
+
+        path = Path(cmake_vars.SOURCE_DIR) / 'docs/stdlib.md'
+        examples = extract_examples(path.read_text(encoding='utf-8'), path)
+        if not examples:
+            raise ValueError(f'{path}: no bpftrace examples found')
+        yield ('stdlib_docs', examples)
 
     @staticmethod
     def read(file_name):

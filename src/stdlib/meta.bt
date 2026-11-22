@@ -40,6 +40,7 @@ macro is_unsigned_integer(expr)
 //
 // **compile time**
 //
+// <!-- doctest: expect-fail -->
 // ```bpftrace
 // BEGIN { static_assert(1 == 2) }
 // /*

@@ -326,6 +326,7 @@ If deletion fails (e.g. the key doesn’t exist) the function returns false (0).
 If the return value of `delete` isn't used, you will get a compile-time warning, whether or not the deletion succeeds.
 Use `_ = delete(...)` to discard it without a warning.
 
+<!-- doctest: skip -->
 ```bpftrace
 @a[1] = 1;
 
@@ -343,8 +344,9 @@ _ = delete(@a, 2); // no warning (return value is explicitly discarded)
 The, now deprecated, API (supported in version &lt;= 0.21.x) of passing map arguments with the key is still supported:
 e.g. `delete(@mymap[3, "hello"]);`.
 
+<!-- doctest: expect-fail -->
 ```bpftrace
-kprobe:dummy {
+BEGIN {
   @scalar = 1;
   delete(@scalar); // ok
   @single["hello"] = 1;
@@ -453,6 +455,7 @@ Reports a compile-time error and halts compilation when reached.
 
 `fail()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location but, as opposed to [`errorf`](#errorf), is treated like a static assert and halts compilation if it is visited. All args have to be literals since they are evaluated at compile time.
 
+<!-- doctest: expect-fail -->
 ```bpftrace
 BEGIN { if ($1 < 2) { fail("Expected the first positional param to be greater than 1. Got %d", $1); } }
 ```
@@ -471,7 +474,7 @@ Use this instead of `has_key` and a map access to avoid an additional map lookup
 Error if called with a map that has no keys (aka scalar map).
 
 ```bpftrace
-kprobe:dummy {
+BEGIN {
   @map[2] = (1, "hello");
   let $val;
   if (find(@map, 2, $val)) {
@@ -546,8 +549,9 @@ Return `true` if the key exists in this map.
 Otherwise return `false`.
 Error if called with a map that has no keys (aka scalar map).
 
+<!-- doctest: expect-fail -->
 ```bpftrace
-kprobe:dummy {
+BEGIN {
   @associative[1,2] = 1;
   if (!has_key(@associative, (1,3))) { // ok
     print(("bye"));
@@ -581,6 +585,7 @@ using the `ERR_PTR` macro. These are pointer values in the range
 
 This is equivalent to the kernel's `IS_ERR()` macro.
 
+<!-- doctest: skip -->
 ```bpftrace
 fexit:do_filp_open {
   if (is_err(retval)) {
@@ -959,6 +964,7 @@ This utilizes the BPF helper `bpf_override_return`.
 
 When using `override` the probed function will not be executed and instead `rc` will be returned.
 
+<!-- doctest: unsafe,skip -->
 ```bpftrace
 kprobe:__x64_sys_getuid
 /comm == "id"/ {
@@ -1139,6 +1145,7 @@ The `div` argument scales the values prior to printing them.
 Scaling values before storing them can result in rounding errors.
 Consider the following program:
 
+<!-- doctest: skip -->
 ```bpftrace
 kprobe:f {
   @[func] += arg0 / 10;
@@ -1230,7 +1237,7 @@ tracepoint:kmem:kmalloc {
 Colors are supported too, using standard terminal escape sequences:
 
 ```bpftrace
-print("\033[31mRed\t\033[33mYellow\033[0m\n")
+BEGIN { printf("\033[31mRed\t\033[33mYellow\033[0m\n"); }
 ```
 
 
@@ -1338,6 +1345,7 @@ Send a signal to the process being traced (any thread).
 Use `signal_thread` to send to the thread being traced.
 The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
 
+<!-- doctest: unsafe -->
 ```bpftrace
 kprobe:__x64_sys_execve
 /comm == "bash"/ {
@@ -1419,6 +1427,7 @@ Environment variable `BPFTRACE_PERF_RB_PAGES` should be increased in order to ca
 
 Usage (save as `dump.bt`):
 
+<!-- doctest: skip -->
 ```bpftrace
 fentry:napi_gro_receive {
   $ret = skboutput("receive.pcap", args.skb, args.skb.len, 0);
@@ -1492,6 +1501,7 @@ Assert something is true or fail the build.
 
 **compile time**
 
+<!-- doctest: expect-fail -->
 ```bpftrace
 BEGIN { static_assert(1 == 2) }
 /*
@@ -1646,6 +1656,7 @@ Runs a command in a child process and prints its output.
 `system` lets bpftrace run the specified command (`fork` and `exec`) until it completes and print its stdout.
 The `command` is run with the same privileges as bpftrace and it blocks execution of the processing threads which can lead to missed events and delays processing of async events.
 
+<!-- doctest: unsafe -->
 ```bpftrace
 interval:s:1 {
   time("%H:%M:%S: ");
@@ -1687,6 +1698,7 @@ Note how the async `time` and `printf` first print every second until the `inter
 
 `system` supports the same format string and arguments that `printf` does.
 
+<!-- doctest: unsafe -->
 ```bpftrace
 tracepoint:syscalls:sys_enter_execve {
   system("/bin/grep %s /proc/%d/status", "VmSwap", pid);
@@ -1950,6 +1962,7 @@ Returns `true` on success, or `false` on failure.
 Only use on user-space memory addresses belonging to the current task.
 The kernel will print a warning to dmesg when this helper is used.
 
+<!-- doctest: unsafe,skip -->
 ```bpftrace
 tracepoint:syscalls:sys_enter_openat
 /comm == "myapp"/ {
@@ -1986,7 +1999,7 @@ Calculates the running average of values passed to the function.
 ```bpftrace
 interval:s:1 {
   @x++;
-  @y = avg(@x);
+  @y = avg((int64)@x);
   print(@x);
   print(@y);
 }
@@ -2127,9 +2140,11 @@ int x = std::max(3, 33);  // x contains 33
 
 In bpftrace:
 ```bpftrace
-@x = max(3);
-@x = max(33);
-assert(@x == 33, "Invalid maximum!");
+BEGIN {
+  @x = max(3);
+  @x = max(33);
+  assert(@x == 33, "Invalid maximum!");
+}
 ```
 
 Also note that bpftrace takes care to handle the unset case. In other words,
@@ -2170,6 +2185,10 @@ kprobe:vfs_read {
 Individual fields of a `stats_t` map can also be accessed synchronously using `.count`, `.total`, and `.avg`:
 
 ```bpftrace
+kprobe:vfs_read {
+  @bytes[comm] = stats(arg2);
+}
+
 interval:s:1 {
   printf("Count: %d, Total: %d, Avg: %d\n", @bytes["bash"].count, @bytes["bash"].total, @bytes["bash"].avg);
 }
@@ -2235,10 +2254,12 @@ Create a time series that tracks an integer value. `tseries` records up to
 Use duration suffixes to improve readability:
 
 ```bpftrace
-@a = tseries(1, 100ns, 5); // 100 nanoseconds
-@b = tseries(1, 100us, 5); // 100 microseconds
-@c = tseries(1, 100ms, 5); // 100 milliseconds
-@d = tseries(1, 1s, 5);    // 1 second
+BEGIN {
+  @a = tseries(1, 100ns, 5); // 100 nanoseconds
+  @b = tseries(1, 100us, 5); // 100 microseconds
+  @c = tseries(1, 100ms, 5); // 100 milliseconds
+  @d = tseries(1, 1s, 5);    // 1 second
+}
 ```
 
 #### Aggregation Functions

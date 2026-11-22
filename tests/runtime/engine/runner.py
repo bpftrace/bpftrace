@@ -9,10 +9,14 @@ import os
 import time
 from looseversion import LooseVersion
 import re
+import shlex
+import tempfile
 from functools import lru_cache
+from pathlib import Path
 import time
 
 import cmake_vars
+from documentation import DocumentationTest
 
 BPFTRACE_BIN = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
 COLOR_SETTING = os.environ.get("RUNTIME_TEST_COLOR", "auto")
@@ -71,6 +75,7 @@ class Runner(object):
     SKIP_AOT_NOT_SUPPORTED = 7
     SKIP_KERNEL_VERSION_MAX = 8
     SKIP_NOT_IN_ALLOWLIST = 9
+    SKIP_DOCTEST = 10
 
     @staticmethod
     def failed(status):
@@ -90,6 +95,7 @@ class Runner(object):
             Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED,
             Runner.SKIP_AOT_NOT_SUPPORTED,
             Runner.SKIP_NOT_IN_ALLOWLIST,
+            Runner.SKIP_DOCTEST,
         ]
 
     @staticmethod
@@ -110,6 +116,8 @@ class Runner(object):
             return "aot does not yet support this"
         elif status == Runner.SKIP_NOT_IN_ALLOWLIST:
             return "disabled by entry not in allowlist file"
+        elif status == Runner.SKIP_DOCTEST:
+            return "doctest: skip"
         else:
             raise ValueError("Invalid skip reason: %d" % status)
 
@@ -212,7 +220,63 @@ class Runner(object):
 
 
     @staticmethod
+    def run_documentation_test(test):
+        label = f"{test.suite}.{test.name} ({test.path}:{test.line})"
+        if "skip" in test.flags:
+            print(warn("[   SKIP   ] ") + label)
+            return Runner.SKIP_DOCTEST
+
+        print(ok("[ RUN      ] ") + label)
+        with tempfile.TemporaryDirectory(prefix="bpftrace-doctest-") as directory:
+            script = Path(directory) / "example.bt"
+            # Keep compiler line numbers aligned with the documentation.
+            script.write_text("\n" * (test.line - 1) + test.code,
+                              encoding="utf-8")
+            command = [BPFTRACE_BIN, "--mode=codegen", "--verify-llvm-ir"]
+            if "unsafe" in test.flags:
+                command.append("--unsafe")
+            command.append(str(script))
+            try:
+                result = subprocess.run(command, capture_output=True, text=True,
+                                        errors="backslashreplace",
+                                        timeout=test.timeout)
+            except subprocess.TimeoutExpired:
+                print(fail("[  TIMEOUT ] ") + label)
+                print(f"\tTimeout: {test.timeout} seconds")
+                return Runner.TIMEOUT
+            except OSError as error:
+                print(fail("[  FAILED  ] ") + label)
+                print(f"\t{error}")
+                return Runner.FAIL
+
+        output = (result.stdout + result.stderr).replace(
+            str(script), str(test.path))
+        if "expect-fail" in test.flags:
+            # Startup errors and crashes must not satisfy an expected failure.
+            diagnostic = re.search(
+                r"(?m)^.+:\d+(?:-\d+)?(?::\d+(?:-\d+)?)?: ERROR:", output)
+            passed = result.returncode == 1 and diagnostic is not None
+        else:
+            passed = result.returncode == 0
+
+        if passed:
+            suffix = " (expected failure)" if "expect-fail" in test.flags else ""
+            print(ok("[       OK ] ") + label + suffix)
+            return Runner.PASS
+
+        print(fail("[  FAILED  ] ") + label)
+        print(f"\tCommand: {shlex.join(command)}")
+        print(f"\tExit code: {result.returncode}")
+        if "expect-fail" in test.flags:
+            print("\tExpected compilation to fail with a source diagnostic")
+        print(output)
+        return Runner.FAIL
+
+    @staticmethod
     def run_test(test):
+        if isinstance(test, DocumentationTest):
+            return Runner.run_documentation_test(test)
+
         current_kernel = LooseVersion(os.uname()[2])
         if test.kernel_min and LooseVersion(test.kernel_min) > current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
