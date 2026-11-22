@@ -35,9 +35,31 @@ macro is_unsigned_integer(expr)
 }
 
 // :summary Assert something is true or fail the build.
+// :variant void static_assert(bool condition)
 // :variant void static_assert(bool condition, string msg)
 //
 // **compile time**
+//
+// <!-- doctest: expect-fail -->
+// ```bpftrace
+// BEGIN { static_assert(1 == 2) }
+// /*
+//  * Sample output:
+//  * stdlib/meta.bt:61:5-64: ERROR: static_assert failed: 1 == 2
+//  *     fail("static_assert failed: %s", __builtin_stringify(cond));
+//  *     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  * stdin:1:9-30: ERROR: expanded from
+//  * BEGIN { static_assert(1 == 2) }
+//  *         ~~~~~~~~~~~~~~~~~~~~~
+//  */
+// ```
+macro static_assert(cond)
+{
+  if comptime (!cond) {
+    fail("static_assert failed: %s", __builtin_stringify(cond));
+  }
+}
+
 macro static_assert(cond, msg)
 {
   if comptime (!cond) {

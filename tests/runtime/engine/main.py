@@ -24,7 +24,7 @@ def main(test_filter, allowlist_file, run_aot_tests):
     try:
         test_suite = sorted(TestParser.read_all(run_aot_tests))
         test_suite = [ (n, sorted(t)) for n, t in test_suite ]
-    except (UnknownFieldError, RequiredFieldError) as error:
+    except (UnknownFieldError, RequiredFieldError, OSError, ValueError) as error:
         print(fail(f"[  FAILED  ] {str(error)}"))
         exit(1)
 
@@ -78,7 +78,7 @@ def main(test_filter, allowlist_file, run_aot_tests):
     total_tests -= len(skipped_tests)
 
     print(ok("[==========]") + " %d tests from %d test cases ran. (%s ms total)" % (total_tests, len(test_suite), math.ceil(elapsed * 1000)))
-    print(ok("[  PASSED  ]") + " %d tests." % (total_tests - len(failed_tests)))
+    print(ok("[  PASSED  ]") + " %d tests." % (total_tests - len(failed_tests) - len(timeouted_tests)))
 
     if skipped_tests:
         print(warn("[   SKIP   ]") + " %d tests, listed below:" % len(skipped_tests))

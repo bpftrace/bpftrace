@@ -2033,6 +2033,50 @@ TEST_F(TypeCheckerTest, unop_increment_decrement)
   test("kprobe:f { --true; }", Error{});
 }
 
+TEST_F(TypeCheckerTest, stringify)
+{
+  test("begin { print(__builtin_stringify(1 + 2)); }");
+  test("begin { __builtin_stringify(); }", Error{});
+  test("begin { __builtin_stringify(1, 2); }", Error{});
+}
+
+TEST_F(TypeCheckerTest, assert_default_message)
+{
+  test("begin { assert(true); }");
+  test("begin { assert(1); }");
+  test("begin { $x = 1; assert($x); }");
+  test("begin { assert(\"invalid condition\"); }", Error{});
+  test("begin { assert(); }", Error{});
+}
+
+TEST_F(TypeCheckerTest, static_assert_default_message)
+{
+  test("begin { static_assert(true); }");
+  test("begin { static_assert(1); }");
+  test("begin { static_assert(5 % 2 == 1); }");
+  test("begin { static_assert(1 == 2); }",
+       Error{ "ERROR: static_assert failed: 1 == 2" });
+  test("begin { static_assert(5 % 2 == 0); }",
+       Error{ "ERROR: static_assert failed: 5 % 2 == 0" });
+  test(R"(begin { static_assert("%s" == "%d"); })",
+       Error{ R"(ERROR: static_assert failed: "%s" == "%d")" });
+  test("macro check(cond) { static_assert(cond); } "
+       "begin { check(1 + 2 == 4); }",
+       Error{ "ERROR: static_assert failed: 1 + 2 == 4" });
+  test("begin { $x = 1; static_assert($x == 1); }", Error{});
+  test("begin { static_assert((1 + 2) * 3 == 8); }",
+       Error{ "ERROR: static_assert failed: (1 + 2) * 3 == 8" });
+}
+
+TEST_F(TypeCheckerTest, static_assert_custom_message)
+{
+  test(R"(begin { static_assert(true, "custom message"); })");
+  test(R"(begin { static_assert(false, "custom message"); })",
+       Error{ "ERROR: custom message" });
+  test(R"(begin { static_assert(false, "100%% failed"); })",
+       Error{ "ERROR: 100% failed" });
+}
+
 TEST_F(TypeCheckerTest, printf_errorf_warnf)
 {
   std::vector<std::string> funcs = { "printf", "errorf", "warnf" };

@@ -24,6 +24,7 @@ TEST(Location, single_line)
   auto &err = call.addError();
 
   EXPECT_EQ(err.loc()->source_location(), "testfile:3:9-13");
+  EXPECT_EQ(loc.source_text(), "1, 2");
   EXPECT_EQ(err.loc()->source_context(),
             std::vector<std::string>({
                 "  print(1, 2);",
@@ -43,6 +44,7 @@ TEST(Location, multi_line)
   auto &err = call.addError();
 
   EXPECT_EQ(err.loc()->source_location(), "testfile:3-4");
+  EXPECT_EQ(loc.source_text(), "print(1, 2);\n  print(1, 2, 3, 4");
   EXPECT_EQ(err.loc()->source_context(),
             std::vector<std::string>({
                 "  print(1, 2);",
@@ -65,6 +67,7 @@ TEST(Location, multi_line_trailing_newline)
   auto &warn = call.addWarning();
 
   EXPECT_EQ(warn.loc()->source_location(), "testfile:1-4");
+  EXPECT_EQ(loc.source_text(), src);
   EXPECT_EQ(warn.loc()->source_context(),
             std::vector<std::string>({
                 "i:s:1 {",
@@ -72,6 +75,20 @@ TEST(Location, multi_line_trailing_newline)
                 "}",
                 "",
             }));
+}
+
+TEST(Location, source_text_without_source)
+{
+  EXPECT_EQ(ast::SourceLocation().source_text(), "");
+}
+
+TEST(Location, source_text_multiple_lines)
+{
+  ast::ASTContext ast("testfile", "one\ntwo\nthree\nfour");
+  ast::SourceLocation loc(ast.source());
+  loc.begin = { .line = 1, .column = 2 };
+  loc.end = { .line = 4, .column = 3 };
+  EXPECT_EQ(loc.source_text(), "ne\ntwo\nthree\nfo");
 }
 
 } // namespace bpftrace::test::location

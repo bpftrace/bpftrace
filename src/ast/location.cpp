@@ -29,6 +29,25 @@ std::string SourceLocation::source_location() const
   return ss.str();
 }
 
+std::string SourceLocation::source_text() const
+{
+  if (!source_) {
+    return {};
+  }
+
+  size_t start = 0;
+  for (int line = 1; line < begin.line; ++line) {
+    start += source_->lines_.at(line - 1).size() + 1;
+  }
+  size_t finish = start;
+  for (int line = begin.line; line < end.line; ++line) {
+    finish += source_->lines_.at(line - 1).size() + 1;
+  }
+  start += begin.column - 1;
+  finish += end.column - 1;
+  return source_->contents.substr(start, finish - start);
+}
+
 std::ostream &operator<<(std::ostream &out, const SourceLocation &loc)
 {
   out << loc.source_location();

@@ -15,7 +15,31 @@ macro arch()
 }
 
 // :summary Terminates the script with an error code if a condition is false.
+// :variant void assert(bool condition)
 // :variant void assert(bool condition, string message)
+//
+// When no message is supplied, the condition's original source text is used
+// as the message. The condition is evaluated once.
+//
+// ```bpftrace
+// fentry:vmlinux:gro_receive_skb { assert(args.skb.len < 128) }
+// /*
+//  * Sample output:
+//  * Attached 1 probe
+//  * stdlib/base.bt:52:5-37: ERROR: assert failed: args.skb.len < 128
+//  * stdlib/base.bt:46:3-42: ERROR: expanded from
+//  *   assert(cond, __builtin_stringify(cond));
+//  *   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  * stdin:1:34-60: ERROR: expanded from
+//  * fentry:vmlinux:gro_receive_skb { assert(args.skb.len < 128) }
+//  *                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~
+//  */
+// ```
+macro assert(cond)
+{
+  assert(cond, __builtin_stringify(cond));
+}
+
 macro assert(cond, msg)
 {
   if (!cond) {
@@ -265,6 +289,7 @@ macro curtask()
 // If the return value of `delete` isn't used, you will get a compile-time warning, whether or not the deletion succeeds.
 // Use `_ = delete(...)` to discard it without a warning.
 //
+// <!-- doctest: skip -->
 // ```bpftrace
 // @a[1] = 1;
 //
@@ -282,8 +307,9 @@ macro curtask()
 // The, now deprecated, API (supported in version &lt;= 0.21.x) of passing map arguments with the key is still supported:
 // e.g. `delete(@mymap[3, "hello"]);`.
 //
+// <!-- doctest: expect-fail -->
 // ```bpftrace
-// kprobe:dummy {
+// BEGIN {
 //   @scalar = 1;
 //   delete(@scalar); // ok
 //   @single["hello"] = 1;
@@ -381,6 +407,7 @@ macro elapsed()
 //
 // `fail()` formats and prints data (similar to [`printf`](#printf)) as an error message with the source location but, as opposed to [`errorf`](#errorf), is treated like a static assert and halts compilation if it is visited. All args have to be literals since they are evaluated at compile time.
 //
+// <!-- doctest: expect-fail -->
 // ```bpftrace
 // BEGIN { if ($1 < 2) { fail("Expected the first positional param to be greater than 1. Got %d", $1); } }
 // ```
@@ -395,7 +422,7 @@ macro elapsed()
 // Error if called with a map that has no keys (aka scalar map).
 //
 // ```bpftrace
-// kprobe:dummy {
+// BEGIN {
 //   @map[2] = (1, "hello");
 //   let $val;
 //   if (find(@map, 2, $val)) {
@@ -469,8 +496,9 @@ macro gid()
 // Otherwise return `false`.
 // Error if called with a map that has no keys (aka scalar map).
 //
+// <!-- doctest: expect-fail -->
 // ```bpftrace
-// kprobe:dummy {
+// BEGIN {
 //   @associative[1,2] = 1;
 //   if (!has_key(@associative, (1,3))) { // ok
 //     print(("bye"));
@@ -499,6 +527,7 @@ macro has_key(@map, key)
 //
 // This is equivalent to the kernel's `IS_ERR()` macro.
 //
+// <!-- doctest: skip -->
 // ```bpftrace
 // fexit:do_filp_open {
 //   if (is_err(retval)) {
@@ -779,6 +808,7 @@ macro numaid()
 //
 // When using `override` the probed function will not be executed and instead `rc` will be returned.
 //
+// <!-- doctest: unsafe,skip -->
 // ```bpftrace
 // kprobe:__x64_sys_getuid
 // /comm == "id"/ {
@@ -820,6 +850,7 @@ macro override(expr)
 // Only use on user-space memory addresses belonging to the current task.
 // The kernel will print a warning to dmesg when this helper is used.
 //
+// <!-- doctest: unsafe,skip -->
 // ```bpftrace
 // tracepoint:syscalls:sys_enter_openat
 // /comm == "myapp"/ {
@@ -1027,6 +1058,7 @@ macro leader_comm()
 // Scaling values before storing them can result in rounding errors.
 // Consider the following program:
 //
+// <!-- doctest: skip -->
 // ```bpftrace
 // kprobe:f {
 //   @[func] += arg0 / 10;
@@ -1115,7 +1147,7 @@ macro leader_comm()
 // Colors are supported too, using standard terminal escape sequences:
 //
 // ```bpftrace
-// print("\033[31mRed\t\033[33mYellow\033[0m\n")
+// BEGIN { printf("\033[31mRed\t\033[33mYellow\033[0m\n"); }
 // ```
 
 // :summary Returns the fully expanded name of the current probe.
@@ -1209,6 +1241,7 @@ macro retval()
 // Use `signal_thread` to send to the thread being traced.
 // The signal can either be identified by name, e.g. `SIGSTOP` or by ID, e.g. `19` as found in `kill -l`.
 //
+// <!-- doctest: unsafe -->
 // ```bpftrace
 // kprobe:__x64_sys_execve
 // /comm == "bash"/ {
@@ -1274,6 +1307,7 @@ macro signal_thread(expr)
 //
 // Usage (save as `dump.bt`):
 //
+// <!-- doctest: skip -->
 // ```bpftrace
 // fentry:napi_gro_receive {
 //   $ret = skboutput("receive.pcap", args.skb, args.skb.len, 0);
@@ -1399,6 +1433,7 @@ macro socket_cookie(sk)
 // `system` lets bpftrace run the specified command (`fork` and `exec`) until it completes and print its stdout.
 // The `command` is run with the same privileges as bpftrace and it blocks execution of the processing threads which can lead to missed events and delays processing of async events.
 //
+// <!-- doctest: unsafe -->
 // ```bpftrace
 // interval:s:1 {
 //   time("%H:%M:%S: ");
@@ -1440,6 +1475,7 @@ macro socket_cookie(sk)
 //
 // `system` supports the same format string and arguments that `printf` does.
 //
+// <!-- doctest: unsafe -->
 // ```bpftrace
 // tracepoint:syscalls:sys_enter_execve {
 //   system("/bin/grep %s /proc/%d/status", "VmSwap", pid);

@@ -41,6 +41,9 @@ public:
   // form `<file>:<x-y>`.
   std::string source_location() const;
 
+  // Original source text covered by this location.
+  std::string source_text() const;
+
   // Produce a sequence of lines that highlights the specific source context.
   // Note that these should be emitted such that the columns for each line line
   // up when they are displayed.

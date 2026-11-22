@@ -37,6 +37,8 @@ and this project adheres to
   - [#5447](https://github.com/bpftrace/bpftrace/pull/5447)
 - Add `no_prealloc` map declaration arg to create maps that allocate on demand
   - [#5450](https://github.com/bpftrace/bpftrace/pull/5450)
+- Allow `assert()` and `static_assert()` without an explicit message
+  - [#5451](https://github.com/bpftrace/bpftrace/pull/5451)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.
