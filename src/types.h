@@ -696,6 +696,7 @@ std::optional<SizedType> get_promoted_record(const SizedType &currentType,
                                              const SizedType &newType);
 std::optional<SizedType> get_promoted_type(const SizedType &currentType,
                                            const SizedType &newType);
+SizedType castable_map_type_to_int(const SizedType &type);
 
 std::string_view addrspacestr(AddrSpace as);
 std::string typestr(Type t);

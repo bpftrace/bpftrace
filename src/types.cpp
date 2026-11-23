@@ -790,14 +790,19 @@ std::optional<SizedType> get_promoted_record(const SizedType &currentType,
   return CreateRecord(Struct::CreateRecord(new_elems, names));
 }
 
+SizedType castable_map_type_to_int(const SizedType &type)
+{
+  if (type.IsCastableMapTy()) {
+    return type.IsSigned() ? CreateInt64() : CreateUInt64();
+  }
+  return type;
+}
+
 std::optional<SizedType> get_promoted_type(const SizedType &currentType,
                                            const SizedType &newType)
 {
   if (currentType.IsNoneTy()) {
-    if (newType.IsCastableMapTy()) {
-      return newType.IsSigned() ? CreateInt64() : CreateUInt64();
-    }
-    return newType;
+    return castable_map_type_to_int(newType);
   }
 
   if (currentType == newType) {

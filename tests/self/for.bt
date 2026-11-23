@@ -288,3 +288,36 @@ test:map_nested_count
   }
 }
 
+test:map_min_max_avg_key_elements
+{
+  @map_min_max_avg_key_elements_min = min(5);
+  @map_min_max_avg_key_elements_max = max(6);
+  @map_min_max_avg_key_elements_avg = avg(7);
+  @map_min_max_avg_key_elements[@map_min_max_avg_key_elements_min,
+                                @map_min_max_avg_key_elements_max,
+                                @map_min_max_avg_key_elements_avg] = 1;
+
+  for $kv : @map_min_max_avg_key_elements {
+    if ($kv != ((5, 6, 7), 1)) {
+      return 1;
+    }
+  }
+}
+
+test:map_min_max_avg_value_elements
+{
+  @map_min_max_avg_value_elements_min = min(5);
+  @map_min_max_avg_value_elements_max = max(6);
+  @map_min_max_avg_value_elements_avg = avg(7);
+  @map_min_max_avg_value_elements[1] = (1,
+                                        @map_min_max_avg_value_elements_min,
+                                        @map_min_max_avg_value_elements_max,
+                                        @map_min_max_avg_value_elements_avg);
+
+  for $kv : @map_min_max_avg_value_elements {
+    if ($kv != (1, (1, 5, 6, 7))) {
+      return 1;
+    }
+  }
+}
+

@@ -669,6 +669,59 @@ TEST_F(TypeResolverTest, map_value_castable_maps)
   test(R"(begin { @a = sum(1); @a = 1; })", Error{});
 }
 
+TEST_F(TypeResolverTest, map_key_castable_maps)
+{
+  {
+    auto result = test(R"(begin { @a = count(); @k[@a] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@k"), CreateUInt64());
+  }
+  {
+    auto result = test(
+        R"(begin { @a = count(); @c = min(1); @k[@a, @c] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@k"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateUInt64(), CreateInt64() })));
+  }
+  {
+    auto result = test(
+        R"(begin { @a = max(1); @c = avg(1); @k[1, (@a, @c)] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@k"),
+              CreateTuple(Struct::CreateTuple(
+                  { CreateInt8(),
+                    CreateTuple(Struct::CreateTuple(
+                        { CreateInt64(), CreateInt64() })) })));
+  }
+  {
+    auto result = test(
+        R"(begin { @a = count(); @c = min(1); @k[(x=@a, y=@c)] = 1; })");
+    EXPECT_EQ(map_key_type(result, "@k"),
+              CreateRecord(Struct::CreateRecord(
+                  { CreateUInt64(), CreateInt64() }, { "x", "y" })));
+  }
+}
+
+TEST_F(TypeResolverTest, tuple_record_castable_maps)
+{
+  {
+    auto result = test(R"(begin { @c = max(1); @v[1] = (2, @c); })");
+    EXPECT_EQ(map_val_type(result, "@v"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateInt8(), CreateInt64() })));
+  }
+  {
+    auto result = test(R"(begin { @c = min(1); @v[1] = (x=2, y=@c); })");
+    EXPECT_EQ(map_val_type(result, "@v"),
+              CreateRecord(Struct::CreateRecord({ CreateInt8(), CreateInt64() },
+                                                { "x", "y" })));
+  }
+  {
+    auto result = test(R"(begin { @c = count(); $t = (1, @c); })");
+    EXPECT_EQ(var_type(result, "$t"),
+              CreateTuple(
+                  Struct::CreateTuple({ CreateInt8(), CreateUInt64() })));
+  }
+}
+
 TEST_F(TypeResolverTest, map_key_promotion_integers)
 {
   {
