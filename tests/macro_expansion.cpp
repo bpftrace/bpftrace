@@ -168,6 +168,63 @@ TEST(macro_expansion, misc)
   test("macro add3(x) { x + add5(x) } begin { print(add3(1)); }");
 }
 
+TEST(macro_expansion, stringify)
+{
+  test("begin { print(__builtin_stringify(1 + 2)); }", R"(print("1 + 2"))");
+  test("begin { print(__builtin_stringify(\n1 +\n2)); }", R"(print("1 +\n2"))");
+  test("begin { print(__builtin_stringify(missing(++$x))); }",
+       R"bt(print("missing(++$x)"))bt");
+
+  test_error("begin { __builtin_stringify(); }",
+             "__builtin_stringify() expects one argument");
+  test_error("begin { __builtin_stringify(1, 2); }",
+             "__builtin_stringify() expects one argument");
+}
+
+TEST(macro_expansion, stringify_stdlib)
+{
+  test("begin { print(stringify(1 + 2)); }", R"("1 + 2")");
+  test("macro value() { 1 } begin { print(stringify(value())); }",
+       R"bt("value()")bt");
+}
+
+TEST(macro_expansion, stringify_argument_spans)
+{
+  test("begin { print(__builtin_stringify((1 + 2) * 3 == 8)); }",
+       R"bt(print("(1 + 2) * 3 == 8"))bt");
+  test("begin { print(__builtin_stringify((uint8)256)); }",
+       R"bt(print("(uint8)256"))bt");
+}
+
+TEST(macro_expansion, stringify_macro_arguments)
+{
+  test("macro text(x) { __builtin_stringify(x) } "
+       "begin { print(text(1 + 2)); }",
+       R"("1 + 2")");
+  test("macro value() { 1 } macro text(x) { __builtin_stringify(x) } "
+       "begin { print(text(value())); }",
+       R"bt("value()")bt");
+  test("macro text(x) { __builtin_stringify(x) } "
+       "macro forward(x) { text(x) } begin { print(forward(1 + 2)); }",
+       R"("1 + 2")");
+  test("macro text(x) { __builtin_stringify(x) } "
+       "begin { print(text(text(1 + 2))); }",
+       R"bt("text(1 + 2)")bt");
+  test("macro text(unused, x) { __builtin_stringify(x) } "
+       "begin { print(text(0,\n typeof(uint8))); }",
+       R"bt("typeof(uint8)")bt");
+  test("macro text($v) { __builtin_stringify($v) } "
+       "begin { $value = 1; print(text($value)); }",
+       R"("$value")");
+  test("macro text($v) { __builtin_stringify($v) } "
+       "macro forward($v) { text($v) } "
+       "begin { $value = 1; print(forward($value)); }",
+       R"("$value")");
+  test("macro text(@m) { __builtin_stringify(@m) } "
+       "begin { @value = 1; print(text(@value)); }",
+       R"("@value")");
+}
+
 TEST(macro_expansion, overloading)
 {
   // Check for overloading against types.

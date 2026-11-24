@@ -154,6 +154,20 @@ Result<const Macro *> MacroRegistry::lookup(const std::string &name,
   return make_error<MacroLookupError>(name, std::move(closest));
 }
 
+static const std::string *macro_parameter_name(const Expression &expr)
+{
+  if (const auto *ident = expr.as<Identifier>()) {
+    return &ident->ident;
+  }
+  if (const auto *var = expr.as<Variable>()) {
+    return &var->ident;
+  }
+  if (const auto *map = expr.as<Map>()) {
+    return &map->ident;
+  }
+  return nullptr;
+}
+
 class MacroExpander : public Visitor<MacroExpander> {
 public:
   MacroExpander(ASTContext &ast,
@@ -190,12 +204,14 @@ private:
 
   bool rename_ok();
   std::string get_new_var_ident(std::string original_ident);
+  Location argument_location(const Expression &expr) const;
 
   // Maps of macro map/var names -> callsite map/var names
   std::unordered_map<std::string, std::string> maps_;
   std::unordered_map<std::string, std::string> vars_;
   std::unordered_set<std::string> renamed_vars_;
   std::unordered_map<std::string, Expression> passed_exprs_;
+  std::unordered_map<std::string, Location> passed_locations_;
 };
 
 void MacroExpander::visit(AssignVarStatement &assignment)
@@ -458,8 +474,20 @@ void MacroExpander::visit(Expression &expr)
     }
   }
   if (call) {
-    visit(call->vargs);
+    if (call->ns == Call::Namespace::Default &&
+        call->func == "__builtin_stringify") {
+      if (call->vargs.size() != 1) {
+        call->addError() << "__builtin_stringify() expects one argument";
+        return;
+      }
+      // Consume the original source text without expanding the argument.
+      const auto loc = argument_location(call->vargs.front());
+      expr = ast_.make_node<String>(call->loc, loc->current.source_text());
+      return;
+    }
+
     if (call->ns != Call::Namespace::Default) {
+      visit(call->vargs);
       return;
     }
   }
@@ -476,6 +504,9 @@ void MacroExpander::visit(Expression &expr)
   }
   auto result = registry_.lookup(name, args, restrict_to_stdlib);
   if (!result) {
+    if (call) {
+      visit(call->vargs);
+    }
     auto done = handleErrors(
         std::move(result), [&](const MacroLookupError &lookupErr) {
           const auto &closest = lookupErr.closest();
@@ -545,6 +576,17 @@ void MacroExpander::visit(Expression &expr)
   }
 
   const auto *macro = *result;
+  MacroExpander expander(ast_, registry_, stack_);
+  if (call) {
+    // Preserve caller locations before nested arguments are expanded.
+    for (size_t i = 0; i < macro->vargs.size(); ++i) {
+      if (const auto *param = macro_parameter_name(macro->vargs.at(i))) {
+        expander.passed_locations_[*param] = argument_location(
+            call->vargs.at(i));
+      }
+    }
+    visit(call->vargs);
+  }
   for (size_t i = 0; i < stack_.size(); ++i) {
     // We cannot expand recursively at this time, however this may happen
     // later using apply. We provide this helpful error.
@@ -560,10 +602,9 @@ void MacroExpander::visit(Expression &expr)
   }
 
   // Expand this macro.
-  stack_.push_back(macro);
-  auto r = ident ? MacroExpander(ast_, registry_, stack_).expand(*macro, *ident)
-                 : MacroExpander(ast_, registry_, stack_).expand(*macro, *call);
-  stack_.pop_back();
+  expander.stack_.push_back(macro);
+  auto r = ident ? expander.expand(*macro, *ident)
+                 : expander.expand(*macro, *call);
   if (r) {
     expr.value = *r;
   }
@@ -585,6 +626,17 @@ std::string MacroExpander::get_new_var_ident(std::string original_ident)
     base += "_" + std::to_string(stack_.size());
   }
   return base + "_" + original_ident;
+}
+
+Location MacroExpander::argument_location(const Expression &expr) const
+{
+  if (const auto *name = macro_parameter_name(expr)) {
+    if (auto it = passed_locations_.find(*name);
+        it != passed_locations_.end()) {
+      return it->second;
+    }
+  }
+  return expr.loc();
 }
 
 std::optional<BlockExpr *> MacroExpander::expand(const Macro &macro, Call &call)

@@ -69,6 +69,22 @@ macro is_literal(expr)
   __builtin_is_literal(expr)
 }
 
+// :summary Returns an expression's source text as a string.
+// :variant string stringify(any expression)
+//
+// **compile time**
+//
+// The expression is not evaluated.
+//
+// ```bpftrace
+// BEGIN { print(stringify(1 + 2)); }
+// // Prints: 1 + 2
+// ```
+macro stringify(expr)
+{
+  __builtin_stringify(expr)
+}
+
 macro assert_userspace_probe(func)
 {
   if comptime (probetype != "uprobe" && probetype != "uretprobe" && probetype != "usdt") {

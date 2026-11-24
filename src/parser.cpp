@@ -2647,6 +2647,7 @@ Expression Parser::parse_call_expression(const std::string &name,
   ExpressionList args;
   consume_layout();
   auto add_expr_or_type_arg = [&, this]() {
+    consume_layout();
     auto [begin_line, begin_col] = get_current_line_col();
     if (check_keyword("typeof")) {
       auto *typeof_node = parse_type_annotation();

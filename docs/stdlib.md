@@ -1572,6 +1572,22 @@ bpftrace also supports the following format string extensions:
 | `%f` | Microsecond as a decimal number, zero-padded on the left. |
 
 
+### stringify
+
+Returns an expression's source text as a string.
+
+- `string stringify(any expression)`
+
+**compile time**
+
+The expression is not evaluated.
+
+```bpftrace
+BEGIN { print(stringify(1 + 2)); }
+// Prints: 1 + 2
+```
+
+
 ### strlen
 
 Returns the length of a string-like object.
