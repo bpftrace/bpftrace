@@ -1181,7 +1181,7 @@ TEST_F(TypeCheckerTest, call_external_void_pointer)
   test("kprobe:f { $x = takes_int64_ptr((int32 *)arg0); }",
        Types{ types },
        Error{ R"(
-stdin:1:33-42: ERROR: Expected int64 * for argument `p` got int32 *
+stdin:1:33-46: ERROR: Expected int64 * for argument `p` got int32 *
 )" });
   test("kprobe:f { $x = takes_void_ptr(1); }", Types{ types }, Error{ R"(
 stdin:1:32-33: ERROR: Expected void * for argument `p` got int8
@@ -2465,9 +2465,9 @@ TEST_F(TypeCheckerTest, map_aggregations_explicit_cast)
   test("kprobe:f { @ = avg(5); print((1, (uint16)@)); }");
 
   test("kprobe:f { @ = hist(5); print((1, (uint16)@)); }", Error{ R"(
-stdin:1:35-43: ERROR: Cannot cast from "hist_t" to "uint16"
+stdin:1:35-44: ERROR: Cannot cast from "hist_t" to "uint16"
 kprobe:f { @ = hist(5); print((1, (uint16)@)); }
-                                  ~~~~~~~~
+                                  ~~~~~~~~~
 )" });
 }
 
@@ -2508,16 +2508,16 @@ TEST_F(TypeCheckerTest, cast_struct)
   test("struct mytype { int field; }\n"
        "begin { $s = (struct mytype *)cpu; (uint32)*$s; }",
        Error{ R"(
-stdin:2:36-44: ERROR: Cannot cast from C type "struct mytype"
+stdin:2:36-47: ERROR: Cannot cast from C type "struct mytype"
 begin { $s = (struct mytype *)cpu; (uint32)*$s; }
-                                   ~~~~~~~~
+                                   ~~~~~~~~~~~
 )" });
   test("struct mytype { int field; } "
        "begin { (struct mytype)cpu }",
        Error{ R"(
-stdin:1:38-53: ERROR: Cannot cast from "uint64" to "struct mytype"
+stdin:1:38-57: ERROR: Cannot cast from "uint64" to "struct mytype"
 struct mytype { int field; } begin { (struct mytype)cpu }
-                                     ~~~~~~~~~~~~~~~
+                                     ~~~~~~~~~~~~~~~~~~~
 )" });
 }
 
@@ -2530,15 +2530,15 @@ TEST_F(TypeCheckerTest, cast_bool)
   test("kprobe:f { $a = (int64)true; $b = (int64)false; }");
 
   test("kprobe:f { $a = (bool)kstack; }", Error{ R"(
-stdin:1:17-23: ERROR: Cannot cast from "kstack_bpftrace_127" to "bool"
+stdin:1:17-29: ERROR: Cannot cast from "kstack_bpftrace_127" to "bool"
 kprobe:f { $a = (bool)kstack; }
-                ~~~~~~
+                ~~~~~~~~~~~~
 )" });
 
   test("kprobe:f { $a = (bool)pton(\"127.0.0.1\"); }", Error{ R"(
-stdin:1:17-23: ERROR: Cannot cast from "uint8[4]" to "bool"
+stdin:1:17-40: ERROR: Cannot cast from "uint8[4]" to "bool"
 kprobe:f { $a = (bool)pton("127.0.0.1"); }
-                ~~~~~~
+                ~~~~~~~~~~~~~~~~~~~~~~~
 )" });
 }
 
@@ -2561,9 +2561,9 @@ TEST_F(TypeCheckerTest, string_too_long)
   test("kprobe:f { $a = (string[65])\"hello\"; }",
        Mock{ *bpftrace },
        Error{ R"_(
-stdin:1:17-29: ERROR: String type is too long (over 64 bytes): string[65]
+stdin:1:17-36: ERROR: String type is too long (over 64 bytes): string[65]
 kprobe:f { $a = (string[65])"hello"; }
-                ~~~~~~~~~~~~
+                ~~~~~~~~~~~~~~~~~~~
 )_" });
 
   test("kprobe:f { let $a : string[64]; }", Mock{ *bpftrace });
@@ -2888,23 +2888,23 @@ TEST_F(TypeCheckerTest, enum_casts)
   test("enum named { a = 1, b } kprobe:f { $x = 3; print((enum named)$x); }");
 
   test("enum named { a = 1, b } kprobe:f { print((enum named)3); }", Error{ R"(
-stdin:1:42-54: ERROR: Enum: named doesn't contain a variant value of 3
+stdin:1:42-55: ERROR: Enum: named doesn't contain a variant value of 3
 enum named { a = 1, b } kprobe:f { print((enum named)3); }
-                                         ~~~~~~~~~~~~
+                                         ~~~~~~~~~~~~~
 )" });
 
   test("enum Foo { a = 1, b } kprobe:f { print((enum Bar)1); }", Error{ R"(
-stdin:1:40-50: ERROR: Unknown enum: Bar
+stdin:1:40-51: ERROR: Unknown enum: Bar
 enum Foo { a = 1, b } kprobe:f { print((enum Bar)1); }
-                                       ~~~~~~~~~~
+                                       ~~~~~~~~~~~
 )" });
 
   test("enum named { a = 1, b } kprobe:f { $a = \"str\"; print((enum "
        "named)$a); }",
        Error{ R"(
-stdin:1:54-66: ERROR: Cannot cast from "string[4]" to "enum named"
+stdin:1:54-68: ERROR: Cannot cast from "string[4]" to "enum named"
 enum named { a = 1, b } kprobe:f { $a = "str"; print((enum named)$a); }
-                                                     ~~~~~~~~~~~~
+                                                     ~~~~~~~~~~~~~~
 )" });
 }
 
@@ -4686,9 +4686,9 @@ TEST_F(TypeCheckerTest, btf_type_tags)
   test("kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }",
        Mock{ *bpftrace },
        Error{ R"(
-stdin:1:13-52: ERROR: Attempting to access pointer field 'field_with_bad_tag' with unsupported tag attribute: percpu
+stdin:1:12-52: ERROR: Attempting to access pointer field 'field_with_bad_tag' with unsupported tag attribute: percpu
 kprobe:f { ((struct Foo *)arg0)->field_with_bad_tag }
-            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 )" });
 }
 
@@ -5677,9 +5677,9 @@ TEST_F(TypeCheckerTest, typeof_casts)
   test(
       R"(struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; })",
       Error{ R"(
-stdin:1:60-73: ERROR: Cannot cast from "int8" to "struct foo"
+stdin:1:60-74: ERROR: Cannot cast from "int8" to "struct foo"
 struct foo { int x; } kprobe:f { $x = (struct foo*)0; $y = (typeof(*$x))0; }
-                                                           ~~~~~~~~~~~~~
+                                                           ~~~~~~~~~~~~~~
 )" });
 }
 

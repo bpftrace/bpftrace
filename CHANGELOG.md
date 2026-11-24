@@ -57,6 +57,8 @@ and this project adheres to
   - [#5456](https://github.com/bpftrace/bpftrace/pull/5456)
 - Fix invalid BTF for tuples and records containing `min`/`max`/`avg` values, which made programs using them in maps fail to load.
   - [#5458](https://github.com/bpftrace/bpftrace/pull/5458)
+- Error locations for casts and for expressions with a parenthesized leading operand.
+  - [#5459](https://github.com/bpftrace/bpftrace/pull/5459)
 #### Security
 #### Docs
 #### Tools

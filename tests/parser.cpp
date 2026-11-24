@@ -4016,6 +4016,34 @@ TEST(Parser, naked_expression)
   ASSERT_TRUE(result.has_value());
 }
 
+TEST(Parser, expression_locations)
+{
+  for (const std::string input : {
+           "(1 + 2)",
+           "(1 + 2) * 3",
+           "(1) + (2) * (3)",
+           "(1) ? 2 : 3",
+           "(1) ?: 3",
+           "(uint8)256",
+           "(int64)(1 + 2)",
+           "(struct Foo *)arg0",
+           "((struct Foo *)arg0)->field",
+           "(curtask).pid",
+           "($x)[0]",
+           "($x).0",
+           "(@x)++",
+       }) {
+    ast::ASTContext ast("stdin", std::string(input));
+    Parser parser(ast);
+    auto result = parser.parse_expr();
+    ASSERT_TRUE(ast.diagnostics().ok()) << input;
+    ASSERT_TRUE(result.has_value()) << input;
+    EXPECT_EQ(result->loc()->source_location(),
+              "stdin:1:1-" + std::to_string(input.size() + 1))
+        << input;
+  }
+}
+
 TEST(Parser, while_loop_unary_condition)
 {
   test("kprobe:f { $a = 1; while !$a { $a++; } }",
