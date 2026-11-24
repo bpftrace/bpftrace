@@ -37,6 +37,8 @@ and this project adheres to
   - [#5447](https://github.com/bpftrace/bpftrace/pull/5447)
 - Add `no_prealloc` map declaration arg to create maps that allocate on demand
   - [#5450](https://github.com/bpftrace/bpftrace/pull/5450)
+- Resolve kernel module symbols in `kaddr`, including the `kaddr("module:symbol")` form.
+  - [#2899](https://github.com/bpftrace/bpftrace/issues/2899)
 #### Changed
 - `void *` converts to and from any pointer, without a cast, when calling an
   imported C function or kfunc.
