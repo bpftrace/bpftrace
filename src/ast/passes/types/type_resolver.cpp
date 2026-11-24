@@ -1986,7 +1986,8 @@ void TypeRuleCollector::visit(Record &record)
         std::vector<SizedType> elements;
         std::vector<std::string_view> names;
         for (size_t i = 0; i < record.elems.size(); ++i) {
-          auto &elem = elements.emplace_back(inputs[i]);
+          auto &elem = elements.emplace_back(
+              castable_map_type_to_int(inputs[i]));
           if (elem.IsCTypeTy() || elem.IsArrayTy()) {
             elem.SetValueLocation(ValueLocation::bpf_memory);
           }
@@ -2094,6 +2095,7 @@ void TypeRuleCollector::visit(Tuple &tuple)
       .resolve = [](const std::vector<SizedType> &inputs) -> SizedType {
         std::vector<SizedType> elements(inputs.begin(), inputs.end());
         for (auto &elem : elements) {
+          elem = castable_map_type_to_int(elem);
           if (elem.IsCTypeTy() || elem.IsArrayTy()) {
             elem.SetValueLocation(ValueLocation::bpf_memory);
           }

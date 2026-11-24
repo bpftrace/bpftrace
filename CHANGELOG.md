@@ -55,6 +55,8 @@ and this project adheres to
   - [#5415](https://github.com/bpftrace/bpftrace/pull/5415)
 - Exempt `fail()` from `max_strlen` restrictions because it's a comptime function.
   - [#5456](https://github.com/bpftrace/bpftrace/pull/5456)
+- Fix invalid BTF for tuples and records containing `min`/`max`/`avg` values, which made programs using them in maps fail to load.
+  - [#5458](https://github.com/bpftrace/bpftrace/pull/5458)
 #### Security
 #### Docs
 #### Tools
