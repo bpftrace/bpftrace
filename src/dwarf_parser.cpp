@@ -28,6 +28,11 @@ void DwarfParseError::log(llvm::raw_ostream &OS) const
 
 #include "llvm/ADT/StringExtras.h"
 
+#include <algorithm>
+#include <map>
+#include <set>
+#include <tuple>
+
 namespace bpftrace {
 
 struct FuncInfo {
@@ -320,6 +325,8 @@ static std::string get_die_name(Dwarf_Die *die)
   return name ?: "";
 }
 
+static std::string cu_kernel_module_name(Dwarf_Die *cudie);
+
 static int get_func_die_cb(Dwarf_Die *func_die, void *arg)
 {
   auto *func_info = static_cast<struct FuncInfo *>(arg);
@@ -331,14 +338,71 @@ static int get_func_die_cb(Dwarf_Die *func_die, void *arg)
   return DWARF_CB_OK;
 }
 
-std::optional<Dwarf_Die> Dwarf::get_func_die(const std::string &function) const
+struct DeclFiles {
+  std::string name;
+  std::set<std::string> files;
+};
+
+static int collect_decl_files_cb(Dwarf_Die *func_die, void *arg)
+{
+  auto *decl_files = static_cast<struct DeclFiles *>(arg);
+  if (!dwarf_hasattr_integrate(func_die, DW_AT_name) ||
+      get_die_name(func_die) != decl_files->name) {
+    return DWARF_CB_OK;
+  }
+
+  // A declaration names a function defined elsewhere.
+  if (!dwarf_hasattr_integrate(func_die, DW_AT_low_pc) &&
+      !dwarf_hasattr_integrate(func_die, DW_AT_ranges) &&
+      !dwarf_hasattr_integrate(func_die, DW_AT_inline)) {
+    return DWARF_CB_OK;
+  }
+
+  if (const char *decl_file = dwarf_decl_file(func_die)) {
+    decl_files->files.emplace(decl_file);
+  }
+  return DWARF_CB_OK;
+}
+
+// Number of source files defining a function of this name. A static function
+// inlined from a header appears in every CU including it, but always with the
+// same declaring file, so only distinct files mean distinct functions.
+size_t Dwarf::count_function_definitions(const std::string &function,
+                                         const std::string &kernel_module) const
+{
+  struct DeclFiles decl_files = { .name = function, .files = {} };
+
+  CuInfo cu_info = {};
+  while (next_cu_info(&cu_info)) {
+    if (!kernel_module.empty() &&
+        cu_kernel_module_name(cu_info.cu_die()) != kernel_module) {
+      continue;
+    }
+    dwarf_getfuncs(cu_info.cu_die(), collect_decl_files_cb, &decl_files, 0);
+  }
+
+  return decl_files.files.size();
+}
+
+std::optional<Dwarf_Die> Dwarf::get_func_die(
+    const std::string &function,
+    CuInfo *cu_info_out,
+    const std::string &kernel_module) const
 {
   struct FuncInfo func_info = { .name = function, .die = {} };
 
   CuInfo cu_info = {};
   while (next_cu_info(&cu_info)) {
-    if (dwarf_getfuncs(cu_info.cu_die(), get_func_die_cb, &func_info, 0) > 0)
+    if (!kernel_module.empty() &&
+        cu_kernel_module_name(cu_info.cu_die()) != kernel_module) {
+      continue;
+    }
+    if (dwarf_getfuncs(cu_info.cu_die(), get_func_die_cb, &func_info, 0) > 0) {
+      if (cu_info_out) {
+        *cu_info_out = cu_info;
+      }
       return func_info.die;
+    }
   }
 
   return std::nullopt;
@@ -827,26 +891,16 @@ Result<Dwarf::CuInfo> Dwarf::get_cu_by_src(
   return std::move(*matched);
 }
 
-Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
+Result<Dwarf_Addr> Dwarf::line_to_addr_in_cu(
+    CuInfo &cu,
+    const std::filesystem::path &source_path,
     const std::string &source_file,
     size_t line_num,
-    size_t col_num,
-    const std::string &kernel_module) const
+    size_t col_num) const
 {
-  auto cu = get_cu_by_src(source_file, kernel_module);
-  if (!cu) {
-    return cu.takeError();
-  }
-
-  if (!cu->source_path) {
-    return make_error<DwarfParseError>(
-        "Failed to get compilation unit source path");
-  }
-
   Dwarf_Lines *lines = nullptr;
   size_t num_lines = 0;
-
-  if (dwarf_getsrclines(cu->cu_die(), &lines, &num_lines) != 0) {
+  if (dwarf_getsrclines(cu.cu_die(), &lines, &num_lines) != 0) {
     return make_error<DwarfParseError>(
         "Failed to get compilation unit source lines");
   }
@@ -870,12 +924,9 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
       continue;
     }
 
-    // Check if the line source matches the CU's source path, to avoid
+    // Check if the line source matches the requested source path, to avoid
     // unintentionally accessing statements from included files.
-    //
-    // clang-tidy doesn't like the following line, even with an explicit check
-    // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
-    if (util::path_ends_with(linesrc, *cu->source_path) &&
+    if (util::path_ends_with(linesrc, source_path) &&
         line_num == static_cast<size_t>(lineno) &&
         (col_num == 0 || col_num == static_cast<size_t>(linecol))) {
       bool end_sequence = false;
@@ -900,21 +951,322 @@ Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
   }
 
   if (auto addr = statement_addr ? statement_addr : other_addr) {
-    // Add KASLR offset if in kernel mode
-    Dwfl_Module *mod = dwfl_cumodule(cu->cudie);
-    const char *func = mod ? dwfl_module_addrname(mod, *addr + cu->mod_bias)
-                           : nullptr;
-
-    return SourceLocation{
-      .address = is_kernel_ ? *addr + cu->mod_bias : *addr,
-      .kernel_module = is_kernel_ ? cu_kernel_module_name(cu->cudie) : "",
-      .function = func ? func : "",
-    };
+    return *addr;
   }
-
   return make_error<DwarfParseError>(
       "Unable to map '" + source_file + ":" + std::to_string(line_num) +
-      (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address");
+          (col_num > 0 ? ":" + std::to_string(col_num) : "") + "' to address",
+      DwarfParseError::Kind::LineNotMapped);
+}
+
+Result<Dwarf::SourceLocation> Dwarf::line_to_addr(
+    const std::string &source_file,
+    size_t line_num,
+    size_t col_num,
+    const std::string &kernel_module) const
+{
+  auto found = get_cu_by_src(source_file, kernel_module);
+  if (!found) {
+    return found.takeError();
+  }
+  CuInfo cu = std::move(*found);
+
+  if (!cu.source_path) {
+    return make_error<DwarfParseError>(
+        "Failed to get compilation unit source path");
+  }
+
+  auto addr = line_to_addr_in_cu(
+      cu, *cu.source_path, source_file, line_num, col_num);
+  if (!addr) {
+    return addr.takeError();
+  }
+
+  // Add KASLR offset if in kernel mode
+  Dwfl_Module *mod = dwfl_cumodule(cu.cudie);
+  const char *func = mod ? dwfl_module_addrname(mod, *addr + cu.mod_bias)
+                         : nullptr;
+
+  return SourceLocation{
+    .address = is_kernel_ ? *addr + cu.mod_bias : *addr,
+    .kernel_module = is_kernel_ ? cu_kernel_module_name(cu.cudie) : "",
+    .function = func ? func : "",
+  };
+}
+
+using PcRange = std::pair<Dwarf_Addr, Dwarf_Addr>;
+
+static std::vector<PcRange> get_pc_ranges(Dwarf_Die *die)
+{
+  std::vector<PcRange> ranges;
+  ptrdiff_t offset = 0;
+  Dwarf_Addr base = 0;
+  Dwarf_Addr start = 0;
+  Dwarf_Addr end = 0;
+  while ((offset = dwarf_ranges(die, offset, &base, &start, &end)) > 0) {
+    if (start < end) {
+      ranges.emplace_back(start, end);
+    }
+  }
+
+  if (ranges.empty()) {
+    Dwarf_Addr low = 0;
+    Dwarf_Addr high = 0;
+    if (dwarf_lowpc(die, &low) == 0 && dwarf_highpc(die, &high) == 0 &&
+        low < high) {
+      ranges.emplace_back(low, high);
+    }
+  }
+
+  std::ranges::sort(ranges);
+  ranges.erase(std::ranges::unique(ranges).begin(), ranges.end());
+  return ranges;
+}
+
+static void collect_instances(Dwarf_Die *die,
+                              int tag,
+                              Dwarf_Off abstract_off,
+                              std::vector<PcRange> &ranges)
+{
+  Dwarf_Die child;
+  if (dwarf_child(die, &child) != 0) {
+    return;
+  }
+
+  do {
+    if (dwarf_tag(&child) == tag) {
+      Dwarf_Attribute attr;
+      Dwarf_Die origin;
+      if (dwarf_attr(&child, DW_AT_abstract_origin, &attr) &&
+          dwarf_formref_die(&attr, &origin) &&
+          dwarf_dieoffset(&origin) == abstract_off) {
+        auto instance = get_pc_ranges(&child);
+        ranges.insert(ranges.end(), instance.begin(), instance.end());
+      }
+    }
+    collect_instances(&child, tag, abstract_off, ranges);
+  } while (dwarf_siblingof(&child, &child) == 0);
+}
+
+// An abstract DW_AT_inline DIE carries no code. The code lives in the
+// instances referring back to it: DW_TAG_subprogram for an out-of-line copy,
+// DW_TAG_inlined_subroutine for an inlined one.
+static std::vector<PcRange> get_instance_ranges(Dwarf_Die *cu_die,
+                                                int tag,
+                                                Dwarf_Die *function_die)
+{
+  std::vector<PcRange> ranges;
+  collect_instances(cu_die, tag, dwarf_dieoffset(function_die), ranges);
+  std::ranges::sort(ranges);
+  ranges.erase(std::ranges::unique(ranges).begin(), ranges.end());
+  return ranges;
+}
+
+struct DeclLineOwners {
+  std::filesystem::path file;
+  std::map<size_t, std::string> by_decl_line;
+};
+
+static int collect_decl_line_owners_cb(Dwarf_Die *die, void *arg)
+{
+  auto *owners = static_cast<DeclLineOwners *>(arg);
+
+  // Skip declarations: they carry no code and must not partition the file.
+  if (!dwarf_hasattr_integrate(die, DW_AT_low_pc) &&
+      !dwarf_hasattr_integrate(die, DW_AT_ranges) &&
+      !dwarf_hasattr_integrate(die, DW_AT_inline)) {
+    return DWARF_CB_OK;
+  }
+
+  int decl_line = 0;
+  const char *decl_file = dwarf_decl_file(die);
+  if (!decl_file || dwarf_decl_line(die, &decl_line) != 0 || decl_line <= 0 ||
+      !util::path_ends_with(decl_file, owners->file)) {
+    return DWARF_CB_OK;
+  }
+
+  owners->by_decl_line.emplace(static_cast<size_t>(decl_line),
+                               get_die_name(die));
+  return DWARF_CB_OK;
+}
+
+// Definitions do not nest in C, so a line belongs to the last definition
+// starting at or before it.
+static std::optional<std::string> line_owner(const DeclLineOwners &owners,
+                                             size_t line_num)
+{
+  auto it = owners.by_decl_line.upper_bound(line_num);
+  if (it == owners.by_decl_line.begin()) {
+    return std::nullopt;
+  }
+  --it;
+  if (it->second.empty()) {
+    return std::nullopt;
+  }
+  return it->second;
+}
+
+static bool in_ranges(const std::vector<PcRange> &ranges, Dwarf_Addr address)
+{
+  return std::ranges::any_of(ranges, [address](const auto &range) {
+    return address >= range.first && address < range.second;
+  });
+}
+
+Result<std::vector<DwarfFunctionLine>> Dwarf::list_function_lines(
+    const std::string &function,
+    bool *from_instances_out,
+    const std::string &kernel_module) const
+{
+  CuInfo cu_info = {};
+  auto function_die = get_func_die(function, &cu_info, kernel_module);
+  if (!function_die) {
+    return make_error<DwarfParseError>("Function '" + function +
+                                       "' not found in DWARF");
+  }
+
+  // Nothing in the name says which one was meant, and picking one would list
+  // another function's lines under the requested name.
+  if (count_function_definitions(function, kernel_module) > 1) {
+    return make_error<DwarfParseError>("Multiple functions named '" + function +
+                                       "' found in DWARF");
+  }
+
+  const char *decl_file = dwarf_decl_file(&*function_die);
+  if (decl_file == nullptr || *decl_file == '\0') {
+    return make_error<DwarfParseError>("Failed to get source file for '" +
+                                       function + "'");
+  }
+
+  const std::filesystem::path target_file(decl_file);
+  auto ranges = get_pc_ranges(&*function_die);
+
+  // An abstract DIE is reached whenever the function is inlined anywhere, even
+  // if it also has an out-of-line copy. Collect both kinds of instance: the
+  // code of such a function is spread over all of them.
+  const bool from_instances = ranges.empty() &&
+                              dwarf_hasattr_integrate(&*function_die,
+                                                      DW_AT_inline);
+  if (from_instances) {
+    ranges = get_instance_ranges(cu_info.cu_die(),
+                                 DW_TAG_subprogram,
+                                 &*function_die);
+    auto inlined_into = get_instance_ranges(cu_info.cu_die(),
+                                            DW_TAG_inlined_subroutine,
+                                            &*function_die);
+    ranges.insert(ranges.end(), inlined_into.begin(), inlined_into.end());
+    std::ranges::sort(ranges);
+    ranges.erase(std::ranges::unique(ranges).begin(), ranges.end());
+  }
+
+  if (from_instances_out) {
+    *from_instances_out = from_instances;
+  }
+
+  if (ranges.empty()) {
+    return make_error<DwarfParseError>("No PC ranges found for '" + function +
+                                       "'");
+  }
+
+  Dwarf_Lines *lines = nullptr;
+  size_t num_lines = 0;
+  if (dwarf_getsrclines(cu_info.cu_die(), &lines, &num_lines) != 0) {
+    return make_error<DwarfParseError>("Failed to get source lines for '" +
+                                       function + "'");
+  }
+
+  std::set<std::pair<std::string, size_t>> candidates;
+  for (size_t i = 0; i < num_lines; ++i) {
+    Dwarf_Line *line = dwarf_onesrcline(lines, i);
+    if (!line) {
+      continue;
+    }
+
+    int line_num = 0;
+    if (dwarf_lineno(line, &line_num) != 0 || line_num <= 0) {
+      continue;
+    }
+
+    const char *source = dwarf_linesrc(line, nullptr, nullptr);
+    if (!source || !util::path_ends_with(source, target_file)) {
+      continue;
+    }
+
+    bool end_sequence = false;
+    if (dwarf_lineendsequence(line, &end_sequence) != 0 || end_sequence) {
+      continue;
+    }
+
+    Dwarf_Addr address = 0;
+    if (dwarf_lineaddr(line, &address) != 0) {
+      continue;
+    }
+
+    if (!in_ranges(ranges, address)) {
+      continue;
+    }
+
+    candidates.emplace(source, static_cast<size_t>(line_num));
+  }
+
+  DeclLineOwners owners = { .file = target_file, .by_decl_line = {} };
+  dwarf_getfuncs(cu_info.cu_die(), collect_decl_line_owners_cb, &owners, 0);
+
+  std::vector<DwarfFunctionLine> result;
+  for (const auto &[source, line_num] : candidates) {
+    auto canonical = line_to_addr_in_cu(
+        cu_info, target_file, source, line_num, 0);
+    if (!canonical) {
+      DwarfParseError::Kind kind = DwarfParseError::Kind::Generic;
+      std::string msg;
+      auto unhandled = llvm::handleErrors(canonical.takeError(),
+                                          [&](const DwarfParseError &error) {
+                                            kind = error.kind();
+                                            msg = error.msg();
+                                          });
+      if (unhandled) {
+        return unhandled;
+      }
+      if (kind == DwarfParseError::Kind::LineNotMapped) {
+        continue;
+      }
+      return make_error<DwarfParseError>(std::move(msg), kind);
+    }
+
+    // The canonical address is picked from the whole CU, so it can land in
+    // another function sharing this line through inlining.
+    if (!in_ranges(ranges, *canonical)) {
+      continue;
+    }
+
+    auto owner = line_owner(owners, line_num);
+    const bool own_line = !owner || *owner == function;
+
+    // Instance ranges also cover call sites and nested inlining, which belong
+    // to the surrounding functions.
+    if (from_instances && !own_line) {
+      continue;
+    }
+
+    std::optional<std::string> inline_function;
+    if (from_instances) {
+      inline_function = function;
+    } else if (!own_line) {
+      inline_function = std::move(owner);
+    }
+
+    result.push_back(DwarfFunctionLine{
+        .source_file = source,
+        .line = line_num,
+        .inline_function = std::move(inline_function),
+    });
+  }
+
+  std::ranges::sort(result, [](const auto &lhs, const auto &rhs) {
+    return std::tie(lhs.source_file, lhs.line) <
+           std::tie(rhs.source_file, rhs.line);
+  });
+  return result;
 }
 
 } // namespace bpftrace
