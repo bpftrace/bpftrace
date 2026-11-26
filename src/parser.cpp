@@ -1442,7 +1442,10 @@ Statement Parser::make_assignment_or_expr(Expression lhs,
   // Not an assignment, treat as expression statement.
   // First apply postfix operators (e.g. $x[0], $x.field), then continue
   // parsing any remaining binary operators (e.g. $x[0] == 102).
-  auto postfix = parse_postfix(std::move(lhs));
+  const auto lhs_begin = lhs.loc()->current.begin;
+  auto postfix = parse_postfix(std::move(lhs),
+                               lhs_begin.line,
+                               lhs_begin.column);
 
   consume_layout();
   next = peek();
@@ -1484,7 +1487,8 @@ Statement Parser::make_assignment_or_expr(Expression lhs,
     return { es };
   }
   // Continue parsing as a full expression (binary ops, ternary, etc.).
-  auto expr = parse_binary(0, std::move(postfix));
+  auto expr = parse_binary(
+      0, std::move(postfix), lhs_begin.line, lhs_begin.column);
   auto loc = make_loc(stmt_line, stmt_col, line_, col_);
   auto *expr_stmt = ctx_.make_node<ExprStatement>(loc, std::move(expr));
   return { expr_stmt };
@@ -1798,6 +1802,8 @@ Expression Parser::parse_expression()
 Expression Parser::parse_ternary()
 {
   PARSE_TRACE("parse_ternary");
+  consume_layout();
+  auto [begin_line, begin_col] = get_current_line_col();
   auto expr = parse_binary(0);
   auto sp = save_point();
   consume_layout();
@@ -1807,7 +1813,6 @@ Expression Parser::parse_ternary()
     return expr;
   }
 
-  const auto &expr_begin = expr.loc()->current.begin;
   advance();
   consume_layout();
 
@@ -1816,7 +1821,7 @@ Expression Parser::parse_ternary()
     // Short form: expr ?: expr
     advance();
     auto else_expr = parse_ternary();
-    auto loc = make_loc(expr_begin.line, expr_begin.column, line_, col_);
+    auto loc = make_loc(begin_line, begin_col, line_, col_);
     auto *if_node = ctx_.make_node<IfExpr>(
         loc, expr, expr, std::move(else_expr));
     return { if_node };
@@ -1825,7 +1830,7 @@ Expression Parser::parse_ternary()
   then_expr = parse_ternary();
   expect(':');
   auto else_expr = parse_ternary();
-  auto loc = make_loc(expr_begin.line, expr_begin.column, line_, col_);
+  auto loc = make_loc(begin_line, begin_col, line_, col_);
   auto *if_node = ctx_.make_node<IfExpr>(
       loc, expr, std::move(then_expr), std::move(else_expr));
   return { if_node };
@@ -1982,10 +1987,15 @@ std::optional<Parser::BinopInfo> Parser::peek_binop() const
 Expression Parser::parse_binary(int min_prec)
 {
   PARSE_TRACE("parse_binary min_prec=" << min_prec);
-  return parse_binary(min_prec, parse_unary());
+  consume_layout();
+  auto [begin_line, begin_col] = get_current_line_col();
+  return parse_binary(min_prec, parse_unary(), begin_line, begin_col);
 }
 
-Expression Parser::parse_binary(int min_prec, Expression left)
+Expression Parser::parse_binary(int min_prec,
+                                Expression left,
+                                int begin_line,
+                                int begin_col)
 {
   while (true) {
     auto sp = save_point();
@@ -1996,14 +2006,13 @@ Expression Parser::parse_binary(int min_prec, Expression left)
       break;
     }
 
-    const auto &left_begin = left.loc()->current.begin;
     int len = op_length(info->op);
     for (int i = 0; i < len; i++) {
       advance();
     }
 
     auto right = parse_binary(info->prec + 1);
-    auto loc = make_loc(left_begin.line, left_begin.column, line_, col_);
+    auto loc = make_loc(begin_line, begin_col, line_, col_);
     auto *binop = ctx_.make_node<Binop>(
         loc, std::move(left), info->op, std::move(right));
     left = Expression(binop);
@@ -2081,7 +2090,7 @@ Expression Parser::parse_unary()
   } else if (next == '-' && peek(1) != '-') {
     op = Operator::MINUS;
   } else {
-    return parse_postfix(parse_primary());
+    return parse_postfix(parse_primary(), begin_line, begin_col);
   }
 
   advance();
@@ -2092,7 +2101,7 @@ Expression Parser::parse_unary()
 }
 
 // Postfix operations: .field, ->field, .N (tuple), [expr], ++, --
-Expression Parser::parse_postfix(Expression expr)
+Expression Parser::parse_postfix(Expression expr, int begin_line, int begin_col)
 {
   PARSE_TRACE("parse_postfix");
   while (true) {
@@ -2100,7 +2109,6 @@ Expression Parser::parse_postfix(Expression expr)
     // past the end of the expression when no postfix op is found.
     auto sp = save_point();
     consume_layout();
-    const auto &expr_begin = expr.loc()->current.begin;
 
     // Field access: expr.field or tuple access: expr.N
     char next = peek();
@@ -2116,7 +2124,7 @@ Expression Parser::parse_postfix(Expression expr)
       if (std::isdigit(peek())) {
         auto int_str = consume_integer_str();
         auto res = util::to_uint(int_str, 0);
-        auto loc = make_loc(expr_begin.line, expr_begin.column, line_, col_);
+        auto loc = make_loc(begin_line, begin_col, line_, col_);
         auto *ta = ctx_.make_node<TupleAccess>(
             loc, std::move(expr), static_cast<ssize_t>(res ? *res : 0));
         expr = Expression(ta);
@@ -2128,7 +2136,7 @@ Expression Parser::parse_postfix(Expression expr)
       if (!field) {
         break;
       }
-      auto loc = make_loc(expr_begin.line, expr_begin.column, line_, col_);
+      auto loc = make_loc(begin_line, begin_col, line_, col_);
       auto *fa = ctx_.make_node<FieldAccess>(loc,
                                              std::move(expr),
                                              std::move(*field));
@@ -2143,7 +2151,7 @@ Expression Parser::parse_postfix(Expression expr)
       if (!field) {
         break;
       }
-      auto loc = make_loc(expr_begin.line, expr_begin.column, line_, col_);
+      auto loc = make_loc(begin_line, begin_col, line_, col_);
       auto *fa = ctx_.make_node<FieldAccess>(loc,
                                              std::move(expr),
                                              std::move(*field));
@@ -2156,7 +2164,7 @@ Expression Parser::parse_postfix(Expression expr)
       advance();
       auto index = parse_expression();
       expect(']');
-      auto loc = make_loc(expr_begin.line, expr_begin.column, line_, col_);
+      auto loc = make_loc(begin_line, begin_col, line_, col_);
       auto *aa = ctx_.make_node<ArrayAccess>(loc,
                                              std::move(expr),
                                              std::move(index));
@@ -2179,7 +2187,7 @@ Expression Parser::parse_postfix(Expression expr)
         break;
       }
       advance(2);
-      auto loc = make_loc(expr_begin.line, expr_begin.column, line_, col_);
+      auto loc = make_loc(begin_line, begin_col, line_, col_);
       auto *unop = ctx_.make_node<Unop>(loc,
                                         std::move(expr),
                                         is_post_increment
@@ -2581,8 +2589,8 @@ std::optional<Expression> Parser::try_parse_cast_expr(int begin_line,
     return std::nullopt;
   }
 
-  auto loc = make_loc(begin_line, begin_col, line_, col_);
   auto cast_target = parse_unary();
+  auto loc = make_loc(begin_line, begin_col, line_, col_);
   auto *cast = ctx_.make_node<Cast>(loc, typeof_node, std::move(cast_target));
   return Expression(cast);
 }
@@ -2595,6 +2603,8 @@ Expression Parser::parse_tuple_or_grouping_expr(int begin_line, int begin_col)
   // Simple parenthesized expression.
   if (peek() != ',') {
     expect(')');
+    first.node().loc = ctx_.location(
+        make_loc(begin_line, begin_col, line_, col_));
     return first;
   }
 

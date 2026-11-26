@@ -70,9 +70,14 @@ private:
   ast::Expression parse_expression();
   ast::Expression parse_ternary();
   ast::Expression parse_binary(int min_prec);
-  ast::Expression parse_binary(int min_prec, ast::Expression left);
+  ast::Expression parse_binary(int min_prec,
+                               ast::Expression left,
+                               int begin_line,
+                               int begin_col);
   ast::Expression parse_unary();
-  ast::Expression parse_postfix(ast::Expression expr);
+  ast::Expression parse_postfix(ast::Expression expr,
+                                int begin_line,
+                                int begin_col);
   ast::Expression parse_primary();
   ast::Expression parse_call_expression(
       const std::string &name,
