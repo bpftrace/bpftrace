@@ -10,6 +10,8 @@ and this project adheres to
 
 #### Breaking Changes
 #### Added
+- stdlib: Add `stringify()` to obtain expression source text without evaluating it.
+  - [#5460](https://github.com/bpftrace/bpftrace/pull/5460)
 - Allow access to individual fields (.count, .total, .avg) of `stats_t` created by `stats()`
   - [#5227](https://github.com/bpftrace/bpftrace/issues/5227)
 - stdlib: Add `abs_path` and `cwd`.

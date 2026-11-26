@@ -3,6 +3,11 @@ PROG BEGIN { assert(false, "My error message"); }
 EXPECT_REGEX stdlib/base\.bt:[0-9]+:5-37: ERROR: assert failed: My error message
 WILL_FAIL
 
+NAME stringify_does_not_evaluate
+PROG BEGIN { $x = 0; printf("%s:%d\n", stringify(++$x), $x); exit(); }
+EXPECT ++$x:0
+RETURN_CODE 0
+
 NAME ppid_macro
 PROG BEGIN { printf("SUCCESS %d\n", ppid(curtask)); exit(); }
 EXPECT_REGEX SUCCESS [0-9][0-9]*

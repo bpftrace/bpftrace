@@ -2059,6 +2059,13 @@ TEST_F(TypeCheckerTest, unop_increment_decrement)
   test("kprobe:f { --true; }", Error{});
 }
 
+TEST_F(TypeCheckerTest, stringify)
+{
+  test("begin { print(__builtin_stringify(1 + 2)); }");
+  test("begin { __builtin_stringify(); }", Error{});
+  test("begin { __builtin_stringify(1, 2); }", Error{});
+}
+
 TEST_F(TypeCheckerTest, printf_errorf_warnf)
 {
   std::vector<std::string> funcs = { "printf", "errorf", "warnf" };
