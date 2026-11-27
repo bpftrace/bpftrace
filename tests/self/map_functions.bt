@@ -76,3 +76,68 @@ test:delete_all
     return 1;
   }
 }
+
+test:delete_map
+{
+  @delete_map_a[1] = 1;
+  if (!has_key(@delete_map_a, 1)) {
+    return 1;
+  }
+  _ = delete(@delete_map_a, 1);
+  if has_key(@delete_map_a, 1) {
+    return 1;
+  }
+
+  @delete_map_b[1, 2] = 2;
+  if (!delete(@delete_map_b, (1, 2))) {
+    return 1;
+  }
+  if has_key(@delete_map_b, (1, 2)) {
+    return 1;
+  }
+
+  // Deleting a missing key returns false
+  if delete(@delete_map_b, (5, 6)) {
+    return 1;
+  }
+}
+
+test:bad_delete
+{
+  @bad_delete[1] = 1;
+  $x = delete(@bad_delete, 2);
+  $y = delete(@bad_delete, 1);
+  if ($x != false) {
+    return 1;
+  }
+  if ($y != true) {
+    return 1;
+  }
+}
+
+test:delete_count_map
+{
+  @delete_count_map_a[1] = count();
+  if (!has_key(@delete_count_map_a, 1)) {
+    return 1;
+  }
+  _ = delete(@delete_count_map_a, 1);
+  if has_key(@delete_count_map_a, 1) {
+    return 1;
+  }
+}
+
+test:delete_deprecated
+{
+  @delete_deprecated_a[1] = 1;
+  @delete_deprecated_b[2, "hi"] = 2;
+  _ = delete(@delete_deprecated_a[1]);
+  _ = delete(@delete_deprecated_b[2, "hi"]);
+  if has_key(@delete_deprecated_a, 1) {
+    return 1;
+  }
+  if has_key(@delete_deprecated_b, (2, "hi")) {
+    return 1;
+  }
+}
+

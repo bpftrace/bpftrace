@@ -1,0 +1,9 @@
+import "stdlib/test";
+
+test:interop_return_types
+{
+  if (!__always_true()) {
+    return 1;
+  }
+}
+
