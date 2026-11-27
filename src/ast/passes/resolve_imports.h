@@ -88,6 +88,8 @@ public:
                            const std::string &macro_name,
                            const std::vector<std::filesystem::path> &paths);
 
+  Result<OK> import_cwd_c_headers(Node &node);
+
   void mark_external_stdlib_override()
   {
     has_external_stdlib_override_ = true;
